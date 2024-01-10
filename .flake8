@@ -1,0 +1,11 @@
+[flake8]
+select=M511
+
+exclude =
+    doc,
+    .tox,
+    .git,
+    .yml,
+    Pipfile.*,
+    docs/*,
+    .cache/*

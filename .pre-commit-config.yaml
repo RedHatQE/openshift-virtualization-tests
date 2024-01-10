@@ -1,0 +1,36 @@
+default_language_version:
+    python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.5.0"
+    hooks:
+    - id: check-merge-conflict
+    - id: debug-statements
+    - id: trailing-whitespace
+      args: [--markdown-linebreak-ext=md] # Do not process Markdown files.
+    - id: end-of-file-fixer
+    - id: check-ast
+    - id: check-builtin-literals
+    - id: check-docstring-first
+    - id: check-toml
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: "6.1.0"
+    hooks:
+      - id: flake8
+        additional_dependencies: [
+          "git+https://github.com/RedHatQE/flake8-plugins.git",
+          "flake8-mutable",
+        ]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.5
+    hooks:
+      - id: ruff
+      - id: ruff-format
