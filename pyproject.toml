@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "openshift-virtualization-tests"
+version = "0.0.0"
+description = "Verification tests for Openshift Virtualization"
+authors = ["dbasunag <dbasunag@redhat.com>"]
+license = "Apache License 2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+openshift-python-wrapper = "^4.15.14"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
