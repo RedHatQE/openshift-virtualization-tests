@@ -9,6 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8"
 openshift-python-wrapper = "^4.15.14"
+openshift-operator-utilities = "^1.0.0"
 
 
 [build-system]

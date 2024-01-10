@@ -302,6 +302,20 @@ signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
+name = "openshift-operator-utilities"
+version = "1.0.0"
+description = "Utilities to interact with openshift operators"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "openshift_operator_utilities-1.0.0.tar.gz", hash = "sha256:6eb7c5eadf0f27f3c4c11cb4bb60198184df8b5530d25aa95ef2bc0b1f4934a6"},
+]
+
+[package.dependencies]
+kubernetes = ">=28.1.0,<29.0.0"
+openshift-python-wrapper = ">=4.15.11,<5.0.0"
+
+[[package]]
 name = "openshift-python-wrapper"
 version = "4.15.14"
 description = "Wrapper around https://github.com/kubernetes-client/python"
@@ -617,4 +631,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "d43484d11729b8e689a97c026d1f213bdfbb931ca002b20f65472a95f63af1db"
+content-hash = "eeb3f7d7ad8c5346fc9b82ba12d57cfb0c940a1f171c2cb752e15b5dde209792"
