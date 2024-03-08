@@ -11,6 +11,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Read secret (content won't be shown in logs)
+        id: readfile
         env:
           SECRET_CONTENT: ${{ secrets.TEST_SECRET }}
         run: echo "Secret content has been read."
@@ -19,4 +20,5 @@ jobs:
         run: |
           echo "$SECRET_CONTENT" > secret_data.txt
           chmod 600 secret_data.txt
-          cat secret_data.txt >> "$GITHUB_OUTPUT"
+      - name: show file content
+        run: echo "${{ steps.readfile.outputs.content }}"
