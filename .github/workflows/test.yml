@@ -18,7 +18,7 @@ jobs:
     steps:
     - name : Print Title of PR
       run: echo The Title of your PR is ${{ github.event.pull_request.title }}
-    
+
     - name: Get Pull Request Title
       id: get_title
       run: |
