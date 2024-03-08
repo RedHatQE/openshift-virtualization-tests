@@ -2,7 +2,9 @@ name: Read Secret, Create File, and Verify (No Secret Printing)
 
 on:
   push:
-
+env:
+  PR_TITLE: ${{ github.event.pull_request.title }} # this is returning empty
+  PR_DESCRIPTION: ${{ github.event.head_commit.message }}
 jobs:
   verify_file:
     runs-on: ubuntu-latest
@@ -10,22 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Read secret (content won't be shown in logs)
-        env:
-          SECRET_CONTENT: ${{ secrets.YOUR_SECRET_NAME }}  # Replace with your secret name
-        run: echo "Secret content has been read."  # Optional success message
-
-      - name: Create file from secret
-        run: |
-          echo "$SECRET_CONTENT" > secret_data.txt  # Replace with desired filename
-          chmod 600 secret_data.txt  # Set file permissions (optional)
+      - name: Get Pull Request Number
+        run: echo "PULL_NUMBER=$(echo "$GITHUB_REF" | awk -F / '{print $3}')" >> $GITHUB_ENV
+        shell: bash
 
       - name: Verify file creation (without revealing content)
         run: |
-          # Check if the file exists and has expected size
-          if [[ -f secret_data.txt && $(wc -c < secret_data.txt) -gt 0 ]]; then
-            echo "File 'secret_data.txt' created successfully."
-          else
-            echo "Error: File creation failed or empty."
-            exit 1  # Fail the workflow if file creation has issues
-          fi
+          echo "PR title is: $PR_TITLE"
+          echo "PR description is: $PR_DESCRIPTION"
