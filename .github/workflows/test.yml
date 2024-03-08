@@ -7,12 +7,6 @@ jobs:
   verify_file:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-
-      pull_request:
-   types: [opened, synchronize]
-
   print_title_of_pr:
     runs-on: ubuntu-20.04
     steps:
