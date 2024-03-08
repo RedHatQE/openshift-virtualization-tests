@@ -5,7 +5,7 @@ on:
 
 env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  PR_TITLE: ${{ github.event.pull_request.title }}
+  PR_TITLE: ${{ github.event.issue.pull_request }}
   PR_DESCRIPTION: ${{ github.event.head_commit.message }}
 
 jobs:
