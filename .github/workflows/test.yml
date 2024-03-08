@@ -20,5 +20,6 @@ jobs:
         run: |
           echo "$SECRET_CONTENT" > secret_data.txt
           chmod 600 secret_data.txt
+          
       - name: show file content
         run: echo "${{ steps.readfile.outputs.content }}"
