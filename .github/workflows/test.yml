@@ -1,0 +1,22 @@
+name: Test workflow
+
+on:
+  push:
+
+jobs:
+  create_file:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Read secret (content won't be shown in logs)
+        env:
+          SECRET_CONTENT: ${{ secrets.TEST_SECRET }}
+        run: echo "Secret content has been read."
+
+      - name: Create file from secret
+        run: |
+          echo "$SECRET_CONTENT" > secret_data.txt  
+          chmod 600 secret_data.txt 
+          cat secret_data.txt  
