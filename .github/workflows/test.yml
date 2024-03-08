@@ -6,7 +6,6 @@ on:
 env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   PR_DESCRIPTION: ${{ github.event.head_commit.message }}
-  PR_NUM: ${PR_URL##*/}
 
 jobs:
   verify_file:
@@ -17,8 +16,10 @@ jobs:
 
       - name: Get Pull Request Number
         run: |
+          PR_URL="${{ github.event.issue.pull_request.url }}"
+          PR_NUM=${PR_URL##*/}
           echo "PR branch is: ${GITHUB_REF##*/}"
-          echo "Another option: and $PR_NUM"
+          echo "Another option: and ${PR_URL##*/}"
 
       - name: Verify file creation (without revealing content)
         run: |
