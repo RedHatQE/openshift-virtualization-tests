@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "PR title is: $PR_TITLE"
           echo "PR description is: $PR_DESCRIPTION"
-      
+
       - name: Find Comment
         uses: peter-evans/find-comment@v3
         id: fc
