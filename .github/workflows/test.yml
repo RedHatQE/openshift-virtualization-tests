@@ -1,28 +1,25 @@
-name: Read Secret, Create File, and Verify (No Secret Printing)
+name: Capture Pull Request Title
 
 on:
-  push:
+  pull_request:
+    types: [closed]  # Trigger on pull request closure
 
 jobs:
-  verify_file:
+  save_title:
     runs-on: ubuntu-latest
 
-  print_title_of_pr:
-    runs-on: ubuntu-20.04
     steps:
-    - name : Print Title of PR
-      run: echo The Title of your PR is ${{ github.event.pull_request.title }}
+      - uses: actions/checkout@v3
 
-    - name: Get Pull Request Title
-      id: get_title
-      run: |
-        echo "PR_TITLE=$(github.event.pull_request.title)" >> $GITHUB_OUTPUT
-
-    - name: Save Title to File (optional)
-      run: |
-        mkdir -p output  # Create output directory if needed
-        echo "${{ steps.get_title.outputs.PR_TITLE }}" > output/pr_title.txt
-
-    - name: Read non-secret file content
-      run: |
-        cat output/pr_title.txt
+      - name: Get Pull Request Title
+        id: get_title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+           echo The Title of your PR is $TITLE
+           echo "$PR_TITLE" >> $GITHUB_OUTPUT
+        
+      - name: Save Title to File (optional)
+        run: |
+          mkdir -p output  # Create output directory if needed
+          echo "${{ steps.get_title.outputs.PR_TITLE }}" > output/pr_title.txt
