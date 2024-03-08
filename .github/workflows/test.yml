@@ -18,7 +18,7 @@ jobs:
         run: |
            echo The Title of your PR is $TITLE
            echo "$PR_TITLE" >> $GITHUB_OUTPUT
-        
+
       - name: Save Title to File (optional)
         run: |
           mkdir -p output  # Create output directory if needed
