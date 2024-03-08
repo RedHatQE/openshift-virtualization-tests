@@ -1,0 +1,29 @@
+name: Checkout, Create Config Folder, Run Tox
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Add Config File to current folder
+        run: |
+          echo "$CONFIG_CONTENT" > jira.cfg
+        env:
+          CONFIG_CONTENT: ${{ secrets.JIRA_CFG }}
+
+      - name: Install Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run Tox with Environment Variables
+        run: tox -e verify-bugs-are-open
