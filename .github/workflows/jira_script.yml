@@ -2,6 +2,9 @@ name: Checkout, Create Config Folder, Run Tox
 
 on:
   push:
+    branches:
+      - main
+      - 'cnv-**'
 
 jobs:
   verify-jira:

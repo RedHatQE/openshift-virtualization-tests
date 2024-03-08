@@ -87,9 +87,10 @@ def get_all_jiras_from_file(file_content):
 def get_jiras_from_python_files():
     jira_found = {}
     for filename in all_python_files():
+        filename_for_key = re.findall(r"openshift-virtualization-tests/.*", filename)[0]
         with open(filename) as fd:
             if unique_jiras := get_all_jiras_from_file(file_content=fd.read()):
-                jira_found[filename] = unique_jiras
+                jira_found[filename_for_key] = unique_jiras
     return jira_found
 
 
