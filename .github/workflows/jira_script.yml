@@ -2,10 +2,9 @@ name: Checkout, Create Config Folder, Run Tox
 
 on:
   push:
-    branches: [ main ]
 
 jobs:
-  build:
+  verify-jira:
     runs-on: ubuntu-latest
 
     steps:
