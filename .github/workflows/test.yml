@@ -30,7 +30,7 @@ jobs:
         id: fc
         with:
           issue-number: 1
-          body-regex: '^.*my 1.*$'
+          body-includes:  test description
       - run: |
           echo ${{ steps.fc.outputs.comment-id }}
           echo ${{ steps.fc.outputs.comment-body }}
