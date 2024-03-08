@@ -1,25 +1,31 @@
-name: Capture Pull Request Title
+name: Read Secret, Create File, and Verify (No Secret Printing)
 
 on:
-  pull_request:
-    types: [closed]  # Trigger on pull request closure
+  push:
 
 jobs:
-  save_title:
+  verify_file:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Get Pull Request Title
-        id: get_title
+      - name: Read secret (content won't be shown in logs)
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-           echo The Title of your PR is $TITLE
-           echo "$PR_TITLE" >> $GITHUB_OUTPUT
+          SECRET_CONTENT: ${{ secrets.YOUR_SECRET_NAME }}  # Replace with your secret name
+        run: echo "Secret content has been read."  # Optional success message
 
-      - name: Save Title to File (optional)
+      - name: Create file from secret
         run: |
-          mkdir -p output  # Create output directory if needed
-          echo "${{ steps.get_title.outputs.PR_TITLE }}" > output/pr_title.txt
+          echo "$SECRET_CONTENT" > secret_data.txt  # Replace with desired filename
+          chmod 600 secret_data.txt  # Set file permissions (optional)
+
+      - name: Verify file creation (without revealing content)
+        run: |
+          # Check if the file exists and has expected size
+          if [[ -f secret_data.txt && $(wc -c < secret_data.txt) -gt 0 ]]; then
+            echo "File 'secret_data.txt' created successfully."
+          else
+            echo "Error: File creation failed or empty."
+            exit 1  # Fail the workflow if file creation has issues
+          fi
