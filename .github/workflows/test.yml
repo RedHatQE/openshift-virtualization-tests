@@ -24,3 +24,15 @@ jobs:
         run: |
           echo "PR title is: $PR_TITLE"
           echo "PR description is: $PR_DESCRIPTION"
+      
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: 1
+          body-regex: '^.*my 1.*$'
+      - run: |
+          echo ${{ steps.fc.outputs.comment-id }}
+          echo ${{ steps.fc.outputs.comment-body }}
+          echo ${{ steps.fc.outputs.comment-author }}
+          echo ${{ steps.fc.outputs.comment-created-at }}
