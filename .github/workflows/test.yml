@@ -12,14 +12,14 @@ jobs:
 
       - name: Read secret (content won't be shown in logs)
         env:
-          SECRET_CONTENT: ${{ secrets.TEST_SECRET }}  
-        run: echo "Secret content has been read."  
+          SECRET_CONTENT: ${{ secrets.TEST_SECRET }}
+        run: echo "Secret content has been read."
 
       - name: Create file from secret
         run: |
-          echo "$SECRET_CONTENT" > secret_data.txt  
-          chmod 777 secret_data.txt 
-          cat secret_data.txt 
+          echo "$SECRET_CONTENT" > secret_data.txt
+          chmod 777 secret_data.txt
+          cat secret_data.txt
 
       - name: Verify file creation (without revealing content)
         run: |
