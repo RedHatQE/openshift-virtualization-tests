@@ -6,7 +6,7 @@ on:
 env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   PR_DESCRIPTION: ${{ github.event.head_commit.message }}
-  PR_URL: "${{ github.event.issue.pull_request.url }}"
+  PR_URL: ${{ github.event.issue.pull_request.url }}
   PR_NUM: ${PR_URL##*/}
 
 jobs:
