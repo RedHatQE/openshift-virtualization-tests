@@ -56,10 +56,10 @@ def get_all_jiras_from_file(file_content):
     """
     Try to find all jira tickets in the file.
     Looking for the following patterns:
-    - jira_id=CNV-12345  # call in is_jira_open
-    - jira_id = CNV-12345  # when jira is constant
-    - https://issues.redhat.com/browse/CNV-12345  # when jira is in a link in comments
-    - pytest.mark.jira(CNV-12345)  # when jira is in a marker
+    - jira_id=<id>>  # call in is_jira_open
+    - jira_id = <id>  # when jira is constant
+    - https://issues.redhat.com/browse/<id>  # when jira is in a link in comments
+    - pytest.mark.jira(id)  # when jira is in a marker
 
     Args:
         file_content (str): The content of the file.
@@ -76,12 +76,7 @@ def get_all_jiras_from_file(file_content):
         rf"https://issues.redhat.com/browse/{issue_pattern}.*",
         file_content,
     )
-    _is_jira_comments = re.findall(
-        r"({issue_pattern}(?! <skip-jira-check>))", file_content, re.IGNORECASE
-    )
-    return set(
-        _pytest_jira_marker_bugs + _is_jira_open + _jira_url_jiras + _is_jira_comments
-    )
+    return set(_pytest_jira_marker_bugs + _is_jira_open + _jira_url_jiras)
 
 
 def get_jiras_from_python_files():
