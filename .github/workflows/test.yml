@@ -2,9 +2,11 @@ name: Read Secret, Create File, and Verify (No Secret Printing)
 
 on:
   push:
+
 env:
   PR_TITLE: ${{ github.event.pull_request.title }} # this is returning empty
   PR_DESCRIPTION: ${{ github.event.head_commit.message }}
+
 jobs:
   verify_file:
     runs-on: ubuntu-latest
