@@ -17,6 +17,6 @@ jobs:
 
       - name: Create file from secret
         run: |
-          echo "$SECRET_CONTENT" > secret_data.txt  
-          chmod 600 secret_data.txt 
-          cat secret_data.txt  
+          echo "$SECRET_CONTENT" > secret_data.txt
+          chmod 600 secret_data.txt
+          cat secret_data.txt
