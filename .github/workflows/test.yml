@@ -10,16 +10,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Get Pull Request Title
-        id: get_title
-        run: |
-          echo "PR_TITLE=$(github.event.pull_request.title)" >> $GITHUB_OUTPUT
+      pull_request:
+   types: [opened, synchronize]
 
-      - name: Save Title to File (optional)
-        run: |
-          mkdir -p output  # Create output directory if needed
-          echo "${{ steps.get_title.outputs.PR_TITLE }}" > output/pr_title.txt
+  print_title_of_pr:
+    runs-on: ubuntu-20.04
+    steps:
+    - name : Print Title of PR
+      run: echo The Title of your PR is ${{ github.event.pull_request.title }}
+    
+    - name: Get Pull Request Title
+      id: get_title
+      run: |
+        echo "PR_TITLE=$(github.event.pull_request.title)" >> $GITHUB_OUTPUT
 
-      - name: Read non-secret file content
-        run: |
-          cat output/pr_title.txt
+    - name: Save Title to File (optional)
+      run: |
+        mkdir -p output  # Create output directory if needed
+        echo "${{ steps.get_title.outputs.PR_TITLE }}" > output/pr_title.txt
+
+    - name: Read non-secret file content
+      run: |
+        cat output/pr_title.txt
