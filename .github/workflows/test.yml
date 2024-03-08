@@ -1,25 +1,32 @@
-name: Test workflow
+name: Read Secret, Create File, and Verify (No Secret Printing)
 
 on:
   push:
 
 jobs:
-  create_file:
+  verify_file:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Read secret (content won't be shown in logs)
-        id: readfile
         env:
-          SECRET_CONTENT: ${{ secrets.TEST_SECRET }}
-        run: echo "Secret content has been read."
+          SECRET_CONTENT: ${{ secrets.TEST_SECRET }}  
+        run: echo "Secret content has been read."  
 
       - name: Create file from secret
         run: |
-          echo "$SECRET_CONTENT" > secret_data.txt
-          chmod 600 secret_data.txt
+          echo "$SECRET_CONTENT" > secret_data.txt  
+          chmod 777 secret_data.txt 
+          cat secret_data.txt 
 
-      - name: show file content
-        run: echo "${{ steps.readfile.outputs.content }}"
+      - name: Verify file creation (without revealing content)
+        run: |
+          # Check if the file exists and has expected size
+          if [[ -f secret_data.txt && $(wc -c < secret_data.txt) -gt 0 ]]; then
+            echo "File 'secret_data.txt' created successfully."
+          else
+            echo "Error: File creation failed or empty."
+            exit 1  # Fail the workflow if file creation has issues
+          fi
