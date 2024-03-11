@@ -2,7 +2,7 @@ import re
 
 from jira import JIRA, JIRAError
 
-from ci_scripts.utils import all_python_files, get_connection_params, print_status
+from ci_scripts.utils import get_all_python_files, get_connection_params, print_status
 
 
 # Needs to be update based on the branch.
@@ -79,9 +79,9 @@ def get_all_jiras_from_file(file_content):
     return set(_pytest_jira_marker_bugs + _is_jira_open + _jira_url_jiras)
 
 
-def get_jiras_from_python_files():
+def get_jiras_from_all_python_files():
     jira_found = {}
-    for filename in all_python_files():
+    for filename in get_all_python_files():
         filename_for_key = re.findall(r"openshift-virtualization-tests/.*", filename)[0]
         with open(filename) as fd:
             if unique_jiras := get_all_jiras_from_file(file_content=fd.read()):
@@ -94,7 +94,7 @@ def main():
     closed_jiras = {}
     mismatch_bugs_version = {}
     jira_ids_with_errors = {}
-    jira_ids_dict = get_jiras_from_python_files()
+    jira_ids_dict = get_jiras_from_all_python_files()
     jira_connection = get_jira_connection()
     for filename in jira_ids_dict:
         for jira_id in jira_ids_dict[filename]:

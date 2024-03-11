@@ -20,7 +20,7 @@ def print_status(status_dict):
     print("\n")
 
 
-def all_python_files():
+def get_all_python_files():
     exclude_dirs = [".tox", "venv", ".pytest_cache", "site-packages", ".git"]
     for root, _, files in os.walk(os.path.abspath(os.curdir)):
         if [_dir for _dir in exclude_dirs if _dir in root]:
