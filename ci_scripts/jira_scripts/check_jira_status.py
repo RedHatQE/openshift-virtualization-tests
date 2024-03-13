@@ -21,19 +21,19 @@ def get_jira_connection():
 def get_jira_metadata(jira_id, jira_connection):
     retries = 0
     max_retry = 3
-    while True:
+    while retries < max_retry:
         try:
             return jira_connection.issue(
                 id=jira_id, fields="status, issuetype, fixVersions"
             ).fields
-        except JIRAError as e:
+        except JIRAError as jira_exception:
             # Check for inactivity error (adjust based on your library)
-            if "Unauthorized" in str(e) or "Session timed out" in str(e):
+            if "Unauthorized" in str(jira_exception) or "Session timed out" in str(
+                jira_exception
+            ):
                 retries += 1
                 print(
-                    "Failed to get issue due to inactivity, retrying (%d/%d)",
-                    retries,
-                    max_retry,
+                    f"Failed to get issue due to inactivity, retrying ({retries}/{max_retry})"
                 )
                 if retries < max_retry:
                     jira_connection = get_jira_connection()  # Attempt reconnection
