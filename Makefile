@@ -1,4 +1,3 @@
-# Building cluster-sanity container
 IMAGE_BUILD_CMD = "$(shell which podman 2>/dev/null || which docker)"
 IMAGE_REGISTRY ?= "quay.io"
 ORG_NAME ?= "openshift-cnv"
