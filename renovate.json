@@ -1,3 +1,1 @@
-{
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
-}
+{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "packageRules": [{"matchPackagePatterns": ["openshift-python-wrapper", "openshift-operator-utilities", "jira", "pylero", "pytest", "pytest-testconfig", "python-simple-logger", "ipdb", "ipython"], "groupName": "poetry-deps"}]}

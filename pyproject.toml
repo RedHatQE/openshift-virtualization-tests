@@ -5,6 +5,7 @@ description = "Verification tests for Openshift Virtualization"
 authors = ["dbasunag <dbasunag@redhat.com>"]
 license = "Apache License 2.0"
 readme = "README.md"
+packages = [{ include = "*" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -12,7 +13,14 @@ openshift-python-wrapper = "^10.0.12"
 openshift-operator-utilities = "^1.0.0"
 jira = "^3.6.0"
 pylero = "^0.0.9"
+pytest = "^8.0.0"
+pytest-testconfig = "^0.2.0"
+python-simple-logger = "^1.0.9"
 
+
+[tool.poetry.group.dev.dependencies]
+ipdb = "^0.13.13"
+ipython = "*"
 
 [build-system]
 requires = ["poetry-core"]
