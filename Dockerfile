@@ -3,10 +3,10 @@ FROM fedora:39
 ARG OPENSHIFT_PYTHON_WRAPPER_COMMIT=''
 ARG POETRY_HOME='/usr/local'
 
-RUN dnf -y install dnf-plugins-core && \
+RUN dnf install --nodocs -y --setopt=install_weak_deps=False dnf-plugins-core && \
     dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo && \
     dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
-    dnf -y install --setopt=skip_missing_names_on_install=False \
+    dnf install --nodocs -y --setopt=install_weak_deps=False --setopt=skip_missing_names_on_install=False \
     python3-pip \
     python3-devel \
     procps-ng \
