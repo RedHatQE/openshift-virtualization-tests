@@ -85,7 +85,7 @@ def cluster_sanity(
             system_health_status="healthy",
         )
     except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError) as ex:
-        pytest.exit(msg=str(ex), returncode=99)
+        pytest.exit(reason=str(ex), returncode=99)
 
 
 def wait_for_pods_running(
