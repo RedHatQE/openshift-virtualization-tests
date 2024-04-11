@@ -20,3 +20,19 @@ class UrlNotFoundError(Exception):
 
     def __str__(self):
         return f"{self.url_request.url} not found. status code is: {self.url_request.status_code}"
+
+
+class HyperconvergedNotHealthyCondition(Exception):
+    def __init__(self, err_str):
+        self.err_str = err_str
+
+    def __str__(self):
+        return self.err_str
+
+
+class HyperconvergedSystemHealthException(Exception):
+    def __init__(self, err_str):
+        self.err_str = err_str
+
+    def __str__(self):
+        return self.err_str

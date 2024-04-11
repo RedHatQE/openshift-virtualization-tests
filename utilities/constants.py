@@ -35,13 +35,6 @@ class NamespacesNames:
 class StorageClassNames:
     CEPH_RBD = "ocs-storagecluster-ceph-rbd"
     CEPH_RBD_VIRTUALIZATION = f"{CEPH_RBD}-virtualization"
-    CEPHFS = "ocs-storagecluster-cephfs"
-    HOSTPATH = "hostpath-provisioner"
-    NFS = "nfs"
-    TOPOLVM = "lvms-vg1"
-    PORTWORX_CSI_DB_SHARED = "px-csi-db-shared"
-    RH_INTERNAL_NFS = "rh-internal-nfs"
-    TRIDENT_CSI_FSX = "trident-csi-fsx"
 
 
 DEFAULT_HCO_CONDITIONS = {

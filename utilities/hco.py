@@ -1,8 +1,14 @@
+import json
+
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.resource import Resource
 from utilities.constants import HYPERCONVERGED_NAME
-from utilities.exceptions import ClusterSanityError
+from utilities.exceptions import (
+    HyperconvergedNotHealthyCondition,
+    HyperconvergedSystemHealthException,
+)
 
 
 def get_hyperconverged_resource(namespace_name):
@@ -14,29 +20,37 @@ def get_hyperconverged_resource(namespace_name):
     )
 
 
-def cluster_sanity_hyperconverged(namespace, expected_hco_status):
-    hyperconverged = get_hyperconverged_resource(namespace_name=namespace)
-    current_status_conditions = hyperconverged.instance.status.conditions
-    mismatch_statuses = get_hco_mismatch_statuses(
-        hco_status_conditions=current_status_conditions,
-        expected_hco_status=expected_hco_status,
-    )
+def assert_hyperconverged_health(
+    hyperconverged, hyperconverged_status_conditions=None, system_health_status=None
+):
+    if not hyperconverged_status_conditions:
+        hyperconverged_status_conditions = {
+            Resource.Condition.AVAILABLE: Resource.Condition.Status.TRUE,
+            Resource.Condition.PROGRESSING: Resource.Condition.Status.FALSE,
+            Resource.Condition.RECONCILE_COMPLETE: Resource.Condition.Status.TRUE,
+            Resource.Condition.DEGRADED: Resource.Condition.Status.FALSE,
+            Resource.Condition.UPGRADEABLE: Resource.Condition.Status.TRUE,
+        }
+    hyperconverged_obj_status = hyperconverged.instance.status
 
-    if mismatch_statuses:
-        raise ClusterSanityError(
-            err_str=f"{mismatch_statuses} \nHCO is unhealthy. "
-            f"Expected {expected_hco_status}, Current: {current_status_conditions}"
+    health_mismatch_conditions = [
+        condition
+        for condition in hyperconverged_obj_status.conditions
+        if condition.type in hyperconverged_status_conditions
+        and hyperconverged_status_conditions[condition.type] != condition.status
+    ]
+    if health_mismatch_conditions:
+        raise HyperconvergedNotHealthyCondition(
+            "Hyperconverged status condition unhealthy "
+            f"expected: {json.dumps(hyperconverged_status_conditions, indent=3)}:"
+            f"actual: {json.dumps(health_mismatch_conditions, indent=3,)}"
         )
 
-
-def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
-    current_status = {
-        condition["type"]: condition["status"] for condition in hco_status_conditions
-    }
-    mismatch_statuses = []
-
-    for condition_type, condition_status in expected_hco_status.items():
-        if current_status[condition_type] != condition_status:
-            mismatch_statuses.append({condition_type: current_status[condition_type]})
-
-    return mismatch_statuses
+    if (
+        system_health_status
+        and hyperconverged_obj_status.systemHealthStatus != system_health_status
+    ):
+        raise HyperconvergedSystemHealthException(
+            f"Hyperconverged systemHealthStatus expected: {system_health_status},"
+            f" actual: {hyperconverged_obj_status.systemHealthStatus}"
+        )

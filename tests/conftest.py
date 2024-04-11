@@ -13,8 +13,8 @@ from ocp_resources.storage_class import StorageClass
 from ocp_utilities.infra import get_client
 from utilities.constants import (
     StorageClassNames,
-    DEFAULT_HCO_CONDITIONS,
     VIRTCTL_CLI_DOWNLOADS,
+    NamespacesNames,
 )
 from utilities.hco import get_hyperconverged_resource
 from utilities.infra import (
@@ -260,7 +260,6 @@ def cluster_sanity_scope_session(
         admin_client=admin_client,
         nodes=nodes,
         hco_namespace=hco_namespace.name,
-        expected_hco_status=DEFAULT_HCO_CONDITIONS,
     )
 
 
@@ -274,7 +273,6 @@ def cluster_sanity_scope_module(
         admin_client=admin_client,
         nodes=nodes,
         hco_namespace=hco_namespace.name,
-        expected_hco_status=DEFAULT_HCO_CONDITIONS,
     )
 
 

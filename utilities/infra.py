@@ -42,7 +42,7 @@ from utilities.exceptions import (
     UtilityPodNotFoundError,
     UrlNotFoundError,
 )
-from utilities.hco import cluster_sanity_hyperconverged
+from utilities.hco import assert_hyperconverged_health, get_hyperconverged_resource
 from pyhelper_utils.shell import run_command
 
 LOGGER = logging.getLogger(__name__)
@@ -59,7 +59,6 @@ def cluster_sanity(
     admin_client,
     nodes,
     hco_namespace,
-    expected_hco_status,
 ):
     LOGGER.info("Running cluster sanity.")
     try:
@@ -81,9 +80,9 @@ def cluster_sanity(
                 err_str=f"Timed out waiting for all pods in namespace {hco_namespace} to get to running state."
             )
 
-        cluster_sanity_hyperconverged(
-            namespace=hco_namespace,
-            expected_hco_status=expected_hco_status,
+        assert_hyperconverged_health(
+            hyperconverged=get_hyperconverged_resource(namespace_name=hco_namespace),
+            system_health_status="healthy",
         )
     except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError) as ex:
         pytest.exit(msg=str(ex), returncode=99)
