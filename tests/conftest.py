@@ -169,7 +169,7 @@ def ocs_current_version(ocs_storage_class, admin_client):
     if ocs_storage_class:
         for csv in ClusterServiceVersion.get(
             dyn_client=admin_client,
-            namespace="openshift-storage",
+            namespace=NamespacesNames.OPENSHIFT_STORAGE,
             label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
         ):
             return csv.instance.spec.version
