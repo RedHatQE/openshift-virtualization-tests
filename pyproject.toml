@@ -16,6 +16,8 @@ pylero = "^0.0.9"
 pytest = "^8.0.0"
 pytest-testconfig = "^0.2.0"
 python-simple-logger = "^1.0.9"
+pyhelper-utils = "^0.0.8"
+netaddr = "^1.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
