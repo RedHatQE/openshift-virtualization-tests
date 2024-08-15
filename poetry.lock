@@ -650,12 +650,12 @@ timeout-sampler = ">=0.0.1"
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "10.0.35"
+version = "10.0.55"
 description = "Wrapper around https://github.com/kubernetes-client/python"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "openshift_python_wrapper-10.0.35.tar.gz", hash = "sha256:5e593726332a7d2ce06e4088caae4adb1bec7f25e420f439d0bebec19060f988"},
+    {file = "openshift_python_wrapper-10.0.55.tar.gz", hash = "sha256:cf9192fe315df0db43a6a43a63408b9abff523d35a023bca9251562dc9d9ec59"},
 ]
 
 [package.dependencies]
@@ -823,13 +823,13 @@ xmp = ["defusedxml"]
 
 [[package]]
 name = "pluggy"
-version = "1.4.0"
+version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pluggy-1.4.0-py3-none-any.whl", hash = "sha256:7db9f7b503d67d1c5b95f59773ebb58a8c1c288129a88665838012cfb07b8981"},
-    {file = "pluggy-1.4.0.tar.gz", hash = "sha256:8c85c2876142a764e5b7548e7d9a0e0ddb46f5185161049a79b7e974454223be"},
+    {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
+    {file = "pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1"},
 ]
 
 [package.extras]
@@ -933,12 +933,12 @@ rich = ">=13.7.1,<14.0.0"
 
 [[package]]
 name = "pylero"
-version = "0.0.9"
+version = "0.1.0"
 description = "Python SDK for Polarion"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pylero-0.0.9.tar.gz", hash = "sha256:e0efaeed55088aee0f982dbf4f97349d50baee44704bc29c5a8176b701c7b139"},
+    {file = "pylero-0.1.0.tar.gz", hash = "sha256:12adad19e83275fda45d16eb5057f95b6163838d0bbfad467f577bc213a206d2"},
 ]
 
 [package.dependencies]
@@ -947,13 +947,13 @@ suds = "*"
 
 [[package]]
 name = "pytest"
-version = "8.1.1"
+version = "8.3.2"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest-8.1.1-py3-none-any.whl", hash = "sha256:2a8386cfc11fa9d2c50ee7b2a57e7d898ef90470a7a34c4b949ff59662bb78b7"},
-    {file = "pytest-8.1.1.tar.gz", hash = "sha256:ac978141a75948948817d360297b7aae0fcb9d6ff6bc9ec6d514b85d5a65c044"},
+    {file = "pytest-8.3.2-py3-none-any.whl", hash = "sha256:4ba08f9ae7dcf84ded419494d229b48d0903ea6407b030eaec46df5e6a73bba5"},
+    {file = "pytest-8.3.2.tar.gz", hash = "sha256:c132345d12ce551242c87269de812483f5bcc87cdbb4722e48487ba194f9fdce"},
 ]
 
 [package.dependencies]
@@ -961,11 +961,11 @@ colorama = {version = "*", markers = "sys_platform == \"win32\""}
 exceptiongroup = {version = ">=1.0.0rc8", markers = "python_version < \"3.11\""}
 iniconfig = "*"
 packaging = "*"
-pluggy = ">=1.4,<2.0"
+pluggy = ">=1.5,<2"
 tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 
 [package.extras]
-testing = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
+dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
 
 [[package]]
 name = "pytest-testconfig"
@@ -1036,12 +1036,12 @@ files = [
 
 [[package]]
 name = "python-simple-logger"
-version = "1.0.21"
+version = "1.0.36"
 description = "A simple logger for python"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "python_simple_logger-1.0.21.tar.gz", hash = "sha256:da012d77ab78995efe0fcc180684576758968ffa592bd4730d71ac8abd9aa441"},
+    {file = "python_simple_logger-1.0.36.tar.gz", hash = "sha256:7187af94507e48e8460ce625dbb80fc30e07357ec774fc5378a90fa241a35971"},
 ]
 
 [package.dependencies]
@@ -1391,4 +1391,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "aec962ebac1d17ba814c19ebbc556ea8b5ca015cb6466cf3b0ccc15bd4ea2833"
+content-hash = "58470f73c35ad3b05c16d492b2f49f4dbca1fb125cddd826a414fbdddae3fc2a"
