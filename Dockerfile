@@ -1,4 +1,4 @@
-FROM fedora:39
+FROM fedora:42
 
 ARG OPENSHIFT_PYTHON_WRAPPER_COMMIT=''
 ARG POETRY_HOME='/usr/local'
