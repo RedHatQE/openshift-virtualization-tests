@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v4.6.0"
+    rev: "v5.0.0"
     hooks:
     - id: check-merge-conflict
     - id: debug-statements
@@ -16,7 +16,7 @@ repos:
     - id: check-toml
 
   - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
+    rev: "7.1.1"
     hooks:
       - id: flake8
         additional_dependencies: [
@@ -25,12 +25,12 @@ repos:
         ]
 
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: detect-secrets
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.1
+    rev: v0.8.1
     hooks:
       - id: ruff
       - id: ruff-format
