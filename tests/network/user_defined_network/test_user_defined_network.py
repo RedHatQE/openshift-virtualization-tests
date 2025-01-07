@@ -3,7 +3,7 @@ import ipaddress
 import pytest
 from ocp_resources.resource import Resource
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
-from ocp_resources.utils.constants import TIMEOUT_1MINUTE, TIMEOUT_30SEC
+from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.vm import affinity
@@ -112,11 +112,7 @@ def namespaced_layer2_user_defined_network(namespace):
         subnets=["10.10.0.0/24"],
         ipam_lifecycle="Persistent",
     ) as udn:
-        udn.wait_for_condition(
-            condition="NetworkReady",
-            status=Resource.Condition.Status.TRUE,
-            timeout=TIMEOUT_30SEC,
-        )
+        udn.wait_for_network_ready()
         yield udn
 
 
