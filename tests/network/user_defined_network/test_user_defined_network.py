@@ -5,11 +5,11 @@ from ocp_resources.resource import Resource
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
+from libs.net.udn import udn_primary_network
 from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status
 from libs.vm import affinity
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import Interface, NetBinding, Network
 from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify
 
@@ -33,10 +33,6 @@ def udn_vm(namespace_name, name, template_labels=None):
         spec.template.spec.affinity = new_pod_anti_affinity(label=label)
 
     return fedora_vm(namespace=namespace_name, name=name, spec=spec)
-
-
-def udn_primary_network(name):
-    return Interface(name=name, binding=NetBinding(name="l2bridge")), Network(name=name, pod={})
 
 
 def vm_primary_network_name(vm):
