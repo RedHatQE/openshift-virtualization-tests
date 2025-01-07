@@ -6,7 +6,7 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.udn import udn_primary_network
-from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status
+from libs.net.vmspec import VMInterfaceSpecNotFoundError, lookup_iface_status
 from libs.vm import affinity
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
@@ -40,7 +40,7 @@ def vm_primary_network_name(vm):
     for network in vm.instance.spec.template.spec.networks:
         if vm_primary_network_type in network.keys():
             return network.name
-    raise VMInterfaceStatusNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
+    raise VMInterfaceSpecNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
 
 
 @pytest.fixture(scope="module")

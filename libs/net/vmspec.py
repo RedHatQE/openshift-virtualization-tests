@@ -10,6 +10,10 @@ LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 RETRY_INTERVAL_SEC: Final[int] = 5
 
 
+class VMInterfaceSpecNotFoundError(Exception):
+    pass
+
+
 class VMInterfaceStatusNotFoundError(Exception):
     pass
 
