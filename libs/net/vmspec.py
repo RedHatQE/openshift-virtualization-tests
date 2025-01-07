@@ -4,6 +4,7 @@ from typing import Any, Final
 from kubernetes.dynamic.client import ResourceField
 from timeout_sampler import TimeoutExpiredError, retry
 
+from libs.vm.spec import Network
 from libs.vm.vm import BaseVirtualMachine
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
@@ -70,3 +71,10 @@ def _lookup_iface_status(vm: BaseVirtualMachine, iface_name: str, predicate: Cal
         if iface.name == iface_name and predicate(iface):
             return iface
     raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
+
+
+def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
+    for network in vm.instance.spec.template.spec.networks:
+        if network.pod is not None:
+            return Network(**network)
+    raise VMInterfaceSpecNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
