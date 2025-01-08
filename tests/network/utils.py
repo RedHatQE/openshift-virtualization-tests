@@ -350,11 +350,11 @@ def verify_console_command_output(
     with console.Console(vm=vm) as vmc:
         LOGGER.info(f"Execute {command} on {vm.name}")
         try:
-            vmc.sendline(command)
-            vmc.expect(expected_output, timeout=timeout)
+            vmc.expecter.sendline(command)
+            vmc.expecter.expect(expected_output, timeout=timeout)
             return expected_output
         except pexpect.exceptions.TIMEOUT:
-            return vmc.before
+            return vmc.expecter.before
 
 
 def vm_for_brcnv_tests(

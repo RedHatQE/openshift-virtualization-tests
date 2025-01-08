@@ -35,7 +35,7 @@ from tests.network.utils import (
     ServiceMeshMemberRollForTests,
     authentication_request,
 )
-from utilities.console import vm_console_run_commands
+from utilities.console import Console
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, unique_name
 from utilities.virt import running_vm, wait_for_console
@@ -438,7 +438,9 @@ def peer_authentication_service_mesh_deployment(
 
 @pytest.fixture()
 def vmi_http_server(vm_fedora_with_service_mesh_annotation):
-    vm_console_run_commands(
-        vm=vm_fedora_with_service_mesh_annotation,
-        commands=[f'while true ; do  echo -e "HTTP/1.1 200 OK\n\n $(date)" | nc -l -p {SERVICE_MESH_PORT}  ; done &'],
-    )
+    with Console(vm=vm_fedora_with_service_mesh_annotation) as vmc:
+        vmc.run_commands(
+            commands=[
+                f'while true ; do  echo -e "HTTP/1.1 200 OK\n\n $(date)" | nc -l -p {SERVICE_MESH_PORT}  ; done &'
+            ],
+        )

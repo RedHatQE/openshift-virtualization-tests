@@ -9,7 +9,7 @@ from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
-from utilities.console import vm_console_run_commands
+from utilities.console import Console
 from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.exceptions import ResourceValueError
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
@@ -102,14 +102,14 @@ def get_vm_connection_reply(
 
 
 def start_nc_response_on_vm(flat_l2_port, vm, num_connections):
-    vm_console_run_commands(
-        vm=vm,
-        commands=[
-            f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
-            f"-lp {flat_l2_port}; done &"
-        ],
-        verify_commands_output=False,
-    )
+    with Console(vm=vm) as vmc:
+        vmc.run_commands(
+            commands=[
+                f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
+                f"-lp {flat_l2_port}; done &"
+            ],
+            verify_commands_output=False,
+        )
     fetch_pid_from_linux_vm(vm=vm, process_name="nc")
 
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 from dataclasses import asdict
 from typing import Any
@@ -17,7 +15,7 @@ from libs.vm.spec import (
     Volume,
 )
 from utilities import infra
-from utilities.console import vm_console_run_commands
+from utilities.console import Console
 from utilities.virt import get_oc_image_info
 
 
@@ -66,13 +64,13 @@ class BaseVirtualMachine(VirtualMachine):
         commands: list[str],
         timeout: int,
     ) -> dict[str, list[str]] | None:
-        return vm_console_run_commands(
-            vm=self,
-            commands=commands,
-            timeout=timeout,
-            verify_commands_output=True,
-            command_output=True,
-        )
+        with Console(vm=self) as vmc:  # type: ignore[no-untyped-call]
+            return vmc.run_commands(
+                commands=commands,
+                timeout=timeout,
+                verify_commands_output=True,
+                command_output=True,
+            )
 
 
 def container_image(base_image: str) -> str:

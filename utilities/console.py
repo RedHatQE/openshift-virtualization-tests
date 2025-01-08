@@ -5,7 +5,6 @@ import os
 import re
 
 import pexpect
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import TimeoutSampler
 
@@ -32,14 +31,16 @@ class Console(object):
         Examples:
             from utilities import console
             with console.Console(vm=vm) as vmc:
-                vmc.sendline('some command)
-                vmc.expect('some output')
+                vmc.expecter.sendline('some command)
+                vmc.expecter.expect('some output')
+
+                vmc.run_commands("ls -la")
         """
         self.vm = vm
         self.username = username or self.vm.login_params["username"]
         self.password = password or self.vm.login_params["password"]
         self.timeout = timeout
-        self.child = None
+        self.expecter = None
         self.login_prompt = "login:"
         self.prompt = prompt if prompt else [r"\$"]
         self.cmd = self._generate_cmd()
@@ -51,33 +52,33 @@ class Console(object):
 
         self._connect()
 
-        return self.child
+        return self.expecter
 
     def _connect(self):
-        self.child.send("\n\n")
+        self.expecter.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt, timeout=TIMEOUT_5MIN)
+            self.expecter.expect(self.login_prompt, timeout=TIMEOUT_5MIN)
             LOGGER.info(f"{self.vm.name}: Using username {self.username}")
-            self.child.sendline(self.username)
+            self.expecter.sendline(self.username)
             if self.password:
-                self.child.expect("Password:")
+                self.expecter.expect("Password:")
                 LOGGER.info(f"{self.vm.name}: Using password {self.password}")
-                self.child.sendline(self.password)
+                self.expecter.sendline(self.password)
 
-        self.child.expect(self.prompt, timeout=150)
+        self.expecter.expect(self.prompt, timeout=150)
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
-        if self.child.terminated:
+        if self.expecter.terminated:
             self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
-        self.child.send("\n\n")
-        self.child.expect(self.prompt)
+        self.expecter.send("\n\n")
+        self.expecter.expect(self.prompt)
         if self.username:
-            self.child.send("exit")
-            self.child.send("\n\n")
-            self.child.expect("login:")
-        self.child.close()
+            self.expecter.send("exit")
+            self.expecter.send("\n\n")
+            self.expecter.expect("login:")
+        self.expecter.close()
 
     def force_disconnect(self):
         """
@@ -99,8 +100,8 @@ class Console(object):
         )
         for sample in sampler:
             if sample:
-                self.child = sample
-                self.child.logfile = open(f"{self.base_dir}/{self.vm.name}.pexpect.log", "a")
+                self.expecter = sample
+                self.expecter.logfile = open(f"{self.base_dir}/{self.vm.name}.pexpect.log", "a")
                 break
 
     def _generate_cmd(self):
@@ -114,7 +115,8 @@ class Console(object):
         """
         Connect to console
         """
-        return self.connect()
+        self.connect()
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -122,38 +124,35 @@ class Console(object):
         """
         self.disconnect()
 
+    def run_commands(
+        self,
+        commands: list[str],
+        timeout: int = TIMEOUT_1MIN,
+        verify_commands_output: bool = True,
+        command_output: bool = False,
+    ) -> dict[str, list[str]] | None:
+        """
+        Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
+        If return code other than 0 then it will break execution and raise exception.
 
-def vm_console_run_commands(
-    vm: VirtualMachine,
-    commands: list[str],
-    timeout: int = TIMEOUT_1MIN,
-    verify_commands_output: bool = True,
-    command_output: bool = False,
-) -> dict[str, list[str]] | None:
-    """
-    Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
-    If return code other than 0 then it will break execution and raise exception.
-
-    Args:
-        vm (obj): VirtualMachine
-        commands (list): List of commands
-        timeout (int): Time to wait for the command output
-        verify_commands_output (bool): Check commands return 0
-        command_output (bool): If selected, returns a dict of command and associated output
-    """
-    output = {}
-    # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
-    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-    with Console(vm=vm) as vmc:
+        Args:
+            commands (list): List of commands
+            timeout (int): Time to wait for the command output
+            verify_commands_output (bool): Check commands return 0
+            command_output (bool): If selected, returns a dict of command and associated output
+        """
+        output = {}
+        # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
+        ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
         for command in commands:
-            LOGGER.info(f"Execute {command} on {vm.name}")
-            vmc.sendline(command)
-            vmc.expect(r".*\$")
-            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
+            LOGGER.info(f"Execute {command} on {self.vm.name}")
+            self.expecter.sendline(command)
+            self.expecter.expect(r".*\$")
+            output[command] = ansi_escape.sub("", self.expecter.after).replace("\r", "").split("\n")
             if verify_commands_output:
-                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
+                self.expecter.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                 try:
-                    vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
+                    self.expecter.expect("rc==0==", timeout=timeout)  # Expected return code is 0
                 except pexpect.exceptions.TIMEOUT:
                     raise CommandExecFailed(output[command])
-    return output if command_output else None
+        return output if command_output else None

@@ -661,15 +661,15 @@ def write_file(vm, filename, content, stop_vm=True):
     if not vm.ready:
         vm.start(wait=True)
     with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(f"echo '{content}' >> {filename}")
+        vm_console.expecter.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
     with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
+        vm_console.expecter.sendline(command)
+        vm_console.expecter.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):

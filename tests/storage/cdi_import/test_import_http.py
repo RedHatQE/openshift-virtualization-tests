@@ -620,8 +620,8 @@ def test_disk_falloc(internal_http_configmap, dv_from_http_import):
     with create_vm_from_dv(dv=dv_from_http_import) as vm_dv:
         with console.Console(vm=vm_dv) as vm_console:
             LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/zero of=file bs=1M")
-            vm_console.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
+            vm_console.expecter.sendline("dd if=/dev/zero of=file bs=1M")
+            vm_console.expecter.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.destructive

@@ -20,7 +20,7 @@ from tests.virt.upgrade.utils import (
     verify_vms_ssh_connectivity,
     vm_is_not_migrateable,
 )
-from utilities.console import vm_console_run_commands
+from utilities.console import Console
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
 from utilities.virt import migrate_vm_and_verify
@@ -67,7 +67,8 @@ class TestUpgradeVirt:
     )
     def test_vm_console_before_upgrade(self, vms_for_upgrade):
         for vm in vms_for_upgrade:
-            vm_console_run_commands(vm=vm, commands=["ls"])
+            with Console(vm=vm) as vmc:
+                vmc.run_commands(commands=["ls"])
 
     @pytest.mark.polarion("CNV-4208")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
@@ -162,7 +163,8 @@ class TestUpgradeVirt:
     )
     def test_vm_console_after_upgrade(self, vms_for_upgrade):
         for vm in vms_for_upgrade:
-            vm_console_run_commands(vm=vm, commands=["ls"])
+            with Console(vm=vm) as vmc:
+                vmc.run_commands(commands=["ls"])
 
     @pytest.mark.polarion("CNV-4209")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
@@ -237,7 +239,8 @@ class TestUpgradeVirt:
             if vm_is_not_migrateable(vm=vm):
                 continue
             migrate_vm_and_verify(vm=vm)
-            vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
+            with Console(vm=vm) as vmc:
+                vmc.run_commands(commands=["ls"], timeout=1100)
 
     @pytest.mark.polarion("CNV-3682")
     @pytest.mark.order(

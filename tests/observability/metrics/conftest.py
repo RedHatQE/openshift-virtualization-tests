@@ -605,7 +605,7 @@ def validated_preference_instance_type_of_target_vm(
 @pytest.fixture()
 def connected_vm_console_successfully(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
-        vmc.sendline("ls")
+        vmc.expecter.sendline("ls")
         yield
     validate_metrics_value(
         prometheus=prometheus,
