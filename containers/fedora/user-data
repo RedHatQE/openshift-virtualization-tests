@@ -1,0 +1,34 @@
+#cloud-config
+password: CHANGE_ME
+chpasswd: { expire: False }
+ssh_pwauth: true
+write_files:
+  - path: /etc/systemd/system/wait-for-cloud-init.service
+    owner: root:root
+    permissions: '0755'
+    content: |
+        [Unit]
+        Description=Wait for cloud-init to complete
+        Before=qemu-guest-agent.service
+        After=cloud-final.service
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=cloud-init status --wait
+        ExecStart=/usr/bin/true
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=cloud-init.service
+runcmd:
+  - sudo systemctl daemon-reload
+  - dnf install -y tcpdump qemu-guest-agent iperf3 dmidecode nginx lldpad kernel-modules nmap dhcp-server dhcp-relay sshpass podman ethtool libibverbs dpdk stress-ng iotop fio
+  - sudo dnf autoremove
+  - sudo dnf clean all
+  - rpm -q kernel-core | sort | head -1 | xargs sudo rpm -e
+  - sudo systemctl enable wait-for-cloud-init
+  - sudo systemctl enable qemu-guest-agent
+  - sudo sed -i 's/listen       80;/listen       80;\n\tlisten       81;/g' /etc/nginx/nginx.conf
+  - sudo systemctl enable nginx
+  - sudo systemctl enable sshd
+  - sudo shutdown
