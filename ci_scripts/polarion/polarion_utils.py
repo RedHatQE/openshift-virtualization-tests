@@ -3,7 +3,6 @@ import re
 import shlex
 import subprocess
 
-
 logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger(__name__)

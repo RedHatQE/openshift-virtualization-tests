@@ -8,7 +8,6 @@ from ci_scripts.polarion.polarion_utils import (
     git_diff_added_removed_lines,
 )
 
-
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
 AUTOMATED = "automated"
