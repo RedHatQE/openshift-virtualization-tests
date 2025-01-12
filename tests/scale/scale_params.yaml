@@ -1,0 +1,41 @@
+# This structure must be preserved in order to run scale tests.
+keep_resources: False
+run_live_migration: False
+test_namespace: "scale-test"
+default_vms_cores: &default_num_cores 1
+default_vms_memory: &default_vm_memory 2Gi
+default_run_strategy: &default_run_strategy null
+test_duration: 720
+vms_verification_interval: 10
+seconds_between_batches: 5
+vms:
+  rhel:
+    ocs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    nfs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    cores: *default_num_cores
+    memory: *default_vm_memory
+    run_strategy: *default_run_strategy
+  win:
+    ocs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    nfs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    cores: *default_num_cores
+    memory: 4Gi
+    run_strategy: *default_run_strategy
+  fedora:
+    ocs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    nfs:
+      vms_per_batch: 1
+      number_of_batches: 1
+    cores: *default_num_cores
+    memory: *default_vm_memory
+    run_strategy: *default_run_strategy
