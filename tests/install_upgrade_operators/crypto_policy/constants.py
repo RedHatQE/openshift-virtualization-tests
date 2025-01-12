@@ -1,0 +1,110 @@
+from copy import deepcopy
+from typing import Any
+
+from ocp_resources.cdi import CDI
+from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.network_addons_config import NetworkAddonsConfig
+from ocp_resources.ssp import SSP
+
+from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from utilities.constants import TLS_CUSTOM_POLICY, TLS_OLD_POLICY
+
+MANAGED_CRS_LIST = [KubeVirt, CDI, NetworkAddonsConfig, SSP]
+
+TLS_MODERN_POLICY = "modern"
+TLS_INTERMEDIATE_POLICY = "intermediate"
+TLS_INTERMEDIATE_PROFILE = {TLS_INTERMEDIATE_POLICY: {}, "type": "Intermediate"}
+
+EXPECTED_VALUE_STR = "expected_value"
+
+TLS_CUSTOM_CIPHERS = ["ECDHE-RSA-AES128-GCM-SHA256", "ECDHE-ECDSA-AES128-GCM-SHA256"]
+TLS_CUSTOM_VERSION = "VersionTLS12"
+
+TLS_CUSTOM_PROFILE = {
+    TLS_CUSTOM_POLICY: {
+        "minTLSVersion": TLS_CUSTOM_VERSION,
+        "ciphers": TLS_CUSTOM_CIPHERS,
+    },
+    "type": "Custom",
+}
+TLS_OLD_PROFILE = {TLS_OLD_POLICY: {}, "type": "Old"}
+CRYPTO_POLICY_SPEC_DICT = {
+    TLS_OLD_POLICY: TLS_OLD_PROFILE,
+    TLS_CUSTOM_POLICY: TLS_CUSTOM_PROFILE,
+}
+
+KUBEVIRT_OLD_PROFILE = {
+    "ciphers": [
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+        "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_RSA_WITH_AES_128_CBC_SHA256",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+    ],
+    "minTLSVersion": "VersionTLS10",
+}
+KUBEVIRT_TLS_CONFIG_KEY = "tlsConfiguration"
+KUBEVIRT_TLS_CONFIG_STR = f"configuration{KEY_PATH_SEPARATOR}{KUBEVIRT_TLS_CONFIG_KEY}"
+
+TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX = {
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": "ECDHE-ECDSA-AES128-GCM-SHA256",
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": "ECDHE-RSA-AES128-GCM-SHA256",
+    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": "ECDHE-ECDSA-AES256-GCM-SHA384",
+    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": "ECDHE-RSA-AES256-GCM-SHA384",
+    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": "ECDHE-ECDSA-CHACHA20-POLY1305",
+    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256": "ECDHE-RSA-CHACHA20-POLY1305",
+}
+
+# For Kubevirt need to convert from OPENSSL to IANA syntax and keep ciphers order same as in TLS_CUSTOM_PROFILE
+TLS_CUSTOM_PROFILE_KUBEVIRT: dict[str, Any] = deepcopy(TLS_CUSTOM_PROFILE)
+TLS_CUSTOM_PROFILE_KUBEVIRT[TLS_CUSTOM_POLICY]["ciphers"] = [
+    key
+    for cipher in TLS_CUSTOM_CIPHERS
+    for key, value in TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX.items()
+    if value == cipher
+]
+
+CRYPTO_POLICY_EXPECTED_DICT = {
+    TLS_INTERMEDIATE_POLICY: {
+        KubeVirt: {
+            "ciphers": list(TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX.keys()),
+            "minTLSVersion": "VersionTLS12",
+        },
+        SSP: TLS_INTERMEDIATE_PROFILE,
+        CDI: TLS_INTERMEDIATE_PROFILE,
+        NetworkAddonsConfig: TLS_INTERMEDIATE_PROFILE,
+    },
+    TLS_CUSTOM_POLICY: {
+        KubeVirt: TLS_CUSTOM_PROFILE_KUBEVIRT[TLS_CUSTOM_POLICY],
+        SSP: TLS_CUSTOM_PROFILE,
+        CDI: TLS_CUSTOM_PROFILE,
+        NetworkAddonsConfig: TLS_CUSTOM_PROFILE,
+    },
+    TLS_OLD_POLICY: {
+        KubeVirt: KUBEVIRT_OLD_PROFILE,
+        SSP: TLS_OLD_PROFILE,
+        CDI: TLS_OLD_PROFILE,
+        NetworkAddonsConfig: TLS_OLD_PROFILE,
+    },
+}
+
+MIN_TLS_VERSIONS = {
+    # services can't connect with 1.0/1.1, so TLS_OLD_POLICY is set with "1.2"
+    TLS_OLD_POLICY: "1.2",
+    TLS_INTERMEDIATE_POLICY: "1.2",
+    TLS_MODERN_POLICY: "1.3",
+    TLS_CUSTOM_POLICY: str(float(TLS_CUSTOM_VERSION[-2:]) / 10),
+}
