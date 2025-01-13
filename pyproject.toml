@@ -9,13 +9,13 @@ packages = [{ include = "*" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-openshift-python-wrapper = "^10.0.12"
+openshift-python-wrapper = "^11.0.0"
 openshift-operator-utilities = "^1.0.0"
 jira = "^3.6.0"
 pylero = "^0.0.9"
 pytest = "^8.0.0"
 pytest-testconfig = "^0.2.0"
-python-simple-logger = "^1.0.9"
+python-simple-logger = "^2.0.0"
 pyhelper-utils = "^0.0.12"
 netaddr = "^1.2.1"
 
