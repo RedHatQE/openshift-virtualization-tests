@@ -1,7 +1,8 @@
 approvers:
-  - myakove
-  - jpeimer
   - dbasunag
+  - myakove
 reviewers:
   - dbasunag
-  - jpeimer
+  - RoniKishner
+  - vsibirsk
+  - dshchedr

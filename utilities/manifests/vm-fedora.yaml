@@ -1,0 +1,36 @@
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  creationTimestamp: null
+  labels:
+    kubevirt.io/vm: {{ name }}
+  name: {{ name }}
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      domain:
+        cpu:
+          cores: 1
+        memory:
+          guest: 1Gi
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: containerdisk
+          interfaces:
+          - masquerade: {}
+            name: default
+        machine:
+          type: ""
+      networks:
+      - name: default
+        pod: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - containerDisk:
+          image: {{ image }}
+        name: containerdisk
+status: {}

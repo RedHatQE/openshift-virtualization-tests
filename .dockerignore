@@ -1,0 +1,7 @@
+**/*.pyc
+**/__pycache__/
+.git/
+.idea
+.pytest_cache/
+.tox
+.venv/
