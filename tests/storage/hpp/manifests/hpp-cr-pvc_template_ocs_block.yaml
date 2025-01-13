@@ -1,0 +1,20 @@
+apiVersion: hostpathprovisioner.kubevirt.io/v1beta1
+kind: HostPathProvisioner
+metadata:
+  name: hostpath-provisioner
+spec:
+  imagePullPolicy: IfNotPresent
+  storagePools:
+    - name: hpp-csi-pvc-template-ocs-block
+      pvcTemplate:
+        volumeMode: Block
+        storageClassName: ocs-storagecluster-ceph-rbd
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+      path: "/var/hpp-csi-pvc-template-ocs-block"
+  workload:
+    nodeSelector:
+      kubernetes.io/os: linux

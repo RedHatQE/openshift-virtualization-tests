@@ -1,0 +1,9 @@
+DISCONNECTED_STR = "disconnected"
+CHECKUP_NODE_LABEL = {"checkup_framework": "allow"}
+NONEXISTING_CONFIGMAP = "nonexistent-configmap"
+CHECKUP_NAD = "checkup-nad"
+SRIOV_CHECKUP_NAD = f"sriov-{CHECKUP_NAD}"
+DPDK_15_TIMEOUT = "15"
+API_GROUPS_STR = "apiGroups"
+RESOURCES_STR = "resources"
+VERBS_STR = "verbs"

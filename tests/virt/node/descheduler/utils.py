@@ -1,0 +1,306 @@
+import logging
+from collections import Counter
+
+import bitmath
+from ocp_resources.pod import Pod
+from ocp_resources.virtual_machine import VirtualMachine
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+from tests.virt.node.descheduler.constants import (
+    DESCHEDULING_INTERVAL_120SEC,
+    RUNNING_PING_PROCESS_NAME_IN_VM,
+)
+from utilities.constants import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_15MIN,
+    TIMEOUT_20SEC,
+)
+from utilities.virt import (
+    VirtualMachineForTests,
+    fedora_vm_body,
+    fetch_pid_from_linux_vm,
+    running_vm,
+    start_and_fetch_processid_on_linux_vm,
+)
+
+LOGGER = logging.getLogger(__name__)
+
+STRATEGIES = "strategies"
+
+
+class UnexpectedBehaviorError(Exception):
+    def __init__(self, error_msg):
+        self.error_msg = error_msg
+
+    def __str__(self):
+        return f"Unexpected behavior: {self.error_msg}"
+
+
+class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
+    def __init__(
+        self,
+        name,
+        namespace,
+        memory_guest,
+        client,
+        cpu_model,
+        body,
+        cpu_requests=None,
+        descheduler_eviction=True,
+        node_selector_labels=None,
+        vm_affinity=None,
+    ):
+        super().__init__(
+            name=name,
+            namespace=namespace,
+            client=client,
+            memory_guest=memory_guest,
+            cpu_model=cpu_model,
+            body=body,
+            cpu_requests=cpu_requests,
+            node_selector_labels=node_selector_labels,
+            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+            vm_affinity=vm_affinity,
+        )
+        self.descheduler_eviction = descheduler_eviction
+
+    def to_dict(self):
+        super().to_dict()
+        metadata = self.res["spec"]["template"]["metadata"]
+        metadata.setdefault("annotations", {})
+        if self.descheduler_eviction:
+            metadata["annotations"]["descheduler.alpha.kubernetes.io/evict"] = "true"
+
+
+def get_allocatable_memory_per_node(schedulable_nodes):
+    """
+    Node capacity & allocatable statuses determine how much of a resource we can "request".
+    A node may or may not have any allocatable values set by the admin, in which case, we fall back to the capacity.
+    """
+    nodes_memory = {}
+    for node in schedulable_nodes:
+        # memory format does not include the Bytes suffix(e.g: 23514144Ki)
+        memory = getattr(
+            node.instance.status.allocatable,
+            "memory",
+            node.instance.status.capacity.memory,
+        )
+        nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
+        LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
+    return nodes_memory
+
+
+def calculate_vm_deployment(
+    available_memory_per_node,
+    deployment_size,
+    available_nodes,
+    percent_of_available_memory,
+):
+    vm_deployment = {}
+    for node in available_nodes:
+        vm_deployment[node] = int(
+            (available_memory_per_node[node].bytes * percent_of_available_memory) / deployment_size["memory"].bytes
+        )
+
+    LOGGER.info(f"calculated vm_deployment: {vm_deployment}")
+
+    return vm_deployment
+
+
+def wait_vmi_failover(vm, orig_node):
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_15MIN, sleep=TIMEOUT_5SEC, func=lambda: vm.vmi.node.name)
+    LOGGER.info(f"Waiting for {vm.name} to be moved from node {orig_node.name}")
+    try:
+        for sample in samples:
+            if sample and sample != orig_node.name:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} failed to deploy on new node")
+        raise
+
+
+def assert_running_process_after_failover(vms_list, process_dict):
+    LOGGER.info(f"Verify {RUNNING_PING_PROCESS_NAME_IN_VM} is running after migrations.")
+    failed_vms = []
+    for vm in vms_list:
+        vm_name = vm.name
+        new_pid = None
+        try:
+            new_pid = fetch_pid_from_linux_vm(vm=vm, process_name=RUNNING_PING_PROCESS_NAME_IN_VM)
+        except (ValueError, AssertionError):
+            failed_vms.append(vm_name)
+            continue
+        if new_pid != process_dict[vm_name]:
+            failed_vms.append(vm_name)
+
+    assert not failed_vms, f"The following VMs process ID has changed after migration: {failed_vms}"
+
+
+def assert_vms_distribution_after_failover(vms, nodes, all_nodes=True):
+    def _get_vms_per_nodes():
+        return vms_per_nodes(vms=vm_nodes(vms=vms))
+
+    # Allow the descheduler to cycle multiple times before returning.
+    # The value can be affected by high pod counts or load within
+    # the cluster which increases the descheduler runtime.
+    descheduling_failover_timeout = DESCHEDULING_INTERVAL_120SEC * 3
+
+    if all_nodes:
+        LOGGER.info("Verify all nodes have at least one VM running")
+    else:
+        LOGGER.info("Verify at least one node has a VM running")
+
+    samples = TimeoutSampler(
+        wait_timeout=descheduling_failover_timeout,
+        sleep=TIMEOUT_5SEC,
+        func=_get_vms_per_nodes,
+    )
+    vms_per_nodes_dict = None
+    try:
+        for vms_per_nodes_dict in samples:
+            vm_counts = [vm_count for vm_count in vms_per_nodes_dict.values() if vm_count]
+            if all_nodes and len(vm_counts) == len(nodes):
+                LOGGER.info(f"Every node has at least one VM running on it: {vms_per_nodes_dict}")
+                return
+            elif vm_counts and not all_nodes:
+                LOGGER.info(f"There is at least one node with a VM running on it: {vms_per_nodes_dict}")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Running VMs missing from nodes: {vms_per_nodes_dict}")
+        raise
+
+
+def vms_per_nodes(vms):
+    """
+    Args:
+        vms (dict): dict of VM objects
+
+    Returns:
+        dict: keys - node names, values - number of running VMs
+    """
+    return Counter([node.name for node in vms.values()])
+
+
+def vm_nodes(vms):
+    """
+    Args:
+        vms (list): list of VM objects
+
+    Returns:
+        dict: keys- VM names, keys - running VMs nodes objects
+    """
+    return {vm.name: vm.vmi.node for vm in vms}
+
+
+def assert_vms_consistent_virt_launcher_pods(running_vms):
+    """Verify VMs virt launcher pods are not replaced (sampled every one minute).
+    Using VMs virt launcher pods to verify that VMs are not migrated nor restarted.
+
+    Args:
+        running_vms (list): list of VMs
+    """
+
+    def _vms_launcher_pod_names():
+        return {
+            vm.name: vm.vmi.virt_launcher_pod.name
+            for vm in running_vms
+            if vm.vmi.virt_launcher_pod.status == vm.vmi.virt_launcher_pod.Status.RUNNING
+        }
+
+    orig_virt_launcher_pod_names = _vms_launcher_pod_names()
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_1MIN,
+        func=_vms_launcher_pod_names,
+    )
+    try:
+        for sample in samples:
+            if any([pod_name != orig_virt_launcher_pod_names[vm_name] for vm_name, pod_name in sample.items()]):
+                raise UnexpectedBehaviorError(
+                    error_msg=f"Some VMs were migrated: {sample} from {orig_virt_launcher_pod_names}"
+                )
+    except TimeoutExpiredError:
+        LOGGER.info("No VMs were migrated.")
+
+
+def start_vms_with_process(vms, process_name, args):
+    vms_process_id_dict = {}
+    for vm in vms:
+        vms_process_id_dict[vm.name] = start_and_fetch_processid_on_linux_vm(
+            vm=vm, process_name=process_name, args=args
+        )
+
+    return vms_process_id_dict
+
+
+def deploy_vms(
+    vm_prefix,
+    client,
+    namespace_name,
+    cpu_model,
+    vm_count,
+    deployment_size,
+    descheduler_eviction,
+    node_selector_labels=None,
+    vm_affinity=None,
+):
+    vms = []
+    for vm_index in range(vm_count):
+        vm_name = f"vm-{vm_prefix}-{vm_index}"
+        vm = VirtualMachineForDeschedulerTest(
+            name=vm_name,
+            namespace=namespace_name,
+            client=client,
+            cpu_requests=deployment_size["cpu"],
+            memory_guest=deployment_size["memory"].bytes,
+            cpu_model=cpu_model,
+            descheduler_eviction=descheduler_eviction,
+            body=fedora_vm_body(name=vm_name),
+            node_selector_labels=node_selector_labels,
+            vm_affinity=vm_affinity,
+        )
+        vm.deploy()
+        vms.append(vm)
+
+    for vm in vms:
+        running_vm(vm=vm)
+
+    yield vms
+
+    # delete all VMs simultaneously
+    for vm in vms:
+        vm.delete()
+
+    for vm in vms:
+        vm.wait_deleted()
+
+
+def get_pod_memory_requests(pod_instance):
+    """Sum all memory requests of the pod's containers"""
+    memory_requests = bitmath.Byte(value=0)
+    for container in pod_instance.spec.containers:
+        if hasattr(container.resources.requests, "memory"):
+            memory_requests += bitmath.parse_string_unsafe(s=container.resources.requests.memory).to_KiB()
+    return memory_requests
+
+
+def get_non_terminated_pods(client, node):
+    return list(
+        Pod.get(
+            dyn_client=client,
+            field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
+        )
+    )
+
+
+def verify_at_least_one_vm_migrated(vms, node_before):
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_20SEC,
+        func=lambda: [vm.vmi.node.name for vm in vms],
+    )
+    for sample in samples:
+        if not all(node_before.name == node for node in sample):
+            return sample

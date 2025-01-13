@@ -1,0 +1,7 @@
+ALERT_NAME = "UnsupportedHCOModification"
+QUERY_STRING = "kubevirt_hco_unsafe_modifications"
+PATH_KUBEVIRT = "migrations"
+DISABLE_TLS = "disableTLS"
+COMPONENT_KUBEVIRT = "kubevirt"
+PATH_CDI = "featureGates/0"
+COMPONENT_CDI = "cdi"
