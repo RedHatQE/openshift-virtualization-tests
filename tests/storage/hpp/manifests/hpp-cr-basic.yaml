@@ -1,0 +1,12 @@
+apiVersion: hostpathprovisioner.kubevirt.io/v1beta1
+kind: HostPathProvisioner
+metadata:
+  name: hostpath-provisioner
+spec:
+  imagePullPolicy: IfNotPresent
+  storagePools:
+    - name: hpp-csi-local-basic
+      path: "/var/hpp-csi-local-basic"
+  workload:
+    nodeSelector:
+      kubernetes.io/os: linux
