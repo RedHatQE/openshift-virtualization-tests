@@ -1,36 +1,74 @@
 default_language_version:
-    python: python3
+  python: python3
 
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v4.6.0"
+  - repo: https://github.com/myint/autoflake
+    rev: "v2.3.1"
     hooks:
-    - id: check-merge-conflict
-    - id: debug-statements
-    - id: trailing-whitespace
-      args: [--markdown-linebreak-ext=md] # Do not process Markdown files.
-    - id: end-of-file-fixer
-    - id: check-ast
-    - id: check-builtin-literals
-    - id: check-docstring-first
-    - id: check-toml
-
-  - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
-    hooks:
-      - id: flake8
-        additional_dependencies: [
-          "git+https://github.com/RedHatQE/flake8-plugins.git",
-          "flake8-mutable",
-        ]
-
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-      - id: detect-secrets
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-unused-variables
+          - --remove-all-unused-imports
+        stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.1
+    rev: v0.8.6
     hooks:
       - id: ruff
+        stages: [pre-commit]
+      - id: ruff
+        name: sort imports with ruff
+        args: [--select, I, --fix]
       - id: ruff-format
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v5.0.0"
+    hooks:
+      - id: check-merge-conflict
+        stages: [pre-commit]
+      - id: debug-statements
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-ast
+        stages: [pre-commit]
+      - id: check-builtin-literals
+        stages: [pre-commit]
+      - id: detect-private-key
+      - id: mixed-line-ending
+  - repo: https://github.com/PyCQA/flake8
+    rev: "7.1.1"
+    hooks:
+      - id: flake8
+        args: [--config=.flake8]
+        additional_dependencies:
+          [
+            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.5",
+            "flake8-mutable",
+            "pep8-naming",
+          ]
+        stages: [pre-commit]
+
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: "v0.19.1"
+    hooks:
+      - id: gitlint
+        stages: [commit-msg]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: "v8.22.1"
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        exclude: 'test_(.*).py$'
+        additional_dependencies:
+          ["types-PyYAML", "types-requests", "types-paramiko", "types-beautifulsoup4", "pytest", "types-xmltodict",
+          "types-setuptools", "types-pexpect", "types-netaddr"]

@@ -15,7 +15,7 @@ jobs:
         run: |
           echo "$CONFIG_CONTENT" > jira.cfg
         env:
-          CONFIG_CONTENT: ${{ secrets.JIRA_CFG }}
+          CONFIG_CONTENT: ${{ secrets.JIRA_CONFIG }}
 
       - name: Install Python
         uses: actions/setup-python@v5

@@ -1,1 +1,70 @@
-{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "packageRules": [{"matchPackagePatterns": ["openshift-python-wrapper", "openshift-operator-utilities", "jira", "pylero", "pytest", "pytest-testconfig", "python-simple-logger", "ipdb", "ipython"], "groupName": "poetry-deps"}]}
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "baseBranches": [
+    "main"
+  ],
+  "recreateWhen": "never",
+  "packageRules": [
+    {
+      "matchDepPatterns": [
+        "pexpect",
+        "PyYAML",
+        "pytest",
+        "bitmath",
+        "urllib3",
+        "netaddr",
+        "bcrypt",
+        "pytest-testconfig",
+        "pytest-benchmark",
+        "sh",
+        "pytest-order",
+        "jinja2",
+        "requests",
+        "xmltodict",
+        "pytest-jira",
+        "jira",
+        "python-rrmngmnt",
+        "importlib-metadata",
+        "importlib-resources",
+        "click",
+        "docker",
+        "pyvmomi",
+        "pytest-dependency",
+        "pytest-progress",
+        "pytest-lazy-fixture",
+        "colorlog",
+        "dictdiffer",
+        "python-benedict",
+        "bs4",
+        "shortuuid",
+        "podman",
+        "jsons",
+        "deepdiff",
+        "python-utility-scripts",
+        "pyhelper-utils",
+        "openshift-python-utilities"
+      ],
+      "minimumReleaseAge": "5 days",
+      "groupName": "python dependencies"
+    },
+    {
+      "matchDepPatterns": ["timeout-sampler"],
+      "matchBaseBranches": ["main"],
+      "groupName": "secondary dependencies"
+    },
+    {
+      "matchDepPatterns": ["openshift-python-wrapper", "kubernetes"],
+      "matchUpdateTypes": ["major"],
+      "matchBaseBranches": [
+        "main"
+      ],
+      "enabled": false,
+      "groupName": "Upstream dependencies"
+    }
+  ],
+  "schedule": ["after 7pm on wednesday"],
+  "timezone": "America/New_York"
+}
