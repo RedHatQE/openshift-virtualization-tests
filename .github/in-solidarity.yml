@@ -1,0 +1,11 @@
+rules:
+  master:
+    level: off  # default rules are set to warning
+  slave:
+    level: failure
+  blacklist:
+    level: failure
+  whitelist:
+    level: failure
+ignore:
+ - ".github/in-solidarity.yml"  # default
