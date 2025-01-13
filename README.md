@@ -39,11 +39,7 @@ Upgrade tests must be run against a large deployment(24GiB RAM, 250GB volume siz
 
 ## Prerequirements
 
-<<<<<<< HEAD
 python >=3.12
-=======
-python >=3.8
->>>>>>> f42a772 (move rest root dir files)
 
 Following binaries are needed:
 
@@ -57,26 +53,9 @@ sudo dnf install python3-devel  \
                  libxml2-devel
 ```
 
-<<<<<<< HEAD
 ## virtctl
 
 virtctl binary needs to be downloaded from consoleCliDownloads resource of the cluster under test.
-=======
-## jq
-
-Install using sudo yum install
-
-## virtctl
-
-Install using the following cli commands:
-
-```bash
-export KUBEVIRT_VERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases | grep tag_name | sort -V | tail -1 | awk -F '"' '{print $4}')
-curl -L -o virtctl https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/virtctl-${KUBEVIRT_VERSION}-linux-amd64
-chmod +x virtctl
-sudo mv virtctl /usr/bin
-```
->>>>>>> f42a772 (move rest root dir files)
 
 ## oc
 
@@ -91,13 +70,10 @@ To update one package:
 ```bash
 uv lock --upgrade-package openshift-python-wrapper
 ```
-<<<<<<< HEAD
 To update all the packages
 ```bash
 uv lock --upgrade
 ```
-=======
->>>>>>> f42a772 (move rest root dir files)
 
 # Getting started
 
