@@ -218,7 +218,7 @@ def wait_for_mcp_updated_condition_true(machine_config_pools_list, timeout=TIMEO
 def wait_for_mcp_ready_machine_count(machine_config_pools_list):
     LOGGER.info("Waiting for MCPs to have all machines ready.")
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
+        wait_timeout=TIMEOUT_20MIN,
         sleep=TIMEOUT_5SEC,
         func=get_mcps_with_all_machines_ready,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -251,9 +251,9 @@ def consecutive_checks_for_mcp_condition(mcp_sampler, machine_config_pools_list)
         raise
 
 
-def wait_for_mcp_update_end(machine_config_pools_list):
-    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list)
-    wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list)
+def wait_for_mcp_update_end(machine_config_pools_list, timeout=TIMEOUT_75MIN):
+    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list, timeout=timeout)
+    wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list, timeout=timeout)
 
 
 def wait_for_mcp_update_start(machine_config_pools_list, initial_transition_times):
@@ -514,7 +514,7 @@ def wait_for_csv_successful_state(admin_client, namespace_name, subscription_nam
     raise ResourceNotFoundError(f"Subscription {subscription_name} not found in namespace: {namespace_name}")
 
 
-def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes):
+def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes, timeout=TIMEOUT_75MIN):
     initial_updating_transition_times = get_mcp_updating_transition_times(mcp_conditions=initial_mcp_conditions)
 
     wait_for_mcp_update_start(
@@ -523,6 +523,7 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
     )
     wait_for_mcp_update_end(
         machine_config_pools_list=machine_config_pools_list,
+        timeout=timeout,
     )
     wait_for_nodes_to_have_same_kubelet_version(nodes=nodes)
     wait_for_all_nodes_ready(nodes=nodes)
@@ -531,7 +532,7 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
 def wait_for_all_nodes_ready(nodes):
     nodes_not_ready = None
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
+        wait_timeout=TIMEOUT_15MIN,
         sleep=TIMEOUT_10SEC,
         func=get_nodes_not_ready,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -559,7 +560,7 @@ def get_nodes_not_ready(nodes):
 def wait_for_nodes_to_have_same_kubelet_version(nodes):
     node_versions = None
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
+        wait_timeout=TIMEOUT_15MIN,
         sleep=TIMEOUT_10SEC,
         func=lambda: {node.name: node.instance.status.nodeInfo.kubeletVersion for node in nodes},
         exceptions_dict=BASE_EXCEPTIONS_DICT,

@@ -17,6 +17,8 @@ from utilities.data_collector import collect_alerts_data
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.usefixtures("skip_on_eus_upgrade")
+
 
 @pytest.mark.upgrade_custom
 @pytest.mark.sno

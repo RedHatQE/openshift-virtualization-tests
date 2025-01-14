@@ -71,7 +71,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from tests.utils import download_and_extract_tar, get_hco_version_name, update_cluster_cpu_model
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
     AMD,
@@ -1903,7 +1903,7 @@ def upgrade_br1test_nad(upgrade_namespace_scope_session, upgrade_bridge_on_all_n
 
 
 @pytest.fixture(scope="session")
-def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version):
+def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_target_version):
     """
     Verify if the upgrade can be performed by comparing the current and target versions.
 
@@ -1911,9 +1911,8 @@ def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version):
         admin_client: The admin client instance.
         pytestconfig: The pytest configuration object.
         cnv_current_version: The current CNV version.
+        cnv_target_version: The target CNV version.
     """
-    cnv_target_version = pytestconfig.option.cnv_version
-
     upgrade_stream = determine_upgrade_stream(
         current_version=cnv_current_version,
         target_version=cnv_target_version,
@@ -1990,7 +1989,12 @@ def rhel_latest_os_params():
 
 @pytest.fixture(scope="session")
 def hco_target_version(cnv_target_version):
-    return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
+    return get_hco_version_name(cnv_target_version=cnv_target_version) if cnv_target_version else None
+
+
+@pytest.fixture(scope="session")
+def eus_hco_target_version(is_eus_upgrade, eus_target_cnv_version):
+    return get_hco_version_name(cnv_target_version=eus_target_cnv_version) if is_eus_upgrade else None
 
 
 @pytest.fixture(scope="session")

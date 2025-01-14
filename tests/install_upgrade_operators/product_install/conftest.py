@@ -17,6 +17,7 @@ from tests.install_upgrade_operators.product_install.constants import (
     OPENSHIFT_VIRTUALIZATION,
 )
 from tests.install_upgrade_operators.product_install.utils import get_all_resources
+from tests.utils import get_hco_version_name
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     CRITICAL_STR,
@@ -206,7 +207,7 @@ def cnv_install_plan_installed(
     )
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_5MIN)
     csv = get_csv_by_name(
-        csv_name=f"kubevirt-hyperconverged-operator.v{cnv_version_to_install}",
+        csv_name=get_hco_version_name(cnv_target_version=cnv_version_to_install),
         admin_client=admin_client,
         namespace=created_cnv_namespace.name,
     )

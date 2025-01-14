@@ -17,6 +17,7 @@ from utilities.constants import (
     PRODUCTION_CATALOG_SOURCE,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_10SEC,
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
 )
@@ -29,7 +30,7 @@ def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
     LOGGER.info(f"Wait for the operator condition. Name:{name} Upgradable:{upgradable}")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30MIN,
-        sleep=1,
+        sleep=TIMEOUT_10SEC,
         func=OperatorCondition.get,
         dyn_client=dyn_client,
         namespace=hco_namespace,
@@ -56,9 +57,12 @@ def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
 def wait_for_install_plan(dyn_client, hco_namespace, hco_target_version, is_production_source):
     install_plan_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_40MIN,
-        sleep=1,
+        sleep=TIMEOUT_10SEC,
         func=InstallPlan.get,
-        exceptions_dict={ConflictError: []},  # Ignore ConflictError during install plan reconciliation
+        exceptions_dict={
+            ConflictError: [],
+            ResourceNotFoundError: [],
+        },  # Ignore ConflictError during install plan reconciliation
         dyn_client=dyn_client,
         hco_namespace=hco_namespace,
         hco_target_version=hco_target_version,
@@ -80,25 +84,27 @@ def wait_for_install_plan(dyn_client, hco_namespace, hco_target_version, is_prod
                 # upgrade cnv using custom catalogsource, to a specified version. Approving install plan associated
                 # with the production catalogsource would also lead to failure as production catalogsource has been
                 # disabled at this point.
-                ip_instance = ip.instance
-                if not is_production_source:
+                if ip.exists:
+                    ip_instance = ip.instance
+                    if not is_production_source:
+                        if (
+                            not ip_instance.spec.approved
+                            and ip_instance.status
+                            and ip_instance.status.bundleLookups[0].get("catalogSourceRef").get("name")
+                            == PRODUCTION_CATALOG_SOURCE
+                        ):
+                            ip.clean_up()
+                            continue
                     if (
-                        not ip_instance.spec.approved
-                        and ip_instance.status
-                        and ip_instance.status.bundleLookups[0].get("catalogSourceRef").get("name")
-                        == PRODUCTION_CATALOG_SOURCE
+                        hco_target_version == ip_instance.spec.clusterServiceVersionNames[0]
+                        and ip.name == install_plan_name_in_subscription
                     ):
-                        ip.delete(wait=True)
-                        continue
-                if (
-                    hco_target_version == ip_instance.spec.clusterServiceVersionNames[0]
-                    and ip.name == install_plan_name_in_subscription
-                ):
-                    return ip
-                LOGGER.info(
-                    f"Subscription: {subscription.name}, is associated with install plan:"
-                    f" {install_plan_name_in_subscription}"
-                )
+                        return ip
+                    LOGGER.info(
+                        f"Subscription: {subscription.name}, is associated with install plan:"
+                        f" {install_plan_name_in_subscription}"
+                    )
+
     except TimeoutExpiredError:
         LOGGER.error(
             f"timeout waiting for target install plan: version={hco_target_version}, "
