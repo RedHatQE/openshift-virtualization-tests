@@ -559,13 +559,13 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
         LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
 
 
-def get_upgrade_path(target_version: Version) -> dict:
+def get_upgrade_path(target_version: str) -> dict:
     return wait_for_version_explorer_response(
         api_end_point="GetUpgradePath", query_string=f"targetVersion={target_version}"
     )
 
 
-def get_shortest_upgrade_path(target_version: Version) -> dict:
+def get_shortest_upgrade_path(target_version: str) -> dict:
     """
     Get the shortest upgrade path to a given CNV target version(latest z stream)
     Args:

@@ -332,7 +332,7 @@ def skip_on_eus_upgrade(is_eus_upgrade):
 
 
 @pytest.fixture(scope="session")
-def eus_target_cnv_version(is_eus_upgrade, cnv_current_version):
+def eus_target_cnv_version(pytestconfig, cnv_current_version):
     cnv_current_version = Version(version=cnv_current_version)
     minor = cnv_current_version.minor
     # EUS-to-EUS updates are only viable between even-numbered minor versions, exit if non-eus version
@@ -341,7 +341,7 @@ def eus_target_cnv_version(is_eus_upgrade, cnv_current_version):
             message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
             return_code=EUS_ERROR_CODE,
         )
-    return Version(version=f"v{cnv_current_version.major}.{minor + 2}.0")
+    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
 
 
 @pytest.fixture(scope="session")
@@ -460,21 +460,26 @@ def eus_applied_all_icsp(
         delete_file=True,
     )
 
+
 @pytest.fixture()
 def machine_config_pools_conditions(machine_config_pools):
     return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
 
+
 @pytest.fixture(scope="session")
 def master_machine_config_pools():
-    return get_machine_config_pool_by_name(mcp_name="master")
+    return [get_machine_config_pool_by_name(mcp_name="master")]
+
 
 @pytest.fixture(scope="session")
 def worker_machine_config_pools():
-    return get_machine_config_pool_by_name(mcp_name="worker")
+    return [get_machine_config_pool_by_name(mcp_name="worker")]
+
 
 @pytest.fixture(scope="module")
 def worker_machine_config_pools_conditions(worker_machine_config_pools):
     return get_machine_config_pools_conditions(machine_config_pools=worker_machine_config_pools)
+
 
 @pytest.fixture(scope="session")
 def eus_ocp_image_urls(pytestconfig):

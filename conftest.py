@@ -118,11 +118,12 @@ def pytest_addoption(parser):
         help="OCP image to upgrade to. Images can be found under "
         "https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com/",
     )
-    # OCP images for EUS-to-EUS upgrade
+    # EUS Upgrade options
     install_upgrade_group.addoption(
         "--eus-ocp-images",
         help="Comma-separated OCP images to use for EUS-to-EUS upgrade.",
     )
+    install_upgrade_group.addoption("--eus-cnv-target-version", help="target CNV version for eus upgrade")
     install_upgrade_group.addoption(
         "--upgrade-skip-default-sc-setup",
         help="Skip the fixture that changes the default sc in upgrade lane",
