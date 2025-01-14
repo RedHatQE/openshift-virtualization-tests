@@ -22,6 +22,7 @@ from utilities.constants import (
     CNV_OPERATORS,
     CNV_PROMETHEUS_RULES,
     DATA_SOURCE_NAME,
+    CONTAINER_DISK_IMAGE_PATH_STR,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
     INSTANCE_TYPE_STR,
@@ -194,6 +195,7 @@ auto_update_data_source_matrix = [
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"
 DV_SIZE_STR = "dv_size"
+CONTAINER_DISK_DV_SIZE_STR = "container_disk_dv_size"
 TEMPLATE_LABELS_STR = "template_labels"
 OS_STR = "os"
 WORKLOAD_STR = "workload"
@@ -288,7 +290,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "10",
             IMAGE_NAME_STR: Images.Windows.WIN10_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN10_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_10,
                 WORKLOAD_STR: Template.Workload.DESKTOP,
@@ -301,7 +307,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "2016",
             IMAGE_NAME_STR: Images.Windows.WIN2k16_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k16_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k16_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "win2k16",
                 WORKLOAD_STR: Template.Workload.SERVER,
@@ -314,7 +324,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "2019",
             IMAGE_NAME_STR: Images.Windows.WIN2k19_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k19_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k19_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "win2k19",
@@ -328,7 +342,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "11",
             IMAGE_NAME_STR: Images.Windows.WIN11_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN11_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_11,
                 WORKLOAD_STR: Template.Workload.DESKTOP,
@@ -341,7 +359,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "2022",
             IMAGE_NAME_STR: Images.Windows.WIN2022_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN2022_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k22_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_2K22,
                 WORKLOAD_STR: Template.Workload.SERVER,
@@ -354,7 +376,11 @@ windows_os_matrix = [
             OS_VERSION_STR: "2025",
             IMAGE_NAME_STR: Images.Windows.WIN2k25_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k25_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k25_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
+            CONTAINER_DISK_DV_SIZE_STR: Images.Windows.CONTAINER_DISK_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_2K25,
                 WORKLOAD_STR: Template.Workload.SERVER,

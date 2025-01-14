@@ -5,8 +5,13 @@ from packaging import version
 
 from tests.utils import vm_object_from_template
 from tests.virt.cluster.common_templates.utils import skip_on_guest_agent_version
-from utilities.constants import REGEDIT_PROC_NAME
-from utilities.storage import create_or_update_data_source, data_volume
+from utilities.constants import CONTAINER_DISK_IMAGE_PATH_STR, REGEDIT_PROC_NAME
+from utilities.storage import (
+    create_dv,
+    create_or_update_data_source,
+    data_volume,
+    get_test_artifact_server_url,
+)
 from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
@@ -158,15 +163,19 @@ def golden_image_data_volume_multi_windows_os_multi_storage_scope_class(
     storage_class_matrix__class__,
     schedulable_nodes,
     windows_os_matrix__class__,
+    artifact_docker_server_url,
 ):
-    yield from data_volume(
-        namespace=golden_images_namespace,
-        storage_class_matrix=storage_class_matrix__class__,
-        schedulable_nodes=schedulable_nodes,
-        os_matrix=windows_os_matrix__class__,
-        check_dv_exists=True,
-        admin_client=admin_client,
-    )
+    os_matrix_key = [*windows_os_matrix__class__][0]
+    os_params = windows_os_matrix__class__[os_matrix_key]
+    with create_dv(
+        dv_name=os_matrix_key,
+        namespace=golden_images_namespace.name,
+        source="registry",
+        url=f"{artifact_docker_server_url}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
+        size=os_params.get("container_disk_dv_size"),
+        storage_class=[*storage_class_matrix__class__][0],
+    ) as dv:
+        yield dv
 
 
 @pytest.fixture(scope="class")
@@ -330,3 +339,8 @@ def regedit_process_in_windows_os(
         vm=golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
         process_name=REGEDIT_PROC_NAME,
     )
+
+
+@pytest.fixture(scope="session")
+def artifact_docker_server_url():
+    return get_test_artifact_server_url(schema="registry")

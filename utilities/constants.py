@@ -23,6 +23,8 @@ from urllib3.exceptions import (
 
 # Images
 BASE_IMAGES_DIR = "cnv-tests"
+DOCKER_IMAGES_DIR = "docker"
+CONTAINER_DISK_IMAGE_PATH_STR = "container_disk_image_path"
 NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
 
 
@@ -73,6 +75,12 @@ class Images:
         WIN2022_IMG = "win_2022.qcow2"
         WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
         WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
+        WIN10_CONTAINER_IMG = "win_10:virtio"
+        WIN11_CONTAINER_IMG = "win_11:virtio"
+        WIN2k16_CONTAINER_IMG = "win_2k16:virtio"
+        WIN2k19_CONTAINER_IMG = "win_2k19:virtio"
+        WIN2k22_CONTAINER_IMG = "win_2k22:virtio"
+        WIN2k25_CONTAINER_IMG = "win_2k25:virtio"
         DIR = f"{BASE_IMAGES_DIR}/windows-images"
         RAW_DIR = f"{DIR}/raw_images"
         UEFI_WIN_DIR = f"{DIR}/uefi"
@@ -81,8 +89,10 @@ class Images:
         ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
         ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
         ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
+        DOCKER_IMG_QE_DIR = f"{DOCKER_IMAGES_DIR}/windows-qe"
         DEFAULT_DV_SIZE = "70Gi"
         WSL2_DV_SIZE = "40Gi"
+        CONTAINER_DISK_DV_SIZE = "40Gi"
         DEFAULT_MEMORY_SIZE = "8Gi"
         DEFAULT_MEMORY_SIZE_WSL = "12Gi"
         DEFAULT_CPU_CORES = 4
