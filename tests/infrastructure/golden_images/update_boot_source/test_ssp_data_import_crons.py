@@ -20,6 +20,7 @@ from tests.infrastructure.golden_images.constants import (
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     template_labels,
 )
+
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
@@ -206,31 +207,32 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
 
 
 @pytest.fixture(scope="class")
-def golden_images_data_import_cron_job_dict(
+def golden_images_data_import_cron_spec(
     golden_images_data_import_crons_scope_class,
 ):
     assert golden_images_data_import_crons_scope_class, (
         f"No data import cron job found in {py_config['golden_images_namespace']}"
     )
-    return golden_images_data_import_crons_scope_class[0].instance.to_dict()
+    return golden_images_data_import_crons_scope_class[0].instance.spec
 
 
 @pytest.fixture()
 def created_data_import_cron(
     unprivileged_client,
     data_import_cron_namespace,
-    golden_images_data_import_cron_job_dict,
+    golden_images_data_import_cron_spec,
 ):
-    cron_job_name = "data-import-cron-for-test"
-    data_import_cron_for_test_res = copy.deepcopy(golden_images_data_import_cron_job_dict)
-    data_import_cron_for_test_res["metadata"]["namespace"] = data_import_cron_namespace.name
-    data_import_cron_for_test_res["metadata"]["name"] = cron_job_name
-    del data_import_cron_for_test_res["metadata"]["resourceVersion"]
-    del data_import_cron_for_test_res["status"]
-    data_import_cron_for_test = DataImportCron(name=cron_job_name, namespace=data_import_cron_namespace.name)
-    data_import_cron_for_test.res = data_import_cron_for_test_res
-    yield data_import_cron_for_test.deploy()
-    data_import_cron_for_test.clean_up()
+    cron_template_spec = golden_images_data_import_cron_spec.template.spec
+    with DataImportCron(
+        name="data-import-cron-for-test",
+        namespace=data_import_cron_namespace.name,
+        pull_method="node",
+        url=cron_template_spec.source.registry.url,
+        size=cron_template_spec.storage.resources.requests.storage,
+        managed_data_source=golden_images_data_import_cron_spec.managedDataSource,
+        schedule=golden_images_data_import_cron_spec.schedule,
+    ) as data_import_cron:
+        yield data_import_cron
 
 
 @pytest.fixture()
