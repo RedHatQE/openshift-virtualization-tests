@@ -152,7 +152,7 @@ class TestPrimaryUdn:
         )
 
     @pytest.mark.polarion("CNV-11674")
-    def test_ip_address_is_preserved_during_live_migration(self, namespaced_layer2_user_defined_network, vma_udn):
+    def test_ip_address_is_preserved_after_live_migration(self, namespaced_layer2_user_defined_network, vma_udn):
         ip_before_migration = get_iface(vm=vma_udn, iface_name=vm_primary_network_name(vm=vma_udn))[IP_ADDRESS]
         assert ip_before_migration
         migrate_vm_and_verify(vm=vma_udn)
