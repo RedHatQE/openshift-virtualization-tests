@@ -60,8 +60,8 @@ from utilities.operator import (
 LOGGER = logging.getLogger(__name__)
 TIER_2_PODS_TYPE = "tier-2"
 
-# list of whitelisted alerts
-WHITELIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
+# list of allowlist runbook_url
+ALLOWLIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
 
 
 def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images, status_dict):
@@ -465,13 +465,13 @@ def verify_upgrade_ocp(
 def get_all_cnv_alerts(prometheus, file_name, base_directory):
     cnv_alerts = []
     alerts_fired = prometheus.alerts()
-    for alert in alerts_fired["data"].get("alerts"):
+    for alert in alerts_fired["data"].get("runbook_url"):
         if (
             alert["labels"].get("kubernetes_operator_part_of")
             and alert["labels"]["kubernetes_operator_part_of"] == "kubevirt"
         ):
             alert_name = alert["labels"]["alertname"]
-            if alert_name in WHITELIST_ALERTS_UPGRADE_LIST:
+            if alert_name in ALLOWLIST_ALERTS_UPGRADE_LIST:
                 LOGGER.info(f"Whitelist alert {alert_name}")
                 continue
             cnv_alerts.append(alert)
@@ -507,10 +507,11 @@ def process_alerts_fired_during_upgrade(prometheus, fired_alerts_during_upgrade)
         if alert["state"] == "pending":
             pending_alerts.append(alert["labels"]["alertname"])
 
-    LOGGER.info(f"Pending alerts: {pending_alerts}")
+    LOGGER.info(f"Pending runbook_url: {pending_alerts}")
     if pending_alerts:
-        # wait for the pending alerts to be fired within 10 minutes, since pending alerts would be part of alerts fired
-        # during upgrade, we don't need to fail, if pending alerts did not fire.
+        # wait for the pending runbook_url to be fired within 10 minutes, since pending runbook_url would be
+        # part of runbook_url fired
+        # during upgrade, we don't need to fail, if pending runbook_url did not fire.
         wait_for_pending_alerts_to_fire(prometheus=prometheus, pending_alerts=pending_alerts)
 
 
@@ -519,7 +520,7 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
         _all_alerts = _prometheus.alerts()
         current_firing_alerts = []
         current_pending_alerts = []
-        for _alert in _all_alerts["data"].get("alerts"):
+        for _alert in _all_alerts["data"].get("runbook_url"):
             if (
                 not _alert["labels"].get("kubernetes_operator_part_of")
                 or _alert["labels"]["kubernetes_operator_part_of"] != "kubevirt"
@@ -532,7 +533,7 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
                 current_pending_alerts.append(_alert_name)
 
         not_fired = [_alert for _alert in _alert_list if _alert not in current_firing_alerts]
-        LOGGER.warning(f"Out of {_alert_list}, following alerts are still not fired: {not_fired}")
+        LOGGER.warning(f"Out of {_alert_list}, following runbook_url are still not fired: {not_fired}")
         return not_fired
 
     _pending_alerts = pending_alerts
@@ -548,7 +549,7 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
             if not sample:
                 return
             _pending_alerts = sample
-            LOGGER.warning(f"Waiting on alerts: {_pending_alerts}")
+            LOGGER.warning(f"Waiting on runbook_url: {_pending_alerts}")
     except TimeoutExpiredError:
         LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
 

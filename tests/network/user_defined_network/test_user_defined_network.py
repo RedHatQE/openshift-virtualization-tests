@@ -64,7 +64,7 @@ def vma_udn(namespace, namespaced_layer2_user_defined_network, udn_affinity_labe
 
 
 @pytest.fixture(scope="class")
-def vmb_udn_non_migratable(namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
+def vmb_udn(namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
     with udn_vm(namespace_name=namespace.name, name="vmb-udn", template_labels=dict((udn_affinity_label,))) as vm:
         vm.start(wait=True)
         vm.vmi.wait_for_condition(condition="AgentConnected", status=Resource.Condition.Status.TRUE)
@@ -93,6 +93,11 @@ def client(vma_udn, vmb_udn_non_migratable):
 
 @pytest.mark.ipv4
 class TestPrimaryUdn:
+    @pytest.mark.polarion("CNV-11673")
+    def test_vmi_connected_to_primary_udn_is_running(self, namespace, namespaced_layer2_user_defined_network):
+        with udn_vm(namespace_name=namespace.name, name="vm-udn") as vm:
+            vm.start(wait=True)
+
     @pytest.mark.polarion("CNV-11624")
     def test_ip_address_in_running_vm_matches_udn_subnet(self, namespaced_layer2_user_defined_network, vma_udn):
         ip = lookup_iface_status(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name)[IP_ADDRESS]
