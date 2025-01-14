@@ -1,34 +1,6 @@
 # openshift-virtualization-tests
 
-This repository contains tests. These tests are to verify functionality of
-OpenShift + CNV installation.
-
-The infra for the tests can be found in <https://github.com/RedHatQE/openshift-python-wrapper>
-and also as a pypi project under <https://pypi.org/project/openshift-python-wrapper/>
-
-## Contribute to openshift-python-wrapper
-
-Fork openshift-python-wrapper repo from <https://github.com/RedHatQE/openshift-python-wrapper>
-Git clone the forked repo and locally add remote repository:
-
-```bash
-git remote add upstream git@github.com:RedHatQE/openshift-python-wrapper.git
-```
-
-Make a pull request:
-
-```bash
-cd openshift-python-wrapper
-git checkout -b <name-your-local-branch>
-<make your changes>
-git add <changed files>
-git commit
-git push origin <name-your-local-branch>
-```
-
-Go to the forked repo and create a pull request.
-
-## Use a tag, branch, or unmerged pull-request from wrapper
+This repository contains tests to verify the functionality of OpenShift with CNV installation.
 
 ## Cluster requirements
 
@@ -55,11 +27,11 @@ sudo dnf install python3-devel  \
 
 ## virtctl
 
-virtctl binary needs to be downloaded from consoleCliDownloads resource of the cluster under test.
+`virtctl` binary is to be downloaded from `consoleCliDownloads` resource of the cluster under test.
 
 ## oc
 
-oc client is to be downloaded from the cluster under test.
+`oc` client is to be downloaded from `consoleCliDownloads` resource of the cluster under test.
 
 ## Setup VirtualEnv
 
@@ -79,13 +51,11 @@ uv lock --upgrade
 
 ## Prepare CNV cluster
 
-This project runs tests against a cluster with running CNV instance. You can
-use your own cluster or deploy a local one using attached scripts.
+This project runs tests against a cluster with running CNV instance.
 
 ### Arbitrary cluster
 
-These tests can be executed against arbitrary OpenShift cluster with CNV
-installed.
+These tests can be executed against arbitrary OpenShift cluster with CNV installed.
 
 You can login into such cluster via:
 
@@ -123,7 +93,7 @@ CNV chaos tests disrupt the cluster in different ways in order to build confiden
 To run the chaos tests the following command needs to be run:
 
 ```bash
-make tests PYTEST_ARGS="-k chaos"
+make tests PYTEST_ARGS="-m chaos"
 ```
 
 ## Other parameters
@@ -182,7 +152,7 @@ uv run pytest -k network -m "not ipv6"
 
 ## Install openshift-virtualization tests
 
-Current openshift-virtualization install test automation allows us the ability to use production or osbs catalogsource to deploy the same.
+Installation tests allow us to use either the `production` or `osbs` catalogsource for deployment.
 
 Note:
 1. Install test expects no cnv installation exists on the cluster. Installation of openshift-virtualization x.y._ is only supported on ocp x.y._
@@ -206,7 +176,7 @@ pytest tests/install_upgrade_operators/product_install/test_install_openshift_vi
 
 ## Upgrade tests
 
-Current upgrade test automation allows us the ability to run just ocp/cnv upgrade or upgrade along with pre and post upgrade validation of various components.
+Upgrade test automation allows us to run just ocp/cnv upgrade or upgrade along with pre and post upgrade validation of various components.
 
 Note:
 1. Before running upgrade tests, please check "Cluster requirements" section to see minimum requirements in terms of cluster size.
@@ -326,14 +296,13 @@ You can run a test using a subset of a simple matrix (i.e flat list), example:
 ```
 
 To run a test using a subset of a complex matrix (e.g list of dicts), you'll also need to add
-the following to tests/conftest.py
+the following to `openshift-virtualization-tests/conftest.py`
 
-- Add parser.addoption under pytest_addoption (the name must end with \_matrix)
+- Add `parser.addoption` under `pytest_addoption` (the name must end with `_matrix`)
 
-Multiple keys can be selected by passing them with ','
+Multiple keys can be selected by passing them with `,`
 
-Available storage classes can be found in `global_config.py`
-under storage_class_matrix dictionary.
+Available storage classes can be found in `global_config.py` under `storage_class_matrix` dictionary.
 
 Example:
 
@@ -447,7 +416,7 @@ export IMAGE_TAG=<the image tag to use>              # default "latest"
 ### Running containerized tests examples
 
 For running tests you need to have access to artifactory server with images.
-Environment variables ARTIFACTORY_USER and ARTIFACTORY_TOKEN expected to be set up for local runs.
+Environment variables `ARTIFACTORY_USER` and `ARTIFACTORY_TOKEN` expected to be set up for local runs.
 For these credentials, please contact devops QE focal point via cnv-qe slack channel.
 
 Also need to create the folder which should contain `kubeconfig`, binaries `oc`, `virtctl` and **ssh key** for access
@@ -552,25 +521,7 @@ To check for PEP 8 issues locally run:
 tox
 ```
 
-### Run functional tests locally
-
-It is possible to run functional tests on local 2-node Kubernetes environment.
-This is not a targeted setup for users, but these tests may help you during the
-development before proper verification described in the following section.
-
-Run tests locally:
-
-```bash
-UPSTREAM=1 make cluster-up tests
-```
-
-Remove the cluster:
-
-```bash
-make cluster-down
-```
-
-### Run functional tests via Jenkins job
+### Run the tests via Jenkins job
 
 #### Build and push a container with your changes
 
@@ -618,16 +569,18 @@ docs/build/html/index.html
 
 ##### unprivileged_client
 
-To skip 'unprivileged_client' creation pass to pytest command:
+To skip `unprivileged_client` creation pass to pytest command:
+```bash
 --tc=no_unprivileged_client:True
+```
 
 #### Run command on nodes
 
-ExecCommandOnPod is used to run command on nodes
+`ExecCommandOnPod` is used to run command on nodes
 
 ##### Example
 
-workers_utility_pods and masters_utility_pods are fixtures that hold the pods.
+`workers_utility_pods` and `masters_utility_pods` are fixtures that hold the pods.
 
 ```python
 pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
