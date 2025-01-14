@@ -159,14 +159,14 @@ def kmp_manager_nodes(admin_client):
 
 
 @pytest.fixture()
-def rebooted_master_node(request, admin_client, masters, kmp_manager_nodes):
+def rebooted_master_node(request, admin_client, control_plane_nodes, kmp_manager_nodes):
     master_node_to_reboot = request.param["master_node_to_reboot"]
 
     if master_node_to_reboot == "node_with_kmp_manager":
         yield random.choice(seq=kmp_manager_nodes)
     else:
         yield random.choice(
-            seq=[node for node in masters if node.name not in [node.name for node in kmp_manager_nodes]]
+            seq=[node for node in control_plane_nodes if node.name not in [node.name for node in kmp_manager_nodes]]
         )
 
 
@@ -260,7 +260,7 @@ def chaos_worker_background_process(
 
 @pytest.fixture()
 def nginx_monitoring_process(
-    masters,
+    control_plane_nodes,
     masters_utility_pods,
     vm_with_nginx_service,
 ):
@@ -270,7 +270,7 @@ def nginx_monitoring_process(
         sampling_duration=TIMEOUT_2MIN,
         sampling_interval=TIMEOUT_5SEC,
         utility_pods=masters_utility_pods,
-        master_host_node=random.choice(masters),
+        master_host_node=random.choice(control_plane_nodes),
     )
     nginx_monitoring_process.start()
     LOGGER.info(f"{nginx_monitoring_process} process started")

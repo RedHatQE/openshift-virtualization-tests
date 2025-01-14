@@ -45,7 +45,7 @@ LOGGER = logging.getLogger(__name__)
 def node_placement_labels(
     admin_client,
     hco_namespace,
-    masters,
+    control_plane_nodes,
     workers,
 ):
     """
@@ -62,7 +62,7 @@ def node_placement_labels(
         node_labels=worker_labels,
     )
     master_resources = add_labels_to_nodes(
-        nodes=masters,
+        nodes=control_plane_nodes,
         node_labels=master_labels,
     )
     label_dict = {}
