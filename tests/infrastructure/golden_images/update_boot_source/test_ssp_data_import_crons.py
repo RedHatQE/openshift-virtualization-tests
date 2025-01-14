@@ -1,4 +1,3 @@
-import copy
 import logging
 import re
 
@@ -20,7 +19,6 @@ from tests.infrastructure.golden_images.constants import (
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     template_labels,
 )
-
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
