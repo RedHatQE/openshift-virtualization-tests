@@ -198,6 +198,7 @@ def dpdk_checkup_config(
         "spec.param.networkAttachmentDefinitionName": network_attachment_definition_name,
         "spec.param.trafficGenContainerDiskImage": traffic_gen_container_diskimage,
         "spec.param.vmUnderTestContainerDiskImage": vm_under_test_container_diskimage,
+        "spec.param.verbose": "true",
     }
 
     if traffic_gen_target_node:
