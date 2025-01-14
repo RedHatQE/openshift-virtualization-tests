@@ -1,6 +1,6 @@
 # openshift-virtualization-tests
 
-This repository contains tests to verify the functionality of OpenShift with CNV installation.
+This repository contains tests to verify the functionality of OpenShift with `OpenShift Virtualization`.
 
 ## Cluster requirements
 
@@ -27,11 +27,11 @@ sudo dnf install python3-devel  \
 
 ## virtctl
 
-`virtctl` binary is to be downloaded from `consoleCliDownloads` resource of the cluster under test.
+`virtctl` binary should be downloaded from `consoleCliDownloads` resource of the cluster under test.
 
 ## oc
 
-`oc` client is to be downloaded from `consoleCliDownloads` resource of the cluster under test.
+`oc` client should be downloaded from `consoleCliDownloads` resource of the cluster under test.
 
 ## Setup VirtualEnv
 
@@ -88,12 +88,12 @@ define `KUBECTL`, `CNV_TESTS_VIRTCTL_BIN` and `CNV_TESTS_OC_BIN` environment var
 
 ## Running chaos tests
 
-CNV chaos tests disrupt the cluster in different ways in order to build confidence in the robustness of CNV.
+`chaos` tests disrupt the cluster in different ways in order to build confidence in the robustness of `OpenShift Virtualization`.
 
-To run the chaos tests the following command needs to be run:
+To run the chaos tests:
 
 ```bash
-make tests PYTEST_ARGS="-m chaos"
+pytest <pytest_args> -m chaos
 ```
 
 ## Other parameters
@@ -106,7 +106,7 @@ For each test failure cluster logs are collected and stored under 'tests-collect
 To see verbose logging of a test run, add the following parameter:
 
 ```bash
-make tests PYTEST_ARGS="-o log_cli=true"
+pytest <test_to_run> -o log_cli=true
 ```
 
 openshift-virtualization-tests would collect must-gather data, pexpect logs, alert data for failure analysis, when --data-collector argument is passed.
@@ -124,11 +124,17 @@ pytest.mark.skip_must_gather_collection
 
 ### Selecting tests
 
-To run a particular set of tests, you can use name pattern matching. For
-example, to run all network related tests, do:
+To run a particular set of tests, you can use name pattern matching.
+For example, to run all tests that contain `test_clone_windows_vm` or `test_migrate_vm` in their names:
 
 ```bash
-make tests PYTEST_ARGS="-k network"
+pytest <pytest_args> -k "test_clone_windows_vm or test_migrate_vm"
+```
+
+To run all network component tests:
+
+```bash
+pytest <pytest_args> -m network
 ```
 
 #### Selecting network IP version type tests
@@ -140,14 +146,14 @@ These markers are useful when running tests in an IPv4 or IPv6 single-stack clus
 For example, to run only the IPV4 network tests:
 
 ```bash
-uv run pytest -k network -m ipv4
+uv run pytest -m "network and ipv4"
 ```
 
 You can also run all IPV4 network tests in addition to all the other general
 tests that are not specifically marked with IP version type marker:
 
 ```bash
-uv run pytest -k network -m "not ipv6"
+uv run pytest -m "network and not ipv6"
 ```
 
 ## Install openshift-virtualization tests
