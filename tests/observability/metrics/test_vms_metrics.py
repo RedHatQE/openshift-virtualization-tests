@@ -19,9 +19,8 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     timestamp_to_seconds,
-    validate_metric_value_within_range,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.observability.utils import validate_metric_value_within_range, validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     MIGRATION_POLICY_VM_LABEL,

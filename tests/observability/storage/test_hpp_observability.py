@@ -2,13 +2,10 @@ import logging
 
 import pytest
 
-from tests.observability.storage.constants import HPP_NOT_READY
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
-    CRITICAL_STR,
     HOSTPATH_PROVISIONER_OPERATOR,
     TIMEOUT_2MIN,
-    TIMEOUT_6MIN,
     WARNING_STR,
 )
 from utilities.monitoring import validate_alerts
@@ -19,40 +16,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestHPPCrReady:
-    KUBEVIRT_HPP_CR_READY = "kubevirt_hpp_cr_ready"
-    TEST_KUBEVIRT_HPP_CR_READY = f"test_{KUBEVIRT_HPP_CR_READY}"
-
-    @pytest.mark.dependency(name=TEST_KUBEVIRT_HPP_CR_READY)
     @pytest.mark.polarion("CNV-11022")
     def test_kubevirt_hpp_cr_ready_metric(self, prometheus, modified_hpp_non_exist_node_selector):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=self.KUBEVIRT_HPP_CR_READY,
+            metric_name="kubevirt_hpp_cr_ready",
             expected_value="0",
-        )
-
-    @pytest.mark.dependency(depends=[TEST_KUBEVIRT_HPP_CR_READY])
-    @pytest.mark.parametrize(
-        "alert_dict",
-        [
-            pytest.param(
-                {
-                    "alert_name": HPP_NOT_READY,
-                    "labels": {
-                        "severity": WARNING_STR,
-                        "operator_health_impact": CRITICAL_STR,
-                        "kubernetes_operator_component": HOSTPATH_PROVISIONER_OPERATOR,
-                    },
-                },
-                marks=pytest.mark.polarion("CNV-11023"),
-            ),
-        ],
-    )
-    def test_hpp_not_ready_alert(self, prometheus, modified_hpp_non_exist_node_selector, alert_dict):
-        validate_alerts(
-            prometheus=prometheus,
-            alert_dict=alert_dict,
-            timeout=TIMEOUT_6MIN,
         )
 
 
@@ -92,4 +61,24 @@ class TestHPPSharingPoolPathWithOS:
             prometheus=prometheus,
             alert_dict=alert_tested,
             timeout=TIMEOUT_2MIN,
+        )
+
+
+class TestHPPUpMetric:
+    @pytest.mark.parametrize(
+        "scaled_deployment",
+        [pytest.param({"deployment_name": HOSTPATH_PROVISIONER_OPERATOR, "replicas": 0})],
+        indirect=True,
+    )
+    @pytest.mark.polarion("CNV-10435")
+    def test_kubevirt_hpp_operator_up_metric(
+        self,
+        prometheus,
+        disabled_virt_operator,
+        scaled_deployment,
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name="kubevirt_hpp_operator_up",
+            expected_value="0",
         )
