@@ -13,7 +13,7 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.alerts.constants import KUBEVIRT_VIRT_OPERATOR_READY
+from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
     GO_VERSION_STR,
     INSTANCE_TYPE_LABELS,
@@ -865,29 +865,6 @@ def assert_virtctl_version_equal_metric_output(virtctl_server_version, metric_ou
     assert not mismatch_result, (
         f"Data mismatch, expected version results:{virtctl_server_version}\nactual results {metric_result}"
     )
-
-
-def validate_metric_value_within_range(prometheus, metric_name, expected_value, timeout=TIMEOUT_4MIN):
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                sample = abs(float(sample))
-                if sample * 0.95 <= abs(expected_value) <= sample * 1.05:
-                    return
-    except TimeoutExpiredError:
-        LOGGER.info(
-            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
-            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
-        )
-        raise
 
 
 def network_packets_received(vm, interface_name):

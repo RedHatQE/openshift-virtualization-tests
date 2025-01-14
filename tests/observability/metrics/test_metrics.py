@@ -13,8 +13,8 @@ from tests.observability.metrics.utils import (
     assert_vmi_dommemstat_with_metric_value,
     compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
-    validate_metric_value_within_range,
 )
+from tests.observability.utils import validate_metric_value_within_range
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
