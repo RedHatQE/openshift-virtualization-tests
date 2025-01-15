@@ -899,3 +899,60 @@ def virt_handler_pods_count(hco_namespace):
             namespace=hco_namespace.name,
         ).instance.status.numberReady
     )
+
+
+@pytest.fixture(scope="class")
+def nodes_allocatable_info(nodes):
+    selected_node = nodes[0]
+    selected_node_instance = selected_node.instance
+    return {
+        "node_name": selected_node.name,
+        "allocatable_data": selected_node_instance.status.allocatable,
+        "labels": selected_node_instance.metadata.labels,
+    }
+
+
+@pytest.fixture()
+def node_labels_exists(prometheus, nodes_allocatable_info):
+    node_labels_from_metric = (
+        prometheus.query(query=f"kube_node_labels{{node='{nodes_allocatable_info['node_name']}'}}")
+        .get("data")
+        .get("result")[0]
+        .get("metric")
+    )
+    missing_labels = [
+        label
+        for label in nodes_allocatable_info["labels"].keys()
+        if f"label_{label.replace('.', '_').replace('/', '_').replace('-', '_')}" not in node_labels_from_metric
+        and nodes_allocatable_info["labels"][label]
+    ]
+    assert not missing_labels, (
+        f"There is missing labels from node: {nodes_allocatable_info['node_name']}, "
+        f"missing labels in the metric: {missing_labels}"
+    )
+    # Return the first label with non-empty value.
+    for label, value in nodes_allocatable_info["labels"].items():
+        if value:
+            return {"label_name": label.replace(".", "_").replace("/", "_").replace("-", "_"), "value": value}
+
+
+@pytest.fixture()
+def nodes_allocatable_data_to_check_exists(prometheus, nodes_allocatable_info):
+    nodes_allocatable_resources = nodes_allocatable_info["allocatable_data"].keys()
+    node_status_allocatable_data_from_metric = (
+        prometheus.query(query=f"kube_node_status_allocatable{{node='{nodes_allocatable_info['node_name']}'}}")
+        .get("data")
+        .get("result")
+    )
+    missing_resources = [
+        resource
+        for resource in nodes_allocatable_resources
+        if resource.replace("-", "_")
+        not in [resource.get("metric").get("resource") for resource in node_status_allocatable_data_from_metric]
+    ]
+    assert not missing_resources, (
+        f"Missing resources from the node instance in metric result, node name: {nodes_allocatable_info['node_name']}, "
+        f"missing_resources: {missing_resources}"
+    )
+    assert "pods" in nodes_allocatable_resources
+    return nodes_allocatable_info["allocatable_data"].get("pods")

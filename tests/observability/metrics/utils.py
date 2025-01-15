@@ -1153,3 +1153,27 @@ def compare_metric_file_system_values_with_vm_file_system_values(
             f"Result from metric for the mountpoint: {mount_point}: {metric_value}"
         )
         raise
+
+
+def verify_metric_labels_value(prometheus, metric_name, label):
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample:
+                if (
+                    sample.get("data").get("result")[0].get("metric").get(f"label_{label['label_name']}")
+                    == label["value"]
+                ):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.info(
+            f"Label {label['label_name']} value is not correlating with metric value, metric values: {sample}, "
+            f"expected: {label['value']}"
+        )
+        raise
