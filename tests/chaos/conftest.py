@@ -159,10 +159,10 @@ def kmp_manager_nodes(admin_client):
 
 
 @pytest.fixture()
-def rebooted_master_node(request, admin_client, control_plane_nodes, kmp_manager_nodes):
-    master_node_to_reboot = request.param["master_node_to_reboot"]
+def rebooted_control_plane_node(request, admin_client, control_plane_nodes, kmp_manager_nodes):
+    control_plane_node_to_reboot = request.param["control_plane_node_to_reboot"]
 
-    if master_node_to_reboot == "node_with_kmp_manager":
+    if control_plane_node_to_reboot == "node_with_kmp_manager":
         yield random.choice(seq=kmp_manager_nodes)
     else:
         yield random.choice(
@@ -171,17 +171,17 @@ def rebooted_master_node(request, admin_client, control_plane_nodes, kmp_manager
 
 
 @pytest.fixture()
-def rebooting_master_node(
-    rebooted_master_node,
+def rebooting_control_plane_node(
+    rebooted_control_plane_node,
     masters_utility_pods,
 ):
-    LOGGER.info(f"Rebooting master node {rebooted_master_node.name}...")
-    ExecCommandOnPod(utility_pods=masters_utility_pods, node=rebooted_master_node).exec(
+    LOGGER.info(f"Rebooting control plane node {rebooted_control_plane_node.name}...")
+    ExecCommandOnPod(utility_pods=masters_utility_pods, node=rebooted_control_plane_node).exec(
         command="shutdown -r", ignore_rc=True
     )
-    wait_for_node_status(node=rebooted_master_node, status=False, wait_timeout=TIMEOUT_3MIN)
-    yield rebooted_master_node
-    wait_for_node_status(node=rebooted_master_node, wait_timeout=TIMEOUT_15MIN)
+    wait_for_node_status(node=rebooted_control_plane_node, status=False, wait_timeout=TIMEOUT_3MIN)
+    yield rebooted_control_plane_node
+    wait_for_node_status(node=rebooted_control_plane_node, wait_timeout=TIMEOUT_15MIN)
 
 
 @pytest.fixture()
