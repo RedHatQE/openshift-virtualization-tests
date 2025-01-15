@@ -51,6 +51,7 @@ EXPECTED_CNAO_COMP = [
     "linuxBridge",
     "ovs",
     "tlsSecurityProfile",
+    "kubevirtIpamController",
 ]
 MANAGED_BY = "managed-by"
 COMP_LABELS = ["component", "version", "part-of", MANAGED_BY]
