@@ -917,3 +917,16 @@ def generated_api_deprecated_requests(prometheus):
             check=False,
         )
     return initial_metric_value + COUNT_FIVE
+<<<<<<< HEAD
+=======
+
+
+@pytest.fixture()
+def virt_handler_pods_count(hco_namespace):
+    return str(
+        DaemonSet(
+            name=VIRT_HANDLER,
+            namespace=hco_namespace.name,
+        ).instance.status.numberReady
+    )
+>>>>>>> 4060eb6 ([pre-commit.ci] auto fixes from pre-commit.com hooks)
