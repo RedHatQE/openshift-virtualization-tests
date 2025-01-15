@@ -15,7 +15,8 @@ from tests.observability.metrics.utils import (
     get_vm_metrics,
     validate_metric_value_within_range,
 )
-from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API
+from tests.observability.utils import validate_metrics_value
+from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -217,4 +218,14 @@ class TestMemoryDeltaFromRequestedBytes:
             prometheus=prometheus,
             metric_name=f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
             expected_value=float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte),
+        )
+
+
+class TestKubeDaemonsetStatusNumberReady:
+    @pytest.mark.polarion("CNV-11727")
+    def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kube_daemonset_status_number_ready{{daemonset='{VIRT_HANDLER}'}}",
+            expected_value=virt_handler_pods_count,
         )
