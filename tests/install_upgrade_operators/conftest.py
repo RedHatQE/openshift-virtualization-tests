@@ -40,9 +40,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def skip_on_hpp_pool(cnv_deployment_matrix__function__):
-    if cnv_deployment_matrix__function__ == HPP_POOL:
-        pytest.skip(f"Priority class test is not valid for {HPP_POOL} deployment")
+def cnv_deployment_by_name_no_hpp(
+    admin_client,
+    hco_namespace,
+    cnv_deployment_no_hpp_matrix__function__,
+):
+    return get_deployment_by_name(
+        namespace_name=hco_namespace.name,
+        deployment_name=cnv_deployment_no_hpp_matrix__function__,
+    )
 
 
 @pytest.fixture()
