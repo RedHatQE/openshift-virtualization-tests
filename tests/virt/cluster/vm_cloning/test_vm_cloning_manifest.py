@@ -8,6 +8,8 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
 from utilities.infra import run_virtctl_command
 
+pytestmark = pytest.mark.gating
+
 LOGGER = logging.getLogger(__name__)
 
 

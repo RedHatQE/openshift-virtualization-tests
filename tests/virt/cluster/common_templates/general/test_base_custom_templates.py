@@ -13,6 +13,8 @@ from utilities.virt import (
     running_vm,
 )
 
+pytestmark = pytest.mark.gating
+
 LOGGER = logging.getLogger(__name__)
 
 

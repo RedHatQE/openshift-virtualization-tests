@@ -143,6 +143,7 @@ def fedora_target_vm_instance(fedora_target_vm):
     yield fedora_target_vm.instance
 
 
+@pytest.mark.gating
 @pytest.mark.parametrize(
     "dv_template_for_vm_cloning, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
@@ -272,6 +273,7 @@ class TestVMCloneAndMigrate:
             f"Excluded labels present on the clone: \n Current labels: {labels}, Excluded: {LABEL_TO_EXCLUDE_STR}"
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-10353")
     def test_check_annotations_on_clone(self, fedora_target_vm_instance):
         annotations = dict(fedora_target_vm_instance.metadata.annotations)
@@ -284,6 +286,7 @@ class TestVMCloneAndMigrate:
             f"Excluded: {ANNOTATION_TO_EXCLUDE_STR}"
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-10354")
     def test_check_new_mac_address_on_clone(self, fedora_target_vm_instance):
         for iface in fedora_target_vm_instance.spec.template.spec.domain.devices.interfaces:
@@ -291,6 +294,7 @@ class TestVMCloneAndMigrate:
                 f"MAC Address on the target VM is not correct: {iface.macAddress}"
             )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-10355")
     def test_check_new_smbios_serial_on_clone(self, fedora_target_vm_instance):
         current_serial = fedora_target_vm_instance.spec.template.spec.domain.get("firmware", {}).get("serial")
@@ -299,10 +303,12 @@ class TestVMCloneAndMigrate:
             f"Expected: {NEW_SMBIOS_SERIAL_CLONE_STR}"
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-10320")
     def test_migrate_the_vm_clone(self, skip_when_one_node, skip_if_no_common_cpu, fedora_target_vm):
         migrate_vm_and_verify(vm=fedora_target_vm)
 
+    @pytest.mark.gating
     @pytest.mark.parametrize(
         "cloning_job_scope_function",
         [

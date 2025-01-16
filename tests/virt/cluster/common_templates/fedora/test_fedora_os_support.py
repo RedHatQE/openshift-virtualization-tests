@@ -225,6 +225,7 @@ class TestCommonTemplatesFedora:
             vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class,
         )
 
+    @pytest.mark.gating
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.polarion("CNV-5842")
@@ -256,6 +257,7 @@ class TestCommonTemplatesFedora:
             pre_pause_pid=ping_process_in_fedora_os,
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-6006")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_verify_virtctl_guest_agent_data_after_migrate(

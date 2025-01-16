@@ -11,6 +11,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_ACRQ_CLASS_NAME = "TestApplicationAwareClusterResourceQuota"
 
 
+@pytest.mark.gating
 @pytest.mark.usefixtures(
     "enabled_aaq_feature_gate_scope_package",
     "enabled_acrq_support",

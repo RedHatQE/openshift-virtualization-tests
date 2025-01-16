@@ -115,6 +115,7 @@ def test_inspect_cpu_allocation_ratio_pod(
     )
 
 
+@pytest.mark.gating
 @pytest.mark.polarion("CNV-11294")
 def test_limitrange_default_cpu_not_override_vm_cpu(
     limit_range_for_cpu_allocation_test,

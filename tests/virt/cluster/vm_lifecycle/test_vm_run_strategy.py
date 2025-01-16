@@ -294,6 +294,7 @@ class TestRunStrategyAdvancedActions:
         LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {request_updated_vm_run_strategy}")
         pause_unpause_vmi_and_verify_status(vm=lifecycle_vm)
 
+    @pytest.mark.gating
     @pytest.mark.parametrize(
         "request_updated_vm_run_strategy",
         [

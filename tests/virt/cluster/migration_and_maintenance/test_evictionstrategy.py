@@ -21,6 +21,8 @@ from utilities.virt import (
     wait_for_node_schedulable_status,
 )
 
+pytestmark = pytest.mark.gating
+
 LOGGER = logging.getLogger(__name__)
 
 

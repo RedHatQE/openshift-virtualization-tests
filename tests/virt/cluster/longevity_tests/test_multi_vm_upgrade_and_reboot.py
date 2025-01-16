@@ -9,6 +9,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.gating
 @pytest.mark.parametrize(
     "multi_dv, multi_vms",
     [

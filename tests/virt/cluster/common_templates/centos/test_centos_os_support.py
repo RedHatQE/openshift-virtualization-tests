@@ -30,6 +30,7 @@ TESTS_CLASS_NAME = "TestCommonTemplatesCentos"
 
 
 class TestCommonTemplatesCentos:
+    @pytest.mark.gating
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
     @pytest.mark.polarion("CNV-5337")
     def test_create_vm(
@@ -42,6 +43,7 @@ class TestCommonTemplatesCentos:
         LOGGER.info("Create VM from template.")
         golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class.create(wait=True)
 
+    @pytest.mark.gating
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-5338")
     def test_start_vm(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -49,6 +51,7 @@ class TestCommonTemplatesCentos:
 
         running_vm(vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class)
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5341")
     def test_vm_console(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -59,6 +62,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
         )
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5342")
     def test_os_version(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -68,6 +72,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
         )
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-5344")
     def test_domain_label(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -76,6 +81,7 @@ class TestCommonTemplatesCentos:
         domain_label = vm.instance.spec.template.metadata["labels"]["kubevirt.io/domain"]
         assert domain_label == vm.name, f"Wrong domain label: {domain_label}"
 
+    @pytest.mark.gating
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::vm_expose_ssh",
         depends=[f"{TESTS_CLASS_NAME}::start_vm"],
@@ -88,6 +94,7 @@ class TestCommonTemplatesCentos:
             tcp_timeout=120
         ), "Failed to login via SSH"
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-5346")
     def test_vmi_guest_agent_info(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -112,6 +119,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class
         )
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-5349")
     def test_virtctl_guest_agent_user_info(
@@ -122,11 +130,13 @@ class TestCommonTemplatesCentos:
                 vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class
             )
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5350")
     def test_vm_machine_type(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
         check_machine_type(vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class)
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5594")
     def test_vm_smbios_default(
@@ -139,6 +149,7 @@ class TestCommonTemplatesCentos:
             cm_values=smbios_from_kubevirt_config,
         )
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5918")
     def test_pause_unpause_vm(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
@@ -146,6 +157,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-5841")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
@@ -178,6 +190,7 @@ class TestCommonTemplatesCentos:
             pre_pause_pid=ping_process_in_centos_os,
         )
 
+    @pytest.mark.gating
     @pytest.mark.polarion("CNV-6008")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_verify_virtctl_guest_agent_data_after_migrate(
@@ -187,6 +200,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class
         ), "Guest agent stopped responding"
 
+    @pytest.mark.gating
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-5351")
     def test_vm_deletion(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):

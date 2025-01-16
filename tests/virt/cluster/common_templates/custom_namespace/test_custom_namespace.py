@@ -16,7 +16,7 @@ from utilities.constants import UNPRIVILEGED_USER, NamespacesNames
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating]
 
 TESTS_CLASS_NAME = "TestCustomNamespace"
 
