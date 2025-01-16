@@ -8,6 +8,7 @@ from pytest_testconfig import config as py_config
 from tests.observability.metrics.utils import (
     validate_vmi_node_cpu_affinity_with_prometheus,
 )
+from tests.observability.utils import validate_metrics_value
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -88,4 +89,14 @@ class TestVmNameInLabel:
         assert virt_launcher_pod_labels.get(f"{Resource.ApiGroup.VM_KUBEVIRT_IO}/name") == vm_name, (
             f"VM name {vm_name} is missing in the virt-launcher pod label"
             f"Content of virt-launcher pod label: {virt_launcher_pod_labels}"
+        )
+
+
+class TestVirtHCOSingleStackIpv6:
+    @pytest.mark.polarion("CNV-11740")
+    def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_supported_cluster):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name="kubevirt_hco_single_stack_ipv6",
+            expected_value="1" if ipv6_supported_cluster else "0",
         )
