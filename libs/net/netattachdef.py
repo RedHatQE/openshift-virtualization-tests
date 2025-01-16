@@ -8,7 +8,6 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.resource import NamespacedResource
 
 _DEFAULT_CNI_VERSION: Final[str] = "0.3.1"
-_DEFAULT_CREATION_TIMEOUT: Final[int] = 10
 
 
 @dataclass
@@ -56,7 +55,6 @@ class NetworkAttachmentDefinition(NamespacedResource):
         namespace: str,
         config: NetConfig,
         resource_name: str | None = None,
-        timeout: int = _DEFAULT_CREATION_TIMEOUT,
         client: DynamicClient | None = None,
     ):
         """
@@ -68,14 +66,11 @@ class NetworkAttachmentDefinition(NamespacedResource):
             config (NetConfig): Configuration body, as defined by the CNI spec.
             resource_name (str): Optional resource name marking
                 (set on the object annotations).
-            timeout: (int): Optional creation timeout duration in seconds
-                (defaults to 10sec).
             client: (DynamicClient): Optional DynamicClient to use.
         """
         super().__init__(
             name=name,
             namespace=namespace,
-            timeout=timeout,
             annotations=resource_name_annotation(resource_name),
             client=client,
         )
