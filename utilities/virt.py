@@ -88,7 +88,6 @@ CIRROS_IMAGE = "kubevirt/cirros-container-disk-demo:latest"
 FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS)
 VM_ERROR_STATUSES = [
     VirtualMachine.Status.CRASH_LOOPBACK_OFF,
-    VirtualMachine.Status.ERROR_UNSCHEDULABLE,
     VirtualMachine.Status.ERROR_PVC_NOT_FOUND,
     VirtualMachine.Status.IMAGE_PULL_BACK_OFF,
     VirtualMachine.Status.ERR_IMAGE_PULL,
@@ -1575,11 +1574,7 @@ def get_rhel_os_dict(rhel_version):
 
 def assert_vm_not_error_status(vm):
     vm_status = vm.printable_status
-    error_list = VM_ERROR_STATUSES.copy()
-    vm_devices = vm.instance.spec.template.spec.domain.devices
-    if vm_devices.gpus:
-        error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-    assert vm_status not in error_list, f"VM {vm.name} error status: {vm_status}"
+    assert vm_status not in VM_ERROR_STATUSES, f"VM {vm.name} error status: {vm_status}"
 
 
 def wait_for_running_vm(
