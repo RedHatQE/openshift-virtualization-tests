@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:41 AS builder
+FROM quay.io/fedora/fedora:42 AS builder
 
 ENV LANG=C.UTF-8
 ENV CNV_TESTS_CONTAINER=Yes
@@ -21,7 +21,7 @@ COPY / /openshift-virtualization-tests/
 
 # The following is the runner section, which we start again from a clean Fedora image
 # and only adding the required bits to allow us to run the tests.
-FROM quay.io/fedora/fedora:41 AS runner
+FROM quay.io/fedora/fedora:42 AS runner
 
 ARG TEST_DIR=/openshift-virtualization-tests
 
