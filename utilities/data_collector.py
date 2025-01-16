@@ -5,7 +5,6 @@ import shlex
 
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import get_client
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
 from pytest_testconfig import config as py_config
 
@@ -80,16 +79,12 @@ def collect_alerts_data():
     )
 
 
-def collect_vnc_screenshot_for_vms() -> None:
+def collect_vnc_screenshot_for_vms(vm_name: str, vm_namespace: str) -> None:
     base_dir = get_data_collector_base_directory()
-    # get all the vms in the cluster:
-    vms = VirtualMachine.get(dyn_client=get_client())
-    base_command = "vnc screenshot"
-    for vm in vms:
-        utilities.infra.run_virtctl_command(
-            command=shlex.split(f"{base_command} {vm.name} -f {base_dir}/{vm.namespace}-{vm.name}.png"),
-            namespace=vm.namespace,
-        )
+    utilities.infra.run_virtctl_command(
+        command=shlex.split(f"vnc screenshot {vm_name} -f {base_dir}/{vm_namespace}-{vm_name}.png"),
+        namespace=vm_namespace,
+    )
 
 
 def collect_ocp_must_gather(since_time):

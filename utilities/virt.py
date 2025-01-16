@@ -96,7 +96,7 @@ VM_ERROR_STATUSES = [
 ]
 
 
-def wait_for_guest_agent(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool | None:
+def wait_for_guest_agent(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> None:
     LOGGER.info(f"Wait until guest agent is active on {vmi.name}")
 
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
@@ -108,15 +108,14 @@ def wait_for_guest_agent(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12M
                 if condition.get("type") == "AgentConnected" and condition.get("status") == "True"
             ]
             if agent_status:
-                return True
+                return
 
     except TimeoutExpiredError:
         LOGGER.error(f"Guest agent is not installed or not active on {vmi.name}")
         raise
-    return None
 
 
-def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool | None:
+def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool:
     """
     Wait until guest agent report VMI network interfaces.
 
@@ -131,15 +130,15 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
         TimeoutExpiredError: After timeout reached.
     """
     # Waiting for guest agent connection before checking guest agent interfaces report
-    if wait_for_guest_agent(vmi=vmi, timeout=timeout):
-        LOGGER.info(f"Wait for {vmi.name} network interfaces")
-        sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
-        for sample in sampler:
-            interfaces = sample.get("status", {}).get("interfaces", [])
-            active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
-            if len(active_interfaces) == len(interfaces):
-                return True
-    return None
+    wait_for_guest_agent(vmi=vmi, timeout=timeout)
+    LOGGER.info(f"Wait for {vmi.name} network interfaces")
+    sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
+    for sample in sampler:
+        interfaces = sample.get("status", {}).get("interfaces", [])
+        active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
+        if len(active_interfaces) == len(interfaces):
+            return True
+    return False
 
 
 def generate_cloud_init_data(data):
@@ -1614,7 +1613,7 @@ def wait_for_running_vm(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
-        collect_vnc_screenshot_for_vms()
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
         raise
 
 
