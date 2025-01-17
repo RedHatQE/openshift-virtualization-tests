@@ -65,12 +65,12 @@ def test_request_param(deployment_by_name, cpu_min_value):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-7675")
 def test_cnv_deployment_priority_class_name(
-    skip_on_hpp_pool,
-    cnv_deployment_by_name,
+    cnv_deployment_by_name_no_hpp,
 ):
-    if not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
+    if not cnv_deployment_by_name_no_hpp.instance.spec.template.spec.priorityClassName:
         pytest.fail(
-            f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
+            f"For cnv deployment {cnv_deployment_by_name_no_hpp.name}, spec.template.spec.priorityClassName "
+            "has not been set."
         )
 
 

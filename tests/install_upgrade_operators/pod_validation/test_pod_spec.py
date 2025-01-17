@@ -1,5 +1,4 @@
 import logging
-import re
 
 import pytest
 from ocp_resources.job import Job
@@ -42,9 +41,10 @@ def cnv_pods_by_type(cnv_pod_matrix__function__, cnv_pods, sno_cluster):
 
 
 @pytest.fixture()
-def skip_host_path_provisioner_priority_class(cnv_pod_matrix__function__):
-    if re.match(rf"{HOSTPATH_PROVISIONER}|{HPP_POOL}.*", cnv_pod_matrix__function__):
-        pytest.skip(f"PriorityClassName test is not valid for {cnv_pod_matrix__function__} pods")
+def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function__, cnv_pods):
+    pod_list = [pod for pod in cnv_pods if pod.name.startswith(cnv_pod_priority_class_matrix__function__)]
+    assert pod_list, f"Pod {cnv_pod_priority_class_matrix__function__} not found"
+    return pod_list
 
 
 @pytest.mark.polarion("CNV-7261")
@@ -64,9 +64,9 @@ def test_no_new_cnv_pods_added(is_jira_53226_open, cnv_pods, cnv_jobs):
 
 
 @pytest.mark.polarion("CNV-7262")
-def test_pods_priority_class_value(skip_host_path_provisioner_priority_class, cnv_pods_by_type):
-    validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type)
-    validate_priority_class_value(pod_list=cnv_pods_by_type)
+def test_pods_priority_class_value(cnv_pods_by_type_no_hpp_csi_hpp_pool):
+    validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
+    validate_priority_class_value(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
 
 
 @pytest.mark.polarion("CNV-7306")
