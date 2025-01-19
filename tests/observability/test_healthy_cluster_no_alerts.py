@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.constants import SSP_ALERTS_LIST, VIRT_ALERTS_LIST
-from tests.observability.runbook_url.test_runbook_url import verify_no_listed_alerts_on_cluster
+from tests.observability.utils import verify_no_listed_alerts_on_cluster
 
 
 @pytest.mark.polarion("CNV-7610")

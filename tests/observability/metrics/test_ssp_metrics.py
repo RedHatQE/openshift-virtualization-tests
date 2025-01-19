@@ -1,16 +1,69 @@
 import pytest
+from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
+from tests.observability.constants import SSP_HIGH_RATE_REJECTED_VMS
 from tests.observability.metrics.constants import KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE
-from tests.observability.utils import validate_metric_value_within_range, validate_metrics_value
-from utilities.constants import SSP_OPERATOR, VIRT_TEMPLATE_VALIDATOR
+from tests.observability.metrics.utils import validate_metric_value_within_range
+from tests.observability.utils import validate_metrics_value
+from utilities.constants import (
+    SSP_OPERATOR,
+    VIRT_TEMPLATE_VALIDATOR,
+)
+from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.virt import VirtualMachineForTests
 
-KUBEVIRT_SSP_TEMPLATE_VALIDATOR_UP = "kubevirt_ssp_template_validator_up"
 KUBEVIRT_SSP_OPERATOR_UP = "kubevirt_ssp_operator_up"
-KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED = "kubevirt_ssp_operator_reconcile_succeeded_aggregated"
+KUBEVIRT_SSP_TEMPLATE_VALIDATOR_UP = "kubevirt_ssp_template_validator_up"
 KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE = "kubevirt_ssp_common_templates_restored_increase"
+KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED = "kubevirt_ssp_operator_reconcile_succeeded_aggregated"
 
 
-class TestSSPMetrics:
+@pytest.fixture(scope="class")
+def template_modified(admin_client, base_templates):
+    with ResourceEditorValidateHCOReconcile(
+        patches={base_templates[0]: {"metadata": {"annotations": {"description": "New Description"}}}}
+    ):
+        yield
+
+
+@pytest.fixture(scope="class")
+def high_rate_rejected_vms_metric(prometheus_existing_records):
+    for rule in prometheus_existing_records:
+        if rule.get("alert") == SSP_HIGH_RATE_REJECTED_VMS:
+            return int(rule["expr"][-1])
+
+
+@pytest.fixture(scope="class")
+def created_multiple_failed_vms(
+    instance_type_for_test_scope_class,
+    unprivileged_client,
+    namespace,
+    high_rate_rejected_vms_metric,
+):
+    """
+    This fixture is trying to create wrong VMs multiple times for getting alert triggered
+    """
+    with instance_type_for_test_scope_class as vm_instance_type:
+        for _ in range(high_rate_rejected_vms_metric + 1):
+            with pytest.raises(UnprocessibleEntityError):
+                with VirtualMachineForTests(
+                    name="non-creatable-vm",
+                    namespace=namespace.name,
+                    client=unprivileged_client,
+                    vm_instance_type=vm_instance_type,
+                    diskless_vm=True,
+                    vm_validation_rule={
+                        "name": "minimal-required-memory",
+                        "path": "jsonpath::.spec.domain.resources.requests.memory",
+                        "rule": "integer",
+                        "message": "This VM requires more memory.",
+                        "min": 1073741824,
+                    },
+                ) as vm:
+                    return vm
+
+
+class TestSSPTemplate:
     @pytest.mark.parametrize(
         "scaled_deployment, metric_name",
         [
@@ -36,8 +89,6 @@ class TestSSPMetrics:
             expected_value="0",
         )
 
-
-class TestSSPTemplateMetrics:
     @pytest.mark.polarion("CNV-11357")
     def test_metric_kubevirt_ssp_operator_reconcile_succeeded_aggregated(
         self, prometheus, paused_ssp_operator, template_validator_finalizer, deleted_ssp_operator_pod
@@ -53,7 +104,7 @@ class TestSSPTemplateMetrics:
         validate_metric_value_within_range(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE,
-            expected_value=1,
+            expected_value="1",
         )
 
 
@@ -71,6 +122,7 @@ class TestSSPTemplateMetrics:
 )
 @pytest.mark.usefixtures("instance_type_for_test_scope_class", "created_multiple_failed_vms")
 class TestSSPTemplateValidatorRejected:
+    @pytest.mark.dependency(depends=[f"test_{SSP_HIGH_RATE_REJECTED_VMS}"])
     @pytest.mark.polarion("CNV-11310")
     def test_metric_kubevirt_ssp_template_validator_rejected_increase(
         self,

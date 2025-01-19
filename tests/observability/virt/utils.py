@@ -1,23 +1,21 @@
-import logging
-
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.replica_set import ReplicaSet
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import BAD_HTTPGET_PATH
+from tests.observability.utils import LOGGER
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, VIRT_OPERATOR
 from utilities.infra import get_deployment_by_name
 
-LOGGER = logging.getLogger(__name__)
 
-
-def delete_replica_set_by_prefix(replica_set_prefix, namespace, dyn_client):
+def delete_replica_set_by_prefix(replica_set_prefix: str, namespace: str, dyn_client: DynamicClient) -> None:
     for replica_set in get_replica_set_by_name_prefix(
         dyn_client=dyn_client, replica_set_prefix=replica_set_prefix, namespace=namespace
     ):
         replica_set.delete(wait=True)
 
 
-def get_replica_set_by_name_prefix(dyn_client, replica_set_prefix, namespace):
+def get_replica_set_by_name_prefix(dyn_client: DynamicClient, replica_set_prefix: str, namespace: str) -> list:
     replica_sets = [
         replica
         for replica in ReplicaSet.get(dyn_client=dyn_client, namespace=namespace)
@@ -27,7 +25,7 @@ def get_replica_set_by_name_prefix(dyn_client, replica_set_prefix, namespace):
     return replica_sets
 
 
-def wait_hco_csv_updated_virt_operator_httpget(namespace, updated_hco_field):
+def wait_hco_csv_updated_virt_operator_httpget(namespace: str, updated_hco_field: str) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
@@ -48,7 +46,7 @@ def wait_hco_csv_updated_virt_operator_httpget(namespace, updated_hco_field):
         raise
 
 
-def csv_dict_with_bad_virt_operator_httpget_path(hco_csv_dict):
+def csv_dict_with_bad_virt_operator_httpget_path(hco_csv_dict: dict) -> dict:
     for deployment in hco_csv_dict["spec"]["install"]["spec"]["deployments"]:
         if deployment["name"] == VIRT_OPERATOR:
             deployment["spec"]["template"]["spec"]["containers"][0]["readinessProbe"]["httpGet"]["path"] = (

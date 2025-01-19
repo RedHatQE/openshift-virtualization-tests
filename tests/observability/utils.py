@@ -1,16 +1,22 @@
 import logging
 
-from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
+from ocp_resources.namespace import Namespace
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_4MIN, TIMEOUT_15SEC
+from utilities.constants import (
+    TIMEOUT_2MIN,
+    TIMEOUT_4MIN,
+    TIMEOUT_15SEC,
+)
 from utilities.infra import get_pod_by_name_prefix
 from utilities.monitoring import get_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 
 
-def validate_metrics_value(prometheus, metric_name, expected_value, timeout=TIMEOUT_4MIN):
+def validate_metrics_value(prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_15SEC,
@@ -31,30 +37,7 @@ def validate_metrics_value(prometheus, metric_name, expected_value, timeout=TIME
         raise
 
 
-def validate_metric_value_within_range(prometheus, metric_name, expected_value, timeout=TIMEOUT_4MIN):
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                sample = abs(float(sample))
-                if sample * 0.95 <= abs(expected_value) <= sample * 1.05:
-                    return
-    except TimeoutExpiredError:
-        LOGGER.info(
-            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
-            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
-        )
-        raise
-
-
-def wait_for_kubemacpool_pods_error_state(dyn_client, hco_namespace):
+def wait_for_kubemacpool_pods_error_state(dyn_client: DynamicClient, hco_namespace: Namespace) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
@@ -68,3 +51,23 @@ def wait_for_kubemacpool_pods_error_state(dyn_client, hco_namespace):
     for sample in samples:
         if any([pod.exists and pod.status == pod.Status.PENDING for pod in sample]):
             return
+
+
+def verify_no_listed_alerts_on_cluster(prometheus, alerts_list: list) -> None:
+    """
+    It gets a list of alerts and verifies that none of them are firing on a cluster.
+    """
+    fired_alerts = {}
+    for alert in alerts_list:
+        alerts_by_name = prometheus.get_all_alerts_by_alert_name(alert_name=alert)
+        if alerts_by_name and alerts_by_name[0]["state"] == "firing":
+            fired_alerts[alert] = alerts_by_name
+
+    assert not fired_alerts, f"Alerts should not be fired on healthy cluster.\n {fired_alerts}"
+
+
+def get_olm_namespace() -> Namespace:
+    olm_ns = Namespace(name="openshift-operator-lifecycle-manager")
+    if olm_ns.exists:
+        return olm_ns
+    raise ResourceNotFoundError(f"Namespace: {olm_ns.name} not found.")

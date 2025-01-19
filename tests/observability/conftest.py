@@ -1,22 +1,44 @@
 import logging
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.namespace import Namespace
 from ocp_resources.prometheus_rule import PrometheusRule
+from ocp_resources.ssp import SSP
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.observability.metrics.utils import validate_initial_virt_operator_replicas_reverted
+from tests.observability.utils import (
+    get_olm_namespace,
+)
 from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     VIRT_OPERATOR,
 )
-from utilities.hco import get_installed_hco_csv
+from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
 from utilities.infra import get_deployment_by_name, scale_deployment_replicas
 from utilities.monitoring import wait_for_firing_alert_clean_up
 from utilities.virt import get_all_virt_pods_with_running_status
 
 LOGGER = logging.getLogger(__name__)
+ANNOTATIONS_FOR_VIRT_OPERATOR_ENDPOINT = {
+    "annotations": {
+        "control-plane.alpha.kubernetes.io/leader": '{"holderIdentity":"fake-holder",'
+        '"leaseDurationSeconds":3600,"acquireTime":"now()",'
+        '"renewTime":"now()+1","leaderTransitions":1}'
+    }
+}
+
+
+@pytest.fixture(scope="class")
+def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
+    """
+    Pause ssp-operator to avoid from reconciling any related objects
+    """
+    with ResourceEditorValidateHCOReconcile(
+        patches={ssp_resource_scope_class: {"metadata": {"annotations": {"kubevirt.io/operator.paused": "true"}}}},
+        list_resource_reconcile=[SSP],
+    ):
+        yield
 
 
 @pytest.fixture(scope="class")
@@ -29,7 +51,7 @@ def prometheus_existing_records(prometheus_k8s_rules_cnv):
     return [
         component["rules"]
         for component in prometheus_k8s_rules_cnv.instance.to_dict()["spec"]["groups"]
-        if component["name"] == "runbook_url.rules"
+        if component["name"] == "alerts.rules"
     ][0]
 
 
@@ -109,8 +131,15 @@ def virt_operator_deployment(hco_namespace):
     return get_deployment_by_name(deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name)
 
 
-def get_olm_namespace():
-    olm_ns = Namespace(name="openshift-operator-lifecycle-manager")
-    if olm_ns.exists:
-        return olm_ns
-    raise ResourceNotFoundError(f"Namespace: {olm_ns.name} not found.")
+@pytest.fixture(scope="module")
+def initial_virt_operator_replicas(prometheus, virt_operator_deployment, hco_namespace):
+    virt_operator_deployment_initial_replicas = str(virt_operator_deployment.instance.status.replicas)
+    assert virt_operator_deployment_initial_replicas, f"Not replicas found for {VIRT_OPERATOR}"
+    return virt_operator_deployment_initial_replicas
+
+
+@pytest.fixture(scope="class")
+def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_replicas):
+    validate_initial_virt_operator_replicas_reverted(
+        prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
+    )

@@ -64,18 +64,17 @@ class TestHPPSharingPoolPathWithOS:
         )
 
 
-class TestHPPUpMetric:
-    @pytest.mark.parametrize(
-        "scaled_deployment",
-        [pytest.param({"deployment_name": HOSTPATH_PROVISIONER_OPERATOR, "replicas": 0})],
-        indirect=True,
-    )
+@pytest.mark.parametrize(
+    "scaled_deployment_scope_class",
+    [{"deployment_name": HOSTPATH_PROVISIONER_OPERATOR, "replicas": 0}],
+    indirect=["scaled_deployment_scope_class"],
+)
+@pytest.mark.usefixtures("disabled_virt_operator", "scaled_deployment_scope_class")
+class TestHPPOperatorUpMetric:
     @pytest.mark.polarion("CNV-10435")
     def test_kubevirt_hpp_operator_up_metric(
         self,
         prometheus,
-        disabled_virt_operator,
-        scaled_deployment,
     ):
         validate_metrics_value(
             prometheus=prometheus,

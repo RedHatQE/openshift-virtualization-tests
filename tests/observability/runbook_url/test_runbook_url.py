@@ -25,7 +25,7 @@ def cnv_prometheus_rules_names(hco_namespace):
 @pytest.mark.polarion("CNV-10081")
 def test_no_new_prometheus_rules(cnv_prometheus_rules_names):
     """
-    Since validations for runbook url of all cnv runbook_url are done via polarion parameterization of prometheusrules,
+    Since validations for runbook url of all cnv alerts are done via polarion parameterization of prometheusrules,
     this test has been added to catch any new cnv prometheusrules that is not part of cnv_prometheus_rules_matrix
     """
     assert sorted(CNV_PROMETHEUS_RULES) == sorted(cnv_prometheus_rules_names), (
@@ -59,8 +59,8 @@ def test_runbook_upstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
         )
     )
     if not_reachable_url:
-        LOGGER.error(f"Upstream runbook url not reachable for following CNV runbook_url: {not_reachable_url}")
-        raise AssertionError("CNV runbook_url with unreachable runbook urls found.")
+        LOGGER.error(f"Upstream runbook url not reachable for following CNV alerts: {not_reachable_url}")
+        raise AssertionError("CNV alerts with unreachable runbook urls found.")
 
 
 @pytest.mark.polarion("CNV-10084")
@@ -77,23 +77,10 @@ def test_runbook_downstream_urls(cnv_prometheus_rules_unique_alert_names_runbook
         if error:
             error_messages.append(error)
     if alerts_without_runbook:
-        LOGGER.error(f"Runbook url missing for following CNV runbook_url: {alerts_without_runbook}")
-        raise AssertionError("CNV runbook_url with missing runbook url found.")
+        LOGGER.error(f"Runbook url missing for following CNV alerts: {alerts_without_runbook}")
+        raise AssertionError("CNV alerts with missing runbook url found.")
 
     if error_messages:
         message = f"Downstream runbook url validation failed for the followings: {error_messages}"
         LOGGER.error(message)
         raise AssertionError(message)
-
-
-def verify_no_listed_alerts_on_cluster(prometheus, alerts_list):
-    """
-    It gets a list of runbook_url and verifies that none of them are firing on a cluster.
-    """
-    fired_alerts = {}
-    for alert in alerts_list:
-        alerts_by_name = prometheus.get_all_alerts_by_alert_name(alert_name=alert)
-        if alerts_by_name and alerts_by_name[0]["state"] == "firing":
-            fired_alerts[alert] = alerts_by_name
-
-    assert not fired_alerts, f"Alerts should not be fired on healthy cluster.\n {fired_alerts}"

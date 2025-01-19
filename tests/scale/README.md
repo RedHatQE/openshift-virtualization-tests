@@ -14,13 +14,13 @@
 ### Jenkins run
 
     You can run the test using Jenkins at - https://main-jenkins-csb-cnvqe.apps.ocp-c1.prod.psi.redhat.com/job/scale-test
-    The job will update the default scale_params.yaml file located at cnv-tests/tests/scale/scale_params.yaml, according to the values entered in the test.
+    The job will update the default scale_params.yaml file located at openshift-virtualization-tests/tests/scale/scale_params.yaml, according to the values entered in the test.
 
 ### Manual run
 
     In order to run the test manually without the jenkins job:
     - make the required changes in the yaml param file, you can optionally enter the path to the chosen file using --scale-params-file,
-    the default file in case you need an example is found at cnv-tests/tests/scale/scale_params.yaml
+    the default file in case you need an example is found at openshift-virtualization-tests/tests/scale/scale_params.yaml
     - run the test using pytest (uv run pytest -m scale -o log_cli=true -s)
 
 ### Test parameter
@@ -41,7 +41,7 @@
 
 ### Notes
 
-- The test takes the latest OS as configured in cnv-tests.
+- The test takes the latest OS as configured in openshift-virtualization-tests.
 - You can use a different params file using the --scale-params-file option, the jenkins job will **not** update this file.
 - In order to add new storage types for the test, you should add the storage type to SCALE*STORAGE_TYPES const in test_scale_benchmark.py, and
   num*<storage_type>\_vms to scale_params.yaml

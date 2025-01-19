@@ -58,22 +58,16 @@ def modified_virt_operator_httpget_from_hco_and_delete_virt_operator_pods(
 
 
 @pytest.fixture(scope="class")
-def initial_virt_operator_replicas(prometheus, virt_operator_deployment, hco_namespace):
-    virt_operator_deployment_initial_replicas = str(virt_operator_deployment.instance.status.replicas)
-    assert virt_operator_deployment_initial_replicas, f"Not replicas found for {VIRT_OPERATOR}"
-    return virt_operator_deployment_initial_replicas
-
-
-@pytest.fixture(scope="class")
-def deleted_virt_handler_pods(admin_client, hco_namespace):
-    virt_handler_pods = get_pod_by_name_prefix(
-        dyn_client=admin_client,
-        pod_prefix=VIRT_HANDLER,
-        namespace=hco_namespace.name,
-        get_all=True,
-    )
-    for pod in virt_handler_pods:
-        pod.clean_up()
+def initial_readiness_probe_httpget_path(csv_scope_class):
+    initial_readiness_probe_httpget_path = None
+    for deployment in csv_scope_class.instance.spec.install.spec.deployments:
+        if deployment["name"] == VIRT_OPERATOR:
+            initial_readiness_probe_httpget_path = deployment.spec.template.spec.containers[
+                0
+            ].readinessProbe.httpGet.path
+            break
+    assert initial_readiness_probe_httpget_path, f"{VIRT_OPERATOR} deployment not found in hco csv"
+    return initial_readiness_probe_httpget_path
 
 
 @pytest.fixture(scope="class")
@@ -90,29 +84,21 @@ def virt_handler_daemonset_with_bad_image(virt_handler_daemonset_scope_class):
 
 
 @pytest.fixture(scope="class")
+def deleted_virt_handler_pods(admin_client, hco_namespace):
+    virt_handler_pods = get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=VIRT_HANDLER,
+        namespace=hco_namespace.name,
+        get_all=True,
+    )
+    for pod in virt_handler_pods:
+        pod.clean_up()
+
+
+@pytest.fixture(scope="class")
 def virt_handler_daemonset_scope_class(hco_namespace, admin_client):
     return get_daemonset_by_name(
         admin_client=admin_client,
         daemonset_name=VIRT_HANDLER,
         namespace_name=hco_namespace.name,
-    )
-
-
-@pytest.fixture(scope="class")
-def initial_readiness_probe_httpget_path(csv_scope_class):
-    initial_readiness_probe_httpget_path = None
-    for deployment in csv_scope_class.instance.spec.install.spec.deployments:
-        if deployment["name"] == VIRT_OPERATOR:
-            initial_readiness_probe_httpget_path = deployment.spec.template.spec.containers[
-                0
-            ].readinessProbe.httpGet.path
-            break
-    assert initial_readiness_probe_httpget_path, f"{VIRT_OPERATOR} deployment not found in hco csv"
-    return initial_readiness_probe_httpget_path
-
-
-@pytest.fixture(scope="class")
-def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_replicas):
-    validate_initial_virt_operator_replicas_reverted(
-        prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
     )

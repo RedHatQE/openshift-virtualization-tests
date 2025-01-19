@@ -36,6 +36,7 @@ LOGGER = logging.getLogger(__name__)
 def updated_cnao_kubemacpool_with_bad_image_csv(
     admin_client,
     hco_namespace,
+    prometheus,
     csv_scope_class,
     updated_csv_dict_bad_kubemacpool_image,
 ):

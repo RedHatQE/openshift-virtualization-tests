@@ -78,7 +78,7 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
 
 def run_general_vm_preferences(client, namespace, preferences):
     for preference_name in preferences:
-        # TODO remove arm64 skip when cnv-tests support arm64
+        # TODO remove arm64 skip when openshift-virtualization-tests support arm64
         if all(suffix not in preference_name for suffix in ["virtio", "arm64"]):
             start_vm_with_cluster_preference(
                 client=client,
