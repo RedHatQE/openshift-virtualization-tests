@@ -222,16 +222,6 @@ class TestMemoryDeltaFromRequestedBytes:
         )
 
 
-class TestKubevirtApiRequestDeprecatedTotal:
-    @pytest.mark.polarion("CNV-11739")
-    def test_metric_kubevirt_api_request_deprecated_total(self, prometheus, generated_api_deprecated_requests):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
-            expected_value=str(generated_api_deprecated_requests),
-        )
-
-
 class TestKubeDaemonsetStatusNumberReady:
     @pytest.mark.polarion("CNV-11727")
     def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):

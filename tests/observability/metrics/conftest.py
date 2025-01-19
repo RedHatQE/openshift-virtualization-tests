@@ -8,7 +8,7 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -904,6 +904,7 @@ def virt_handler_pods_count(hco_namespace):
     )
 
 
+@pytest.fixture()
 def generated_api_deprecated_requests(prometheus):
     initial_metric_value = int(
         get_metrics_value(
@@ -911,22 +912,7 @@ def generated_api_deprecated_requests(prometheus):
             metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
         )
     )
-    for oc_command in range(COUNT_FIVE):
-        run_command(
-            command=shlex.split("oc get --raw /apis/kubevirt.io/v1alpha3/namespaces/default/virtualmachines"),
-            check=False,
-        )
+    VirtualMachine.api_version = Resource.ApiVersion.V1ALPHA3
+    for _ in range(COUNT_FIVE):
+        len(list(VirtualMachine.get()))
     return initial_metric_value + COUNT_FIVE
-<<<<<<< HEAD
-=======
-
-
-@pytest.fixture()
-def virt_handler_pods_count(hco_namespace):
-    return str(
-        DaemonSet(
-            name=VIRT_HANDLER,
-            namespace=hco_namespace.name,
-        ).instance.status.numberReady
-    )
->>>>>>> 4060eb6 ([pre-commit.ci] auto fixes from pre-commit.com hooks)

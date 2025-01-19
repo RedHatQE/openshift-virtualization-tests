@@ -1,3 +1,5 @@
+from ocp_resources.resource import Resource
+
 from utilities.constants import (
     FLAVOR_STR,
     INSTANCE_TYPE_STR,
@@ -22,7 +24,7 @@ KUBEVIRT_CNAO_KUBEMACPOOL_DUPLICATE_MACS = "kubevirt_cnao_kubemacpool_duplicate_
 KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED = "kubevirt_cnao_cr_kubemacpool_deployed"
 KUBEVIRT_CNAO_KUBEMACPOOL_MANAGER_UP = "kubevirt_cnao_kubemacpool_manager_up"
 KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE = (
-    "kubevirt_api_request_deprecated_total{version='v1alpha3',resource='virtualmachines'}"
+    f"kubevirt_api_request_deprecated_total{{version='{Resource.ApiVersion.V1ALPHA3}',resource='virtualmachines'}}"
 )
 CPU_USER = "cpu.user"
 CPU_SYSTEM = "cpu.system"
