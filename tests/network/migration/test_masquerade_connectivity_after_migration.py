@@ -9,12 +9,12 @@ import logging
 import pytest
 from timeout_sampler import TimeoutSampler
 
+from utilities.console import vm_console_run_commands
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
-    vm_console_run_commands,
     wait_for_console,
 )
 

@@ -20,9 +20,10 @@ from tests.virt.upgrade.utils import (
     verify_vms_ssh_connectivity,
     vm_is_not_migrateable,
 )
+from utilities.console import vm_console_run_commands
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
-from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
+from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID = f"{VIRT_NODE_ID_PREFIX}::test_is_vm_running_after_upgrade"

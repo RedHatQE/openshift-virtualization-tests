@@ -4,12 +4,13 @@ VM to VM connectivity
 
 import pytest
 
+from utilities.console import vm_console_run_commands
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm, vm_console_run_commands
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture()

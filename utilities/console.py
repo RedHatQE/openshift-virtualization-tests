@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import logging
 import os
+import re
 
 import pexpect
+from ocp_resources.virtual_machine import VirtualMachine
+from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
+    TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     VIRTCTL,
 )
@@ -115,3 +121,39 @@ class Console(object):
         Logout from shell
         """
         self.disconnect()
+
+
+def vm_console_run_commands(
+    vm: VirtualMachine,
+    commands: list[str],
+    timeout: int = TIMEOUT_1MIN,
+    verify_commands_output: bool = True,
+    command_output: bool = False,
+) -> dict[str, list[str]] | None:
+    """
+    Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
+    If return code other than 0 then it will break execution and raise exception.
+
+    Args:
+        vm (obj): VirtualMachine
+        commands (list): List of commands
+        timeout (int): Time to wait for the command output
+        verify_commands_output (bool): Check commands return 0
+        command_output (bool): If selected, returns a dict of command and associated output
+    """
+    output = {}
+    # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+    with Console(vm=vm) as vmc:
+        for command in commands:
+            LOGGER.info(f"Execute {command} on {vm.name}")
+            vmc.sendline(command)
+            vmc.expect(r".*\$")
+            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
+            if verify_commands_output:
+                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
+                try:
+                    vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
+                except pexpect.exceptions.TIMEOUT:
+                    raise CommandExecFailed(output[command])
+    return output if command_output else None

@@ -35,9 +35,10 @@ from tests.network.utils import (
     ServiceMeshMemberRollForTests,
     authentication_request,
 )
+from utilities.console import vm_console_run_commands
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, unique_name
-from utilities.virt import running_vm, vm_console_run_commands, wait_for_console
+from utilities.virt import running_vm, wait_for_console
 
 LOGGER = logging.getLogger(__name__)
 

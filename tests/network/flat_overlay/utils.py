@@ -9,6 +9,7 @@ from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
+from utilities.console import vm_console_run_commands
 from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.exceptions import ResourceValueError
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
@@ -18,7 +19,6 @@ from utilities.virt import (
     fedora_vm_body,
     fetch_pid_from_linux_vm,
     running_vm,
-    vm_console_run_commands,
 )
 
 LOGGER = logging.getLogger(__name__)

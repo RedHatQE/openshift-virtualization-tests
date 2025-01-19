@@ -17,7 +17,8 @@ from libs.vm.spec import (
     Volume,
 )
 from utilities import infra
-from utilities.virt import get_oc_image_info, vm_console_run_commands
+from utilities.console import vm_console_run_commands
+from utilities.virt import get_oc_image_info
 
 
 class BaseVirtualMachine(VirtualMachine):
