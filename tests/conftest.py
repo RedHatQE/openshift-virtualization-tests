@@ -71,7 +71,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from tests.utils import download_and_extract_tar, get_hco_version_name, update_cluster_cpu_model
+from tests.utils import download_and_extract_tar, update_cluster_cpu_model
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
     AMD,
@@ -176,6 +176,7 @@ from utilities.network import (
 from utilities.operator import (
     cluster_with_icsp,
     disable_default_sources_in_operatorhub,
+    get_hco_version_name,
     get_machine_config_pool_by_name,
 )
 from utilities.ssp import get_data_import_crons, get_ssp_resource
@@ -1989,12 +1990,12 @@ def rhel_latest_os_params():
 
 @pytest.fixture(scope="session")
 def hco_target_version(cnv_target_version):
-    return get_hco_version_name(cnv_target_version=cnv_target_version) if cnv_target_version else None
+    return get_hco_version_name(cnv_target_version=cnv_target_version)
 
 
 @pytest.fixture(scope="session")
-def eus_hco_target_version(is_eus_upgrade, eus_target_cnv_version):
-    return get_hco_version_name(cnv_target_version=eus_target_cnv_version) if is_eus_upgrade else None
+def eus_hco_target_version(eus_target_cnv_version):
+    return get_hco_version_name(cnv_target_version=eus_target_cnv_version)
 
 
 @pytest.fixture(scope="session")

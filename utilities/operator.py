@@ -17,6 +17,7 @@ from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
+from ocp_resources.node import Node
 from ocp_resources.operator_group import OperatorGroup
 from ocp_resources.operator_hub import OperatorHub
 from ocp_resources.pod import Pod
@@ -218,7 +219,7 @@ def wait_for_mcp_updated_condition_true(machine_config_pools_list, timeout=TIMEO
 def wait_for_mcp_ready_machine_count(machine_config_pools_list):
     LOGGER.info("Waiting for MCPs to have all machines ready.")
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_20MIN,
+        wait_timeout=TIMEOUT_10MIN,
         sleep=TIMEOUT_5SEC,
         func=get_mcps_with_all_machines_ready,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -251,8 +252,8 @@ def consecutive_checks_for_mcp_condition(mcp_sampler, machine_config_pools_list)
         raise
 
 
-def wait_for_mcp_update_end(machine_config_pools_list, timeout=TIMEOUT_75MIN):
-    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list, timeout=timeout)
+def wait_for_mcp_update_end(machine_config_pools_list):
+    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list)
     wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list)
 
 
@@ -514,7 +515,7 @@ def wait_for_csv_successful_state(admin_client, namespace_name, subscription_nam
     raise ResourceNotFoundError(f"Subscription {subscription_name} not found in namespace: {namespace_name}")
 
 
-def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes, timeout=TIMEOUT_75MIN):
+def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes):
     initial_updating_transition_times = get_mcp_updating_transition_times(mcp_conditions=initial_mcp_conditions)
 
     wait_for_mcp_update_start(
@@ -523,7 +524,6 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
     )
     wait_for_mcp_update_end(
         machine_config_pools_list=machine_config_pools_list,
-        timeout=timeout,
     )
     wait_for_nodes_to_have_same_kubelet_version(nodes=nodes)
     wait_for_all_nodes_ready(nodes=nodes)
@@ -532,7 +532,7 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
 def wait_for_all_nodes_ready(nodes):
     nodes_not_ready = None
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_15MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_10SEC,
         func=get_nodes_not_ready,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -560,7 +560,7 @@ def get_nodes_not_ready(nodes):
 def wait_for_nodes_to_have_same_kubelet_version(nodes):
     node_versions = None
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_15MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_10SEC,
         func=lambda: {node.name: node.instance.status.nodeInfo.kubeletVersion for node in nodes},
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -717,3 +717,61 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
         LOGGER.error(f"Following cluster operators failed to stabilize: {sample}")
         if sample:
             raise
+
+
+def get_hco_version_name(cnv_target_version: str) -> str:
+    return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
+
+
+def get_generated_icsp_idms(
+    image_url: str,
+    registry_source: str,
+    generated_pulled_secret: str,
+    pull_secret_directory: str,
+    is_idms_cluster: bool,
+    cnv_version: str | None = None,
+) -> str:
+    pull_secret = None
+    if BREW_REGISTERY_SOURCE in image_url:
+        registry_source = BREW_REGISTERY_SOURCE
+        pull_secret = generated_pulled_secret
+    cnv_mirror_cmd = create_icsp_idms_command(
+        image=image_url,
+        source_url=registry_source,
+        folder_name=pull_secret_directory,
+        pull_secret=pull_secret,
+    )
+    icsp_file_path = generate_icsp_idms_file(
+        folder_name=pull_secret_directory,
+        command=cnv_mirror_cmd,
+        is_idms_file=is_idms_cluster,
+        cnv_version=cnv_version,
+    )
+
+    return icsp_file_path
+
+
+def apply_icsp_idms(
+    file_paths: list[str],
+    machine_config_pools: list[MachineConfigPool],
+    mcp_conditions: dict[str, list[dict[str, str]]],
+    nodes: list[Node],
+    is_idms_file: bool,
+    delete_file: bool = False,
+) -> None:
+    LOGGER.info("pausing MCP updates while modifying ICSP/IDMS")
+    with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
+        if delete_file:
+            # Due to the amount of annotations in ICSP/IDMS yaml, `oc apply` may fail. Existing ICSP/IDMS is deleted.
+            LOGGER.info("Deleting existing ICSP/IDMS.")
+            delete_existing_icsp_idms(name="iib", is_idms_file=is_idms_file)
+        LOGGER.info("Creating new ICSP/IDMS")
+        for file_path in file_paths:
+            create_icsp_idms_from_file(file_path=file_path)
+
+    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
+    wait_for_mcp_update_completion(
+        machine_config_pools_list=machine_config_pools,
+        initial_mcp_conditions=mcp_conditions,
+        nodes=nodes,
+    )

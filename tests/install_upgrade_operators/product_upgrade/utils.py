@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
 import re
 from pprint import pformat
 from threading import Thread
-from typing import Dict, List
+from typing import Any
 
 from deepdiff import DeepDiff
 from kubernetes.dynamic import DynamicClient
@@ -14,18 +16,14 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
-from ocp_resources.node import Node
 from ocp_resources.resource import Resource, ResourceEditor
-from ocp_wrapper_data_collector.data_collector import collect_resources_yaml_instance, get_data_collector_dict
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.launcher_updates.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME
 from tests.install_upgrade_operators.utils import wait_for_install_plan
-from tests.utils import get_hco_version_name
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
     BREW_REGISTERY_SOURCE,
@@ -55,10 +53,7 @@ from utilities.infra import (
 )
 from utilities.operator import (
     approve_install_plan,
-    create_icsp_idms_command,
-    create_icsp_idms_from_file,
-    delete_existing_icsp_idms,
-    generate_icsp_idms_file,
+    get_hco_version_name,
     update_image_in_catalog_source,
     wait_for_mcp_update_completion,
 )
@@ -427,7 +422,7 @@ def extract_ocp_version_from_ocp_image(ocp_image_url: str) -> str:
     return ocp_version
 
 
-def run_ocp_upgrade_command(ocp_image_url: str, check: bool = True) -> None:
+def run_ocp_upgrade_command(ocp_image_url: str) -> None:
     LOGGER.info(f"Executing OCP upgrade command to image {ocp_image_url}")
     rc, out, err = run_command(
         command=[
@@ -441,7 +436,7 @@ def run_ocp_upgrade_command(ocp_image_url: str, check: bool = True) -> None:
             ocp_image_url,
         ],
         verify_stderr=False,
-        check=check,
+        check=False,
     )
     assert rc, f"OCP upgrade command failed. out: {out}. err: {err}"
 
@@ -559,19 +554,21 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
         LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
 
 
-def get_upgrade_path(target_version: str) -> dict:
+def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list[str]]]]:
     return wait_for_version_explorer_response(
         api_end_point="GetUpgradePath", query_string=f"targetVersion={target_version}"
     )
 
 
-def get_shortest_upgrade_path(target_version: str) -> dict:
+def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]:
     """
     Get the shortest upgrade path to a given CNV target version(latest z stream)
+
     Args:
-    target_version (str): The target version of the upgrade path.
+        target_version (str): The target version of the upgrade path.
+
     Returns:
-    dict: The shortest upgrade path to the target version.
+        dict: The shortest upgrade path to the target version.
     """
     upgrade_paths = get_upgrade_path(target_version=target_version)["path"]
     assert upgrade_paths, f"Couldn't find upgrade path for {target_version} version"
@@ -579,23 +576,22 @@ def get_shortest_upgrade_path(target_version: str) -> dict:
         upgrade_paths,
         key=lambda path: Version(version="0")
         if "-hotfix" in path["startVersion"]
-        else Version(version=path["startVersion"]),
+        else Version(version=str(path["startVersion"])),
     )
     return upgrade_path
 
 
-def get_iib_images_of_cnv_versions(versions: List[str], errata_status: str = "true") -> Dict[str, str]:
-    base_image_url = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib"
+def get_iib_images_of_cnv_versions(versions: list[str], errata_status: str = "true") -> dict[str, str]:
     version_images = {}
     for version in versions:
         iib = get_successful_fbc_build_iib(
             build_info=get_build_info_by_version(version=version, errata_status=errata_status)["successful_builds"]
         )
-        version_images[version] = base_image_url + "-pub:" + iib if iib.startswith("v") else base_image_url + ":" + iib
+        version_images[version] = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:{iib}"
     return version_images
 
 
-def get_successful_fbc_build_iib(build_info: List[Dict[str, str]]) -> str:
+def get_successful_fbc_build_iib(build_info: list[dict[str, str]]) -> str:
     LOGGER.info(f"Build info found: {build_info}")
     for build in build_info:
         if build["pipeline"] == "RHTAP FBC":
@@ -603,7 +599,7 @@ def get_successful_fbc_build_iib(build_info: List[Dict[str, str]]) -> str:
     raise AssertionError("Should have a fbc build")
 
 
-def get_build_info_by_version(version: str, errata_status: str = "true") -> dict:
+def get_build_info_by_version(version: str, errata_status: str = "true") -> dict[str, Any]:
     query_string = f"version={version}"
     if errata_status:
         query_string = f"{query_string}&errata_status={errata_status}"
@@ -613,66 +609,12 @@ def get_build_info_by_version(version: str, errata_status: str = "true") -> dict
     )
 
 
-def get_generated_icsp_idms(
-    image_url: str,
-    registry_source: str,
-    generated_pulled_secret: str,
-    pull_secret_directory: str,
-    is_idms_cluster: bool,
-    cnv_version: str | None = None,
-) -> str:
-    pull_secret = None
-    if BREW_REGISTERY_SOURCE in image_url:
-        registry_source = BREW_REGISTERY_SOURCE
-        pull_secret = generated_pulled_secret
-    cnv_mirror_cmd = create_icsp_idms_command(
-        image=image_url,
-        source_url=registry_source,
-        folder_name=pull_secret_directory,
-        pull_secret=pull_secret,
-    )
-    icsp_file_path = generate_icsp_idms_file(
-        folder_name=pull_secret_directory,
-        command=cnv_mirror_cmd,
-        is_idms_file=is_idms_cluster,
-        cnv_version=cnv_version,
-    )
-
-    return icsp_file_path
-
-
-def apply_icsp_idms(
-    file_paths: List[str],
-    machine_config_pools: List[MachineConfigPool],
-    mcp_conditions: Dict[str, List[Dict[str, str]]],
-    nodes: List[Node],
-    is_idms_file: bool,
-    delete_file: bool = False,
-) -> None:
-    LOGGER.info("pausing MCP updates while modifying ICSP/IDMS")
-    with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
-        if delete_file:
-            # Due to the amount of annotations in ICSP/IDMS yaml, `oc apply` may fail. Existing ICSP/IDMS is deleted.
-            LOGGER.info("Deleting existing ICSP/IDMS.")
-            delete_existing_icsp_idms(name="iib", is_idms_file=is_idms_file)
-        LOGGER.info("Creating new ICSP/IDMS")
-        for file_path in file_paths:
-            create_icsp_idms_from_file(file_path=file_path)
-
-    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
-    wait_for_mcp_update_completion(
-        machine_config_pools_list=machine_config_pools,
-        initial_mcp_conditions=mcp_conditions,
-        nodes=nodes,
-    )
-
-
-def update_mcp_paused_spec(mcp: List[MachineConfigPool], paused: bool = True) -> None:
+def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) -> None:
     for mcp in mcp:
         ResourceEditor(patches={mcp: {"spec": {"paused": paused}}}).update()
 
 
-def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: List[str]) -> None:
+def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: list[str]) -> None:
     ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource: {
@@ -741,17 +683,11 @@ def wait_for_hco_csv_creation(
                 return csv
     except TimeoutExpiredError:
         LOGGER.error(f"timeout waiting for target cluster service version: {hco_target_version}")
-        if py_config.get("data_collector"):
-            data_collector_dict = get_data_collector_dict()
-            collect_resources_yaml_instance(
-                resources_to_collect=[ClusterServiceVersion],
-                base_directory=data_collector_dict["data_collector_base_directory"],
-            )
         raise
 
 
 def wait_for_odf_update(target_version: str) -> None:
-    def _get_updated_odf_csv(_target_version: str) -> List[str]:
+    def _get_updated_odf_csv(_target_version: str) -> list[str]:
         csv_list = []
         for csv in ClusterServiceVersion.get(namespace=NamespacesNames.OPENSHIFT_STORAGE):
             if any(

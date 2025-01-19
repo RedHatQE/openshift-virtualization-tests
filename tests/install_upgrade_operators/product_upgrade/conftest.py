@@ -12,12 +12,10 @@ from pytest_testconfig import py_config
 from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.launcher_updates.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME
 from tests.install_upgrade_operators.product_upgrade.utils import (
-    apply_icsp_idms,
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
     get_all_cnv_alerts,
-    get_generated_icsp_idms,
     get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
@@ -34,7 +32,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, TIMEOUT_180MIN, NamespacesNames
+from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
@@ -47,6 +45,8 @@ from utilities.infra import (
     get_subscription,
 )
 from utilities.operator import (
+    apply_icsp_idms,
+    get_generated_icsp_idms,
     get_machine_config_pool_by_name,
     get_machine_config_pools_conditions,
     update_image_in_catalog_source,
@@ -284,7 +284,7 @@ def triggered_ocp_upgrade(ocp_image_url, is_disconnected_cluster):
         assert image_info, f"For ocp image {ocp_image_url}, image information not found"
         image_url = f"quay.io/openshift-release-dev/ocp-release@{image_info['digest']}"
     LOGGER.info(f"Executing OCP upgrade command to image {ocp_image_url}")
-    run_ocp_upgrade_command(ocp_image_url=image_url, check=False)
+    run_ocp_upgrade_command(ocp_image_url=image_url)
 
 
 @pytest.fixture(scope="session")
@@ -390,7 +390,6 @@ def eus_unpaused_worker_mcp(
         machine_config_pools_list=worker_machine_config_pools,
         initial_mcp_conditions=worker_machine_config_pools_conditions,
         nodes=workers,
-        timeout=TIMEOUT_180MIN,
     )
 
 

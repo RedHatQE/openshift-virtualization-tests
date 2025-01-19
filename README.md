@@ -196,13 +196,11 @@ Please note, in Y-1 -> Y upgrade, OCP must be upgraded first, followed by CNV up
 
 ##### Z-stream Upgrade
 
-Here, no ocp upgrade is needed (e.g. 4.y.z-1 -> 4.y.z).
+Here, no ocp upgrade is needed (e.g. 4.Y.z-1 -> 4.Y.z).
 
 ##### EUS Upgrade:
-EUS-to-EUS updates are only viable between even-numbered minor versions of OpenShift Container Platform.
+EUS-to-EUS updates are only viable between even-numbered minor versions of OpenShift Container Platform. (e.g 4.Y.z -> 4.Y+2.z)
 
-You must provide --eus-ocp-images via cli, which is two comma separated ocp images for EUS upgrade.
-The default target cnv version will be 4.Y+2.0. Optionally, --eus-csv-target-version can be provided for 4.Y+2.z version.
 
 #### OCP upgrade
 
@@ -242,12 +240,14 @@ Command to run only cnv upgrade test, without any pre/post validation:
 -m cnv_upgrade --upgrade cnv --cnv-version <target_version> --cnv source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
-To upgrade to cnv 4.y.0, using the cnv image that has been shipped, following command could be used:
+To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following command could be used:
 ```bash
---upgrade cnv --cnv-version 4.y.0 --cnv-source osbs --cnv-image registry-proxy.engineering.redhat.com/rh-osbs/iib:<index_image>
+--upgrade cnv --cnv-version 4.Y.z --cnv-source osbs --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 #### EUS upgrade
+You must provide --eus-ocp-images via cli, which is two comma separated ocp images for EUS upgrade.
+The default target cnv version will be 4.Y+2.0. Optionally, --eus-csv-target-version can be provided for 4.Y+2.z version.
 Command to run entire upgrade test suite for EUS upgrade, including pre and post upgrade validation:
 
 ```bash

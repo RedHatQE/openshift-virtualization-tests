@@ -4,6 +4,7 @@ import logging
 import re
 
 from benedict import benedict
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ConflictError, ResourceNotFoundError
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -54,7 +55,12 @@ def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
         raise
 
 
-def wait_for_install_plan(dyn_client, hco_namespace, hco_target_version, is_production_source):
+def wait_for_install_plan(
+    dyn_client: DynamicClient,
+    hco_namespace: str,
+    hco_target_version: str,
+    is_production_source: bool,
+) -> InstallPlan:
     install_plan_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_40MIN,
         sleep=TIMEOUT_10SEC,

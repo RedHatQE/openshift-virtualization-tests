@@ -17,8 +17,6 @@ from utilities.data_collector import collect_alerts_data
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("skip_on_eus_upgrade")
-
 
 @pytest.mark.upgrade_custom
 @pytest.mark.sno
@@ -34,6 +32,7 @@ class TestUpgradeIUO:
     )
     def test_alerts_fired_during_upgrade(
         self,
+        skip_on_eus_upgrade,
         prometheus_scope_function,
         fired_alerts_during_upgrade,
     ):

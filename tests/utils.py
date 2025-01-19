@@ -545,7 +545,3 @@ def vm_object_from_template(
         network_multiqueue=param_dict.get("network_multiqueue"),
         ssh=param_dict.get("ssh", True),
     )
-
-
-def get_hco_version_name(cnv_target_version):
-    return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"

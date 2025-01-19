@@ -17,7 +17,6 @@ from tests.install_upgrade_operators.product_install.constants import (
     OPENSHIFT_VIRTUALIZATION,
 )
 from tests.install_upgrade_operators.product_install.utils import get_all_resources
-from tests.utils import get_hco_version_name
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     CRITICAL_STR,
@@ -49,6 +48,7 @@ from utilities.operator import (
     create_operator_group,
     create_subscription,
     generate_icsp_idms_file,
+    get_hco_version_name,
     get_install_plan_from_subscription,
     get_mcp_updating_transition_times,
     wait_for_catalogsource_ready,
