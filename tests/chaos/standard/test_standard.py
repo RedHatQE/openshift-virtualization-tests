@@ -54,24 +54,24 @@ def test_pod_delete_openshift_apiserver(
 
 
 @pytest.mark.parametrize(
-    "rebooted_master_node",
+    "rebooted_control_plane_node",
     [
         pytest.param(
-            {"master_node_to_reboot": "node_without_kmp_manager"},
+            {"control_plane_node_to_reboot": "node_without_kmp_manager"},
             id="nodes_without_kmp_manager",
             marks=pytest.mark.polarion("CNV-9293"),
         ),
     ],
     indirect=True,
 )
-def test_master_node_restart(
+def test_control_plane_node_restart(
     admin_client,
     chaos_namespace,
-    rebooting_master_node,
+    rebooting_control_plane_node,
 ):
     """
     This test verifies that a RHEL VM can be created, started, stopped and deleted
-    while a given master node (randomly selected either from the nodes that have
+    while a given control plane node (randomly selected either from the nodes that have
     kubemacpool-mac-controller-manager pod or from the nodes that don't have it) is rebooted.
     """
     with VirtualMachineForTests(

@@ -45,32 +45,32 @@ LOGGER = logging.getLogger(__name__)
 def node_placement_labels(
     admin_client,
     hco_namespace,
-    masters,
+    control_plane_nodes,
     workers,
 ):
     """
     Set Infra and Workloads Labels on the worker nodes and
-    Set Operators Labels on the master nodes.
+    Set Operators Labels on the control plane nodes.
 
     This would help with Installing CNV components on specific nodes.
     It yields a dictionary key is node and value is a dictionary of labels.
     """
-    master_labels = {"op-comp": "op"}
+    control_plane_labels = {"op-comp": "op"}
     worker_labels = {"infra-comp": "infra", "work-comp": "work"}
     worker_resources = add_labels_to_nodes(
         nodes=workers,
         node_labels=worker_labels,
     )
-    master_resources = add_labels_to_nodes(
-        nodes=masters,
-        node_labels=master_labels,
+    control_plane_resources = add_labels_to_nodes(
+        nodes=control_plane_nodes,
+        node_labels=control_plane_labels,
     )
     label_dict = {}
     all_resources = []
     for key, value in worker_resources.items():
         label_dict.update({value["node"]: value["labels"]})
         all_resources.append(key)
-    for key, value in master_resources.items():
+    for key, value in control_plane_resources.items():
         all_resources.append(key)
         if label_dict.get(value["node"]):
             label_dict[value["node"]].update(value["labels"])
