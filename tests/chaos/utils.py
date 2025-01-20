@@ -10,6 +10,7 @@ from datetime import datetime
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
+from ocp_resources.pod import Pod
 from ocp_resources.service import Service
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -145,13 +146,13 @@ def create_pod_deleting_process(
 
 
 def create_nginx_monitoring_process(
-    url,
-    curl_timeout,
-    sampling_duration,
-    sampling_interval,
-    utility_pods,
-    master_host_node,
-):
+    url: str,
+    curl_timeout: int,
+    sampling_duration: int,
+    sampling_interval: int,
+    utility_pods: list[Pod],
+    control_plane_host_node: Node,
+) -> multiprocessing.Process:
     """
     Creates a process that, when started,
     Continuously queries the HTTP server that runs on the VM. Runs for the duration defined
@@ -162,6 +163,8 @@ def create_nginx_monitoring_process(
         curl_timeout (int): timeout in seconds for curl connect-timeout parameter.
         sampling_duration (str): The amount of time during which sampling will take place.
         sampling_interval (int): Interval that determines how often the http server will be queried.
+        utility_pods (list): list of utility pods
+        control_plane_host_node (Node): control plane node
 
     Returns:
         multiprocessing.Process: Process that continuously query the http server.
@@ -173,11 +176,11 @@ def create_nginx_monitoring_process(
         _sampling_duration,
         _sampling_interval,
         _utility_pods,
-        _master_host_node,
+        _control_plane_host_node,
     ):
         timeout_watch = TimeoutWatch(timeout=_sampling_duration)
         while timeout_watch.remaining_time() > 0:
-            if not is_http_ok(utility_pods=_utility_pods, node=_master_host_node, url=_url):
+            if not is_http_ok(utility_pods=_utility_pods, node=_control_plane_host_node, url=_url):
                 raise Exception("Wrong status code from server.")
             time.sleep(_sampling_interval)
         LOGGER.info("HTTP querying finished successfully.")
@@ -191,7 +194,7 @@ def create_nginx_monitoring_process(
             sampling_duration,
             sampling_interval,
             utility_pods,
-            master_host_node,
+            control_plane_host_node,
         ),
     )
 
