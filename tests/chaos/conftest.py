@@ -270,7 +270,7 @@ def nginx_monitoring_process(
         sampling_duration=TIMEOUT_2MIN,
         sampling_interval=TIMEOUT_5SEC,
         utility_pods=masters_utility_pods,
-        master_host_node=random.choice(control_plane_nodes),
+        control_plane_host_node=random.choice(control_plane_nodes),
     )
     nginx_monitoring_process.start()
     LOGGER.info(f"{nginx_monitoring_process} process started")
