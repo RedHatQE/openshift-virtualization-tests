@@ -57,6 +57,10 @@ BOND = "bond"
 INPROGRESS = "InProgress"
 
 
+class Foo:
+    pass
+
+
 class SriovIfaceNotFound(Exception):
     pass
 
