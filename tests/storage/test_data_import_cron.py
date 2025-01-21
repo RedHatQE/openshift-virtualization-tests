@@ -16,6 +16,7 @@ from ocp_resources.volume_snapshot import VolumeSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
+    BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
@@ -111,15 +112,25 @@ def data_import_cron_image_stream(namespace, storage_class_name_scope_function):
     with DataImportCron(
         name=f"{RHEL8_STR}-image-import-cron",
         namespace=namespace.name,
-        image_stream=RHEL8_IMAGE_STREAM,
-        storage_class=storage_class_name_scope_function,
-        pull_method="node",
-        size=Images.Rhel.DEFAULT_DV_SIZE,
-        schedule=WILDCARD_CRON_EXPRESSION,
         garbage_collect=OUTDATED,
-        managed_data_source=RHEL8_STR,
         imports_to_keep=1,
-        bind_immediate_annotation=True,
+        managed_data_source=RHEL8_STR,
+        schedule=WILDCARD_CRON_EXPRESSION,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
+        template={
+            "spec": {
+                "source": {
+                    "registry": {
+                        "imageStream": RHEL8_IMAGE_STREAM,
+                        "pullMethod": "node",
+                    }
+                },
+                "storage": {
+                    "resources": {"requests": {"storage": Images.Rhel.DEFAULT_DV_SIZE}},
+                    "storageClassName": storage_class_name_scope_function,
+                },
+            }
+        },
     ) as data_import_cron:
         yield data_import_cron
 

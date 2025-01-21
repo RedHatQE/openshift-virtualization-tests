@@ -19,7 +19,7 @@ from tests.infrastructure.golden_images.constants import (
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     template_labels,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
+from utilities.constants import BIND_IMMEDIATE_ANNOTATION, TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
 from utilities.ssp import (
@@ -224,11 +224,22 @@ def created_data_import_cron(
     with DataImportCron(
         name="data-import-cron-for-test",
         namespace=data_import_cron_namespace.name,
-        pull_method="node",
-        url=cron_template_spec.source.registry.url,
-        size=cron_template_spec.storage.resources.requests.storage,
         managed_data_source=golden_images_data_import_cron_spec.managedDataSource,
         schedule=golden_images_data_import_cron_spec.schedule,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
+        template={
+            "spec": {
+                "source": {
+                    "registry": {
+                        "url": cron_template_spec.source.registry.url,
+                        "pullMethod": "node",
+                    }
+                },
+                "storage": {
+                    "resources": {"requests": {"storage": cron_template_spec.storage.resources.requests.storage}}
+                },
+            }
+        },
     ) as data_import_cron:
         yield data_import_cron
 
