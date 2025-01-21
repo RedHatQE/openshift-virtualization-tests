@@ -3,6 +3,7 @@ import logging
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.namespace import Namespace
+from ocp_utilities.monitoring import Prometheus
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
@@ -16,7 +17,9 @@ from utilities.monitoring import get_metrics_value
 LOGGER = logging.getLogger(__name__)
 
 
-def validate_metrics_value(prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN) -> None:
+def validate_metrics_value(
+    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
+) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_15SEC,
@@ -53,7 +56,7 @@ def wait_for_kubemacpool_pods_error_state(dyn_client: DynamicClient, hco_namespa
             return
 
 
-def verify_no_listed_alerts_on_cluster(prometheus, alerts_list: list) -> None:
+def verify_no_listed_alerts_on_cluster(prometheus: Prometheus, alerts_list: list) -> None:
     """
     It gets a list of alerts and verifies that none of them are firing on a cluster.
     """

@@ -6,8 +6,10 @@ import shlex
 import urllib.request
 from contextlib import contextmanager
 
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
@@ -238,7 +240,7 @@ def validate_os_info_vmi_vs_windows_os(vm):
     assert not data_mismatch, f"Data mismatch {data_mismatch}!\nVMI: {vmi_info}\nOS: {windows_info}"
 
 
-def is_ssp_pod_running(dyn_client, hco_namespace):
+def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace):
     pod = utilities.infra.get_pod_by_name_prefix(
         dyn_client=dyn_client,
         pod_prefix=SSP_OPERATOR,

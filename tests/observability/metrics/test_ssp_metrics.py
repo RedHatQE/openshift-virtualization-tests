@@ -104,7 +104,7 @@ class TestSSPTemplate:
         validate_metric_value_within_range(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE,
-            expected_value="1",
+            expected_value=1,
         )
 
 
