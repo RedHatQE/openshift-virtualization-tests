@@ -1,11 +1,14 @@
+import logging
+
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.replica_set import ReplicaSet
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import BAD_HTTPGET_PATH
-from tests.observability.utils import LOGGER
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, VIRT_OPERATOR
 from utilities.infra import get_deployment_by_name
+
+LOGGER = logging.getLogger(__name__)
 
 
 def delete_replica_set_by_prefix(replica_set_prefix: str, namespace: str, dyn_client: DynamicClient) -> None:

@@ -246,7 +246,7 @@ def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace):
         pod_prefix=SSP_OPERATOR,
         namespace=hco_namespace.name,
     )
-    return pod.instance.status.phase == pod.Status.RUNNING and pod.instance.status.containerStatuses[0]["ready"]
+    return pod.status == pod.Status.RUNNING and pod.instance.status.containerStatuses[0]["ready"]
 
 
 def verify_ssp_pod_is_running(
