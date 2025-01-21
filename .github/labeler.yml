@@ -1,8 +1,8 @@
 # Add 'sig-network' label to any changes within 'tests/network' folder
 # or any subfolders
 sig-network:
-- changed-files:
-  - any-glob-to-any-file:
-    - tests/network/**
-    - libs/net/**
-    - utilities/network.py
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/network/**'
+      - 'libs/net/**'
+      - 'utilities/network.py'
