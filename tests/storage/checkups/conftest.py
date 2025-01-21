@@ -22,6 +22,7 @@ from tests.storage.checkups.utils import update_storage_profile
 from tests.storage.utils import create_cirros_vm
 from tests.utils import get_image_from_csv
 from utilities.constants import (
+    BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
     TIMEOUT_10MIN,
     VALUE_STR,
@@ -197,13 +198,27 @@ def broken_data_import_cron(golden_images_namespace):
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
-        image_stream=NON_EXISTENT_STR,
-        pull_method="node",
-        size="30Gi",
         schedule=WILDCARD_CRON_EXPRESSION,
         garbage_collect=OUTDATED,
         managed_data_source="broken-data-source",
-        bind_immediate_annotation=True,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
+        template={
+            "spec": {
+                "source": {
+                    "registry": {
+                        "imageStream": NON_EXISTENT_STR,
+                        "pullMethod": "node",
+                    }
+                },
+                "storage": {
+                    "resources": {
+                        "requests": {
+                            "storage": "30Gi",
+                        }
+                    }
+                },
+            }
+        },
     ) as data_import_cron:
         yield data_import_cron
 

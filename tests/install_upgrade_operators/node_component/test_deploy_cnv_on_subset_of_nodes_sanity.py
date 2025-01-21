@@ -56,7 +56,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
     ):
         assert nodes_labeled["op2"] == expected_node_by_label["op2"]
-        # Verify all operator components are removed from master-0 and created on master-1.
+        # Verify all operator components are removed from control plane node-0 and created on control plane node-1.
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op2"][0],
@@ -234,7 +234,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
     ):
         assert nodes_labeled["op3"] == expected_node_by_label["op3"]
-        # Verify all operator components are removed from master-2 and created on master-3.
+        # Verify all operator components are removed from control plane node -2 and created on control plane node-3.
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op3"][0],

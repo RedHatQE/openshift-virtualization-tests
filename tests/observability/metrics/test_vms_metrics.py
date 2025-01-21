@@ -3,12 +3,14 @@ from datetime import datetime, timezone
 
 import bitmath
 import pytest
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
+from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
@@ -22,8 +24,10 @@ from tests.observability.metrics.utils import (
     validate_metric_value_within_range,
 )
 from tests.observability.utils import validate_metrics_value
+from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
 from utilities.constants import (
     CAPACITY,
+    LIVE_MIGRATE,
     MIGRATION_POLICY_VM_LABEL,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -78,7 +82,7 @@ def stopped_vm_metric_1(vm_metric_1):
 
 
 @pytest.fixture()
-def vm_in_error_state(namespace, masters):
+def vm_in_error_state(namespace):
     vm_name = "vm-in-error-state"
     with VirtualMachineForTests(
         name=vm_name,
@@ -429,4 +433,41 @@ class TestVmFreeMemoryBytes:
             metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_rss"
             f"{{pod='{vm_for_test.privileged_vmi.virt_launcher_pod.name}'}}",
             expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_rss_bytes,
+        )
+
+
+class TestKubevirtVmiNonEvictable:
+    @pytest.mark.parametrize(
+        "data_volume_scope_function, vm_from_template_with_existing_dv",
+        [
+            pytest.param(
+                {
+                    "dv_name": "non-evictable-dv",
+                    "image": RHEL_LATEST["image_path"],
+                    "storage_class": py_config["default_storage_class"],
+                    "dv_size": RHEL_LATEST["dv_size"],
+                    "access_modes": DataVolume.AccessMode.RWO,
+                },
+                {
+                    "vm_name": "non-evictable-vm",
+                    "template_labels": FEDORA_LATEST_LABELS,
+                    "ssh": False,
+                    "guest_agent": False,
+                    "eviction_strategy": LIVE_MIGRATE,
+                },
+                marks=pytest.mark.polarion("CNV-7484"),
+            ),
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vmi_non_evictable(
+        self,
+        prometheus,
+        data_volume_scope_function,
+        vm_from_template_with_existing_dv,
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name="kubevirt_vmi_non_evictable",
+            expected_value="1",
         )

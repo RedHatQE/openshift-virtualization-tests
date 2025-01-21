@@ -781,3 +781,5 @@ WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
 
 PUBLIC_DNS_SERVER_IP = "8.8.8.8"
+
+BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}

@@ -438,7 +438,7 @@ def workers(nodes):
 
 
 @pytest.fixture(scope="session")
-def masters(nodes):
+def control_plane_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label=MASTER_NODE_LABEL_KEY)
 
 
@@ -530,7 +530,7 @@ def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cn
 
 
 @pytest.fixture(scope="session")
-def masters_utility_pods(admin_client, installing_cnv, masters, utility_daemonset):
+def masters_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
     """
     Get utility pods from master nodes.
     When the tests start we deploy a pod on every master node in the cluster using a daemonset.
@@ -539,7 +539,7 @@ def masters_utility_pods(admin_client, installing_cnv, masters, utility_daemonse
     if installing_cnv:
         return
     return get_utility_pods_from_nodes(
-        nodes=masters,
+        nodes=control_plane_nodes,
         admin_client=admin_client,
         label_selector="cnv-test=utility",
     )
@@ -2083,8 +2083,8 @@ def skip_if_sno_cluster(sno_cluster):
 
 
 @pytest.fixture(scope="session")
-def compact_cluster(nodes, workers, masters):
-    return len(nodes) == len(workers) == len(masters) == 3
+def compact_cluster(nodes, workers, control_plane_nodes):
+    return len(nodes) == len(workers) == len(control_plane_nodes) == 3
 
 
 @pytest.fixture(scope="session")

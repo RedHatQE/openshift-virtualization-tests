@@ -10,7 +10,10 @@ from tests.network.checkup_framework.utils import (
     wait_for_job_finish,
 )
 
-pytestmark = pytest.mark.usefixtures("framework_resources")
+pytestmark = [
+    pytest.mark.jira("CNV-55124", run=False),
+    pytest.mark.usefixtures("framework_resources"),
+]
 
 CNCF_IO_RESOURCE = Resource.ApiGroup.K8S_CNI_CNCF_IO
 CONNECTIVITY_ISSUE_ERROR_REGEX_MESSAGE = (

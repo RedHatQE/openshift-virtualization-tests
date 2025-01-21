@@ -8,7 +8,7 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -16,6 +16,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     CNV_VMI_STATUS_RUNNING_COUNT,
+    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
@@ -52,6 +53,7 @@ from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
+    COUNT_FIVE,
     NODE_STR,
     ONE_CPU_CORE,
     PVC,
@@ -72,6 +74,7 @@ from utilities.constants import (
 )
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
+from utilities.monitoring import get_metrics_value
 from utilities.storage import create_dv, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
     VirtualMachineForTests,
@@ -899,3 +902,17 @@ def virt_handler_pods_count(hco_namespace):
             namespace=hco_namespace.name,
         ).instance.status.numberReady
     )
+
+
+@pytest.fixture()
+def generated_api_deprecated_requests(prometheus):
+    initial_metric_value = int(
+        get_metrics_value(
+            prometheus=prometheus,
+            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
+        )
+    )
+    VirtualMachine.api_version = Resource.ApiVersion.V1ALPHA3
+    for _ in range(COUNT_FIVE):
+        len(list(VirtualMachine.get()))
+    return initial_metric_value + COUNT_FIVE
