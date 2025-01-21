@@ -82,7 +82,7 @@ def stopped_vm_metric_1(vm_metric_1):
 
 
 @pytest.fixture()
-def vm_in_error_state(namespace, masters):
+def vm_in_error_state(namespace):
     vm_name = "vm-in-error-state"
     with VirtualMachineForTests(
         name=vm_name,
