@@ -1,9 +1,8 @@
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
-from tests.observability.constants import SSP_HIGH_RATE_REJECTED_VMS
 from tests.observability.metrics.constants import KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE
-from tests.observability.metrics.utils import validate_metric_value_within_range
+from tests.observability.metrics.utils import COUNT_THREE, validate_metric_value_within_range
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     SSP_OPERATOR,
@@ -18,7 +17,7 @@ KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE = "kubevirt_ssp_common_templates
 KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED = "kubevirt_ssp_operator_reconcile_succeeded_aggregated"
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def template_modified(admin_client, base_templates):
     with ResourceEditorValidateHCOReconcile(
         patches={base_templates[0]: {"metadata": {"annotations": {"description": "New Description"}}}}
@@ -27,24 +26,17 @@ def template_modified(admin_client, base_templates):
 
 
 @pytest.fixture(scope="class")
-def high_rate_rejected_vms_metric(prometheus_existing_records):
-    for rule in prometheus_existing_records:
-        if rule.get("alert") == SSP_HIGH_RATE_REJECTED_VMS:
-            return int(rule["expr"][-1])
-
-
-@pytest.fixture(scope="class")
 def created_multiple_failed_vms(
     instance_type_for_test_scope_class,
     unprivileged_client,
     namespace,
-    high_rate_rejected_vms_metric,
+    request,
 ):
     """
     This fixture is trying to create wrong VMs multiple times for getting alert triggered
     """
     with instance_type_for_test_scope_class as vm_instance_type:
-        for _ in range(high_rate_rejected_vms_metric + 1):
+        for _ in range(request.param["vm_count"]):
             with pytest.raises(UnprocessibleEntityError):
                 with VirtualMachineForTests(
                     name="non-creatable-vm",
@@ -64,6 +56,14 @@ def created_multiple_failed_vms(
 
 
 class TestSSPTemplate:
+    @pytest.mark.polarion("CNV-11356")
+    def test_metric_kubevirt_ssp_common_templates_restored_increase(self, prometheus, template_modified):
+        validate_metric_value_within_range(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE,
+            expected_value=1,
+        )
+
     @pytest.mark.parametrize(
         "scaled_deployment, metric_name",
         [
@@ -99,38 +99,27 @@ class TestSSPTemplate:
             expected_value="0",
         )
 
-    @pytest.mark.polarion("CNV-11356")
-    def test_metric_kubevirt_ssp_common_templates_restored_increase(self, prometheus, template_modified):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE,
-            expected_value=1,
-        )
-
 
 @pytest.mark.parametrize(
-    "common_instance_type_param_dict",
+    "initiate_metric_value, common_instance_type_param_dict, created_multiple_failed_vms",
     [
         pytest.param(
+            KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE,
             {
                 "name": "basic",
                 "memory_requests": "10Mi",
             },
+            {"vm_count": COUNT_THREE},
         )
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("instance_type_for_test_scope_class", "created_multiple_failed_vms")
+@pytest.mark.usefixtures("initiate_metric_value", "instance_type_for_test_scope_class", "created_multiple_failed_vms")
 class TestSSPTemplateValidatorRejected:
-    @pytest.mark.dependency(depends=[f"test_{SSP_HIGH_RATE_REJECTED_VMS}"])
     @pytest.mark.polarion("CNV-11310")
-    def test_metric_kubevirt_ssp_template_validator_rejected_increase(
-        self,
-        prometheus,
-        high_rate_rejected_vms_metric,
-    ):
+    def test_metric_kubevirt_ssp_template_validator_rejected_increase(self, prometheus, initiate_metric_value):
         validate_metric_value_within_range(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE,
-            expected_value=float(high_rate_rejected_vms_metric + 1),
+            expected_value=float(float(initiate_metric_value) + COUNT_THREE),
         )

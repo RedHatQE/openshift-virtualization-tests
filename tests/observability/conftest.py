@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.ssp import SSP
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -39,20 +38,6 @@ def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
         list_resource_reconcile=[SSP],
     ):
         yield
-
-
-@pytest.fixture(scope="class")
-def prometheus_k8s_rules_cnv(hco_namespace):
-    return PrometheusRule(name="prometheus-k8s-rules-cnv", namespace=hco_namespace.name)
-
-
-@pytest.fixture(scope="class")
-def prometheus_existing_records(prometheus_k8s_rules_cnv):
-    return [
-        component["rules"]
-        for component in prometheus_k8s_rules_cnv.instance.to_dict()["spec"]["groups"]
-        if component["name"] == "alerts.rules"
-    ][0]
 
 
 @pytest.fixture()

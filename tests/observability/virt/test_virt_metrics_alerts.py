@@ -53,7 +53,6 @@ class TestLowReadyVirtOperatorCount:
         ],
         indirect=True,
     )
-    @pytest.mark.dependency(depends=[f"test_metric_{KUBEVIRT_VIRT_OPERATOR_READY}"])
     def test_alert_low_virt_operator_count(
         self,
         prometheus,

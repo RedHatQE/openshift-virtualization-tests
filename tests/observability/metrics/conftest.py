@@ -955,3 +955,8 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
     ).delete(wait=True)
     yield
     verify_ssp_pod_is_running(dyn_client=admin_client, hco_namespace=hco_namespace)
+
+
+@pytest.fixture(scope="class")
+def initiate_metric_value(request, prometheus):
+    return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
