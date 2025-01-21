@@ -2261,7 +2261,7 @@ def start_and_fetch_processid_on_linux_vm(vm, process_name, args="", use_nohup=F
 def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=shlex.split(f"pgrep {process_name} || true"),
+        commands=shlex.split(f"pgrep {process_name} -x || true"),
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
     return int(cmd_res)
