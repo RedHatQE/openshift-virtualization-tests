@@ -1602,6 +1602,9 @@ def wait_for_running_vm(
         wait_for_interfaces (bool): Is waiting for VM's interfaces mandatory for declaring VM as running.
         check_ssh_connectivity (bool): Enable SSh service in the VM.
         ssh_timeout (int): how much time to wait for SSH connectivity
+
+    Raises:
+        TimeoutExpiredError: After timeout is reached for any of the steps
     """
     assert_vm_not_error_status(vm=vm)
     try:
