@@ -2,7 +2,11 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from tests.observability.metrics.constants import KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE
-from tests.observability.metrics.utils import COUNT_THREE, validate_metric_value_within_range
+from tests.observability.metrics.utils import (
+    COUNT_THREE,
+    validate_metric_value_with_round_down,
+    validate_metric_value_within_range,
+)
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     SSP_OPERATOR,
@@ -118,7 +122,7 @@ class TestSSPTemplate:
 class TestSSPTemplateValidatorRejected:
     @pytest.mark.polarion("CNV-11310")
     def test_metric_kubevirt_ssp_template_validator_rejected_increase(self, prometheus, initiate_metric_value):
-        validate_metric_value_within_range(
+        validate_metric_value_with_round_down(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE,
             expected_value=float(float(initiate_metric_value) + COUNT_THREE),
