@@ -9,6 +9,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -75,7 +76,7 @@ from utilities.constants import (
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
-from utilities.storage import create_dv, vm_snapshot, wait_for_cdi_worker_pod
+from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -919,22 +920,15 @@ def generated_api_deprecated_requests(prometheus):
 
 
 @pytest.fixture()
-def smartclone_support_drivers():
-    return [
-        line.split()[1]
-        for line in run_command(command=shlex.split("oc get volumesnapshotclass"), check=False)[1]
-        .strip()
-        .split("\n")[1:]
-    ]
-
-
-@pytest.fixture()
-def storage_class_info_for_testing(cluster_storage_classes, smartclone_support_drivers):
-    chosen_sc_instance = cluster_storage_classes[0].instance
+def storage_class_info_for_testing(admin_client):
+    chosen_sc_name = py_config["default_storage_class"]
     return {
-        "storageclass": chosen_sc_instance.metadata.name,
-        "smartclone": "true" if chosen_sc_instance.provisioner in smartclone_support_drivers else "false",
+        "storageclass": chosen_sc_name,
+        "smartclone": "true" if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=admin_client) else "false",
         "virtdefault": "true"
-        if chosen_sc_instance.metadata.annotations["storageclass.kubevirt.io/is-default-virt-class"] == "true"
+        if StorageClass(client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
+            "storageclass.kubevirt.io/is-default-virt-class"
+        ]
+        == "true"
         else "false",
     }
