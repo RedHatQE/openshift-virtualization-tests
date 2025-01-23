@@ -916,3 +916,25 @@ def generated_api_deprecated_requests(prometheus):
     for _ in range(COUNT_FIVE):
         len(list(VirtualMachine.get()))
     return initial_metric_value + COUNT_FIVE
+
+
+@pytest.fixture()
+def smartclone_support_drivers():
+    return [
+        line.split()[1]
+        for line in run_command(command=shlex.split("oc get volumesnapshotclass"), check=False)[1]
+        .strip()
+        .split("\n")[1:]
+    ]
+
+
+@pytest.fixture()
+def storage_class_info_for_testing(cluster_storage_classes, smartclone_support_drivers):
+    chosen_sc_instance = cluster_storage_classes[0].instance
+    return {
+        "storageclass": chosen_sc_instance.metadata.name,
+        "smartclone": "true" if chosen_sc_instance.provisioner in smartclone_support_drivers else "false",
+        "virtdefault": "true"
+        if chosen_sc_instance.metadata.annotations["storageclass.kubevirt.io/is-default-virt-class"] == "true"
+        else "false",
+    }
