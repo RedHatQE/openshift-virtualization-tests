@@ -920,14 +920,14 @@ def generated_api_deprecated_requests(prometheus):
 
 
 @pytest.fixture()
-def storage_class_info_for_testing(admin_client):
+def storage_class_labels_for_testing(admin_client):
     chosen_sc_name = py_config["default_storage_class"]
     return {
         "storageclass": chosen_sc_name,
         "smartclone": "true" if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=admin_client) else "false",
         "virtdefault": "true"
         if StorageClass(client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
-            "storageclass.kubevirt.io/is-default-virt-class"
+            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         ]
         == "true"
         else "false",

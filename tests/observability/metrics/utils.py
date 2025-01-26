@@ -1156,17 +1156,13 @@ def compare_metric_file_system_values_with_vm_file_system_values(
         raise
 
 
-def compare_metric_labels_value_with_expected_results(
+def expected_storage_class_labels_and_values(
     prometheus: Prometheus, metric_name: str, expected_labels_and_values: dict[str, str]
 ) -> None:
     metric_output = prometheus.query_sampler(query=metric_name)[0].get("metric")
-    missmatch = {}
-    for label in expected_labels_and_values:
-        metric_output_metric_result = metric_output.get(label)
-        expected_label_results = expected_labels_and_values[label]
-        if metric_output_metric_result != expected_label_results:
-            missmatch[label] = {
-                f"{label} metric result: {metric_output_metric_result}, "
-                f"expected_label_results: {expected_label_results}"
-            }
-    assert not missmatch, f"There is a missmatch in expected values and metric result: {missmatch}"
+    mismatch = {
+        label: {f"{label} metric result: {metric_output.get(label)}, expected_label_results: {expected_label_results}"}
+        for label, expected_label_results in expected_labels_and_values.items()
+        if metric_output.get(label) != expected_label_results
+    }
+    assert not mismatch, f"There is a missmatch in expected values and metric result: {mismatch}"
