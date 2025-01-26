@@ -5,7 +5,7 @@ Pytest conftest file for CNV Storage restricted namespace cloning tests
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.resource import Resource
+from ocp_resources.resource import Resource, get_client
 from ocp_resources.service_account import ServiceAccount
 
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -34,8 +34,8 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture(scope="module")
-def destination_ns(unprivileged_client):
-    yield from create_ns(name="restricted-namespace-destination-namespace", unprivileged_client=unprivileged_client)
+def destination_ns(admin_client):
+    yield from create_ns(name="restricted-namespace-test-destination-namespace", admin_client=admin_client)
 
 
 @pytest.fixture(scope="module")
@@ -194,7 +194,6 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
     permissions_src,
 ):
     namespace = data_volume_multi_storage_scope_module.namespace
-
     with create_dv(
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_module}",
         namespace=namespace,
@@ -205,7 +204,6 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
-        cdv.wait_for_dv_success()
         yield cdv
 
 
@@ -229,7 +227,8 @@ def dv_destination_cloned_from_pvc(
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
-        cdv.wait_for_dv_success()
+        _cdv_admin = DataVolume(name=cdv.name, namespace=cdv.namespace, client=get_client())
+        _cdv_admin.wait_for_dv_success()
         yield cdv
 
 
@@ -252,3 +251,13 @@ def vm_for_restricted_namespace_cloning_test(
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+@pytest.fixture()
+def user_has_get_permissions_in_source_namespace(namespace, unprivileged_client):
+    assert list(DataVolume.get(namespace=namespace.name, dyn_client=unprivileged_client))[0]
+
+
+@pytest.fixture()
+def verify_image_permissions(request):
+    return request.param.get("verify_image_permissions")
