@@ -15,16 +15,6 @@ pytestmark = [pytest.mark.usefixtures("skip_if_hpp_not_exist", "hpp_condition_av
 LOGGER = logging.getLogger(__name__)
 
 
-class TestHPPCrReady:
-    @pytest.mark.polarion("CNV-11022")
-    def test_kubevirt_hpp_cr_ready_metric(self, prometheus, modified_hpp_non_exist_node_selector):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_hpp_cr_ready",
-            expected_value="0",
-        )
-
-
 @pytest.mark.usefixtures("hpp_pod_sharing_pool_path")
 class TestHPPSharingPoolPathWithOS:
     TEST_HPP_POOL_NAME = "test-hpp-pool-path"
@@ -79,5 +69,15 @@ class TestHPPOperatorUpMetric:
         validate_metrics_value(
             prometheus=prometheus,
             metric_name="kubevirt_hpp_operator_up",
+            expected_value="0",
+        )
+
+
+class TestHPPCrReady:
+    @pytest.mark.polarion("CNV-11022")
+    def test_kubevirt_hpp_cr_ready_metric(self, prometheus, modified_hpp_non_exist_node_selector):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name="kubevirt_hpp_cr_ready",
             expected_value="0",
         )

@@ -6,10 +6,9 @@ from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError
 
-from tests.observability.storage.constants import HPP_NOT_READY
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import HOSTPATH_PROVISIONER, HOSTPATH_PROVISIONER_CSI, TIMEOUT_2MIN
 from utilities.infra import get_pod_by_name_prefix, scale_deployment_replicas
-from utilities.monitoring import wait_for_firing_alert_clean_up
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +59,11 @@ def modified_hpp_non_exist_node_selector(hostpath_provisioner_scope_class, prome
         status=hostpath_provisioner_scope_class.Condition.Status.TRUE,
         timeout=TIMEOUT_2MIN,
     )
-    wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=HPP_NOT_READY)
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name="kubevirt_hpp_cr_ready",
+        expected_value="1",
+    )
 
 
 @pytest.fixture(scope="class")
