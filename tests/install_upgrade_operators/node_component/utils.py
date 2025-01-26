@@ -19,7 +19,7 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    MASTER_NODE_LABEL_KEY,
+    NODE_ROLE_KUBERNETES_IO,
     SSP_OPERATOR,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
@@ -61,7 +61,7 @@ SUBSCRIPTION_NODE_SELCTOR_3 = {"op-comp": "op3"}
 SUBSCRIPTION_TOLERATIONS = [
     {
         "effect": "NoSchedule",
-        "key": MASTER_NODE_LABEL_KEY,
+        "key": f"{NODE_ROLE_KUBERNETES_IO}/master",
         "operator": "Exists",
     }
 ]

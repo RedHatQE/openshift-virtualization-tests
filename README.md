@@ -586,7 +586,7 @@ To skip `unprivileged_client` creation pass to pytest command:
 
 ##### Example
 
-`workers_utility_pods` and `masters_utility_pods` are fixtures that hold the pods.
+`workers_utility_pods` and `control_plane_utility_pods` are fixtures that hold the pods.
 
 ```python
 pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
