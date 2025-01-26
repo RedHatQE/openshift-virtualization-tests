@@ -41,8 +41,6 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     get_containers_for_pods_with_pvc,
-    is_snapshot_supported_by_sc,
-    sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -300,16 +298,6 @@ def importer_container_status_reason(pod):
         return container_state.waiting.reason
     if container_state.terminated:
         return container_state.terminated.reason
-
-
-def verify_snapshot_used_namespace_transfer(cdv, unprivileged_client):
-    cdv.wait_for_dv_success()
-    storage_class = cdv.storage_class
-    # Namespace transfer is not possible with WFFC
-    if is_snapshot_supported_by_sc(
-        sc_name=storage_class, client=unprivileged_client
-    ) and not sc_volume_binding_mode_is_wffc(sc=storage_class):
-        assert_pvc_snapshot_clone_annotation(pvc=cdv.pvc, storage_class=storage_class)
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
