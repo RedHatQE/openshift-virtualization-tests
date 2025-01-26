@@ -96,8 +96,8 @@ from utilities.constants import (
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEMACPOOL_MAC_RANGE_CONFIG,
     LINUX_BRIDGE,
-    MASTER_NODE_LABEL_KEY,
     MIGRATION_POLICY_VM_LABEL,
+    NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
     OS_FLAVOR_RHEL,
@@ -439,7 +439,7 @@ def workers(nodes):
 
 @pytest.fixture(scope="session")
 def control_plane_nodes(nodes):
-    return get_nodes_with_label(nodes=nodes, label=MASTER_NODE_LABEL_KEY)
+    return get_nodes_with_label(nodes=nodes, label=f"{NODE_ROLE_KUBERNETES_IO}/control-plane")
 
 
 @pytest.fixture(scope="session")
@@ -530,10 +530,10 @@ def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cn
 
 
 @pytest.fixture(scope="session")
-def masters_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
+def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
     """
-    Get utility pods from master nodes.
-    When the tests start we deploy a pod on every master node in the cluster using a daemonset.
+    Get utility pods from control plane nodes.
+    When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
     These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
     """
     if installing_cnv:
@@ -2219,7 +2219,9 @@ def skip_if_no_storage_class_for_snapshot(storage_class_for_snapshot):
 @pytest.fixture()
 def audit_logs():
     """Get audit logs names"""
-    output = subprocess.getoutput(f"{OC_ADM_LOGS_COMMAND} --role=master {AUDIT_LOGS_PATH} | grep audit").splitlines()
+    output = subprocess.getoutput(
+        f"{OC_ADM_LOGS_COMMAND} --role=control-plane {AUDIT_LOGS_PATH} | grep audit"
+    ).splitlines()
     nodes_logs = defaultdict(list)
     for line in output:
         try:

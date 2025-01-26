@@ -202,8 +202,10 @@ def test_successful_import_archive(
     skip_block_volumemode_scope_module,
     running_pod_with_dv_pvc,
 ):
-    """"Skip block volume mode - archive does not support block mode DVs,\
-       https://github.com/kubevirt/containerized-data-importer/blob/master/doc/supported_operations.md"""
+    """
+    Skip block volume mode - archive does not support block mode DVs,
+    https://github.com/kubevirt/containerized-data-importer/blob/main/doc/supported_operations.md
+    """
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
@@ -263,8 +265,10 @@ def test_successful_import_image(
 def test_successful_import_secure_archive(
     skip_block_volumemode_scope_module, internal_http_configmap, running_pod_with_dv_pvc
 ):
-    """"Skip block volume mode - archive does not support block mode DVs,\
-        https://github.com/kubevirt/containerized-data-importer/blob/master/doc/supported_operations.md"""
+    """
+    Skip block volume mode - archive does not support block mode DVs,
+    https://github.com/kubevirt/containerized-data-importer/blob/main/doc/supported_operations.md
+    """
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
