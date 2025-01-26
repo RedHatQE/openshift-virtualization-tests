@@ -309,7 +309,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
     ):
         assert nodes_labeled["op1"] == expected_node_by_label["op1"]
-        # Verify all the operators are moved to master-0
+        # Verify all the operators are moved to control plane -0
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op1"][0],

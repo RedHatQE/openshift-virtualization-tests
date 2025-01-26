@@ -413,7 +413,7 @@ def get_json_patch_annotation_values(component, path, value=None, op="add"):
 
 
 def hco_cr_jsonpatch_annotations_dict(component, path, value=None, op="add"):
-    # https://github.com/kubevirt/hyperconverged-cluster-operator/blob/master/docs/cluster-configuration.md#jsonpatch-annotations
+    # https://github.com/kubevirt/hyperconverged-cluster-operator/blob/main/docs/cluster-configuration.md#jsonpatch-annotations
     return {
         "metadata": {
             "annotations": get_json_patch_annotation_values(component=component, path=path, value=value, op=op)

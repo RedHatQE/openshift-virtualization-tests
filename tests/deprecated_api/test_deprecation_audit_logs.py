@@ -73,7 +73,7 @@ def format_printed_deprecations_dict(deprecated_calls):
 
 @pytest.fixture()
 def deprecated_apis_calls(audit_logs):
-    """Go over master nodes audit logs and look for calls using deprecated APIs"""
+    """Go over control plane nodes audit logs and look for calls using deprecated APIs"""
     failed_api_calls = defaultdict(list)
     for node, logs in audit_logs.items():
         for audit_log_entry_dict in get_node_audit_log_line_dict(
