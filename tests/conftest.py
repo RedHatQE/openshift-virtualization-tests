@@ -3022,3 +3022,8 @@ def nmstate_namespace(admin_client):
     nmstate_ns = Namespace(name="openshift-nmstate")
     assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
     return nmstate_ns
+
+
+@pytest.fixture()
+def kubevirt_resource(admin_client, hco_namespace):
+    return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)

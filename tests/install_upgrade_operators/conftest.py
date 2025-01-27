@@ -34,7 +34,6 @@ from utilities.operator import (
     get_machine_config_pools_conditions,
 )
 from utilities.storage import get_hyperconverged_cdi
-from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -117,11 +116,6 @@ def ocp_resources_submodule_list():
 @pytest.fixture(scope="session")
 def cnv_registry_source(cnv_source):
     return py_config["cnv_registry_sources"][cnv_source]
-
-
-@pytest.fixture()
-def kubevirt_resource(admin_client, hco_namespace):
-    return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture()
