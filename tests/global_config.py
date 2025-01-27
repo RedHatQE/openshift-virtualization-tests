@@ -187,10 +187,12 @@ sysprep_source_matrix = ["ConfigMap", "Secret"]
 # If the DataImportCron uses a different prefix than the DataSource name
 # use data_import_cron_prefix in matrix dict to specify new prefix.
 auto_update_data_source_matrix = [
-    {"centos-stream9": {"template_os": "centos-stream9"}},
-    {"fedora": {"template_os": "fedora"}},
-    {"rhel8": {"template_os": "rhel8.4"}},
-    {"rhel9": {"template_os": "rhel9.0"}},
+    {"centos-stream9"},
+    {"centos-stream10"},
+    {"fedora"},
+    {"rhel8"},
+    {"rhel9"},
+    {"rhel10-beta"},
 ]
 
 IMAGE_NAME_STR = "image_name"

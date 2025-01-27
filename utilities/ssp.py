@@ -78,14 +78,7 @@ def wait_for_at_least_one_auto_update_data_import_cron(admin_client, namespace):
 
 
 def matrix_auto_boot_data_import_cron_prefixes():
-    data_import_cron_prefixes = []
-    for data_source_matrix_entry in py_config["auto_update_data_source_matrix"]:
-        data_source_name = [*data_source_matrix_entry][0]
-        data_import_cron_prefixes.append(
-            data_source_matrix_entry[data_source_name].get("data_import_cron_prefix", data_source_name)
-        )
-
-    return data_import_cron_prefixes
+    return [list(data_source_name)[0] for data_source_name in py_config["auto_update_data_source_matrix"]]
 
 
 def get_data_import_crons(admin_client, namespace):

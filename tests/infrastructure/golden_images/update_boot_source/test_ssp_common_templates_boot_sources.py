@@ -21,25 +21,23 @@ from utilities.infra import (
     get_artifactory_secret,
     validate_os_info_vmi_vs_linux_os,
 )
-from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
+from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
 
 LOGGER = logging.getLogger(__name__)
 RHEL9_NAME = "rhel9"
 
 
-def assert_os_version_mismatch_in_vm(vm, expected_os):
-    expected_os_params = re.match(r"(?P<os_name>[a-z]+)(-stream)?(?P<os_ver>[0-9]+)", expected_os).groupdict()
+def assert_os_version_mismatch_in_vm(vm, latest_fedora_release_version):
     vm_os = vm.ssh_exec.os.release_str.lower()
-    os_name = "redhat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else vm.os_flavor
-    expected_name_in_vm_os = "red hat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else os_name
-    assert re.match(rf"({expected_name_in_vm_os}).*({expected_os_params['os_ver']}).*", vm_os), (
-        f"Wrong VM OS, expected: {expected_os_params}, actual: {vm_os}"
+    expected_os_params = re.match(r"(?P<os_name>[a-z]+)(?:\.stream|\.|$)(?P<os_ver>[0-9]*)", vm.instance.spec.preference.name).groupdict()
+    expected_name_in_vm_os = (
+        "red hat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else expected_os_params["os_name"]
     )
-
-
-@pytest.fixture()
-def boot_source_os_from_data_source_dict(auto_update_data_source_matrix__function__):
-    return auto_update_data_source_matrix__function__[[*auto_update_data_source_matrix__function__][0]]["template_os"]
+    expected_os_params['os_ver'] = expected_os_params['os_ver'] or latest_fedora_release_version
+    assert re.match(rf"{expected_name_in_vm_os}.*{expected_os_params['os_ver']}.*", vm_os), (
+        f"Wrong VM OS, expected: {expected_name_in_vm_os}, actual: {vm_os}"
+    )
 
 
 @pytest.fixture()
@@ -80,15 +78,17 @@ def auto_update_boot_source_vm(
     unprivileged_client,
     namespace,
     existing_data_source_volume,
-    boot_source_os_from_data_source_dict,
 ):
     LOGGER.info(f"Create a VM using {existing_data_source_volume.name} dataSource")
-    with VirtualMachineForTestsFromTemplate(
-        name=f"{existing_data_source_volume.name}-vm",
-        namespace=namespace.name,
+    with VirtualMachineForTests(
         client=unprivileged_client,
-        labels=template_labels(os=boot_source_os_from_data_source_dict),
-        data_source=existing_data_source_volume,
+        name=f"{existing_data_source_volume.name}-data-source-vm",
+        namespace=namespace.name,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=existing_data_source_volume,
+        ),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -152,15 +152,12 @@ def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source, rhel9_htt
 @pytest.mark.polarion("CNV-7586")
 def test_vm_from_auto_update_boot_source(
     auto_update_boot_source_vm,
-    boot_source_os_from_data_source_dict,
     latest_fedora_release_version,
 ):
     LOGGER.info(f"Verify {auto_update_boot_source_vm.name} OS version and virtctl info")
-    if "fedora" in boot_source_os_from_data_source_dict and latest_fedora_release_version:
-        boot_source_os_from_data_source_dict = f"fedora{latest_fedora_release_version}"
     assert_os_version_mismatch_in_vm(
         vm=auto_update_boot_source_vm,
-        expected_os=boot_source_os_from_data_source_dict,
+        latest_fedora_release_version=latest_fedora_release_version,
     )
     validate_os_info_vmi_vs_linux_os(vm=auto_update_boot_source_vm)
 
