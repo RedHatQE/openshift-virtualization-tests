@@ -10,6 +10,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -76,7 +77,7 @@ from utilities.constants import (
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
-from utilities.storage import create_dv, vm_snapshot, wait_for_cdi_worker_pod
+from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -926,3 +927,18 @@ def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_ap
         except UnprocessibleEntityError:
             continue
     return initial_metric_value + COUNT_FIVE
+
+
+@pytest.fixture()
+def storage_class_labels_for_testing(admin_client):
+    chosen_sc_name = py_config["default_storage_class"]
+    return {
+        "storageclass": chosen_sc_name,
+        "smartclone": "true" if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=admin_client) else "false",
+        "virtdefault": "true"
+        if StorageClass(client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
+            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
+        ]
+        == "true"
+        else "false",
+    }
