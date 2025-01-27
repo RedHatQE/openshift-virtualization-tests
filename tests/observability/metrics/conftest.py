@@ -9,8 +9,8 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.storage_class import StorageClass
 from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -936,9 +936,7 @@ def storage_class_labels_for_testing(admin_client):
         "storageclass": chosen_sc_name,
         "smartclone": "true" if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=admin_client) else "false",
         "virtdefault": "true"
-        if 
-      
-      (client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
+        if StorageClass(client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
             StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         ]
         == "true"
