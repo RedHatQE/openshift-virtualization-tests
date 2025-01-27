@@ -404,6 +404,8 @@ def pod_deleting_process_recover(resource, namespace, pod_prefix):
         if resource_obj.kind == Deployment.kind:
             resource_obj.wait_for_replicas()
 
+    LOGGER.info("Pod recovery process completed successfully.")
+
 
 def get_instance_type(name):
     """

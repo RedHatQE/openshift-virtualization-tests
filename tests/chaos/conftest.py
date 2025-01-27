@@ -188,7 +188,7 @@ def rebooting_control_plane_node(
 def pod_deleting_process(request, admin_client):
     pod_prefix = request.param["pod_prefix"]
     namespace_name = request.param["namespace_name"]
-    pod_deleting_process = create_pod_deleting_process(
+    process = create_pod_deleting_process(
         dyn_client=admin_client,
         pod_prefix=pod_prefix,
         namespace_name=namespace_name,
@@ -196,15 +196,12 @@ def pod_deleting_process(request, admin_client):
         interval=request.param["interval"],
         max_duration=request.param["max_duration"],
     )
-    pod_deleting_process.start()
-    yield pod_deleting_process
-    terminate_process(process=pod_deleting_process)
-
-    pod_deleting_process_recover(
-        resource=request.param["resource"],
-        namespace=namespace_name,
-        pod_prefix=pod_prefix,
-    )
+    process.start()
+    yield {
+        "namespace_name": namespace_name,
+        "pod_prefix": pod_prefix,
+    }
+    terminate_process(process=process)
 
 
 @pytest.fixture()
