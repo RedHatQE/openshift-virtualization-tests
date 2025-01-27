@@ -23,8 +23,9 @@ KUBEVIRT_CNAO_CR_READY = "kubevirt_cnao_cr_ready"
 KUBEVIRT_CNAO_KUBEMACPOOL_DUPLICATE_MACS = "kubevirt_cnao_kubemacpool_duplicate_macs"
 KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED = "kubevirt_cnao_cr_kubemacpool_deployed"
 KUBEVIRT_CNAO_KUBEMACPOOL_MANAGER_UP = "kubevirt_cnao_kubemacpool_manager_up"
-KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE = (
-    f"kubevirt_api_request_deprecated_total{{version='{Resource.ApiVersion.V1ALPHA3}',resource='virtualmachines'}}"
+KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE = (
+    f"kubevirt_api_request_deprecated_total{{version='{Resource.ApiVersion.V1ALPHA3}',"
+    f"resource='virtualmachines', verb='{'POST'}'}}"
 )
 CPU_USER = "cpu.user"
 CPU_SYSTEM = "cpu.system"

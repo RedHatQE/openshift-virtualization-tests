@@ -2,7 +2,7 @@ import bitmath
 import pytest
 
 from tests.observability.metrics.constants import (
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
+    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_VMI_INFO,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -237,6 +237,6 @@ class TestKubevirtApiRequestDeprecatedTotal:
     def test_metric_kubevirt_api_request_deprecated_total(self, prometheus, generated_api_deprecated_requests):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
+            metric_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
             expected_value=str(generated_api_deprecated_requests),
         )
