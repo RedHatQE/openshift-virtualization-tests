@@ -4,11 +4,12 @@ import shlex
 
 import bitmath
 import pytest
+from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -16,7 +17,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     CNV_VMI_STATUS_RUNNING_COUNT,
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
+    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
@@ -905,14 +906,23 @@ def virt_handler_pods_count(hco_namespace):
 
 
 @pytest.fixture()
-def generated_api_deprecated_requests(prometheus):
+def vm_instance_with_deprecated_api_version(namespace):
+    vm_instance = VirtualMachine(name="vm-deprecated-api", namespace=namespace.name, client=get_client())
+    vm_instance.api_version = f"{Resource.ApiGroup.KUBEVIRT_IO}/{Resource.ApiVersion.V1ALPHA3}"
+    return vm_instance
+
+
+@pytest.fixture()
+def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_api_version):
     initial_metric_value = int(
         get_metrics_value(
             prometheus=prometheus,
-            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_AND_RESOURCE,
+            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
         )
     )
-    VirtualMachine.api_version = Resource.ApiVersion.V1ALPHA3
     for _ in range(COUNT_FIVE):
-        len(list(VirtualMachine.get()))
+        try:
+            vm_instance_with_deprecated_api_version.deploy()
+        except UnprocessibleEntityError:
+            continue
     return initial_metric_value + COUNT_FIVE
