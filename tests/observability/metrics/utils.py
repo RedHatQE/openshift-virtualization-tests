@@ -10,6 +10,7 @@ import pytest
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
+from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -1153,3 +1154,15 @@ def compare_metric_file_system_values_with_vm_file_system_values(
             f"Result from metric for the mountpoint: {mount_point}: {metric_value}"
         )
         raise
+
+
+def expected_storage_class_labels_and_values(
+    prometheus: Prometheus, metric_name: str, expected_labels_and_values: dict[str, str]
+) -> None:
+    metric_output = prometheus.query_sampler(query=metric_name)[0].get("metric")
+    mismatch = {
+        label: {f"{label} metric result: {metric_output.get(label)}, expected_label_results: {expected_label_results}"}
+        for label, expected_label_results in expected_labels_and_values.items()
+        if metric_output.get(label) != expected_label_results
+    }
+    assert not mismatch, f"There is a missmatch in expected values and metric result: {mismatch}"
