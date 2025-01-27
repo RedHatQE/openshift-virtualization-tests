@@ -2,6 +2,7 @@ import random
 
 import pytest
 from ocp_resources.deployment import Deployment
+from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.chaos.constants import STRESS_NG
@@ -20,6 +21,7 @@ from utilities.constants import (
     NamespacesNames,
     StorageClassNames,
 )
+from utilities.infra import wait_for_pods_running
 from utilities.virt import wait_for_vmi_relocation_and_running
 
 pytestmark = [
@@ -62,6 +64,7 @@ def test_pod_delete_migration(
     chaos_vm_rhel9,
     pod_deleting_process,
     tainted_node_for_vm_chaos_rhel9_migration,
+    admin_client,
 ):
     """
     This experiment tests the robustness of the cluster
@@ -71,6 +74,12 @@ def test_pod_delete_migration(
     """
 
     wait_for_vmi_relocation_and_running(vm=chaos_vm_rhel9, initial_node=tainted_node_for_vm_chaos_rhel9_migration)
+    wait_for_pods_running(
+        admin_client=admin_client,
+        namespace=Namespace(name=pod_deleting_process["namespace_name"]),
+        number_of_consecutive_checks=10,
+        filter_pods_by_name=pod_deleting_process["pod_prefix"],
+    )
 
 
 @pytest.mark.parametrize(
