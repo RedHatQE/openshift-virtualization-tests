@@ -77,6 +77,7 @@ from utilities.constants import (
     VIRTCTL,
     Images,
 )
+from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import wait_for_hco_conditions
 from utilities.storage import get_default_storage_class
 
@@ -95,7 +96,7 @@ VM_ERROR_STATUSES = [
 ]
 
 
-def wait_for_guest_agent(vmi, timeout=TIMEOUT_12MIN):
+def wait_for_guest_agent(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> None:
     LOGGER.info(f"Wait until guest agent is active on {vmi.name}")
 
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
@@ -107,14 +108,14 @@ def wait_for_guest_agent(vmi, timeout=TIMEOUT_12MIN):
                 if condition.get("type") == "AgentConnected" and condition.get("status") == "True"
             ]
             if agent_status:
-                return True
+                return
 
     except TimeoutExpiredError:
         LOGGER.error(f"Guest agent is not installed or not active on {vmi.name}")
         raise
 
 
-def wait_for_vm_interfaces(vmi, timeout=TIMEOUT_12MIN):
+def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool:
     """
     Wait until guest agent report VMI network interfaces.
 
@@ -129,14 +130,15 @@ def wait_for_vm_interfaces(vmi, timeout=TIMEOUT_12MIN):
         TimeoutExpiredError: After timeout reached.
     """
     # Waiting for guest agent connection before checking guest agent interfaces report
-    if wait_for_guest_agent(vmi=vmi, timeout=timeout):
-        LOGGER.info(f"Wait for {vmi.name} network interfaces")
-        sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
-        for sample in sampler:
-            interfaces = sample.get("status", {}).get("interfaces", [])
-            active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
-            if len(active_interfaces) == len(interfaces):
-                return True
+    wait_for_guest_agent(vmi=vmi, timeout=timeout)
+    LOGGER.info(f"Wait for {vmi.name} network interfaces")
+    sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
+    for sample in sampler:
+        interfaces = sample.get("status", {}).get("interfaces", [])
+        active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
+        if len(active_interfaces) == len(interfaces):
+            return True
+    return False
 
 
 def generate_cloud_init_data(data):
@@ -1462,7 +1464,9 @@ class ServiceForVirtualMachineForTests(Service):
             return self.instance.attributes.spec.ports[0][node_port]
 
 
-def wait_for_ssh_connectivity(vm, timeout=TIMEOUT_2MIN, tcp_timeout=TIMEOUT_1MIN):
+def wait_for_ssh_connectivity(
+    vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
+) -> None:
     LOGGER.info(f"Wait for {vm.name} SSH connectivity.")
 
     for sample in TimeoutSampler(
@@ -1573,7 +1577,7 @@ def get_rhel_os_dict(rhel_version):
     raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
 
 
-def assert_vm_not_error_status(vm):
+def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:
     vm_status = vm.printable_status
     error_list = VM_ERROR_STATUSES.copy()
     vm_devices = vm.instance.spec.template.spec.domain.devices
@@ -1583,12 +1587,12 @@ def assert_vm_not_error_status(vm):
 
 
 def wait_for_running_vm(
-    vm,
-    wait_until_running_timeout=TIMEOUT_4MIN,
-    wait_for_interfaces=True,
-    check_ssh_connectivity=True,
-    ssh_timeout=TIMEOUT_2MIN,
-):
+    vm: VirtualMachineForTests,
+    wait_until_running_timeout: int = TIMEOUT_4MIN,
+    wait_for_interfaces: bool = True,
+    check_ssh_connectivity: bool = True,
+    ssh_timeout: int = TIMEOUT_2MIN,
+) -> None:
     """
     Wait for the VMI to be in Running state.
 
@@ -1598,15 +1602,22 @@ def wait_for_running_vm(
         wait_for_interfaces (bool): Is waiting for VM's interfaces mandatory for declaring VM as running.
         check_ssh_connectivity (bool): Enable SSh service in the VM.
         ssh_timeout (int): how much time to wait for SSH connectivity
+
+    Raises:
+        TimeoutExpiredError: After timeout is reached for any of the steps
     """
     assert_vm_not_error_status(vm=vm)
-    vm.vmi.wait_until_running(timeout=wait_until_running_timeout)
+    try:
+        vm.vmi.wait_until_running(timeout=wait_until_running_timeout)
 
-    if wait_for_interfaces:
-        wait_for_vm_interfaces(vmi=vm.vmi)
+        if wait_for_interfaces:
+            wait_for_vm_interfaces(vmi=vm.vmi)
 
-    if check_ssh_connectivity:
-        wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
+        if check_ssh_connectivity:
+            wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
+    except TimeoutExpiredError:
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        raise
 
 
 def running_vm(

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shlex
 
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import get_client
@@ -20,7 +21,7 @@ def get_data_collector_base():
     return f"{'/data/' if os.environ.get('CNV_TESTS_CONTAINER') else ''}"
 
 
-def get_data_collector_base_directory():
+def get_data_collector_base_directory() -> str:
     return py_config["data_collector"]["data_collector_base_directory"]
 
 
@@ -75,6 +76,14 @@ def collect_alerts_data():
         base_directory=base_dir,
         file_name="firing_alerts.json",
         content=json.dumps(alerts),
+    )
+
+
+def collect_vnc_screenshot_for_vms(vm_name: str, vm_namespace: str) -> None:
+    base_dir = get_data_collector_base_directory()
+    utilities.infra.run_virtctl_command(
+        command=shlex.split(f"vnc screenshot {vm_name} -f {base_dir}/{vm_namespace}-{vm_name}.png"),
+        namespace=vm_namespace,
     )
 
 
