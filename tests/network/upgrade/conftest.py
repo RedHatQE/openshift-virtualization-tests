@@ -86,23 +86,3 @@ def namespace_with_disabled_kmp():
         name="kmp-disabled-ns",
         labels={KMP_VM_ASSIGNMENT_LABEL: KMP_DISABLED_LABEL},
     )
-
-
-@pytest.fixture(scope="session")
-def running_vm_with_bridge(
-    unprivileged_client,
-    upgrade_namespace_scope_session,
-    upgrade_br1test_nad,
-):
-    name = "vm-bridge-connected"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=upgrade_namespace_scope_session.name,
-        networks={upgrade_br1test_nad.name: upgrade_br1test_nad.name},
-        interfaces=[upgrade_br1test_nad.name],
-        client=unprivileged_client,
-        body=fedora_vm_body(name=name),
-        eviction_strategy=ES_NONE,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        yield vm

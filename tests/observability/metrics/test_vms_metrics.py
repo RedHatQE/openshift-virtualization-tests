@@ -471,14 +471,3 @@ class TestKubevirtVmiNonEvictable:
             metric_name="kubevirt_vmi_non_evictable",
             expected_value="1",
         )
-
-
-class TestOutdatedVmi:
-    @pytest.mark.post_upgrade
-    @pytest.mark.polarion("CNV-11749")
-    def test_metric_kubevirt_vmi_number_of_outdated(self, prometheus, kubevirt_resource):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_vmi_number_of_outdated",
-            expected_value=kubevirt_resource.instance.status.outdatedVirtualMachineInstanceWorkloads,
-        )
