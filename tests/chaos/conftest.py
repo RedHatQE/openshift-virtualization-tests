@@ -173,10 +173,10 @@ def rebooted_control_plane_node(request, admin_client, control_plane_nodes, kmp_
 @pytest.fixture()
 def rebooting_control_plane_node(
     rebooted_control_plane_node,
-    masters_utility_pods,
+    control_plane_utility_pods,
 ):
     LOGGER.info(f"Rebooting control plane node {rebooted_control_plane_node.name}...")
-    ExecCommandOnPod(utility_pods=masters_utility_pods, node=rebooted_control_plane_node).exec(
+    ExecCommandOnPod(utility_pods=control_plane_utility_pods, node=rebooted_control_plane_node).exec(
         command="shutdown -r", ignore_rc=True
     )
     wait_for_node_status(node=rebooted_control_plane_node, status=False, wait_timeout=TIMEOUT_3MIN)
@@ -188,7 +188,7 @@ def rebooting_control_plane_node(
 def pod_deleting_process(request, admin_client):
     pod_prefix = request.param["pod_prefix"]
     namespace_name = request.param["namespace_name"]
-    pod_deleting_process = create_pod_deleting_process(
+    process = create_pod_deleting_process(
         dyn_client=admin_client,
         pod_prefix=pod_prefix,
         namespace_name=namespace_name,
@@ -196,15 +196,12 @@ def pod_deleting_process(request, admin_client):
         interval=request.param["interval"],
         max_duration=request.param["max_duration"],
     )
-    pod_deleting_process.start()
-    yield pod_deleting_process
-    terminate_process(process=pod_deleting_process)
-
-    pod_deleting_process_recover(
-        resource=request.param["resource"],
-        namespace=namespace_name,
-        pod_prefix=pod_prefix,
-    )
+    process.start()
+    yield {
+        "namespace_name": namespace_name,
+        "pod_prefix": pod_prefix,
+    }
+    terminate_process(process=process)
 
 
 @pytest.fixture()
@@ -261,7 +258,7 @@ def chaos_worker_background_process(
 @pytest.fixture()
 def nginx_monitoring_process(
     control_plane_nodes,
-    masters_utility_pods,
+    control_plane_utility_pods,
     vm_with_nginx_service,
 ):
     nginx_monitoring_process = create_nginx_monitoring_process(
@@ -269,7 +266,7 @@ def nginx_monitoring_process(
         curl_timeout=TIMEOUT_10SEC,
         sampling_duration=TIMEOUT_2MIN,
         sampling_interval=TIMEOUT_5SEC,
-        utility_pods=masters_utility_pods,
+        utility_pods=control_plane_utility_pods,
         control_plane_host_node=random.choice(control_plane_nodes),
     )
     nginx_monitoring_process.start()
