@@ -77,9 +77,8 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
-<<<<<<< HEAD
-from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.ssp import verify_ssp_pod_is_running
+from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,

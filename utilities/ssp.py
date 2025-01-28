@@ -240,7 +240,7 @@ def validate_os_info_vmi_vs_windows_os(vm):
     assert not data_mismatch, f"Data mismatch {data_mismatch}!\nVMI: {vmi_info}\nOS: {windows_info}"
 
 
-def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace):
+def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace) -> bool:
     pod = utilities.infra.get_pod_by_name_prefix(
         dyn_client=dyn_client,
         pod_prefix=SSP_OPERATOR,
@@ -250,11 +250,11 @@ def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace):
 
 
 def verify_ssp_pod_is_running(
-    dyn_client,
-    hco_namespace,
-    wait_timeout=TIMEOUT_6MIN,
-    sleep=TIMEOUT_10SEC,
-    consecutive_checks_count=3,
+    dyn_client: DynamicClient,
+    hco_namespace: Namespace,
+    wait_timeout: int = TIMEOUT_6MIN,
+    sleep: int = TIMEOUT_10SEC,
+    consecutive_checks_count: int = 3,
 ):
     """
     Verifies that SSP pod is up and running
