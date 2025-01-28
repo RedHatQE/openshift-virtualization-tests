@@ -322,15 +322,15 @@ wheels = [
 
 [[package]]
 name = "dogpile-cache"
-version = "1.3.3"
+version = "1.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "decorator" },
     { name = "stevedore" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/3b/83ce66995ce658ad63b86f7ca83943c466133108f20edc7056d4e0f41347/dogpile.cache-1.3.3.tar.gz", hash = "sha256:f84b8ed0b0fb297d151055447fa8dcaf7bae566d4dbdefecdcc1f37662ab588b", size = 272404 }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/b7/2fa37f52b4f38bc8eb6d4923163dd822ca6f9e2f817378478a5de73b239e/dogpile_cache-1.3.4.tar.gz", hash = "sha256:4f0295575f5fdd3f7e13c84ba8e36656971d1869a2081b4737ec99ede378a8c0", size = 933234 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/b6/eb8bb5bced9f0bf475b22a53e86e4ed80fa60949de1133e2e673e23282d7/dogpile.cache-1.3.3-py3-none-any.whl", hash = "sha256:5e211c4902ebdf88c678d268e22454b41e68071632daa9402d8ee24e825ed8ca", size = 58651 },
+    { url = "https://files.pythonhosted.org/packages/3c/82/d118accb66f9048acbc4ff91592755c24d52f54cce40d6b0b2a0ce351cf5/dogpile.cache-1.3.4-py3-none-any.whl", hash = "sha256:a393412f93d24a8942fdf9248dc80678127d54c5e60a7be404027aa193cafe12", size = 62859 },
 ]
 
 [[package]]
@@ -688,7 +688,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/88/ed/038eb464ab41500e5
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.22"
+version = "11.0.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -710,7 +710,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/40/804daa02b3fc6fe0cc8bf740e58feedc56de798498ed57a210c39e4e602a/openshift_python_wrapper-11.0.22.tar.gz", hash = "sha256:bb0d3fa2227b797ef2c342ee8848fcb89fc60a7ec1822cdff3091e5660b6a931", size = 6490062 }
+sdist = { url = "https://files.pythonhosted.org/packages/38/2c/ec2a7a7ebbea414ab2ef692e53085b0c325d23cf4df0060c3c74b4e77659/openshift_python_wrapper-11.0.23.tar.gz", hash = "sha256:d52552d50f28debda8f78b724ff904a9d5df973b01c0887bf3255060c9e71c27", size = 6490072 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
