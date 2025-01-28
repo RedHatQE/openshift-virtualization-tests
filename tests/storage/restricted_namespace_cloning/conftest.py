@@ -6,7 +6,7 @@ import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.resource import Resource, get_client
+from ocp_resources.resource import Resource
 from ocp_resources.service_account import ServiceAccount
 
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -264,8 +264,7 @@ def dv_destination_cloned_from_pvc(
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
-        _cdv_admin = DataVolume(name=cdv.name, namespace=cdv.namespace, client=get_client())
-        _cdv_admin.wait_for_dv_success()
+        cdv.wait_for_dv_success()
         yield cdv
 
 
