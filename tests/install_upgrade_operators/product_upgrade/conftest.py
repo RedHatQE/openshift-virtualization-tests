@@ -9,8 +9,7 @@ from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
 
-from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
-from tests.install_upgrade_operators.launcher_updates.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME
+from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.product_upgrade.utils import (
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
@@ -456,7 +455,6 @@ def eus_applied_all_icsp(
         mcp_conditions=machine_config_pools_conditions_scope_module,
         nodes=nodes,
         is_idms_file=is_idms_cluster,
-        delete_file=True,
     )
 
 

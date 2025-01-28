@@ -21,8 +21,7 @@ from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
-from tests.install_upgrade_operators.launcher_updates.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME
+from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.utils import wait_for_install_plan
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
