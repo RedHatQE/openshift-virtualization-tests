@@ -89,6 +89,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     data_volume_clone_settings,
     perm_src_service_account,
     perm_destination_service_account,
+    permissions_pvc_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(
@@ -98,7 +99,8 @@ def test_create_vm_with_cloned_data_volume_positive(
 
 
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_src, permissions_destination",
+    "namespace, data_volume_multi_storage_scope_module, "
+    "permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -112,16 +114,16 @@ def test_create_vm_with_cloned_data_volume_positive(
 )
 def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions_negative(
     namespace,
-    destination_ns,
+    destination_namespace,
     restricted_namespace_service_account,
     unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
     data_volume_clone_settings,
-    permissions_src,
-    permissions_destination,
+    permissions_datavolume_source,
+    permissions_datavolume_destination,
 ):
     create_vm_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
         unprivileged_client=unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
@@ -143,7 +145,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
 )
 def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_perm_negative(
     namespace,
-    destination_ns,
+    destination_namespace,
     restricted_namespace_service_account,
     unprivileged_client,
     data_volume_clone_settings,
@@ -151,7 +153,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     perm_destination_service_account,
 ):
     create_vm_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
         unprivileged_client=unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
@@ -175,6 +177,7 @@ def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
     data_volume_clone_settings,
     permission_src_service_account_for_creating_pods,
     permission_destination_service_account_for_creating_pods,
+    permissions_pvc_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(

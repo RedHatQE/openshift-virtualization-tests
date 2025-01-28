@@ -6,7 +6,6 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.resource import get_client
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -34,7 +33,7 @@ pytestmark = pytest.mark.usefixtures("skip_when_no_unprivileged_client_available
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_src, "
+    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_source, "
     "dv_cloned_by_unprivileged_user_in_the_same_namespace",
     [
         pytest.param(
@@ -48,19 +47,16 @@ pytestmark = pytest.mark.usefixtures("skip_when_no_unprivileged_client_available
     indirect=True,
 )
 def test_unprivileged_user_clone_same_namespace_positive(
+    permissions_pvc_source,
     dv_cloned_by_unprivileged_user_in_the_same_namespace,
 ):
-    dv_admin = DataVolume(
-        name=dv_cloned_by_unprivileged_user_in_the_same_namespace.name,
-        namespace=dv_cloned_by_unprivileged_user_in_the_same_namespace.namespace,
-        client=get_client(),
-    )
-    dv_admin.wait_for_dv_success()
+    dv_cloned_by_unprivileged_user_in_the_same_namespace.wait_for_dv_success()
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_src, permissions_destination, "
+    "namespace, data_volume_multi_storage_scope_module, "
+    "permissions_datavolume_source, permissions_datavolume_destination, "
     "dv_destination_cloned_from_pvc, verify_image_permissions",
     [
         pytest.param(
@@ -90,6 +86,7 @@ def test_user_permissions_positive(
     unprivileged_client,
     storage_class_matrix__module__,
     storage_class_name_scope_module,
+    permissions_pvc_destination,
     dv_destination_cloned_from_pvc,
     verify_image_permissions,
 ):
@@ -98,17 +95,13 @@ def test_user_permissions_positive(
         verify_image_permissions
         and storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"] == DataVolume.VolumeMode.FILE
     ):
-        dv_admin = DataVolume(
-            name=dv_destination_cloned_from_pvc.name,
-            namespace=dv_destination_cloned_from_pvc.namespace,
-            client=get_client(),
-        )
-        create_vm_and_verify_image_permission(dv=dv_admin)
+        create_vm_and_verify_image_permission(dv=dv_destination_cloned_from_pvc)
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_src, permissions_destination",
+    "namespace, data_volume_multi_storage_scope_module, "
+    "permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -133,14 +126,14 @@ def test_user_permissions_negative(
     storage_class_matrix__module__,
     namespace,
     data_volume_multi_storage_scope_module,
-    destination_ns,
+    destination_namespace,
     unprivileged_client,
-    permissions_src,
-    permissions_destination,
+    permissions_datavolume_source,
+    permissions_datavolume_destination,
     user_has_get_permissions_in_source_namespace,
 ):
     create_dv_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         storage_class_dict=storage_class_matrix__module__,
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
@@ -180,7 +173,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_destination",
+    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -194,12 +187,12 @@ def test_unprivileged_user_clone_same_namespace_negative(
 def test_user_permissions_only_for_dst_ns_negative(
     storage_class_matrix__module__,
     data_volume_multi_storage_scope_module,
-    destination_ns,
+    destination_namespace,
     unprivileged_client,
-    permissions_destination,
+    permissions_datavolume_destination,
 ):
     create_dv_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         storage_class_dict=storage_class_matrix__module__,
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
