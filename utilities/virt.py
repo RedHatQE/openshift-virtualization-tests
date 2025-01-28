@@ -438,16 +438,12 @@ class VirtualMachineForTests(VirtualMachine):
         return self
 
     def clean_up(self) -> bool:
-        try:
-            if self.exists and self.ready:
-                self.stop(wait=True, vmi_delete_timeout=TIMEOUT_8MIN)
-            super().clean_up()
-            if self.custom_service:
-                self.custom_service.delete(wait=True)
-            return True
-        except TimeoutExpiredError:
-            LOGGER.error(f"Timed out cleaning up vm: {self.name}")
-            return False
+        if self.exists and self.ready:
+            self.stop(wait=True, vmi_delete_timeout=TIMEOUT_8MIN)
+        super().clean_up()
+        if self.custom_service:
+            self.custom_service.delete(wait=True)
+        return True
 
     def to_dict(self):
         super().to_dict()
