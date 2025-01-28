@@ -208,6 +208,7 @@ def create_role_binding(
 @contextmanager
 def set_permissions(
     role_name,
+    role_api_groups,
     verbs,
     permissions_to_resources,
     binding_name,
@@ -219,7 +220,7 @@ def set_permissions(
 ):
     with create_cluster_role(
         name=role_name,
-        api_groups=["cdi.kubevirt.io"],
+        api_groups=role_api_groups,
         permissions_to_resources=permissions_to_resources,
         verbs=verbs,
     ) as cluster_role:
