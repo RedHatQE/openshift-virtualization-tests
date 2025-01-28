@@ -921,7 +921,6 @@ def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_ap
     return initial_metric_value + COUNT_FIVE
 
 
-<<<<<<< HEAD
 @pytest.fixture()
 def storage_class_labels_for_testing(admin_client):
     chosen_sc_name = py_config["default_storage_class"]

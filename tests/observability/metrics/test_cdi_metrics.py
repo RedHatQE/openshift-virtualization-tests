@@ -64,3 +64,13 @@ def test_kubevirt_cdi_operator_up(
         expected_value="0",
         metric_name="kubevirt_cdi_operator_up",
     )
+
+
+@pytest.mark.polarion("CNV-11744")
+def test_metric_kubevirt_cdi_storageprofile_info(prometheus, storage_class_labels_for_testing):
+    expected_storage_class_labels_and_values(
+        prometheus=prometheus,
+        metric_name=f"kubevirt_cdi_storageprofile_info"
+        f"{{storageclass='{storage_class_labels_for_testing['storageclass']}'}}",
+        expected_labels_and_values=storage_class_labels_for_testing,
+    )
