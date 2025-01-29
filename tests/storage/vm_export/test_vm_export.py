@@ -66,11 +66,14 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
         pytest.param(
             {"vm_name": "vm-cnv-9903"},
             {"number_of_snapshots": 1},
+            marks=(
+                pytest.mark.polarion("CNV-9903"),
+                pytest.mark.gating(),
+            ),
         ),
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-9903")
 def test_vmexport_snapshot_manifests(
     namespace,
     vmexport_from_vmsnapshot,
