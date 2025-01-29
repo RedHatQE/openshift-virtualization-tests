@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Pytest conftest file for CNV tests
 """
@@ -15,9 +14,11 @@ import traceback
 
 import pytest
 import shortuuid
+from _pytest.config import Config
 from kubernetes.dynamic.exceptions import ConflictError
 from ocp_resources.resource import get_client
 from ocp_resources.storage_class import StorageClass
+from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.infra
@@ -93,7 +94,11 @@ def pytest_addoption(parser):
     csv_group = parser.getgroup(name="CSV")
     csv_group.addoption("--update-csv", action="store_true")
     # Upgrade addoption
-    install_upgrade_group.addoption("--upgrade", choices=["cnv", "ocp"], help="Run OCP or CNV upgrade tests")
+    install_upgrade_group.addoption(
+        "--upgrade",
+        choices=["cnv", "ocp", "eus"],
+        help="Run OCP or CNV or EUS upgrade tests",
+    )
     install_upgrade_group.addoption(
         "--upgrade_custom", choices=["cnv", "ocp"], help="Run OCP or CNV upgrade tests with custom lanes"
     )
@@ -114,6 +119,12 @@ def pytest_addoption(parser):
         help="OCP image to upgrade to. Images can be found under "
         "https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com/",
     )
+    # EUS Upgrade options
+    install_upgrade_group.addoption(
+        "--eus-ocp-images",
+        help="Comma-separated OCP images to use for EUS-to-EUS upgrade.",
+    )
+    install_upgrade_group.addoption("--eus-cnv-target-version", help="target CNV version for eus upgrade")
     install_upgrade_group.addoption(
         "--upgrade-skip-default-sc-setup",
         help="Skip the fixture that changes the default sc in upgrade lane",
@@ -237,19 +248,28 @@ def pytest_cmdline_main(config):
     # Make pytest tmp dir unique for current session
     config.option.basetemp = f"{config.option.basetemp}-{config.option.session_id}"
 
-    if config.getoption("upgrade") == "ocp" and not config.getoption("ocp_image"):
+    upgrade_option = config.getoption("upgrade")
+    if upgrade_option == "ocp" and not config.getoption("ocp_image"):
         raise ValueError("Running with --upgrade ocp: Missing --ocp-image")
 
-    if config.getoption("upgrade") == "cnv":
+    if upgrade_option == "cnv":
         if not config.getoption("cnv_version"):
             raise ValueError("Missing --cnv-version")
         if not config.getoption("cnv_image"):
             if config.getoption("cnv_source") != "production":
                 raise ValueError("Missing --cnv-image")
 
+    if upgrade_option == "eus":
+        eus_ocp_images = config.getoption("eus_ocp_images")
+        if not (eus_ocp_images and len(eus_ocp_images.split(",")) == 2):
+            raise ValueError(
+                f"Two OCP images are needed to perform EUS-to-EUS upgrade with --eus-ocp-images."
+                f" Provided images: {eus_ocp_images}"
+            )
+
     # Default value is set as this value is used to set test name in
     # tests.upgrade_params.UPGRADE_TEST_DEPENDENCY_NODE_ID which is needed for pytest dependency marker
-    py_config["upgraded_product"] = config.getoption("--upgrade") or config.getoption("--upgrade_custom") or "cnv"
+    py_config["upgraded_product"] = upgrade_option or config.getoption("--upgrade_custom") or "cnv"
     py_config["cnv_source"] = config.getoption("--cnv-source")
 
     # [rhel|fedora|windows|centos]-os-matrix and latest-[rhel|fedora|windows|centos] are mutually exclusive
@@ -260,11 +280,11 @@ def pytest_cmdline_main(config):
     if rhel_os_violation or windows_os_violation or fedora_os_violation or centos_os_violation:
         raise ValueError("os matrix and latest os options are mutually exclusive.")
 
-    if config.getoption("upgrade") == "cnv" and config.getoption("cnv_source") and not config.getoption("cnv_version"):
+    if upgrade_option == "cnv" and config.getoption("cnv_source") and not config.getoption("cnv_version"):
         raise ValueError("Running with --cnv-source: Missing --cnv-version")
 
 
-def add_polarion_parameters_to_user_properties(item, matrix_name):
+def add_polarion_parameters_to_user_properties(item: Item, matrix_name: str) -> None:
     values = re.findall("(#.*?#)", item.name)  # Extract all substrings enclosed in '#' from item.name
     for value in values:
         value = value.strip("#")
@@ -276,7 +296,7 @@ def add_polarion_parameters_to_user_properties(item, matrix_name):
                 item.user_properties.append((f"polarion-parameter-{matrix_name}", value))
 
 
-def add_test_id_markers(item, marker_name):
+def add_test_id_markers(item: Item, marker_name: str) -> None:
     for marker in item.iter_markers(name=marker_name):
         test_id = marker.args[0]
         if marker_name == "polarion":
@@ -284,19 +304,23 @@ def add_test_id_markers(item, marker_name):
         item.user_properties.append((marker_name, test_id))
 
 
-def add_tier2_marker(item):
+def add_tier2_marker(item: Item) -> None:
     markers = [mark.name for mark in list(item.iter_markers())]
     if not [mark for mark in markers if mark in EXCLUDE_MARKER_FROM_TIER2_MARKER]:
         item.add_marker(marker="tier2")
 
 
-def mark_tests_by_team(item):
+def mark_tests_by_team(item: Item) -> None:
     for team, vals in TEAM_MARKERS.items():
         if item.location[0].split("/")[1] in vals:
             item.add_marker(marker=team)
 
 
-def filter_upgrade_tests(items, config, upgrade_markers):
+def filter_upgrade_tests(
+    items: list[Item],
+    config: Config,
+    upgrade_markers: list[str],
+) -> tuple[list[Item], list[Item]]:
     upgrade_tests, non_upgrade_tests = [], []
 
     for item in items:
@@ -320,11 +344,55 @@ def filter_upgrade_tests(items, config, upgrade_markers):
     return non_upgrade_tests, upgrade_tests
 
 
-def filter_deprecated_api_tests(items, config):
+def remove_upgrade_tests_based_on_config(
+    cnv_source: str,
+    upgrade_tests: list[Item],
+) -> tuple[list[Item], list[Item]]:
+    """
+    Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
+
+    Args:
+        cnv_source(str): cnv source option.
+        upgrade_tests(list): list of upgrade tests.
+    """
+    ocp_upgrade_test: Item
+    cnv_upgrade_test_with_prod_src: Item
+    cnv_upgrade_test_no_prod_src: Item
+    eus_upgrade_test: Item
+    cnv_upgrade_tests: list[Item] = []
+
+    for test in upgrade_tests:
+        if "ocp_upgrade" in test.keywords:
+            ocp_upgrade_test = test
+        elif "eus_upgrade" in test.keywords:
+            eus_upgrade_test = test
+        elif "cnv_upgrade" in test.keywords:
+            cnv_upgrade_tests.append(test)
+            if "production_source" in test.name:
+                cnv_upgrade_test_with_prod_src = test
+            else:
+                cnv_upgrade_test_no_prod_src = test
+
+    if py_config["upgraded_product"] == "cnv":
+        discard = [
+            cnv_upgrade_test_no_prod_src if cnv_source == "production" else cnv_upgrade_test_with_prod_src,
+            ocp_upgrade_test,
+            eus_upgrade_test,
+        ]
+    elif py_config["upgraded_product"] == "ocp":
+        discard = [*cnv_upgrade_tests, eus_upgrade_test]
+    else:
+        discard = [*cnv_upgrade_tests, ocp_upgrade_test]
+
+    keep = [test for test in upgrade_tests if test not in discard]
+    return keep, discard
+
+
+def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]:
     # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
-    items_to_return = []
+    items_to_return: list[Item] = []
     if config.getoption("--skip-deprecated-api-test") or config.getoption("--install") or config.getoption("--upgrade"):
-        deprecated_api_tests = []
+        deprecated_api_tests: list[Item] = []
         for item in items:
             if "deprecated_api" in item.keywords:
                 deprecated_api_tests.append(item)
@@ -334,33 +402,6 @@ def filter_deprecated_api_tests(items, config):
         config.hook.pytest_deselected(items=deprecated_api_tests)
         return items_to_return
     return items
-
-
-def remove_upgrade_tests_based_on_config(cnv_source, upgrade_tests):
-    (
-        ocp_upgrade_test,
-        cnv_upgrade_test_with_prod_src,
-        cnv_upgrade_test_no_prod_src,
-    ) = (None, None, None)
-    cnv_upgrade_tests = []
-    for test in upgrade_tests:
-        if "ocp_upgrade" in test.keywords:
-            ocp_upgrade_test = test
-        elif "cnv_upgrade" in test.keywords:
-            cnv_upgrade_tests.append(test)
-            if "production_source" in test.name:
-                cnv_upgrade_test_with_prod_src = test
-            else:
-                cnv_upgrade_test_no_prod_src = test
-    if py_config["upgraded_product"] == "cnv":
-        discard = [
-            cnv_upgrade_test_no_prod_src if cnv_source == "production" else cnv_upgrade_test_with_prod_src,
-            ocp_upgrade_test,
-        ]
-    else:
-        discard = cnv_upgrade_tests
-    keep = [test for test in upgrade_tests if test not in discard]
-    return keep, discard
 
 
 def pytest_configure(config):

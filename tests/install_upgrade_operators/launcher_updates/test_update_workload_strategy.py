@@ -1,6 +1,6 @@
 import pytest
 
-from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
+from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.launcher_updates.constants import (
     CUSTOM_BATCH_EVICTION_INTERVAL,
     CUSTOM_BATCH_EVICTION_INTERVAL_INT,
@@ -16,7 +16,6 @@ from tests.install_upgrade_operators.launcher_updates.constants import (
     MOD_DEFAULT_BATCH_EVICTION_SIZE_ZERO,
     MOD_DEFAULT_WORKLOAD_UPDATE_METHOD,
     MOD_DEFAULT_WORKLOAD_UPDATE_METHOD_EMPTY,
-    WORKLOAD_UPDATE_STRATEGY_KEY_NAME,
 )
 from tests.install_upgrade_operators.utils import wait_for_spec_change
 from utilities.hco import get_hco_spec
