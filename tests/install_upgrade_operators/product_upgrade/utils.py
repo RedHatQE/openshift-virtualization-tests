@@ -1,36 +1,61 @@
+from __future__ import annotations
+
 import json
 import logging
+import re
 from pprint import pformat
 from threading import Thread
+from typing import Any
 
 from deepdiff import DeepDiff
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
+from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.cluster_version import ClusterVersion
-from ocp_resources.resource import Resource
+from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.machine_config_pool import MachineConfigPool
+from ocp_resources.namespace import Namespace
+from ocp_resources.resource import Resource, ResourceEditor
+from packaging.version import Version
+from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.utils import wait_for_install_plan
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
+    BREW_REGISTERY_SOURCE,
     FIRING_STATE,
+    HCO_CATALOG_SOURCE,
     IMAGE_CRON_STR,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_20MIN,
     TIMEOUT_30MIN,
+    TIMEOUT_30SEC,
     TIMEOUT_180MIN,
     TSC_FREQUENCY,
+    NamespacesNames,
 )
 from utilities.data_collector import write_to_file
-from utilities.hco import wait_for_hco_conditions, wait_for_hco_version
+from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions, wait_for_hco_version
 from utilities.infra import (
     get_clusterversion,
+    get_csv_by_name,
     get_deployments,
     get_pod_by_name_prefix,
     get_pods,
     wait_for_consistent_resource_conditions,
+    wait_for_version_explorer_response,
 )
-from utilities.operator import approve_install_plan, wait_for_mcp_update_completion
+from utilities.operator import (
+    approve_install_plan,
+    get_hco_version_name,
+    update_image_in_catalog_source,
+    wait_for_mcp_update_completion,
+)
 
 LOGGER = logging.getLogger(__name__)
 TIER_2_PODS_TYPE = "tier-2"
@@ -288,7 +313,7 @@ def format_dict_output(diff_dict):
         diff_dict.update({key: formatted_labels_dict})
 
 
-def wait_for_hco_upgrade(dyn_client, hco_namespace, cnv_target_version):
+def wait_for_hco_upgrade(dyn_client: DynamicClient, hco_namespace: Namespace, cnv_target_version: str) -> None:
     LOGGER.info(f"Wait for HCO version to be updated to {cnv_target_version}.")
     wait_for_hco_version(
         client=dyn_client,
@@ -378,6 +403,41 @@ def wait_for_cluster_version_state_and_version(cluster_version, target_ocp_versi
             f"clusterversion conditions: {cluster_version.instance.status.conditions}"
         )
         raise
+
+
+def extract_ocp_version_from_ocp_image(ocp_image_url: str) -> str:
+    """
+    Extract the OCP version from the OCP URL input.
+    Expected inputs / output examples:
+      quay.io/openshift-release-dev/ocp-release:4.10.9-x86_64 -> 4.10.9
+      quay.io/openshift-release-dev/ocp-release:4.10.0-rc.6-x86_64 -> 4.10.0-rc.6
+      registry.ci.openshift.org/ocp/release:4.11.0-0.nightly-2022-04-01-172551 -> 4.11.0-0.nightly-2022-04-01-172551
+      registry.ci.openshift.org/ocp/release:4.11.0-0.ci-2022-04-06-165430 -> 4.11.0-0.ci-2022-04-06-165430
+    """
+    ocp_version_match = re.search(r"release:(.*?)(?:-x86_64$|$)", ocp_image_url)
+    ocp_version = ocp_version_match.group(1) if ocp_version_match else None
+    assert ocp_version, f"Cannot extract OCP version. OCP image url: {ocp_image_url} is invalid"
+    LOGGER.info(f"OCP version {ocp_version} extracted from ocp image: {ocp_version}")
+    return ocp_version
+
+
+def run_ocp_upgrade_command(ocp_image_url: str) -> None:
+    LOGGER.info(f"Executing OCP upgrade command to image {ocp_image_url}")
+    rc, out, err = run_command(
+        command=[
+            "oc",
+            "adm",
+            "upgrade",
+            "--force=true",
+            "--allow-explicit-upgrade",
+            "--allow-upgrade-with-warnings",
+            "--to-image",
+            ocp_image_url,
+        ],
+        verify_stderr=False,
+        check=False,
+    )
+    assert rc, f"OCP upgrade command failed. out: {out}. err: {err}"
 
 
 def verify_upgrade_ocp(
@@ -491,3 +551,168 @@ def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
             LOGGER.warning(f"Waiting on alerts: {_pending_alerts}")
     except TimeoutExpiredError:
         LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
+
+
+def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list[str]]]]:
+    return wait_for_version_explorer_response(
+        api_end_point="GetUpgradePath", query_string=f"targetVersion={target_version}"
+    )
+
+
+def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]:
+    """
+    Get the shortest upgrade path to a given CNV target version(latest z stream)
+
+    Args:
+        target_version (str): The target version of the upgrade path.
+
+    Returns:
+        dict: The shortest upgrade path to the target version.
+    """
+    upgrade_paths = get_upgrade_path(target_version=target_version)["path"]
+    assert upgrade_paths, f"Couldn't find upgrade path for {target_version} version"
+    upgrade_path = max(
+        upgrade_paths,
+        key=lambda path: Version(version="0")
+        if "-hotfix" in path["startVersion"]
+        else Version(version=str(path["startVersion"])),
+    )
+    return upgrade_path
+
+
+def get_iib_images_of_cnv_versions(versions: list[str], errata_status: str = "true") -> dict[str, str]:
+    version_images = {}
+    for version in versions:
+        iib = get_successful_fbc_build_iib(
+            build_info=get_build_info_by_version(version=version, errata_status=errata_status)["successful_builds"]
+        )
+        version_images[version] = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:{iib}"
+    return version_images
+
+
+def get_successful_fbc_build_iib(build_info: list[dict[str, str]]) -> str:
+    LOGGER.info(f"Build info found: {build_info}")
+    for build in build_info:
+        if build["pipeline"] == "RHTAP FBC":
+            return build["iib"]
+    raise AssertionError("Should have a fbc build")
+
+
+def get_build_info_by_version(version: str, errata_status: str = "true") -> dict[str, Any]:
+    query_string = f"version={version}"
+    if errata_status:
+        query_string = f"{query_string}&errata_status={errata_status}"
+    return wait_for_version_explorer_response(
+        api_end_point="GetSuccessfulBuildsByVersion",
+        query_string=query_string,
+    )
+
+
+def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) -> None:
+    for mcp in mcp:
+        ResourceEditor(patches={mcp: {"spec": {"paused": paused}}}).update()
+
+
+def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: list[str]) -> None:
+    ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource: {
+                "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: workload_update_method}}
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ).update()
+
+
+def perform_cnv_upgrade(
+    admin_client: DynamicClient,
+    cnv_image_url: str,
+    cr_name: str,
+    hco_namespace: Namespace,
+    cnv_target_version: str,
+) -> None:
+    hco_version = get_hco_version_name(cnv_target_version=cnv_target_version)
+
+    LOGGER.info("Updating image in CatalogSource")
+    update_image_in_catalog_source(
+        dyn_client=admin_client,
+        image=cnv_image_url,
+        catalog_source_name=HCO_CATALOG_SOURCE,
+        cr_name=cr_name,
+    )
+    LOGGER.info("Approving CNV InstallPlan")
+    approve_cnv_upgrade_install_plan(
+        dyn_client=admin_client,
+        hco_namespace=hco_namespace.name,
+        hco_target_version=hco_version,
+        is_production_source=False,
+    )
+    LOGGER.info("Waiting for target CSV")
+    target_csv = wait_for_hco_csv_creation(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace.name,
+        hco_target_version=hco_version,
+    )
+    LOGGER.info("Waiting for CSV status to be SUCCEEDED")
+    target_csv.wait_for_status(
+        status=target_csv.Status.SUCCEEDED,
+        timeout=TIMEOUT_10MIN,
+        stop_status="fakestatus",  # to bypass intermittent FAILED status that is not permanent.
+    )
+    LOGGER.info(f"Wait for HCO version to be updated to {cnv_target_version}.")
+    wait_for_hco_upgrade(dyn_client=admin_client, hco_namespace=hco_namespace, cnv_target_version=cnv_target_version)
+
+
+def wait_for_hco_csv_creation(
+    admin_client: DynamicClient, hco_namespace: str, hco_target_version: str
+) -> ClusterServiceVersion:
+    LOGGER.info(f"Wait for new CSV {hco_target_version} to be created")
+    csv_sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_10MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_csv_by_name,
+        admin_client=admin_client,
+        namespace=hco_namespace,
+        csv_name=hco_target_version,
+    )
+    try:
+        for csv in csv_sampler:
+            if csv:
+                return csv
+    except TimeoutExpiredError:
+        LOGGER.error(f"timeout waiting for target cluster service version: {hco_target_version}")
+        raise
+
+
+def wait_for_odf_update(target_version: str) -> None:
+    def _get_updated_odf_csv(_target_version: str) -> list[str]:
+        csv_list = []
+        for csv in ClusterServiceVersion.get(namespace=NamespacesNames.OPENSHIFT_STORAGE):
+            if any(
+                csv_name in csv.name
+                for csv_name in [
+                    "mcg-operator",
+                    "ocs-operator",
+                    "odf-csi-addons-operator",
+                    "odf-operator",
+                ]
+            ):
+                csv_instance = csv.instance
+                phase = csv_instance.status.phase
+                current_version = csv_instance.spec.version
+                if phase != csv.Status.SUCCEEDED or _target_version not in current_version:
+                    csv_list.append(f"{csv.name} with status: {phase}, version: {csv_instance.spec.version}")
+        return csv_list
+
+    upgrade_sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_20MIN,
+        sleep=TIMEOUT_30SEC,
+        func=_get_updated_odf_csv,
+        _target_version=target_version,
+    )
+
+    for sample in upgrade_sampler:
+        if not sample:
+            return
+        LOGGER.info(f"Following odf csvs are not updated: {','.join(sample)}")
