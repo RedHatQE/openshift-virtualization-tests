@@ -1,12 +1,19 @@
 from pytest_testconfig import config as py_config
 
-upgrade_source_suffix = "_production_source" if py_config["cnv_source"] == "production" else ""
-test_name = f"test{upgrade_source_suffix}_{py_config['upgraded_product']}_upgrade_process"
+UPGRADE_PACKAGE_NAME = "tests/install_upgrade_operators/product_upgrade"
+EUS = "eus"
 
-IUO_UPGRADE_TEST_ORDERING_NODE_ID = IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID = (
-    f"tests/install_upgrade_operators/product_upgrade/test_upgrade.py::TestUpgrade::{test_name}"
-)
+if py_config["upgraded_product"] == EUS:
+    upgrade_class = "TestEUSToEUSUpgrade"
+    test_name = "test_eus_upgrade_process"
+    file_name = f"{UPGRADE_PACKAGE_NAME}/test_eus_upgrade.py"
+else:
+    upgrade_class = "TestUpgrade"
+    upgrade_source_suffix = "_production_source" if py_config["cnv_source"] == "production" else ""
+    test_name = f"test_{py_config['upgraded_product']}{upgrade_source_suffix}_upgrade_process"
+    file_name = f"{UPGRADE_PACKAGE_NAME}/test_upgrade.py"
 
+IUO_UPGRADE_TEST_ORDERING_NODE_ID = IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID = f"{file_name}::{upgrade_class}::{test_name}"
 
 IUO_CNV_ALERT_ORDERING_NODE_ID = (
     "tests/install_upgrade_operators/product_upgrade/test_upgrade_iuo.py::TestUpgradeIUO::"

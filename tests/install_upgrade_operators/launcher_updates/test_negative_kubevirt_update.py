@@ -1,9 +1,8 @@
 import pytest
 
-from tests.install_upgrade_operators.constants import WORKLOADUPDATEMETHODS
+from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.launcher_updates.constants import (
     CUSTOM_WORKLOAD_UPDATE_STRATEGY,
-    WORKLOAD_UPDATE_STRATEGY_KEY_NAME,
 )
 from tests.install_upgrade_operators.utils import wait_for_spec_change
 from utilities.hco import get_hco_spec

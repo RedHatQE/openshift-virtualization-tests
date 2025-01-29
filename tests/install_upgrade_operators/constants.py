@@ -60,3 +60,4 @@ HCO_DEFAULT_FEATUREGATES = {
     "downwardMetrics": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
+WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"

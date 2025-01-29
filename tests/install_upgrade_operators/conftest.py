@@ -194,11 +194,6 @@ def cnv_image_url(pytestconfig):
     return pytestconfig.option.cnv_image
 
 
-@pytest.fixture()
-def machine_config_pools_conditions(machine_config_pools):
-    return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
-
-
 @pytest.fixture(scope="module")
 def machine_config_pools_conditions_scope_module(machine_config_pools):
     return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
