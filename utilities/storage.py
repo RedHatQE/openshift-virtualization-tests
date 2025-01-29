@@ -537,7 +537,7 @@ class PodWithPVC(Pod):
         })
 
     def delete(self, wait=False, timeout=TIMEOUT_3MIN, body=None):
-        super().delete(
+        return super().delete(
             wait=wait,
             timeout=timeout,
             body=kubernetes.client.V1DeleteOptions(grace_period_seconds=0),
