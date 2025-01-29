@@ -301,5 +301,5 @@ def user_has_get_permissions_in_source_namespace(
 
 
 @pytest.fixture()
-def verify_image_permissions(request):
+def requested_verify_image_permissions(request):
     return request.param.get("verify_image_permissions")
