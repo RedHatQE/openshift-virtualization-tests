@@ -2,6 +2,8 @@ import logging
 
 import pytest
 from kubernetes.client.rest import ApiException
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.datavolume import DataVolume
 
 from tests.storage.restricted_namespace_cloning.constants import TARGET_DV
 from tests.storage.utils import assert_pvc_snapshot_clone_annotation
@@ -16,7 +18,7 @@ from utilities.storage import (
 LOGGER = logging.getLogger(__name__)
 
 
-def verify_snapshot_used_namespace_transfer(cdv, unprivileged_client):
+def verify_snapshot_used_namespace_transfer(cdv: DataVolume, unprivileged_client: DynamicClient) -> None:
     storage_class = cdv.storage_class
     # Namespace transfer is not possible with WFFC
     if is_snapshot_supported_by_sc(
@@ -26,13 +28,13 @@ def verify_snapshot_used_namespace_transfer(cdv, unprivileged_client):
 
 
 def create_dv_negative(
-    namespace,
-    storage_class_dict,
-    size,
-    source_pvc,
-    source_namespace,
-    unprivileged_client,
-):
+    namespace: str,
+    storage_class: str,
+    size: str,
+    source_pvc: str,
+    source_namespace: str,
+    unprivileged_client: DynamicClient,
+) -> None:
     with pytest.raises(
         ApiException,
         match=ErrorMsg.CANNOT_CREATE_RESOURCE,
@@ -45,6 +47,6 @@ def create_dv_negative(
             source_pvc=source_pvc,
             source_namespace=source_namespace,
             client=unprivileged_client,
-            storage_class=[*storage_class_dict][0],
+            storage_class=storage_class,
         ):
             LOGGER.error("Target dv was created, but shouldn't have been")

@@ -1,6 +1,7 @@
 import logging
 import shlex
 from contextlib import contextmanager
+from typing import Iterator
 
 import requests
 from ocp_resources.cdi import CDI
@@ -161,7 +162,9 @@ def get_file_url_https_server(images_https_server, file_name):
 
 
 @contextmanager
-def create_cluster_role(name, api_groups, verbs, permissions_to_resources):
+def create_cluster_role(
+    name: str, api_groups: list[str], verbs: list[str], permissions_to_resources: list[str]
+) -> Iterator[ClusterRole]:
     """
     Create cluster role
     """
@@ -180,15 +183,15 @@ def create_cluster_role(name, api_groups, verbs, permissions_to_resources):
 
 @contextmanager
 def create_role_binding(
-    name,
-    namespace,
-    subjects_kind,
-    subjects_name,
-    role_ref_kind,
-    role_ref_name,
-    subjects_namespace=None,
-    subjects_api_group=None,
-):
+    name: str,
+    namespace: str,
+    subjects_kind: str,
+    subjects_name: str,
+    role_ref_kind: str,
+    role_ref_name: str,
+    subjects_namespace: str | None = None,
+    subjects_api_group: str | None = None,
+) -> Iterator[RoleBinding]:
     """
     Create role binding
     """
@@ -207,17 +210,17 @@ def create_role_binding(
 
 @contextmanager
 def set_permissions(
-    role_name,
-    role_api_groups,
-    verbs,
-    permissions_to_resources,
-    binding_name,
-    namespace,
-    subjects_name,
-    subjects_kind="User",
-    subjects_api_group=None,
-    subjects_namespace=None,
-):
+    role_name: str,
+    role_api_groups: list[str],
+    verbs: list[str],
+    permissions_to_resources: list[str],
+    binding_name: str,
+    namespace: str,
+    subjects_name: str,
+    subjects_kind: str = "User",
+    subjects_api_group: str | None = None,
+    subjects_namespace: str | None = None,
+) -> Iterator[tuple[ClusterRole, RoleBinding]]:
     with create_cluster_role(
         name=role_name,
         api_groups=role_api_groups,
@@ -234,7 +237,7 @@ def set_permissions(
             role_ref_kind=cluster_role.kind,
             role_ref_name=cluster_role.name,
         ) as role_binding:
-            yield [cluster_role, role_binding]
+            yield cluster_role, role_binding
 
 
 def create_vm_and_verify_image_permission(dv):
