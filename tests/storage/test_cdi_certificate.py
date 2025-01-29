@@ -24,8 +24,8 @@ from utilities.constants import (
     CDI_SECRETS,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    TIMEOUT_20SEC,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -132,8 +132,8 @@ def refresh_cdi_certificates(secrets):
                 LOGGER.info(f"Wait for Secret {secret.name} to be updated")
                 res.update()
                 for sample in TimeoutSampler(
-                    wait_timeout=TIMEOUT_20SEC,
-                    sleep=10,
+                    wait_timeout=TIMEOUT_1MIN,
+                    sleep=TIMEOUT_5SEC,
                     func=lambda: secret.certificate_not_before != secret.certificate_not_after,
                 ):
                     if sample:
@@ -184,7 +184,6 @@ def test_dv_delete_from_vm(
 
 
 @pytest.mark.sno
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-3667")
 def test_upload_after_certs_renewal(
     skip_if_sc_volume_binding_mode_is_wffc,
