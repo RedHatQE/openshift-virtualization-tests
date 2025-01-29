@@ -30,11 +30,13 @@ RHEL9_NAME = "rhel9"
 
 def assert_os_version_mismatch_in_vm(vm, latest_fedora_release_version):
     vm_os = vm.ssh_exec.os.release_str.lower()
-    expected_os_params = re.match(r"(?P<os_name>[a-z]+)(?:\.stream|\.|$)(?P<os_ver>[0-9]*)", vm.instance.spec.preference.name).groupdict()
+    expected_os_params = re.match(
+        r"(?P<os_name>[a-z]+)(?:\.stream|\.|$)(?P<os_ver>[0-9]*)", vm.instance.spec.preference.name
+    ).groupdict()
     expected_name_in_vm_os = (
         "red hat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else expected_os_params["os_name"]
     )
-    expected_os_params['os_ver'] = expected_os_params['os_ver'] or latest_fedora_release_version
+    expected_os_params["os_ver"] = expected_os_params["os_ver"] or latest_fedora_release_version
     assert re.match(rf"{expected_name_in_vm_os}.*{expected_os_params['os_ver']}.*", vm_os), (
         f"Wrong VM OS, expected: {expected_name_in_vm_os}, actual: {vm_os}"
     )
