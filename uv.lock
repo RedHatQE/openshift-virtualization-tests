@@ -669,7 +669,7 @@ wheels = [
 
 [[package]]
 name = "openshift-python-utilities"
-version = "6.0.6"
+version = "6.0.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -684,11 +684,11 @@ dependencies = [
     { name = "semver" },
     { name = "timeout-sampler" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/ed/038eb464ab41500e59ad0987d6c97770ada252623b6086910dc91359de58/openshift_python_utilities-6.0.6.tar.gz", hash = "sha256:ad4f1f1c9a9a78f1332ed7330fa4b5fa2db1c7e069cd12242c1f445f922bf6b2", size = 18167 }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/cc/34cfb46e9232813139c7958b00ef6a54475d262ca2f6fdd49e0fd5f31e27/openshift_python_utilities-6.0.7.tar.gz", hash = "sha256:49ad7d478784405419f58c5d800852b5883e5a8c6b8fb76d73a1ab957f70b9bb", size = 18169 }
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.23"
+version = "11.0.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -710,18 +710,18 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/2c/ec2a7a7ebbea414ab2ef692e53085b0c325d23cf4df0060c3c74b4e77659/openshift_python_wrapper-11.0.23.tar.gz", hash = "sha256:d52552d50f28debda8f78b724ff904a9d5df973b01c0887bf3255060c9e71c27", size = 6490072 }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/0f/92df562fac6c77b7f7d41eca91af9604bda60308761d4b65dd34d542d7ec/openshift_python_wrapper-11.0.24.tar.gz", hash = "sha256:6346954f0ff8b700989771b26704075a47ecb6b963ecc65db40521776c7f7fbb", size = 6490090 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
-version = "2.0.6"
+version = "2.0.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openshift-python-wrapper" },
     { name = "pytest-testconfig" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/9c/c956f199ea5d02ec6c42236d010d1cb02ef8c9c6b42887cc70a5aa41f8fd/openshift_python_wrapper_data_collector-2.0.6.tar.gz", hash = "sha256:bd488500034c6617c325383bcfb5a9cda99e7a14a05daff2b2179b3d66920c09", size = 8212 }
+sdist = { url = "https://files.pythonhosted.org/packages/57/95/9028d39697f067b90c1315f352daea56f04880831cd0ed115c6d11bafd4b/openshift_python_wrapper_data_collector-2.0.8.tar.gz", hash = "sha256:a681e5c8b4309b484d0d1e552cafc88c195794031b88a409c9b1dfe65576c2a5", size = 8212 }
 
 [[package]]
 name = "openshift-virtualization-tests-4-18"
@@ -1071,7 +1071,7 @@ wheels = [
 
 [[package]]
 name = "pyhelper-utils"
-version = "1.0.8"
+version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ipdb" },
@@ -1080,7 +1080,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/d4/ee5326c9353eacef7c455069668f904a61c581fb377e126c26dd007d3b8c/pyhelper_utils-1.0.8.tar.gz", hash = "sha256:8c0d09f4c4b707c238e6b4744f1e60a9841c70f9ec1423ac8fdfa38fafa0e087", size = 10791 }
+sdist = { url = "https://files.pythonhosted.org/packages/31/96/b57d3581c0a2ba765553043112f505b73e95ce22532ab15f9075fa7b8367/pyhelper_utils-1.0.9.tar.gz", hash = "sha256:786e1c85a05e28f4cea2e778388911773df235e1ed6214f519e90ab7ec883e41", size = 10790 }
 
 [[package]]
 name = "pylero"
@@ -1281,12 +1281,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/45/60/571982c7af8f5453b
 
 [[package]]
 name = "python-simple-logger"
-version = "2.0.5"
+version = "2.0.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorlog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/31/af201cb95afecfee32a7de07c003b42a078c108eed4096824424553faf78/python_simple_logger-2.0.5.tar.gz", hash = "sha256:22f75d7c2ea306c3184c99b9e9818b84a0320a6f2f77509fd8255b9f3cf96667", size = 9412 }
+sdist = { url = "https://files.pythonhosted.org/packages/41/e0/8253a23ef288949e04a0b2aa3be232ece34f217a5e0b1dc19cfc105728d8/python_simple_logger-2.0.6.tar.gz", hash = "sha256:c86de59cea69af8edc58b06d2c2008c0035d2f8a9ee6166f002360bac02c50fc", size = 9413 }
 
 [[package]]
 name = "python-slugify"
@@ -1302,7 +1302,7 @@ wheels = [
 
 [[package]]
 name = "python-utility-scripts"
-version = "1.0.10"
+version = "1.0.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jira" },
@@ -1313,7 +1313,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/26/4cef5c4e6151d9c557478b260e8f4b69526e9a4db54ec26d67c2e8576d1f/python_utility_scripts-1.0.10.tar.gz", hash = "sha256:b4f853004a92fb619f671c3bd054d9f3c4bbddbd2e0194a224f0847b8b6645a6", size = 14186 }
+sdist = { url = "https://files.pythonhosted.org/packages/98/ce/6fd758fa8eed8467544b7164980c3a464e3bc31a390383691fe4b00962ff/python_utility_scripts-1.0.12.tar.gz", hash = "sha256:df787abd6d9147ea1199703f8756b24b25dae36247c9acc3e729411740e19b85", size = 14189 }
 
 [[package]]
 name = "pytz"
@@ -1616,13 +1616,13 @@ wheels = [
 
 [[package]]
 name = "timeout-sampler"
-version = "1.0.7"
+version = "1.0.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
     { name = "python-simple-logger" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/7e/d364a17a9d047a331cd78644627fa925d3007bfc26355466c7617d83e967/timeout_sampler-1.0.7.tar.gz", hash = "sha256:b82254a69c587a086876b46fc48de3ffe99c134f36c493af1a1feee868e01128", size = 17845 }
+sdist = { url = "https://files.pythonhosted.org/packages/25/b1/b20853d0c7e46e050543b98314f8e19700235390515df8320b1665c4f8ec/timeout_sampler-1.0.8.tar.gz", hash = "sha256:d45bb62e9e0eaeea1e469ceab36472226aa76198786341bc10fb6a0b77d7c9d1", size = 17846 }
 
 [[package]]
 name = "traitlets"
