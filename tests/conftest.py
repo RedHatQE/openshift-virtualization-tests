@@ -176,6 +176,7 @@ from utilities.network import (
 from utilities.operator import (
     cluster_with_icsp,
     disable_default_sources_in_operatorhub,
+    get_hco_version_name,
     get_machine_config_pool_by_name,
 )
 from utilities.ssp import get_data_import_crons, get_ssp_resource
@@ -1903,7 +1904,7 @@ def upgrade_br1test_nad(upgrade_namespace_scope_session, upgrade_bridge_on_all_n
 
 
 @pytest.fixture(scope="session")
-def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version):
+def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_target_version):
     """
     Verify if the upgrade can be performed by comparing the current and target versions.
 
@@ -1911,9 +1912,8 @@ def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version):
         admin_client: The admin client instance.
         pytestconfig: The pytest configuration object.
         cnv_current_version: The current CNV version.
+        cnv_target_version: The target CNV version.
     """
-    cnv_target_version = pytestconfig.option.cnv_version
-
     upgrade_stream = determine_upgrade_stream(
         current_version=cnv_current_version,
         target_version=cnv_target_version,
@@ -1990,7 +1990,12 @@ def rhel_latest_os_params():
 
 @pytest.fixture(scope="session")
 def hco_target_version(cnv_target_version):
-    return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
+    return get_hco_version_name(cnv_target_version=cnv_target_version)
+
+
+@pytest.fixture(scope="session")
+def eus_hco_target_version(eus_target_cnv_version):
+    return get_hco_version_name(cnv_target_version=eus_target_cnv_version)
 
 
 @pytest.fixture(scope="session")

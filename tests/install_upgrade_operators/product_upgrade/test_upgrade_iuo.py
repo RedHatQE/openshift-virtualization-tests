@@ -32,6 +32,7 @@ class TestUpgradeIUO:
     )
     def test_alerts_fired_during_upgrade(
         self,
+        skip_on_eus_upgrade,
         prometheus_scope_function,
         fired_alerts_during_upgrade,
     ):
