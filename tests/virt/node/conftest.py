@@ -34,7 +34,7 @@ def vm_with_memory_load(
     unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
-    nodes_intel_cpu_model,
+    modern_cpu_for_migration,
     vm_cpu_flags,
 ):
     with vm_instance_from_template(
@@ -42,7 +42,7 @@ def vm_with_memory_load(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
-        vm_cpu_model=nodes_intel_cpu_model,
+        vm_cpu_model=modern_cpu_for_migration,
         vm_cpu_flags=vm_cpu_flags,
     ) as vm:
         yield vm

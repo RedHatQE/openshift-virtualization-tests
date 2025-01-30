@@ -4,11 +4,6 @@ from utilities.constants import AMD, INTEL
 
 
 @pytest.fixture(scope="session")
-def nodes_intel_cpu_model(cluster_common_modern_node_cpu, nodes_cpu_vendor):
-    return cluster_common_modern_node_cpu if nodes_cpu_vendor == INTEL else None
-
-
-@pytest.fixture(scope="session")
 def nodes_cpu_virt_extension(nodes_cpu_vendor):
     if nodes_cpu_vendor == INTEL:
         return "vmx"
