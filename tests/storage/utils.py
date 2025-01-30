@@ -1,7 +1,7 @@
 import logging
 import shlex
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Generator
 
 import requests
 from ocp_resources.cdi import CDI
@@ -164,7 +164,7 @@ def get_file_url_https_server(images_https_server, file_name):
 @contextmanager
 def create_cluster_role(
     name: str, api_groups: list[str], verbs: list[str], permissions_to_resources: list[str]
-) -> Iterator[ClusterRole]:
+) -> Generator:
     """
     Create cluster role
     """
@@ -191,7 +191,7 @@ def create_role_binding(
     role_ref_name: str,
     subjects_namespace: str | None = None,
     subjects_api_group: str | None = None,
-) -> Iterator[RoleBinding]:
+) -> Generator:
     """
     Create role binding
     """
@@ -220,7 +220,7 @@ def set_permissions(
     subjects_kind: str = "User",
     subjects_api_group: str | None = None,
     subjects_namespace: str | None = None,
-) -> Iterator[tuple[ClusterRole, RoleBinding]]:
+) -> Generator:
     with create_cluster_role(
         name=role_name,
         api_groups=role_api_groups,
