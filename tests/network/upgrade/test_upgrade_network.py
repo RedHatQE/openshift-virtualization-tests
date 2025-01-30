@@ -56,7 +56,6 @@ class TestUpgradeNetwork:
     @pytest.mark.dependency(name=f"{DEPENDENCIES_NODE_ID_PREFIX}::test_bridge_marker_before_upgrade")
     def test_bridge_marker_before_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
@@ -75,7 +74,6 @@ class TestUpgradeNetwork:
     @pytest.mark.dependency(name=f"{DEPENDENCIES_NODE_ID_PREFIX}::test_linux_bridge_before_upgrade")
     def test_linux_bridge_before_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
@@ -105,7 +103,6 @@ class TestUpgradeNetwork:
     @pytest.mark.dependency(name=f"{DEPENDENCIES_NODE_ID_PREFIX}::test_kubemacpool_before_upgrade")
     def test_kubemacpool_before_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         mac_pool,
@@ -194,7 +191,6 @@ class TestUpgradeNetwork:
     )
     def test_bridge_marker_after_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
@@ -218,7 +214,6 @@ class TestUpgradeNetwork:
     )
     def test_linux_bridge_after_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
@@ -238,7 +233,6 @@ class TestUpgradeNetwork:
     )
     def test_kubemacpool_after_upgrade(
         self,
-        skip_if_sno_cluster,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         mac_pool,

@@ -2076,18 +2076,6 @@ def golden_images_data_import_crons_scope_class(admin_client, golden_images_name
 
 
 @pytest.fixture(scope="session")
-def skip_if_not_sno_cluster(sno_cluster):
-    if not sno_cluster:
-        pytest.skip("Skip test on non-SNO cluster")
-
-
-@pytest.fixture(scope="session")
-def skip_if_sno_cluster(sno_cluster):
-    if sno_cluster:
-        pytest.skip("Skip test on SNO cluster")
-
-
-@pytest.fixture(scope="session")
 def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
 
