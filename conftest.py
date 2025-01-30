@@ -390,7 +390,12 @@ def remove_upgrade_tests_based_on_config(
 
 def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]:
     # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
-    if config.getoption("--skip-deprecated-api-test") or config.getoption("--install") or config.getoption("--upgrade"):
+    if (
+        config.getoption("--skip-deprecated-api-test")
+        or config.getoption("--install")
+        or config.getoption("--upgrade")
+        or config.getoption("--upgrade-custom")
+    ):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
@@ -398,7 +403,6 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
 
 
 def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
-    # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
     if config.getoption("-m") and "sno" not in config.getoption("-m"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
         config.hook.pytest_deselected(items=discard_tests)
