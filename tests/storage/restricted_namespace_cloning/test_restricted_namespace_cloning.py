@@ -24,6 +24,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
 from tests.storage.utils import create_vm_and_verify_image_permission
+from utilities.storage import create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ pytestmark = pytest.mark.usefixtures("skip_when_no_unprivileged_client_available
     ],
     indirect=True,
 )
-def test_unprivileged_user_clone_same_namespace_positive(
+def test_unprivileged_user_clone_dv_same_namespace_positive(
     permissions_pvc_source,
     dv_cloned_by_unprivileged_user_in_the_same_namespace,
 ):
@@ -91,11 +92,12 @@ def test_user_permissions_positive(
     requested_verify_image_permissions,
 ):
     verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
-    if (
-        requested_verify_image_permissions
-        and storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"] == DataVolume.VolumeMode.FILE
-    ):
-        create_vm_and_verify_image_permission(dv=dv_destination_cloned_from_pvc)
+    if requested_verify_image_permissions:
+        if storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"] == DataVolume.VolumeMode.FILE:
+            create_vm_and_verify_image_permission(dv=dv_destination_cloned_from_pvc)
+        else:
+            with create_vm_from_dv(dv=dv_destination_cloned_from_pvc):
+                return
 
 
 @pytest.mark.sno
