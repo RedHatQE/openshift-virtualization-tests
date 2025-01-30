@@ -83,10 +83,9 @@ TEAM_MARKERS = {
     "data_protection": ["data_protection", "deprecated_api"],
 }
 NAMESPACE_COLLECTION = {
-    "storage": [NamespacesNames.OPENSHIFT_STORAGE, NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES],
+    "storage": [NamespacesNames.OPENSHIFT_STORAGE],
     "network": ["openshift-nmstate"],
-    "virt": [NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES],
-    "install_upgrade_operators": [NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES],
+    "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [MissingEnvironmentVariableError, StorageSanityError, ConflictError]
 INSPECT_BASE_COMMAND = "oc adm inspect"
