@@ -394,7 +394,7 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
         config.getoption("--skip-deprecated-api-test")
         or config.getoption("--install")
         or config.getoption("--upgrade")
-        or config.getoption("--upgrade-custom")
+        or config.getoption("--upgrade_custom")
     ):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
         config.hook.pytest_deselected(items=discard_tests)
