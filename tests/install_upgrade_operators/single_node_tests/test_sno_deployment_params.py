@@ -2,7 +2,7 @@ import pytest
 
 from utilities.constants import VIRT_OPERATOR
 
-pytestmark = [pytest.mark.sno]
+pytestmark = pytest.mark.sno
 
 
 @pytest.mark.polarion("CNV-8374")

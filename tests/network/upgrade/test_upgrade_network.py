@@ -35,6 +35,7 @@ DEPENDENCIES_NODE_ID_PREFIX = f"{os.path.abspath(__file__)}::TestUpgradeNetwork"
 class TestUpgradeNetwork:
     """Pre-upgrade tests"""
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-2988")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
