@@ -2590,7 +2590,7 @@ def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged
 
 
 @pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, skip_when_one_node, vm_for_migration_test):
+def migrated_vm_multiple_times(request, vm_for_migration_test):
     vmim = []
     for migration_index in range(request.param):
         migration_obj = VirtualMachineInstanceMigration(
