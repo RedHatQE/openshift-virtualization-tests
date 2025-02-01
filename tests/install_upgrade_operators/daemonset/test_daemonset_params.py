@@ -1,6 +1,6 @@
 import pytest
 
-from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DAEMONSETS_NO_HPP_CSI, HOSTPATH_PROVISIONER_CSI
+from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DAEMONSETS_NO_HPP_CSI
 from utilities.infra import get_daemonsets
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -18,9 +18,7 @@ def test_no_new_cnv_daemonset_added(is_jira_53226_open, sno_cluster, cnv_daemons
     Since cnv deployments image validations are done via polarion parameterization, this test has been added
     to catch any new cnv deployments that is not part of cnv_deployment_matrix
     """
-    cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if sno_cluster else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
-    if sno_cluster:
-        cnv_daemonsets.remove(HOSTPATH_PROVISIONER_CSI)
+    cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if not sno_cluster else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
 
     # daemonset passt-binding-cni will be removed with upcoming builds
     if is_jira_53226_open:
