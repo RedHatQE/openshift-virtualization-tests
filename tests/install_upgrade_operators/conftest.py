@@ -66,7 +66,7 @@ def cnv_deployment_by_name(
             )
         )
         if not hpp_pool_deployments:
-            pytest.skip("HPP pool deployment not found on this cluster")
+            pytest.fail("HPP pool deployment not found on this cluster")
         return hpp_pool_deployments[0]
 
     return get_deployment_by_name(
