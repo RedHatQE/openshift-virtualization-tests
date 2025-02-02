@@ -7,7 +7,9 @@ from ocp_resources.pipeline import Pipeline
 from ocp_resources.resource import Resource
 from ocp_resources.task import Task
 
-from tests.infrastructure.tekton.utils import wait_for_tekton_resource_availability
+from tests.infrastructure.tekton.utils import (
+    wait_for_tekton_resource_availability,
+)
 from utilities.constants import WIN_2K22, WIN_2K25, WIN_10, WIN_11
 
 pytestmark = pytest.mark.tier3
@@ -74,8 +76,4 @@ class TestTektonEfiPipelineExecution:
         assert (
             final_status_pipelinerun.status == Resource.Condition.Status.TRUE
             and final_status_pipelinerun.type == Resource.Condition.Phase.SUCCEEDED
-        ), (
-            "Pipelines failed to succeed. Reason: "
-            f"{pipelinerun_from_pipeline_template.instance.status.conditions[0]['message']}."
-            f"Skipped Tasks: {pipelinerun_from_pipeline_template.instance.status.skippedTasks}"
-        )
+        ), f"Pipelines failed to succeed. Pipeline status: {final_status_pipelinerun.instance.status}"
