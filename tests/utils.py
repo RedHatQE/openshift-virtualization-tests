@@ -545,3 +545,10 @@ def vm_object_from_template(
         network_multiqueue=param_dict.get("network_multiqueue"),
         ssh=param_dict.get("ssh", True),
     )
+
+
+def wait_for_virt_launcher_pod(vmi):
+    samples = TimeoutSampler(wait_timeout=30, sleep=1, func=lambda: vmi.virt_launcher_pod)
+    for sample in samples:
+        if sample:
+            return
