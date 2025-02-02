@@ -50,7 +50,7 @@ from tests.observability.metrics.utils import (
     wait_for_no_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_cr_labels_change
+from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -73,6 +73,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     WARNING_STR,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
@@ -942,3 +943,16 @@ def storage_class_labels_for_testing(admin_client):
         == "true"
         else "false",
     }
+
+
+@pytest.fixture()
+def ocs_rbd_vm(admin_client, namespace):
+    with create_cirros_vm(
+        storage_class=StorageClassNames.CEPH_RBD,
+        namespace=namespace.name,
+        client=admin_client,
+        dv_name="dv-rbd",
+        vm_name="vm-with-rbd-sc",
+        wait_running=False,
+    ) as vm:
+        yield vm

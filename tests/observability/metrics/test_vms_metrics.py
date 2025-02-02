@@ -471,3 +471,13 @@ class TestKubevirtVmiNonEvictable:
             metric_name="kubevirt_vmi_non_evictable",
             expected_value="1",
         )
+
+
+class TestSSPVmRbdBlockVolumeWithoutRxBounce:
+    @pytest.mark.polarion("CNV-11760")
+    def test_kubevirt_ssp_vm_rbd_block_volume_without_rxbounce(self, prometheus, ocs_rbd_vm):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_ssp_vm_rbd_block_volume_without_rxbounce{{name='{ocs_rbd_vm.name}'}}",
+            expected_value="1",
+        )
