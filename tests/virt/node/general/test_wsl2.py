@@ -69,7 +69,7 @@ def windows_wsl2_vm(
     namespace,
     unprivileged_client,
     golden_image_data_source_scope_class,
-    nodes_intel_cpu_model,
+    modern_cpu_for_migration,
     vm_cpu_flags,
 ):
     """Create Windows 10/11 VM, Run VM and wait for WSL2 guest to start"""
@@ -80,7 +80,7 @@ def windows_wsl2_vm(
         namespace=namespace.name,
         client=unprivileged_client,
         data_source=golden_image_data_source_scope_class,
-        cpu_model=nodes_intel_cpu_model,
+        cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,
         memory_guest=Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
         cpu_cores=16,
