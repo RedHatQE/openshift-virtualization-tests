@@ -50,7 +50,7 @@ from tests.observability.metrics.utils import (
     wait_for_no_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_cr_labels_change, wait_for_virt_launcher_pod
+from tests.utils import create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -868,14 +868,15 @@ def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_a
 
 @pytest.fixture()
 def vm_memory_working_set_bytes(vm_for_test):
-    vmi = vm_for_test.vmi
-    wait_for_virt_launcher_pod(vmi=vmi)
     return int(
         bitmath.parse_string_unsafe(
             re.search(
                 r"\b(\d+Mi)\b",
                 run_command(
-                    command=shlex.split(f"oc adm top pod {vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}")
+                    command=shlex.split(
+                        f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
+                    ),
+                    check=False,
                 )[1],
             ).group(1)
         ).bytes
