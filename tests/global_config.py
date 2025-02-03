@@ -3,9 +3,6 @@ from typing import Any
 
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.pod import Pod
-from ocp_resources.replica_set import ReplicaSet
-from ocp_resources.service import Service
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 
@@ -433,7 +430,6 @@ cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_deployment_no_hpp_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
-nmo_removal_matrix = [Service, ReplicaSet, Deployment, Pod]
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]
 cnv_operators_matrix = CNV_OPERATORS
 cnv_vm_console_proxy_cluster_resource_matrix = VM_CONSOLE_PROXY_CLUSTER_RESOURCES
