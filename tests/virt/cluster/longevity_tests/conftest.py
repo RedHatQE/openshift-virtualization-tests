@@ -45,9 +45,8 @@ def multi_vms(
     unprivileged_client,
     multi_datasources,
     rhsm_created_secret,
-    nodes_intel_cpu_model,
+    modern_cpu_for_migration,
     vm_cpu_flags,
-    fips_enabled_cluster,
 ):
     yield from create_dv_vms(
         vm_deploys=vm_deploys,
@@ -55,7 +54,7 @@ def multi_vms(
         namespace=namespace,
         datasources=multi_datasources,
         vm_params=request.param["vm_params"],
-        nodes_common_cpu_model=nodes_intel_cpu_model,
+        nodes_common_cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,
     )
 
@@ -76,7 +75,7 @@ def wsl2_vms_with_pids(multi_vms):
 
 
 @pytest.fixture()
-def multi_dv(request, admin_client, golden_images_namespace, fips_enabled_cluster):
+def multi_dv(request, admin_client, golden_images_namespace):
     yield from create_multi_dvs(
         namespace=golden_images_namespace,
         client=admin_client,
