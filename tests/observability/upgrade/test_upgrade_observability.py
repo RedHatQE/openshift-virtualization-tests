@@ -14,8 +14,8 @@ class TestUpgradeObservability:
     """Pre-upgrade tests"""
 
     @pytest.mark.polarion("CNV-11749")
-    @pytest.mark.order(before=KUBEVIRT_VMI_NUMBER_OF_OUTDATED)
-    @pytest.mark.dependency(name=f"test_metric_{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}")
+    @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
+    @pytest.mark.dependency(name=f"test_metric_{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}::before_upgrade")
     def test_metric_kubevirt_vmi_number_of_outdated_before_upgrade(self, prometheus, kubevirt_resource):
         assert kubevirt_resource.instance.status.outdatedVirtualMachineInstanceWorkloads == 0
         validate_metrics_value(
@@ -27,9 +27,8 @@ class TestUpgradeObservability:
     """ Post-upgrade tests """
 
     @pytest.mark.polarion("CNV-11758")
-    @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
-        depends=[f"test_metric_{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}", IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
+        depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, f"test_metric_{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}::before_upgrade"],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(self, prometheus):
