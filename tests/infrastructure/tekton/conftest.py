@@ -1,39 +1,65 @@
 import logging
+import os
 import shlex
 
 import pytest
 import yaml
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.pipeline import Pipeline
 from ocp_resources.pipelineruns import PipelineRun
-from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.resource import ResourceEditor
+from ocp_resources.secret import Secret
 from ocp_resources.task import Task
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_command
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from pytest_testconfig import py_config
 
 from tests.infrastructure.tekton.utils import (
     filter_yaml_files,
     get_component_image_digest,
     process_yaml_files,
+    wait_for_final_status_pipelinerun,
     win_iso_download_url_for_pipelineref,
     yaml_files_in_dir,
 )
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
+    OS_FLAVOR_FEDORA,
+    PVC,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
+    TIMEOUT_10MIN,
+    TIMEOUT_30SEC,
     TIMEOUT_50MIN,
     WINDOWS_EFI_INSTALLER_STR,
 )
-from utilities.infra import create_ns, get_artifactory_config_map, get_artifactory_secret, get_resources_by_name_prefix
+from utilities.infra import (
+    base64_encode_str,
+    create_ns,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_resources_by_name_prefix,
+)
+from utilities.storage import create_dv
+from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
 DATAVOLUME_TASK = "kubevirt-tekton-tasks-create-datavolume-rhel9"
 DISK_VIRT_TASK = "kubevirt-tekton-tasks-disk-virt-customize-rhel9"
 KUBEVIRT_TEKTON_AVAILABLE_TASKS_TEST = "kubevirt-tekton-tasks-test-rhel9"
+DISK_UPLOADER_TASK = "disk-uploader"
+EXPORT_SOURCE_KIND = "EXPORT_SOURCE_KIND"
+EXPORT_SOURCE_NAME = "EXPORT_SOURCE_NAME"
+VOLUME_NAME = "VOLUME_NAME"
+IMAGE_DESTINATION = "IMAGE_DESTINATION"
+PUSH_TIMEOUT = "PUSH_TIMEOUT"
+SECRET_NAME = "SECRET_NAME"
 
 COMMON_PIPELINEREF_PARAMS = {
     WINDOWS_EFI_INSTALLER_STR: {
@@ -44,6 +70,31 @@ COMMON_PIPELINEREF_PARAMS = {
         "virtualMachinePreferenceKind": "VirtualMachineClusterPreference",
     },
 }
+
+
+DISK_UPLOADER_PIPELINE_PARAMS = [
+    {"name": EXPORT_SOURCE_KIND, "type": "string"},
+    {"name": EXPORT_SOURCE_NAME, "type": "string"},
+    {"name": VOLUME_NAME, "type": "string"},
+    {"name": IMAGE_DESTINATION, "type": "string"},
+    {"name": PUSH_TIMEOUT, "type": "string", "default": TIMEOUT_2MIN},
+    {"name": SECRET_NAME, "type": "string"},
+]
+
+DISK_UPLOADER_PIPELINE_TASK = [
+    {
+        "name": DISK_UPLOADER_TASK,
+        "params": [
+            {"name": EXPORT_SOURCE_KIND, "value": f"$(params.{EXPORT_SOURCE_KIND})"},
+            {"name": EXPORT_SOURCE_NAME, "value": f"$(params.{EXPORT_SOURCE_NAME})"},
+            {"name": VOLUME_NAME, "value": f"$(params.{VOLUME_NAME})"},
+            {"name": IMAGE_DESTINATION, "value": f"$(params.{IMAGE_DESTINATION})"},
+            {"name": PUSH_TIMEOUT, "value": f"$(params.{PUSH_TIMEOUT})"},
+            {"name": SECRET_NAME, "value": f"$(params.{SECRET_NAME})"},
+        ],
+        "taskRef": {"kind": "Task", "name": DISK_UPLOADER_TASK},
+    }
+]
 
 
 @pytest.fixture(scope="session")
@@ -262,21 +313,99 @@ def pipelinerun_from_pipeline_template(
 
 
 @pytest.fixture()
-def final_status_pipelinerun(pipelinerun_from_pipeline_template):
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_50MIN,
-            sleep=TIMEOUT_1MIN,
-            func=lambda: pipelinerun_from_pipeline_template.instance.status.conditions[0],
-        ):
-            if sample and sample["status"] != Resource.Condition.Status.UNKNOWN:
-                # There are 3 conditions.status possible : Unknown, False, True.
-                LOGGER.info(f"PipelineRun Condition : {sample}")
-                return sample
+def quay_disk_uploader_secret(custom_pipeline_namespace):
+    with Secret(
+        name="quay-disk-uploader-secret",
+        namespace=custom_pipeline_namespace.name,
+        accesskeyid=base64_encode_str(os.environ["QUAY_ACCESS_KEY_TEKTON_TASKS"]),
+        secretkey=base64_encode_str(os.environ["QUAY_SECRET_KEY_TEKTON_TASKS"]),
+    ) as quay_disk_uploader_secret:
+        yield quay_disk_uploader_secret
 
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Pipelinerun: {pipelinerun_from_pipeline_template.name} , "
-            f"Preparing for VM teardown due to Timeout Error.Last available sample: {sample}"
-        )
-        raise
+
+@pytest.fixture()
+def created_fedora_dv_for_disk_uploader(admin_client, golden_images_namespace, custom_pipeline_namespace):
+    with create_dv(
+        dv_name="fedora-dv-disk-uploader",
+        namespace=custom_pipeline_namespace.name,
+        source=PVC,
+        source_pvc=DataSource(
+            name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name
+        ).instance.spec.source.pvc.name,
+        source_namespace=golden_images_namespace.name,
+        size="35Gi",  # Keeping size of the data volume, slightly larger than the data source (~32Gi)
+        client=admin_client,
+        storage_class=py_config["default_storage_class"],
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
+@pytest.fixture()
+def vm_for_disk_uploader(custom_pipeline_namespace, admin_client, created_fedora_dv_for_disk_uploader):
+    with VirtualMachineForTests(
+        name="fedora-vm-diskuploader",
+        namespace=custom_pipeline_namespace.name,
+        client=admin_client,
+        data_volume=created_fedora_dv_for_disk_uploader,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.small"),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def pipeline_disk_uploader(
+    admin_client,
+    custom_pipeline_namespace,
+):
+    with Pipeline(
+        name="pipeline-disk-uploader",
+        namespace=custom_pipeline_namespace.name,
+        client=admin_client,
+        tasks=DISK_UPLOADER_PIPELINE_TASK,
+        params=DISK_UPLOADER_PIPELINE_PARAMS,
+    ) as pipeline:
+        yield pipeline
+
+
+@pytest.fixture()
+def pipelinerun_for_disk_uploader(
+    admin_client,
+    custom_pipeline_namespace,
+    quay_disk_uploader_secret,
+    pipeline_disk_uploader,
+    created_fedora_dv_for_disk_uploader,
+    vm_for_disk_uploader,
+):
+    pipeline_run_params = {
+        EXPORT_SOURCE_KIND: "vm",
+        EXPORT_SOURCE_NAME: vm_for_disk_uploader.name,
+        VOLUME_NAME: created_fedora_dv_for_disk_uploader.name,
+        IMAGE_DESTINATION: "quay.io/openshift-cnv/tekton-tasks",
+        SECRET_NAME: quay_disk_uploader_secret.name,
+    }
+
+    with PipelineRun(
+        name="pipelinerun-disk-uploader",
+        namespace=custom_pipeline_namespace.name,
+        client=admin_client,
+        params=pipeline_run_params,
+        pipelineref=pipeline_disk_uploader.name,
+    ) as pipelinerun:
+        pipelinerun.wait_for_conditions()
+        yield pipelinerun
+
+
+@pytest.fixture()
+def final_status_pipelinerun(pipelinerun_from_pipeline_template):
+    return wait_for_final_status_pipelinerun(
+        pipelinerun=pipelinerun_from_pipeline_template, wait_timeout=TIMEOUT_50MIN, sleep_interval=TIMEOUT_1MIN
+    )
+
+
+@pytest.fixture()
+def final_status_pipelinerun_for_disk_uploader(pipelinerun_for_disk_uploader):
+    return wait_for_final_status_pipelinerun(
+        pipelinerun=pipelinerun_for_disk_uploader, wait_timeout=TIMEOUT_10MIN, sleep_interval=TIMEOUT_30SEC
+    )
