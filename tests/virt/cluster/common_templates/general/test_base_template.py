@@ -186,6 +186,7 @@ def verify_annotations_match(obj_annotations, expected):
     return sorted(obj_annotations) == sorted(expected)
 
 
+@pytest.mark.gating
 @pytest.mark.polarion("CNV-1069")
 def test_base_templates_annotations(skip_not_openshift, base_templates, common_templates_expected_list):
     """

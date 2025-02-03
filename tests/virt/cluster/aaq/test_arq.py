@@ -33,10 +33,13 @@ TESTS_POD_CLASS_NAME = "TestARQCanManagePods"
 TESTS_VM_CLASS_NAME = "TestARQCanManageVMs"
 
 
-pytestmark = pytest.mark.usefixtures(
-    "enabled_aaq_feature_gate_scope_package",
-    "updated_namespace_with_aaq_label",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enabled_aaq_feature_gate_scope_package",
+        "updated_namespace_with_aaq_label",
+    ),
+    pytest.mark.gating,
+]
 
 
 @pytest.mark.usefixtures(

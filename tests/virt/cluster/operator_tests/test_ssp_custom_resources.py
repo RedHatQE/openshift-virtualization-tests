@@ -14,7 +14,7 @@ from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
 @pytest.fixture()
