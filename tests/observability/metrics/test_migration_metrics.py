@@ -17,8 +17,6 @@ from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = pytest.mark.usefixtures("skip_when_one_node")
-
 
 def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
     """

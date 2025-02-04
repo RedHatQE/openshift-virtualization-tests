@@ -34,7 +34,7 @@ from tests.os_params import FEDORA_LATEST
 from utilities.constants import ARM_64, COUNT_FIVE
 from utilities.infra import is_jira_open
 
-pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ def kubevirt_architecture_configuration_scope_session(
 
 
 @pytest.mark.usefixtures("collected_cluster_must_gather_with_vms")
+@pytest.mark.sno
 class TestMustGatherClusterWithVMs:
     @pytest.mark.parametrize(
         ("resource_type", "resource_path", "checks"),
@@ -99,6 +100,7 @@ class TestMustGatherClusterWithVMs:
         )
 
 
+@pytest.mark.sno
 class TestMustGatherVmDetails:
     @pytest.mark.parametrize(
         "extracted_data_from_must_gather_file, format_regex",
@@ -285,6 +287,7 @@ class TestMustGatherVmDetails:
         )
 
 
+@pytest.mark.sno
 class TestGuestConsoleLog:
     @pytest.mark.usefixtures("updated_disable_serial_console_log_false", "must_gather_vm_scope_class")
     @pytest.mark.polarion("CNV-10630")
@@ -299,6 +302,7 @@ class TestGuestConsoleLog:
         )
 
 
+@pytest.mark.sno
 class TestMustGatherVmLongNameDetails:
     @pytest.mark.polarion("CNV-9233")
     def test_data_collected_from_virt_launcher_long(
@@ -346,6 +350,7 @@ class TestNoMultipleFilesCollected:
         )
 
 
+@pytest.mark.sno
 class TestControllerRevisionCollected:
     @pytest.mark.polarion("CNV-10978")
     def test_controller_revision_collected(

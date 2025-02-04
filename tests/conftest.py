@@ -2076,18 +2076,6 @@ def golden_images_data_import_crons_scope_class(admin_client, golden_images_name
 
 
 @pytest.fixture(scope="session")
-def skip_if_not_sno_cluster(sno_cluster):
-    if not sno_cluster:
-        pytest.skip("Skip test on non-SNO cluster")
-
-
-@pytest.fixture(scope="session")
-def skip_if_sno_cluster(sno_cluster):
-    if sno_cluster:
-        pytest.skip("Skip test on SNO cluster")
-
-
-@pytest.fixture(scope="session")
 def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
 
@@ -2602,7 +2590,7 @@ def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged
 
 
 @pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, skip_when_one_node, vm_for_migration_test):
+def migrated_vm_multiple_times(request, vm_for_migration_test):
     vmim = []
     for migration_index in range(request.param):
         migration_obj = VirtualMachineInstanceMigration(

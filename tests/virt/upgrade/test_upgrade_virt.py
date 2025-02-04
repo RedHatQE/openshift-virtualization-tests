@@ -44,12 +44,12 @@ AFTER_UPGRADE_STORAGE_ORDERING = [
 ]
 
 
-@pytest.mark.sno
 @pytest.mark.upgrade
 @pytest.mark.usefixtures("base_templates")
 class TestUpgradeVirt:
     """Pre-upgrade tests"""
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-2974")
     @pytest.mark.order("first")
     @pytest.mark.dependency(name=VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID)
@@ -57,6 +57,7 @@ class TestUpgradeVirt:
         for vm in vms_for_upgrade:
             assert vm.vmi.status == VirtualMachineInstance.Status.RUNNING
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-2987")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(
@@ -68,6 +69,7 @@ class TestUpgradeVirt:
         for vm in vms_for_upgrade:
             vm_console_run_commands(vm=vm, commands=["ls"])
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-4208")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(
@@ -85,12 +87,13 @@ class TestUpgradeVirt:
         depends=[VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_before_upgrade(self, skip_if_sno_cluster, skip_if_no_common_cpu, vms_for_upgrade):
+    def test_migration_before_upgrade(self, skip_if_no_common_cpu, vms_for_upgrade):
         for vm in vms_for_upgrade:
             if vm_is_not_migrateable(vm=vm):
                 continue
             migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-6999")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID, after=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_run_strategy_before_upgrade")
@@ -103,6 +106,7 @@ class TestUpgradeVirt:
     ):
         verify_vms_ssh_connectivity(vms_list=[manual_run_strategy_vm, always_run_strategy_vm])
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-7243")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID, after=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_windows_vm_before_upgrade")
@@ -126,7 +130,6 @@ class TestUpgradeVirt:
     )
     def test_vmi_pod_image_updates_after_upgrade_optin(
         self,
-        skip_if_sno_cluster,
         skip_on_ocp_upgrade,
         unupdated_vmi_pods_names,
     ):
@@ -135,6 +138,7 @@ class TestUpgradeVirt:
         """
         assert not unupdated_vmi_pods_names, f"The following VMI Pods were not updated: {unupdated_vmi_pods_names}"
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-2978")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
@@ -149,6 +153,7 @@ class TestUpgradeVirt:
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-2980")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
@@ -163,6 +168,7 @@ class TestUpgradeVirt:
         for vm in vms_for_upgrade:
             vm_console_run_commands(vm=vm, commands=["ls"])
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-4209")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
@@ -176,6 +182,7 @@ class TestUpgradeVirt:
     def test_vm_ssh_after_upgrade(self, vms_for_upgrade):
         verify_vms_ssh_connectivity(vms_list=vms_for_upgrade)
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-7000")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
@@ -194,6 +201,7 @@ class TestUpgradeVirt:
         )
         verify_vms_ssh_connectivity(vms_list=run_strategy_vmi_list)
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-7244")
     @pytest.mark.order(
         after=[
@@ -238,6 +246,7 @@ class TestUpgradeVirt:
             migrate_vm_and_verify(vm=vm)
             vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-3682")
     @pytest.mark.order(
         after=[
@@ -258,6 +267,7 @@ class TestUpgradeVirt:
                 == vms_for_upgrade_dict_before[vm.name]["spec"]["template"]["spec"]["domain"]["machine"]["type"]
             )
 
+    @pytest.mark.sno
     @pytest.mark.polarion("CNV-5749")
     @pytest.mark.order(
         after=[
