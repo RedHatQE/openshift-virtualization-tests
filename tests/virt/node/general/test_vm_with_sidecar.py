@@ -54,6 +54,7 @@ def sidecar_vm(namespace, unprivileged_client):
     ],
     indirect=True,
 )
+@pytest.mark.gating
 def test_vm_with_sidecar_hook(enabled_featuregate_scope_function, sidecar_vm):
     """
     Test VM with sidecar hook, Install dmidecode with annotation
