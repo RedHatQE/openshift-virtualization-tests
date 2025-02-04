@@ -390,18 +390,35 @@ def remove_upgrade_tests_based_on_config(
 
 def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]:
     # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
-    items_to_return: list[Item] = []
-    if config.getoption("--skip-deprecated-api-test") or config.getoption("--install") or config.getoption("--upgrade"):
-        deprecated_api_tests: list[Item] = []
-        for item in items:
-            if "deprecated_api" in item.keywords:
-                deprecated_api_tests.append(item)
-            else:
-                items_to_return.append(item)
-
-        config.hook.pytest_deselected(items=deprecated_api_tests)
+    if (
+        config.getoption("--skip-deprecated-api-test")
+        or config.getoption("--install")
+        or config.getoption("--upgrade")
+        or config.getoption("--upgrade_custom")
+    ):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
+        config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
     return items
+
+
+def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
+    if config.getoption("-m") and "sno" not in config.getoption("-m"):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items
+
+
+def remove_tests_from_list(items: list[Item], filter_str: str) -> tuple[list[Item], list[Item]]:
+    discard_tests: list[Item] = []
+    items_to_return: list[Item] = []
+    for item in items:
+        if filter_str in item.keywords:
+            discard_tests.append(item)
+        else:
+            items_to_return.append(item)
+    return discard_tests, items_to_return
 
 
 def pytest_configure(config):
@@ -447,11 +464,10 @@ def pytest_collection_modifyitems(session, config, items):
         add_test_id_markers(item=item, marker_name="polarion")
         add_test_id_markers(item=item, marker_name="jira")
 
-        # Add tier2 marker for tests without an exclution marker.
+        # Add tier2 marker for tests without an exclusion marker.
         add_tier2_marker(item=item)
 
         mark_tests_by_team(item=item)
-
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     if config.getoption("--upgrade_custom"):
         keep, discard = filter_upgrade_tests(items=items, config=config, upgrade_markers=["upgrade_custom"])
@@ -461,9 +477,12 @@ def pytest_collection_modifyitems(session, config, items):
     #  For non-upgrade tests we should exclude both markers: 'upgrade' and 'upgrade_custom'
     else:
         keep, discard = filter_upgrade_tests(items=items, config=config, upgrade_markers=["upgrade", "upgrade_custom"])
+
     items[:] = keep
-    config.hook.pytest_deselected(items=discard)
+    if discard:
+        config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
+    items[:] = filter_sno_only_tests(items=items, config=config)
 
 
 def pytest_report_teststatus(report, config):
