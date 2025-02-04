@@ -19,7 +19,6 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.usefixtures(
     "skip_if_no_multinic_nodes",
-    "skip_when_one_node",
     "skip_when_no_jumbo_frame_support",
     "hyperconverged_ovs_annotations_enabled_scope_session",
 )

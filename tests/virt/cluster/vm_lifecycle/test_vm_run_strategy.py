@@ -312,7 +312,6 @@ class TestRunStrategyAdvancedActions:
     )
     def test_run_strategy_migrate_vm(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         skip_access_mode_rwo_scope_function,
         lifecycle_vm,
