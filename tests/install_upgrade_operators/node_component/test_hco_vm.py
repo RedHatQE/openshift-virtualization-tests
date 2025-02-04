@@ -50,7 +50,7 @@ def hco_vm(unprivileged_client, namespace):
     indirect=True,
 )
 def test_remove_workload_label_from_node_while_vm_running(
-    skip_on_rosa_cluster, node_placement_labels, hyperconverged_with_node_placement, hco_vm
+    node_placement_labels, hyperconverged_with_node_placement, hco_vm
 ):
     node_name = hco_vm.privileged_vmi.node.name
     LOGGER.info(f"Removing workload label from node: {node_name}")

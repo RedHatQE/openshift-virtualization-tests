@@ -47,7 +47,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_change_subscription_on_selected_node_before_workload(
         self,
-        skip_on_rosa_cluster,
         admin_client,
         hco_namespace,
         alter_cnv_subscription_configuration,
@@ -81,7 +80,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(name="test_change_infrastructure_components_on_selected_node_before_workload")
     def test_change_infrastructure_components_on_selected_node_before_workload(
         self,
-        skip_on_rosa_cluster,
         admin_client,
         hco_namespace,
         alter_np_configuration,
