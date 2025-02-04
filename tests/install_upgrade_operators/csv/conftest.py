@@ -38,13 +38,6 @@ def kubevirt_package_manifest_channel(kubevirt_package_manifest, cnv_current_ver
 
 
 @pytest.fixture()
-def skip_if_nightly_channel(kubevirt_package_manifest):
-    for channel in kubevirt_package_manifest.status.channels:
-        if "nightly" in channel.name:
-            pytest.skip(f"Test skipping due to nightly build. Current channel is {channel.name}")
-
-
-@pytest.fixture()
 def csv_annotation(csv_scope_session):
     """
     Gets csv annotation for csv_scope_session.ApiGroup.INFRA_FEATURES
