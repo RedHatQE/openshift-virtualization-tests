@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.polarion("CNV-9330")
 def test_update_api_server(
-    skip_on_rosa_cluster,
     hco_namespace,
     workers,
     workers_utility_pods,

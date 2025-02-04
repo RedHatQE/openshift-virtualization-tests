@@ -52,7 +52,6 @@ def updated_apiserver_with_tls_old_profile(
 @pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
     skip_apiserver_crypto_policy_reset,
-    skip_on_rosa_cluster,
     resources_dict,
     updated_hco_tls_custom_policy,
     expected_all_managed_crs_crypto_policies,

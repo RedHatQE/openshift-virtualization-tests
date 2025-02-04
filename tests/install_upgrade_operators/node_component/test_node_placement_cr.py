@@ -29,7 +29,6 @@ class TestCreateHCOWithNodePlacement:
     @pytest.mark.dependency(name="test_hco_cr_with_node_placement")
     def test_hco_cr_with_node_placement(
         self,
-        skip_on_rosa_cluster,
         admin_client,
         hco_namespace,
         hco_pods_per_nodes,

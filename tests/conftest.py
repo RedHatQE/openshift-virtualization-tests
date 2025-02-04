@@ -2843,25 +2843,9 @@ def is_aws_cluster():
 
 
 @pytest.fixture(scope="session")
-def is_rosa_cluster(is_aws_cluster):
-    if not is_aws_cluster:
-        return False
-    for tag in get_infrastructure().instance.status.platformStatus.aws.get("resourceTags", []):
-        if tag.get("key") == "red-hat-clustertype" and tag.get("value") == "rosa":
-            return True
-    return False
-
-
-@pytest.fixture(scope="session")
 def skip_on_aws_cluster(is_aws_cluster):
     if is_aws_cluster:
         pytest.skip("This test is skipped on an AWS cluster")
-
-
-@pytest.fixture(scope="session")
-def skip_on_rosa_cluster(is_rosa_cluster):
-    if is_rosa_cluster:
-        pytest.skip("This test is skipped on ROSA cluster")
 
 
 @pytest.fixture()
