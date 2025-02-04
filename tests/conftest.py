@@ -1026,20 +1026,6 @@ def started_windows_vm(
     )
 
 
-def is_openshift(client):
-    namespaces = [ns.name for ns in Namespace.get(dyn_client=client)]
-    return "openshift-operators" in namespaces
-
-
-@pytest.fixture(scope="session")
-def skip_not_openshift(admin_client):
-    """
-    Skip test if tests run on kubernetes (and not openshift)
-    """
-    if not is_openshift(admin_client):
-        pytest.skip("Skipping test requiring OpenShift")
-
-
 @pytest.fixture(scope="session")
 def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nodes):
     """
