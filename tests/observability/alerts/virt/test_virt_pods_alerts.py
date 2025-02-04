@@ -127,7 +127,6 @@ class TestVirtAlerts:
         self,
         prometheus,
         alert_tested,
-        skip_when_one_node,
         disabled_olm_operator,
         disabled_virt_operator,
         scaled_deployment,
