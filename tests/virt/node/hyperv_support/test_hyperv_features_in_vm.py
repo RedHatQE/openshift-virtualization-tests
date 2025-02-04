@@ -186,6 +186,7 @@ class TestWindowsHyperVFlags:
     ],
     indirect=True,
 )
+@pytest.mark.gating
 class TestFedoraHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",
