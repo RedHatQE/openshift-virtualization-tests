@@ -248,11 +248,11 @@ class TestCheckupLatencyLinuxBridgeNad:
         )
 
 
+@pytest.mark.sriov
 class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10418")
     def test_basic_configmap_sriov_network(
         self,
-        skip_when_no_sriov,
         checkup_ns,
         checkup_sriov_network,
         default_latency_configmap,
@@ -267,7 +267,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10419")
     def test_basic_configmap_sriov_network_on_same_node(
         self,
-        skip_when_no_sriov,
         checkup_ns,
         checkup_sriov_network,
         latency_same_node_configmap,
@@ -282,7 +281,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10420")
     def test_two_configmaps_and_jobs_with_success_sriov_network(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_sriov_network,
         checkup_ns,
@@ -300,7 +298,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10421")
     def test_concurrent_checkup_jobs_sriov_network(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -320,7 +317,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10422")
     def test_job_failure_sriov_network_nonexistent_configmap_env(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -338,7 +334,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10423")
     def test_job_failure_sriov_network(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -356,7 +351,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10424")
     def test_configmap_error_job_failure_sriov_network_nonexistent_nad(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -374,7 +368,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10425")
     def test_configmap_error_job_failure_sriov_network_nonexistent_namespace(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -392,7 +385,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10426")
     def test_configmap_error_job_failure_sriov_network_one_second_timeout(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -410,7 +402,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10427")
     def test_configmap_error_job_failure_sriov_network_zero_milliseconds(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
@@ -428,7 +419,6 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10428")
     def test_configmap_error_job_failure_sriov_network_nonexistent_node(
         self,
-        skip_when_no_sriov,
         unprivileged_client,
         checkup_ns,
         checkup_sriov_network,

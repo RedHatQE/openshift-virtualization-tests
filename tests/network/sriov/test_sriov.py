@@ -14,7 +14,7 @@ from utilities.virt import migrate_vm_and_verify
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.usefixtures("skip_when_no_sriov")
+pytestmark = pytest.mark.sriov
 
 
 @pytest.mark.usefixtures(
