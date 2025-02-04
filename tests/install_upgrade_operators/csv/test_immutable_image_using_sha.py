@@ -16,7 +16,7 @@ def hco_package_stable_channel_images(admin_client):
 
 
 @pytest.mark.polarion("CNV-4751")
-def test_immutable_image_using_sha(skip_if_nightly_channel, hco_package_stable_channel_images):
+def test_immutable_image_using_sha(hco_package_stable_channel_images):
     """
     check all images of the stable channel on the kubevirt-hyperconverged Package Manifest.
     make sure all images have SHA256 in their string (this indicates they are immutable)
