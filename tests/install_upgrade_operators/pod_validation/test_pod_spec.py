@@ -12,11 +12,8 @@ from tests.install_upgrade_operators.pod_validation.utils import (
 )
 from utilities.constants import (
     ALL_CNV_PODS,
-    HOSTPATH_PROVISIONER,
-    HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
 )
-from utilities.storage import get_hostpath_provisioner
 
 pytestmark = pytest.mark.sno
 
@@ -29,12 +26,7 @@ def cnv_jobs(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def cnv_pods_by_type(cnv_pod_matrix__function__, cnv_pods, sno_cluster):
-    if (sno_cluster or not get_hostpath_provisioner()) and cnv_pod_matrix__function__ == HOSTPATH_PROVISIONER_CSI:
-        pytest.skip(
-            f"{cnv_pod_matrix__function__} test won't be run against SNO cluster or cluster "
-            f"without {HOSTPATH_PROVISIONER}"
-        )
+def cnv_pods_by_type(cnv_pod_matrix__function__, cnv_pods):
     pod_list = [pod for pod in cnv_pods if pod.name.startswith(cnv_pod_matrix__function__)]
     assert pod_list, f"Pod {cnv_pod_matrix__function__} not found"
     return pod_list

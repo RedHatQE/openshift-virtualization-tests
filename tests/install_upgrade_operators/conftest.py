@@ -21,7 +21,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
+from utilities.constants import HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -66,7 +66,7 @@ def cnv_deployment_by_name(
             )
         )
         if not hpp_pool_deployments:
-            pytest.skip("HPP pool deployment not found on this cluster")
+            pytest.fail("HPP pool deployment not found on this cluster")
         return hpp_pool_deployments[0]
 
     return get_deployment_by_name(
@@ -80,11 +80,7 @@ def cnv_daemonset_by_name(
     admin_client,
     hco_namespace,
     cnv_daemonset_matrix__function__,
-    sno_cluster,
 ):
-    if sno_cluster and cnv_daemonset_matrix__function__ == HOSTPATH_PROVISIONER_CSI:
-        pytest.skip(f"{cnv_daemonset_matrix__function__} test won't be run against SNO cluster")
-
     return get_daemonset_by_name(
         admin_client=admin_client,
         namespace_name=hco_namespace.name,

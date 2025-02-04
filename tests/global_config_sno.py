@@ -3,7 +3,12 @@ from typing import Any
 import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import StorageClassNames
+from utilities.constants import (
+    ALL_CNV_DAEMONSETS_NO_HPP_CSI,
+    ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
+    CNV_PODS_NO_HPP_CSI_HPP_POOL,
+    StorageClassNames,
+)
 from utilities.storage import HppCsiStorageClass
 
 global config
@@ -15,7 +20,9 @@ VOLUME_MODE = "volume_mode"
 FILESYSTEM = DataVolume.VolumeMode.FILE
 RWO = DataVolume.AccessMode.RWO
 
-
+cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
+cnv_pod_matrix = CNV_PODS_NO_HPP_CSI_HPP_POOL
+cnv_daemonset_matrix = ALL_CNV_DAEMONSETS_NO_HPP_CSI
 HPP_VOLUME_MODE_ACCESS_MODE = {
     VOLUME_MODE: FILESYSTEM,
     ACCESS_MODE: RWO,

@@ -127,7 +127,7 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_if_sno_cluster", "skip_access_mode_rwo_scope_class", "cluster_cpu_model_scope_class")
+@pytest.mark.usefixtures("skip_access_mode_rwo_scope_class", "cluster_cpu_model_scope_class")
 class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(

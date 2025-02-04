@@ -6,8 +6,6 @@ from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_when_one_node",
-    "skip_if_sno_cluster",
     "enable_multi_network_policy_usage",
     "flat_l2_port",
 )

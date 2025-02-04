@@ -29,7 +29,6 @@ import utilities.virt as virt_util
 from utilities import console
 from utilities.constants import (
     CDI_LABEL,
-    HOSTPATH_PROVISIONER,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
     OS_FLAVOR_CIRROS,
@@ -800,11 +799,6 @@ def create_cirros_dv_for_snapshot_dict(name, namespace, storage_class, artifacto
     )
     dv.to_dict()
     return dv.res
-
-
-def get_hostpath_provisioner():
-    hostpath_provisioner = HostPathProvisioner(name=HOSTPATH_PROVISIONER)
-    return hostpath_provisioner.exists
 
 
 def check_disk_count_in_vm(vm):
