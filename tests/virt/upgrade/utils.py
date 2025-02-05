@@ -152,11 +152,11 @@ def wait_for_automatic_vm_migrations(vm_list):
         raise
 
 
-def validate_vms_pod_updated(admin_client, hco_namespace, hco_target_version, vm_list):
+def validate_vms_pod_updated(admin_client, hco_namespace, hco_target_csv_name, vm_list):
     csv = get_csv_by_name(
         admin_client=admin_client,
         namespace=hco_namespace.name,
-        csv_name=hco_target_version,
+        csv_name=hco_target_csv_name,
     )
     target_related_images = get_related_images_name_and_version(csv=csv)
     return [

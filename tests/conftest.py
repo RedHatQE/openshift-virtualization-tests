@@ -17,7 +17,6 @@ from signal import SIGINT, SIGTERM, getsignal, signal
 from subprocess import check_output
 
 import bcrypt
-import packaging.version
 import paramiko
 import pytest
 import requests
@@ -67,6 +66,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
+from packaging.version import Version, parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
@@ -176,7 +176,7 @@ from utilities.network import (
 from utilities.operator import (
     cluster_with_icsp,
     disable_default_sources_in_operatorhub,
-    get_hco_version_name,
+    get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
 from utilities.ssp import get_data_import_crons, get_ssp_resource
@@ -223,7 +223,7 @@ ACCESS_TOKEN = {
     "accessTokenInactivityTimeout": None,
 }
 CNV_NOT_INSTALLED = "CNV not yet installed."
-
+EUS_ERROR_CODE = 98
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
     StorageClassNames.TRIDENT_CSI_FSX,
@@ -1717,7 +1717,7 @@ def openshift_current_version(admin_client):
 
 @pytest.fixture(scope="session")
 def ocp_current_version(openshift_current_version):
-    return packaging.version.parse(version=openshift_current_version.split("-")[0])
+    return parse(version=openshift_current_version.split("-")[0])
 
 
 @pytest.fixture(scope="session")
@@ -1929,8 +1929,8 @@ def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_targ
 
 
 def determine_upgrade_stream(current_version, target_version):
-    current_cnv_version = packaging.version.parse(version=current_version.split("-")[0])
-    target_cnv_version = packaging.version.parse(version=target_version.split("-")[0])
+    current_cnv_version = parse(version=current_version.split("-")[0])
+    target_cnv_version = parse(version=target_version.split("-")[0])
 
     if current_cnv_version.major < target_cnv_version.major:
         return UpgradeStreams.X_STREAM
@@ -1989,18 +1989,31 @@ def rhel_latest_os_params():
 
 
 @pytest.fixture(scope="session")
-def hco_target_version(cnv_target_version):
-    return get_hco_version_name(cnv_target_version=cnv_target_version)
+def hco_target_csv_name(cnv_target_version):
+    return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
 
 @pytest.fixture(scope="session")
-def eus_hco_target_version(eus_target_cnv_version):
-    return get_hco_version_name(cnv_target_version=eus_target_cnv_version)
+def eus_hco_target_csv_name(eus_target_cnv_version):
+    return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
 
 
 @pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
+
+
+@pytest.fixture(scope="session")
+def eus_target_cnv_version(pytestconfig, cnv_current_version):
+    cnv_current_version = Version(version=cnv_current_version)
+    minor = cnv_current_version.minor
+    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, exit if non-eus version
+    if minor % 2:
+        exit_pytest_execution(
+            message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
+            return_code=EUS_ERROR_CODE,
+        )
+    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
 
 
 @pytest.fixture()
@@ -2487,11 +2500,6 @@ def gpu_nodes(nodes):
 def skip_if_no_gpu_node(gpu_nodes):
     if not gpu_nodes:
         pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
-
-
-@pytest.fixture(scope="session")
-def cnv_version(cnv_current_version):
-    return packaging.version.parse(version=cnv_current_version)
 
 
 @pytest.fixture()

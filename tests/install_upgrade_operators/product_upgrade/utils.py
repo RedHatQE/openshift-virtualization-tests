@@ -52,7 +52,7 @@ from utilities.infra import (
 )
 from utilities.operator import (
     approve_install_plan,
-    get_hco_version_name,
+    get_hco_csv_name_by_version,
     update_image_in_catalog_source,
     wait_for_mcp_update_completion,
 )
@@ -344,12 +344,12 @@ def verify_upgrade_cnv(dyn_client, hco_namespace, expected_images):
     )
 
 
-def approve_cnv_upgrade_install_plan(dyn_client, hco_namespace, hco_target_version, is_production_source):
+def approve_cnv_upgrade_install_plan(dyn_client, hco_namespace, hco_target_csv_name, is_production_source):
     LOGGER.info("Get the upgrade install plan.")
     install_plan = wait_for_install_plan(
         dyn_client=dyn_client,
         hco_namespace=hco_namespace,
-        hco_target_version=hco_target_version,
+        hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
     )
 
@@ -632,7 +632,7 @@ def perform_cnv_upgrade(
     hco_namespace: Namespace,
     cnv_target_version: str,
 ) -> None:
-    hco_version = get_hco_version_name(cnv_target_version=cnv_target_version)
+    hco_target_csv_name = get_hco_csv_name_by_version(cnv_target_version=cnv_target_version)
 
     LOGGER.info("Updating image in CatalogSource")
     update_image_in_catalog_source(
@@ -645,14 +645,12 @@ def perform_cnv_upgrade(
     approve_cnv_upgrade_install_plan(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
-        hco_target_version=hco_version,
+        hco_target_csv_name=hco_target_csv_name,
         is_production_source=False,
     )
     LOGGER.info("Waiting for target CSV")
     target_csv = wait_for_hco_csv_creation(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace.name,
-        hco_target_version=hco_version,
+        admin_client=admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name
     )
     LOGGER.info("Waiting for CSV status to be SUCCEEDED")
     target_csv.wait_for_status(
@@ -665,23 +663,23 @@ def perform_cnv_upgrade(
 
 
 def wait_for_hco_csv_creation(
-    admin_client: DynamicClient, hco_namespace: str, hco_target_version: str
+    admin_client: DynamicClient, hco_namespace: str, hco_target_csv_name: str
 ) -> ClusterServiceVersion:
-    LOGGER.info(f"Wait for new CSV {hco_target_version} to be created")
+    LOGGER.info(f"Wait for new CSV {hco_target_csv_name} to be created")
     csv_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_10MIN,
         sleep=TIMEOUT_5SEC,
         func=get_csv_by_name,
         admin_client=admin_client,
         namespace=hco_namespace,
-        csv_name=hco_target_version,
+        csv_name=hco_target_csv_name,
     )
     try:
         for csv in csv_sampler:
             if csv:
                 return csv
     except TimeoutExpiredError:
-        LOGGER.error(f"timeout waiting for target cluster service version: {hco_target_version}")
+        LOGGER.error(f"timeout waiting for target cluster service version: {hco_target_csv_name}")
         raise
 
 

@@ -48,7 +48,7 @@ from utilities.operator import (
     create_operator_group,
     create_subscription,
     generate_icsp_idms_file,
-    get_hco_version_name,
+    get_hco_csv_name_by_version,
     get_install_plan_from_subscription,
     get_mcp_updating_transition_times,
     wait_for_catalogsource_ready,
@@ -207,7 +207,7 @@ def cnv_install_plan_installed(
     )
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_5MIN)
     csv = get_csv_by_name(
-        csv_name=get_hco_version_name(cnv_target_version=cnv_version_to_install),
+        csv_name=get_hco_csv_name_by_version(cnv_target_version=cnv_version_to_install),
         admin_client=admin_client,
         namespace=created_cnv_namespace.name,
     )
