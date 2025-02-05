@@ -6,7 +6,7 @@ import logging
 import os
 import shlex
 from contextlib import contextmanager
-from multiprocessing import Process
+from threading import Event, Thread
 
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
@@ -69,8 +69,8 @@ def windows_oom_stress_started(vm_with_memory_load):
 def start_file_transfer(vm):
     file_name = "oom-test.txt"
 
-    def _transfer_loop():
-        while True:
+    def _transfer_loop(stop_event):
+        while not stop_event.is_set():
             vm.ssh_exec.fs.transfer(path_src=file_name, target_host=vm.ssh_exec, path_dst="new_file")
 
     run_ssh_commands(
@@ -79,13 +79,15 @@ def start_file_transfer(vm):
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )
 
-    transfer = Process(target=_transfer_loop)
+    stop_event = Event()
+    transfer = Thread(target=_transfer_loop, args=(stop_event,), daemon=True)
+
     transfer.start()
 
     try:
         yield
     finally:
-        transfer.kill()
+        stop_event.set()
 
 
 def wait_vm_oom(vm):
