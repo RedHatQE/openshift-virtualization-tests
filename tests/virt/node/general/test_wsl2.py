@@ -13,7 +13,7 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
-from tests.virt.utils import verify_wsl2_guest_running
+from tests.virt.utils import verify_wsl2_guest_works
 from utilities.constants import TCP_TIMEOUT_30SEC, Images
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -27,24 +27,6 @@ pytestmark = pytest.mark.usefixtures("skip_on_psi_cluster")
 LOGGER = logging.getLogger(__name__)
 RESOURCE_USAGES = 70.0
 TESTS_CLASS_NAME = "TestWSL2"
-
-
-def get_wsl_pid(vm):
-    """
-    Run on the VM the command: 'tasklist' and return the pid for wsl.exe
-    output 'tasklist' => here pid is 8816:
-    ....
-    wsl.exe                       8816 Console                    1      4,144 K
-    ....
-    """
-    res = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split("tasklist"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )
-    wsl_pid = re.search(r"wsl.exe.*?(\d+).*?", res[0])
-    assert wsl_pid, f"Missing pid for wsl.exe, task list: \n{res[0]}"
-    return wsl_pid.group(1)
 
 
 def get_windows_vm_resource_usage(vm):
@@ -61,6 +43,12 @@ def get_windows_vm_resource_usage(vm):
     LOGGER.info(f"Windows VM CPU and Memory usage: {usage}")
     out = re.search(r".*CPU usage: (?P<cpu>.*),.*\(RAM\):(?P<ram>.*)", usage)
     return float(out.group("cpu")), float(out.group("ram"))
+
+
+def assert_windows_host_resource_usage(vm):
+    cpu, ram = get_windows_vm_resource_usage(vm=vm)
+    assert float(cpu) < RESOURCE_USAGES, f"CPU usage on the Windows VM is higher than {RESOURCE_USAGES}"
+    assert float(ram) < RESOURCE_USAGES, f"Memory usage on the Windows VM is higher than {RESOURCE_USAGES}"
 
 
 @pytest.fixture(scope="class")
@@ -83,12 +71,16 @@ def windows_wsl2_vm(
         cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,
         memory_guest=Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
-        cpu_cores=16,
-        cpu_threads=1,  # TODO: Remove once WSL2 image is fixed to work with multi-threads
+        cpu_cores=8,
     ) as vm:
         running_vm(vm=vm)
-        verify_wsl2_guest_running(vm=vm)
         yield vm
+
+
+@pytest.fixture()
+def migrated_wsl2_vm(windows_wsl2_vm):
+    migrate_vm_and_verify(vm=windows_wsl2_vm, check_ssh_connectivity=True)
+    return windows_wsl2_vm
 
 
 @pytest.mark.ibm_bare_metal
@@ -120,41 +112,16 @@ def windows_wsl2_vm(
     indirect=True,
 )
 class TestWSL2:
-    @staticmethod
-    def _check_usage(resource_usage, resource_type):
-        assert float(resource_usage) < RESOURCE_USAGES, (
-            f"{resource_type} usage on the Windows VM is higher then {RESOURCE_USAGES}"
-        )
-
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::wsl2_guest")
     @pytest.mark.polarion("CNV-6023")
-    def test_wsl2_guest(
-        self,
-        golden_image_data_volume_scope_class,
-        windows_wsl2_vm,
-    ):
-        resource_usage = get_windows_vm_resource_usage(vm=windows_wsl2_vm)
-        self._check_usage(resource_usage=resource_usage[0], resource_type="CPU")
-        self._check_usage(resource_usage=resource_usage[1], resource_type="Memory")
+    def test_wsl2_guest(self, windows_wsl2_vm):
+        verify_wsl2_guest_works(vm=windows_wsl2_vm)
+        assert_windows_host_resource_usage(vm=windows_wsl2_vm)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::wsl2_guest"])
     @pytest.mark.polarion("CNV-5462")
     def test_migration_with_wsl2_guest(
-        self,
-        skip_if_no_common_modern_cpu,
-        skip_access_mode_rwo_scope_function,
-        golden_image_data_volume_scope_class,
-        windows_wsl2_vm,
+        self, skip_if_no_common_modern_cpu, skip_access_mode_rwo_scope_function, migrated_wsl2_vm
     ):
-        wsl_pid_before = get_wsl_pid(vm=windows_wsl2_vm)
-        LOGGER.info(f"PID before migration: {wsl_pid_before}")
-        migrate_vm_and_verify(vm=windows_wsl2_vm, check_ssh_connectivity=True)
-        verify_wsl2_guest_running(vm=windows_wsl2_vm)
-        wsl_pid_after = get_wsl_pid(vm=windows_wsl2_vm)
-        LOGGER.info(f"PID after migration: {wsl_pid_after}")
-        assert wsl_pid_before == wsl_pid_after, (
-            f"WSL pid are not the same before and after migrate. before:{wsl_pid_before}, after:{wsl_pid_after}"
-        )
-        resource_usage = get_windows_vm_resource_usage(vm=windows_wsl2_vm)
-        self._check_usage(resource_usage=resource_usage[0], resource_type="CPU")
-        self._check_usage(resource_usage=resource_usage[1], resource_type="Memory")
+        verify_wsl2_guest_works(vm=migrated_wsl2_vm)
+        assert_windows_host_resource_usage(vm=migrated_wsl2_vm)
