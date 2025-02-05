@@ -58,7 +58,7 @@ def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
 def wait_for_install_plan(
     dyn_client: DynamicClient,
     hco_namespace: str,
-    hco_target_version: str,
+    hco_target_csv_name: str,
     is_production_source: bool,
 ) -> InstallPlan:
     install_plan_sampler = TimeoutSampler(
@@ -71,7 +71,7 @@ def wait_for_install_plan(
         },  # Ignore ConflictError during install plan reconciliation
         dyn_client=dyn_client,
         hco_namespace=hco_namespace,
-        hco_target_version=hco_target_version,
+        hco_target_version=hco_target_csv_name,
     )
     subscription = get_subscription(
         admin_client=dyn_client,
@@ -102,7 +102,7 @@ def wait_for_install_plan(
                             ip.clean_up()
                             continue
                     if (
-                        hco_target_version == ip_instance.spec.clusterServiceVersionNames[0]
+                        hco_target_csv_name == ip_instance.spec.clusterServiceVersionNames[0]
                         and ip.name == install_plan_name_in_subscription
                     ):
                         return ip
@@ -113,7 +113,7 @@ def wait_for_install_plan(
 
     except TimeoutExpiredError:
         LOGGER.error(
-            f"timeout waiting for target install plan: version={hco_target_version}, "
+            f"timeout waiting for target install plan: version={hco_target_csv_name}, "
             f"subscription install plan: {install_plan_name_in_subscription}"
         )
         raise

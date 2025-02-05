@@ -36,7 +36,6 @@ from utilities.data_collector import (
     get_data_collector_base_directory,
 )
 from utilities.infra import (
-    exit_pytest_execution,
     generate_openshift_pull_secret_file,
     get_csv_by_name,
     get_prometheus_k8s_token,
@@ -56,7 +55,6 @@ from utilities.virt import get_oc_image_info
 
 LOGGER = logging.getLogger(__name__)
 POD_STR_NOT_MANAGED_BY_HCO = "hostpath-"
-EUS_ERROR_CODE = 98
 
 
 @pytest.fixture(scope="session")
@@ -159,21 +157,19 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 
 
 @pytest.fixture()
-def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_version, is_production_source):
+def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
     approve_cnv_upgrade_install_plan(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
-        hco_target_version=hco_target_version,
+        hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
     )
 
 
 @pytest.fixture()
-def created_target_hco_csv(admin_client, hco_namespace, hco_target_version):
+def created_target_hco_csv(admin_client, hco_namespace, hco_target_csv_name):
     return wait_for_hco_csv_creation(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace.name,
-        hco_target_version=hco_target_version,
+        admin_client=admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name
     )
 
 
@@ -200,11 +196,11 @@ def target_images_for_pods_not_managed_by_hco(related_images_from_target_csv):
 
 
 @pytest.fixture()
-def started_cnv_upgrade(admin_client, hco_namespace, hco_target_version):
+def started_cnv_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     wait_for_operator_condition(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
-        name=hco_target_version,
+        name=hco_target_csv_name,
         upgradable=False,
     )
 
@@ -214,7 +210,7 @@ def upgraded_cnv(
     admin_client,
     hco_namespace,
     cnv_target_version,
-    hco_target_version,
+    hco_target_csv_name,
     created_target_hco_csv,
     target_operator_pods_images,
     target_images_for_pods_not_managed_by_hco,
@@ -225,11 +221,11 @@ def upgraded_cnv(
         timeout=TIMEOUT_10MIN,
         stop_status="fakestatus",  # to bypass intermittent FAILED status that is not permanent.
     )
-    LOGGER.info(f"Wait for operator condition {hco_target_version} to reach upgradable: True")
+    LOGGER.info(f"Wait for operator condition {hco_target_csv_name} to reach upgradable: True")
     wait_for_operator_condition(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
-        name=hco_target_version,
+        name=hco_target_csv_name,
         upgradable=True,
     )
 
@@ -328,19 +324,6 @@ def is_eus_upgrade(pytestconfig):
 def skip_on_eus_upgrade(is_eus_upgrade):
     if is_eus_upgrade:
         pytest.skip("This test is not supported for EUS upgrade")
-
-
-@pytest.fixture(scope="session")
-def eus_target_cnv_version(pytestconfig, cnv_current_version):
-    cnv_current_version = Version(version=cnv_current_version)
-    minor = cnv_current_version.minor
-    # EUS-to-EUS updates are only viable between even-numbered minor versions, exit if non-eus version
-    if minor % 2:
-        exit_pytest_execution(
-            message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
-            return_code=EUS_ERROR_CODE,
-        )
-    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
 
 
 @pytest.fixture(scope="session")
@@ -577,9 +560,9 @@ def non_eus_to_target_eus_cnv_upgraded(
 
 
 @pytest.fixture()
-def eus_created_target_hco_csv(admin_client, hco_namespace, eus_hco_target_version):
+def eus_created_target_hco_csv(admin_client, hco_namespace, eus_hco_target_csv_name):
     return get_csv_by_name(
-        csv_name=eus_hco_target_version,
+        csv_name=eus_hco_target_csv_name,
         admin_client=admin_client,
         namespace=hco_namespace.name,
     )
