@@ -11,6 +11,7 @@ import requests
 import xmltodict
 from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
@@ -21,21 +22,30 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     DISK_SERIAL,
+    OS_FLAVOR_CIRROS,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_30MIN,
+    Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_annotations
-from utilities.infra import ExecCommandOnPod, get_artifactory_header
+from utilities.infra import (
+    ExecCommandOnPod,
+    get_artifactory_config_map,
+    get_artifactory_header,
+    get_artifactory_secret,
+    get_http_image_url,
+)
 from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     fedora_vm_body,
     get_created_migration_job,
     prepare_cloud_init_user_data,
+    running_vm,
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
     wait_for_updated_kv_value,
@@ -545,3 +555,50 @@ def vm_object_from_template(
         network_multiqueue=param_dict.get("network_multiqueue"),
         ssh=param_dict.get("ssh", True),
     )
+
+
+@contextmanager
+def create_cirros_vm(
+    storage_class,
+    namespace,
+    client,
+    dv_name,
+    vm_name,
+    node=None,
+    wait_running=True,
+    volume_mode=None,
+    cpu_model=None,
+    annotations=None,
+):
+    artifactory_secret = get_artifactory_secret(namespace=namespace)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+
+    dv = DataVolume(
+        name=dv_name,
+        namespace=namespace,
+        source="http",
+        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+        storage_class=storage_class,
+        size=Images.Cirros.DEFAULT_DV_SIZE,
+        api_name="storage",
+        volume_mode=volume_mode,
+        secret=artifactory_secret,
+        cert_configmap=artifactory_config_map.name,
+    )
+    dv.to_dict()
+    dv_metadata = dv.res["metadata"]
+    with VirtualMachineForTests(
+        client=client,
+        name=vm_name,
+        namespace=dv_metadata["namespace"],
+        os_flavor=OS_FLAVOR_CIRROS,
+        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
+        node_selector=node,
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        cpu_model=cpu_model,
+        annotations=annotations,
+    ) as vm:
+        if wait_running:
+            running_vm(vm=vm, wait_for_interfaces=False)
+        yield vm

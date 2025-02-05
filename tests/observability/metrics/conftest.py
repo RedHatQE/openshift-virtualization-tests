@@ -8,10 +8,12 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -50,7 +52,7 @@ from tests.observability.metrics.utils import (
     wait_for_no_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_cr_labels_change
+from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -942,4 +944,60 @@ def storage_class_labels_for_testing(admin_client):
         ]
         == "true"
         else "false",
+    }
+
+
+@pytest.fixture()
+def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
+    with create_cirros_vm(
+        storage_class=storage_class_for_snapshot,
+        namespace=namespace.name,
+        client=admin_client,
+        dv_name="dv-rbd",
+        vm_name="vm-for-snapshot",
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def vm_snapshot_for_metric_test(vm_for_snapshot_for_metrics_test):
+    with vm_snapshot(
+        vm=vm_for_snapshot_for_metrics_test, name=f"{vm_for_snapshot_for_metrics_test.name}-snapshot"
+    ) as snapshot:
+        yield snapshot
+
+
+@pytest.fixture()
+def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for_metric_test):
+    vm_name = vm_for_snapshot_for_metrics_test.name
+    vm_for_snapshot_for_metrics_test.stop(wait=True)
+    with VirtualMachineRestore(
+        name=f"restore-snapshot-{vm_name}",
+        namespace=vm_snapshot_for_metric_test.namespace,
+        vm_name=vm_name,
+        snapshot_name=vm_snapshot_for_metric_test.name,
+    ) as vm_restore:
+        vm_restore.wait_restore_done()
+        vm_for_snapshot_for_metrics_test.start(wait=True)
+        yield vm_restore
+
+
+@pytest.fixture()
+def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
+    for pvc in list(PersistentVolumeClaim.get(dyn_client=admin_client)):
+        pvc_name = pvc.name
+        if (
+            pvc_name.startswith("restore")
+            and pvc.instance.metadata.labels.get("restore.kubevirt.io/source-vm-name")
+            == vm_for_snapshot_for_metrics_test.name
+        ):
+            return pvc_name
+
+
+@pytest.fixture()
+def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for_metrics_test, restored_pvc_name):
+    return {
+        "label_restore_kubevirt_io_source_vm_name": vm_for_snapshot_for_metrics_test.name,
+        "persistentvolumeclaim": restored_pvc_name,
+        "namespace": vm_snapshot_for_metric_test.namespace,
     }

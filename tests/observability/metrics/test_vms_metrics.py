@@ -20,6 +20,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
+    expected_metric_labels_and_values,
     timestamp_to_seconds,
     validate_metric_value_within_range,
 )
@@ -470,4 +471,27 @@ class TestKubevirtVmiNonEvictable:
             prometheus=prometheus,
             metric_name="kubevirt_vmi_non_evictable",
             expected_value="1",
+        )
+
+
+class TestVmSnapshotPersistentVolumeClaimLabels:
+    @pytest.mark.jira("CNV-54584")
+    @pytest.mark.polarion("CNV-11762")
+    def test_metric_kubevirt_vmsnapshot_persistentvolumeclaim_labels(
+        self,
+        prometheus,
+        vm_for_snapshot_for_metrics_test,
+        vm_snapshot_for_metric_test,
+        restored_vm_using_snapshot,
+        snapshot_labels_for_testing,
+    ):
+        """
+        This test is working only on ocs-storagecluster-ceph-rbd StorageClass,
+        it is a bug, and it mentioned in the marker.
+        """
+        expected_metric_labels_and_values(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vmsnapshot_persistentvolumeclaim_labels"
+            f"{{vm_name='{vm_for_snapshot_for_metrics_test.name}'}}",
+            expected_labels_and_values=snapshot_labels_for_testing,
         )
