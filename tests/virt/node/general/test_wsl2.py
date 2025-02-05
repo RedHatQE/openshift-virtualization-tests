@@ -47,8 +47,8 @@ def get_windows_vm_resource_usage(vm):
 
 def assert_windows_host_resource_usage(vm):
     cpu, ram = get_windows_vm_resource_usage(vm=vm)
-    assert float(cpu) < RESOURCE_USAGES, f"CPU usage on the Windows VM is higher then {RESOURCE_USAGES}"
-    assert float(ram) < RESOURCE_USAGES, f"Memory usage on the Windows VM is higher then {RESOURCE_USAGES}"
+    assert float(cpu) < RESOURCE_USAGES, f"CPU usage on the Windows VM is higher than {RESOURCE_USAGES}"
+    assert float(ram) < RESOURCE_USAGES, f"Memory usage on the Windows VM is higher than {RESOURCE_USAGES}"
 
 
 @pytest.fixture(scope="class")
