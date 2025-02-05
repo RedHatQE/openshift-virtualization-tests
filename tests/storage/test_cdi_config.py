@@ -220,13 +220,13 @@ def test_cdi_config_scratch_space_value_is_default(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2208")
-def test_cdi_config_exists(skip_not_openshift, cdi_config, upload_proxy_route):
+def test_cdi_config_exists(cdi_config, upload_proxy_route):
     assert cdi_config.upload_proxy_url == upload_proxy_route.host
 
 
 @pytest.mark.destructive
 @pytest.mark.polarion("CNV-2209")
-def test_different_route_for_upload_proxy(skip_not_openshift, hco_namespace, cdi_config, uploadproxy_route_deleted):
+def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy_route_deleted):
     with Route(
         namespace=hco_namespace.name,
         name="new-route-uploadproxy",
@@ -237,7 +237,7 @@ def test_different_route_for_upload_proxy(skip_not_openshift, hco_namespace, cdi
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2215")
-def test_route_for_different_service(skip_not_openshift, cdi_config, upload_proxy_route):
+def test_route_for_different_service(cdi_config, upload_proxy_route):
     with Route(namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api") as cdi_api_route:
         assert cdi_config.upload_proxy_url != cdi_api_route.host
         assert cdi_config.upload_proxy_url == upload_proxy_route.host
@@ -245,7 +245,7 @@ def test_route_for_different_service(skip_not_openshift, cdi_config, upload_prox
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2216")
-def test_upload_proxy_url_overridden(skip_not_openshift, cdi_config, namespace, cdi_config_upload_proxy_overridden):
+def test_upload_proxy_url_overridden(cdi_config, namespace, cdi_config_upload_proxy_overridden):
     with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY) as new_route:
         assert cdi_config.upload_proxy_url != new_route.host
 

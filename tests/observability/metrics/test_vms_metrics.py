@@ -188,7 +188,6 @@ class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3048")
     def test_vmi_count_metric_increase(
         self,
-        skip_not_openshift,
         prometheus,
         number_of_running_vmis,
         vm_metric_1,
@@ -199,7 +198,6 @@ class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3589")
     def test_vmi_count_metric_decrease(
         self,
-        skip_not_openshift,
         prometheus,
         number_of_running_vmis,
         vm_metric_1,
