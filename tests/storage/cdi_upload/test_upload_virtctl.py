@@ -76,7 +76,6 @@ def test_successful_virtctl_upload_no_url(namespace, tmpdir):
 @pytest.mark.destructive
 @pytest.mark.polarion("CNV-2191")
 def test_successful_virtctl_upload_no_route(
-    skip_not_openshift,
     hco_namespace,
     namespace,
     tmpdir,
@@ -108,7 +107,6 @@ def test_successful_virtctl_upload_no_route(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2217")
 def test_image_upload_with_overridden_url(
-    skip_not_openshift,
     namespace,
     tmpdir,
     cdi_config_upload_proxy_overridden,
@@ -133,7 +131,6 @@ def test_image_upload_with_overridden_url(
 def test_virtctl_image_upload_with_ca(
     enabled_ca,
     skip_no_reencrypt_route,
-    skip_not_openshift,
     tmpdir,
     namespace,
 ):
