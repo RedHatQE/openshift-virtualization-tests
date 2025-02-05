@@ -719,7 +719,7 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
             raise
 
 
-def get_hco_version_name(cnv_target_version: str) -> str:
+def get_hco_csv_name_by_version(cnv_target_version: str) -> str:
     return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
 
 
