@@ -236,8 +236,8 @@ def set_permissions(
             subjects_namespace=subjects_namespace,
             role_ref_kind=cluster_role.kind,
             role_ref_name=cluster_role.name,
-        ) as role_binding:
-            yield cluster_role, role_binding
+        ):
+            yield
 
 
 def create_vm_and_verify_image_permission(dv):
