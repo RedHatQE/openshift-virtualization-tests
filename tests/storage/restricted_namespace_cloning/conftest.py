@@ -293,10 +293,9 @@ def vm_for_restricted_namespace_cloning_test(
 def user_has_get_permissions_in_source_namespace(
     namespace, unprivileged_client, data_volume_multi_storage_scope_module
 ):
-    dv_name = data_volume_multi_storage_scope_module.name
-    assert list(DataVolume.get(namespace=namespace.name, name=dv_name, dyn_client=unprivileged_client)), (
-        f"Got empty list for DataVolume.get '{dv_name}' in '{namespace.name}' namespace"
-    )
+    _ = DataVolume(
+        namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
+    ).instance
 
 
 @pytest.fixture()
