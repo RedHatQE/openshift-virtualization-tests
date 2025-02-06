@@ -328,7 +328,6 @@ def brcnv_migrated_vm(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-2060")
 def test_ping_vm_migration(
-    skip_when_one_node,
     vma,
     vmb,
     running_vma,
@@ -342,7 +341,6 @@ def test_ping_vm_migration(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-2063")
 def test_ssh_vm_migration(
-    skip_when_one_node,
     namespace,
     br1test_nad,
     vma,
@@ -360,7 +358,6 @@ def test_ssh_vm_migration(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-8600")
 def test_cnv_bridge_ssh_vm_migration(
-    skip_when_one_node,
     brcnv_ovs_nad_vlan_1,
     brcnv_vma_with_vlan_1,
     brcnv_vm_for_migration,
@@ -375,7 +372,6 @@ def test_cnv_bridge_ssh_vm_migration(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5565")
 def test_connectivity_after_migration_and_restart(
-    skip_when_one_node,
     namespace,
     br1test_nad,
     vma,
@@ -394,7 +390,6 @@ def test_connectivity_after_migration_and_restart(
 def test_migration_with_masquerade(
     ip_stack_version_matrix__module__,
     admin_client,
-    skip_when_one_node,
     skip_if_not_ipv4_supported_cluster_from_mtx,
     skip_if_not_ipv6_supported_cluster_from_mtx,
     vma,
