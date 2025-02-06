@@ -10,15 +10,10 @@ from tests.network.checkup_framework.utils import (
     wait_for_job_finish,
 )
 
-pytestmark = [
-    pytest.mark.jira("CNV-55124", run=False),
-    pytest.mark.usefixtures("framework_resources"),
-]
+pytestmark = pytest.mark.usefixtures("framework_resources")
 
 CNCF_IO_RESOURCE = Resource.ApiGroup.K8S_CNI_CNCF_IO
-CONNECTIVITY_ISSUE_ERROR_REGEX_MESSAGE = (
-    "run: failed to run check: failed due to connectivity issue: \\d+ packets transmitted, 0 packets received"
-)
+CONNECTIVITY_ISSUE_ERROR_REGEX_MESSAGE = "run: ping parser: no connectivity - 100% packet loss"
 CONDITION_TIMEOUT_REGEX_MESSAGE = (
     r"setup: failed to wait for VMI 'test-checkup-framework/latency-check-target-.*' IP address to "
     "appear on status: timed out waiting for the condition"
@@ -39,7 +34,6 @@ LATENCY_NONEXISTENT_CONFIGMAP_ENV_JOB_ERROR_REGEX_MESSAGE = f'configmaps "{NONEX
 LATENCY_NO_ENV_VARIABLES_JOB_ERROR_REGEX_MESSAGE = 'missing required environment variable: "CONFIGMAP_NAMESPACE"'
 
 
-@pytest.mark.jira("CNV-48962", run=False)
 @pytest.mark.polarion("CNV-8578")
 def test_disconnected_network_job_failure(
     latency_disconnected_configmap, latency_disconnected_network_job, latency_disconnected_network_job_failure
@@ -50,7 +44,6 @@ def test_disconnected_network_job_failure(
     )
 
 
-@pytest.mark.jira("CNV-48962", run=False)
 @pytest.mark.polarion("CNV-9535")
 def test_disconnected_network_sriov_job_failure(
     latency_disconnected_configmap_sriov,
