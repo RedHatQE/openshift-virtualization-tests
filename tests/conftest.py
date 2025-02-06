@@ -555,17 +555,6 @@ def node_physical_nics(workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def ovn_kubernetes_cluster(admin_client):
-    return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
-
-
-@pytest.fixture(scope="session")
-def skip_if_ovn_cluster(ovn_kubernetes_cluster):
-    if ovn_kubernetes_cluster:
-        pytest.skip("Test cannot run on cluster with OVN network type")
-
-
-@pytest.fixture(scope="session")
 def nodes_active_nics(
     workers,
     workers_utility_pods,
