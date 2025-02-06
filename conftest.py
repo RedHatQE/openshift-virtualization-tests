@@ -719,7 +719,7 @@ def is_skip_must_gather(node: Node) -> bool:
     return "skip_must_gather_collection" in get_all_node_markers(node=node)
 
 
-def get_inspect_command_string(node: Node, test_name: str) -> str:
+def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     namespace_str = ""
     components = [key for key in NAMESPACE_COLLECTION.keys() if f"tests/{key}/" in test_name]
     if not components:
@@ -742,7 +742,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
         test_name = f"{node.fspath}::{node.name}"
         LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
-        inspect_str = get_inspect_command_string(test_name=test_name, node=node)
+        inspect_str = get_inspect_command_namespace_string(test_name=test_name, node=node)
         if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
