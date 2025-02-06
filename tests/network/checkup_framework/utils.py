@@ -256,13 +256,16 @@ def wait_for_job_failure(job):
         job_status = TimeoutSampler(
             wait_timeout=timeout,
             sleep=1,
-            func=lambda: job.instance.status.conditions[0],
+            func=lambda: filter(
+                lambda cond: cond["status"] == job.Condition.Status.TRUE, job.instance.status.conditions
+            ),
         )
         for sample in job_status:
-            if sample["type"] == job.Status.FAILED and sample["status"] == job.Condition.Status.TRUE:
-                return
-            if sample["type"] == job.Status.SUCCEEDED and sample["status"] == job.Condition.Status.TRUE:
-                raise ResourceValueError(f"Job {job.name} has succeeded and should have failed.")
+            for condition in sample:
+                if condition["type"] == job.Status.FAILED:
+                    return
+                if condition["type"] == job.Status.SUCCEEDED:
+                    raise ResourceValueError(f"Job {job.name} has succeeded and should have failed.")
     except TimeoutExpiredError:
         for status in job_status:
             LOGGER.error(f"Job {job.name} current status is {status} and not {job.Status.FAILED} as expected.")
