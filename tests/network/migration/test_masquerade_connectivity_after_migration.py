@@ -84,7 +84,6 @@ def vm_console_connection_ready(running_vm_for_migration):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-6733")
 def test_connectivity_after_migration(
-    skip_when_one_node,
     namespace,
     running_vm_static,
     running_vm_for_migration,

@@ -122,7 +122,6 @@ class TestBondConnectivityWithNodesDefaultInterface:
     @pytest.mark.polarion("CNV-3433")
     def test_vm_connectivity_over_linux_bond(
         self,
-        skip_when_one_node,
         skip_no_bond_support,
         namespace,
         lbodi_bond,
@@ -147,7 +146,6 @@ class TestBondConnectivityWithNodesDefaultInterface:
     @pytest.mark.polarion("CNV-3439")
     def test_bond_and_persistence(
         self,
-        skip_when_one_node,
         skip_no_bond_support,
         namespace,
         workers_utility_pods,

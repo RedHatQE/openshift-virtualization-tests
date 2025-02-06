@@ -110,7 +110,7 @@ def vm_re_migrated_after_updating_migration_policy(vm_for_migration_policy_test,
     migrate_vm_and_verify(vm=vm_for_migration_policy_test)
 
 
-@pytest.mark.usefixtures("skip_when_one_node", "skip_access_mode_rwo_scope_class", "skip_if_no_common_cpu")
+@pytest.mark.usefixtures("skip_access_mode_rwo_scope_class", "skip_if_no_common_cpu")
 class TestMigrationPolicies:
     @pytest.mark.gating
     @pytest.mark.parametrize(

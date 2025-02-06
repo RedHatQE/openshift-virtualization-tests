@@ -8,7 +8,7 @@ from tests.network.connectivity.utils import get_masquerade_vm_ip, is_masquerade
 from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
 
-pytestmark = pytest.mark.usefixtures("skip_if_no_multinic_nodes", "skip_when_one_node")
+pytestmark = pytest.mark.usefixtures("skip_if_no_multinic_nodes")
 
 
 class TestConnectivityLinuxBridge:

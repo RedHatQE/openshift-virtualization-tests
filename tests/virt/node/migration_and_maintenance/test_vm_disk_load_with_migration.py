@@ -89,7 +89,6 @@ def get_disk_usage(ssh_exec):
     indirect=True,
 )
 def test_fedora_vm_load_migration(
-    skip_when_one_node,
     skip_if_no_common_cpu,
     skip_access_mode_rwo_scope_function,
     vm_with_fio,

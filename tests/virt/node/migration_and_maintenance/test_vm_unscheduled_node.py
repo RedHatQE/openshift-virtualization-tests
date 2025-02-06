@@ -53,7 +53,6 @@ def unscheduled_node_vm(
 )
 @pytest.mark.polarion("CNV-4157")
 def test_schedule_vm_on_cordoned_node(
-    skip_when_one_node,
     skip_access_mode_rwo_scope_function,
     nodes,
     data_volume_scope_function,

@@ -24,7 +24,6 @@ from tests.infrastructure.workload_availability.remediation_fencing.utils import
 pytestmark = [
     pytest.mark.usefixtures(
         "skip_if_workers_vms",
-        "skip_when_one_node",
         "skip_on_aws_cluster",
     ),
     pytest.mark.node_remediation,

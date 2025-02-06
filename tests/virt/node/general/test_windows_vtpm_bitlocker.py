@@ -180,7 +180,6 @@ class TestBitLockerVTPM:
     @pytest.mark.polarion("CNV-10309")
     def test_migrate_encrypted_vm(
         self,
-        skip_when_one_node,
         skip_if_no_common_modern_cpu,
         skip_access_mode_rwo_scope_function,
         migrated_encrypted_vm,

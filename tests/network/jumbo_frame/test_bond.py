@@ -23,7 +23,6 @@ BRIDGE_NAME = "brbond1"
 
 pytestmark = pytest.mark.usefixtures(
     "skip_if_no_multinic_nodes",
-    "skip_when_one_node",
     "skip_no_bond_support",
     "skip_when_no_jumbo_frame_support",
     "hyperconverged_ovs_annotations_enabled_scope_session",

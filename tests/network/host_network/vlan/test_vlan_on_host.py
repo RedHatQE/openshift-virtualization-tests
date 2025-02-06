@@ -35,7 +35,6 @@ class TestVlanInterface:
     @pytest.mark.polarion("CNV-3451")
     def test_vlan_connectivity_on_several_hosts(
         self,
-        skip_when_one_node,
         workers_utility_pods,
         namespace,
         vlan_iface_dhcp_client_1,
@@ -56,7 +55,6 @@ class TestVlanInterface:
     @pytest.mark.polarion("CNV-3452")
     def test_vlan_connectivity_on_one_host(
         self,
-        skip_when_one_node,
         workers_utility_pods,
         namespace,
         vlan_iface_dhcp_client_2,
@@ -76,7 +74,6 @@ class TestVlanInterface:
     @pytest.mark.polarion("CNV-3463")
     def test_no_connectivity_between_different_vlan_tags(
         self,
-        skip_when_one_node,
         workers_utility_pods,
         namespace,
         dhcp_server,
@@ -96,7 +93,6 @@ class TestVlanInterface:
     @pytest.mark.polarion("CNV-3462")
     def test_vlan_deletion(
         self,
-        skip_when_one_node,
         skip_insufficient_nodes,
         workers_utility_pods,
         namespace,
@@ -126,7 +122,6 @@ class TestVlanBond:
     @pytest.mark.polarion("CNV-3469")
     def test_vlan_connectivity_over_bond_on_all_hosts(
         self,
-        skip_when_one_node,
         skip_no_bond_support,
         workers_utility_pods,
         namespace,

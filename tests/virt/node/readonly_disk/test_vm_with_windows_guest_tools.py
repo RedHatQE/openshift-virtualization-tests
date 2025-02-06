@@ -144,7 +144,6 @@ class TestWindowsGuestTools:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_with_guest_tools"])
     def test_migrate_vm_with_windows_guest_tools(
         self,
-        skip_when_one_node,
         skip_if_no_common_modern_cpu,
         skip_access_mode_rwo_scope_class,
         vm_with_guest_tools,
