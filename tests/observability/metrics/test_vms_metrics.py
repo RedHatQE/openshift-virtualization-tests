@@ -189,7 +189,6 @@ class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3048")
     def test_vmi_count_metric_increase(
         self,
-        skip_not_openshift,
         prometheus,
         number_of_running_vmis,
         vm_metric_1,
@@ -200,7 +199,6 @@ class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3589")
     def test_vmi_count_metric_decrease(
         self,
-        skip_not_openshift,
         prometheus,
         number_of_running_vmis,
         vm_metric_1,
@@ -475,7 +473,6 @@ class TestKubevirtVmiNonEvictable:
 
 
 class TestVmSnapshotPersistentVolumeClaimLabels:
-    @pytest.mark.jira("CNV-54584")
     @pytest.mark.polarion("CNV-11762")
     def test_metric_kubevirt_vmsnapshot_persistentvolumeclaim_labels(
         self,
@@ -485,10 +482,6 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         restored_vm_using_snapshot,
         snapshot_labels_for_testing,
     ):
-        """
-        This test is working only on ocs-storagecluster-ceph-rbd StorageClass,
-        it is a bug, and it mentioned in the marker.
-        """
         expected_metric_labels_and_values(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmsnapshot_persistentvolumeclaim_labels"

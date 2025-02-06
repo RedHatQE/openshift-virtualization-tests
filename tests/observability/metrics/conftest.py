@@ -953,7 +953,7 @@ def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, n
         storage_class=storage_class_for_snapshot,
         namespace=namespace.name,
         client=admin_client,
-        dv_name="dv-rbd",
+        dv_name="dv-for-snapshot",
         vm_name="vm-for-snapshot",
     ) as vm:
         yield vm
@@ -984,7 +984,9 @@ def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for
 
 @pytest.fixture()
 def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
-    for pvc in list(PersistentVolumeClaim.get(dyn_client=admin_client)):
+    for pvc in list(
+        PersistentVolumeClaim.get(dyn_client=admin_client, namespace=vm_for_snapshot_for_metrics_test.namespace)
+    ):
         pvc_name = pvc.name
         if (
             pvc_name.startswith("restore")
