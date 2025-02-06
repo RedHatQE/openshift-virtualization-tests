@@ -18,8 +18,6 @@ BRIDGEMARKER1 = "bridgemarker1"
 BRIDGEMARKER2 = "bridgemarker2"
 BRIDGEMARKER3 = "bridgemarker3"
 
-pytestmark = pytest.mark.sno
-
 
 @contextmanager
 def create_bridge_attached_vm_for_bridge_marker(namespace, bridge_marker_bridge_network):
@@ -112,7 +110,7 @@ def bridge_device_on_all_nodes():
 
 
 @pytest.fixture()
-def non_homogenous_bridges(skip_when_one_node, worker_node1, worker_node2):
+def non_homogenous_bridges(worker_node1, worker_node2):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="bridge-marker2",
@@ -135,6 +133,7 @@ def _assert_failure_reason_is_bridge_missing(pod, bridge):
     assert f"Insufficient {missing_resource}" in cond.message
 
 
+@pytest.mark.sno
 @pytest.mark.polarion("CNV-2234")
 def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_vmi_for_bridge_marker_no_device):
     """Check that VMI fails to start when bridge device is missing."""
@@ -148,6 +147,7 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
 
 # note: the order of fixtures is important because we should first create the
 # device before attaching a VMI to it
+@pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2235")
 def test_bridge_marker_device_exists(bridge_device_on_all_nodes, bridge_attached_vmi_for_bridge_marker_device_exists):
