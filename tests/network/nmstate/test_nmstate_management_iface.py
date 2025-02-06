@@ -17,7 +17,6 @@ class TestWithDhcpOverBridge:
     @pytest.mark.polarion("CNV-3002")
     def test_ping_between_vms_through_brext(
         self,
-        skip_when_one_node,
         worker_nodes_ipv4_false_secondary_nics,
         bridge_on_management_ifaces_node1,
         bridge_on_management_ifaces_node2,
@@ -34,7 +33,6 @@ class TestWithDhcpOverBridge:
     @pytest.mark.polarion("CNV-3003")
     def test_ping_remote_ip_through_brext(
         self,
-        skip_when_one_node,
         worker_nodes_ipv4_false_secondary_nics,
         bridge_on_management_ifaces_node1,
         bridge_on_management_ifaces_node2,
@@ -54,7 +52,6 @@ class TestAfterBridgeTeardown:
     @pytest.mark.polarion("CNV-3028")
     def test_ping_between_vms_through_main_interface(
         self,
-        skip_when_one_node,
         worker_nodes_ipv4_false_secondary_nics,
         nmstate_vma,
         nmstate_vmb,
@@ -69,7 +66,6 @@ class TestAfterBridgeTeardown:
     @pytest.mark.polarion("CNV-3029")
     def test_ping_remote_ip_through_main_interface(
         self,
-        skip_when_one_node,
         worker_nodes_ipv4_false_secondary_nics,
         nmstate_vma,
         nmstate_vmb,

@@ -66,7 +66,6 @@ def test_dpdk_checkup_with_high_transfer_rate_same_node(
 
 @pytest.mark.polarion("CNV-9786")
 def test_dpdk_checkup_with_high_transfer_rate_different_nodes(
-    skip_when_one_node,
     unprivileged_client,
     dpdk_checkup_namespace,
     dpdk_high_traffic_configmap_different_node,

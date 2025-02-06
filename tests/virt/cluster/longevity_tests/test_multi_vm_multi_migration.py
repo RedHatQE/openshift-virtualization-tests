@@ -14,7 +14,7 @@ from tests.virt.cluster.longevity_tests.constants import (
 from tests.virt.cluster.longevity_tests.utils import run_migration_loop
 
 pytestmark = [
-    pytest.mark.usefixtures("skip_if_workers_vms", "skip_when_one_node", "skip_if_no_common_modern_cpu"),
+    pytest.mark.usefixtures("skip_if_workers_vms", "skip_if_no_common_modern_cpu"),
     pytest.mark.longevity,
 ]
 

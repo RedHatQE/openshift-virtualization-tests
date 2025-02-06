@@ -36,7 +36,6 @@ class TestAAQDifferentAllocationMethods:
     @pytest.mark.polarion("CNV-11387")
     def test_aaq_vm_migration_with_different_allocation(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         vm_for_aaq_allocation_methods_test,
     ):

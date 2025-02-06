@@ -33,7 +33,6 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
-    pytest.mark.usefixtures("skip_when_one_node"),
 ]
 
 
@@ -118,7 +117,6 @@ def migration_job_sampler(dyn_client, namespace):
 
 @pytest.mark.polarion("CNV-3006")
 def test_node_drain_using_console_fedora(
-    skip_when_one_node,
     admin_client,
     vm_container_disk_fedora,
 ):

@@ -4,7 +4,7 @@ from tests.virt.cluster.longevity_tests.constants import WSL2_DV_PARAMS, WSL2_VM
 from tests.virt.cluster.longevity_tests.utils import run_windows_upgrade_storm
 
 pytestmark = [
-    pytest.mark.usefixtures("skip_if_workers_vms", "skip_when_one_node", "skip_test_if_no_ocs_sc"),
+    pytest.mark.usefixtures("skip_if_workers_vms", "skip_test_if_no_ocs_sc"),
     pytest.mark.longevity,
 ]
 

@@ -19,7 +19,6 @@ class TestJumboPodNetworkOnly:
     @pytest.mark.polarion("CNV-9660")
     def test_jumbo_traffic_over_pod_network_separate_nodes(
         self,
-        skip_when_one_node,
         running_vma_jumbo_primary_interface_worker_1,
         running_vmb_jumbo_primary_interface_worker_2,
         cluster_network_mtu,
@@ -48,7 +47,6 @@ class TestJumboPodNetworkOnly:
     @pytest.mark.polarion("CNV-9672")
     def test_jumbo_negative_traffic_over_pod_network_with_oversized_traffic(
         self,
-        skip_when_one_node,
         running_vma_jumbo_primary_interface_worker_1,
         running_vmb_jumbo_primary_interface_worker_2,
         cluster_network_mtu,

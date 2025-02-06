@@ -442,7 +442,6 @@ class TestScale:
     def test_mass_vm_live_migration(
         self,
         skip_if_not_run_live_migration,
-        skip_when_one_node,
         scale_vms,
         vm_migration_info,
     ):

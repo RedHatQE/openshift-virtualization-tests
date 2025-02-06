@@ -190,7 +190,7 @@ def vms_deployed_on_same_node(migration_vm_1, migration_vm_2):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_when_one_node", "skip_if_no_multinic_nodes")
+@pytest.mark.usefixtures("skip_if_no_multinic_nodes")
 class TestDedicatedLiveMigrationNetwork:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-7877")
