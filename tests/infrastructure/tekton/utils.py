@@ -2,14 +2,29 @@
 Tekton Pipeline Use Cases
 """
 
+from __future__ import annotations
+
 import glob
 import logging
 import os
 import re
 
+from kubernetes.dynamic import ResourceInstance
+from ocp_resources.pipelineruns import PipelineRun
+from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_5SEC, TIMEOUT_10SEC, WIN_2K22, WIN_2K25, WIN_10, WIN_11, Images
+from utilities.constants import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_10SEC,
+    TIMEOUT_50MIN,
+    WIN_2K22,
+    WIN_2K25,
+    WIN_10,
+    WIN_11,
+    Images,
+)
 from utilities.infra import get_http_image_url
 
 LOGGER = logging.getLogger(__name__)
@@ -94,3 +109,21 @@ def process_yaml_files(file_paths, replacements, resource_kind, namespace):
         update_tekton_resources_yaml_file(file_path=file_path, replacements=replacements)
         resources.append(resource_kind(yaml_file=file_path, namespace=namespace).create())
     return resources
+
+
+def wait_for_final_status_pipelinerun(
+    pipelinerun: PipelineRun, wait_timeout: int = TIMEOUT_50MIN, sleep_interval: int = TIMEOUT_1MIN
+) -> ResourceInstance:
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=wait_timeout,
+            sleep=sleep_interval,
+            func=lambda: pipelinerun.instance.status.conditions[0],
+        ):
+            if sample and sample["status"] != Resource.Condition.Status.UNKNOWN:
+                LOGGER.info(f"PipelineRun Condition: {sample}")
+                return sample
+
+    except TimeoutExpiredError:
+        LOGGER.error(f"Pipelinerun: {pipelinerun.name}, Last available condition: {sample}")
+        raise

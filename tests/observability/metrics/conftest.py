@@ -875,7 +875,8 @@ def vm_memory_working_set_bytes(vm_for_test):
                 run_command(
                     command=shlex.split(
                         f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
-                    )
+                    ),
+                    check=False,
                 )[1],
             ).group(1)
         ).bytes

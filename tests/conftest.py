@@ -17,7 +17,6 @@ from signal import SIGINT, SIGTERM, getsignal, signal
 from subprocess import check_output
 
 import bcrypt
-import packaging.version
 import paramiko
 import pytest
 import requests
@@ -67,6 +66,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
+from packaging.version import Version, parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
@@ -176,7 +176,7 @@ from utilities.network import (
 from utilities.operator import (
     cluster_with_icsp,
     disable_default_sources_in_operatorhub,
-    get_hco_version_name,
+    get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
 from utilities.ssp import get_data_import_crons, get_ssp_resource
@@ -223,7 +223,7 @@ ACCESS_TOKEN = {
     "accessTokenInactivityTimeout": None,
 }
 CNV_NOT_INSTALLED = "CNV not yet installed."
-
+EUS_ERROR_CODE = 98
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
     StorageClassNames.TRIDENT_CSI_FSX,
@@ -405,12 +405,6 @@ def unprivileged_client(
             yield get_client(config_file=exported_kubeconfig, context=unprivileged_context)
         else:
             yield admin_client
-
-
-@pytest.fixture(scope="session")
-def skip_when_one_node(schedulable_nodes):
-    if len(schedulable_nodes) < 2:
-        pytest.skip("Test requires at least 2 nodes")
 
 
 @pytest.fixture(scope="session")
@@ -1024,20 +1018,6 @@ def started_windows_vm(
         vm=vm_instance_from_template_multi_storage_scope_function,
         version=request.param["os_version"],
     )
-
-
-def is_openshift(client):
-    namespaces = [ns.name for ns in Namespace.get(dyn_client=client)]
-    return "openshift-operators" in namespaces
-
-
-@pytest.fixture(scope="session")
-def skip_not_openshift(admin_client):
-    """
-    Skip test if tests run on kubernetes (and not openshift)
-    """
-    if not is_openshift(admin_client):
-        pytest.skip("Skipping test requiring OpenShift")
 
 
 @pytest.fixture(scope="session")
@@ -1717,7 +1697,7 @@ def openshift_current_version(admin_client):
 
 @pytest.fixture(scope="session")
 def ocp_current_version(openshift_current_version):
-    return packaging.version.parse(version=openshift_current_version.split("-")[0])
+    return parse(version=openshift_current_version.split("-")[0])
 
 
 @pytest.fixture(scope="session")
@@ -1929,8 +1909,8 @@ def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_targ
 
 
 def determine_upgrade_stream(current_version, target_version):
-    current_cnv_version = packaging.version.parse(version=current_version.split("-")[0])
-    target_cnv_version = packaging.version.parse(version=target_version.split("-")[0])
+    current_cnv_version = parse(version=current_version.split("-")[0])
+    target_cnv_version = parse(version=target_version.split("-")[0])
 
     if current_cnv_version.major < target_cnv_version.major:
         return UpgradeStreams.X_STREAM
@@ -1989,18 +1969,31 @@ def rhel_latest_os_params():
 
 
 @pytest.fixture(scope="session")
-def hco_target_version(cnv_target_version):
-    return get_hco_version_name(cnv_target_version=cnv_target_version)
+def hco_target_csv_name(cnv_target_version):
+    return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
 
 @pytest.fixture(scope="session")
-def eus_hco_target_version(eus_target_cnv_version):
-    return get_hco_version_name(cnv_target_version=eus_target_cnv_version)
+def eus_hco_target_csv_name(eus_target_cnv_version):
+    return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
 
 
 @pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
+
+
+@pytest.fixture(scope="session")
+def eus_target_cnv_version(pytestconfig, cnv_current_version):
+    cnv_current_version = Version(version=cnv_current_version)
+    minor = cnv_current_version.minor
+    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, exit if non-eus version
+    if minor % 2:
+        exit_pytest_execution(
+            message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
+            return_code=EUS_ERROR_CODE,
+        )
+    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
 
 
 @pytest.fixture()
@@ -2073,18 +2066,6 @@ def disabled_common_boot_image_import_feature_gate_scope_class(
 @pytest.fixture(scope="class")
 def golden_images_data_import_crons_scope_class(admin_client, golden_images_namespace):
     return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
-
-
-@pytest.fixture(scope="session")
-def skip_if_not_sno_cluster(sno_cluster):
-    if not sno_cluster:
-        pytest.skip("Skip test on non-SNO cluster")
-
-
-@pytest.fixture(scope="session")
-def skip_if_sno_cluster(sno_cluster):
-    if sno_cluster:
-        pytest.skip("Skip test on SNO cluster")
 
 
 @pytest.fixture(scope="session")
@@ -2501,11 +2482,6 @@ def skip_if_no_gpu_node(gpu_nodes):
         pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
 
 
-@pytest.fixture(scope="session")
-def cnv_version(cnv_current_version):
-    return packaging.version.parse(version=cnv_current_version)
-
-
 @pytest.fixture()
 def cnv_prometheus_rule_by_name(cnv_prometheus_rules_matrix__function__):
     prometheus_rule = PrometheusRule(
@@ -2602,7 +2578,7 @@ def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged
 
 
 @pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, skip_when_one_node, vm_for_migration_test):
+def migrated_vm_multiple_times(request, vm_for_migration_test):
     vmim = []
     for migration_index in range(request.param):
         migration_obj = VirtualMachineInstanceMigration(
@@ -2855,25 +2831,9 @@ def is_aws_cluster():
 
 
 @pytest.fixture(scope="session")
-def is_rosa_cluster(is_aws_cluster):
-    if not is_aws_cluster:
-        return False
-    for tag in get_infrastructure().instance.status.platformStatus.aws.get("resourceTags", []):
-        if tag.get("key") == "red-hat-clustertype" and tag.get("value") == "rosa":
-            return True
-    return False
-
-
-@pytest.fixture(scope="session")
 def skip_on_aws_cluster(is_aws_cluster):
     if is_aws_cluster:
         pytest.skip("This test is skipped on an AWS cluster")
-
-
-@pytest.fixture(scope="session")
-def skip_on_rosa_cluster(is_rosa_cluster):
-    if is_rosa_cluster:
-        pytest.skip("This test is skipped on ROSA cluster")
 
 
 @pytest.fixture()

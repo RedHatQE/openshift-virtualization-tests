@@ -214,7 +214,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2809")
-    def test_node_nftables(self, skip_no_rhcos, collected_nft_files_must_gather, nftables_from_utility_pods):
+    def test_node_nftables(self, collected_nft_files_must_gather, nftables_from_utility_pods):
         table_not_found_errors = []
         for node_name in collected_nft_files_must_gather:
             nftables = nftables_from_utility_pods[node_name]

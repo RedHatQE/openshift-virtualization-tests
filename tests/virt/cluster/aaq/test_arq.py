@@ -33,10 +33,13 @@ TESTS_POD_CLASS_NAME = "TestARQCanManagePods"
 TESTS_VM_CLASS_NAME = "TestARQCanManageVMs"
 
 
-pytestmark = pytest.mark.usefixtures(
-    "enabled_aaq_feature_gate_scope_package",
-    "updated_namespace_with_aaq_label",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enabled_aaq_feature_gate_scope_package",
+        "updated_namespace_with_aaq_label",
+    ),
+    pytest.mark.gating,
+]
 
 
 @pytest.mark.usefixtures(
@@ -108,7 +111,6 @@ class TestARQCanManageVMs:
     @pytest.mark.polarion("CNV-11282")
     def test_arq_vm_migration_allowed_when_quota_reached(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         vm_for_aaq_test,
     ):
@@ -150,7 +152,6 @@ class TestARQCanManageVMs:
     @pytest.mark.polarion("CNV-11236")
     def test_arq_vm_active_and_migratable_when_lower_quota_applied(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         vm_for_aaq_test,
         updated_arq_quota,

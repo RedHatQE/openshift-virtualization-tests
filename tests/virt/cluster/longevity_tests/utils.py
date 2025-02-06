@@ -2,7 +2,7 @@ import logging
 import shlex
 import shutil
 import socket
-from multiprocessing import Process
+from threading import Thread
 
 from ocp_resources import pod
 from ocp_resources.data_source import DataSource
@@ -140,21 +140,21 @@ def start_win_upgrade_multi_vms(vm_list):
         except socket.timeout:
             LOGGER.warning(f"VM {vm.name}: Finished upgrades download/install stage but the script was stuck")
 
-    upgrade_proc_list = []
+    upgrade_threads_list = []
 
     # make all the upgrade preparations in separate loop for more clear logging
-    # (multiprocessing will mess up logs order)
+    # (threads will mess up logs order)
     for vm in vm_list:
         _set_interface_mtu(vm=vm)
         _prepare_win_upgrade(vm=vm)
 
     for vm in vm_list:
-        proc = Process(target=_start_win_upgrade, args=[vm], name=vm.name)
-        proc.start()
-        upgrade_proc_list.append(proc)
+        sub_thread = Thread(target=_start_win_upgrade, args=[vm], name=vm.name)
+        sub_thread.start()
+        upgrade_threads_list.append(sub_thread)
 
-    for proc in upgrade_proc_list:
-        proc.join()
+    for thread in upgrade_threads_list:
+        thread.join()
 
     LOGGER.info("Restarting all VMs to finish installation process and perform finalization stage")
     for vm in vm_list:
