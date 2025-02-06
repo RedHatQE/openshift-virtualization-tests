@@ -240,15 +240,19 @@ def set_permissions(
             yield
 
 
-def create_vm_and_verify_image_permission(dv):
+def create_vm_and_verify_image_permission(dv: DataVolume) -> None:
     with create_vm_from_dv(dv=dv) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False, wait_for_interfaces=False)
-        v_pod = vm.vmi.virt_launcher_pod
-        LOGGER.debug("Check image exist, permission and ownership")
-        output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
-        assert "disk.img" in output
-        assert "-rw-rw----." in output
-        assert "qemu qemu" in output
+        verify_vm_disk_image_permission(vm=vm)
+
+
+def verify_vm_disk_image_permission(vm: VirtualMachine) -> None:
+    v_pod = vm.vmi.virt_launcher_pod
+    LOGGER.debug("Check image exist, permission and ownership")
+    output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
+    assert "disk.img" in output
+    assert "-rw-rw----." in output
+    assert "qemu qemu" in output
 
 
 def get_importer_pod(
