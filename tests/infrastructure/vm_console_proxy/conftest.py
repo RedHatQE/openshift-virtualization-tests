@@ -5,7 +5,6 @@ from subprocess import check_output
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.resource import Resource
-from ocp_resources.role import Role
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.ssp import SSP
@@ -24,6 +23,7 @@ from tests.infrastructure.vm_console_proxy.constants import (
     TOKEN_API_VERSION,
     TOKEN_ENDPOINT,
     VM_CONSOLE_PROXY,
+    VM_CONSOLE_PROXY_CLUSTER_ROLE,
     VM_CONSOLE_PROXY_USER,
 )
 from tests.infrastructure.vm_console_proxy.utils import (
@@ -104,22 +104,6 @@ def vm_for_console_proxy(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_console_proxy_role(namespace):
-    with Role(
-        name="vnc-token-access",
-        namespace=namespace.name,
-        rules=[
-            {
-                "apiGroups": [TOKEN_ENDPOINT],
-                "resources": ["virtualmachines/vnc"],
-                "verbs": ["get"],
-            }
-        ],
-    ) as vm_console_proxy_role:
-        yield vm_console_proxy_role
-
-
-@pytest.fixture(scope="class")
 def vm_console_proxy_service_account(namespace):
     with ServiceAccount(name=f"{VM_CONSOLE_PROXY_USER}1", namespace=namespace.name) as sa:
         yield sa
@@ -140,15 +124,24 @@ def vm_service_account_role_binding(namespace, vm_console_proxy_service_account)
 
 
 @pytest.fixture(scope="class")
-def vm_console_proxy_service_account_role_binding(namespace, vm_console_proxy_service_account, vm_console_proxy_role):
+def vm_console_proxy_cluster_role_exists():
+    assert ClusterRole(name=VM_CONSOLE_PROXY_CLUSTER_ROLE).exists, (
+        f"ClusterRole {VM_CONSOLE_PROXY_CLUSTER_ROLE} not found"
+    )
+
+
+@pytest.fixture(scope="class")
+def vm_console_proxy_service_account_role_binding(
+    namespace, vm_console_proxy_cluster_role_exists, vm_console_proxy_service_account
+):
     with RoleBinding(
         name=f"{VM_CONSOLE_PROXY_USER}-token-access",
         namespace=namespace.name,
         subjects_kind=vm_console_proxy_service_account.kind,
         subjects_name=vm_console_proxy_service_account.name,
         subjects_namespace=namespace.name,
-        role_ref_kind=Role.kind,
-        role_ref_name=vm_console_proxy_role.name,
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name=VM_CONSOLE_PROXY_CLUSTER_ROLE,
     ) as vm_role_service_account_role_binding:
         yield vm_role_service_account_role_binding
 
