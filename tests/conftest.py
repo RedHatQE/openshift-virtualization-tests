@@ -631,11 +631,6 @@ def nodes_available_nics(nodes_active_nics):
 
 
 @pytest.fixture(scope="session")
-def nodes_occupied_nics(nodes_active_nics):
-    return {node: nodes_active_nics[node]["occupied"] for node in nodes_active_nics.keys()}
-
-
-@pytest.fixture(scope="session")
 def multi_nics_nodes(hosts_common_available_ports):
     """
     Check if nodes has any available NICs
