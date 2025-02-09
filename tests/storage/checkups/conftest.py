@@ -2,6 +2,7 @@ import pytest
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.data_source import DataSource
 from ocp_resources.job import Job
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.role import Role
@@ -33,6 +34,7 @@ from utilities.infra import create_ns
 from utilities.storage import update_default_sc
 
 KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
+BROKEN_DATA_SOURCE_NAME = "broken-data-source"
 
 
 @pytest.fixture(scope="package")
@@ -194,13 +196,19 @@ def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
 
 
 @pytest.fixture()
-def broken_data_import_cron(golden_images_namespace):
+def cleaned_up_broken_data_source(golden_images_namespace):
+    yield
+    DataSource(name=BROKEN_DATA_SOURCE_NAME, namespace=golden_images_namespace.name).clean_up(wait=True)
+
+
+@pytest.fixture()
+def broken_data_import_cron(golden_images_namespace, cleaned_up_broken_data_source):
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
         schedule=WILDCARD_CRON_EXPRESSION,
         garbage_collect=OUTDATED,
-        managed_data_source="broken-data-source",
+        managed_data_source=BROKEN_DATA_SOURCE_NAME,
         annotations=BIND_IMMEDIATE_ANNOTATION,
         template={
             "spec": {
