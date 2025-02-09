@@ -979,15 +979,9 @@ def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
     for pvc in PersistentVolumeClaim.get(
         dyn_client=admin_client,
         namespace=vm_for_snapshot_for_metrics_test.namespace,
-        label_selector="restore.kubevirt.io/source-vm-name",
+        label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
     ):
-        pvc_name = pvc.name
-        if (
-            pvc_name.startswith("restore")
-            and pvc.instance.metadata.labels.get("restore.kubevirt.io/source-vm-name")
-            == vm_for_snapshot_for_metrics_test.name
-        ):
-            return pvc_name
+        return pvc.name
 
 
 @pytest.fixture()
