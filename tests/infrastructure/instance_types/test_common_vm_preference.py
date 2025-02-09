@@ -63,16 +63,25 @@ NETWORK_PREFERENCE_LIST = [
 
 def start_vm_with_cluster_preference(client, preference_name, namespace_name):
     cluster_preference = VirtualMachineClusterPreference(name=preference_name)
-    with VirtualMachineForTests(
-        client=client,
-        name=f"rhel-vm-with-{preference_name}",
-        namespace=namespace_name,
-        # TODO add corresponding images to the vms
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        memory_guest=cluster_preference.instance.spec.requirements.memory.guest,
-        cpu_sockets=cluster_preference.instance.spec.requirements.cpu.guest,
-        vm_preference=cluster_preference,
-    ) as vm:
+
+    vm_args = {
+        "client": client,
+        "name": f"rhel-vm-with-{preference_name}",
+        "namespace": namespace_name,
+        # TODO add corresponding images to the VM based on preference
+        "image": Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        "memory_guest": cluster_preference.instance.spec.requirements.memory.guest,
+        "cpu_sockets": cluster_preference.instance.spec.requirements.cpu.guest,
+        "vm_preference": cluster_preference,
+    }
+
+    if preference_name == "rhel.9.realtime":
+        vm_args.update({
+            "cpu_cores": cluster_preference.instance.spec.requirements.cpu.guest,
+            "cpu_threads": cluster_preference.instance.spec.requirements.cpu.guest,
+        })
+
+    with VirtualMachineForTests(**vm_args) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 

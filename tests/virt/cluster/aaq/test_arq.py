@@ -111,7 +111,6 @@ class TestARQCanManageVMs:
     @pytest.mark.polarion("CNV-11282")
     def test_arq_vm_migration_allowed_when_quota_reached(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         vm_for_aaq_test,
     ):
@@ -153,7 +152,6 @@ class TestARQCanManageVMs:
     @pytest.mark.polarion("CNV-11236")
     def test_arq_vm_active_and_migratable_when_lower_quota_applied(
         self,
-        skip_when_one_node,
         skip_if_no_common_cpu,
         vm_for_aaq_test,
         updated_arq_quota,

@@ -6,3 +6,4 @@ TOKEN_API_VERSION = Resource.ApiVersion.V1
 TOKEN_ENDPOINT = "token.kubevirt.io"
 VM_CONSOLE_PROXY = "vm-console-proxy"
 VM_CONSOLE_PROXY_USER = f"{VM_CONSOLE_PROXY}-user"
+VM_CONSOLE_PROXY_CLUSTER_ROLE = f"{TOKEN_ENDPOINT}:generate"
