@@ -986,7 +986,11 @@ def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for
 
 @pytest.fixture()
 def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
-    for pvc in PersistentVolumeClaim.get(dyn_client=admin_client, namespace=vm_for_snapshot_for_metrics_test.namespace):
+    for pvc in PersistentVolumeClaim.get(
+        dyn_client=admin_client,
+        namespace=vm_for_snapshot_for_metrics_test.namespace,
+        label_selector="restore.kubevirt.io/source-vm-name",
+    ):
         pvc_name = pvc.name
         if (
             pvc_name.startswith("restore")
@@ -1009,5 +1013,7 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
 def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
     wait_for_non_empty_metrics_value(
         prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(vm=vm_for_snapshot_for_metrics_test.name),
+        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
+            vm_name=vm_for_snapshot_for_metrics_test.name
+        ),
     )

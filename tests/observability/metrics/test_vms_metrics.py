@@ -486,7 +486,7 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         expected_metric_labels_and_values(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-                vm=vm_for_snapshot_for_metrics_test.name
+                vm_name=vm_for_snapshot_for_metrics_test.name
             ),
             expected_labels_and_values=snapshot_labels_for_testing,
         )
