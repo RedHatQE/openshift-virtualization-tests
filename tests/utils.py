@@ -571,7 +571,7 @@ def create_cirros_vm(
     volume_mode: Optional[str] = None,
     cpu_model: Optional[str] = None,
     annotations: Optional[str] = None,
-) -> Generator[VirtualMachineForTests]:
+) -> Generator[VirtualMachineForTests, None, None]:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
 

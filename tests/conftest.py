@@ -408,12 +408,6 @@ def unprivileged_client(
 
 
 @pytest.fixture(scope="session")
-def skip_when_one_node(schedulable_nodes):
-    if len(schedulable_nodes) < 2:
-        pytest.skip("Test requires at least 2 nodes")
-
-
-@pytest.fixture(scope="session")
 def nodes(admin_client):
     yield list(Node.get(dyn_client=admin_client))
 
