@@ -5,11 +5,13 @@ import shlex
 import tarfile
 from contextlib import contextmanager
 from io import BytesIO
+from typing import Generator, Optional
 
 import bitmath
 import requests
 import xmltodict
 from bs4 import BeautifulSoup
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -559,17 +561,17 @@ def vm_object_from_template(
 
 @contextmanager
 def create_cirros_vm(
-    storage_class,
-    namespace,
-    client,
-    dv_name,
-    vm_name,
-    node=None,
-    wait_running=True,
-    volume_mode=None,
-    cpu_model=None,
-    annotations=None,
-):
+    storage_class: str,
+    namespace: str,
+    client: DynamicClient,
+    dv_name: str,
+    vm_name: str,
+    node: Optional[str] = None,
+    wait_running: Optional[bool] = True,
+    volume_mode: Optional[str] = None,
+    cpu_model: Optional[str] = None,
+    annotations: Optional[str] = None,
+) -> Generator[VirtualMachineForTests]:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
 

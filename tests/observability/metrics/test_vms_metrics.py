@@ -16,6 +16,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
+    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
@@ -478,13 +479,14 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         self,
         prometheus,
         vm_for_snapshot_for_metrics_test,
-        vm_snapshot_for_metric_test,
         restored_vm_using_snapshot,
         snapshot_labels_for_testing,
+        kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value,
     ):
         expected_metric_labels_and_values(
             prometheus=prometheus,
-            metric_name=f"kubevirt_vmsnapshot_persistentvolumeclaim_labels"
-            f"{{vm_name='{vm_for_snapshot_for_metrics_test.name}'}}",
+            metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
+                vm=vm_for_snapshot_for_metrics_test.name
+            ),
             expected_labels_and_values=snapshot_labels_for_testing,
         )
