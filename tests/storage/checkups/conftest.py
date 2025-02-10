@@ -196,13 +196,7 @@ def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
 
 
 @pytest.fixture()
-def cleaned_up_broken_data_source(golden_images_namespace):
-    yield
-    DataSource(name=BROKEN_DATA_SOURCE_NAME, namespace=golden_images_namespace.name).clean_up(wait=True)
-
-
-@pytest.fixture()
-def broken_data_import_cron(golden_images_namespace, cleaned_up_broken_data_source):
+def broken_data_import_cron(golden_images_namespace):
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
@@ -229,6 +223,8 @@ def broken_data_import_cron(golden_images_namespace, cleaned_up_broken_data_sour
         },
     ) as data_import_cron:
         yield data_import_cron
+    # DataImportCron created a DataSource, but it is not supposed to clean it up
+    DataSource(name=BROKEN_DATA_SOURCE_NAME, namespace=golden_images_namespace.name).clean_up(wait=True)
 
 
 @pytest.fixture()
