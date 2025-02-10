@@ -49,6 +49,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
+from utilities.virt import restart_vm_wait_for_running_vm
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -679,7 +680,7 @@ def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
 
 def assert_hotplugvolume_nonexist_optional_restart(vm, restart=False):
     if restart:
-        vm.restart(wait=True)
+        restart_vm_wait_for_running_vm(vm=vm)
     volume_status = vm.vmi.instance.status.volumeStatus[0]
     assert HOTPLUG_VOLUME not in volume_status, (
         f"{HOTPLUG_VOLUME} in {volume_status}, hotplug disk should become a regular disk for VM after restart"
