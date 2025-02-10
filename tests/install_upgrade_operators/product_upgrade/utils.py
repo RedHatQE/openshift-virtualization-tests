@@ -16,6 +16,7 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
+from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource, ResourceEditor
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
@@ -720,7 +721,7 @@ def wait_for_odf_update(target_version: str) -> None:
         LOGGER.info(f"Following odf csvs are not updated: {','.join(sample)}")
 
 
-def wait_for_greater_than_zero_metric_value(prometheus, metric_name):
+def wait_for_greater_than_zero_metric_value(prometheus: Prometheus, metric_name: str) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_30SEC,

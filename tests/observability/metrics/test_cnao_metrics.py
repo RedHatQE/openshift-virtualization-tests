@@ -4,7 +4,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED,
     KUBEVIRT_CNAO_CR_READY,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 
 
 class TestSSPMetrics:

@@ -5,7 +5,7 @@ Firing alerts for kubevirt pods
 import pytest
 
 from tests.observability.constants import KUBEVIRT_STR_LOWER
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     CRITICAL_STR,
     PENDING_STR,

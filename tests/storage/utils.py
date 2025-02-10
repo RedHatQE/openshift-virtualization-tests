@@ -18,13 +18,11 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
-from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    OS_FLAVOR_CIRROS,
     TIMEOUT_2MIN,
     TIMEOUT_30MIN,
     Images,
@@ -47,7 +45,6 @@ from utilities.storage import (
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import (
-    VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     running_vm,
     vm_instance_from_template,
@@ -429,53 +426,6 @@ def check_snapshot_indication(snapshot, is_online):
         assert not snapshot_indications, (
             f"Snapshot should not have indications, current indications: {snapshot_indications}"
         )
-
-
-@contextmanager
-def create_cirros_vm(
-    storage_class,
-    namespace,
-    client,
-    dv_name,
-    vm_name,
-    node=None,
-    wait_running=True,
-    volume_mode=None,
-    cpu_model=None,
-    annotations=None,
-):
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        api_name="storage",
-        volume_mode=volume_mode,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    dv_metadata = dv.res["metadata"]
-    with VirtualMachineForTests(
-        client=client,
-        name=vm_name,
-        namespace=dv_metadata["namespace"],
-        os_flavor=OS_FLAVOR_CIRROS,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
-        node_selector=node,
-        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
-        cpu_model=cpu_model,
-        annotations=annotations,
-    ) as vm:
-        if wait_running:
-            running_vm(vm=vm, wait_for_interfaces=False)
-        yield vm
 
 
 @contextmanager

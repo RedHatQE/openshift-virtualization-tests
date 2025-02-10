@@ -31,6 +31,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
+from tests.utils import create_cirros_vm
 from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
     get_data_collector_base_directory,
@@ -620,3 +621,17 @@ def upgraded_odf(
     updated_odf_subscription_source,
 ):
     wait_for_odf_update(target_version=odf_version)
+
+
+@pytest.fixture(scope="session")
+def cirros_vm_with_node_selector(admin_client, namespace, worker_node1):
+    with create_cirros_vm(
+        storage_class=py_config["default_storage_class"],
+        namespace=namespace.name,
+        client=admin_client,
+        dv_name="dv-for-cirros",
+        vm_name="cirros-vm",
+        wait_running=True,
+        node=worker_node1.name,
+    ) as vm:
+        yield vm
