@@ -2987,3 +2987,8 @@ def nmstate_namespace(admin_client):
     nmstate_ns = Namespace(name="openshift-nmstate")
     assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
     return nmstate_ns
+
+
+@pytest.fixture()
+def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
+    return ipv6_supported_cluster and not ipv4_supported_cluster
