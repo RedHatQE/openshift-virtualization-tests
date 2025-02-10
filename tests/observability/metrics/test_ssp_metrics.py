@@ -125,5 +125,5 @@ class TestSSPTemplateValidatorRejected:
         validate_metric_value_with_round_down(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE,
-            expected_value=float(float(initiate_metric_value) + COUNT_THREE),
+            expected_value=round(float(initiate_metric_value) + COUNT_THREE),
         )
