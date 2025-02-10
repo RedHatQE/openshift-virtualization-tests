@@ -31,6 +31,7 @@ def fedora_vm(unprivileged_client, namespace):
         yield vm
 
 
+@pytest.mark.gating
 @pytest.mark.polarion("CNV-1275")
 def test_owner_references_on_vm(fedora_vm):
     """

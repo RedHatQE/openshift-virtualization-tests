@@ -70,6 +70,7 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
     )
 
 
+@pytest.mark.gating
 @pytest.mark.parametrize(
     "resource_quota_for_auto_resource_limits_test, vm_auto_resource_limits, expected_limits",
     [
@@ -124,7 +125,7 @@ def test_auto_limits_set_one_resource(
                 "cpu_limits": "2",
                 "memory_limits": "2Gi",
             },
-            marks=pytest.mark.polarion("CNV-11218"),
+            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating()),
         ),
     ],
     indirect=True,
@@ -162,7 +163,6 @@ def test_vm_with_limits_overrides_global_vlaues(
     indirect=True,
 )
 def test_auto_limits_with_cpu_hotplug(
-    skip_when_one_node,
     skip_if_no_common_cpu,
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,

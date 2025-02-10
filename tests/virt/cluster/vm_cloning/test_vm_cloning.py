@@ -159,7 +159,10 @@ def fedora_target_vm_instance(fedora_target_vm):
                 "dv_extra": {"name": "dv-extra", "source": "blank", "size": "10Gi"},
             },
             {"source_name": RHEL_VM_WITH_TWO_PVC},
-            marks=pytest.mark.polarion("CNV-10295"),
+            marks=(
+                pytest.mark.polarion("CNV-10295"),
+                pytest.mark.gating(),
+            ),
         )
     ],
     indirect=True,
@@ -250,6 +253,7 @@ def test_clone_windows_vm(
     ],
     indirect=True,
 )
+@pytest.mark.gating
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",
     "cloning_job_fedora_vm",
@@ -300,7 +304,7 @@ class TestVMCloneAndMigrate:
         )
 
     @pytest.mark.polarion("CNV-10320")
-    def test_migrate_the_vm_clone(self, skip_when_one_node, skip_if_no_common_cpu, fedora_target_vm):
+    def test_migrate_the_vm_clone(self, skip_if_no_common_cpu, fedora_target_vm):
         migrate_vm_and_verify(vm=fedora_target_vm)
 
     @pytest.mark.parametrize(

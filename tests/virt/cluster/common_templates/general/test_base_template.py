@@ -186,8 +186,9 @@ def verify_annotations_match(obj_annotations, expected):
     return sorted(obj_annotations) == sorted(expected)
 
 
+@pytest.mark.gating
 @pytest.mark.polarion("CNV-1069")
-def test_base_templates_annotations(skip_not_openshift, base_templates, common_templates_expected_list):
+def test_base_templates_annotations(base_templates, common_templates_expected_list):
     """
     Check all CNV templates exists, by label: template.kubevirt.io/type=base
     """
@@ -249,7 +250,6 @@ def test_base_templates_annotations(skip_not_openshift, base_templates, common_t
     ],
 )
 def test_validate_rhel_min_max_memory(
-    skip_not_openshift,
     base_templates,
     downloaded_latest_libosinfo_db,
     os_type,
@@ -327,7 +327,6 @@ def test_validate_rhel_min_max_memory(
     ],
 )
 def test_validate_windows_min_max_memory(
-    skip_not_openshift,
     base_templates,
     downloaded_latest_libosinfo_db,
     osinfo_filename,

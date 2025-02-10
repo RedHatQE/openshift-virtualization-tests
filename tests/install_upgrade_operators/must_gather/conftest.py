@@ -26,7 +26,6 @@ from utilities.constants import LINUX_BRIDGE
 from utilities.exceptions import MissingResourceException
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
-    ExecCommandOnPod,
     create_ns,
 )
 from utilities.must_gather import collect_must_gather, run_must_gather
@@ -248,17 +247,6 @@ def config_maps_file(hco_namespace, collected_cluster_must_gather):
         "r",
     ) as config_map_file:
         return yaml.safe_load(config_map_file)
-
-
-@pytest.fixture(scope="session")
-def rhcos_workers(worker_node1, workers_utility_pods):
-    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).release_info["ID"] == "rhcos"
-
-
-@pytest.fixture(scope="session")
-def skip_no_rhcos(rhcos_workers):
-    if not rhcos_workers:
-        pytest.skip("test should run only on rhcos workers")
 
 
 @pytest.fixture(scope="package")

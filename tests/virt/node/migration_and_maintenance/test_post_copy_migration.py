@@ -28,7 +28,6 @@ from utilities.virt import (
 )
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_when_one_node",
     "skip_if_no_common_modern_cpu",
     "skip_access_mode_rwo_scope_module",
     "created_post_copy_migration_policy",
