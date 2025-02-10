@@ -123,12 +123,13 @@ def param_substring_scope_class(storage_class_name_scope_class):
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_scope_class(namespace, param_substring_scope_class):
+def fedora_vm_for_hotplug_scope_class(namespace, param_substring_scope_class, cpu_for_migration):
     name = f"fedora-hotplug-{param_substring_scope_class}"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
         yield vm
