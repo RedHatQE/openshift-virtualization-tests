@@ -34,7 +34,6 @@ from utilities.infra import create_ns
 from utilities.storage import update_default_sc
 
 KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
-BROKEN_DATA_SOURCE_NAME = "broken-data-source"
 
 
 @pytest.fixture(scope="package")
@@ -197,12 +196,13 @@ def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
 
 @pytest.fixture()
 def broken_data_import_cron(golden_images_namespace):
+    data_source = DataSource(name="broken-data-source", namespace=golden_images_namespace.name)
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
         schedule=WILDCARD_CRON_EXPRESSION,
         garbage_collect=OUTDATED,
-        managed_data_source=BROKEN_DATA_SOURCE_NAME,
+        managed_data_source=data_source.name,
         annotations=BIND_IMMEDIATE_ANNOTATION,
         template={
             "spec": {
@@ -224,7 +224,7 @@ def broken_data_import_cron(golden_images_namespace):
     ) as data_import_cron:
         yield data_import_cron
     # DataImportCron created a DataSource, but it is not supposed to clean it up
-    DataSource(name=BROKEN_DATA_SOURCE_NAME, namespace=golden_images_namespace.name).clean_up(wait=True)
+    data_source.clean_up(wait=True)
 
 
 @pytest.fixture()
