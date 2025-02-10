@@ -53,12 +53,6 @@ def enable_threading_get_intermediate_nnce_nodes(policy, workers):
         return actual_state
 
 
-@pytest.fixture()
-def skip_if_not_three_nodes(schedulable_nodes):
-    if len(schedulable_nodes) != NUM_OF_DESIRED_WORKERS:
-        pytest.skip(f"Only run on {NUM_OF_DESIRED_WORKERS} worker nodes")
-
-
 @pytest.fixture(scope="session")
 def label_max_unavailable_nodes(schedulable_nodes):
     yield from label_nodes(nodes=schedulable_nodes, labels=MAXUNAVAILABLE_NODES_LABEL)
@@ -111,7 +105,6 @@ def maxunavailable_input_for_bridge_creation(request, hosts_common_available_por
     indirect=["maxunavailable_input_for_bridge_creation"],
 )
 def test_create_policy_get_status(
-    skip_if_not_three_nodes,
     skip_if_no_multinic_nodes,
     schedulable_nodes,
     label_max_unavailable_nodes,
