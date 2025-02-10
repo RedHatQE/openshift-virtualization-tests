@@ -22,8 +22,6 @@ BOND_NAME = "jfbond1"
 BRIDGE_NAME = "brbond1"
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_if_no_multinic_nodes",
-    "skip_no_bond_support",
     "skip_when_no_jumbo_frame_support",
     "hyperconverged_ovs_annotations_enabled_scope_session",
     "workers_type",
@@ -34,7 +32,6 @@ pytestmark = pytest.mark.usefixtures(
 def jumbo_frame_bond1_worker_1(
     cluster_hardware_mtu,
     index_number,
-    skip_no_bond_support,
     worker_node1,
     nodes_available_nics,
 ):
@@ -55,7 +52,6 @@ def jumbo_frame_bond1_worker_1(
 def jumbo_frame_bond1_worker_2(
     cluster_hardware_mtu,
     index_number,
-    skip_no_bond_support,
     worker_node2,
     nodes_available_nics,
 ):
@@ -114,7 +110,6 @@ def jumbo_frame_bridge_on_bond_worker_2(
 
 @pytest.fixture(scope="class")
 def br1bond_nad(
-    skip_no_bond_support,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     namespace,

@@ -26,20 +26,6 @@ from utilities.infra import ExecCommandOnPod, get_deployment_by_name, get_node_s
 from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
 
 
-@pytest.fixture(scope="session")
-def bond_supported(hosts_common_available_ports):
-    """
-    Check if setup support BOND (have 2 or more NICs up)
-    """
-    return len(hosts_common_available_ports) >= 2
-
-
-@pytest.fixture(scope="session")
-def skip_no_bond_support(bond_supported):
-    if not bond_supported:
-        pytest.skip("No BOND support")
-
-
 def get_index_number():
     num = 1
     while True:

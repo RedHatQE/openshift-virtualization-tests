@@ -37,7 +37,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_if_no_multinic_nodes",
     "enabled_kube_secondary_dns_feature_gate",
     "exposed_kubernetes_secondary_dns_service",
 )

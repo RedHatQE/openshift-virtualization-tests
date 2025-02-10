@@ -9,7 +9,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_if_no_multinic_nodes",
     "enable_multi_network_policy_usage",
 )
 
