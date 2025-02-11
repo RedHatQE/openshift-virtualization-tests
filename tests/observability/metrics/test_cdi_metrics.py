@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.metrics.utils import expected_storage_class_labels_and_values
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 
 
 @pytest.mark.polarion("CNV-10557")

@@ -11,7 +11,7 @@ from tests.observability.alerts.constants import (
 )
 from tests.observability.metrics.constants import KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE
 from tests.observability.metrics.utils import validate_metric_value_within_range
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     CRITICAL_STR,
     SSP_OPERATOR,

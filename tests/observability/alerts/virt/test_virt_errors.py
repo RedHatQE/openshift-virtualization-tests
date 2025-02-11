@@ -2,7 +2,7 @@ import pytest
 
 from tests.observability.alerts.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.constants import KUBEVIRT_STR_LOWER
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     COUNT_TWELVE,
     NONE_STRING,

@@ -49,8 +49,7 @@ from tests.observability.metrics.utils import (
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_cr_labels_change
+from tests.utils import create_vms, validate_metrics_value, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,

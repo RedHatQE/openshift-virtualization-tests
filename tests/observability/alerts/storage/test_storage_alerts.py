@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.alerts.utils import CONTAINERIZED_DATA_IMPORTER
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import CDI_OPERATOR, CRITICAL_STR, HOSTPATH_PROVISIONER_OPERATOR, NONE_STRING, WARNING_STR
 from utilities.monitoring import validate_alerts
 

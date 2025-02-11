@@ -6,7 +6,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CNAO_KUBEMACPOOL_MANAGER_UP,
     KUBEVIRT_CNAO_OPERATOR_UP,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, CRITICAL_STR, TIMEOUT_5MIN, WARNING_STR
 from utilities.monitoring import validate_alerts
 
