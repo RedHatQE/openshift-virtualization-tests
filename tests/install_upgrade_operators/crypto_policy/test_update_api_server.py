@@ -21,6 +21,7 @@ pytestmark = pytest.mark.tier3
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9330")
 def test_update_api_server(
     hco_namespace,

@@ -32,7 +32,6 @@ from utilities.constants import (
     TLS_SECURITY_PROFILE,
 )
 from utilities.exceptions import MissingResourceException
-from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,16 +79,7 @@ def api_server(admin_client):
 
 
 @pytest.fixture()
-def skip_apiserver_crypto_policy_reset():
-    if is_jira_open(jira_id="RHSTOR-6566"):
-        pytest.skip(
-            "Test skipped as the bug RHSTOR-6566 prevents worker nodes to be READY after apiserver cryptopolicy reset"
-        )
-
-
-@pytest.fixture()
 def updated_api_server_crypto_policy(
-    skip_apiserver_crypto_policy_reset,
     admin_client,
     hco_namespace,
     cnv_crypto_policy_matrix__function__,
