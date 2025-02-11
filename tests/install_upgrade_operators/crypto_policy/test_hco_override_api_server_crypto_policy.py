@@ -49,9 +49,9 @@ def updated_apiserver_with_tls_old_profile(
         yield
 
 
+@pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
-    skip_apiserver_crypto_policy_reset,
     resources_dict,
     updated_hco_tls_custom_policy,
     expected_all_managed_crs_crypto_policies,
