@@ -49,7 +49,7 @@ def updated_apiserver_with_tls_old_profile(
         yield
 
 
-@pytest.mark.polarion("CNV-9368")  # <skip-jira-utils-check>
+@pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
     resources_dict,
