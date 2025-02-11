@@ -93,10 +93,11 @@ class TestVmNameInLabel:
 
 
 class TestVirtHCOSingleStackIpv6:
+    @pytest.mark.ipv6
     @pytest.mark.polarion("CNV-11740")
-    def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_supported_cluster):
+    def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_single_stack_cluster):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name="kubevirt_hco_single_stack_ipv6",
-            expected_value="1" if ipv6_supported_cluster else "0",
+            expected_value="1" if ipv6_single_stack_cluster else "0",
         )
