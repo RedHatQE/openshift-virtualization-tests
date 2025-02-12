@@ -223,10 +223,12 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin):
     """
     Perform verification that the cluster is a multi-nic one otherwise exit run
     """
+    network_sanity_failure_return_code = 91
     LOGGER.info("Verify cluster running network tests is a multi-nic one")
     if len(hosts_common_available_ports) <= 1:
         exit_pytest_execution(
             filename="network_cluster_sanity_failure.txt",
+            return_code=network_sanity_failure_return_code,
             message=f"Cluster is not a multinic cluster, with {hosts_common_available_ports} common available ports",
             junitxml_property=junitxml_plugin,
         )
