@@ -25,7 +25,7 @@ from utilities.constants import (
     VIRT_HANDLER,
 )
 from utilities.infra import ExecCommandOnPod, exit_pytest_execution, get_deployment_by_name, get_node_selector_dict
-from utilities.network import ip_version_data_from_matrix, network_nad, get_cluster_cni_type
+from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
 
 LOGGER = logging.getLogger(__name__)
 
