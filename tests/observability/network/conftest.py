@@ -7,7 +7,7 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_utilities.infra import cluster_resource
 from pytest_testconfig import config as py_config
 
-from tests.observability.alerts.network.utils import KUBEMACPOOL_DOWN, wait_for_kubemacpool_pods_error_state
+from tests.observability.utils import wait_for_kubemacpool_pods_error_state
 from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KMP_VM_ASSIGNMENT_LABEL,
@@ -25,7 +25,6 @@ from utilities.infra import (
     label_project,
     wait_for_pods_running,
 )
-from utilities.monitoring import wait_for_firing_alert_clean_up
 from utilities.network import network_device, network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
@@ -37,7 +36,6 @@ LOGGER = logging.getLogger(__name__)
 def updated_cnao_kubemacpool_with_bad_image_csv(
     admin_client,
     hco_namespace,
-    prometheus,
     csv_scope_class,
     updated_csv_dict_bad_kubemacpool_image,
 ):
@@ -45,7 +43,6 @@ def updated_cnao_kubemacpool_with_bad_image_csv(
         wait_for_kubemacpool_pods_error_state(dyn_client=admin_client, hco_namespace=hco_namespace)
         yield
     wait_for_pods_running(admin_client=admin_client, namespace=hco_namespace)
-    wait_for_firing_alert_clean_up(alert_name=KUBEMACPOOL_DOWN, prometheus=prometheus)
 
 
 @pytest.fixture(scope="class")
