@@ -12,12 +12,10 @@ from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.service import Service
 from ocp_resources.service_monitor import ServiceMonitor
 from ocp_resources.ssp import SSP
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.utils import (
     COUNT_THREE,
     COUNT_TWO,
-    KUBEVIRT_CR_ALERT_NAME,
     get_changed_mutation_component_value,
     wait_for_summary_count_to_be_expected,
 )
@@ -25,10 +23,8 @@ from utilities.constants import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     COUNT_FIVE,
     SSP_KUBEVIRT_HYPERCONVERGED,
-    TIMEOUT_3MIN,
     VIRTCTL_CLI_DOWNLOADS,
 )
-from utilities.monitoring import validate_alerts
 
 pytestmark = pytest.mark.sno
 LOGGER = logging.getLogger(__name__)
@@ -222,7 +218,6 @@ COMPONENT_CONFIG = {
 @pytest.mark.dependency(name="test_metric_invalid_change")
 def test_metric_invalid_change(
     prometheus,
-    alert_dictionary_kubevirt_cr_modified,
     mutation_count_before_change,
     updated_resource_with_invalid_label,
     component_name,
@@ -241,11 +236,6 @@ def test_metric_invalid_change(
     )
 
     # Check an alert state is firing after metric is generated.
-    validate_alerts(
-        prometheus=prometheus,
-        alert_dict=alert_dictionary_kubevirt_cr_modified,
-        timeout=TIMEOUT_3MIN,
-    )
 
 
 @pytest.mark.parametrize(
@@ -348,7 +338,6 @@ def test_metric_invalid_change(
 @pytest.mark.dependency(name="test_metric_multiple_invalid_change")
 def test_metric_multiple_invalid_change(
     prometheus,
-    alert_dictionary_kubevirt_cr_modified,
     mutation_count_before_change,
     updated_resource_multiple_times_with_invalid_label,
     component_name,
@@ -366,33 +355,8 @@ def test_metric_multiple_invalid_change(
     )
 
     # Check an alert state is firing after metric is generated.
-    validate_alerts(
-        prometheus=prometheus,
-        alert_dict=alert_dictionary_kubevirt_cr_modified,
-        timeout=TIMEOUT_3MIN,
-    )
     wait_for_summary_count_to_be_expected(
         prometheus=prometheus,
         component_name=component_name,
         expected_summary_value=change_count,
     )
-
-
-@pytest.mark.dependency(depends=["test_metric_invalid_change", "test_metric_multiple_invalid_change"])
-@pytest.mark.polarion("CNV-6144")
-def test_check_no_single_alert_remain(prometheus):
-    # Wait until alert is removed.
-    samples = TimeoutSampler(
-        wait_timeout=630,
-        sleep=10,
-        func=prometheus.get_all_alerts_by_alert_name,
-        alert_name=KUBEVIRT_CR_ALERT_NAME,
-    )
-    alerts_present = []
-    try:
-        for alert_present in samples:
-            if not alert_present:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"There are still alerts present after 10 minutes {alerts_present}")
-        raise

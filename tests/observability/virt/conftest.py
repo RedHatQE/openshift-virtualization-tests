@@ -1,103 +1,104 @@
 import logging
 
 import pytest
-from ocp_resources.cluster_role_binding import ClusterRoleBinding
-from ocp_resources.prometheus_rule import PrometheusRule
+from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.alerts.virt.utils import (
-    wait_kubevirt_operator_role_binding_resource,
+from tests.observability.constants import BAD_HTTPGET_PATH
+from tests.observability.metrics.utils import validate_initial_virt_operator_replicas_reverted
+from tests.observability.virt.utils import (
+    csv_dict_with_bad_virt_operator_httpget_path,
+    delete_replica_set_by_prefix,
+    wait_hco_csv_updated_virt_operator_httpget,
 )
-from tests.observability.utils import get_kubevirt_operator_role_binding_resource
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_10SEC
-from utilities.monitoring import get_metrics_value
+from utilities.constants import VIRT_HANDLER, VIRT_OPERATOR
+from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.infra import get_daemonset_by_name, get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def modified_errors_burst_alerts_expression(request, hco_namespace):
-    rest_errors_burst_alerts_prometheus_rules = PrometheusRule(
-        namespace=hco_namespace.name,
-        name="prometheus-kubevirt-rules",
-    )
-    alert_names_and_expressions = {}
-    alerts_prometheus_rules_dict = rest_errors_burst_alerts_prometheus_rules.instance.to_dict()
-    for group in alerts_prometheus_rules_dict.get("spec").get("groups"):
-        if group.get("name") == "alerts.rules":
-            for alert_rule in group.get("rules"):
-                alert_name = alert_rule.get("alert")
-                if alert_name in request.param["alerts_list"]:
-                    alert_rule.update({
-                        "expr": (
-                            alert_rule["expr"]
-                            .replace("0.8", request.param["threshold_for_rule_expression"])  # Update threshold
-                            .replace("[5m]", "[1m]")  # Update duration
-                        ),
-                        "for": "2m",  # Update the 'for' field
-                    })
-                    alert_names_and_expressions[alert_name] = alert_rule["expr"].split(">=")[0].strip()
-    with ResourceEditor(patches={rest_errors_burst_alerts_prometheus_rules: alerts_prometheus_rules_dict}):
-        yield alert_names_and_expressions
-
-
-@pytest.fixture()
-def virt_rest_errors_burst_precondition(
+def modified_virt_operator_httpget_from_hco_and_delete_virt_operator_pods(
+    admin_client,
+    hco_namespace,
     prometheus,
-    alert_tested,
-    modified_errors_burst_alerts_expression,
+    initial_virt_operator_replicas,
+    csv_scope_class,
+    initial_readiness_probe_httpget_path,
+    virt_operator_deployment,
+    disabled_olm_operator,
 ):
-    threshold = float(alert_tested["threshold_for_rule_expression"])
-    query = modified_errors_burst_alerts_expression[alert_tested["alert_name"]]
-    samples = TimeoutSampler(
-        wait_timeout=alert_tested.get("pre_condition_timeout", TIMEOUT_5MIN),
-        sleep=TIMEOUT_10SEC,
-        prometheus=prometheus,
-        func=get_metrics_value,
-        metrics_name=query,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if float(sample) >= threshold:
-                return
-    except TimeoutExpiredError:
-        pytest.fail(
-            f"Prometheus query: {query} output is returning non-expected results\n"
-            f"Expected results: >= {threshold} for {TIMEOUT_5MIN} seconds\n"
-            f"Actual results: {sample}"
+    with ResourceEditor(
+        patches={
+            csv_scope_class: csv_dict_with_bad_virt_operator_httpget_path(
+                hco_csv_dict=csv_scope_class.instance.to_dict()
+            )
+        }
+    ):
+        wait_hco_csv_updated_virt_operator_httpget(namespace=hco_namespace.name, updated_hco_field=BAD_HTTPGET_PATH)
+        delete_replica_set_by_prefix(
+            dyn_client=admin_client,
+            replica_set_prefix=VIRT_OPERATOR,
+            namespace=hco_namespace.name,
         )
-
-
-@pytest.fixture()
-def annotated_resource(request, hco_namespace):
-    resource = request.param["resource_type"](
-        name=request.param["name"],
+        yield
+    wait_hco_csv_updated_virt_operator_httpget(
+        namespace=hco_namespace.name, updated_hco_field=initial_readiness_probe_httpget_path
+    )
+    delete_replica_set_by_prefix(
+        dyn_client=admin_client,
+        replica_set_prefix=VIRT_OPERATOR,
         namespace=hco_namespace.name,
     )
+    virt_operator_deployment.wait_for_replicas()
+    validate_initial_virt_operator_replicas_reverted(
+        prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
+    )
 
-    with ResourceEditor(patches={resource: {"metadata": {"annotations": request.param["annotations"]}}}):
+
+@pytest.fixture(scope="class")
+def initial_readiness_probe_httpget_path(csv_scope_class):
+    initial_readiness_probe_httpget_path = None
+    for deployment in csv_scope_class.instance.spec.install.spec.deployments:
+        if deployment["name"] == VIRT_OPERATOR:
+            initial_readiness_probe_httpget_path = deployment.spec.template.spec.containers[
+                0
+            ].readinessProbe.httpGet.path
+            break
+    assert initial_readiness_probe_httpget_path, f"{VIRT_OPERATOR} deployment not found in hco csv"
+    return initial_readiness_probe_httpget_path
+
+
+@pytest.fixture(scope="class")
+def virt_handler_daemonset_with_bad_image(virt_handler_daemonset_scope_class):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            virt_handler_daemonset_scope_class: {
+                "spec": {"template": {"spec": {"containers": [{"name": "virt-handler", "image": "bad_image"}]}}}
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+    ):
         yield
 
 
-@pytest.fixture()
-def kubevirt_operator_cluster_role_binding(admin_client):
-    return get_kubevirt_operator_role_binding_resource(admin_client=admin_client)
-
-
-@pytest.fixture()
-def removed_kubevirt_operator_cluster_role_binding(admin_client, kubevirt_operator_cluster_role_binding):
-    labels = kubevirt_operator_cluster_role_binding.instance.metadata.labels
-    subjects = kubevirt_operator_cluster_role_binding.instance.to_dict()["subjects"]
-    crb_object = ClusterRoleBinding(
-        name=kubevirt_operator_cluster_role_binding.name,
-        cluster_role=kubevirt_operator_cluster_role_binding.name,
-        subjects=subjects,
+@pytest.fixture(scope="class")
+def deleted_virt_handler_pods(admin_client, hco_namespace):
+    virt_handler_pods = get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=VIRT_HANDLER,
+        namespace=hco_namespace.name,
+        get_all=True,
     )
-    if kubevirt_operator_cluster_role_binding.exists:
-        kubevirt_operator_cluster_role_binding.clean_up()
-    yield
-    crb_object.deploy(wait=True)
-    ResourceEditor({crb_object: {"metadata": {"labels": labels}}}).update()
-    wait_kubevirt_operator_role_binding_resource(admin_client=admin_client)
+    for pod in virt_handler_pods:
+        pod.clean_up()
+
+
+@pytest.fixture(scope="class")
+def virt_handler_daemonset_scope_class(hco_namespace, admin_client):
+    return get_daemonset_by_name(
+        admin_client=admin_client,
+        daemonset_name=VIRT_HANDLER,
+        namespace_name=hco_namespace.name,
+    )
