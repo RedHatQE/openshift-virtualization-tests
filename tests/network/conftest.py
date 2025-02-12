@@ -23,7 +23,7 @@ from utilities.constants import (
     VIRT_HANDLER,
 )
 from utilities.infra import ExecCommandOnPod, get_deployment_by_name, get_node_selector_dict
-from utilities.network import ip_version_data_from_matrix, network_nad
+from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
 
 
 @pytest.fixture(scope="session")
@@ -191,12 +191,6 @@ def brcnv_vma_with_vlan_1(
 
 
 @pytest.fixture(scope="session")
-def skip_if_not_ovn_cluster(ovn_kubernetes_cluster):
-    if not ovn_kubernetes_cluster:
-        pytest.skip("Test can only run on cluster with OVN-Kubernetes network type")
-
-
-@pytest.fixture(scope="session")
 def cluster_network_mtu():
     network_resource = Network(name=CLUSTER)
     if not network_resource.exists:
@@ -231,3 +225,8 @@ def cnao_deployment(hco_namespace):
         namespace_name=hco_namespace.name,
         deployment_name=CLUSTER_NETWORK_ADDONS_OPERATOR,
     )
+
+
+@pytest.fixture(scope="session")
+def ovn_kubernetes_cluster(admin_client):
+    return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
