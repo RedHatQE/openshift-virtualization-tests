@@ -6,7 +6,7 @@ from tests.network.checkup_framework.utils import assert_successful_dpdk_checkup
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [
-    pytest.mark.sriov,
+    pytest.mark.special_infra,
     pytest.mark.usefixtures(
         "skip_when_no_dpdk",
         "patched_align_cpus",

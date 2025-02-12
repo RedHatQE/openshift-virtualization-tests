@@ -241,7 +241,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         )
 
 
-@pytest.mark.sriov
+@pytest.mark.special_infra
 class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10418")
     def test_basic_configmap_sriov_network(
