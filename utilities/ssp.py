@@ -6,8 +6,10 @@ import shlex
 import urllib.request
 from contextlib import contextmanager
 
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
@@ -144,67 +146,6 @@ def wait_for_condition_message_value(resource, expected_message):
         raise
 
 
-def is_ssp_pod_running(dyn_client, hco_namespace):
-    pod = utilities.infra.get_pod_by_name_prefix(
-        dyn_client=dyn_client,
-        pod_prefix=SSP_OPERATOR,
-        namespace=hco_namespace.name,
-    )
-    return pod.instance.status.phase == pod.Status.RUNNING and pod.instance.status.containerStatuses[0]["ready"]
-
-
-def verify_ssp_pod_is_running(
-    dyn_client,
-    hco_namespace,
-    wait_timeout=TIMEOUT_6MIN,
-    sleep=TIMEOUT_10SEC,
-    consecutive_checks_count=3,
-):
-    """
-    Verifies that SSP pod is up and running
-
-    This function polls for the status of SSP pod every 'sleep' seconds for
-    the maximum time duration of 'wait_timeout', before it raises
-    'TimeoutExpiredError'. Also this function makes sure that SSP pod
-    is up and running for at least 'consecutive_checks_count'
-
-    Args:
-        dyn_client (DynamicClient): Dynamic client object
-        hco_namespace (Namespace): Namespace object
-        wait_timeout (int) : Maximum time to wait till SSP pod is up
-        sleep (int): polling interval
-        consecutive_checks_count (int): Minimum repetitive check iteration before
-            assuring that SSP pod is up.
-
-    Raises:
-        'TimeoutExpiredError' when SSP pod is not up and running
-         for the time duration of 'wait_timeout'
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=wait_timeout,
-        sleep=sleep,
-        func=is_ssp_pod_running,
-        dyn_client=dyn_client,
-        hco_namespace=hco_namespace,
-    )
-    sample = None
-    checks_count = 0
-    try:
-        for sample in sampler:
-            if sample:
-                checks_count += 1
-                if checks_count == consecutive_checks_count:
-                    return
-            else:
-                checks_count = 0
-    except TimeoutExpiredError:
-        if sample:
-            LOGGER.warning(f"SSP pod is up, but not for the last {consecutive_checks_count} consecutive checks")
-        else:
-            LOGGER.error(f"SSP pod was not running for last {TIMEOUT_6MIN} seconds")
-            raise
-
-
 @contextmanager
 def create_custom_template_from_url(url, template_name, template_dir, namespace):
     template_filepath = os.path.join(template_dir, template_name)
@@ -297,3 +238,64 @@ def validate_os_info_vmi_vs_windows_os(vm):
             data_mismatch.append(f"OS data mismatch - {os_param_name}")
 
     assert not data_mismatch, f"Data mismatch {data_mismatch}!\nVMI: {vmi_info}\nOS: {windows_info}"
+
+
+def is_ssp_pod_running(dyn_client: DynamicClient, hco_namespace: Namespace) -> bool:
+    pod = utilities.infra.get_pod_by_name_prefix(
+        dyn_client=dyn_client,
+        pod_prefix=SSP_OPERATOR,
+        namespace=hco_namespace.name,
+    )
+    return pod.status == pod.Status.RUNNING and pod.instance.status.containerStatuses[0]["ready"]
+
+
+def verify_ssp_pod_is_running(
+    dyn_client: DynamicClient,
+    hco_namespace: Namespace,
+    wait_timeout: int = TIMEOUT_6MIN,
+    sleep: int = TIMEOUT_10SEC,
+    consecutive_checks_count: int = 3,
+):
+    """
+    Verifies that SSP pod is up and running
+
+    This function polls for the status of SSP pod every 'sleep' seconds for
+    the maximum time duration of 'wait_timeout', before it raises
+    'TimeoutExpiredError'. Also this function makes sure that SSP pod
+    is up and running for at least 'consecutive_checks_count'
+
+    Args:
+        dyn_client (DynamicClient): Dynamic client object
+        hco_namespace (Namespace): Namespace object
+        wait_timeout (int) : Maximum time to wait till SSP pod is up
+        sleep (int): polling interval
+        consecutive_checks_count (int): Minimum repetitive check iteration before
+            assuring that SSP pod is up.
+
+    Raises:
+        'TimeoutExpiredError' when SSP pod is not up and running
+         for the time duration of 'wait_timeout'
+    """
+    sampler = TimeoutSampler(
+        wait_timeout=wait_timeout,
+        sleep=sleep,
+        func=is_ssp_pod_running,
+        dyn_client=dyn_client,
+        hco_namespace=hco_namespace,
+    )
+    sample = None
+    checks_count = 0
+    try:
+        for sample in sampler:
+            if sample:
+                checks_count += 1
+                if checks_count == consecutive_checks_count:
+                    return
+            else:
+                checks_count = 0
+    except TimeoutExpiredError:
+        if sample:
+            LOGGER.warning(f"SSP pod is up, but not for the last {consecutive_checks_count} consecutive checks")
+        else:
+            LOGGER.error(f"SSP pod was not running for last {TIMEOUT_6MIN} seconds")
+            raise

@@ -6,10 +6,9 @@ from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError
 
-from tests.observability.storage.constants import HPP_NOT_READY
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import HOSTPATH_PROVISIONER, HOSTPATH_PROVISIONER_CSI, TIMEOUT_2MIN
-from utilities.infra import get_pod_by_name_prefix
-from utilities.monitoring import wait_for_firing_alert_clean_up
+from utilities.infra import get_pod_by_name_prefix, scale_deployment_replicas
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +59,11 @@ def modified_hpp_non_exist_node_selector(hostpath_provisioner_scope_class, prome
         status=hostpath_provisioner_scope_class.Condition.Status.TRUE,
         timeout=TIMEOUT_2MIN,
     )
-    wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=HPP_NOT_READY)
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name="kubevirt_hpp_cr_ready",
+        expected_value="1",
+    )
 
 
 @pytest.fixture(scope="class")
@@ -81,3 +84,13 @@ def hpp_pod_sharing_pool_path(admin_client, hco_namespace, hostpath_provisioner_
             if "pvc-" in pod.execute(command=shlex.split(f"ls {name}-data-dir/csi"), container=HOSTPATH_PROVISIONER):
                 return
     raise AssertionError("An HPP pod should have share a path with the os")
+
+
+@pytest.fixture(scope="class")
+def scaled_deployment_scope_class(request, hco_namespace):
+    with scale_deployment_replicas(
+        deployment_name=request.param["deployment_name"],
+        replica_count=request.param["replicas"],
+        namespace=hco_namespace.name,
+    ):
+        yield
