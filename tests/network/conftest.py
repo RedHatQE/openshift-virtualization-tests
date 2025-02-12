@@ -24,7 +24,6 @@ from utilities.constants import (
     OVS_BRIDGE,
     VIRT_HANDLER,
 )
-
 from utilities.infra import ExecCommandOnPod, exit_pytest_execution, get_deployment_by_name, get_node_selector_dict
 from utilities.network import ip_version_data_from_matrix, network_nad
 
