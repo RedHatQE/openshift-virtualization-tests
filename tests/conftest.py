@@ -555,17 +555,6 @@ def node_physical_nics(workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def ovn_kubernetes_cluster(admin_client):
-    return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
-
-
-@pytest.fixture(scope="session")
-def skip_if_ovn_cluster(ovn_kubernetes_cluster):
-    if ovn_kubernetes_cluster:
-        pytest.skip("Test cannot run on cluster with OVN network type")
-
-
-@pytest.fixture(scope="session")
 def nodes_active_nics(
     workers,
     workers_utility_pods,
@@ -639,11 +628,6 @@ def nodes_active_nics(
 @pytest.fixture(scope="session")
 def nodes_available_nics(nodes_active_nics):
     return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
-
-
-@pytest.fixture(scope="session")
-def nodes_occupied_nics(nodes_active_nics):
-    return {node: nodes_active_nics[node]["occupied"] for node in nodes_active_nics.keys()}
 
 
 @pytest.fixture(scope="session")
@@ -2979,3 +2963,8 @@ def nmstate_namespace(admin_client):
     nmstate_ns = Namespace(name="openshift-nmstate")
     assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
     return nmstate_ns
+
+
+@pytest.fixture()
+def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
+    return ipv6_supported_cluster and not ipv4_supported_cluster
