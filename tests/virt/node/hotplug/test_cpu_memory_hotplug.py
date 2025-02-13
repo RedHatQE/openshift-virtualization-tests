@@ -88,8 +88,9 @@ class TestCPUHotPlug:
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
+    @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10695")
-    def test_hotplug_cpu(self, skip_windows_if_on_psi_cluster, hotplugged_sockets_memory_guest, hotplugged_vm):
+    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm):
         assert_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
@@ -159,8 +160,9 @@ class TestMemoryHotPlug:
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_memory")
+    @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10676")
-    def test_hotplug_memory(self, skip_windows_if_on_psi_cluster, hotplugged_sockets_memory_guest, hotplugged_vm):
+    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm):
         assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=SIX_GI_MEMORY)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])

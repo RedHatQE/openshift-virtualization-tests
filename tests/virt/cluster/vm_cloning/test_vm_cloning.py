@@ -218,7 +218,7 @@ def test_clone_vm_with_instance_type_and_preference(
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.special_infra
 def test_clone_windows_vm(
     skip_if_workers_vms,
     vm_with_dv_for_cloning,

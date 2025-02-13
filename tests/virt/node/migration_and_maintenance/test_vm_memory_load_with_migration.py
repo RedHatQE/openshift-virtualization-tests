@@ -17,7 +17,10 @@ from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("skip_if_no_common_modern_cpu", "skip_access_mode_rwo_scope_module")
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.usefixtures("skip_if_no_common_modern_cpu", "skip_access_mode_rwo_scope_module"),
+]
 
 
 @pytest.fixture()
@@ -97,7 +100,6 @@ class TestMigrationVMWithMemoryLoad:
         ],
         indirect=True,
     )
-    @pytest.mark.usefixtures("skip_on_psi_cluster")
     def test_windows_vm_migrate_with_memory_load(
         self,
         skip_if_workers_vms,

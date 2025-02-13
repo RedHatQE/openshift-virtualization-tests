@@ -112,7 +112,6 @@ class TestUpgradeVirt:
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_windows_vm_before_upgrade")
     def test_windows_vm_before_upgrade(
         self,
-        skip_on_psi_cluster,
         windows_vm,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])

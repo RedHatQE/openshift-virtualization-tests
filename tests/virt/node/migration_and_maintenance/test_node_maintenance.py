@@ -33,6 +33,7 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
 ]
 
 
@@ -211,7 +212,6 @@ class TestNodeMaintenanceRHEL:
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "skip_on_psi_cluster",
     "skip_if_no_common_modern_cpu",
     "skip_access_mode_rwo_scope_class",
     "cluster_modern_cpu_model_scope_class",
