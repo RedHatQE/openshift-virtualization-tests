@@ -27,6 +27,7 @@ from utilities.exceptions import MissingResourceException
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     create_ns,
+    get_node_selector_dict,
 )
 from utilities.must_gather import collect_must_gather, run_must_gather
 from utilities.storage import add_dv_to_vm
@@ -154,11 +155,12 @@ def must_gather_nad(nodenetworkstate_with_bridge, node_gather_unprivileged_names
 
 
 @pytest.fixture(scope="package")
-def nodenetworkstate_with_bridge():
+def nodenetworkstate_with_bridge(worker_node1):
     with utilities.network.network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="must-gather-br",
         interface_name="mg-br1",
+        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as br:
         yield br
 
