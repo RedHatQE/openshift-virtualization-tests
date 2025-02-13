@@ -147,8 +147,9 @@ class TestCommonVmPreference:
     def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
         run_general_vm_preferences(client=unprivileged_client, namespace=namespace, preferences=cluster_preferences)
 
+    @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10806")
-    def test_common_vm_preference_dpdk(self, skip_when_no_sriov, unprivileged_client, namespace):
+    def test_common_vm_preference_dpdk(self, unprivileged_client, namespace):
         run_general_vm_preferences(client=unprivileged_client, namespace=namespace, preferences=NETWORK_PREFERENCE_LIST)
 
 

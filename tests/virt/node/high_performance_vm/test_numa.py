@@ -112,9 +112,9 @@ def test_numa(vm_numa):
     assert_numa_cpu_allocation(vm_cpus=vm_cpu_list, numa_nodes=numa_node_dict)
 
 
+@pytest.mark.special_infra
 @pytest.mark.polarion("CNV-4309")
 def test_numa_with_sriov(
-    skip_when_no_sriov,
     vm_numa_sriov,
     workers_utility_pods,
 ):
