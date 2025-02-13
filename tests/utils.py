@@ -21,6 +21,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     DISK_SERIAL,
+    HCO_DEFAULT_CPU_MODEL_KEY,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
@@ -28,7 +29,7 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_30MIN,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_annotations
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod, get_artifactory_header
 from utilities.virt import (
     VirtualMachineForTests,
@@ -261,10 +262,10 @@ def assert_restart_required_codition(vm, expected_message):
 
 @contextmanager
 def update_cluster_cpu_model(admin_client, hco_namespace, hco_resource, cpu_model):
-    with update_hco_annotations(
-        resource=hco_resource,
-        path="cpuModel",
-        value=cpu_model,
+    with ResourceEditorValidateHCOReconcile(
+        patches={hco_resource: {"spec": {HCO_DEFAULT_CPU_MODEL_KEY: cpu_model}}},
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
     ):
         wait_for_updated_kv_value(
             admin_client=admin_client,
