@@ -227,6 +227,7 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin):
     """
     Perform verification that the cluster is a multi-nic one otherwise exit run
     """
+    # set a non-zero return code to indicate failure of network sanity
     network_sanity_failure_return_code = 91
     LOGGER.info("Verify cluster running network tests is a multi-nic one")
     if len(hosts_common_available_ports) <= 1:
