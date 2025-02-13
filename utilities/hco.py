@@ -467,15 +467,12 @@ def update_hco_annotations(
             f"{resource_existing_jsonpatch_annotation[:-1]},{hco_annotations_dict[jsonpatch_key][1:]}"
         )
 
-    editor = ResourceEditorValidateHCOReconcile(
-        patches={
-            resource: hco_config_jsonpath_dict,
-        },
+    with ResourceEditorValidateHCOReconcile(
+        patches={resource: hco_config_jsonpath_dict},
         list_resource_reconcile=resource_list,
-    )
-    editor.update(backup_resources=True)
-    yield
-    editor.restore()
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
 
 
 def is_hco_tainted(admin_client, hco_namespace):
