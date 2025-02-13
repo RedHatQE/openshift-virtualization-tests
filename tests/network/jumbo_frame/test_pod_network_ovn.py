@@ -8,9 +8,7 @@ import pytest
 from tests.network.utils import assert_no_ping, get_destination_ip_address
 from utilities.network import assert_ping_successful
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_when_no_jumbo_frame_support",
-)
+pytestmark = pytest.mark.special_infra
 
 
 class TestJumboPodNetworkOnly:

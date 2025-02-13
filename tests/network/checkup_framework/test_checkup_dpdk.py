@@ -1,6 +1,5 @@
 import pytest
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.performance_profile import PerformanceProfile
 
 from tests.network.checkup_framework.utils import assert_successful_dpdk_checkup
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -8,7 +7,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 pytestmark = [
     pytest.mark.special_infra,
     pytest.mark.usefixtures(
-        "skip_when_no_dpdk",
         "patched_align_cpus",
         "patched_runtime_class",
         "dpdk_checkup_traffic_generator_service_account",
@@ -16,12 +14,6 @@ pytestmark = [
         "dpdk_checkup_resources_role_binding",
     ),
 ]
-
-
-@pytest.fixture(scope="session")
-def skip_when_no_dpdk(admin_client):
-    if not any(profile.name == "dpdk" for profile in list(PerformanceProfile.get(dyn_client=admin_client))):
-        pytest.skip("DPDK is not configured")
 
 
 @pytest.fixture(scope="module")

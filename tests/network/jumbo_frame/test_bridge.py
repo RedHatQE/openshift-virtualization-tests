@@ -17,10 +17,12 @@ from utilities.network import (
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_when_no_jumbo_frame_support",
-    "hyperconverged_ovs_annotations_enabled_scope_session",
-)
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.usefixtures(
+        "hyperconverged_ovs_annotations_enabled_scope_session",
+    ),
+]
 
 
 @pytest.fixture(scope="class")
