@@ -137,7 +137,7 @@ def dhcp_server(running_dhcp_server_vm):
 
 
 @pytest.fixture(scope="module")
-def dhcp_server_vm(skip_insufficient_nodes, namespace, worker_node1, dhcp_br_nad, unprivileged_client):
+def dhcp_server_vm(namespace, worker_node1, dhcp_br_nad, unprivileged_client):
     cloud_init_data = dhcp_server_cloud_init_data(dhcp_iface_ip_addr=f"{DHCP_IP_SUBNET}.1")
     vm_name = "dhcp-server-vm"
 
@@ -244,13 +244,6 @@ def disabled_dhcp_client_2(vlan_iface_dhcp_client_2, dhcp_client_2):
     disable_ipv4_dhcp_client(vlan_iface_nncp=vlan_iface_dhcp_client_2, selected_node=dhcp_client_2.name)
     yield dhcp_client_2
     enable_ipv4_dhcp_client(vlan_iface_nncp=vlan_iface_dhcp_client_2, selected_node=dhcp_client_2.name)
-
-
-@pytest.fixture(scope="module")
-def skip_insufficient_nodes(schedulable_nodes):
-    num_of_nodes = 3
-    if len(schedulable_nodes) < num_of_nodes:
-        pytest.skip(f"Not enough nodes, test needs minimum {num_of_nodes} nodes in the cluster")
 
 
 # VLAN on BOND fixtures
