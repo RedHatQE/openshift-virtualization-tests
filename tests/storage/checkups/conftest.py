@@ -2,6 +2,7 @@ import pytest
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.data_source import DataSource
 from ocp_resources.job import Job
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.role import Role
@@ -195,12 +196,13 @@ def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
 
 @pytest.fixture()
 def broken_data_import_cron(golden_images_namespace):
+    data_source = DataSource(name="broken-data-source", namespace=golden_images_namespace.name)
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
         schedule=WILDCARD_CRON_EXPRESSION,
         garbage_collect=OUTDATED,
-        managed_data_source="broken-data-source",
+        managed_data_source=data_source.name,
         annotations=BIND_IMMEDIATE_ANNOTATION,
         template={
             "spec": {
@@ -221,6 +223,8 @@ def broken_data_import_cron(golden_images_namespace):
         },
     ) as data_import_cron:
         yield data_import_cron
+    # DataImportCron created a DataSource, but it is not supposed to clean it up
+    data_source.clean_up(wait=True)
 
 
 @pytest.fixture()
