@@ -887,7 +887,7 @@ def virt_launcher_pod_metrics_resource_exists(vm_for_test):
         for sample in samples:
             if sample:
                 LOGGER.info(f"PodMetric resource for {vl_name} exists.")
-                return True
+                return
     except TimeoutExpiredError:
         LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
         raise
