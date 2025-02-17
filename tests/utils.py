@@ -24,8 +24,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     DISK_SERIAL,
-    OS_FLAVOR_CIRROS,
     HCO_DEFAULT_CPU_MODEL_KEY,
+    OS_FLAVOR_CIRROS,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
@@ -34,8 +34,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
-
-from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_annotations
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
     get_artifactory_config_map,
