@@ -30,7 +30,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
-    KUBEVIRT_CR_ALERT_NAME,
     SINGLE_VM,
     ZERO_CPU_CORES,
     disk_file_system_info,
@@ -64,6 +63,7 @@ from utilities.constants import (
     ONE_CPU_CORE,
     PVC,
     SOURCE_POD,
+    SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
@@ -75,12 +75,13 @@ from utilities.constants import (
     TWO_CPU_THREADS,
     VERSION_LABEL_KEY,
     VIRT_HANDLER,
-    WARNING_STR,
+    VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
+from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
     VirtualMachineForTests,
@@ -152,17 +153,6 @@ def updated_resource_with_invalid_label(request, admin_client, hco_namespace, hc
     ):
         wait_for_cr_labels_change(component=resource, expected_value=labels)
         yield
-
-
-@pytest.fixture(scope="module")
-def alert_dictionary_kubevirt_cr_modified():
-    return {
-        "alert_name": KUBEVIRT_CR_ALERT_NAME,
-        "labels": {
-            "severity": WARNING_STR,
-            "operator_health_impact": WARNING_STR,
-        },
-    }
 
 
 @pytest.fixture()
@@ -1017,3 +1007,28 @@ def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus,
             vm_name=vm_for_snapshot_for_metrics_test.name
         ),
     )
+
+
+@pytest.fixture(scope="class")
+def template_validator_finalizer(hco_namespace):
+    deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name)
+    with ResourceEditorValidateHCOReconcile(
+        patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}}
+    ):
+        yield
+
+
+@pytest.fixture(scope="class")
+def deleted_ssp_operator_pod(admin_client, hco_namespace):
+    get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=SSP_OPERATOR,
+        namespace=hco_namespace.name,
+    ).delete(wait=True)
+    yield
+    verify_ssp_pod_is_running(dyn_client=admin_client, hco_namespace=hco_namespace)
+
+
+@pytest.fixture(scope="class")
+def initiate_metric_value(request, prometheus):
+    return get_metrics_value(prometheus=prometheus, metrics_name=request.param)

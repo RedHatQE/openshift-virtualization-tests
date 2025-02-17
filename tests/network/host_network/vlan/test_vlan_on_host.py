@@ -93,7 +93,6 @@ class TestVlanInterface:
     @pytest.mark.polarion("CNV-3462")
     def test_vlan_deletion(
         self,
-        skip_insufficient_nodes,
         workers_utility_pods,
         namespace,
         dhcp_client_nodes,

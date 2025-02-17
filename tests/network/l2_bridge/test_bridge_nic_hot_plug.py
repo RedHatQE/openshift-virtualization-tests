@@ -618,11 +618,11 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             f"of hot-plugged interface was not released upon VM deletion."
         )
 
+    @pytest.mark.special_infra
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10647")
     def test_connectivity_of_hot_plugged_sriov_interface(
         self,
-        skip_when_no_sriov,
         vm1_with_hot_plugged_sriov_interface,
         vm2_with_hot_plugged_sriov_interface,
         sriov_network_for_hot_plug,
