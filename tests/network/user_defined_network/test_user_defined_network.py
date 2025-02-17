@@ -14,10 +14,6 @@ from libs.vm.factory import base_vmspec, fedora_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify
 
-# For version 4.18, this module can only run on clusters where FeatureGate is configured with
-# featureSet TechPreviewNoUpgrade.
-pytestmark = pytest.mark.udn
-
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
 
