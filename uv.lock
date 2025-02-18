@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = "==3.12.*"
 
 [[package]]
@@ -694,7 +695,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/e4/cc/34cfb46e923281313
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.27"
+version = "11.0.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -716,7 +717,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/e5/d23f09715f6817e81601aac27e6d6ce7ed425e63a144b8bb764cadcb44f6/openshift_python_wrapper-11.0.27.tar.gz", hash = "sha256:797a0ad1da79f0b3bbb46cd824c3c5878e42c013393eb53698ce1bc1506f2c67", size = 6490733 }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/40/dea1894708c980c3149f225d43130068c1202ab8d209a8462ec7fd41cced/openshift_python_wrapper-11.0.28.tar.gz", hash = "sha256:fcd17c0fbd3c049616b884bdc0b30f6494685325e628cef5506c731db045ddd9", size = 6653893 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -1080,7 +1081,7 @@ wheels = [
 
 [[package]]
 name = "pyhelper-utils"
-version = "1.0.9"
+version = "1.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ipdb" },
@@ -1089,7 +1090,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/96/b57d3581c0a2ba765553043112f505b73e95ce22532ab15f9075fa7b8367/pyhelper_utils-1.0.9.tar.gz", hash = "sha256:786e1c85a05e28f4cea2e778388911773df235e1ed6214f519e90ab7ec883e41", size = 10790 }
+sdist = { url = "https://files.pythonhosted.org/packages/54/07/8ca88b6a7f137332fb5b9a6b45f5aec8e61c87a13aa4b6fa1fd74272ebd8/pyhelper_utils-1.0.10.tar.gz", hash = "sha256:0d6e6a25ba8abd1ac86af720872316b0313674473c2edaead90d7f341fdc525e", size = 10791 }
 
 [[package]]
 name = "pylero"
@@ -1311,7 +1312,7 @@ wheels = [
 
 [[package]]
 name = "python-utility-scripts"
-version = "1.0.12"
+version = "1.0.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jira" },
@@ -1322,7 +1323,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/98/ce/6fd758fa8eed8467544b7164980c3a464e3bc31a390383691fe4b00962ff/python_utility_scripts-1.0.12.tar.gz", hash = "sha256:df787abd6d9147ea1199703f8756b24b25dae36247c9acc3e729411740e19b85", size = 14189 }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/be/6142f6331e2f682cf576e34c12a2a161b7990ef5a6e7eed13b41a816e62b/python_utility_scripts-1.0.13.tar.gz", hash = "sha256:48e26c1bed49c0af8bbe7a5dc742a80f562326d8395437a6f661e8738f541c3e", size = 14185 }
 
 [[package]]
 name = "pytz"
