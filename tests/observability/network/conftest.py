@@ -4,7 +4,6 @@ from copy import deepcopy
 import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_utilities.infra import cluster_resource
 from pytest_testconfig import config as py_config
 
 from tests.observability.utils import wait_for_kubemacpool_pods_error_state
@@ -125,7 +124,7 @@ def duplicate_mac_nad_vm2(kmp_disabled_namespace, bridge_device_duplicate_mac):
 def duplicate_mac_vm1(namespace, worker_node1, admin_client, vms_mac, duplicate_mac_nad_vm1):
     networks = {duplicate_mac_nad_vm1.name: duplicate_mac_nad_vm1.name}
     name = f"{DUPLICATE_MAC_STR}-vm1"
-    with cluster_resource(VirtualMachineForTests)(
+    with VirtualMachineForTests(
         client=admin_client,
         namespace=namespace.name,
         name=name,
@@ -143,7 +142,7 @@ def duplicate_mac_vm1(namespace, worker_node1, admin_client, vms_mac, duplicate_
 def duplicate_mac_vm2(kmp_disabled_namespace, worker_node1, admin_client, vms_mac, duplicate_mac_nad_vm2):
     networks = {duplicate_mac_nad_vm2.name: duplicate_mac_nad_vm2.name}
     name = f"{DUPLICATE_MAC_STR}-vm2"
-    with cluster_resource(VirtualMachineForTests)(
+    with VirtualMachineForTests(
         client=admin_client,
         namespace=kmp_disabled_namespace.name,
         name=name,
