@@ -20,10 +20,11 @@ from utilities.constants import (
     CNV_TESTS_CONTAINER,
     POD_SECURITY_NAMESPACE_LABELS,
     TIMEOUT_2MIN,
+    StorageClassNames,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
-from utilities.storage import HppCsiStorageClass
+from utilities.storage import HOSTPATH_CSI, HppCsiStorageClass
 
 HPP_VOLUME_MODE_ACCESS_MODE = {
     "volume_mode": DataVolume.VolumeMode.FILE,
@@ -251,6 +252,11 @@ def update_storage_class_matrix_config(session, pytest_config_matrix):
     invald_sc = []
     if cmdline_storage_class:
         cmdline_storage_class_matrix = cmdline_storage_class.split(",")
+        if HOSTPATH_CSI in cmdline_storage_class and StorageClassNames.TOPOLVM in cmdline_storage_class:
+            raise ValueError(
+                f"{HOSTPATH_CSI} storage classes can't be used with {StorageClassNames.TOPOLVM} "
+                f": {cmdline_storage_class}"
+            )
         for sc in cmdline_storage_class_matrix:
             if sc not in matrix_names:
                 if sc in HPP_STORAGE_CLASSES.keys():
