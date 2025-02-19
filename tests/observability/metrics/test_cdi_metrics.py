@@ -1,6 +1,6 @@
 import pytest
 
-from tests.observability.metrics.utils import expected_storage_class_labels_and_values
+from tests.observability.metrics.utils import expected_metric_labels_and_values
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import CDI_OPERATOR
 
@@ -35,7 +35,7 @@ def test_kubevirt_cdi_upload_pods_high_restart(
 
 @pytest.mark.polarion("CNV-11744")
 def test_metric_kubevirt_cdi_storageprofile_info(prometheus, storage_class_labels_for_testing):
-    expected_storage_class_labels_and_values(
+    expected_metric_labels_and_values(
         prometheus=prometheus,
         metric_name=f"kubevirt_cdi_storageprofile_info"
         f"{{storageclass='{storage_class_labels_for_testing['storageclass']}'}}",

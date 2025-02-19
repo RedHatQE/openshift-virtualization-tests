@@ -20,8 +20,7 @@ from tests.storage.checkups.constants import (
     STORAGE_CHECKUP_STR,
 )
 from tests.storage.checkups.utils import update_storage_profile
-from tests.storage.utils import create_cirros_vm
-from tests.utils import get_image_from_csv
+from tests.utils import create_cirros_vm, get_image_from_csv
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
