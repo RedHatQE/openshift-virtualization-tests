@@ -9,6 +9,7 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
+from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
@@ -61,6 +62,7 @@ from utilities.constants import (
     SOURCE_POD,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_10MIN,
@@ -857,7 +859,7 @@ def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_a
 
 
 @pytest.fixture()
-def vm_memory_working_set_bytes(vm_for_test):
+def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
     return int(
         bitmath.parse_string_unsafe(
             re.search(
@@ -871,6 +873,24 @@ def vm_memory_working_set_bytes(vm_for_test):
             ).group(1)
         ).bytes
     )
+
+
+@pytest.fixture()
+def virt_launcher_pod_metrics_resource_exists(vm_for_test):
+    vl_name = vm_for_test.vmi.virt_launcher_pod.name
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
+        raise
 
 
 @pytest.fixture()
