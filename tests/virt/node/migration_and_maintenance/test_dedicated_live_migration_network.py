@@ -28,7 +28,7 @@ from utilities.virt import (
     wait_for_updated_kv_value,
 )
 
-pytestmark = pytest.mark.destructive
+pytestmark = [pytest.mark.destructive, pytest.mark.special_infra]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestDedicatedLiveMigrationNetwork"
