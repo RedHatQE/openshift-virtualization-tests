@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
-from tests.storage.utils import create_cirros_vm
+from tests.utils import create_cirros_vm
 from utilities.storage import write_file
 
 

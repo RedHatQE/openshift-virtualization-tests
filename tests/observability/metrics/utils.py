@@ -1199,7 +1199,7 @@ def compare_metric_file_system_values_with_vm_file_system_values(
         raise
 
 
-def expected_storage_class_labels_and_values(
+def expected_metric_labels_and_values(
     prometheus: Prometheus, metric_name: str, expected_labels_and_values: dict[str, str]
 ) -> None:
     metric_output = prometheus.query_sampler(query=metric_name)[0].get("metric")
