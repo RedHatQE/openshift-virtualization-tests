@@ -32,11 +32,11 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     HttpService,
     check_snapshot_indication,
-    create_cirros_vm,
     get_hpp_daemonset,
     hpp_cr_suffix,
     is_hpp_cr_legacy,
 )
+from tests.utils import create_cirros_vm
 from utilities.constants import (
     CDI_OPERATOR,
     CDI_UPLOADPROXY,

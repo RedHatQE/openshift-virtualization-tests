@@ -8,11 +8,13 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -25,6 +27,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
+    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
@@ -48,9 +51,10 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
+    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_cr_labels_change
+from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -953,6 +957,70 @@ def storage_class_labels_for_testing(admin_client):
         == "true"
         else "false",
     }
+
+
+@pytest.fixture()
+def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
+    with create_cirros_vm(
+        storage_class=storage_class_for_snapshot,
+        namespace=namespace.name,
+        client=admin_client,
+        dv_name="dv-for-snapshot",
+        vm_name="vm-for-snapshot",
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def vm_snapshot_for_metric_test(vm_for_snapshot_for_metrics_test):
+    with vm_snapshot(
+        vm=vm_for_snapshot_for_metrics_test, name=f"{vm_for_snapshot_for_metrics_test.name}-snapshot"
+    ) as snapshot:
+        yield snapshot
+
+
+@pytest.fixture()
+def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for_metric_test):
+    vm_name = vm_for_snapshot_for_metrics_test.name
+    vm_for_snapshot_for_metrics_test.stop(wait=True)
+    with VirtualMachineRestore(
+        name=f"restore-snapshot-{vm_name}",
+        namespace=vm_snapshot_for_metric_test.namespace,
+        vm_name=vm_name,
+        snapshot_name=vm_snapshot_for_metric_test.name,
+    ) as vm_restore:
+        vm_restore.wait_restore_done()
+        vm_for_snapshot_for_metrics_test.start(wait=True)
+        yield vm_restore
+
+
+@pytest.fixture()
+def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
+    for pvc in PersistentVolumeClaim.get(
+        dyn_client=admin_client,
+        namespace=vm_for_snapshot_for_metrics_test.namespace,
+        label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
+    ):
+        return pvc.name
+
+
+@pytest.fixture()
+def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for_metrics_test, restored_pvc_name):
+    return {
+        "label_restore_kubevirt_io_source_vm_name": vm_for_snapshot_for_metrics_test.name,
+        "persistentvolumeclaim": restored_pvc_name,
+        "namespace": vm_snapshot_for_metric_test.namespace,
+    }
+
+
+@pytest.fixture()
+def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
+    wait_for_non_empty_metrics_value(
+        prometheus=prometheus,
+        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
+            vm_name=vm_for_snapshot_for_metrics_test.name
+        ),
+    )
 
 
 @pytest.fixture(scope="class")

@@ -8,7 +8,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
-from tests.storage.utils import create_cirros_vm
+from tests.utils import create_cirros_vm
 from utilities.constants import Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import virtctl_upload_dv

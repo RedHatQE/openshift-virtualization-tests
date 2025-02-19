@@ -77,3 +77,6 @@ KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES = "kubevirt_vmi_migration_data_proce
 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES = "kubevirt_vmi_migration_data_remaining_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES = "kubevirt_vmi_migration_disk_transfer_rate_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES = "kubevirt_vmi_migration_dirty_memory_rate_bytes{{name='{vm_name}'}}"
+KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS = (
+    "kubevirt_vmsnapshot_persistentvolumeclaim_labels{{vm_name='{vm_name}'}}"
+)
