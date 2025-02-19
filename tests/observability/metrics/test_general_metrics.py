@@ -67,11 +67,10 @@ def fedora_vm_without_name_in_label(
 )
 class TestVmiNodeCpuAffinity:
     @pytest.mark.polarion("CNV-7295")
-    def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, schedulable_nodes, vm_from_template_scope_class):
+    def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, vm_from_template_scope_class):
         validate_vmi_node_cpu_affinity_with_prometheus(
             vm=vm_from_template_scope_class,
             prometheus=prometheus,
-            nodes=schedulable_nodes,
         )
 
 
