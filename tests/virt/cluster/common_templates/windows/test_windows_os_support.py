@@ -66,7 +66,9 @@ class TestCommonTemplatesWindows:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-3512")
     def test_vmi_guest_agent_info(
-        self, golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class
+        self,
+        xfail_guest_agent_info_on_win2025,
+        golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
     ):
         """Test Guest OS agent info."""
         validate_os_info_vmi_vs_windows_os(
@@ -77,7 +79,9 @@ class TestCommonTemplatesWindows:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-4196")
     def test_virtctl_guest_agent_os_info(
-        self, golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class
+        self,
+        xfail_guest_agent_info_on_win2025,
+        golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
     ):
         validate_os_info_virtctl_vs_windows_os(
             vm=golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
