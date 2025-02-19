@@ -45,6 +45,7 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_storage_class_matrix_config,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -615,7 +616,11 @@ def pytest_sessionstart(session):
         log_file=tests_log_file,
         log_level=session.config.getoption("log_cli_level") or logging.INFO,
     )
-    py_config_scs = py_config.get("storage_class_matrix", [])
+    # Add HPP-CSI-BASIC/HPP-CSI-PVC-BLOCK to global config's storage_class_matrix, only
+    # if command line option --storage-class-matrix includes them:
+    py_config_scs = update_storage_class_matrix_config(
+        session=session, pytest_config_matrix=py_config.get("storage_class_matrix", [])
+    )
 
     # Save the default storage_class_matrix before it is updated
     # with runtime storage_class_matrix value(s)
@@ -641,7 +646,6 @@ def pytest_sessionstart(session):
                     items_list.append(item)
 
         py_config[key] = items_list
-
     config_default_storage_class(session=session)
     # Set py_config["servers"] and py_config["os_login_param"]
     # Send --tc=server_url:<url> to override servers URL

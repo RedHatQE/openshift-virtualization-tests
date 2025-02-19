@@ -8,6 +8,7 @@ import socket
 import sys
 
 from ocp_resources.config_map import ConfigMap
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
@@ -22,6 +23,17 @@ from utilities.constants import (
 )
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
+from utilities.storage import HppCsiStorageClass
+
+HPP_VOLUME_MODE_ACCESS_MODE = {
+    "volume_mode": DataVolume.VolumeMode.FILE,
+    "access_mode": DataVolume.AccessMode.RWO,
+}
+
+HPP_STORAGE_CLASSES = {
+    HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE,
+    HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE,
+}
 
 LOGGER = logging.getLogger(__name__)
 
@@ -230,3 +242,23 @@ def get_cnv_version_explorer_url(pytest_config):
         if not version_explorer_url:
             raise MissingEnvironmentVariableError("Please set CNV_VERSION_EXPLORER_URL environment variable")
         return version_explorer_url
+
+
+def update_storage_class_matrix_config(session, pytest_config_matrix):
+    cmdline_storage_class = session.config.getoption(name="storage_class_matrix")
+    matrix_list = pytest_config_matrix
+    matrix_names = [[*sc][0] for sc in pytest_config_matrix]
+    invald_sc = []
+    if cmdline_storage_class:
+        cmdline_storage_class_matrix = cmdline_storage_class.split(",")
+        for sc in cmdline_storage_class_matrix:
+            if sc not in matrix_names:
+                if sc in HPP_STORAGE_CLASSES.keys():
+                    matrix_list.append({sc: HPP_STORAGE_CLASSES[sc]})
+                else:
+                    invald_sc.append(sc)
+    assert not invald_sc, (
+        f"Invalid sc requested via --storage-class-matix: {invald_sc}. Valid options: "
+        f"{matrix_names} and {[*HPP_STORAGE_CLASSES]}"
+    )
+    return matrix_list
