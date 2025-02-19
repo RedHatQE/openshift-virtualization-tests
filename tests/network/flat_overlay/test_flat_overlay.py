@@ -9,7 +9,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 pytestmark = [
-    pytest.mark.special_infra,
     pytest.mark.usefixtures(
         "enable_multi_network_policy_usage",
     ),

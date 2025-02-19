@@ -18,7 +18,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [
-    pytest.mark.special_infra,
     pytest.mark.usefixtures(
         "hyperconverged_ovs_annotations_enabled_scope_session",
     ),

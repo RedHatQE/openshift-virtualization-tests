@@ -23,7 +23,6 @@ BRIDGE_NAME = "brbond1"
 
 
 pytestmark = [
-    pytest.mark.special_infra,
     pytest.mark.usefixtures(
         "hyperconverged_ovs_annotations_enabled_scope_session",
         "workers_type",
