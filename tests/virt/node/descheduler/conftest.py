@@ -26,7 +26,7 @@ from tests.virt.node.descheduler.utils import (
     wait_vmi_failover,
 )
 from tests.virt.utils import get_match_expressions_dict
-from utilities.constants import BREW_REGISTERY_SOURCE, FILTER_BY_OS_OPTION, TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
+from utilities.constants import FILTER_BY_OS_OPTION, TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
     create_ns,
