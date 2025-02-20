@@ -116,7 +116,7 @@ def secondary_linux_bridge_nad(namespace, linux_bridge_interface):
 
 
 @pytest.fixture(scope="module")
-def linux_bridge_interface(skip_if_no_multinic_nodes, hosts_common_available_ports):
+def linux_bridge_interface(hosts_common_available_ports):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="sec-br",

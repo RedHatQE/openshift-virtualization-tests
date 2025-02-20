@@ -90,7 +90,6 @@ def vlan_iface_dhcp_client_2(
 
 @pytest.fixture(scope="class")
 def vlan_iface_on_dhcp_client_2_with_different_tag(
-    skip_if_no_multinic_nodes,
     vlan_base_iface,
     vlan_index_number,
     dhcp_client_nodes,
@@ -109,7 +108,6 @@ def vlan_iface_on_dhcp_client_2_with_different_tag(
 
 @pytest.fixture()
 def vlan_iface_on_all_worker_nodes(
-    skip_if_no_multinic_nodes,
     label_schedulable_nodes,
     vlan_base_iface,
     vlan_index_number_for_all_nodes,
@@ -198,7 +196,6 @@ def dhcp_br_nad(dhcp_server_bridge, namespace):
 
 @pytest.fixture(scope="module")
 def dhcp_server_vlan_iface(
-    skip_if_no_multinic_nodes,
     worker_node1,
     vlan_base_iface,
     vlan_index_number_for_all_nodes,
@@ -250,7 +247,6 @@ def disabled_dhcp_client_2(vlan_iface_dhcp_client_2, dhcp_client_2):
 @pytest.fixture(scope="class")
 def vlan_iface_bond_dhcp_client_1(
     index_number,
-    skip_if_no_multinic_nodes,
     hosts_common_available_ports,
     dhcp_client_1,
     vlan_index_number_for_all_nodes,
@@ -277,7 +273,6 @@ def vlan_iface_bond_dhcp_client_1(
 @pytest.fixture(scope="class")
 def vlan_iface_bond_dhcp_client_2(
     index_number,
-    skip_if_no_multinic_nodes,
     hosts_common_available_ports,
     dhcp_client_2,
     vlan_iface_bond_dhcp_client_1,

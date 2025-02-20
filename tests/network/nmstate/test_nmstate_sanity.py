@@ -85,7 +85,6 @@ def deployed_linux_bridge_device_policy(nmstate_linux_bridge_device_worker):
 
 @pytest.mark.polarion("CNV-5721")
 def test_no_ip(
-    skip_if_no_multinic_nodes,
     worker_node1,
     nodes_available_nics,
 ):
@@ -102,7 +101,6 @@ def test_no_ip(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5720")
 def test_static_ip(
-    skip_if_no_multinic_nodes,
     worker_node1,
     nodes_available_nics,
 ):
@@ -120,7 +118,6 @@ def test_static_ip(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5722")
 def test_dynamic_ip(
-    skip_if_no_multinic_nodes,
     worker_node1,
     nodes_available_nics,
 ):
@@ -137,7 +134,6 @@ def test_dynamic_ip(
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5725")
 def test_static_route(
-    skip_if_no_multinic_nodes,
     worker_node1,
     nodes_available_nics,
 ):
@@ -164,7 +160,6 @@ def test_static_route(
         LOGGER.info("NMstate: Test static route")
 
 
-@pytest.mark.usefixtures("skip_if_no_multinic_nodes")
 class TestNmstatePodDeletion:
     @pytest.mark.polarion("CNV-6559")
     @pytest.mark.dependency(name="TestNmstatePodDeletion::test_delete_nmstate_pod_during_nncp_configuration")
@@ -206,7 +201,7 @@ class TestNmstatePodDeletion:
 
 
 @pytest.mark.polarion("CNV-8232")
-def test_nncp_named_as_worker_hostname(skip_if_no_multinic_nodes, nncp_with_worker_hostname):
+def test_nncp_named_as_worker_hostname(nncp_with_worker_hostname):
     with pytest.raises(TimeoutExpiredError):
         nncp_conditions = nncp_with_worker_hostname.wait_for_configuration_conditions_unknown_or_progressing(
             wait_timeout=TIMEOUT_5MIN
@@ -218,7 +213,6 @@ def test_nncp_named_as_worker_hostname(skip_if_no_multinic_nodes, nncp_with_work
             )
 
 
-@pytest.mark.usefixtures("skip_if_no_multinic_nodes")
 class TestStandaloneNmstate:
     @pytest.mark.polarion("CNV-8519")
     def test_basic_nmstate(self, deployed_linux_bridge_device_policy):

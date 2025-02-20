@@ -121,7 +121,6 @@ class TestVlanBond:
     @pytest.mark.polarion("CNV-3469")
     def test_vlan_connectivity_over_bond_on_all_hosts(
         self,
-        skip_no_bond_support,
         workers_utility_pods,
         namespace,
         vlan_iface_bond_dhcp_client_1,
