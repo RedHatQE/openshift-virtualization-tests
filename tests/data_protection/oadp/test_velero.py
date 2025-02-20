@@ -3,6 +3,7 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.data_protection.oadp.utils import check_file_in_vm, wait_for_restored_dv
 from utilities.constants import TIMEOUT_10SEC, Images
+from utilities.virt import running_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
@@ -55,9 +56,12 @@ def test_restore_multiple_namespaces(
 
 
 @pytest.mark.parametrize(
-    "rhel_vm_with_data_volume_template",
+    ("stopped_vm", "rhel_vm_with_data_volume_template"),
     [
         pytest.param(
+            {
+                "stopped_vm": False,
+            },
             {
                 "dv_name": "block-dv",
                 "vm_name": "block-vm",
@@ -68,6 +72,9 @@ def test_restore_multiple_namespaces(
         ),
         pytest.param(
             {
+                "stopped_vm": False,
+            },
+            {
                 "dv_name": "filesystem-dv",
                 "vm_name": "filesystem-vm",
                 "volume_mode": DataVolume.VolumeMode.FILE,
@@ -75,12 +82,28 @@ def test_restore_multiple_namespaces(
             },
             marks=pytest.mark.polarion("CNV-10565"),
         ),
+        pytest.param(
+            {
+                "stopped_vm": True,
+            },
+            {
+                "dv_name": "stopped-vm-dv",
+                "vm_name": "stopped-vm",
+                "volume_mode": DataVolume.VolumeMode.BLOCK,
+                "rhel_image": Images.Rhel.RHEL9_3_IMG,
+            },
+            marks=pytest.mark.polarion("CNV-11319"),
+        ),
     ],
     indirect=True,
 )
 def test_backup_vm_data_volume_template_with_datamover(
-    rhel_vm_with_data_volume_template, velero_restore_first_namespace_with_datamover
+    stopped_vm,
+    rhel_vm_with_data_volume_template,
+    velero_restore_first_namespace_with_datamover,
 ):
+    if stopped_vm:
+        running_vm(vm=rhel_vm_with_data_volume_template)
     check_file_in_vm(vm=rhel_vm_with_data_volume_template)
 
 
