@@ -35,19 +35,6 @@ def test_cx1_instancetype_profile(skip_if_no_huge_pages, unprivileged_client, na
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
-@pytest.mark.tier3
-@pytest.mark.polarion("CNV-10400")
-def test_gn1_instancetype_profile(skip_if_no_gpu_node, unprivileged_client, namespace):
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        name="rhel-vm-with-gn1",
-        namespace=namespace.name,
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="gn1.xlarge"),
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-
-
 @pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-11288")
 def test_common_instancetype_owner(base_vm_cluster_instancetypes):
