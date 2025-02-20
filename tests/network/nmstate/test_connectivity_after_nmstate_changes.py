@@ -44,7 +44,7 @@ def restart_nmstate_handler(admin_client, nmstate_ds, nmstate_namespace):
 
 
 @pytest.fixture(scope="class")
-def nmstate_linux_bridge_device_worker_1(skip_if_no_multinic_nodes, nodes_available_nics, worker_node1):
+def nmstate_linux_bridge_device_worker_1(nodes_available_nics, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"restart-nmstate-{name_prefix(worker_node1.name)}",
@@ -56,7 +56,7 @@ def nmstate_linux_bridge_device_worker_1(skip_if_no_multinic_nodes, nodes_availa
 
 
 @pytest.fixture(scope="class")
-def nmstate_linux_bridge_device_worker_2(skip_if_no_multinic_nodes, nodes_available_nics, worker_node2):
+def nmstate_linux_bridge_device_worker_2(nodes_available_nics, worker_node2):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"restart-nmstate-{name_prefix(worker_node2.name)}",

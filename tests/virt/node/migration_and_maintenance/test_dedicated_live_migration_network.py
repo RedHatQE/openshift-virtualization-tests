@@ -28,7 +28,7 @@ from utilities.virt import (
     wait_for_updated_kv_value,
 )
 
-pytestmark = pytest.mark.destructive
+pytestmark = [pytest.mark.destructive, pytest.mark.special_infra]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestDedicatedLiveMigrationNetwork"
@@ -190,7 +190,6 @@ def vms_deployed_on_same_node(migration_vm_1, migration_vm_2):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_if_no_multinic_nodes")
 class TestDedicatedLiveMigrationNetwork:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-7877")

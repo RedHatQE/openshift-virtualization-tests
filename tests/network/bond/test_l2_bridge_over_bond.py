@@ -19,7 +19,6 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.usefixtures(
     "hyperconverged_ovs_annotations_enabled_scope_session",
-    "skip_no_bond_support",
     "workers_type",
 )
 
@@ -188,7 +187,6 @@ class TestBondConnectivity:
     @pytest.mark.polarion("CNV-3366")
     def test_bond(
         self,
-        skip_no_bond_support,
         namespace,
         ovs_linux_br1bond_nad,
         ovs_linux_bridge_on_bond_worker_1,

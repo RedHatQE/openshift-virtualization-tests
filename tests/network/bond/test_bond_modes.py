@@ -21,8 +21,6 @@ pytestmark = [
     pytest.mark.sno,
     pytest.mark.usefixtures(
         "hyperconverged_ovs_annotations_enabled_scope_session",
-        "skip_no_bond_support",
-        "skip_if_no_multinic_nodes",
         "workers_type",
     ),
 ]

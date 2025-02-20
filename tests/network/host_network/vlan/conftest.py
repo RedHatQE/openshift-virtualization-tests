@@ -90,7 +90,6 @@ def vlan_iface_dhcp_client_2(
 
 @pytest.fixture(scope="class")
 def vlan_iface_on_dhcp_client_2_with_different_tag(
-    skip_if_no_multinic_nodes,
     vlan_base_iface,
     vlan_index_number,
     dhcp_client_nodes,
@@ -109,7 +108,6 @@ def vlan_iface_on_dhcp_client_2_with_different_tag(
 
 @pytest.fixture()
 def vlan_iface_on_all_worker_nodes(
-    skip_if_no_multinic_nodes,
     label_schedulable_nodes,
     vlan_base_iface,
     vlan_index_number_for_all_nodes,
@@ -137,7 +135,7 @@ def dhcp_server(running_dhcp_server_vm):
 
 
 @pytest.fixture(scope="module")
-def dhcp_server_vm(skip_insufficient_nodes, namespace, worker_node1, dhcp_br_nad, unprivileged_client):
+def dhcp_server_vm(namespace, worker_node1, dhcp_br_nad, unprivileged_client):
     cloud_init_data = dhcp_server_cloud_init_data(dhcp_iface_ip_addr=f"{DHCP_IP_SUBNET}.1")
     vm_name = "dhcp-server-vm"
 
@@ -198,7 +196,6 @@ def dhcp_br_nad(dhcp_server_bridge, namespace):
 
 @pytest.fixture(scope="module")
 def dhcp_server_vlan_iface(
-    skip_if_no_multinic_nodes,
     worker_node1,
     vlan_base_iface,
     vlan_index_number_for_all_nodes,
@@ -246,18 +243,10 @@ def disabled_dhcp_client_2(vlan_iface_dhcp_client_2, dhcp_client_2):
     enable_ipv4_dhcp_client(vlan_iface_nncp=vlan_iface_dhcp_client_2, selected_node=dhcp_client_2.name)
 
 
-@pytest.fixture(scope="module")
-def skip_insufficient_nodes(schedulable_nodes):
-    num_of_nodes = 3
-    if len(schedulable_nodes) < num_of_nodes:
-        pytest.skip(f"Not enough nodes, test needs minimum {num_of_nodes} nodes in the cluster")
-
-
 # VLAN on BOND fixtures
 @pytest.fixture(scope="class")
 def vlan_iface_bond_dhcp_client_1(
     index_number,
-    skip_if_no_multinic_nodes,
     hosts_common_available_ports,
     dhcp_client_1,
     vlan_index_number_for_all_nodes,
@@ -284,7 +273,6 @@ def vlan_iface_bond_dhcp_client_1(
 @pytest.fixture(scope="class")
 def vlan_iface_bond_dhcp_client_2(
     index_number,
-    skip_if_no_multinic_nodes,
     hosts_common_available_ports,
     dhcp_client_2,
     vlan_iface_bond_dhcp_client_1,

@@ -22,14 +22,13 @@ import pytest
 import requests
 import yaml
 from bs4 import BeautifulSoup
-from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
-from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
@@ -555,17 +554,6 @@ def node_physical_nics(workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def ovn_kubernetes_cluster(admin_client):
-    return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
-
-
-@pytest.fixture(scope="session")
-def skip_if_ovn_cluster(ovn_kubernetes_cluster):
-    if ovn_kubernetes_cluster:
-        pytest.skip("Test cannot run on cluster with OVN network type")
-
-
-@pytest.fixture(scope="session")
 def nodes_active_nics(
     workers,
     workers_utility_pods,
@@ -639,25 +627,6 @@ def nodes_active_nics(
 @pytest.fixture(scope="session")
 def nodes_available_nics(nodes_active_nics):
     return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
-
-
-@pytest.fixture(scope="session")
-def nodes_occupied_nics(nodes_active_nics):
-    return {node: nodes_active_nics[node]["occupied"] for node in nodes_active_nics.keys()}
-
-
-@pytest.fixture(scope="session")
-def multi_nics_nodes(hosts_common_available_ports):
-    """
-    Check if nodes has any available NICs
-    """
-    return len(hosts_common_available_ports) > 1
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_multinic_nodes(multi_nics_nodes):
-    if not multi_nics_nodes:
-        pytest.skip("Only run on multi NICs node")
 
 
 @pytest.fixture(scope="module")
@@ -1081,7 +1050,7 @@ def sriov_namespace():
 
 
 @pytest.fixture(scope="session")
-def sriov_nodes_states(skip_when_no_sriov, admin_client, sriov_namespace, sriov_workers):
+def sriov_nodes_states(admin_client, sriov_namespace, sriov_workers):
     sriov_nns_list = [
         SriovNetworkNodeState(client=admin_client, namespace=sriov_namespace.name, name=worker.name)
         for worker in sriov_workers
@@ -1096,7 +1065,7 @@ def sriov_workers(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def vlan_base_iface(skip_if_no_multinic_nodes, worker_node1, nodes_available_nics):
+def vlan_base_iface(worker_node1, nodes_available_nics):
     # Select the last NIC from the list as a way to ensure that the selected NIC
     # is not already used (e.g. as a bond's port).
     return nodes_available_nics[worker_node1.name][-1]
@@ -1365,19 +1334,6 @@ def kubevirt_feature_gates(kubevirt_config):
 @pytest.fixture(scope="module")
 def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["developerConfiguration"][FEATURE_GATES]
-
-
-@pytest.fixture(scope="session")
-def skip_when_no_sriov(admin_client):
-    try:
-        list(
-            CustomResourceDefinition.get(
-                dyn_client=admin_client,
-                name="sriovnetworknodestates.sriovnetwork.openshift.io",
-            )
-        )
-    except NotFoundError:
-        pytest.skip("Cluster without SR-IOV support")
 
 
 @pytest.fixture(scope="class")
@@ -1792,7 +1748,6 @@ def term_handler_scope_session():
 
 @pytest.fixture(scope="session")
 def upgrade_bridge_on_all_nodes(
-    skip_if_no_multinic_nodes,
     label_schedulable_nodes,
     hosts_common_available_ports,
 ):
@@ -2218,14 +2173,6 @@ def audit_logs():
             LOGGER.error(f"Fail to get log: {line}")
 
     return nodes_logs
-
-
-@pytest.fixture()
-def alert_not_firing(request, prometheus):
-    alert = request.param
-    if prometheus.get_firing_alerts(alert_name=alert):
-        pytest.xfail(f"Alert {alert} should not be in Firing or in Pending state on a cluster before running test")
-    return alert
 
 
 @pytest.fixture(scope="session")
@@ -2987,3 +2934,8 @@ def nmstate_namespace(admin_client):
     nmstate_ns = Namespace(name="openshift-nmstate")
     assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
     return nmstate_ns
+
+
+@pytest.fixture()
+def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
+    return ipv6_supported_cluster and not ipv4_supported_cluster
