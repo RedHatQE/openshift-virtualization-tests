@@ -17,9 +17,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.special_infra
 
 
-@pytest.mark.usefixtures(
-    "skip_insufficient_sriov_workers",
-)
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4
@@ -102,7 +99,6 @@ class TestSriovLiveMigration:
     @pytest.mark.polarion("CNV-6455")
     def test_sriov_migration(
         self,
-        skip_insufficient_sriov_workers,
         sriov_network,
         sriov_vm_migrate,
         sriov_vm2,
@@ -116,7 +112,6 @@ class TestSriovLiveMigration:
         )
 
 
-@pytest.mark.usefixtures("skip_if_no_allocatable_1gi_huge_pages_in_sriov_workers")
 @pytest.mark.sno
 class TestSriovDpdk:
     @pytest.mark.polarion("CNV-7887")
