@@ -642,6 +642,8 @@ INFO_STR = "info"
 KUBEVIRT_HYPERCONVERGED_OPERATOR_HEALTH_STATUS = "kubevirt_hyperconverged_operator_health_status"
 WARNING_STR = "warning"
 NONE_STRING = "none"
+ACCESS_MODE = "access_mode"
+VOLUME_MODE = "volume_mode"
 OPERATOR_HEALTH_IMPACT_VALUES = {
     CRITICAL_STR: "2",
     WARNING_STR: "1",

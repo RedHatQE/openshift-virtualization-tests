@@ -321,9 +321,15 @@ Available storage classes can be found in `global_config.py` under `storage_clas
 Example:
 
 ```bash
---storage-class-matrix=rook-ceph-block
---storage-class-matrix=rook-ceph-block,nfs
+--storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization
 ```
+To hostpath-csi-pvc-block and hostpath-csi-basic can be added to global config's storage_class_matrix, via commandline:
+```bash
+--storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization,hostpath-csi-basic,hostpath-csi-pvc-block
+--storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization,hostpath-csi-basic
+```
+
+Note: hostpath-csi-pvc-block and hostpath-csi-basic are not expected to be deployed in the same cluster with lvms-vg1.
 
 ### Using matrix fixtures
 
