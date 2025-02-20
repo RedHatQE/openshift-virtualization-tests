@@ -13,7 +13,6 @@ def run_must_gather(
     flag_names: str = "",
     timeout: str = f"{TIMEOUT_15MIN}s",
     since: str | None = None,
-    run_command_timeout: int = TIMEOUT_20MIN,
 ) -> str:
     """
     Run must gather command with an option to create target directory.
@@ -30,7 +29,6 @@ def run_must_gather(
             must-gather. However, flag_names can not be passed without script_name
         since (str, optional): since when the data should be collected. format is: '(+|-)[0-9]+(s|m|h|d)'
         timeout (str, optional): runs the debug pods for specified duration
-        run_command_timeout(str, optional): timeout value for run_command call
 
     Returns:
         str: command output
@@ -50,7 +48,7 @@ def run_must_gather(
     if flag_names:
         flag_string = "".join([f" --{flag_name}" for flag_name in flag_names.split(",")])
         base_command += f" {flag_string}"
-    return run_command(command=shlex.split(base_command), check=False, timeout=run_command_timeout)[1]
+    return run_command(command=shlex.split(base_command), check=False, timeout=TIMEOUT_20MIN)[1]
 
 
 def get_must_gather_output_file(path):
