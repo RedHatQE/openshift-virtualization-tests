@@ -131,7 +131,7 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.special_infra
 def test_vm_windows_oom(
     skip_if_workers_vms,
     vm_with_memory_load,

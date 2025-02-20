@@ -182,7 +182,8 @@ class TestLatestRHEL:
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster", "golden_image_data_volume_scope_class")
+@pytest.mark.usefixtures("golden_image_data_volume_scope_class")
+@pytest.mark.special_infra
 class TestLatestWindows:
     """
     Test networkInterfaceMultiqueue on latest Windows with different cpu core/socket/thread combinations.

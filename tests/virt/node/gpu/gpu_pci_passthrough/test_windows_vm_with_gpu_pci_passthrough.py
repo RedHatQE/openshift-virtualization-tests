@@ -19,8 +19,8 @@ from utilities.virt import get_windows_os_dict
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
     pytest.mark.usefixtures(
-        "skip_on_psi_cluster",
         "fail_if_device_unbound_to_vfiopci_driver",
         "hco_cr_with_permitted_hostdevices",
     ),

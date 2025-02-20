@@ -36,8 +36,9 @@ def test_cx1_instancetype_profile(skip_if_no_huge_pages, unprivileged_client, na
 
 
 @pytest.mark.tier3
+@pytest.mark.special_infra
 @pytest.mark.polarion("CNV-10400")
-def test_gn1_instancetype_profile(skip_if_no_gpu_node, unprivileged_client, namespace):
+def test_gn1_instancetype_profile(unprivileged_client, namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-gn1",

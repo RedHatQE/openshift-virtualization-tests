@@ -27,9 +27,3 @@ def vm_cpu_flags(nodes_cpu_virt_extension):
         if nodes_cpu_virt_extension
         else None
     )
-
-
-@pytest.fixture(scope="session")
-def skip_on_psi_cluster(is_psi_cluster):
-    if is_psi_cluster:
-        pytest.skip("This test should be skipped on a PSI cluster")

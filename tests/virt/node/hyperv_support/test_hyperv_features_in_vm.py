@@ -81,7 +81,7 @@ def skip_if_no_evmcs_support(schedulable_nodes):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.special_infra
 class TestWindowsHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",

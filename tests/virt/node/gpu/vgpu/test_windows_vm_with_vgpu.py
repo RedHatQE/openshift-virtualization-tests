@@ -26,8 +26,8 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
     pytest.mark.usefixtures(
-        "skip_on_psi_cluster",
         "non_existent_mdev_bus_nodes",
     ),
 ]
