@@ -63,7 +63,6 @@ class TestJumboPodNetworkAndSecondary:
     @pytest.mark.polarion("CNV-9663")
     def test_jumbo_traffic_over_pod_network_while_secondary_traffic_flows(
         self,
-        skip_if_no_multinic_nodes,
         running_vmd_jumbo_primary_interface_and_secondary_interface,
         running_vme_jumbo_primary_interface_and_secondary_interface,
         cluster_network_mtu,

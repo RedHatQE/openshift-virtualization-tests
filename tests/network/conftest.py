@@ -4,6 +4,8 @@
 Pytest conftest file for CNV network tests
 """
 
+import logging
+
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
@@ -22,22 +24,10 @@ from utilities.constants import (
     OVS_BRIDGE,
     VIRT_HANDLER,
 )
-from utilities.infra import ExecCommandOnPod, get_deployment_by_name, get_node_selector_dict
+from utilities.infra import ExecCommandOnPod, exit_pytest_execution, get_deployment_by_name, get_node_selector_dict
 from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
 
-
-@pytest.fixture(scope="session")
-def bond_supported(hosts_common_available_ports):
-    """
-    Check if setup support BOND (have 2 or more NICs up)
-    """
-    return len(hosts_common_available_ports) >= 2
-
-
-@pytest.fixture(scope="session")
-def skip_no_bond_support(bond_supported):
-    if not bond_supported:
-        pytest.skip("No BOND support")
+LOGGER = logging.getLogger(__name__)
 
 
 def get_index_number():
@@ -230,3 +220,21 @@ def cnao_deployment(hco_namespace):
 @pytest.fixture(scope="session")
 def ovn_kubernetes_cluster(admin_client):
     return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def network_sanity(hosts_common_available_ports, junitxml_plugin):
+    """
+    Perform verification that the cluster is a multi-nic one otherwise exit run
+    """
+    # set a non-zero return code to indicate failure of network sanity
+    network_sanity_failure_return_code = 91
+    LOGGER.info("Verify cluster running network tests is a multi-nic one")
+    if len(hosts_common_available_ports) <= 1:
+        exit_pytest_execution(
+            filename="network_cluster_sanity_failure.txt",
+            return_code=network_sanity_failure_return_code,
+            message=f"Cluster is not a multinic cluster, with {hosts_common_available_ports} common available ports",
+            junitxml_property=junitxml_plugin,
+        )
+    LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")

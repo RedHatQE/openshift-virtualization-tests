@@ -629,20 +629,6 @@ def nodes_available_nics(nodes_active_nics):
     return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
 
 
-@pytest.fixture(scope="session")
-def multi_nics_nodes(hosts_common_available_ports):
-    """
-    Check if nodes has any available NICs
-    """
-    return len(hosts_common_available_ports) > 1
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_multinic_nodes(multi_nics_nodes):
-    if not multi_nics_nodes:
-        pytest.skip("Only run on multi NICs node")
-
-
 @pytest.fixture(scope="module")
 def namespace(request, admin_client, unprivileged_client):
     """
@@ -1079,7 +1065,7 @@ def sriov_workers(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def vlan_base_iface(skip_if_no_multinic_nodes, worker_node1, nodes_available_nics):
+def vlan_base_iface(worker_node1, nodes_available_nics):
     # Select the last NIC from the list as a way to ensure that the selected NIC
     # is not already used (e.g. as a bond's port).
     return nodes_available_nics[worker_node1.name][-1]
@@ -1762,7 +1748,6 @@ def term_handler_scope_session():
 
 @pytest.fixture(scope="session")
 def upgrade_bridge_on_all_nodes(
-    skip_if_no_multinic_nodes,
     label_schedulable_nodes,
     hosts_common_available_ports,
 ):

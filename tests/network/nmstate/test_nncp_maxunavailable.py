@@ -105,7 +105,6 @@ def maxunavailable_input_for_bridge_creation(request, hosts_common_available_por
     indirect=["maxunavailable_input_for_bridge_creation"],
 )
 def test_create_policy_get_status(
-    skip_if_no_multinic_nodes,
     schedulable_nodes,
     label_max_unavailable_nodes,
     maxunavailable_input_for_bridge_creation,

@@ -65,7 +65,6 @@ def http_port_accessible(vm, server_ip, server_port):
 
 @pytest.fixture(scope="module")
 def bridge_worker_1(
-    skip_if_no_multinic_nodes,
     worker_node1,
     nodes_available_nics,
 ):
@@ -81,7 +80,6 @@ def bridge_worker_1(
 
 @pytest.fixture(scope="module")
 def bridge_worker_2(
-    skip_if_no_multinic_nodes,
     worker_node2,
     nodes_available_nics,
     bridge_worker_1,

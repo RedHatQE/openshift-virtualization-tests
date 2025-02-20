@@ -29,7 +29,6 @@ from utilities.network import (
 from utilities.virt import migrate_vm_and_verify, running_vm
 
 pytestmark = pytest.mark.usefixtures(
-    "skip_if_no_multinic_nodes",
     "label_schedulable_nodes",
 )
 
