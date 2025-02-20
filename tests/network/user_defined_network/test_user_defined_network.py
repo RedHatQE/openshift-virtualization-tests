@@ -17,6 +17,7 @@ from utilities.virt import migrate_vm_and_verify
 
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
+SUCCESS_STATUS = "NetworkAllocationSucceeded"
 
 
 def udn_vm(namespace_name, name, template_labels=None):
@@ -51,7 +52,10 @@ def namespaced_layer2_user_defined_network(udn_namespace):
         subnets=["10.10.0.0/24"],
         ipam_lifecycle="Persistent",
     ) as udn:
-        udn.wait_for_network_ready()
+        udn.wait_for_condition(
+            condition=SUCCESS_STATUS,
+            status=udn.Condition.Status.TRUE,
+        )
         yield udn
 
 
