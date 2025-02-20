@@ -8,6 +8,11 @@ When running Windows tests, the cluster should have at least 16GiB RAM (XL deplo
 and 80G volume size (default deployment configuration).
 
 Upgrade tests must be run against a large deployment(24GiB RAM, 250GB volume size)
+Upgrade network tests can't be run against a non-multi-nic cluster. To run upgrade against
+such clusters, we must ignore network component
+```bash
+--ignore=tests/network/
+```
 
 ## Prerequirements
 

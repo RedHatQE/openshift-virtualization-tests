@@ -154,7 +154,7 @@ def framework_resources(
 
 
 @pytest.fixture(scope="module")
-def checkup_linux_bridge_device(skip_if_no_multinic_nodes, nodes_available_nics, label_checkup_nodes):
+def checkup_linux_bridge_device(nodes_available_nics, label_checkup_nodes):
     bridge_name = "checkup-br"
     with network_device(
         interface_type=LINUX_BRIDGE,
