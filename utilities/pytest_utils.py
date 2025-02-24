@@ -8,7 +8,6 @@ import socket
 import sys
 
 from ocp_resources.config_map import ConfigMap
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
@@ -18,6 +17,7 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
+    HPP_VOLUME_MODE_ACCESS_MODE,
     POD_SECURITY_NAMESPACE_LABELS,
     TIMEOUT_2MIN,
     StorageClassNames,
@@ -25,11 +25,6 @@ from utilities.constants import (
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
 from utilities.storage import HOSTPATH_CSI, HppCsiStorageClass
-
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    "volume_mode": DataVolume.VolumeMode.FILE,
-    "access_mode": DataVolume.AccessMode.RWO,
-}
 
 HPP_STORAGE_CLASSES = {
     HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE,

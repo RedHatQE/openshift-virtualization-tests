@@ -5,6 +5,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
@@ -787,3 +788,9 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
+FILESYSTEM = DataVolume.VolumeMode.FILE
+RWO = DataVolume.AccessMode.RWO
+HPP_VOLUME_MODE_ACCESS_MODE = {
+    VOLUME_MODE: FILESYSTEM,
+    ACCESS_MODE: RWO,
+}

@@ -1,25 +1,18 @@
 from typing import Any
 
 import pytest_testconfig
-from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import ACCESS_MODE, ALL_CNV_DAEMONSETS, ALL_CNV_DEPLOYMENTS, ALL_CNV_PODS, VOLUME_MODE
+from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DEPLOYMENTS, ALL_CNV_PODS, HPP_VOLUME_MODE_ACCESS_MODE
 from utilities.storage import HppCsiStorageClass
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
 
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_pod_matrix = ALL_CNV_PODS
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
-}
 
 storage_class_matrix = [
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE},
