@@ -11,7 +11,7 @@ IMAGE_REGISTRY ?= "quay.io"
 REGISTRY_NAMESPACE ?= "openshift-cnv"
 OPERATOR_IMAGE_NAME="openshift-virtualization-tests-github"
 # Need to change when main point to new version of openshift-virtualization-tests
-IMAGE_TAG ?= "latest"
+IMAGE_TAG ?= "cnv-4.18"
 
 FULL_OPERATOR_IMAGE ?= "$(IMAGE_REGISTRY)/$(REGISTRY_NAMESPACE)/$(OPERATOR_IMAGE_NAME):$(IMAGE_TAG)"
 UV_BIN = uv
