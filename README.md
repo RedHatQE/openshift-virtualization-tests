@@ -323,7 +323,7 @@ Example:
 ```bash
 --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization
 ```
-To hostpath-csi-pvc-block and hostpath-csi-basic can be added to global config's storage_class_matrix, via command-line:
+Two storage classes hostpath-csi-pvc-block and hostpath-csi-basic can be added to global config's storage_class_matrix, via command-line:
 ```bash
 --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization,hostpath-csi-basic,hostpath-csi-pvc-block
 --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization,hostpath-csi-basic
