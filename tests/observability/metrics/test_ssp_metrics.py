@@ -7,7 +7,7 @@ from tests.observability.metrics.utils import (
     validate_metric_value_with_round_down,
     validate_metric_value_within_range,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     SSP_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,

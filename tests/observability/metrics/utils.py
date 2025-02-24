@@ -27,7 +27,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
     METRIC_SUM_QUERY,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,

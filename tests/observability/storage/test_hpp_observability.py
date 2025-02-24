@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     HOSTPATH_PROVISIONER_OPERATOR,
     TIMEOUT_2MIN,

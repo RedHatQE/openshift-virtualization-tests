@@ -19,6 +19,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
+from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -28,9 +29,11 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
+    TIMEOUT_4MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
+    TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     Images,
 )
@@ -42,6 +45,7 @@ from utilities.infra import (
     get_artifactory_secret,
     get_http_image_url,
 )
+from utilities.monitoring import get_metrics_value
 from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
@@ -605,3 +609,26 @@ def create_cirros_vm(
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+def validate_metrics_value(
+    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    try:
+        sample = None
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
+                if sample == expected_value:
+                    LOGGER.info("Metrics value matches the expected value!")
+                    return
+    except TimeoutExpiredError:
+        LOGGER.info(f"Metrics value: {sample}, expected: {expected_value}")
+        raise
