@@ -32,7 +32,6 @@ from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
     BREW_REGISTERY_SOURCE,
     DEFAULT_RESOURCE_CONDITIONS,
-    FILTER_BY_OS_OPTION,
     ICSP_FILE,
     IDMS_FILE,
     TIMEOUT_5MIN,
@@ -46,22 +45,6 @@ from utilities.constants import (
 from utilities.data_collector import collect_ocp_must_gather
 
 LOGGER = logging.getLogger(__name__)
-
-
-def create_folder_and_mirror_file(path_factory, operator_name, image, pull_secret, is_idms_file, cnv_version=None):
-    temp_folder_path = path_factory.mktemp(f"{operator_name}-folder")
-    folder_name = f"{temp_folder_path}/{operator_name}-manifest"
-    mirror_cmd = create_icsp_idms_command(
-        image=image,
-        source_url=BREW_REGISTERY_SOURCE,
-        folder_name=folder_name,
-        pull_secret=pull_secret,
-        filter_options=f"--index-{FILTER_BY_OS_OPTION}",
-    )
-
-    return generate_icsp_idms_file(
-        folder_name=folder_name, command=mirror_cmd, is_idms_file=is_idms_file, cnv_version=cnv_version
-    )
 
 
 def create_icsp_idms_command(image, source_url, folder_name, pull_secret=None, filter_options=""):
@@ -730,9 +713,10 @@ def get_generated_icsp_idms(
     pull_secret_directory: str,
     is_idms_cluster: bool,
     cnv_version: str | None = None,
+    filter_options: str = "",
 ) -> str:
     pull_secret = None
-    if BREW_REGISTERY_SOURCE in image_url:
+    if image_url.startswith(tuple([BREW_REGISTERY_SOURCE, "quay.io"])):
         registry_source = BREW_REGISTERY_SOURCE
         pull_secret = generated_pulled_secret
     cnv_mirror_cmd = create_icsp_idms_command(
@@ -740,6 +724,7 @@ def get_generated_icsp_idms(
         source_url=registry_source,
         folder_name=pull_secret_directory,
         pull_secret=pull_secret,
+        filter_options=filter_options,
     )
     icsp_file_path = generate_icsp_idms_file(
         folder_name=pull_secret_directory,

@@ -26,7 +26,7 @@ from tests.virt.node.descheduler.utils import (
     wait_vmi_failover,
 )
 from tests.virt.utils import get_match_expressions_dict
-from utilities.constants import TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
+from utilities.constants import FILTER_BY_OS_OPTION, TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
     create_ns,
@@ -34,11 +34,11 @@ from utilities.infra import (
 )
 from utilities.operator import (
     create_catalog_source,
-    create_folder_and_mirror_file,
     create_icsp_idms_from_file,
     create_operator_group,
     create_subscription,
     delete_existing_icsp_idms,
+    get_generated_icsp_idms,
     get_install_plan_from_subscription,
     wait_for_catalogsource_ready,
     wait_for_mcp_updated_condition_true,
@@ -106,15 +106,15 @@ def created_descheduler_subscription(
 
 @pytest.fixture(scope="module")
 def generated_descheduler_icsp_idms(
-    tmp_path_factory, generated_pulled_secret, openshift_current_version, ocp_qe_art_image_url, is_idms_cluster
+    pull_secret_directory, generated_pulled_secret, openshift_current_version, ocp_qe_art_image_url, is_idms_cluster
 ):
-    return create_folder_and_mirror_file(
-        path_factory=tmp_path_factory,
-        operator_name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        image=ocp_qe_art_image_url,
-        pull_secret=generated_pulled_secret,
-        is_idms_file=is_idms_cluster,
-        cnv_version=openshift_current_version,
+    return get_generated_icsp_idms(
+        image_url=ocp_qe_art_image_url,
+        registry_source="manifest",
+        generated_pulled_secret=generated_pulled_secret,
+        pull_secret_directory=pull_secret_directory,
+        is_idms_cluster=is_idms_cluster,
+        filter_options=f"--index-{FILTER_BY_OS_OPTION}",
     )
 
 
