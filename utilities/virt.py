@@ -1033,7 +1033,7 @@ class VirtualMachineForTests(VirtualMachine):
         self.password = self.password or self.login_params["password"]
 
         LOGGER.info(f"SSH command: ssh -o 'ProxyCommand={self.virtctl_port_forward_cmd}' {self.username}@{self.name}")
-        host = Host(hostname=self.name)
+        host = Host(hostname=f"{self.name}/{self.namespace}")
         # For SSH using a key, the public key needs to reside on the server.
         # As the tests use a given set of credentials, this cannot be done in Windows/Cirros.
         if self.os_flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
