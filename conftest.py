@@ -734,5 +734,10 @@ def pytest_exception_interact(node, call, report):
                     since_time=since_time,
                     target_dir=os.path.join(get_data_collector_dir(), "pytest_exception_interact"),
                 )
+            except SystemExit as sys_exit:
+                LOGGER.warning(
+                    f"Failed to collect logs due to timeout in collecting must-gather: {test_name}."
+                    f"Error: {sys_exit} {traceback.format_exc()}"
+                )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
