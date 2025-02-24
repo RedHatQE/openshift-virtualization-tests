@@ -125,6 +125,17 @@ def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
         yield vmim
 
 
+@pytest.fixture(scope="class")
+def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
 @pytest.fixture()
 def vm_with_node_selector(namespace, worker_node1):
     name = "vm-with-node-selector"
@@ -218,6 +229,8 @@ class TestMigrationMetrics:
             metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
         )
 
+
+class TestKubevirtVmiMigrationMetrics:
     @pytest.mark.parametrize(
         "query",
         [
@@ -239,16 +252,17 @@ class TestMigrationMetrics:
             ),
         ],
     )
-    def test_kubevirt_vmi_migration_data_processed_bytes(
+    def test_kubevirt_vmi_migration_metrics(
         self,
         prometheus,
         namespace,
         admin_client,
-        migration_policy_with_bandwidth,
+        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
-        vm_migration_metrics_vmim,
+        vm_migration_metrics_vmim_scope_class,
         query,
     ):
         wait_for_non_empty_metrics_value(
-            prometheus=prometheus, metric_name=query.format(vm_name=vm_for_migration_metrics_test.name)
+            prometheus=prometheus,
+            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[5m])",
         )
