@@ -3,7 +3,7 @@ import shlex
 
 from pyhelper_utils.shell import run_command
 
-from utilities.constants import TIMEOUT_15MIN
+from utilities.constants import TIMEOUT_15MIN, TIMEOUT_20MIN
 
 
 def run_must_gather(
@@ -48,7 +48,7 @@ def run_must_gather(
     if flag_names:
         flag_string = "".join([f" --{flag_name}" for flag_name in flag_names.split(",")])
         base_command += f" {flag_string}"
-    return run_command(command=shlex.split(base_command), check=False, timeout=60)[1]
+    return run_command(command=shlex.split(base_command), check=False, timeout=TIMEOUT_20MIN)[1]
 
 
 def get_must_gather_output_file(path):
