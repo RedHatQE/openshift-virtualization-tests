@@ -4,7 +4,8 @@
     "enabled": true
   },
   "baseBranches": [
-    "main"
+    "main",
+    "cnv-4.18"
   ],
   "recreateWhen": "never",
   "packageRules": [
@@ -52,7 +53,7 @@
     },
     {
       "matchDepPatterns": ["timeout-sampler"],
-      "matchBaseBranches": ["main"],
+      "matchBaseBranches": ["main", "cnv-4.18"],
       "groupName": "secondary dependencies"
     },
     {
