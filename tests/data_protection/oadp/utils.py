@@ -175,10 +175,10 @@ def create_rhel_vm(
 
 def check_file_in_vm(vm):
     with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(LS_COMMAND)
-        vm_console.expect(FILE_NAME_FOR_BACKUP, timeout=TIMEOUT_20SEC)
-        vm_console.sendline(f"cat {FILE_NAME_FOR_BACKUP}")
-        vm_console.expect(TEXT_TO_TEST, timeout=TIMEOUT_20SEC)
+        vm_console.expecter.sendline(LS_COMMAND)
+        vm_console.expecter.expect(FILE_NAME_FOR_BACKUP, timeout=TIMEOUT_20SEC)
+        vm_console.expecter.sendline(f"cat {FILE_NAME_FOR_BACKUP}")
+        vm_console.expecter.expect(TEXT_TO_TEST, timeout=TIMEOUT_20SEC)
 
 
 def is_storage_class_support_volume_mode(storage_class_name, requested_volume_mode):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 from dataclasses import asdict
 from typing import Any
@@ -17,7 +15,8 @@ from libs.vm.spec import (
     Volume,
 )
 from utilities import infra
-from utilities.virt import get_oc_image_info, vm_console_run_commands
+from utilities.console import Console
+from utilities.virt import get_oc_image_info
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -37,7 +36,14 @@ class BaseVirtualMachine(VirtualMachine):
     ):
         self._name = self._new_unique_name(prefix=name)
         self._spec = spec
-        self._os_distribution = os_distribution
+
+        login_params = py_config["os_login_param"][os_distribution]
+        self._console = Console(
+            vm=self,
+            username=login_params["username"],
+            password=login_params["password"],
+        )  # type: ignore[no-untyped-call]
+
         vm_spec = asdict(obj=spec, dict_factory=self._filter_out_none_values)
         super().__init__(
             namespace=namespace,
@@ -56,22 +62,18 @@ class BaseVirtualMachine(VirtualMachine):
     def _filter_out_none_values(data: list[tuple[str, Any]]) -> dict[str, Any]:
         return {key: val for (key, val) in data if val is not None}
 
-    @property
-    def login_params(self) -> dict[str, str]:
-        return py_config["os_login_param"][self._os_distribution]
-
     def console(
         self,
         commands: list[str],
         timeout: int,
     ) -> dict[str, list[str]] | None:
-        return vm_console_run_commands(
-            vm=self,
-            commands=commands,
-            timeout=timeout,
-            verify_commands_output=True,
-            command_output=True,
-        )
+        with self._console as vmc:
+            return vmc.run_commands(
+                commands=commands,
+                timeout=timeout,
+                verify_commands_output=True,
+                command_output=True,
+            )
 
 
 def container_image(base_image: str) -> str:
