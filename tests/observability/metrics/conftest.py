@@ -53,8 +53,7 @@ from tests.observability.metrics.utils import (
     wait_for_no_metrics_value,
     wait_for_non_empty_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
-from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
+from tests.utils import create_cirros_vm, create_vms, validate_metrics_value, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,

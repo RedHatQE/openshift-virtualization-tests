@@ -4,42 +4,16 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_utilities.monitoring import Prometheus
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutSampler
 
 from tests.observability.constants import SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED
 from utilities.constants import (
     TIMEOUT_2MIN,
-    TIMEOUT_4MIN,
-    TIMEOUT_15SEC,
 )
 from utilities.infra import get_pod_by_name_prefix
-from utilities.monitoring import get_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 ALLOW_ALERTS_ON_HEALTHY_CLUSTER_LIST = [SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED]
-
-
-def validate_metrics_value(
-    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    try:
-        sample = None
-        for sample in samples:
-            if sample:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
-                if sample == expected_value:
-                    LOGGER.info("Metrics value matches the expected value!")
-                    return
-    except TimeoutExpiredError:
-        LOGGER.info(f"Metrics value: {sample}, expected: {expected_value}")
-        raise
 
 
 def wait_for_kubemacpool_pods_error_state(dyn_client: DynamicClient, hco_namespace: Namespace) -> None:
