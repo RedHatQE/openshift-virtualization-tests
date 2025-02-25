@@ -1133,6 +1133,7 @@ def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefin
         LOGGER.error(f"Node {node.hostname} is not marked by {bridge_nad.bridge_name} bridge")
         raise
 
+
 def get_nncp_configured_last_transition_time(nncp_status_condition):
     for condition in nncp_status_condition:
         if (
