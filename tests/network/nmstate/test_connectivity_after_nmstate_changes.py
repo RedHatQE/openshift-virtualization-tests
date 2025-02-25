@@ -20,6 +20,8 @@ from utilities.infra import get_node_selector_dict, get_pod_by_name_prefix, name
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
+    get_nncp_configured_last_transition_time,
+    get_nncp_with_different_transition_times,
     get_vmi_ip_v4_by_name,
     is_destination_pingable_from_vm,
     network_device,
@@ -229,6 +231,9 @@ def modified_nncp(
         interfaces[0]["bridge"]["port"][0]["name"] = nodes_available_nics[worker_node.name][
             -2
         ]  # NNCP was created with nodes_available_nics[-1]
+        initial_transition_time = get_nncp_configured_last_transition_time(
+            nncp_status_condition=nncp.instance.status.conditions
+        )
         ResourceEditor(
             patches={
                 nncp: {
@@ -236,6 +241,7 @@ def modified_nncp(
                 },
             }
         ).update()
+        get_nncp_with_different_transition_times(nncp=nncp, initial_transition_time=initial_transition_time)
         nncp.wait_for_status_success()
 
 
