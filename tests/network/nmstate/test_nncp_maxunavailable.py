@@ -9,7 +9,11 @@ from timeout_sampler import TimeoutSampler
 
 from utilities.constants import TIMEOUT_30SEC
 from utilities.infra import label_nodes
-from utilities.network import LinuxBridgeNodeNetworkConfigurationPolicy
+from utilities.network import (
+    LinuxBridgeNodeNetworkConfigurationPolicy,
+    get_nncp_configured_last_transition_time,
+    get_nncp_with_different_transition_times,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -67,6 +71,7 @@ def maxunavailable_input_for_bridge_creation(request, hosts_common_available_por
         max_unavailable=request.param,
         node_selector_labels=MAXUNAVAILABLE_NODES_LABEL,
     )
+
     yield nncp_policy
     # we need to wait for final status because policy can't be deleted until it reaches a final state.
     # Webhook returns 403 forbidden if abort/delete operation is performed.
@@ -111,6 +116,13 @@ def test_create_policy_get_status(
     expected_state,
 ):
     maxunavailable_input_for_bridge_creation.create()
+    initial_transition_time = get_nncp_configured_last_transition_time(
+        nncp_status_condition=maxunavailable_input_for_bridge_creation.instance.status.conditions
+    )
+    if initial_transition_time:
+        get_nncp_with_different_transition_times(
+            nncp=maxunavailable_input_for_bridge_creation, initial_transition_time=initial_transition_time
+        )
     actual_state = enable_threading_get_intermediate_nnce_nodes(
         policy=maxunavailable_input_for_bridge_creation,
         workers=schedulable_nodes,
