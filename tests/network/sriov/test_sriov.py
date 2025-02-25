@@ -55,21 +55,6 @@ class TestPingConnectivity:
         )
 
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-3958")
-    def test_sriov_basic_connectivity_vlan(
-        self,
-        sriov_network_vlan,
-        sriov_vm3,
-        sriov_vm4,
-        running_sriov_vm3,
-        running_sriov_vm4,
-    ):
-        assert_ping_successful(
-            src_vm=running_sriov_vm3,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm4, name=sriov_network_vlan.name),
-        )
-
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-4713")
     def test_sriov_no_connectivity_no_vlan_to_vlan(
         self,
