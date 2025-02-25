@@ -10,7 +10,6 @@ from contextlib import contextmanager
 
 import bitmath
 import pytest
-from kubernetes.client import ApiException
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
@@ -18,8 +17,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import create_cirros_dv
 from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_4MIN, Images
+from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import (
-    ErrorMsg,
     add_dv_to_vm,
     create_dv,
     is_snapshot_supported_by_sc,
@@ -32,8 +31,13 @@ SMALLEST_POSSIBLE_EXPAND = "1Gi"
 STORED_FILENAME = "random_data_file"
 
 
+def convert_gib_to_byte(size):
+    return int(size[:-2]) * 1024**3
+
+
+@contextmanager
 def clone_dv(dv, size):
-    return create_dv(
+    with create_dv(
         source="pvc",
         dv_name=f"{dv.name}-target",
         namespace=dv.namespace,
@@ -41,7 +45,8 @@ def clone_dv(dv, size):
         storage_class=dv.storage_class,
         volume_mode=dv.volume_mode,
         source_pvc=dv.name,
-    )
+    ) as dv:
+        yield dv
 
 
 def cksum_file(vm, filename, create=False):
@@ -286,15 +291,17 @@ def test_disk_expand_then_clone_fail(
     cirros_vm_after_expand,
 ):
     LOGGER.info("Trying to clone DV with original size - should fail at webhook")
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.LARGER_PVC_REQUIRED_CLONE,
-    ):
-        with clone_dv(
-            dv=cirros_dv_for_online_resize,
-            size=Images.Cirros.DEFAULT_DV_SIZE,
-        ):
-            return
+    with clone_dv(
+        dv=cirros_dv_for_online_resize,
+        size=Images.Cirros.DEFAULT_DV_SIZE,
+    ) as dv:
+        wait_for_condition_message_value(
+            resource=dv,
+            expected_message=f"The clone doesn't meet the validation requirements: "
+            f"target resources requests storage size is smaller than "
+            f"the source {convert_gib_to_byte(size=Images.Cirros.DEFAULT_DV_SIZE)}"
+            f" {convert_gib_to_byte(size=cirros_dv_for_online_resize.pvc.instance.status.capacity.storage)}",
+        )
 
 
 @pytest.mark.gating
