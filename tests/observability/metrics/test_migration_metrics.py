@@ -9,6 +9,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
+    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
@@ -110,7 +111,7 @@ def vm_for_migration_metrics_test(namespace):
         body=fedora_vm_body(name=name),
         additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, check_ssh_connectivity=False)
         yield vm
 
 
@@ -249,6 +250,10 @@ class TestKubevirtVmiMigrationMetrics:
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
                 marks=(pytest.mark.polarion("CNV-11599")),
+            ),
+            pytest.param(
+                KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
+                marks=(pytest.mark.polarion("CNV-11802")),
             ),
         ],
     )
