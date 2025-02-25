@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+from datetime import datetime
 
 import netaddr
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -1113,3 +1114,34 @@ def verify_dhcpd_activated(vm):
     except TimeoutExpiredError:
         LOGGER.error(f"{dhcpd} status is not '{active}' but rather '{sample}'")
         raise
+
+
+def get_nncp_configured_last_transition_time(nncp_status_condition):
+    for condition in nncp_status_condition:
+        if (
+            condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
+            and condition["status"] == "True"
+            and condition["reason"] == NodeNetworkConfigurationPolicy.Conditions.Reason.SUCCESSFULLY_CONFIGURED
+        ):
+            return condition["lastTransitionTime"]
+
+
+def get_nncp_with_different_transition_times(nncp, initial_transition_time):
+    date_format = "%Y-%m-%dT%H:%M:%SZ"
+    for sample in TimeoutSampler(
+        wait_timeout=60,
+        sleep=5,
+        func=lambda: next(
+            (
+                condition
+                for condition in nncp.instance.get("status", {}).get("conditions", [])
+                if condition
+                and condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
+                and datetime.strptime(condition["lastTransitionTime"], date_format)
+                > datetime.strptime(initial_transition_time, date_format)
+            ),
+            {},
+        ),
+    ):
+        if sample:
+            return
