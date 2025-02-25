@@ -210,8 +210,8 @@ class TestARQSupportMemoryHotplug:
     @pytest.mark.xfail(
         condition=is_jira_open(jira_id="CNV-56865"),
         reason=(
-                "arq memory hotplug might failed from time to time."
-                "Due to that, skip it to keep the t2 gating test always be green until fix the issue."
+            "arq memory hotplug might failed from time to time."
+            "Due to that, skip it to keep the t2 gating test always be green until fix the issue."
         ),
     )
     @pytest.mark.parametrize(
