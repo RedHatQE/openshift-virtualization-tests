@@ -19,6 +19,7 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
+from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
