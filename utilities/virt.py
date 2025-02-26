@@ -1020,7 +1020,7 @@ class VirtualMachineForTests(VirtualMachine):
 
     @property
     def virtctl_port_forward_cmd(self):
-        return f"{VIRTCTL} port-forward --stdio=true {self.name}.{self.namespace} {SSH_PORT_22}"
+        return f"{VIRTCTL} port-forward --stdio=true vm/{self.name}.{self.namespace} {SSH_PORT_22}"
 
     @property
     def login_params(self):
