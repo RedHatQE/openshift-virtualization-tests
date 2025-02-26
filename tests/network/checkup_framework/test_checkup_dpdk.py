@@ -5,7 +5,8 @@ from tests.network.checkup_framework.utils import assert_successful_dpdk_checkup
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [
-    pytest.mark.special_infra,
+    pytest.mark.tier3,
+    pytest.mark.dpdk,
     pytest.mark.usefixtures(
         "patched_align_cpus",
         "patched_runtime_class",
