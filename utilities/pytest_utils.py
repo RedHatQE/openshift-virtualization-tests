@@ -17,11 +17,19 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
+    HPP_VOLUME_MODE_ACCESS_MODE,
     POD_SECURITY_NAMESPACE_LABELS,
     TIMEOUT_2MIN,
+    StorageClassNames,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
+from utilities.storage import HOSTPATH_CSI, HppCsiStorageClass
+
+HPP_STORAGE_CLASSES = {
+    HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE,
+    HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE,
+}
 
 LOGGER = logging.getLogger(__name__)
 
@@ -230,3 +238,28 @@ def get_cnv_version_explorer_url(pytest_config):
         if not version_explorer_url:
             raise MissingEnvironmentVariableError("Please set CNV_VERSION_EXPLORER_URL environment variable")
         return version_explorer_url
+
+
+def update_storage_class_matrix_config(session, pytest_config_matrix):
+    cmdline_storage_class = session.config.getoption(name="storage_class_matrix")
+    matrix_list = pytest_config_matrix
+    matrix_names = [[*sc][0] for sc in pytest_config_matrix]
+    invald_sc = []
+    if cmdline_storage_class:
+        cmdline_storage_class_matrix = cmdline_storage_class.split(",")
+        if HOSTPATH_CSI in cmdline_storage_class and StorageClassNames.TOPOLVM in cmdline_storage_class:
+            raise ValueError(
+                f"{HOSTPATH_CSI} storage classes can't be used with {StorageClassNames.TOPOLVM} "
+                f": {cmdline_storage_class}"
+            )
+        for sc in cmdline_storage_class_matrix:
+            if sc not in matrix_names:
+                if sc in HPP_STORAGE_CLASSES.keys():
+                    matrix_list.append({sc: HPP_STORAGE_CLASSES[sc]})
+                else:
+                    invald_sc.append(sc)
+    assert not invald_sc, (
+        f"Invalid sc requested via --storage-class-matix: {invald_sc}. Valid options: "
+        f"{matrix_names} and {[*HPP_STORAGE_CLASSES]}"
+    )
+    return matrix_list

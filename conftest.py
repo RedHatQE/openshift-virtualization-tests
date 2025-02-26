@@ -17,13 +17,12 @@ import shortuuid
 from _pytest.config import Config
 from kubernetes.dynamic.exceptions import ConflictError
 from ocp_resources.resource import get_client
-from ocp_resources.storage_class import StorageClass
 from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, StorageClassNames
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -46,8 +45,8 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_storage_class_matrix_config,
 )
-from utilities.storage import HppCsiStorageClass
 
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
@@ -616,18 +615,11 @@ def pytest_sessionstart(session):
         log_file=tests_log_file,
         log_level=session.config.getoption("log_cli_level") or logging.INFO,
     )
-    py_config_scs = py_config.get("storage_class_matrix", [])
-
-    # Set py_config["storage_class_matrix"]
-    if not skip_if_pytest_flags_exists(pytest_config=session.config):
-        cluster_storage_classes_names = [sc.name for sc in list(StorageClass.get(dyn_client=get_client()))]
-        # If TOPOLVM storage class is present in the cluster - add it to the matrix
-        # And do not add the HPP storage classes
-        if StorageClassNames.TOPOLVM in cluster_storage_classes_names:
-            py_config_scs.extend(py_config["topolvm_storage_class_matrix"])
-        # If HPP CSI storage class is present - add HPP CSI storage classes
-        elif HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC in cluster_storage_classes_names:
-            py_config_scs.extend(py_config["new_hpp_storage_class_matrix"])
+    # Add HPP-CSI-BASIC/HPP-CSI-PVC-BLOCK to global config's storage_class_matrix, only
+    # if command line option --storage-class-matrix includes them:
+    py_config_scs = update_storage_class_matrix_config(
+        session=session, pytest_config_matrix=py_config.get("storage_class_matrix", [])
+    )
 
     # Save the default storage_class_matrix before it is updated
     # with runtime storage_class_matrix value(s)
@@ -653,7 +645,6 @@ def pytest_sessionstart(session):
                     items_list.append(item)
 
         py_config[key] = items_list
-
     config_default_storage_class(session=session)
     # Set py_config["servers"] and py_config["os_login_param"]
     # Send --tc=server_url:<url> to override servers URL
