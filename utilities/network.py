@@ -1126,11 +1126,11 @@ def get_nncp_configured_last_transition_time(nncp_status_condition):
             return condition["lastTransitionTime"]
 
 
-def get_nncp_with_different_transition_times(nncp, initial_transition_time):
+def wait_for_nncp_with_different_transition_time(nncp, initial_transition_time):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
     for sample in TimeoutSampler(
-        wait_timeout=60,
-        sleep=5,
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
         func=lambda: next(
             (
                 condition

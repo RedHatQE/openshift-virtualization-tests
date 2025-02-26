@@ -12,7 +12,7 @@ from utilities.infra import label_nodes
 from utilities.network import (
     LinuxBridgeNodeNetworkConfigurationPolicy,
     get_nncp_configured_last_transition_time,
-    get_nncp_with_different_transition_times,
+    wait_for_nncp_with_different_transition_time,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -116,11 +116,12 @@ def test_create_policy_get_status(
     expected_state,
 ):
     maxunavailable_input_for_bridge_creation.create()
+    maxunavailable_input_for_bridge_creation.wait_for_conditions()
     initial_transition_time = get_nncp_configured_last_transition_time(
         nncp_status_condition=maxunavailable_input_for_bridge_creation.instance.status.conditions
     )
     if initial_transition_time:
-        get_nncp_with_different_transition_times(
+        wait_for_nncp_with_different_transition_time(
             nncp=maxunavailable_input_for_bridge_creation, initial_transition_time=initial_transition_time
         )
     actual_state = enable_threading_get_intermediate_nnce_nodes(
