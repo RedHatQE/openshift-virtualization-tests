@@ -21,11 +21,11 @@ from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
     get_nncp_configured_last_transition_time,
-    get_nncp_with_different_transition_times,
     get_vmi_ip_v4_by_name,
     is_destination_pingable_from_vm,
     network_device,
     network_nad,
+    wait_for_nncp_with_different_transition_time,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -241,7 +241,7 @@ def modified_nncp(
                 },
             }
         ).update()
-        get_nncp_with_different_transition_times(nncp=nncp, initial_transition_time=initial_transition_time)
+        wait_for_nncp_with_different_transition_time(nncp=nncp, initial_transition_time=initial_transition_time)
         nncp.wait_for_status_success()
 
 

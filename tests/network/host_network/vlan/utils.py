@@ -7,7 +7,7 @@ from utilities.infra import ExecCommandOnPod
 from utilities.network import (
     cloud_init_network_data,
     get_nncp_configured_last_transition_time,
-    get_nncp_with_different_transition_times,
+    wait_for_nncp_with_different_transition_time,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def set_ipv4_dhcp_client(vlan_iface_nncp, enabled, selected_node=None):
                 nncp_status_condition=vlan_iface_nncp.instance.status.conditions
             )
             vlan_iface_nncp.update(resource_dict=resource_dict)
-            get_nncp_with_different_transition_times(
+            wait_for_nncp_with_different_transition_time(
                 nncp=vlan_iface_nncp, initial_transition_time=initial_transition_time
             )
             vlan_iface_nncp.wait_for_status_success()
