@@ -123,16 +123,6 @@ def sriov_workers_node2(sriov_workers):
     return sriov_workers[1]
 
 
-@pytest.fixture(scope="class")
-def skip_insufficient_sriov_workers(sriov_workers):
-    """
-    This function will make sure at least 2 worker nodes has SR-IOV capability
-    else tests will be skip.
-    """
-    if len(sriov_workers) < 2:
-        pytest.skip("Test requires at least 2 SR-IOV worker nodes")
-
-
 @pytest.fixture(scope="session")
 def vlans_list():
     vlans = py_config["vlans"]

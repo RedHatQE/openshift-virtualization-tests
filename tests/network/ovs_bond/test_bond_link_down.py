@@ -9,11 +9,8 @@ import pytest
 import utilities.network
 
 
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-3296")
 def test_connectivity_over_pod_network(
-    skip_when_no_bond,
-    skip_if_workers_bms,
     disconnected_bond_port,
     running_ovs_bond_vma,
     running_ovs_bond_vmb,
