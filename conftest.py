@@ -22,14 +22,13 @@ from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
 from ocp_resources.resource import get_client
-from ocp_resources.storage_class import StorageClass
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, NamespacesNames, StorageClassNames
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
