@@ -4,36 +4,26 @@ import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 
 from utilities.constants import (
+    ACCESS_MODE,
     ALL_CNV_DAEMONSETS_NO_HPP_CSI,
     ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
+    VOLUME_MODE,
     StorageClassNames,
 )
-from utilities.storage import HppCsiStorageClass
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 
 
-ACCESS_MODE = "access_mode"
-VOLUME_MODE = "volume_mode"
-FILESYSTEM = DataVolume.VolumeMode.FILE
 RWO = DataVolume.AccessMode.RWO
 
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_pod_matrix = CNV_PODS_NO_HPP_CSI_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS_NO_HPP_CSI
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
-}
 
-new_hpp_storage_class_matrix = [
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE},
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE},
-]
 
-topolvm_storage_class_matrix = [
+storage_class_matrix = [
     {
         StorageClassNames.TOPOLVM: {
             VOLUME_MODE: DataVolume.VolumeMode.BLOCK,
@@ -43,8 +33,6 @@ topolvm_storage_class_matrix = [
     },
 ]
 
-# Configured in conftest.py - contains either new_hpp_storage_class_matrix or topolvm_storage_class_matrix
-storage_class_matrix: list[dict[str, Any]] = []
 
 for _dir in dir():
     if not config:  # noqa: F821
