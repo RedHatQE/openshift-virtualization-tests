@@ -8,9 +8,11 @@ from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.usefixtures(
-    "enable_multi_network_policy_usage",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enable_multi_network_policy_usage",
+    ),
+]
 
 
 class TestFlatOverlayConnectivity:
@@ -92,7 +94,6 @@ class TestFlatOverlayJumboConnectivity:
     @pytest.mark.polarion("CNV-10162")
     def test_flat_l2_jumbo_frame_connectivity(
         self,
-        skip_when_no_jumbo_frame_support,
         flat_l2_jumbo_frame_packet_size,
         flat_overlay_jumbo_frame_nad,
         vma_jumbo_flat_l2,

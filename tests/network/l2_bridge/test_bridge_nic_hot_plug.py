@@ -28,9 +28,12 @@ from utilities.network import (
 )
 from utilities.virt import migrate_vm_and_verify, running_vm
 
-pytestmark = pytest.mark.usefixtures(
-    "label_schedulable_nodes",
-)
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.usefixtures(
+        "label_schedulable_nodes",
+    ),
+]
 
 HOT_PLUG_STR = "hot-plug"
 TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY = "test_basic_connectivity_of_hot_plugged_interface"
@@ -574,7 +577,6 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     @pytest.mark.polarion("CNV-10135")
     def test_connectivity_of_hot_plugged_jumbo_interface(
         self,
-        skip_when_no_jumbo_frame_support,
         running_vm_for_jumbo_nic_hot_plug,
         network_attachment_definition_for_jumbo_hot_plug,
         hot_plugged_jumbo_interface_with_address,
