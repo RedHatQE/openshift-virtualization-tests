@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = "==3.12.*"
 
 [[package]]
@@ -154,7 +155,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -694,7 +695,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5c/d9/9cc919c3730eff2a5
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "4.18.2"
+version = "11.0.32"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -716,7 +717,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/46/0f/97f0403e1d195b1528fa77f53eed83c65e67ef3a815d1b9e2a86cff4b9b2/openshift_python_wrapper-4.18.2.tar.gz", hash = "sha256:f05cf205e145e5bf6ea15cfb10e4adf9ade2e57b2f7a9bb368e35e0ece4e6746", size = 6654136 }
+sdist = { url = "https://files.pythonhosted.org/packages/76/64/bff4460fab9f1eaa4984c4823904d1d2ae3e72106a9f7012e5096d7e4873/openshift_python_wrapper-11.0.32.tar.gz", hash = "sha256:ddba20bb376dd5d949ed4faeb3d802fd52a36f11bcb10b3fff2ef73f53e8d8e0", size = 6654745 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -802,7 +803,7 @@ requires-dist = [
     { name = "kubernetes", specifier = "~=31.0.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
-    { name = "openshift-python-wrapper", specifier = "~=4.18.0" },
+    { name = "openshift-python-wrapper", specifier = "~=11.0.28" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "podman", specifier = ">=5.2.0" },

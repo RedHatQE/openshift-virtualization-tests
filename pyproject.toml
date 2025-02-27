@@ -71,7 +71,7 @@ dependencies = [
   "timeout-sampler>=1.0.1",
   "urllib3>=2.2.3",
   "xmltodict>=0.14.2",
-  "openshift-python-wrapper~=4.18.0",
+  "openshift-python-wrapper~=11.0.28",
 ]
 
 [tool.hatch.build.targets.wheel]
