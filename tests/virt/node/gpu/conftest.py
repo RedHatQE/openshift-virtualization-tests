@@ -18,17 +18,11 @@ from utilities.virt import vm_instance_from_template
 
 
 @pytest.fixture(scope="session")
-def nodes_with_supported_gpus(skip_if_no_gpu_node, gpu_nodes, workers_utility_pods):
+def nodes_with_supported_gpus(gpu_nodes, workers_utility_pods):
     filtered_gpu_nodes = filter_out_nodes_with_unsupported_gpus(node_list=gpu_nodes, utility_pods=workers_utility_pods)
     if not filtered_gpu_nodes:
         pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
     return filtered_gpu_nodes
-
-
-@pytest.fixture(scope="session")
-def skip_if_only_one_gpu_node(nodes_with_supported_gpus):
-    if len(nodes_with_supported_gpus) < 2:
-        pytest.skip("Only run on a Cluster with at-least two GPU Worker nodes")
 
 
 @pytest.fixture(scope="session")

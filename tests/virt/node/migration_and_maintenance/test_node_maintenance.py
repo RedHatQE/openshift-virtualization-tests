@@ -31,9 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [
-    pytest.mark.post_upgrade,
-]
+pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
@@ -209,9 +207,9 @@ class TestNodeMaintenanceRHEL:
         ),
     ],
     indirect=True,
+    marks=[pytest.mark.special_infra, pytest.mark.high_resource],
 )
 @pytest.mark.usefixtures(
-    "skip_on_psi_cluster",
     "skip_if_no_common_modern_cpu",
     "skip_access_mode_rwo_scope_class",
     "cluster_modern_cpu_model_scope_class",
