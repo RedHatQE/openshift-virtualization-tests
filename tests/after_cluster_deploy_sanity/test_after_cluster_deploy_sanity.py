@@ -169,5 +169,5 @@ def test_csv_health(admin_client, hco_namespace):
 @pytest.mark.cluster_health_check
 def test_common_node_cpu_model(cluster_node_cpus, cluster_common_node_cpu, cluster_common_modern_node_cpu):
     assert cluster_common_node_cpu and cluster_common_modern_node_cpu, (
-        f"This is a heterogeneous cluster: {cluster_node_cpus}"
+        f"This is a heterogeneous cluster with no common cpus: {cluster_node_cpus}"
     )
