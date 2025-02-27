@@ -14,7 +14,6 @@ from utilities.virt import migrate_vm_and_verify
 LOGGER = logging.getLogger(__name__)
 
 
-
 @pytest.mark.special_infra
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
