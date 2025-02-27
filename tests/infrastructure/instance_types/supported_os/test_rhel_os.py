@@ -57,6 +57,7 @@ class TestCommonInstanceTypeRhel:
         )
 
     @pytest.mark.polarion("CNV-11714")
+    @pytest.mark.special_infra
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
         depends=[START_VM_TEST_NAME],

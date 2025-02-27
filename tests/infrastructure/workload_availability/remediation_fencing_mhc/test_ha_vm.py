@@ -108,6 +108,7 @@ def wait_node_restored(node):
     wait_for_node_status(node=node)
 
 
+@pytest.mark.special_infra
 @pytest.mark.parametrize(
     "ha_vm_container_disk",
     [
@@ -130,7 +131,6 @@ def wait_node_restored(node):
     indirect=True,
 )
 def test_ha_vm_container_disk_reboot(
-    skip_if_workers_vms,
     workers_utility_pods,
     machine_health_check_reboot,
     ha_vm_container_disk,
@@ -141,6 +141,7 @@ def test_ha_vm_container_disk_reboot(
     wait_node_restored(node=orig_node)
 
 
+@pytest.mark.special_infra
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_function, ha_vm_dv_disk",
     [
@@ -166,7 +167,6 @@ def test_ha_vm_container_disk_reboot(
     indirect=True,
 )
 def test_ha_vm_dv_disk_reboot(
-    skip_if_workers_vms,
     workers_utility_pods,
     machine_health_check_reboot,
     ha_vm_dv_disk,

@@ -1373,26 +1373,28 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
 
 
 @pytest.fixture(scope="session")
-def skip_test_if_no_nfs_sc(cluster_storage_classes_names):
+def verify_nfs_sc(cluster_storage_classes_names):
     """
-    Skip test if no NFS storage class available
+    Fail the test if no NFS storage class is available
     """
     if StorageClassNames.NFS not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {StorageClassNames.NFS} storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
+        pytest.fail(
+            f"Test failed: {StorageClassNames.NFS} storage class is not deployed. "
+            f"Available storage classes: {cluster_storage_classes_names}. "
+            f"Ensure the correct NFS storage class is configured before running tests."
         )
 
 
 @pytest.fixture(scope="session")
-def skip_test_if_no_csi_basic_sc(cluster_storage_classes_names):
+def verify_csi_basic_sc(cluster_storage_classes_names):
     """
-    Skip test if no CSI basic storage class available
+    Fail the test if no CSI basic storage class is available
     """
     if HOSTPATH_CSI_BASIC not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {HOSTPATH_CSI_BASIC} basic storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
+        pytest.fail(
+            f"Test failed: {HOSTPATH_CSI_BASIC} basic storage class is not deployed. "
+            f"Available storage classes: {cluster_storage_classes_names}. "
+            f"Ensure the correct CSI storage class is configured before running tests."
         )
 
 
