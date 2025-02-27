@@ -8,12 +8,6 @@ from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
-@pytest.fixture(scope="session")
-def skip_if_no_huge_pages(workers):
-    if not any([worker.instance.status.allocatable["hugepages-2Mi"] == "2Gi" for worker in workers]):
-        pytest.skip("Only run on a Cluster with node that has enough huge pages")
-
-
 @pytest.mark.sno
 @pytest.mark.post_upgrade
 @pytest.mark.gating
@@ -22,9 +16,10 @@ def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 
 
+@pytest.mark.hugepage
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-10387")
-def test_cx1_instancetype_profile(skip_if_no_huge_pages, unprivileged_client, namespace):
+def test_cx1_instancetype_profile(unprivileged_client, namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-cx1",

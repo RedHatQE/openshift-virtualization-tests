@@ -54,7 +54,7 @@ WORKLOAD_NODE_LABEL_NAME = f"{Node.ApiGroup.KUBEVIRT_IO}/workload"
 WORKLOAD_NODE_LABEL_VALUE = "hana"
 
 
-pytestmark = [pytest.mark.usefixtures("skip_if_not_hana_cluster"), pytest.mark.sap_hana]
+pytestmark = [pytest.mark.cpu_manager, pytest.mark.sap_hana]
 
 
 class SAPHANAVirtaulMachine(VirtualMachineForTestsFromTemplate):
@@ -406,12 +406,6 @@ def sap_hana_node(schedulable_nodes):
     ]
     if hana_nodes:
         return hana_nodes[0]
-
-
-@pytest.fixture(scope="class")
-def skip_if_not_hana_cluster(skip_if_no_cpumanager_workers, sap_hana_node):
-    if not sap_hana_node:
-        pytest.skip(f"No node is marked with sap label {WORKLOAD_NODE_LABEL_NAME} = {WORKLOAD_NODE_LABEL_VALUE}")
 
 
 @pytest.fixture(scope="class")
