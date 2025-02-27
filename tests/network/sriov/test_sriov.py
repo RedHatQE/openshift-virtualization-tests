@@ -14,9 +14,8 @@ from utilities.virt import migrate_vm_and_verify
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.special_infra
 
-
+@pytest.mark.special_infra
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4
@@ -94,6 +93,7 @@ class TestPingConnectivity:
         assert restarted_sriov_vm4.vmi.interfaces[1] == vm4_interfaces[1]
 
 
+@pytest.mark.special_infra
 class TestSriovLiveMigration:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-6455")
@@ -113,6 +113,8 @@ class TestSriovLiveMigration:
 
 
 @pytest.mark.sno
+@pytest.mark.tier3
+@pytest.mark.dpdk
 class TestSriovDpdk:
     @pytest.mark.polarion("CNV-7887")
     def test_sriov_dpdk_testpmd(

@@ -100,13 +100,6 @@ def istio_system_namespace(admin_client):
     return Namespace(name=ISTIO_SYSTEM_DEFAULT_NS, client=admin_client).exists
 
 
-@pytest.fixture(scope="session")
-def skip_if_service_mesh_not_installed(istio_system_namespace):
-    # Service mesh not installed if the cluster doesn't have ISTIO-SYSTEM ns
-    if not istio_system_namespace:
-        pytest.skip("Cannot run the test. Service Mesh not installed")
-
-
 @pytest.fixture(scope="module")
 def sriov_workers_node1(sriov_workers):
     """
@@ -190,13 +183,6 @@ def network_overhead(ovn_kubernetes_cluster):
 def cluster_hardware_mtu(network_overhead, cluster_network_mtu):
     # cluster_network_mtu contains the pod network MTU. We should add to it the network overlay to get the hardware MTU.
     return cluster_network_mtu + network_overhead
-
-
-@pytest.fixture(scope="session")
-def skip_when_no_jumbo_frame_support(cluster_network_mtu, network_overhead):
-    # 7950 is the minimal hardware MTU for jumbo frame support we currently have, on PSI clusters.
-    if cluster_network_mtu < (7950 - network_overhead):
-        pytest.skip(f"Cluster network MTU {cluster_network_mtu} not suitable for jumbo traffic.")
 
 
 @pytest.fixture(scope="module")
