@@ -630,6 +630,8 @@ class NamespacesNames:
     DEFAULT = "default"
     NVIDIA_GPU_OPERATOR = "nvidia-gpu-operator"
     MACHINE_API_NAMESPACE = "machine-api-namespace"
+    OPENSHIFT_VIRTUALIZATION_OS_IMAGES = "openshift-virtualization-os-images"
+    WASP = "wasp"
 
 
 # CNV supplemental-templates

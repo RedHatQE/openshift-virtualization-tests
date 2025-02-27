@@ -43,6 +43,7 @@ from utilities.constants import (
     WIN_10,
     WIN_11,
     Images,
+    NamespacesNames,
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
@@ -72,7 +73,7 @@ openshift_apiserver_namespace = "openshift-apiserver"
 sriov_namespace = "openshift-sriov-network-operator"
 marketplace_namespace = "openshift-marketplace"
 machine_api_namespace = "openshift-machine-api"
-golden_images_namespace = "openshift-virtualization-os-images"
+golden_images_namespace = NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
 hco_subscription = ""  # TODO: remove constants/HCO_SUBSCRIPTION and use this instead.
 disconnected_cluster = False
 linux_bridge_cni = "cnv-bridge"
