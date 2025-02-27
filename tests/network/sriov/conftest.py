@@ -384,11 +384,3 @@ def sriov_worker_with_allocatable_1gi_huge_pages(sriov_workers):
     for node in sriov_workers:
         if node.instance.to_dict()["status"]["allocatable"].get(NODE_HUGE_PAGES_1GI_KEY, "").endswith("Gi"):
             return node
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_allocatable_1gi_huge_pages_in_sriov_workers(
-    sriov_worker_with_allocatable_1gi_huge_pages,
-):
-    if not sriov_worker_with_allocatable_1gi_huge_pages:
-        pytest.skip(f"Worker nodes are not configured with {NODE_HUGE_PAGES_1GI_KEY}.")
