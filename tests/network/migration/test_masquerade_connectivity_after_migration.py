@@ -9,12 +9,12 @@ import logging
 import pytest
 from timeout_sampler import TimeoutSampler
 
+from utilities.console import Console
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
-    vm_console_run_commands,
     wait_for_console,
 )
 
@@ -103,8 +103,8 @@ def test_connectivity_after_migration(
     LOGGER.info(f"pinging from migrated {running_vm_for_migration.name} to {running_vm_static.name}")
     static_vm_ip = running_vm_static.vmi.interfaces[0]["ipAddress"]
 
-    vm_console_run_commands(
-        vm=running_vm_for_migration,
-        commands=[f"ping {static_vm_ip} -c 10 -w 10"],
-        timeout=10,
-    )
+    with Console(vm=running_vm_for_migration) as vmc:
+        vmc.run_commands(
+            commands=[f"ping {static_vm_ip} -c 10 -w 10"],
+            timeout=10,
+        )
