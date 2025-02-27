@@ -112,11 +112,6 @@ def create_latency_configmap(
     network_attachment_definition_namespace=None,
     source_node=None,
     target_node=None,
-    traffic_pps=None,
-    dpdk_gen_target_node=None,
-    dpdk_test_target_node=None,
-    dpdk_vmgen_container_diskimage=None,
-    dpdk_vmtest_container_diskimage=None,
 ):
     data = compose_configmap_data(
         timeout=timeout,
@@ -126,11 +121,6 @@ def create_latency_configmap(
         sample_duration_seconds=f"{TIMEOUT_5SEC}",
         source_node=source_node,
         target_node=target_node,
-        traffic_pps=traffic_pps,
-        dpdk_gen_target_node=dpdk_gen_target_node,
-        dpdk_test_target_node=dpdk_test_target_node,
-        dpdk_vmgen_container_diskimage=dpdk_vmgen_container_diskimage,
-        dpdk_vmtest_container_diskimage=dpdk_vmtest_container_diskimage,
     )
     with ConfigMap(namespace=namespace_name, name=configmap_name, data=data) as configmap:
         yield configmap
@@ -144,11 +134,6 @@ def compose_configmap_data(
     network_attachment_definition_namespace=None,
     source_node=None,
     target_node=None,
-    traffic_pps=None,
-    dpdk_gen_target_node=None,
-    dpdk_test_target_node=None,
-    dpdk_vmgen_container_diskimage=None,
-    dpdk_vmtest_container_diskimage=None,
 ):
     """
     Compose a dictionary with the ConfigMap data.
@@ -162,11 +147,6 @@ def compose_configmap_data(
         network_attachment_definition_namespace (str): Namespace name where the NAD was created.
         source_node (str, default=None): Node hostname. Check latency from this node to the target_node.
         target_node (str, default=None): Node hostname. Check latency from source_node to this node.
-        traffic_pps (str, default=None): [DPDK] Traffic Packets per second
-        dpdk_gen_target_node (str, default=None): [DPDK] Node name on which generator vmi will be run.
-        dpdk_test_target_node (str, default=None): [DPDK] Node name on which test vmi will be run.
-        dpdk_vmgen_container_diskimage (str, default=None): [DPDK] Source of trafficGen container image.
-        dpdk_vmtest_container_diskimage (str, default=None): [DPDK] Source of vm under test container image.
 
     Returns:
         dict: Data section of the ConfigMap.
@@ -185,16 +165,47 @@ def compose_configmap_data(
         data_dict["spec.param.sourceNode"] = source_node
     if target_node:
         data_dict["spec.param.targetNode"] = target_node
+
+    return data_dict
+
+
+def dpdk_checkup_config(
+    timeout: str,
+    network_attachment_definition_name: str,
+    traffic_gen_container_diskimage: str,
+    vm_under_test_container_diskimage: str,
+    traffic_gen_target_node: str | None = None,
+    vm_under_test_target_node: str | None = None,
+    traffic_pps: str | None = None,
+) -> dict[str, str]:
+    """
+    Compose a dictionary with the ConfigMap data for the DPDK checkup.
+
+    Args:
+        timeout (str): Timeout to wait for the checkup to finish, in minutes.
+        network_attachment_definition_name (str): NAD name.
+        traffic_gen_container_diskimage (str): Source of trafficGen container image.
+        vm_under_test_container_diskimage (str, default=None): Source of vm under test container image.
+        traffic_gen_target_node (str, default=None): Node name on which generator vmi will be run.
+        vm_under_test_target_node (str, default=None): Node name on which test vmi will be run.
+        traffic_pps (str, default=None): Traffic Packets per second
+
+    Returns:
+        dict: Data section of the DPDK checkup ConfigMap.
+    """
+    data_dict = {
+        "spec.timeout": timeout,
+        "spec.param.networkAttachmentDefinitionName": network_attachment_definition_name,
+        "spec.param.trafficGenContainerDiskImage": traffic_gen_container_diskimage,
+        "spec.param.vmUnderTestContainerDiskImage": vm_under_test_container_diskimage,
+    }
+
+    if traffic_gen_target_node:
+        data_dict["spec.param.trafficGenTargetNodeName"] = traffic_gen_target_node
+    if vm_under_test_target_node:
+        data_dict["spec.param.vmUnderTestTargetNodeName"] = vm_under_test_target_node
     if traffic_pps:
         data_dict["spec.param.trafficGenPacketsPerSecond"] = traffic_pps
-    if dpdk_gen_target_node:
-        data_dict["spec.param.trafficGenTargetNodeName"] = dpdk_gen_target_node
-    if dpdk_test_target_node:
-        data_dict["spec.param.vmUnderTestTargetNodeName"] = dpdk_test_target_node
-    if dpdk_vmgen_container_diskimage:
-        data_dict["spec.param.trafficGenContainerDiskImage"] = dpdk_vmgen_container_diskimage
-    if dpdk_vmtest_container_diskimage:
-        data_dict["spec.param.vmUnderTestContainerDiskImage"] = dpdk_vmtest_container_diskimage
 
     return data_dict
 
