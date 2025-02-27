@@ -32,18 +32,19 @@ class TestUpgradeIUO:
     )
     def test_alerts_fired_during_upgrade(
         self,
-        skip_on_eus_upgrade,
+        is_eus_upgrade,
         prometheus_scope_function,
         fired_alerts_during_upgrade,
     ):
-        LOGGER.info("Verify if any alerts were fired during upgrade")
-        process_alerts_fired_during_upgrade(
-            prometheus=prometheus_scope_function,
-            fired_alerts_during_upgrade=fired_alerts_during_upgrade,
-        )
-        if fired_alerts_during_upgrade:
-            collect_alerts_data()
-            raise AssertionError(f"Following alerts were fired during upgrade: {fired_alerts_during_upgrade}")
+        if not is_eus_upgrade:
+            LOGGER.info("Verify if any alerts were fired during upgrade")
+            process_alerts_fired_during_upgrade(
+                prometheus=prometheus_scope_function,
+                fired_alerts_during_upgrade=fired_alerts_during_upgrade,
+            )
+            if fired_alerts_during_upgrade:
+                collect_alerts_data()
+                raise AssertionError(f"Following alerts were fired during upgrade: {fired_alerts_during_upgrade}")
 
     @pytest.mark.polarion("CNV-6866")
     @pytest.mark.order(before=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, after=IUO_CNV_ALERT_ORDERING_NODE_ID)
