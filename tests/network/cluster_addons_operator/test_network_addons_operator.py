@@ -16,6 +16,16 @@ from ocp_resources.service_account import ServiceAccount
 from ocp_resources.validating_webhook_config import ValidatingWebhookConfiguration
 
 import utilities.network
+from libs.net.nodenetworkconfigurationpolicy import (
+    STP,
+    Bridge,
+    BridgeOptions,
+    DesiredState,
+    Interface,
+    IPv4,
+    IPv6,
+    NetLibsNodeNetworkConfigurationPolicy,
+)
 from tests.network.constants import EXPECTED_CNAO_COMP_NAMES
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
@@ -149,21 +159,34 @@ def check_components(network_addons_config_scope_session):
 
 @pytest.fixture(scope="module")
 def net_add_op_bridge_device(worker_node1):
-    with utilities.network.network_device(
-        interface_type=LINUX_BRIDGE,
-        nncp_name="test-network-operator",
-        interface_name="net-add-br",
+    desired_state = DesiredState(
+        interfaces=[
+            Interface(
+                name="net-add-br",
+                state=NetLibsNodeNetworkConfigurationPolicy.Interface.State.UP,
+                type=LINUX_BRIDGE,
+                ipv4=IPv4(dhcp=False),
+                ipv6=IPv6(dhcp=False),
+                bridge=Bridge(BridgeOptions(STP(enabled=False))),
+            )
+        ]
+    )
+    with NetLibsNodeNetworkConfigurationPolicy(
+        name="test-network-operator",
+        desired_state=desired_state,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as br_dev:
+        br_dev.wait_for_status_success()
         yield br_dev
 
 
 @pytest.fixture(scope="module")
 def net_add_op_br1test_nad(namespace, net_add_op_bridge_device):
+    interface_name = net_add_op_bridge_device.instance["spec"]["desiredState"]["interfaces"][0]["name"]
     with utilities.network.network_nad(
         nad_type=LINUX_BRIDGE,
-        nad_name=net_add_op_bridge_device.bridge_name,
-        interface_name=net_add_op_bridge_device.bridge_name,
+        nad_name=interface_name,
+        interface_name=interface_name,
         namespace=namespace,
     ) as nad:
         yield nad
