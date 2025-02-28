@@ -14,12 +14,15 @@ from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, runnin
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_if_compact_cluster",
-    "skip_if_wasp_agent_disabled",
-    "wasp_agent_active_and_ready",
-    "swap_is_available_on_nodes",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "skip_if_compact_cluster",
+        "skip_if_wasp_agent_disabled",
+        "wasp_agent_active_and_ready",
+        "swap_is_available_on_nodes",
+    ),
+    pytest.mark.swap,
+]
 
 MEMORY_SWAP_MAX_PATH = "/sys/fs/cgroup/memory.swap.max"
 MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
