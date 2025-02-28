@@ -32,6 +32,7 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.gpu,
     pytest.mark.usefixtures("non_existent_mdev_bus_nodes"),
 ]
 
