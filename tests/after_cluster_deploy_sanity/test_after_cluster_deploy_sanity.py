@@ -164,3 +164,10 @@ def test_csv_health(admin_client, hco_namespace):
         timeout=TIMEOUT_5MIN,
         stop_status="fakestatus",  # to bypass intermittent FAILED status that is not permanent.
     )
+
+
+@pytest.mark.cluster_health_check
+def test_common_node_cpu_model(cluster_node_cpus, cluster_common_node_cpu, cluster_common_modern_node_cpu):
+    assert cluster_common_node_cpu and cluster_common_modern_node_cpu, (
+        f"This is a heterogeneous cluster with no common cpus: {cluster_node_cpus}"
+    )
