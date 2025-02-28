@@ -167,8 +167,8 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
 )
 @pytest.mark.polarion("CNV-5529")
 def test_vm_dv_with_different_sc(
-    skip_test_if_no_csi_basic_sc,
-    skip_test_if_no_nfs_sc,
+    verify_csi_basic_sc,
+    verify_nfs_sc,
     golden_image_data_volume_scope_function,
     vm_from_golden_image,
 ):
