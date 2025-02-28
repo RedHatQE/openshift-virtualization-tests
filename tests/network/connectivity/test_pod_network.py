@@ -4,12 +4,13 @@ VM to VM connectivity
 
 import pytest
 
+from utilities.console import Console
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm, vm_console_run_commands
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture()
@@ -91,5 +92,5 @@ def test_connectivity_over_pod_network(
     dst_ip = get_ip_from_vm_or_virt_handler_pod(family=ip_stack_version_matrix__module__, vm=pod_net_running_vmb)
     assert dst_ip, f"Cannot get valid IP address from {pod_net_running_vmb.vmi.name}."
 
-    ping_cmd = f"ping -c 3 {dst_ip}"
-    vm_console_run_commands(vm=pod_net_running_vma, commands=[ping_cmd])
+    with Console(vm=pod_net_running_vma) as vmc:
+        vmc.run_commands(commands=[f"ping -c 3 {dst_ip}"])

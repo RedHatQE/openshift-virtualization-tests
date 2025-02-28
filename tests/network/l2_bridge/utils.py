@@ -184,7 +184,7 @@ def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
     console_command = f"sudo ip addr add {ipv4_address}/{IPV4_ADDRESS_SUBNET_PREFIX_LENGTH} dev {guest_vm_interface}"
     LOGGER.info(f"Sending command to {vm.name} console: '{console_command}'")
     with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(console_command)
+        vm_console.expecter.sendline(console_command)
 
     # Verify the IP address was set successfully.
     # The function fails on timeout if the interface or its address are not found,
