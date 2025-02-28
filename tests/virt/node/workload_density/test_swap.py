@@ -14,12 +14,14 @@ from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, runnin
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_if_compact_cluster",
-    "skip_if_wasp_agent_disabled",
-    "wasp_agent_active_and_ready",
-    "swap_is_available_on_nodes",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "xfail_if_wasp_agent_disabled",
+        "wasp_agent_active_and_ready",
+        "swap_is_available_on_nodes",
+    ),
+    pytest.mark.swap,
+]
 
 MEMORY_SWAP_MAX_PATH = "/sys/fs/cgroup/memory.swap.max"
 MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
@@ -68,9 +70,9 @@ def wasp_agent_daemonset():
 
 
 @pytest.fixture(scope="package")
-def skip_if_wasp_agent_disabled(wasp_agent_daemonset):
+def xfail_if_wasp_agent_disabled(wasp_agent_daemonset):
     if not wasp_agent_daemonset.exists:
-        pytest.skip("Wasp agent not deployed to cluster, skipping test")
+        pytest.xfail(reason="Wasp agent not deployed to cluster")
 
 
 @pytest.fixture(scope="package")
@@ -116,7 +118,6 @@ def vm_for_swap_usage_test(
         namespace=namespace.name,
         cpu_model=cpu_for_migration,
         memory_guest=next(iter(node_with_less_available_memory.values())),
-        memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
         vm_affinity=node_affinity_rule_for_two_nodes,
     ) as vm:
@@ -170,7 +171,6 @@ def test_swap_status_on_pod(vm_with_different_qos):
     )
 
 
-@pytest.mark.usefixtures("skip_if_workers_bms")
 class TestVMCanUseSwap:
     @pytest.mark.dependency(name="test_virt_launcher_pod_use_swap")
     @pytest.mark.polarion("CNV-11258")
