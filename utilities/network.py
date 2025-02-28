@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+import time
 
 import netaddr
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -124,6 +125,10 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
         self.bridge_name = bridge_name
         self.bridge_type = bridge_type
         self.stp_config = stp_config
+
+    def wait_for_status_success(self):
+        time.sleep(10)
+        super().wait_for_status_success()
 
     @staticmethod
     def _does_port_match_type(nns, port_name, port_type):
@@ -377,6 +382,10 @@ class VLANInterfaceNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy
         self.iface.update(vlan_spec)
         super().to_dict()
 
+    def wait_for_status_success(self):
+        time.sleep(10)
+        super().wait_for_status_success()
+
 
 class BondNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
     def __init__(
@@ -462,6 +471,10 @@ class BondNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
 
             if self.mtu:
                 self.configure_mtu_on_ports()
+
+    def wait_for_status_success(self):
+        time.sleep(10)
+        super().wait_for_status_success()
 
 
 NETWORK_DEVICE_TYPE = {
@@ -640,6 +653,10 @@ class EthernetNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
                 }
                 self.set_interface(interface=self.iface)
                 super().to_dict()
+
+    def wait_for_status_success(self):
+        time.sleep(10)
+        super().wait_for_status_success()
 
 
 def sriov_network_dict(namespace, network):
