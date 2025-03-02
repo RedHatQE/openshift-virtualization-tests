@@ -409,7 +409,7 @@ def sap_hana_node(schedulable_nodes):
 
 
 @pytest.fixture(scope="class")
-def skip_if_not_hana_cluster(skip_if_no_cpumanager_workers, sap_hana_node):
+def skip_if_not_hana_cluster(fail_if_no_cpumanager_workers, sap_hana_node):
     if not sap_hana_node:
         pytest.skip(f"No node is marked with sap label {WORKLOAD_NODE_LABEL_NAME} = {WORKLOAD_NODE_LABEL_VALUE}")
 

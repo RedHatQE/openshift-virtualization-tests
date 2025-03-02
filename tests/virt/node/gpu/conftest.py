@@ -6,11 +6,7 @@ import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from tests.virt.node.gpu.constants import GPU_CARDS_MAP
-from tests.virt.node.gpu.utils import (
-    filter_out_nodes_with_unsupported_gpus,
-    get_nodes_gpu_info,
-    install_nvidia_drivers_on_windows_vm,
-)
+from tests.virt.node.gpu.utils import get_nodes_gpu_info, install_nvidia_drivers_on_windows_vm
 from utilities.constants import OS_FLAVOR_WINDOWS
 from utilities.infra import get_node_selector_dict
 from utilities.storage import create_or_update_data_source
@@ -19,10 +15,22 @@ from utilities.virt import vm_instance_from_template
 
 @pytest.fixture(scope="session")
 def nodes_with_supported_gpus(gpu_nodes, workers_utility_pods):
-    filtered_gpu_nodes = filter_out_nodes_with_unsupported_gpus(node_list=gpu_nodes, utility_pods=workers_utility_pods)
-    if not filtered_gpu_nodes:
-        pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
-    return filtered_gpu_nodes
+    gpu_nodes_copy = gpu_nodes.copy()
+    for node in gpu_nodes:
+        # Currently A30/A100 GPU is unsupported by CNV (required driver not supported)
+        if "A30" in get_nodes_gpu_info(util_pods=workers_utility_pods, node=node):
+            gpu_nodes_copy.remove(node)
+    return gpu_nodes_copy
+
+
+@pytest.fixture(scope="session")
+def fail_if_no_gpu(gpu_nodes, nodes_with_supported_gpus):
+    if not gpu_nodes:
+        pytest.fail(reason="No gpu nodes found on cluster!")
+    if not nodes_with_supported_gpus:
+        pytest.skip("No supported gpu nodes found on cluster!")
+    elif len(gpu_nodes) < 2:
+        pytest.fail(reason="Test needs cluster with atleast two gpu nodes")
 
 
 @pytest.fixture(scope="session")
