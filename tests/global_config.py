@@ -43,10 +43,10 @@ from utilities.constants import (
     WIN_10,
     WIN_11,
     Images,
+    NamespacesNames,
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
-from utilities.storage import HppCsiStorageClass
 
 global config
 
@@ -73,7 +73,7 @@ openshift_apiserver_namespace = "openshift-apiserver"
 sriov_namespace = "openshift-sriov-network-operator"
 marketplace_namespace = "openshift-marketplace"
 machine_api_namespace = "openshift-machine-api"
-golden_images_namespace = "openshift-virtualization-os-images"
+golden_images_namespace = NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
 hco_subscription = ""  # TODO: remove constants/HCO_SUBSCRIPTION and use this instead.
 disconnected_cluster = False
 linux_bridge_cni = "cnv-bridge"
@@ -126,25 +126,8 @@ cnv_vm_resource_requests_units_matrix = [
 
 bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    "volume_mode": DataVolume.VolumeMode.FILE,
-    "access_mode": DataVolume.AccessMode.RWO,
-}
-
-new_hpp_storage_class_matrix = [
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE},
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE},
-]
-
-topolvm_storage_class_matrix = [
-    {
-        StorageClassNames.TOPOLVM: {
-            "volume_mode": DataVolume.VolumeMode.BLOCK,
-            "access_mode": DataVolume.AccessMode.RWO,
-        }
-    },
-]
-
+# storage_class_matrix can be overwritten to include hostpath-csi-pvc-block and hostpath-csi-basic along with ocs,
+# via command line argument. Example usage can be found in README.md.
 storage_class_matrix = [
     {
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
