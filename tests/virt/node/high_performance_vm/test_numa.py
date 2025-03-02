@@ -9,10 +9,35 @@ from tests.utils import (
     get_vm_cpu_list,
 )
 from utilities.constants import SRIOV
+from utilities.infra import ExecCommandOnPod
 from utilities.network import sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager, pytest.mark.numa]
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.cpu_manager,
+    pytest.mark.numa,
+    pytest.usefixtures("fail_if_no_cpumanager_workers", "fail_if_no_numa", "fail_if_no_sriov"),
+]
+
+
+@pytest.fixture(scope="module")
+def fail_if_no_numa(schedulable_nodes, workers_utility_pods):
+    cat_cmd = "cat /etc/kubernetes/kubelet.conf"
+    single_numa_node_cmd = f"{cat_cmd} | grep -i single-numa-node"
+    topology_manager_cmd = f"{cat_cmd} | grep -w TopologyManager"
+    for cmd in (single_numa_node_cmd, topology_manager_cmd):
+        for node in schedulable_nodes:
+            pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+            out = pod_exec.exec(command=cmd, ignore_rc=True)
+            if not out:
+                pytest.fail(reason=f"Test should run on nodes with {cmd.split()[-1]}")
+
+
+@pytest.fixture(scope="module")
+def fail_if_no_sriov(sriov_workers):
+    if not sriov_workers:
+        pytest.fail(reason="Test requires SR-IOV worker")
 
 
 @pytest.fixture(scope="module")
