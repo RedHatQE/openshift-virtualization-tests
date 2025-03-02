@@ -17,7 +17,7 @@ pytestmark = [
     pytest.mark.special_infra,
     pytest.mark.cpu_manager,
     pytest.mark.numa,
-    pytest.usefixtures("fail_if_no_cpumanager_workers", "fail_if_no_numa", "fail_if_no_sriov"),
+    pytest.mark.usefixtures("fail_if_no_cpumanager_workers", "fail_if_no_numa", "fail_if_no_sriov"),
 ]
 
 
