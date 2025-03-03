@@ -4,7 +4,8 @@
     "enabled": true
   },
   "baseBranches": [
-    "main"
+    "main",
+    "cnv-4.18"
   ],
   "recreateWhen": "never",
   "packageRules": [
@@ -45,26 +46,24 @@
         "deepdiff",
         "python-utility-scripts",
         "pyhelper-utils",
-        "openshift-python-utilities"
+        "openshift-python-utilities",
+        "timeout-sampler"
       ],
       "minimumReleaseAge": "5 days",
       "groupName": "python dependencies"
     },
     {
-      "matchDepPatterns": ["timeout-sampler"],
-      "matchBaseBranches": ["main"],
-      "groupName": "secondary dependencies"
-    },
-    {
       "matchDepPatterns": ["openshift-python-wrapper", "kubernetes"],
       "matchUpdateTypes": ["major"],
-      "matchBaseBranches": [
-        "main"
-      ],
       "enabled": false,
       "groupName": "Upstream dependencies"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "enabled": false
     }
   ],
+  "extends": ["docker:disable"],
   "schedule": ["after 7pm on wednesday"],
   "timezone": "America/New_York"
 }
