@@ -9,7 +9,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
@@ -103,12 +102,13 @@ def initial_migration_metrics_values(prometheus, migration_metrics_dict):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace):
+def vm_for_migration_metrics_test(namespace, cpu_for_migration):
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)
@@ -235,10 +235,7 @@ class TestKubevirtVmiMigrationMetrics:
     @pytest.mark.parametrize(
         "query",
         [
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
-                marks=(pytest.mark.polarion("CNV-11417")),
-            ),
+            pytest.param(KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES, marks=(pytest.mark.polarion("CNV-11417"))),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
                 marks=(pytest.mark.polarion("CNV-11600")),
@@ -250,10 +247,6 @@ class TestKubevirtVmiMigrationMetrics:
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
                 marks=(pytest.mark.polarion("CNV-11599")),
-            ),
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
-                marks=(pytest.mark.polarion("CNV-11802")),
             ),
         ],
     )
