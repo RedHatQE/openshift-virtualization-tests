@@ -3,7 +3,7 @@ from utilities.storage import HppCsiStorageClass
 
 CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
 
-NAMESPACE_PARAMS = {"use_unprivileged_client": False}
+ADMIN_NAMESPACE_PARAM = {"use_unprivileged_client": False}
 
 HPP_STORAGE_CLASSES = [
     StorageClassNames.HOSTPATH,
