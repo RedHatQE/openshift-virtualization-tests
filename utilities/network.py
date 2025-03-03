@@ -26,7 +26,7 @@ from ocp_resources.sriov_network import SriovNetwork
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.infra
 import utilities.virt
@@ -1126,22 +1126,18 @@ def get_nncp_configured_last_transition_time(nncp_status_condition):
             return condition["lastTransitionTime"]
 
 
+@retry(
+    wait_timeout=TIMEOUT_1MIN,
+    sleep=TIMEOUT_5SEC,
+)
 def wait_for_nncp_with_different_transition_time(nncp, initial_transition_time):
     date_format = "%Y-%m-%dT%H:%M:%SZ"
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: next(
-            (
-                condition
-                for condition in nncp.instance.get("status", {}).get("conditions", [])
-                if condition
-                and condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
-                and datetime.strptime(condition["lastTransitionTime"], date_format)
-                > datetime.strptime(initial_transition_time, date_format)
-            ),
-            {},
-        ),
-    ):
-        if sample:
-            return
+    for condition in nncp.instance.get("status", {}).get("conditions", []):
+        if (
+            condition
+            and condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
+            and datetime.strptime(condition["lastTransitionTime"], date_format)
+            > datetime.strptime(initial_transition_time, date_format)
+        ):
+            return True
+    return False
