@@ -7,7 +7,7 @@ import logging
 import pytest
 from kubernetes.client.rest import ApiException
 
-from tests.storage.constants import NAMESPACE_PARAMS
+from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.restricted_namespace_cloning.constants import (
     ALL,
     DATAVOLUMES,
@@ -26,10 +26,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC_SA,
     VM_FOR_TEST,
 )
-from tests.storage.utils import (
-    create_vm_and_verify_image_permission,
-    verify_snapshot_used_namespace_transfer,
-)
+from tests.storage.restricted_namespace_cloning.utils import verify_snapshot_used_namespace_transfer
 from utilities.constants import OS_FLAVOR_CIRROS, Images
 from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
@@ -73,11 +70,11 @@ def create_vm_negative(
 
 
 @pytest.mark.sno
-@pytest.mark.gating
 @pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
+    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
     [
         pytest.param(
+            ADMIN_NAMESPACE_PARAM,
             DV_PARAMS,
             {PERMISSIONS_SRC_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_DST_SA: ALL},
@@ -92,6 +89,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     data_volume_clone_settings,
     perm_src_service_account,
     perm_destination_service_account,
+    permissions_pvc_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(
@@ -101,10 +99,11 @@ def test_create_vm_with_cloned_data_volume_positive(
 
 
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_src, permissions_destination",
+    "namespace, data_volume_multi_storage_scope_module, "
+    "permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
-            NAMESPACE_PARAMS,
+            ADMIN_NAMESPACE_PARAM,
             DV_PARAMS,
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: ALL},
@@ -115,16 +114,16 @@ def test_create_vm_with_cloned_data_volume_positive(
 )
 def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions_negative(
     namespace,
-    destination_ns,
+    destination_namespace,
     restricted_namespace_service_account,
     unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
     data_volume_clone_settings,
-    permissions_src,
-    permissions_destination,
+    permissions_datavolume_source,
+    permissions_datavolume_destination,
 ):
     create_vm_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
         unprivileged_client=unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
@@ -135,7 +134,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
     [
         pytest.param(
-            NAMESPACE_PARAMS,
+            ADMIN_NAMESPACE_PARAM,
             DV_PARAMS,
             {PERMISSIONS_SRC_SA: DATAVOLUMES, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES, VERBS_DST_SA: ALL},
@@ -146,7 +145,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
 )
 def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_perm_negative(
     namespace,
-    destination_ns,
+    destination_namespace,
     restricted_namespace_service_account,
     unprivileged_client,
     data_volume_clone_settings,
@@ -154,7 +153,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     perm_destination_service_account,
 ):
     create_vm_negative(
-        namespace=destination_ns.name,
+        namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
         unprivileged_client=unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
@@ -163,9 +162,13 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
 
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_module",
+    "namespace, data_volume_multi_storage_scope_module",
     [
-        pytest.param(DV_PARAMS, marks=pytest.mark.polarion("CNV-2829")),
+        pytest.param(
+            ADMIN_NAMESPACE_PARAM,
+            DV_PARAMS,
+            marks=pytest.mark.polarion("CNV-2829"),
+        ),
     ],
     indirect=True,
 )
@@ -174,29 +177,10 @@ def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
     data_volume_clone_settings,
     permission_src_service_account_for_creating_pods,
     permission_destination_service_account_for_creating_pods,
+    permissions_pvc_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(
         cdv=data_volume_clone_settings,
         unprivileged_client=unprivileged_client,
     )
-
-
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_module, permissions_src, permissions_destination, dv_destination_cloned_from_pvc",
-    [
-        pytest.param(
-            DV_PARAMS,
-            {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
-            {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
-            {"dv_name": "cnv-4034"},
-            marks=pytest.mark.polarion("CNV-4034"),
-        )
-    ],
-    indirect=True,
-)
-def test_disk_image_after_create_vm_with_restricted_clone(
-    skip_block_volumemode_scope_module,
-    dv_destination_cloned_from_pvc,
-):
-    create_vm_and_verify_image_permission(dv=dv_destination_cloned_from_pvc)
