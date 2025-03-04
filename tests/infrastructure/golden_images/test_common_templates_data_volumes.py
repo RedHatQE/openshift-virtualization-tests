@@ -155,9 +155,9 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
             },
             {
                 "updated_storage_class_params": {
-                    "storage_class": StorageClassNames.NFS,
+                    "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
                     "access_mode": DataVolume.AccessMode.RWX,
-                    "volume_mode": DataVolume.VolumeMode.FILE,
+                    "volume_mode": DataVolume.VolumeMode.BLOCK,
                 },
             },
             marks=pytest.mark.polarion("CNV-5529"),
@@ -165,16 +165,13 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-5529")
 def test_vm_dv_with_different_sc(
-    skip_test_if_no_csi_basic_sc,
-    skip_test_if_no_nfs_sc,
+    fail_if_no_hostpath_csi_basic_sc,
+    fail_if_no_ceph_rbd_virtualization_sc,
     golden_image_data_volume_scope_function,
     vm_from_golden_image,
 ):
     # VM cloned PVC storage class is different from the original golden image storage class
-    # Using NFS and HPP, as Block <> Filesystem is not supported.
-    # TODO: Add OCS - HPP test
     vm_from_golden_image.ssh_exec.executor().is_connective()
 
 
