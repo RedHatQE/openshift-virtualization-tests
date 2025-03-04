@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from ocp_resources.pod import Pod
+from timeout_sampler import TimeoutSampler
 
 from tests.virt.cluster.aaq.constants import (
     CPU_MAX_SOCKETS,
@@ -25,6 +26,7 @@ from tests.virt.constants import (
     REQUESTS_MEMORY_VMI_STR,
 )
 from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
+from utilities.constants import TIMEOUT_1SEC, TIMEOUT_5SEC
 from utilities.virt import migrate_vm_and_verify, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -221,8 +223,16 @@ class TestARQSupportMemoryHotplug:
         hotplugged_resource,
     ):
         vmi_spec_domain = hotplug_vm_for_aaq_test.vmi.instance.spec.domain
+        samples = TimeoutSampler(
+            wait_timeout=TIMEOUT_1SEC, sleep=TIMEOUT_5SEC, func=lambda: application_aware_resource_quota.instance
+        )
+        arq_instance = None
+        for sample in samples:
+            if sample:
+                arq_instance = sample
+                break
         check_arq_status_values(
-            current_values=application_aware_resource_quota.instance.status.used,
+            current_values=arq_instance.status.used,
             expected_values={
                 **QUOTA_FOR_ONE_VMI,
                 REQUESTS_CPU_VMI_STR: vmi_spec_domain.cpu.sockets,
