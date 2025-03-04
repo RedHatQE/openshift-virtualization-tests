@@ -92,7 +92,7 @@ class TestMigrationVMWithMemoryLoad:
                     "cpu_cores": 16,
                     "cpu_threads": 1,
                 },
-                marks=[pytest.mark.special_infra, pytest.mark.high_resource],
+                marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
             ),
         ],
         indirect=True,

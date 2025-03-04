@@ -17,11 +17,7 @@ from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = [
-    pytest.mark.special_infra,
-    pytest.mark.cpu_manager,
-    pytest.mark.usefixtures("fail_if_no_cpumanager_workers"),
-]
+pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager]
 
 
 VM_DICT = {

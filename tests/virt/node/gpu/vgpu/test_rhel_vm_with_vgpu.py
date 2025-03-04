@@ -34,7 +34,7 @@ pytestmark = [
     pytest.mark.post_upgrade,
     pytest.mark.special_infra,
     pytest.mark.gpu,
-    pytest.mark.usefixtures("fail_if_no_gpu", "non_existent_mdev_bus_nodes"),
+    pytest.mark.usefixtures("non_existent_mdev_bus_nodes"),
 ]
 
 

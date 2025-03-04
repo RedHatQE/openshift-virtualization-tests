@@ -118,7 +118,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
                 "additional_labels": VM_LABEL,
             },
             id="WIN-VM",
-            marks=[pytest.mark.special_infra, pytest.mark.high_resource],
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
     ],
     indirect=True,
