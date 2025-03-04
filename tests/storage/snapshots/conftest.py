@@ -8,6 +8,7 @@ import logging
 import shlex
 
 import pytest
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
@@ -27,6 +28,7 @@ def permissions_for_dv(namespace):
     """
     with set_permissions(
         role_name="datavolume-cluster-role",
+        role_api_groups=[DataVolume.api_group],
         verbs=["*"],
         permissions_to_resources=["datavolumes", "datavolumes/source"],
         binding_name="role-bind-data-volume",
