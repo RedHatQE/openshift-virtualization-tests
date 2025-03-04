@@ -19,6 +19,7 @@ from utilities.virt import get_windows_os_dict
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.gpu,
     pytest.mark.usefixtures(
         "skip_on_psi_cluster",
         "fail_if_device_unbound_to_vfiopci_driver",

@@ -9,21 +9,26 @@ import os
 import os.path
 import pathlib
 import re
+import shlex
 import shutil
 import traceback
+from typing import Any
 
 import pytest
 import shortuuid
 from _pytest.config import Config
+from _pytest.nodes import Collector, Node
+from _pytest.reports import CollectReport, TestReport
+from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
 from ocp_resources.resource import get_client
-from ocp_resources.storage_class import StorageClass
+from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, StorageClassNames
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -46,8 +51,8 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_storage_class_matrix_config,
 )
-from utilities.storage import HppCsiStorageClass
 
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
@@ -75,8 +80,13 @@ TEAM_MARKERS = {
     "infrastructure": ["infrastructure", "deprecated_api"],
     "data_protection": ["data_protection", "deprecated_api"],
 }
-
+NAMESPACE_COLLECTION = {
+    "storage": [NamespacesNames.OPENSHIFT_STORAGE],
+    "network": ["openshift-nmstate"],
+    "virt": [],
+}
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [MissingEnvironmentVariableError, StorageSanityError, ConflictError]
+INSPECT_BASE_COMMAND = "oc adm inspect"
 
 
 def pytest_addoption(parser):
@@ -616,18 +626,11 @@ def pytest_sessionstart(session):
         log_file=tests_log_file,
         log_level=session.config.getoption("log_cli_level") or logging.INFO,
     )
-    py_config_scs = py_config.get("storage_class_matrix", [])
-
-    # Set py_config["storage_class_matrix"]
-    if not skip_if_pytest_flags_exists(pytest_config=session.config):
-        cluster_storage_classes_names = [sc.name for sc in list(StorageClass.get(dyn_client=get_client()))]
-        # If TOPOLVM storage class is present in the cluster - add it to the matrix
-        # And do not add the HPP storage classes
-        if StorageClassNames.TOPOLVM in cluster_storage_classes_names:
-            py_config_scs.extend(py_config["topolvm_storage_class_matrix"])
-        # If HPP CSI storage class is present - add HPP CSI storage classes
-        elif HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC in cluster_storage_classes_names:
-            py_config_scs.extend(py_config["new_hpp_storage_class_matrix"])
+    # Add HPP-CSI-BASIC/HPP-CSI-PVC-BLOCK to global config's storage_class_matrix, only
+    # if command line option --storage-class-matrix includes them:
+    py_config_scs = update_storage_class_matrix_config(
+        session=session, pytest_config_matrix=py_config.get("storage_class_matrix", [])
+    )
 
     # Save the default storage_class_matrix before it is updated
     # with runtime storage_class_matrix value(s)
@@ -653,7 +656,6 @@ def pytest_sessionstart(session):
                     items_list.append(item)
 
         py_config[key] = items_list
-
     config_default_storage_class(session=session)
     # Set py_config["servers"] and py_config["os_login_param"]
     # Send --tc=server_url:<url> to override servers URL
@@ -699,17 +701,39 @@ def pytest_sessionfinish(session, exitstatus):
     session.config.option.log_listener.stop()
 
 
-def is_skip_must_gather(node):
-    all_markers = [mark.name for mark in list(node.iter_markers())]
-    return "skip_must_gather_collection" in all_markers
+def get_all_node_markers(node: Node) -> list[str]:
+    return [mark.name for mark in list(node.iter_markers())]
 
 
-def pytest_exception_interact(node, call, report):
+def is_skip_must_gather(node: Node) -> bool:
+    return "skip_must_gather_collection" in get_all_node_markers(node=node)
+
+
+def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
+    namespace_str = ""
+    components = [key for key in NAMESPACE_COLLECTION.keys() if f"tests/{key}/" in test_name]
+    if not components:
+        LOGGER.warning(f"{test_name} does not require special data collection on failure")
+    else:
+        component = components[0]
+        namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component]
+        if component == "virt":
+            all_markers = get_all_node_markers(node=node)
+            if "gpu" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
+            if "swap" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.WASP)
+        namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
+    return namespace_str
+
+
+def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], report: TestReport | CollectReport) -> None:
     BASIC_LOGGER.error(report.longreprtext)
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
-        LOGGER.info("Must-gather collection is enabled.")
         test_name = f"{node.fspath}::{node.name}"
-        if any([
+        LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
+        inspect_str = get_inspect_command_namespace_string(test_name=test_name, node=node)
+        if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
             LOGGER.warning(f"Must-gather collection would be skipped for exception: {call.excinfo.type}")
@@ -729,9 +753,18 @@ def pytest_exception_interact(node, call, report):
                 # if the test duration is 0 seconds, collect must-gather for past 60 seconds
                 since_time = (int(datetime.datetime.now().strftime("%s")) - test_start_time) or TIMEOUT_1MIN
             try:
-                collect_default_cnv_must_gather_with_vm_gather(
-                    since_time=since_time,
-                    target_dir=os.path.join(get_data_collector_dir(), "pytest_exception_interact"),
-                )
+                collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")
+                collect_default_cnv_must_gather_with_vm_gather(since_time=since_time, target_dir=collection_dir)
+                if inspect_str:
+                    target_dir = os.path.join(collection_dir, "inspect_collection")
+                    inspect_command = (
+                        f"{INSPECT_BASE_COMMAND} {inspect_str} --since={since_time}s --dest-dir={target_dir}"
+                    )
+                    LOGGER.info(f"running inspect command on {inspect_command}")
+                    run_command(
+                        command=shlex.split(inspect_command),
+                        check=False,
+                        verify_stderr=False,
+                    )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
