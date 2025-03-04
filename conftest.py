@@ -68,6 +68,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "longevity",
     "ovs_brcnv",
     "node_remediation",
+    "swap",
 ]
 
 TEAM_MARKERS = {
