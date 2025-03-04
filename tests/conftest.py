@@ -2418,6 +2418,16 @@ def migration_policy_with_bandwidth():
         yield mp
 
 
+@pytest.fixture(scope="class")
+def migration_policy_with_bandwidth_scope_class():
+    with MigrationPolicy(
+        name="migration-policy",
+        bandwidth_per_migration="128Ki",
+        vmi_selector=MIGRATION_POLICY_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
 @pytest.fixture(scope="session")
 def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
