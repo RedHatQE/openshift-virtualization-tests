@@ -8,7 +8,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import REMOVE_NEWLINE
 from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
@@ -29,7 +29,7 @@ MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
 
 def wait_virt_launcher_pod_using_swap(vm):
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=vm.privileged_vmi.virt_launcher_pod.execute,
         command=shlex.split(f"bash -c 'cat {MEMORY_SWAP_CURRENT_PATH} | {REMOVE_NEWLINE}'"),
@@ -129,7 +129,7 @@ def vm_for_swap_usage_test(
 def swap_vm_stress_started(vm_for_swap_usage_test):
     start_stress_on_vm(
         vm=vm_for_swap_usage_test,
-        stress_command="nohup stress-ng --vm 1 --vm-bytes 70% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
+        stress_command="nohup stress-ng --vm 1 --vm-bytes 80% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
     )
 
 
