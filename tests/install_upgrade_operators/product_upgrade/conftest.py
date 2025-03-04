@@ -307,23 +307,21 @@ def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir):
 
 
 @pytest.fixture()
-def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, prometheus_scope_function):
-    return get_alerts_fired_during_upgrade(
-        prometheus=prometheus_scope_function,
-        before_upgrade_alerts=fired_alerts_before_upgrade,
-        base_directory=alert_dir,
+def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, is_eus_upgrade, prometheus_scope_function):
+    return (
+        get_alerts_fired_during_upgrade(
+            prometheus=prometheus_scope_function,
+            before_upgrade_alerts=fired_alerts_before_upgrade,
+            base_directory=alert_dir,
+        )
+        if not is_eus_upgrade
+        else None
     )
 
 
 @pytest.fixture(scope="session")
 def is_eus_upgrade(pytestconfig):
     return pytestconfig.option.upgrade == EUS
-
-
-@pytest.fixture(scope="session")
-def skip_on_eus_upgrade(is_eus_upgrade):
-    if is_eus_upgrade:
-        pytest.skip("This test is not supported for EUS upgrade")
 
 
 @pytest.fixture(scope="session")
