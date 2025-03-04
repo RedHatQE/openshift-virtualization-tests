@@ -175,7 +175,7 @@ def migration_succeeded(vm_migration_metrics_vmim):
 @pytest.fixture(scope="class")
 def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
-        status=vm_migration_metrics_vmim.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
+        status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
 
 
