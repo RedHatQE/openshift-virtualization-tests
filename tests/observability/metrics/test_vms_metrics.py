@@ -42,6 +42,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
+
 def get_last_transition_time(vm):
     for condition in vm.instance.get("status", {}).get("conditions"):
         if condition.get("type") == vm.Condition.READY:
