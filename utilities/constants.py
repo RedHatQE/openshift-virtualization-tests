@@ -90,9 +90,8 @@ class Images:
         DEFAULT_CPU_THREADS = 2
 
     class Fedora:
-        FEDORA40_IMG = "Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
         FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:40"
+        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
         DISK_DEMO = "fedora-cloud-registry-disk-demo"
         DIR = f"{BASE_IMAGES_DIR}/fedora-images"
         DEFAULT_DV_SIZE = "10Gi"
