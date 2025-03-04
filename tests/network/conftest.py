@@ -14,7 +14,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
 from tests.network.constants import BRCNV
-from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
+from tests.network.utils import dpdk_support_validation, get_vlan_index_number, vm_for_brcnv_tests
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
@@ -199,7 +199,7 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def network_sanity(hosts_common_available_ports, junitxml_plugin):
+def network_sanity(hosts_common_available_ports, junitxml_plugin, pytestconfig, request):
     """
     Perform verification that the cluster is a multi-nic one otherwise exit run
     """
@@ -214,3 +214,8 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin):
             junitxml_property=junitxml_plugin,
         )
     LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
+
+    if any(item.get_closest_marker("dpdk") for item in request.session.items):
+        LOGGER.info("Verifying if the cluster supports running DPDK tests...")
+        dpdk_support_validation()
+        LOGGER.info("DPDK support validation completed successfully.")
