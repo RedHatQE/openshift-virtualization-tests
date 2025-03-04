@@ -266,7 +266,7 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
     indirect=True,
 )
 @pytest.mark.special_infra
-@pytest.mark.high_resource
+@pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")
 class TestSysprep:
     @pytest.mark.polarion("CNV-6760")

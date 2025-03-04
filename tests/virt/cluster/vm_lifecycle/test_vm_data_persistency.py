@@ -289,7 +289,7 @@ class TestRestartPersistenceLinux:
     indirect=True,
 )
 @pytest.mark.special_infra
-@pytest.mark.high_resource
+@pytest.mark.high_resource_vm
 class TestRestartPersistenceWindows:
     @pytest.mark.parametrize(
         "changed_os_preferences, restarted_persistence_vm",

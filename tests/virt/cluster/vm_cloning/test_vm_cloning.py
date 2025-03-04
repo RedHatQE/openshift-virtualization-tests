@@ -219,7 +219,7 @@ def test_clone_vm_with_instance_type_and_preference(
 )
 @pytest.mark.ibm_bare_metal
 @pytest.mark.special_infra
-@pytest.mark.high_resource
+@pytest.mark.high_resource_vm
 def test_clone_windows_vm(
     vm_with_dv_for_cloning,
     cloning_job_scope_function,

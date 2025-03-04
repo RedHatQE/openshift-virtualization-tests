@@ -204,7 +204,7 @@ class TestNodeMaintenanceRHEL:
                 "vm_name": "wind-template-node-cordon-and-drain",
                 "template_labels": WINDOWS_LATEST_LABELS,
             },
-            marks=[pytest.mark.special_infra, pytest.mark.high_resource],
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
     ],
     indirect=True,

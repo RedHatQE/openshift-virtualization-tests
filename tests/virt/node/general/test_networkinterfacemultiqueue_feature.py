@@ -184,7 +184,7 @@ class TestLatestRHEL:
 )
 @pytest.mark.usefixtures("golden_image_data_volume_scope_class")
 @pytest.mark.special_infra
-@pytest.mark.high_resource
+@pytest.mark.high_resource_vm
 class TestLatestWindows:
     """
     Test networkInterfaceMultiqueue on latest Windows with different cpu core/socket/thread combinations.

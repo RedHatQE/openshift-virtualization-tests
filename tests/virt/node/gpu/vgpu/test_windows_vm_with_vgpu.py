@@ -27,9 +27,9 @@ from utilities.virt import (
 pytestmark = [
     pytest.mark.post_upgrade,
     pytest.mark.special_infra,
-    pytest.mark.high_resource,
+    pytest.mark.high_resource_vm,
     pytest.mark.gpu,
-    pytest.mark.usefixtures("fail_if_no_gpu", "non_existent_mdev_bus_nodes"),
+    pytest.mark.usefixtures("non_existent_mdev_bus_nodes"),
 ]
 
 

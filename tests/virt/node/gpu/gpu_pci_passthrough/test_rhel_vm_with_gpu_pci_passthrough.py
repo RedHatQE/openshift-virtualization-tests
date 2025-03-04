@@ -25,11 +25,7 @@ pytestmark = [
     pytest.mark.post_upgrade,
     pytest.mark.special_infra,
     pytest.mark.gpu,
-    pytest.mark.usefixtures(
-        "fail_if_no_gpu",
-        "fail_if_device_unbound_to_vfiopci_driver",
-        "hco_cr_with_permitted_hostdevices",
-    ),
+    pytest.mark.usefixtures("fail_if_device_unbound_to_vfiopci_driver", "hco_cr_with_permitted_hostdevices"),
 ]
 
 ALLOCATABLE = "allocatable"

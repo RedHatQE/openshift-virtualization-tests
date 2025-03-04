@@ -2852,9 +2852,9 @@ def machine_type_from_kubevirt_config(kubevirt_config_scope_module):
 
 
 @pytest.fixture(scope="module")
-def fail_if_no_cpumanager_workers(schedulable_nodes):
+def skip_if_no_cpumanager_workers(schedulable_nodes):
     if not any([node.labels.cpumanager == "true" for node in schedulable_nodes]):
-        pytest.fail(reason="Test should run on cluster with CPU Manager")
+        pytest.skip("Test should run on cluster with CPU Manager")
 
 
 @pytest.fixture(scope="module")
