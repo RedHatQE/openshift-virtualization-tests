@@ -13,8 +13,6 @@ global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 
 Images.Cirros.RAW_IMG_XZ = "cirros-0.4.0-aarch64-disk.raw.xz"
-Images.Fedora.FEDORA40_IMG = "Fedora-Cloud-Base-Generic.aarch64-40-1.14.qcow2"
-Images.Fedora.FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:40-arm64"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{ARM_64}"
 
 

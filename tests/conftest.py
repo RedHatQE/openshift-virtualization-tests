@@ -2028,12 +2028,6 @@ def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
 
 
-@pytest.fixture(scope="session")
-def skip_if_compact_cluster(compact_cluster):
-    if compact_cluster:
-        pytest.skip("Test cannot run on compact cluster")
-
-
 @pytest.fixture()
 def virt_pods_with_running_status(admin_client, hco_namespace):
     return get_all_virt_pods_with_running_status(dyn_client=admin_client, hco_namespace=hco_namespace)
@@ -2410,6 +2404,16 @@ def is_disconnected_cluster():
 
 @pytest.fixture()
 def migration_policy_with_bandwidth():
+    with MigrationPolicy(
+        name="migration-policy",
+        bandwidth_per_migration="128Ki",
+        vmi_selector=MIGRATION_POLICY_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="class")
+def migration_policy_with_bandwidth_scope_class():
     with MigrationPolicy(
         name="migration-policy",
         bandwidth_per_migration="128Ki",
