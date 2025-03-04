@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.constants import KUBEVIRT_STR_LOWER, KUBEVIRT_VIRT_OPERATOR_READY
-from tests.observability.utils import validate_metrics_value
+from tests.utils import validate_metrics_value
 from utilities.constants import (
     PENDING_STR,
     TIMEOUT_5MIN,
