@@ -6,7 +6,6 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from pytest_testconfig import config as py_config
 
-from tests.observability.utils import wait_for_kubemacpool_pods_error_state
 from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KMP_VM_ASSIGNMENT_LABEL,
@@ -39,7 +38,6 @@ def updated_cnao_kubemacpool_with_bad_image_csv(
     updated_csv_dict_bad_kubemacpool_image,
 ):
     with ResourceEditorValidateHCOReconcile(patches={csv_scope_class: updated_csv_dict_bad_kubemacpool_image}):
-        wait_for_kubemacpool_pods_error_state(dyn_client=admin_client, hco_namespace=hco_namespace)
         yield
     wait_for_pods_running(admin_client=admin_client, namespace=hco_namespace)
 
