@@ -19,7 +19,7 @@ from tests.observability.metrics.utils import (
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_6MIN
+from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -133,13 +133,13 @@ def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
 
 
 @pytest.fixture(scope="class")
-def vm_migration_metrics_vmim_completed(vm_for_migration_metrics_test):
+def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
     ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.SUCCEEDED, timeout=TIMEOUT_6MIN)
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
 
 
@@ -170,6 +170,13 @@ def vm_with_node_selector_vmim(vm_with_node_selector):
 @pytest.fixture()
 def migration_succeeded(vm_migration_metrics_vmim):
     vm_migration_metrics_vmim.wait_for_status(status=vm_migration_metrics_vmim.Status.SUCCEEDED, timeout=TIMEOUT_3MIN)
+
+
+@pytest.fixture(scope="class")
+def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
+    vm_migration_metrics_vmim_scope_class.wait_for_status(
+        status=vm_migration_metrics_vmim.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
+    )
 
 
 class TestMigrationMetrics:
@@ -272,17 +279,14 @@ class TestMigrationMetrics:
         )
 
 
-@pytest.mark.usefixtures(
-    "migration_policy_with_bandwidth_scope_class",
-    "vm_for_migration_metrics_test",
-    "vm_migration_metrics_vmim_completed",
-)
 class TestKubevirtVmiMigrationStartAndEnd:
     @pytest.mark.polarion("CNV-11809")
     def test_metric_kubevirt_vmi_migration_start_time_seconds(
         self,
         prometheus,
+        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
+        vm_migration_metrics_vmim_scope_class,
     ):
         validate_metric_value_within_range(
             prometheus=prometheus,
@@ -296,7 +300,10 @@ class TestKubevirtVmiMigrationStartAndEnd:
     def test_metric_kubevirt_vmi_migration_end_time_seconds(
         self,
         prometheus,
+        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
+        vm_migration_metrics_vmim_scope_class,
+        migration_succeeded_scope_class,
     ):
         validate_metrics_value(
             prometheus=prometheus,
