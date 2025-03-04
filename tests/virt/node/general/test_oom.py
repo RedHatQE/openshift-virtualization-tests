@@ -131,11 +131,8 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
-def test_vm_windows_oom(
-    skip_if_workers_vms,
-    vm_with_memory_load,
-    windows_oom_stress_started,
-):
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
+def test_vm_windows_oom(vm_with_memory_load, windows_oom_stress_started):
     verify_vm_not_crashed(vm=vm_with_memory_load)
     verify_memory_overuse(pod=vm_with_memory_load.privileged_vmi.virt_launcher_pod)

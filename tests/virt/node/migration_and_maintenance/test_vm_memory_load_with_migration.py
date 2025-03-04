@@ -92,15 +92,14 @@ class TestMigrationVMWithMemoryLoad:
                     "cpu_cores": 16,
                     "cpu_threads": 1,
                 },
-                marks=pytest.mark.polarion("CNV-9844"),
+                marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
             ),
         ],
         indirect=True,
     )
-    @pytest.mark.usefixtures("skip_on_psi_cluster")
+    @pytest.mark.polarion("CNV-9844")
     def test_windows_vm_migrate_with_memory_load(
         self,
-        skip_if_workers_vms,
         vm_with_memory_load,
         stress_pid_before_migration,
         migrate_vm_with_memory_load,

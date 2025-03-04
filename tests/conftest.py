@@ -2423,12 +2423,6 @@ def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
 
 
-@pytest.fixture(scope="session")
-def skip_if_no_gpu_node(gpu_nodes):
-    if not gpu_nodes:
-        pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
-
-
 @pytest.fixture()
 def cnv_prometheus_rule_by_name(cnv_prometheus_rules_matrix__function__):
     prometheus_rule = PrometheusRule(

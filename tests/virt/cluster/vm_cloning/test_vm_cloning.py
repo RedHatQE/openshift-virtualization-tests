@@ -196,7 +196,6 @@ def test_clone_vm_with_instance_type_and_preference(
     check_disk_count_in_vm(vm=target_vm_scope_function)
 
 
-@pytest.mark.ibm_bare_metal
 @pytest.mark.parametrize(
     "dv_template_for_vm_cloning, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
@@ -218,9 +217,10 @@ def test_clone_vm_with_instance_type_and_preference(
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.ibm_bare_metal
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
 def test_clone_windows_vm(
-    skip_if_workers_vms,
     vm_with_dv_for_cloning,
     cloning_job_scope_function,
     target_vm_scope_function,
