@@ -13,12 +13,7 @@ from tests.os_params import (
 from utilities.constants import Images
 from utilities.virt import running_vm, vm_instance_from_template
 
-pytestmark = [
-    pytest.mark.special_infra,
-    pytest.mark.high_resource,
-    pytest.mark.cpu_manager,
-    pytest.mark.usefixtures("fail_if_no_cpumanager_workers"),
-]
+pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.cpu_manager]
 
 
 LOGGER = logging.getLogger(__name__)

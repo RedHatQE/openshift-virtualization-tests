@@ -9,13 +9,8 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     NamespacesNames,
 )
-from utilities.infra import ExecCommandOnPod, get_daemonsets
+from utilities.infra import get_daemonsets
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
-
-
-def get_nodes_gpu_info(util_pods, node):
-    pod_exec = ExecCommandOnPod(utility_pods=util_pods, node=node)
-    return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")
 
 
 def get_num_gpu_devices_in_rhel_vm(vm):

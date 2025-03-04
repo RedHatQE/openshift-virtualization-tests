@@ -22,7 +22,7 @@ from utilities.virt import (
     running_vm,
 )
 
-pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource]
+pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
 
 LOGGER = logging.getLogger(__name__)
