@@ -6,7 +6,6 @@ from utilities.constants import ARM_64, HCO_DEFAULT_CPU_MODEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-
 KUBEVIRT_CPU_MODEL_KEY = "cpuModel"
 HOST_PASSTHROUGH = "host-passthrough"
 
