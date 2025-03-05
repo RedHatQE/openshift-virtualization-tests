@@ -388,8 +388,8 @@ def test_connectivity_after_migration_and_restart(
 def test_migration_with_masquerade(
     ip_stack_version_matrix__module__,
     admin_client,
-    skip_if_not_ipv4_supported_cluster_from_mtx,
-    skip_if_not_ipv6_supported_cluster_from_mtx,
+    fail_if_not_ipv4_supported_cluster_from_mtx,
+    fail_if_not_ipv6_supported_cluster_from_mtx,
     vma,
     vmb,
     running_vma,
