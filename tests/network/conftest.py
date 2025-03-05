@@ -59,21 +59,21 @@ def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
 
 
 @pytest.fixture()
-def skip_if_not_ipv4_supported_cluster_from_mtx(
+def fail_if_not_ipv4_supported_cluster_from_mtx(
     request,
     ipv4_supported_cluster,
 ):
     if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster:
-        pytest.skip("IPv4 is not supported in this cluster")
+        pytest.fail(reason="IPv4 is not supported in this cluster")
 
 
 @pytest.fixture()
-def skip_if_not_ipv6_supported_cluster_from_mtx(
+def fail_if_not_ipv6_supported_cluster_from_mtx(
     request,
     ipv6_supported_cluster,
 ):
     if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster:
-        pytest.skip("IPv6 is not supported in this cluster")
+        pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
 @pytest.fixture()
