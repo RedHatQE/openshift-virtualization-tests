@@ -1,4 +1,5 @@
 import pytest
+from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
@@ -13,7 +14,11 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
-from tests.observability.metrics.utils import get_metric_sum_value, wait_for_non_empty_metrics_value
+from tests.observability.metrics.utils import (
+    get_metric_sum_value,
+    time_passed_from_timestamp_until_now_minutes,
+    wait_for_non_empty_metrics_value,
+)
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
@@ -30,25 +35,31 @@ def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
             pod.delete(wait=True)
 
 
-def metric_value_sampler(prometheus, metric, expected_value):
+def metric_value_sampler(prometheus: Prometheus, metric: str, expected_value: int, period: int = None) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=10,
         func=get_metric_sum_value,
         prometheus=prometheus,
-        metric=metric,
+        metric=f"last_over_time({metric})[{period}m]" if period else metric,
     )
     current_check = 0
     for sample in samples:
         if sample == expected_value:
             current_check += 1
             if current_check >= 3:
-                return True
+                return
         else:
             current_check = 0
 
 
-def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, metric_to_check):
+def assert_metrics_values(
+    prometheus: Prometheus,
+    migration_metrics_dict: dict[str, str],
+    initial_values: dict[str, int],
+    metric_to_check: str,
+    vmi: VirtualMachineInstance = None,
+):
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
@@ -56,7 +67,6 @@ def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, me
     Args:
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
-        vm: vm object
 
     Raises:
         AssertionError: If any metric's value does not match with expected value.
@@ -69,10 +79,18 @@ def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, me
         initial_value = initial_values[metric]
         expected_value = initial_value + 1 if metric == metric_to_check else initial_value
         try:
+            time_passed_from_migration_start = None
+            if vmi:
+                time_passed_from_migration_start = time_passed_from_timestamp_until_now_minutes(
+                    timestamp=vmi.instance.status.migrationState.startTimestamp
+                )
             metric_value_sampler(
                 prometheus=prometheus,
                 metric=metric,
                 expected_value=expected_value,
+                period=time_passed_from_migration_start
+                if time_passed_from_migration_start and time_passed_from_migration_start > 5
+                else None,
             )
         except TimeoutExpiredError:
             failed_metrics[metric] = {
@@ -183,6 +201,7 @@ class TestMigrationMetrics:
             migration_metrics_dict=migration_metrics_dict,
             initial_values=initial_migration_metrics_values,
             metric_to_check=migration_metrics_dict[Resource.Status.SUCCEEDED],
+            vmi=vm_for_migration_metrics_test.vmi,
         )
 
     @pytest.mark.polarion("CNV-8480")
@@ -229,6 +248,7 @@ class TestMigrationMetrics:
             migration_metrics_dict=migration_metrics_dict,
             initial_values=initial_migration_metrics_values,
             metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
+            vmi=vm_for_migration_metrics_test.vmi,
         )
 
 
@@ -265,7 +285,13 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
+        last_over_time_to_check = time_passed_from_timestamp_until_now_minutes(
+            timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
+        )
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m])",
+            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
+            f"[{last_over_time_to_check}m]"
+            if last_over_time_to_check > 5
+            else f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m]",
         )
