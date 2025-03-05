@@ -13,7 +13,6 @@ from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 
-import utilities.network
 from tests.install_upgrade_operators.constants import FILE_SUFFIX, SECTION_TITLE
 from tests.install_upgrade_operators.must_gather.utils import (
     BRIDGE_COMMAND,
@@ -30,6 +29,11 @@ from utilities.infra import (
     get_node_selector_dict,
 )
 from utilities.must_gather import collect_must_gather, run_must_gather
+from utilities.network import (
+    network_device,
+    network_nad,
+    wait_for_node_marked_by_bridge,
+)
 from utilities.storage import add_dv_to_vm
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -144,19 +148,20 @@ def kubevirt_crd_by_type(cnv_crd_matrix__function__, kubevirt_crd_resources, kub
 
 
 @pytest.fixture(scope="package")
-def must_gather_nad(nodenetworkstate_with_bridge, node_gather_unprivileged_namespace):
-    with utilities.network.network_nad(
-        nad_type=nodenetworkstate_with_bridge.bridge_type,
-        nad_name=nodenetworkstate_with_bridge.bridge_name,
-        interface_name=nodenetworkstate_with_bridge.bridge_name,
+def must_gather_nad(must_gather_bridge, node_gather_unprivileged_namespace, worker_node1):
+    with network_nad(
+        nad_type=must_gather_bridge.bridge_type,
+        nad_name=must_gather_bridge.bridge_name,
+        interface_name=must_gather_bridge.bridge_name,
         namespace=node_gather_unprivileged_namespace,
     ) as must_gather_nad:
+        wait_for_node_marked_by_bridge(bridge_nad=must_gather_nad, node=worker_node1)
         yield must_gather_nad
 
 
 @pytest.fixture(scope="package")
-def nodenetworkstate_with_bridge(worker_node1):
-    with utilities.network.network_device(
+def must_gather_bridge(worker_node1):
+    with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="must-gather-br",
         interface_name="mg-br1",
@@ -187,12 +192,12 @@ def node_gather_unprivileged_namespace(unprivileged_client):
 @pytest.fixture(scope="package")
 def must_gather_vm(
     node_gather_unprivileged_namespace,
-    nodenetworkstate_with_bridge,
+    must_gather_bridge,
     must_gather_nad,
     unprivileged_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-2"
-    networks = {nodenetworkstate_with_bridge.bridge_name: nodenetworkstate_with_bridge.bridge_name}
+    networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
 
     with VirtualMachineForTests(
         client=unprivileged_client,
@@ -209,12 +214,12 @@ def must_gather_vm(
 @pytest.fixture(scope="class")
 def must_gather_vm_scope_class(
     node_gather_unprivileged_namespace,
-    nodenetworkstate_with_bridge,
+    must_gather_bridge,
     must_gather_nad,
     unprivileged_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-enabled-guest-console-log"
-    networks = {nodenetworkstate_with_bridge.bridge_name: nodenetworkstate_with_bridge.bridge_name}
+    networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
 
     with VirtualMachineForTests(
         client=unprivileged_client,

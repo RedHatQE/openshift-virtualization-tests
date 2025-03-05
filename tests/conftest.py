@@ -169,6 +169,7 @@ from utilities.network import (
     get_cluster_cni_type,
     network_device,
     network_nad,
+    wait_for_node_marked_by_bridge,
     wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
@@ -1773,13 +1774,14 @@ def bridge_on_one_node(worker_node1):
 
 
 @pytest.fixture(scope="session")
-def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace):
+def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace, worker_node1):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=bridge_on_one_node.bridge_name,
         interface_name=bridge_on_one_node.bridge_name,
         namespace=kmp_enabled_namespace,
     ) as nad:
+        wait_for_node_marked_by_bridge(bridge_nad=nad, node=worker_node1)
         yield nad
 
 
