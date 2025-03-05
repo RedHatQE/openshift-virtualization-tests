@@ -9,8 +9,9 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
+    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES, KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
+    KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
 from tests.observability.metrics.utils import (
     get_metric_sum_value,
