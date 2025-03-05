@@ -23,9 +23,15 @@ from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.upgrade,
+    pytest.mark.ocp_upgrade,
+    pytest.mark.cnv_upgrade,
+    pytest.mark.eus_upgrade,
+]
+
 
 @pytest.mark.usefixtures("updated_default_storage_class_ocs_virt")
-@pytest.mark.upgrade
 class TestUpgradeStorage:
     """Pre-upgrade tests"""
 
