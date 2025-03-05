@@ -37,15 +37,10 @@ from utilities.constants import (
     USED,
 )
 from utilities.infra import get_node_selector_dict
+from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_vm_metric_value(prometheus, metric, vm):
-    query = f"{metric}{{name='{vm.name}'}}"
-    metric_results = prometheus.query(query=query)["data"]["result"]
-    return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
 def get_last_transition_time(vm):
@@ -61,17 +56,16 @@ def check_vm_last_transition_metric_value(prometheus, metric, vm):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
-        func=get_vm_metric_value,
+        func=get_metrics_value,
         prometheus=prometheus,
-        metric=metric,
-        vm=vm,
+        metrics_name=f"{metric}{{name='{vm.name}'}}",
     )
     sample, last_transition_time = None, None
     try:
         for sample in samples:
             if sample:
                 last_transition_time = get_last_transition_time(vm=vm)
-                if sample == last_transition_time:
+                if int(sample) == last_transition_time:
                     break
     except TimeoutExpiredError:
         LOGGER.error(f"Metric value: {sample} does not match vm's last transition timestamp: {last_transition_time}")
@@ -259,7 +253,7 @@ class TestVMStatusLastTransitionMetrics:
     indirect=True,
 )
 @pytest.mark.usefixtures("vm_for_test")
-class TestVmConsolesMetrics:
+class TestVmConsolesAndVmCreateDateTimestampMetrics:
     @pytest.mark.polarion("CNV-11024")
     def test_kubevirt_console_active_connections(self, prometheus, vm_for_test, connected_vm_console_successfully):
         validate_metrics_value(
@@ -274,6 +268,14 @@ class TestVmConsolesMetrics:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=vm_for_test.name),
             expected_value="1",
+        )
+
+    @pytest.mark.polarion("CNV-11805")
+    def test_metric_kubevirt_vm_create_date_timestamp_seconds(self, prometheus, vm_for_test):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_create_date_timestamp_seconds{{name='{vm_for_test.name}'}}",
+            expected_value=str(timestamp_to_seconds(timestamp=vm_for_test.instance.metadata.creationTimestamp)),
         )
 
 
