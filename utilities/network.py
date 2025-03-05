@@ -41,6 +41,7 @@ from utilities.constants import (
     SRIOV,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_30SEC,
@@ -1115,6 +1116,22 @@ def verify_dhcpd_activated(vm):
         LOGGER.error(f"{dhcpd} status is not '{active}' but rather '{sample}'")
         raise
 
+
+def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefinition, node: Node) -> None:
+    bridge_annotation = bridge_nad.resource_name
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_3MIN,
+        sleep=5,
+        func=lambda: bridge_annotation in node.instance.status.capacity.keys()
+        and bridge_annotation in node.instance.status.allocatable.keys(),
+    )
+    try:
+        for sample in sampler:
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Node {node.hostname} is not marked by {bridge_nad.bridge_name} bridge")
+        raise
 
 def get_nncp_configured_last_transition_time(nncp_status_condition):
     for condition in nncp_status_condition:
