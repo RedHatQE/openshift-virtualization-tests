@@ -2,12 +2,13 @@ import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.virtual_machine import VirtualMachine
 
-from utilities.constants import HCO_DEFAULT_CPU_MODEL_KEY
+from utilities.constants import ARM_64, HCO_DEFAULT_CPU_MODEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 KUBEVIRT_CPU_MODEL_KEY = "cpuModel"
-VMI_CPU_MODEL_KEY = "host-model"
+HOST_PASSTHROUGH = "host-passthrough"
+
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -52,6 +53,16 @@ def create_vm(client, namespace):
 
 
 @pytest.fixture(scope="module")
+def default_vmi_cpu_model(nodes_cpu_architecture):
+    return HOST_PASSTHROUGH if nodes_cpu_architecture == ARM_64 else "host-model"
+
+
+@pytest.fixture(scope="module")
+def updated_vmi_cpu_model(nodes_cpu_architecture, cluster_common_node_cpu):
+    return HOST_PASSTHROUGH if nodes_cpu_architecture == ARM_64 else cluster_common_node_cpu
+
+
+@pytest.fixture(scope="module")
 def fedora_vm_scope_module(unprivileged_client, namespace):
     yield from create_vm(client=unprivileged_client, namespace=namespace)
 
@@ -85,11 +96,13 @@ def test_default_value_for_cpu_model(
     hco_spec_scope_module,
     kubevirt_hyperconverged_spec_scope_module,
     fedora_vm_scope_module,
+    default_vmi_cpu_model,
 ):
     """
     Default value for defaultCPUModel should be 'None' in HCO
     Default value for CPU model in kubevirt should be 'None'
-    and for VMI should be 'host-model'
+    and for VMI should be 'host-model' for AMD64 cluster and
+    'host-passthrough' for ARM64 cluster
     """
     assert HCO_DEFAULT_CPU_MODEL_KEY not in hco_spec_scope_module, (
         f"HCO is not expected to contain default value for '{HCO_DEFAULT_CPU_MODEL_KEY}', "
@@ -101,7 +114,7 @@ def test_default_value_for_cpu_model(
     )
     assert_vmi_cpu_model(
         vmi_resource=fedora_vm_scope_module,
-        expected_cpu_model=VMI_CPU_MODEL_KEY,
+        expected_cpu_model=default_vmi_cpu_model,
     )
 
 
@@ -111,6 +124,7 @@ def test_set_hco_default_cpu_model(
     hco_with_default_cpu_model_set,
     fedora_vm_scope_function,
     kubevirt_resource,
+    updated_vmi_cpu_model,
 ):
     """
     After HCO defaultCPUModel is set, it should reflect in
@@ -126,7 +140,7 @@ def test_set_hco_default_cpu_model(
     )
     assert_vmi_cpu_model(
         vmi_resource=fedora_vm_scope_function,
-        expected_cpu_model=hco_with_default_cpu_model_set,
+        expected_cpu_model=updated_vmi_cpu_model,
     )
 
 
@@ -136,6 +150,8 @@ def test_set_hco_default_cpu_model_with_existing_vm(
     fedora_vm_scope_module,
     hco_with_default_cpu_model_set,
     kubevirt_resource,
+    default_vmi_cpu_model,
+    updated_vmi_cpu_model,
 ):
     """
     When HCO defaultCPUModel is set, it should reflect in kubevirt
@@ -153,10 +169,10 @@ def test_set_hco_default_cpu_model_with_existing_vm(
     )
     assert_vmi_cpu_model(
         vmi_resource=fedora_vm_scope_module,
-        expected_cpu_model=VMI_CPU_MODEL_KEY,
+        expected_cpu_model=default_vmi_cpu_model,
     )
     fedora_vm_scope_module.restart(wait=True)
     assert_vmi_cpu_model(
         vmi_resource=fedora_vm_scope_module,
-        expected_cpu_model=hco_with_default_cpu_model_set,
+        expected_cpu_model=updated_vmi_cpu_model,
     )
