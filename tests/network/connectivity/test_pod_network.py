@@ -76,8 +76,8 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2332")
 def test_connectivity_over_pod_network(
-    skip_if_not_ipv4_supported_cluster_from_mtx,
-    skip_if_not_ipv6_supported_cluster_from_mtx,
+    fail_if_not_ipv4_supported_cluster_from_mtx,
+    fail_if_not_ipv6_supported_cluster_from_mtx,
     ip_stack_version_matrix__module__,
     pod_net_vma,
     pod_net_vmb,
