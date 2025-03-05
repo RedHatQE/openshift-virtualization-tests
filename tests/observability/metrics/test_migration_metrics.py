@@ -1,4 +1,5 @@
 import pytest
+from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
@@ -15,11 +16,12 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     get_metric_sum_value,
+    time_passed_from_timestamp_until_now_minutes,
     timestamp_to_seconds,
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
+from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -35,7 +37,7 @@ def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
             pod.delete(wait=True)
 
 
-def metric_value_sampler(prometheus, metric, expected_value):
+def metric_value_sampler(prometheus: Prometheus, metric: str, expected_value: int) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=10,
@@ -48,12 +50,17 @@ def metric_value_sampler(prometheus, metric, expected_value):
         if sample == expected_value:
             current_check += 1
             if current_check >= 3:
-                return True
+                return
         else:
             current_check = 0
 
 
-def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, metric_to_check):
+def assert_metrics_values(
+    prometheus: Prometheus,
+    migration_metrics_dict: dict[str, str],
+    initial_values: dict[str, int],
+    metric_to_check: str,
+):
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
@@ -61,7 +68,6 @@ def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, me
     Args:
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
-        vm: vm object
 
     Raises:
         AssertionError: If any metric's value does not match with expected value.
@@ -277,9 +283,14 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
+        time_passed_from_starting_migration = time_passed_from_timestamp_until_now_minutes(
+            timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
+        )
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m])",
+            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
+            f"[{time_passed_from_starting_migration if time_passed_from_starting_migration > 8 else 8}m])",
+            timeout=TIMEOUT_10MIN,
         )
 
 
