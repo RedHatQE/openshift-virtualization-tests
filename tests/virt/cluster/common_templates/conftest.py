@@ -4,7 +4,7 @@ import pytest
 from packaging import version
 
 from tests.utils import vm_object_from_template
-from tests.virt.cluster.common_templates.utils import skip_on_guest_agent_version
+from tests.virt.cluster.common_templates.utils import xfail_old_guest_agent_version
 from utilities.constants import REGEDIT_PROC_NAME
 from utilities.infra import is_jira_open
 from utilities.storage import create_or_update_data_source, data_volume
@@ -277,21 +277,20 @@ def golden_image_vm_object_from_template_multi_storage_scope_class(
 
 
 @pytest.fixture()
-def skip_guest_agent_on_rhel(
+def xfail_rhel_with_old_guest_agent(
     golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
 ):
-    skip_on_guest_agent_version(
+    xfail_old_guest_agent_version(
         vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
         ga_version="4.2.0",
     )
 
 
 @pytest.fixture()
-def skip_if_os_version_below_rhel9(rhel_os_matrix__class__):
-    current_rhel_name = [*rhel_os_matrix__class__][0]
-    os_ver_str = rhel_os_matrix__class__[current_rhel_name]["os_version"]
+def xfail_on_rhel_version_below_rhel9(rhel_os_matrix__class__):
+    os_ver_str = rhel_os_matrix__class__[[*rhel_os_matrix__class__][0]]["os_version"]
     if version.parse(os_ver_str) < version.parse("9"):
-        pytest.skip("EFI is not enabled by default before RHEL9")
+        pytest.xfail(reason="EFI is not enabled by default on RHEL8 and older")
 
 
 @pytest.fixture(scope="class")
