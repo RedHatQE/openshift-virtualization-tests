@@ -654,7 +654,7 @@ OPERATOR_HEALTH_IMPACT_VALUES = {
     NONE_STRING: "0",
 }
 FIRING_STATE = "firing"
-PENDING_STR = "pending"
+PENDING_STATE = "pending"
 KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS = "kubevirt_hco_hyperconverged_cr_exists"
 ES_LIVE_MIGRATE_IF_POSSIBLE = "LiveMigrateIfPossible"
 ES_NONE = "None"
