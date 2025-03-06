@@ -35,9 +35,9 @@ TESTS_CLASS_NAME = "TestCPUHotPlug"
 
 
 @pytest.fixture()
-def skip_windows_memory_hotunplug_test(hotplugged_vm):
+def xfail_windows_memory_hotunplug(hotplugged_vm):
     if "windows" in hotplugged_vm.name:
-        pytest.skip("Windows OS doesn't officially support memory hot unplug!")
+        pytest.xfail(reason="Windows OS doesn't officially support memory hot unplug!")
 
 
 @pytest.fixture(scope="class")
@@ -174,7 +174,7 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10679")
     def test_decrease_memory_value(
-        self, skip_windows_memory_hotunplug_test, hotplugged_sockets_memory_guest, hotplugged_vm
+        self, xfail_windows_memory_hotunplug, hotplugged_sockets_memory_guest, hotplugged_vm
     ):
         assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=FIVE_GI_MEMORY)
 
