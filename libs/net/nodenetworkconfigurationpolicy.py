@@ -1,4 +1,3 @@
-import time
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -7,7 +6,6 @@ from ocp_resources.exceptions import NNCPConfigurationFailed
 from ocp_resources.node_network_configuration_policy_latest import NodeNetworkConfigurationPolicy as Nncp
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import retry
-
 
 WAIT_FOR_STATUS_TIMEOUT_SEC = 90
 WAIT_FOR_STATUS_INTERVAL_SEC = 5
@@ -127,8 +125,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             for condition in self.instance.status.conditions
             if condition["status"] == Nncp.Condition.Status.TRUE
         )
-        self.logger.info(f"Inside wait_for_status_success. conditions: "
-                         f"{[condition for condition in conditions]}")
+        self.logger.info(f"Inside wait_for_status_success. conditions: {[condition for condition in conditions]}")
         for condition in conditions:
             self.logger.info("inside condition for loop")
             if condition["type"] == Nncp.Condition.AVAILABLE:

@@ -179,8 +179,7 @@ def net_add_op_bridge_device(worker_node1):
         desired_state=desired_state,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as nncp:
-        LOGGER.info("in net_add_op_bridge_device. running nncp.wait_for_status_success("
-              "):")
+        LOGGER.info("in net_add_op_bridge_device. running nncp.wait_for_status_success():")
         stat_suc = nncp.wait_for_status_success()
         LOGGER.info(f"stat_suc: {stat_suc}")
         yield nncp
