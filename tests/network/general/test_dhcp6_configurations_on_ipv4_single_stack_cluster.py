@@ -31,9 +31,9 @@ def vm_cirros(
 
 
 @pytest.fixture(scope="module")
-def skip_if_not_ipv4_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
+def fail_if_not_ipv4_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     if not ipv4_supported_cluster or ipv6_supported_cluster:
-        pytest.skip("Test should only run on an IPv4 single-stack cluster")
+        pytest.fail(reason="Test should only run on an IPv4 single-stack cluster")
 
 
 @pytest.fixture()
@@ -74,7 +74,7 @@ def listening_dhcpv6_pid_in_virt_launcher_pod(worker_node1_pod_executor, virt_la
 @pytest.mark.polarion("CNV-7407")
 @pytest.mark.ipv4
 def test_dhcp6_disabled_on_ipv4_single_stack_cluster(
-    skip_if_not_ipv4_single_stack_cluster,
+    fail_if_not_ipv4_single_stack_cluster,
     vm_cirros,
     listening_dhcpv6_pid_in_virt_launcher_pod,
 ):
