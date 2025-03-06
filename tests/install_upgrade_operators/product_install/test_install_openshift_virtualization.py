@@ -15,7 +15,7 @@ from tests.install_upgrade_operators.product_install.utils import (
 )
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
-    PENDING_STR,
+    PENDING_STATE,
     TIMEOUT_10MIN,
 )
 from utilities.exceptions import ResourceMismatch
@@ -47,7 +47,7 @@ def test_cnv_installation_without_hco_cr_alert(
     validate_alerts(
         prometheus=prometheus,
         alert_dict=alert_dictionary_hco_not_installed,
-        state=PENDING_STR,
+        state=PENDING_STATE,
         timeout=TIMEOUT_10MIN,
     )
 
