@@ -721,12 +721,6 @@ def skip_if_workers_vms(workers_type):
         pytest.skip("Test should run only BM cluster")
 
 
-@pytest.fixture(scope="module")
-def skip_if_workers_bms(workers_type):
-    if workers_type == ClusterHosts.Type.PHYSICAL:
-        pytest.skip("This test(s) cannot run on BM cluster.")
-
-
 @pytest.fixture(scope="session")
 def is_psi_cluster():
     return Infrastructure(name="cluster").instance.status.platform == "OpenStack"
