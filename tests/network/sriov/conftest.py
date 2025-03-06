@@ -7,6 +7,7 @@ import re
 import shlex
 
 import pytest
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
@@ -384,3 +385,4 @@ def sriov_worker_with_allocatable_1gi_huge_pages(sriov_workers):
     for node in sriov_workers:
         if node.instance.to_dict()["status"]["allocatable"].get(NODE_HUGE_PAGES_1GI_KEY, "").endswith("Gi"):
             return node
+    raise ResourceNotFoundError(f"SRIOV worker with {NODE_HUGE_PAGES_1GI_KEY} not found")

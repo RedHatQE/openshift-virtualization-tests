@@ -62,7 +62,7 @@ def bond_and_privileged_pod(workers_utility_pods):
     """
     Get OVS BOND from the worker, if OVS BOND not exists the tests should be skipped.
     """
-    skip_msg = "BOND is not configured on the workers on primary interface"
+    fail_msg = "BOND is not configured on the workers on primary interface"
     for pod in workers_utility_pods:
         pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=pod.node)
         try:
@@ -73,9 +73,9 @@ def bond_and_privileged_pod(workers_utility_pods):
             if bond:
                 return bond, pod
 
-            pytest.skip(skip_msg)
+            pytest.fail(reason=fail_msg)
         except CommandExecFailed:
-            pytest.skip(skip_msg)
+            pytest.fail(reason=fail_msg)
             break
 
 
@@ -106,12 +106,6 @@ def bond_port(workers_utility_pods, privileged_pod, bond, node_with_bond):
 
     assert bond_port is not None, f"OVS Bond {bond} on node {node_with_bond} has no ports"
     return bond_port
-
-
-@pytest.fixture(scope="module")
-def skip_when_no_bond(bond):
-    if not bond:
-        pytest.skip("The test requires at least one node with an OVS bond")
 
 
 @pytest.fixture(scope="module")
