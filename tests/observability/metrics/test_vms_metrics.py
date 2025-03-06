@@ -24,6 +24,7 @@ from tests.observability.metrics.utils import (
     expected_metric_labels_and_values,
     timestamp_to_seconds,
     validate_metric_value_within_range,
+    validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
@@ -491,4 +492,33 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
                 vm_name=vm_for_snapshot_for_metrics_test.name
             ),
             expected_labels_and_values=snapshot_labels_for_testing,
+        )
+
+
+class TestVmVnicInfo:
+    @pytest.mark.parametrize(
+        "vm_for_test, query, vm_or_vmi",
+        [
+            pytest.param(
+                "vnic-testing-vm",
+                "kubevirt_vm_vnic_info{{name='{vm_name}'}}",
+                "vm",
+                marks=pytest.mark.polarion("CNV-11812"),
+            ),
+            pytest.param(
+                "vnic-testing-vm",
+                "kubevirt_vmi_vnic_info{{name='{vm_name}'}}",
+                "vmi",
+                marks=pytest.mark.polarion("CNV-11811"),
+            ),
+        ],
+        indirect=["vm_for_test"],
+    )
+    def test_metric_kubevirt_vm_vnic_info(self, prometheus, vm_for_test, vnic_info_from_vm_and_vmi, query, vm_or_vmi):
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=vnic_info_from_vm_and_vmi["vm"]
+            if vm_or_vmi == "vm"
+            else vnic_info_from_vm_and_vmi["vmi"],
+            metric_name=query.format(vm_name=vm_for_test.name),
         )

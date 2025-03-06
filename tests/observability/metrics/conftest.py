@@ -33,6 +33,7 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
+    binding_name_and_type_from_vm_or_vmi,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -1046,3 +1047,23 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
+
+
+@pytest.fixture(scope="class")
+def vnic_info_from_vm_and_vmi(vm_for_test):
+    vmi_instance = vm_for_test.vmi.instance
+    vm_instance = vm_for_test.instance
+    vm_instance_binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm=vm_instance)
+    vmi_instance_binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm=vmi_instance)
+    return {
+        "vm": {
+            "vnic_name": vm_instance.spec.template.spec.networks[0].name,
+            "binding_name": vm_instance_binding_name_and_type["binding_name"],
+            "binding_type": vm_instance_binding_name_and_type["binding_type"],
+        },
+        "vmi": {
+            "vnic_name": vmi_instance.spec.networks[0].name,
+            "binding_name": vmi_instance_binding_name_and_type["binding_name"],
+            "binding_type": vmi_instance_binding_name_and_type["binding_type"],
+        },
+    }
