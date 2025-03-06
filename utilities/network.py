@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+from datetime import datetime
 
 import netaddr
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -25,7 +26,7 @@ from ocp_resources.sriov_network import SriovNetwork
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.infra
 import utilities.virt
@@ -1131,3 +1132,30 @@ def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefin
     except TimeoutExpiredError:
         LOGGER.error(f"Node {node.hostname} is not marked by {bridge_nad.bridge_name} bridge")
         raise
+
+
+def get_nncp_configured_last_transition_time(nncp_status_condition):
+    for condition in nncp_status_condition:
+        if (
+            condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
+            and condition["status"] == "True"
+            and condition["reason"] == NodeNetworkConfigurationPolicy.Conditions.Reason.SUCCESSFULLY_CONFIGURED
+        ):
+            return condition["lastTransitionTime"]
+
+
+@retry(
+    wait_timeout=TIMEOUT_1MIN,
+    sleep=TIMEOUT_5SEC,
+)
+def wait_for_nncp_with_different_transition_time(nncp, initial_transition_time):
+    date_format = "%Y-%m-%dT%H:%M:%SZ"
+    for condition in nncp.instance.get("status", {}).get("conditions", []):
+        if (
+            condition
+            and condition["type"] == NodeNetworkConfigurationPolicy.Conditions.Type.AVAILABLE
+            and datetime.strptime(condition["lastTransitionTime"], date_format)
+            > datetime.strptime(initial_transition_time, date_format)
+        ):
+            return True
+    return False
