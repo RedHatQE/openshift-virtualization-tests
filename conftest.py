@@ -365,10 +365,10 @@ def remove_upgrade_tests_based_on_config(
         cnv_source(str): cnv source option.
         upgrade_tests(list): list of upgrade tests.
     """
-    ocp_upgrade_test: Item
-    cnv_upgrade_test_with_prod_src: Item
-    cnv_upgrade_test_no_prod_src: Item
-    eus_upgrade_test: Item
+    ocp_upgrade_test = None
+    cnv_upgrade_test_with_prod_src = None
+    cnv_upgrade_test_no_prod_src = None
+    eus_upgrade_test = None
     cnv_upgrade_tests: list[Item] = []
 
     for test in upgrade_tests:
@@ -384,16 +384,17 @@ def remove_upgrade_tests_based_on_config(
                 cnv_upgrade_test_no_prod_src = test
 
     if py_config["upgraded_product"] == "cnv":
-        discard = [
+        tests_to_remove = [
             cnv_upgrade_test_no_prod_src if cnv_source == "production" else cnv_upgrade_test_with_prod_src,
             ocp_upgrade_test,
             eus_upgrade_test,
         ]
     elif py_config["upgraded_product"] == "ocp":
-        discard = [*cnv_upgrade_tests, eus_upgrade_test]
+        tests_to_remove = [*cnv_upgrade_tests, eus_upgrade_test]
     else:
-        discard = [*cnv_upgrade_tests, ocp_upgrade_test]
+        tests_to_remove = [*cnv_upgrade_tests, ocp_upgrade_test]
 
+    discard = [test for test in tests_to_remove if test is not None]
     keep = [test for test in upgrade_tests if test not in discard]
     return keep, discard
 
