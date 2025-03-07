@@ -100,6 +100,12 @@ def istio_system_namespace(admin_client):
     return Namespace(name=ISTIO_SYSTEM_DEFAULT_NS, client=admin_client).exists
 
 
+@pytest.fixture(scope="session")
+def service_mesh_installed_validation(istio_system_namespace):
+    if not istio_system_namespace:
+        pytest.fail(reason="Service Mesh is not installed.")
+
+
 @pytest.fixture(scope="module")
 def sriov_workers_node1(sriov_workers):
     """

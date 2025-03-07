@@ -6,7 +6,7 @@ from tests.network.service_mesh.utils import (
 )
 from tests.network.utils import assert_authentication_request
 
-pytestmark = pytest.mark.special_infra
+pytestmark = [pytest.mark.usefixtures("service_mesh_installed_validation"), pytest.mark.special_infra]
 
 
 class TestSMTrafficManagement:
