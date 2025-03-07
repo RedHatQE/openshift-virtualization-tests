@@ -26,11 +26,10 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
+    pytest.mark.high_resource_vm,
     pytest.mark.gpu,
-    pytest.mark.usefixtures(
-        "skip_on_psi_cluster",
-        "non_existent_mdev_bus_nodes",
-    ),
+    pytest.mark.usefixtures("non_existent_mdev_bus_nodes"),
 ]
 
 

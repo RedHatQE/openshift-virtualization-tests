@@ -56,17 +56,6 @@ def verify_evmcs_related_attributes(vmi_xml_dict):
     assert vapic_hyperv_feature["@state"] == "on", f"vapic feature in libvirt: {vapic_hyperv_feature}"
 
 
-@pytest.fixture(scope="module")
-def skip_if_no_evmcs_support(schedulable_nodes):
-    for node in schedulable_nodes:
-        if any([
-            label == "cpu-feature.node.kubevirt.io/vmx" and value == "true" for label, value in node.labels.items()
-        ]):
-            return
-
-    pytest.skip("Cannot run the test, none of the nodes has vmx support.")
-
-
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_class,",
     [
@@ -81,7 +70,8 @@ def skip_if_no_evmcs_support(schedulable_nodes):
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
 class TestWindowsHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",
@@ -164,11 +154,7 @@ class TestWindowsHyperVFlags:
         ],
         indirect=True,
     )
-    def test_windows_vm_with_evmcs_feature(
-        self,
-        skip_if_no_evmcs_support,
-        hyperv_vm,
-    ):
+    def test_windows_vm_with_evmcs_feature(self, hyperv_vm):
         verify_evmcs_related_attributes(vmi_xml_dict=hyperv_vm.privileged_vmi.xml_dict)
 
 
@@ -186,7 +172,6 @@ class TestWindowsHyperVFlags:
     ],
     indirect=True,
 )
-@pytest.mark.gating
 class TestFedoraHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",
@@ -202,11 +187,7 @@ class TestFedoraHyperVFlags:
         ],
         indirect=True,
     )
-    def test_fedora_vm_with_evmcs_feature(
-        self,
-        skip_if_no_evmcs_support,
-        hyperv_vm,
-    ):
+    def test_fedora_vm_with_evmcs_feature(self, hyperv_vm):
         LOGGER.info("Verify added hyperv feature evmcs is added to libvirt")
         hyperv_vm_xml = hyperv_vm.privileged_vmi.xml_dict
         evmcs_feature = hyperv_vm_xml["domain"]["features"]["hyperv"]["evmcs"]

@@ -265,7 +265,9 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster", "sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
+@pytest.mark.usefixtures("sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")
 class TestSysprep:
     @pytest.mark.polarion("CNV-6760")
     def test_admin_user_locale_computer_name_after_boot(self, sysprep_vm, sysprep_vm_hostname):

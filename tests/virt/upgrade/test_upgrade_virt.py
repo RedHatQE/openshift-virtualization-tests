@@ -107,12 +107,12 @@ class TestUpgradeVirt:
         verify_vms_ssh_connectivity(vms_list=[manual_run_strategy_vm, always_run_strategy_vm])
 
     @pytest.mark.sno
+    @pytest.mark.high_resource_vm
     @pytest.mark.polarion("CNV-7243")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID, after=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_windows_vm_before_upgrade")
     def test_windows_vm_before_upgrade(
         self,
-        skip_on_psi_cluster,
         windows_vm,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
