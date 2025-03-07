@@ -12,12 +12,13 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.constants import VIRT_PROCESS_MEMORY_LIMITS
+from tests.virt.constants import REQUESTS_MEMORY_VMI_STR, VIRT_PROCESS_MEMORY_LIMITS
 from utilities.constants import (
     DEFAULT_HCO_CONDITIONS,
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -30,7 +31,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix
+from utilities.infra import get_pod_by_name_prefix, is_jira_open
 from utilities.virt import (
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
@@ -238,7 +239,15 @@ def wait_when_pod_in_gated_state(pod):
         raise
 
 
-def check_arq_status_values(current_values, expected_values):
+def check_arq_status_values(current_values, expected_values, application_aware_resource_quota=None):
+    if application_aware_resource_quota and is_jira_open("CNV-56865"):
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_5SEC,
+            sleep=TIMEOUT_1SEC,
+            func=lambda: application_aware_resource_quota.instance.status.used,
+        ):
+            if sample and sample.get("requests.memory/vmi") == expected_values[REQUESTS_MEMORY_VMI_STR]:
+                break
     flatten_expected_values = flatten_dict(dictionary=expected_values)
     flatten_arq_status = flatten_dict(dictionary=current_values)
     failed_status_fields = {}
