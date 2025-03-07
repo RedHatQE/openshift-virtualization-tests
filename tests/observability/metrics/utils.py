@@ -8,7 +8,7 @@ from typing import Any, Optional, Union
 
 import bitmath
 import pytest
-from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic import DynamicClient, ResourceInstance
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
@@ -1230,3 +1230,32 @@ def validate_metric_value_with_round_down(
     except TimeoutExpiredError:
         LOGGER.info(f"Metric int value of: {metric_name} is: {sample}, expected value:{expected_value}")
         raise
+
+
+def binding_name_and_type_from_vm_or_vmi(vm: ResourceInstance) -> dict[str, str]:
+    binding_names_and_types = {
+        "masquerade": "core",
+        "bridge": "core",
+        "sriov": "core",
+    }
+    vm_interface = None
+    if vm.kind == "VirtualMachineInstance":
+        vm_interface = vm.spec.domain.devices.interfaces[0]
+    elif vm.kind == "VirtualMachine":
+        vm_interface = vm.spec.template.spec.domain.devices.interfaces[0]
+    if vm_interface:
+        for binding_name in binding_names_and_types.keys():
+            if vm_interface.get(binding_name):
+                return {"binding_name": binding_name, "binding_type": binding_names_and_types[binding_name]}
+    return {}
+
+
+def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
+    vnic_info_metric_result = prometheus.query_sampler(query=metric_name)[0].get("metric")
+    mismatch_vnic_info = {}
+    for info in vnic_info_to_compare:
+        expected_value = vnic_info_to_compare[info]
+        actual_value = vnic_info_metric_result.get(info)
+        if actual_value != expected_value:
+            mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
+    assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
