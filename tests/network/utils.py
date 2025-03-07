@@ -3,9 +3,11 @@ import shlex
 from collections import OrderedDict
 
 import pexpect
+import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
+from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.service import Service
 from ocp_resources.service_mesh_member_roll import ServiceMeshMemberRoll
 from pyhelper_utils.shell import run_ssh_commands
@@ -423,3 +425,8 @@ def get_service(name, namespace):
         return service
 
     raise ResourceNotFoundError(f"Service {name}.")
+
+
+def dpdk_support_validation():
+    if not PerformanceProfile(name="dpdk").exists:
+        pytest.fail(reason="DPDK is not configured")
