@@ -49,7 +49,7 @@ def namespaced_layer2_user_defined_network(udn_namespace):
         namespace=udn_namespace.name,
         role="Primary",
         subnets=["10.10.0.0/24"],
-        ipam_lifecycle="Persistent",
+        ipam={"lifecycle": "Persistent"},
     ) as udn:
         udn.wait_for_condition(
             condition="NetworkAllocationSucceeded",
