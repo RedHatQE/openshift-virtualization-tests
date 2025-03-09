@@ -61,6 +61,18 @@ class Interface:
 
 
 @dataclass
+class BridgeMappings:
+    localnet: str
+    bridge: str
+    state: str
+
+
+@dataclass
+class OVN:
+    bridge_mappings: list[BridgeMappings]
+
+
+@dataclass
 class DesiredState:
     """
     Represents the desired network configuration for NMstate.
@@ -68,7 +80,8 @@ class DesiredState:
     https://nmstate.io/devel/yaml_api.html
     """
 
-    interfaces: list[Interface]
+    interfaces: list[Interface] | None = None
+    ovn: OVN | None = None
 
 
 class NodeNetworkConfigurationPolicy(Nncp):
@@ -109,6 +122,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
     def clean_up(self) -> bool:
         self._delete_interfaces()
+        self._delete_bridge_mappings()
         self.wait_for_status_success()
         return super().clean_up()
 
@@ -134,7 +148,14 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
     def _delete_interfaces(self) -> None:
         desired_state = deepcopy(self.desired_state)
-        for iface in desired_state["interfaces"]:
+        for iface in desired_state.get("interfaces", []):
             iface["state"] = Nncp.Interface.State.ABSENT
-        if desired_state["interfaces"]:
+        if desired_state.get("interfaces"):
             ResourceEditor(patches={self: {"spec": {"desiredState": desired_state}}}).update()
+
+    def _delete_bridge_mappings(self) -> None:
+        ovn = deepcopy(self.desired_state.get("ovn", {}))
+        for bridge_mapping in ovn.get("bridge-mappings", []):
+            bridge_mapping["state"] = Nncp.Interface.State.ABSENT
+        if ovn.get("bridge-mappings"):
+            ResourceEditor(patches={self: {"spec": {"desiredState": {"ovn": ovn}}}}).update()

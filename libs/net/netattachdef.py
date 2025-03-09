@@ -31,6 +31,22 @@ class CNIPluginBridgeConfig(CNIPluginConfig):
 
 
 @dataclass
+class CNIPluginOvnK8sConfig(CNIPluginConfig):
+    """
+    CNI OVN-Kubernetes Plugin
+    Ref:
+    https://docs.openshift.com/container-platform/4.14/networking/multiple_networks/
+    configuring-additional-network.html#configuration-ovnk-network-plugin-json-object_
+    configuring-additional-network
+    """
+
+    type: str = field(default="ovn-k8s-cni-overlay", init=False)
+    topology: str
+    netAttachDefName: str  # noqa: N815
+    vlanID: int | None = None  # noqa: N815
+
+
+@dataclass
 class NetConfig:
     """
     CNI specification configuration
