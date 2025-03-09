@@ -100,6 +100,9 @@ IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
+BINDING_NAME = "binding_name"
+BINDING_TYPE = "binding_type"
+VNIC_NAME = "vnic_name"
 
 
 def wait_for_component_value_to_be_expected(prometheus, component_name, expected_count):
@@ -1057,13 +1060,13 @@ def vnic_info_from_vm_and_vmi(vm_for_test):
     vmi_instance_binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm=vmi_instance)
     return {
         "vm": {
-            "vnic_name": vm_instance.spec.template.spec.networks[0].name,
-            "binding_name": vm_instance_binding_name_and_type["binding_name"],
-            "binding_type": vm_instance_binding_name_and_type["binding_type"],
+            VNIC_NAME: vm_instance.spec.template.spec.networks[0].name,
+            BINDING_NAME: vm_instance_binding_name_and_type[BINDING_NAME],
+            BINDING_TYPE: vm_instance_binding_name_and_type[BINDING_TYPE],
         },
         "vmi": {
-            "vnic_name": vmi_instance.spec.networks[0].name,
-            "binding_name": vmi_instance_binding_name_and_type["binding_name"],
-            "binding_type": vmi_instance_binding_name_and_type["binding_type"],
+            VNIC_NAME: vmi_instance.spec.networks[0].name,
+            BINDING_NAME: vmi_instance_binding_name_and_type[BINDING_NAME],
+            BINDING_TYPE: vmi_instance_binding_name_and_type[BINDING_TYPE],
         },
     }

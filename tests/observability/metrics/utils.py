@@ -8,12 +8,13 @@ from typing import Any, Optional, Union
 
 import bitmath
 import pytest
-from kubernetes.dynamic import DynamicClient, ResourceInstance
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -1232,21 +1233,16 @@ def validate_metric_value_with_round_down(
         raise
 
 
-def binding_name_and_type_from_vm_or_vmi(vm: ResourceInstance) -> dict[str, str]:
-    binding_names_and_types = {
-        "masquerade": "core",
-        "bridge": "core",
-        "sriov": "core",
-    }
+def binding_name_and_type_from_vm_or_vmi(vm: VirtualMachineInstance | VirtualMachine) -> dict[str, str]:
     vm_interface = None
     if vm.kind == "VirtualMachineInstance":
         vm_interface = vm.spec.domain.devices.interfaces[0]
     elif vm.kind == "VirtualMachine":
         vm_interface = vm.spec.template.spec.domain.devices.interfaces[0]
     if vm_interface:
-        for binding_name in binding_names_and_types.keys():
+        for binding_name in ["masquerade", "bridge", "sriov"]:
             if vm_interface.get(binding_name):
-                return {"binding_name": binding_name, "binding_type": binding_names_and_types[binding_name]}
+                return {"binding_name": binding_name, "binding_type": "core"}
     return {}
 
 

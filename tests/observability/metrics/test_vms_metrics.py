@@ -495,30 +495,35 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         )
 
 
+@pytest.mark.parametrize(
+    "vm_for_test",
+    [
+        pytest.param(
+            "vnic-testing-vm",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("vm_for_test")
 class TestVmVnicInfo:
     @pytest.mark.parametrize(
-        "vm_for_test, query, vm_or_vmi",
+        "query, vm_or_vmi",
         [
             pytest.param(
-                "vnic-testing-vm",
                 "kubevirt_vm_vnic_info{{name='{vm_name}'}}",
                 "vm",
                 marks=pytest.mark.polarion("CNV-11812"),
             ),
             pytest.param(
-                "vnic-testing-vm",
                 "kubevirt_vmi_vnic_info{{name='{vm_name}'}}",
                 "vmi",
                 marks=pytest.mark.polarion("CNV-11811"),
             ),
         ],
-        indirect=["vm_for_test"],
     )
     def test_metric_kubevirt_vm_vnic_info(self, prometheus, vm_for_test, vnic_info_from_vm_and_vmi, query, vm_or_vmi):
         validate_vnic_info(
             prometheus=prometheus,
-            vnic_info_to_compare=vnic_info_from_vm_and_vmi["vm"]
-            if vm_or_vmi == "vm"
-            else vnic_info_from_vm_and_vmi["vmi"],
+            vnic_info_to_compare=vnic_info_from_vm_and_vmi[vm_or_vmi],
             metric_name=query.format(vm_name=vm_for_test.name),
         )
