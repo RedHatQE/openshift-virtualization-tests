@@ -9,15 +9,9 @@ from ocp_resources.node import Node
 from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import (
-    ContainerDisk,
-    Disk,
-    SpecDisk,
-    VMSpec,
-    Volume,
-)
+from libs.vm.spec import ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
-from utilities.virt import get_oc_image_info, vm_console_run_commands
+from utilities.virt import generate_cloud_init_data, get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -87,3 +81,10 @@ def container_image(base_image: str) -> str:
 def containerdisk_storage(image: str) -> tuple[SpecDisk, Volume]:
     name = "containerdisk"
     return SpecDisk(name=name, disk=Disk(bus="virtio")), Volume(name=name, containerDisk=ContainerDisk(image=image))
+
+
+def cloudinitdisk_storage(data: dict[Any, Any]) -> tuple[SpecDisk, Volume]:
+    name = "cloudinitdisk"
+    return SpecDisk(name=name, disk=Disk(bus="virtio")), Volume(
+        name=name, cloudInitNoCloud=generate_cloud_init_data(data=data)
+    )
