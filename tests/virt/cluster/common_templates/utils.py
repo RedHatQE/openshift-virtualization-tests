@@ -33,10 +33,10 @@ from utilities.virt import restart_vm_wait_for_running_vm
 LOGGER = logging.getLogger(__name__)
 
 
-def skip_on_guest_agent_version(vm, ga_version):
+def xfail_old_guest_agent_version(vm, ga_version):
     qemu_guest_agent_version = get_linux_guest_agent_version(ssh_exec=vm.ssh_exec)
     if version.parse(qemu_guest_agent_version.split()[0]) < version.parse(ga_version):
-        pytest.skip(f"Skipping on guest agent version {qemu_guest_agent_version}")
+        pytest.xfail(reason=f"Bug in old guest agent version {qemu_guest_agent_version}")
 
 
 def vm_os_version(vm):
