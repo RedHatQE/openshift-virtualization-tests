@@ -169,6 +169,7 @@ from utilities.network import (
     get_cluster_cni_type,
     network_device,
     network_nad,
+    wait_for_node_marked_by_bridge,
     wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
@@ -718,12 +719,6 @@ def workers_type(workers_utility_pods, installing_cnv):
 def skip_if_workers_vms(workers_type):
     if workers_type == ClusterHosts.Type.VIRTUAL:
         pytest.skip("Test should run only BM cluster")
-
-
-@pytest.fixture(scope="module")
-def skip_if_workers_bms(workers_type):
-    if workers_type == ClusterHosts.Type.PHYSICAL:
-        pytest.skip("This test(s) cannot run on BM cluster.")
 
 
 @pytest.fixture(scope="session")
@@ -1773,13 +1768,14 @@ def bridge_on_one_node(worker_node1):
 
 
 @pytest.fixture(scope="session")
-def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace):
+def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace, worker_node1):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=bridge_on_one_node.bridge_name,
         interface_name=bridge_on_one_node.bridge_name,
         namespace=kmp_enabled_namespace,
     ) as nad:
+        wait_for_node_marked_by_bridge(bridge_nad=nad, node=worker_node1)
         yield nad
 
 
@@ -2026,12 +2022,6 @@ def golden_images_data_import_crons_scope_class(admin_client, golden_images_name
 @pytest.fixture(scope="session")
 def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
-
-
-@pytest.fixture(scope="session")
-def skip_if_compact_cluster(compact_cluster):
-    if compact_cluster:
-        pytest.skip("Test cannot run on compact cluster")
 
 
 @pytest.fixture()
@@ -2410,6 +2400,16 @@ def is_disconnected_cluster():
 
 @pytest.fixture()
 def migration_policy_with_bandwidth():
+    with MigrationPolicy(
+        name="migration-policy",
+        bandwidth_per_migration="128Ki",
+        vmi_selector=MIGRATION_POLICY_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="class")
+def migration_policy_with_bandwidth_scope_class():
     with MigrationPolicy(
         name="migration-policy",
         bandwidth_per_migration="128Ki",
