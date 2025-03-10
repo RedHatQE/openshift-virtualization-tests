@@ -10,6 +10,7 @@ import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_config_openshift_io import Network
+from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
@@ -199,7 +200,7 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def network_sanity(hosts_common_available_ports, junitxml_plugin):
+def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
     """
     Perform verification that the cluster is a multi-nic one otherwise exit run
     """
@@ -214,3 +215,16 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin):
             junitxml_property=junitxml_plugin,
         )
     LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
+
+    if any(item.get_closest_marker("dpdk") for item in request.session.items):
+        LOGGER.info("Verifying if the cluster supports running DPDK tests...")
+        dpdk_performance_profile_name = "dpdk"
+        if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
+            exit_pytest_execution(
+                filename="network_cluster_sanity_failure.txt",
+                return_code=network_sanity_failure_return_code,
+                message=f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
+                "does not exist.",
+                junitxml_property=junitxml_plugin,
+            )
+        LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
