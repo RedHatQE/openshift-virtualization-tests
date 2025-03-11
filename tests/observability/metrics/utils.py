@@ -14,13 +14,14 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     GO_VERSION_STR,
     INSTANCE_TYPE_LABELS,
     KUBE_VERSION_STR,
@@ -1233,16 +1234,10 @@ def validate_metric_value_with_round_down(
         raise
 
 
-def binding_name_and_type_from_vm_or_vmi(vm: VirtualMachineInstance | VirtualMachine) -> dict[str, str]:
-    vm_interface = None
-    if vm.kind == "VirtualMachineInstance":
-        vm_interface = vm.spec.domain.devices.interfaces[0]
-    elif vm.kind == "VirtualMachine":
-        vm_interface = vm.spec.template.spec.domain.devices.interfaces[0]
-    if vm_interface:
-        for binding_name in ["masquerade", "bridge", "sriov"]:
-            if vm_interface.get(binding_name):
-                return {"binding_name": binding_name, "binding_type": "core"}
+def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[str, str]:
+    for binding_name in ["masquerade", "bridge", "sriov"]:
+        if vm_interface.get(binding_name):
+            return {BINDING_NAME: binding_name, BINDING_TYPE: "core"}
     return {}
 
 

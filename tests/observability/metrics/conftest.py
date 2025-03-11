@@ -20,6 +20,8 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -100,9 +102,6 @@ IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
-BINDING_NAME = "binding_name"
-BINDING_TYPE = "binding_type"
-VNIC_NAME = "vnic_name"
 
 
 def wait_for_component_value_to_be_expected(prometheus, component_name, expected_count):
@@ -1053,20 +1052,18 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture(scope="class")
-def vnic_info_from_vm_and_vmi(vm_for_test):
-    vmi_instance = vm_for_test.vmi.instance
-    vm_instance = vm_for_test.instance
-    vm_instance_binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm=vm_instance)
-    vmi_instance_binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm=vmi_instance)
+def vnic_info_from_vm_and_vmi(request, vm_for_test):
+    vm_or_vmi = request.param
+    vm_instance = vm_for_test.vmi.instance if vm_or_vmi == "vmi" else vm_for_test.instance
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(
+        vm_interface=vm_instance.spec.domain.devices.interfaces[0]
+        if vm_or_vmi == "vmi"
+        else vm_instance.spec.template.spec.domain.devices.interfaces[0]
+    )
     return {
-        "vm": {
-            VNIC_NAME: vm_instance.spec.template.spec.networks[0].name,
-            BINDING_NAME: vm_instance_binding_name_and_type[BINDING_NAME],
-            BINDING_TYPE: vm_instance_binding_name_and_type[BINDING_TYPE],
-        },
-        "vmi": {
-            VNIC_NAME: vmi_instance.spec.networks[0].name,
-            BINDING_NAME: vmi_instance_binding_name_and_type[BINDING_NAME],
-            BINDING_TYPE: vmi_instance_binding_name_and_type[BINDING_TYPE],
-        },
+        "vnic_name": vm_instance.spec.template.spec.networks[0].name
+        if vm_or_vmi == "vm"
+        else vm_instance.spec.networks[0].name,
+        BINDING_NAME: binding_name_and_type[BINDING_NAME],
+        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
     }
