@@ -118,6 +118,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
                 "additional_labels": VM_LABEL,
             },
             id="WIN-VM",
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
     ],
     indirect=True,
@@ -125,9 +126,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
 class TestPostCopyMigration:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-11421")
-    def test_migrate_vm(
-        self, skip_windows_if_on_psi_cluster, hotplugged_vm, vm_background_process_id, migrated_hotplugged_vm
-    ):
+    def test_migrate_vm(self, hotplugged_vm, vm_background_process_id, migrated_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 

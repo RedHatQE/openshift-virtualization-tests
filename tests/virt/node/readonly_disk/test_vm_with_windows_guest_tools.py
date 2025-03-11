@@ -15,7 +15,7 @@ from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_3MIN, VIRTIO_WIN
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
-pytestmark = pytest.mark.usefixtures("skip_on_psi_cluster")
+pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
 
 LOGGER = logging.getLogger(__name__)

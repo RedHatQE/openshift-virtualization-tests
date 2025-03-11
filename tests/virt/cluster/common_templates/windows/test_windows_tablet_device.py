@@ -17,8 +17,9 @@ from utilities.constants import TCP_TIMEOUT_30SEC, VIRTIO
 from utilities.virt import get_windows_os_dict
 
 pytestmark = [
-    pytest.mark.usefixtures("skip_on_psi_cluster"),
+    pytest.mark.special_infra,
     pytest.mark.post_upgrade,
+    pytest.mark.high_resource_vm,
 ]
 
 

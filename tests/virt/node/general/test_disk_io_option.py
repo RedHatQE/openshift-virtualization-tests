@@ -128,7 +128,8 @@ class TestRHELIOOptions:
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_on_psi_cluster")
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
 class TestWindowsIOOptions:
     @pytest.mark.parametrize(
         "disk_options_vm, expected_disk_io_option",
