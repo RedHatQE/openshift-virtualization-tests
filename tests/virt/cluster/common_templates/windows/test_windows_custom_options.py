@@ -22,7 +22,7 @@ from utilities.virt import (
     running_vm,
 )
 
-pytestmark = pytest.mark.usefixtures("skip_on_psi_cluster")
+pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
 FIRMWARE_UUID = "A6074E4A-13ED-5222-9CC5-4DC445BE1EC5"
 TESTS_CLASS_NAME = "TestCustomWindowsOptions"

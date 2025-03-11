@@ -9,13 +9,8 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     NamespacesNames,
 )
-from utilities.infra import ExecCommandOnPod, get_daemonsets
+from utilities.infra import get_daemonsets
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
-
-
-def get_nodes_gpu_info(util_pods, node):
-    pod_exec = ExecCommandOnPod(utility_pods=util_pods, node=node)
-    return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")
 
 
 def get_num_gpu_devices_in_rhel_vm(vm):
@@ -124,12 +119,3 @@ def wait_for_manager_pods_deployed(admin_client, ds_name):
     for ds in daemonsets_in_namespace:
         if ds_name in ds.name:
             ds.wait_until_deployed()
-
-
-def filter_out_nodes_with_unsupported_gpus(node_list, utility_pods):
-    gpu_nodes_copy = node_list.copy()
-    for node in node_list:
-        # Currently A30/A100 GPU is unsupported by CNV (required driver not supported)
-        if "A30" in get_nodes_gpu_info(util_pods=utility_pods, node=node):
-            gpu_nodes_copy.remove(node)
-    return gpu_nodes_copy
