@@ -8,15 +8,11 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from utilities.constants import AMD
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = [
-    pytest.mark.post_upgrade,
-    pytest.mark.sno,
-    pytest.mark.usefixtures("skip_if_amd_cpu_nodes"),
-]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.usefixtures("fail_if_amd_cpu_nodes")]
 
 
 @pytest.fixture()
-def skip_if_amd_cpu_nodes(nodes_cpu_vendor):
+def fail_if_amd_cpu_nodes(nodes_cpu_vendor):
     if nodes_cpu_vendor == AMD:
         pytest.skip("PCID CPU feature is not supported on AMD CPU")
 

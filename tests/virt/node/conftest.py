@@ -118,9 +118,3 @@ def migration_policy_with_allow_auto_converge(namespace):
         allow_auto_converge=True,
     ):
         yield
-
-
-@pytest.fixture(scope="class")
-def skip_windows_if_on_psi_cluster(is_psi_cluster, hotplugged_vm):
-    if is_psi_cluster and "windows" in hotplugged_vm.name:
-        pytest.skip("This test should be skipped on a PSI cluster")
