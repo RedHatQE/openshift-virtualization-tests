@@ -32,6 +32,7 @@ from utilities.virt import (
 
 pytestmark = [
     pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
     pytest.mark.gpu,
     pytest.mark.usefixtures("non_existent_mdev_bus_nodes"),
 ]
@@ -198,7 +199,6 @@ class TestVGPURHELGPUSSpec:
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "skip_if_only_one_gpu_node",
     "hco_cr_with_node_specific_mdev_permitted_hostdevices",
 )
 class TestNodeMDEVTypeVGPURHELGPUSSpec:

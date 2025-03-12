@@ -9,40 +9,10 @@ from tests.utils import (
     get_vm_cpu_list,
 )
 from utilities.constants import SRIOV
-from utilities.infra import ExecCommandOnPod
 from utilities.network import sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-pytestmark = [
-    pytest.mark.usefixtures(
-        "skip_if_workers_vms",
-        "skip_if_no_cpumanager_workers",
-        "skip_if_numa_not_configured_or_enabled",
-    ),
-]
-
-
-@pytest.fixture(scope="module")
-def skip_if_numa_not_configured_or_enabled(schedulable_nodes, workers_utility_pods):
-    cat_cmd = "cat /etc/kubernetes/kubelet.conf"
-    single_numa_node_cmd = f"{cat_cmd} | grep -i single-numa-node"
-    topology_manager_cmd = f"{cat_cmd} | grep -w TopologyManager"
-    for cmd in (single_numa_node_cmd, topology_manager_cmd):
-        if not check_numa_config_on_node(
-            cmd=cmd,
-            schedulable_nodes=schedulable_nodes,
-            utility_pods=workers_utility_pods,
-        ):
-            pytest.skip(f"Test should run on nodes with {cmd.split()[-1]}")
-
-
-def check_numa_config_on_node(cmd, schedulable_nodes, utility_pods):
-    for node in schedulable_nodes:
-        pod_exec = ExecCommandOnPod(utility_pods=utility_pods, node=node)
-        out = pod_exec.exec(command=cmd, ignore_rc=True)
-        if not out:
-            return False
-    return True
+pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager, pytest.mark.numa]
 
 
 @pytest.fixture(scope="module")
@@ -112,7 +82,7 @@ def test_numa(vm_numa):
     assert_numa_cpu_allocation(vm_cpus=vm_cpu_list, numa_nodes=numa_node_dict)
 
 
-@pytest.mark.special_infra
+@pytest.mark.sriov
 @pytest.mark.polarion("CNV-4309")
 def test_numa_with_sriov(
     vm_numa_sriov,

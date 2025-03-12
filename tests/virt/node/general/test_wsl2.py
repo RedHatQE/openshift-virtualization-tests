@@ -22,7 +22,8 @@ from utilities.virt import (
     running_vm,
 )
 
-pytestmark = pytest.mark.usefixtures("skip_on_psi_cluster")
+pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
+
 
 LOGGER = logging.getLogger(__name__)
 RESOURCE_USAGES = 70.0

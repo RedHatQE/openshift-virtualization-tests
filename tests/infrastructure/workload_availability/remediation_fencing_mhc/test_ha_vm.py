@@ -130,7 +130,6 @@ def wait_node_restored(node):
     indirect=True,
 )
 def test_ha_vm_container_disk_reboot(
-    skip_if_workers_vms,
     workers_utility_pods,
     machine_health_check_reboot,
     ha_vm_container_disk,
@@ -166,7 +165,6 @@ def test_ha_vm_container_disk_reboot(
     indirect=True,
 )
 def test_ha_vm_dv_disk_reboot(
-    skip_if_workers_vms,
     workers_utility_pods,
     machine_health_check_reboot,
     ha_vm_dv_disk,

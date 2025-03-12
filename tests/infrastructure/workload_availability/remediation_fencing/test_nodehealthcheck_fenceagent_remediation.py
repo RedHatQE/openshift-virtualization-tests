@@ -21,13 +21,7 @@ from tests.infrastructure.workload_availability.remediation_fencing.utils import
     wait_for_nodehealthcheck_enabled_phase,
 )
 
-pytestmark = [
-    pytest.mark.usefixtures(
-        "skip_if_workers_vms",
-        "skip_on_aws_cluster",
-    ),
-    pytest.mark.node_remediation,
-]
+pytestmark = [pytest.mark.destructive, pytest.mark.special_infra, pytest.mark.node_remediation_ipmi_enabled]
 
 
 @pytest.fixture(scope="session")
