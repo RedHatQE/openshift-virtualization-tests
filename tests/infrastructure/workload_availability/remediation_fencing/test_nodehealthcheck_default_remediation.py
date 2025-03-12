@@ -19,9 +19,11 @@ from tests.infrastructure.workload_availability.remediation_fencing.utils import
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "skip_if_compact_cluster_and_jira_47277_open",
+        "fail_if_compact_cluster_and_jira_47277_open",
     ),
     pytest.mark.node_remediation,
+    pytest.mark.destructive,
+    pytest.mark.special_infra,
 ]
 
 

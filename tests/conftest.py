@@ -85,7 +85,6 @@ from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
-    HOSTPATH_CSI_BASIC,
     HOTFIX_STR,
     INSTANCE_TYPE_STR,
     INTEL,
@@ -713,12 +712,6 @@ def workers_type(workers_utility_pods, installing_cnv):
     LOGGER.info(f"Cluster workers are: {virtual}")
     os.environ[WORKERS_TYPE] = virtual
     return virtual
-
-
-@pytest.fixture(scope="module")
-def skip_if_workers_vms(workers_type):
-    if workers_type == ClusterHosts.Type.VIRTUAL:
-        pytest.skip("Test should run only BM cluster")
 
 
 @pytest.fixture(scope="session")
@@ -1365,30 +1358,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
     """
     if not ocs_storage_class:
         pytest.skip("Skipping test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_nfs_sc(cluster_storage_classes_names):
-    """
-    Skip test if no NFS storage class available
-    """
-    if StorageClassNames.NFS not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {StorageClassNames.NFS} storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
-        )
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_csi_basic_sc(cluster_storage_classes_names):
-    """
-    Skip test if no CSI basic storage class available
-    """
-    if HOSTPATH_CSI_BASIC not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {HOSTPATH_CSI_BASIC} basic storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
-        )
 
 
 @pytest.fixture(scope="session")
