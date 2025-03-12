@@ -204,27 +204,38 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
     """
     Perform verification that the cluster is a multi-nic one otherwise exit run
     """
-    # set a non-zero return code to indicate failure of network sanity
-    network_sanity_failure_return_code = 91
-    LOGGER.info("Verify cluster running network tests is a multi-nic one")
-    if len(hosts_common_available_ports) <= 1:
+    failure_msgs = []
+
+    def _verify_multi_nic():
+        LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
+        if len(hosts_common_available_ports) <= 1:
+            failure_msgs.append(
+                f"Cluster lacks multiple NICs, only {hosts_common_available_ports} common available ports found"
+            )
+        else:
+            LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
+
+    def _verify_dpdk():
+        if any(item.get_closest_marker("dpdk") for item in request.session.items):
+            LOGGER.info("Verifying if the cluster supports running DPDK tests...")
+            dpdk_performance_profile_name = "dpdk"
+            if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
+                failure_msgs.append(
+                    f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
+                    "does not exist."
+                )
+            else:
+                LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
+
+    _verify_multi_nic()
+    _verify_dpdk()
+
+    if failure_msgs:
+        err_msg = "\n".join(failure_msgs)
+        LOGGER.error(f"Network cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
+            message=err_msg,
+            return_code=91,
             filename="network_cluster_sanity_failure.txt",
-            return_code=network_sanity_failure_return_code,
-            message=f"Cluster is not a multinic cluster, with {hosts_common_available_ports} common available ports",
             junitxml_property=junitxml_plugin,
         )
-    LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
-
-    if any(item.get_closest_marker("dpdk") for item in request.session.items):
-        LOGGER.info("Verifying if the cluster supports running DPDK tests...")
-        dpdk_performance_profile_name = "dpdk"
-        if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
-            exit_pytest_execution(
-                filename="network_cluster_sanity_failure.txt",
-                return_code=network_sanity_failure_return_code,
-                message=f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
-                "does not exist.",
-                junitxml_property=junitxml_plugin,
-            )
-        LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
