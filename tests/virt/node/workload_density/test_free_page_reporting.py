@@ -136,7 +136,7 @@ def test_free_page_reporting_in_vm_with_dedicated_cpu(vm_with_dedicated_cpu):
 
 @pytest.mark.polarion("CNV-10597")
 @pytest.mark.special_infra
-@pytest.mark.hugepage
+@pytest.mark.hugepages
 def test_free_page_reporting_in_vm_with_hugepages(vm_with_hugepages):
     assert_vmi_free_page_reporting(
         vm=vm_with_hugepages,
