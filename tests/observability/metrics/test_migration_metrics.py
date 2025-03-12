@@ -21,7 +21,7 @@ from tests.observability.metrics.utils import (
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
+from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -290,7 +290,6 @@ class TestKubevirtVmiMigrationMetrics:
             prometheus=prometheus,
             metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
             f"[{time_passed_from_starting_migration if time_passed_from_starting_migration > 8 else 8}m])",
-            timeout=TIMEOUT_10MIN,
         )
 
 
