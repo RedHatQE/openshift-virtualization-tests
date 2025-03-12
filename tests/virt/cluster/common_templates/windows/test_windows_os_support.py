@@ -22,7 +22,7 @@ from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import migrate_vm_and_verify, running_vm, validate_libvirt_persistent_domain
 
-pytestmark = [pytest.mark.usefixtures("skip_on_psi_cluster"), pytest.mark.post_upgrade]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"

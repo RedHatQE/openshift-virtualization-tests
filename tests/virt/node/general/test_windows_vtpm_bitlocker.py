@@ -18,11 +18,7 @@ from utilities.virt import (
     running_vm,
 )
 
-pytestmark = [
-    pytest.mark.usefixtures("skip_if_workers_vms"),
-    pytest.mark.tier3,
-    pytest.mark.ibm_bare_metal,
-]
+pytestmark = [pytest.mark.tier3, pytest.mark.ibm_bare_metal, pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestBitLockerVTPM"
