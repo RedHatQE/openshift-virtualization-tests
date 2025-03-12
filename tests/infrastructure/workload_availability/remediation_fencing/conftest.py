@@ -20,9 +20,9 @@ from utilities.virt import (
 
 
 @pytest.fixture(scope="session")
-def skip_if_compact_cluster_and_jira_47277_open(compact_cluster):
+def fail_if_compact_cluster_and_jira_47277_open(compact_cluster):
     if compact_cluster and is_jira_open(jira_id="CNV-47277"):
-        pytest.skip("Test cannot run on compact cluster")
+        pytest.fail("Test cannot run on compact cluster")
 
 
 @pytest.fixture(scope="module")
