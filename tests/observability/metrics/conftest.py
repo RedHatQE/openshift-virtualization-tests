@@ -79,6 +79,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
@@ -1046,3 +1047,23 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
+
+
+@pytest.fixture()
+def vm_for_vm_disk_allocation_size_test(namespace, admin_client):
+    vm_name = "vm-disk-metric-allocation-test"
+    with create_cirros_vm(
+        storage_class=StorageClassNames.CEPH_RBD,
+        namespace=namespace.name,
+        client=admin_client,
+        dv_name=vm_name,
+        vm_name=vm_name,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
+    for pvc in PersistentVolumeClaim.get(dyn_client=get_client()):
+        if pvc.name == vm_for_vm_disk_allocation_size_test.instance.spec.template.spec.volumes[0].dataVolume.name:
+            return pvc.instance.spec.resources.requests.storage
