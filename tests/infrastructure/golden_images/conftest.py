@@ -6,6 +6,8 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 
+from utilities.constants import HOSTPATH_CSI_BASIC, StorageClassNames
+
 
 @pytest.fixture()
 def updated_default_storage_class_scope_function(
@@ -40,3 +42,29 @@ def latest_fedora_release_version(downloaded_latest_libosinfo_db):
         raise FileNotFoundError("No fedora files were found in osinfo db")
     latest_fedora_os_file = list_of_fedora_os_files[-1]
     return re.findall(r"\d+", latest_fedora_os_file.name)[0]
+
+
+@pytest.fixture(scope="session")
+def fail_if_no_ceph_rbd_virtualization_sc(cluster_storage_classes_names):
+    """
+    Fail the test if no NFS storage class is available
+    """
+    if StorageClassNames.CEPH_RBD_VIRTUALIZATION not in cluster_storage_classes_names:
+        pytest.fail(
+            f"Test failed: {StorageClassNames.CEPH_RBD_VIRTUALIZATION} storage class is not deployed. "
+            f"Available storage classes: {cluster_storage_classes_names}. "
+            "Ensure the correct storage class is configured before running tests."
+        )
+
+
+@pytest.fixture(scope="session")
+def fail_if_no_hostpath_csi_basic_sc(cluster_storage_classes_names):
+    """
+    Fail the test if no CSI basic storage class is available
+    """
+    if HOSTPATH_CSI_BASIC not in cluster_storage_classes_names:
+        pytest.fail(
+            f"Test failed: {HOSTPATH_CSI_BASIC} basic storage class is not deployed. "
+            f"Available storage classes: {cluster_storage_classes_names}. "
+            "Ensure the correct CSI storage class is configured before running tests."
+        )
