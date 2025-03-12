@@ -202,7 +202,9 @@ def ovn_kubernetes_cluster(admin_client):
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
     """
-    Perform verification that the cluster is a multi-nic one otherwise exit run
+    Ensures the test cluster meets network requirements before executing tests.
+    A failure in these checks results in pytest exiting with a predefined
+    return code and a message recorded in JUnit XML.
     """
     failure_msgs = []
 
