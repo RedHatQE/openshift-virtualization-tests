@@ -1051,10 +1051,9 @@ def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
 
 
-@pytest.fixture(scope="class")
-def vnic_info_from_vm_and_vmi(request, vm_for_test):
-    vm_or_vmi = request.param
-    vm_instance = vm_for_test.vmi.instance.spec if vm_or_vmi == "vmi" else vm_for_test.instance.spec.template.spec
+@pytest.fixture()
+def vnic_info_from_vm_or_vmi(request, vm_for_test):
+    vm_instance = vm_for_test.vmi.instance.spec if request.param == "vmi" else vm_for_test.instance.spec.template.spec
     binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
     return {
         "vnic_name": vm_instance.networks[0].name,

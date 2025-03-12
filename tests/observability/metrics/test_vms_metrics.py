@@ -506,7 +506,7 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
 )
 class TestVmVnicInfo:
     @pytest.mark.parametrize(
-        "vnic_info_from_vm_and_vmi, query",
+        "vnic_info_from_vm_or_vmi, query",
         [
             pytest.param(
                 "vm",
@@ -519,11 +519,11 @@ class TestVmVnicInfo:
                 marks=pytest.mark.polarion("CNV-11811"),
             ),
         ],
-        indirect=["vnic_info_from_vm_and_vmi"],
+        indirect=["vnic_info_from_vm_or_vmi"],
     )
-    def test_metric_kubevirt_vm_vnic_info(self, prometheus, vm_for_test, vnic_info_from_vm_and_vmi, query):
+    def test_metric_kubevirt_vm_vnic_info(self, prometheus, vm_for_test, vnic_info_from_vm_or_vmi, query):
         validate_vnic_info(
             prometheus=prometheus,
-            vnic_info_to_compare=vnic_info_from_vm_and_vmi,
+            vnic_info_to_compare=vnic_info_from_vm_or_vmi,
             metric_name=query.format(vm_name=vm_for_test.name),
         )

@@ -1235,10 +1235,12 @@ def validate_metric_value_with_round_down(
 
 
 def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[str, str]:
+    binding_name_and_type = None
     for binding_name in ["masquerade", "bridge", "sriov"]:
         if vm_interface.get(binding_name):
-            return {BINDING_NAME: binding_name, BINDING_TYPE: "core"}
-    return {}
+            binding_name_and_type = {BINDING_NAME: binding_name, BINDING_TYPE: "core"}
+    assert binding_name_and_type, f"vm interface {vm_interface} has not valid binding name."
+    return binding_name_and_type
 
 
 def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
