@@ -1,4 +1,5 @@
 import logging
+import shlex
 from contextlib import contextmanager
 from copy import deepcopy
 
@@ -9,9 +10,12 @@ from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 
 from tests.virt.upgrade.utils import (
+    LINUX_BOOT_TIME_CMD,
+    WINDOWS_BOOT_TIME_CMD,
     get_all_migratable_vms,
     validate_vms_pod_updated,
     wait_for_automatic_vm_migrations,
@@ -192,7 +196,7 @@ def vm_from_template(
     cpu_model,
     template_labels,
     networks=None,
-    run_strategy=None,
+    run_strategy=VirtualMachine.RunStrategy.HALTED,
     eviction_strategy=None,
 ):
     with VirtualMachineForTestsFromTemplate(
@@ -315,3 +319,23 @@ def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_imag
         source=generate_data_source_dict(dv=run_strategy_golden_image_dv),
     ) as ds:
         yield ds
+
+
+@pytest.fixture(scope="session")
+def vms_boot_time_before_upgrade(vms_for_upgrade):
+    boot_time_dict = {}
+    for vm in vms_for_upgrade:
+        boot_time_dict[vm.name] = run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(LINUX_BOOT_TIME_CMD),
+        )[0]
+    yield boot_time_dict
+
+
+@pytest.fixture(scope="session")
+def windows_boot_time_before_upgrade(windows_vm):
+    boot_time = run_ssh_commands(
+        host=windows_vm.ssh_exec,
+        commands=shlex.split(WINDOWS_BOOT_TIME_CMD),
+    )[0]
+    yield boot_time
