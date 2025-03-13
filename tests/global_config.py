@@ -173,6 +173,15 @@ auto_update_data_source_matrix = [
     {"rhel9": {"template_os": "rhel9.0"}},
 ]
 
+data_import_cron_matrix = [
+    {"centos-stream9": {"instance_type": "u1.medium", "preference": "centos.stream9"}},
+    {"centos-stream10": {"instance_type": "u1.medium", "preference": "centos.stream10"}},
+    {"fedora": {"instance_type": "u1.medium", "preference": "fedora"}},
+    {"rhel8": {"instance_type": "u1.medium", "preference": "rhel.8"}},
+    {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
+    {"rhel10-beta": {"instance_type": "u1.medium", "preference": "rhel.10"}},
+]
+
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"
 DV_SIZE_STR = "dv_size"
