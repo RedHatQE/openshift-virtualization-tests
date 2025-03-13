@@ -1246,8 +1246,7 @@ def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[s
 def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
     vnic_info_metric_result = prometheus.query_sampler(query=metric_name)[0].get("metric")
     mismatch_vnic_info = {}
-    for info in vnic_info_to_compare:
-        expected_value = vnic_info_to_compare[info]
+    for info, expected_value in vnic_info_to_compare.items():
         actual_value = vnic_info_metric_result.get(info)
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}

@@ -1052,8 +1052,10 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vnic_info_from_vm_or_vmi(request, vm_for_test):
-    vm_instance = vm_for_test.vmi.instance.spec if request.param == "vmi" else vm_for_test.instance.spec.template.spec
+def vnic_info_from_vm_or_vmi(request, running_metric_vm):
+    vm_instance = (
+        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
+    )
     binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
     return {
         "vnic_name": vm_instance.networks[0].name,
