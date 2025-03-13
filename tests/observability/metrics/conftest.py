@@ -1068,11 +1068,13 @@ def vm_for_vm_disk_allocation_size_test(namespace, admin_client, golden_images_n
         ),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     ) as vm:
+        running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture()
 def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
-    return vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[
-        0
-    ].spec.storage.resources.requests.storage
+    return PersistentVolumeClaim(
+        name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
+        namespace=vm_for_vm_disk_allocation_size_test.namespace,
+    ).instance.spec.resources.requests.storage
