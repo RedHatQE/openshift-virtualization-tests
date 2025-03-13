@@ -228,6 +228,7 @@ class TestARQSupportMemoryHotplug:
                 REQUESTS_CPU_VMI_STR: vmi_spec_domain.cpu.sockets,
                 REQUESTS_MEMORY_VMI_STR: vmi_spec_domain.memory.guest,
             },
+            application_aware_resource_quota=application_aware_resource_quota,
         )
 
     @pytest.mark.parametrize(
