@@ -60,7 +60,7 @@ def updated_hco_cr_custom_template_scope_class(
 
 @pytest.mark.usefixtures("updated_hco_cr_custom_template_scope_class")
 class TestCustomTemplates:
-    @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_fg")
+    @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-8707")
     def test_custom_template_status(self, hyperconverged_status_templates_scope_function):
         custom_template_name = CUSTOM_CRON_TEMPLATE["metadata"]["name"]
@@ -75,7 +75,7 @@ class TestCustomTemplates:
             f"Custom template: {custom_template_name} is not found in hco.status: {custom_templates_name}"
         )
 
-    @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_fg")
+    @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7884")
     def test_add_custom_data_import_cron_template(
         self,
@@ -87,19 +87,19 @@ class TestCustomTemplates:
             ssp_spec_templates_scope_function=ssp_spec_templates_scope_function,
         )
 
-    @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_fg")
+    @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7914")
-    def test_add_custom_data_import_cron_template_disable_fg(
+    def test_add_custom_data_import_cron_template_disable_spec(
         self,
         admin_client,
         hco_namespace,
-        disabled_common_boot_image_import_feature_gate_scope_function,
+        disabled_common_boot_image_import_hco_spec_scope_function,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
     ):
         wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
-        error_message_base = "With enableCommonBootImageImport featuregate disabled,"
+        error_message_base = "With enableCommonBootImageImport spec disabled,"
         validate_custom_template_added(
             hyperconverged_status_templates_scope_function=hyperconverged_status_templates_scope_function,
             ssp_spec_templates_scope_function=ssp_spec_templates_scope_function,
