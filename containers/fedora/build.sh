@@ -44,6 +44,8 @@ sed -i "s/password: $PASSWORD_PLACEHOLDER/password: $FEDORA_PASSWORD/" user-data
 echo "Create cloud-init user data ISO"
 cloud-localds $CLOUD_INIT_ISO user-data
 
+virt-customize -a $FEDORA_IMAGE --run-command 'grubby --update-kernel=ALL --args="net.ifnames=0"'
+
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
   --memory 2048 \

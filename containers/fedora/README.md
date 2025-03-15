@@ -14,6 +14,7 @@ Ensure the following tools are installed on your system:
 - `qemu-img`
 - `cloud-localds`
 - `virt-sysprep`
+- `virt-customize`
 
 Ensure Your Python Environment Is Ready
 Install the required Python dependencies: Run the following command to set up the Python environment:
