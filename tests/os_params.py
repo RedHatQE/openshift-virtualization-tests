@@ -14,6 +14,8 @@ RHEL_8_10_TEMPLATE_LABELS = RHEL_8_10["template_labels"]
 
 WINDOWS_10 = get_windows_os_dict(windows_version="win-10")
 WINDOWS_10_TEMPLATE_LABELS = WINDOWS_10["template_labels"]
+WINDOWS_11 = get_windows_os_dict(windows_version="win-11")
+WINDOWS_11_TEMPLATE_LABELS = WINDOWS_11["template_labels"]
 WINDOWS_2019 = get_windows_os_dict(windows_version="win-2019")
 WINDOWS_2019_TEMPLATE_LABELS = WINDOWS_2019["template_labels"]
 WINDOWS_2019_OS = WINDOWS_2019_TEMPLATE_LABELS["os"]
