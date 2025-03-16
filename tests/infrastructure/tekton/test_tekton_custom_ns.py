@@ -12,7 +12,7 @@ from tests.infrastructure.tekton.utils import (
 )
 from utilities.constants import WIN_2K22, WIN_2K25, WIN_10, WIN_11
 
-pytestmark = pytest.mark.tier3
+pytestmark = [pytest.mark.tier3, pytest.mark.special_infra]
 
 
 @pytest.mark.usefixtures("extracted_kubevirt_tekton_resources", "processed_yaml_files")
