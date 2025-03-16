@@ -672,6 +672,7 @@ def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
         ].strip(),
         "namespace": single_metric_vm.namespace,
         NODE_STR: single_metric_vm.vmi.virt_launcher_pod.node.name,
+        "vmi_pod": single_metric_vm.vmi.virt_launcher_pod.name,
     }
 
 
