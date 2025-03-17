@@ -256,7 +256,7 @@ def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 
 @pytest.fixture()
-def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test):
+def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test, admin_client):
     hotplug_resource_and_wait_hotplug_migration_finish(
         vm=hotplug_vm_for_aaq_test,
         client=unprivileged_client,
@@ -264,7 +264,7 @@ def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test):
         memory_guest=request.param.get("memory_guest"),
     )
     yield
-    clean_up_migration_jobs(client=unprivileged_client, vm=hotplug_vm_for_aaq_test)
+    clean_up_migration_jobs(client=admin_client, vm=hotplug_vm_for_aaq_test)
 
 
 @pytest.fixture()
