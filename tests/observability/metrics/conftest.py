@@ -1058,9 +1058,9 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, admin_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
-        client=admin_client,
+        client=unprivileged_client,
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
@@ -1079,3 +1079,8 @@ def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
         name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
         namespace=vm_for_vm_disk_allocation_size_test.namespace,
     ).instance.spec.resources.requests.storage
+
+
+@pytest.fixture()
+def allocatable_nodes(nodes):
+    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
