@@ -1063,3 +1063,8 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
         BINDING_NAME: binding_name_and_type[BINDING_NAME],
         BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
     }
+
+
+@pytest.fixture()
+def allocatable_nodes(nodes):
+    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
