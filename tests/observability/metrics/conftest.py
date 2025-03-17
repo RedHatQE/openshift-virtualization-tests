@@ -20,6 +20,8 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -33,6 +35,7 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
+    binding_name_and_type_from_vm_or_vmi,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -1047,6 +1050,19 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
+
+
+@pytest.fixture()
+def vnic_info_from_vm_or_vmi(request, running_metric_vm):
+    vm_instance = (
+        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
+    )
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
+    return {
+        "vnic_name": vm_instance.networks[0].name,
+        BINDING_NAME: binding_name_and_type[BINDING_NAME],
+        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+    }
 
 
 @pytest.fixture()
