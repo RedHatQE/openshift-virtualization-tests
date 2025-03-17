@@ -634,15 +634,6 @@ def pytest_sessionstart(session):
         log_file=tests_log_file,
         log_level=session.config.getoption("log_cli_level") or logging.INFO,
     )
-    # # Add HPP-CSI-BASIC/HPP-CSI-PVC-BLOCK to global config's storage_class_matrix, only
-    # # if command line option --storage-class-matrix includes them:
-    # py_config_scs = update_storage_class_matrix_config(
-    #     session=session, pytest_config_matrix=py_config.get("storage_class_matrix", [])
-    # )
-    #
-    # # Save the default storage_class_matrix before it is updated
-    # # with runtime storage_class_matrix value(s)
-    # py_config["system_storage_class_matrix"] = py_config_scs
 
     _update_os_related_config()
 
