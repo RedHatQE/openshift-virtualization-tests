@@ -31,4 +31,5 @@ runcmd:
   - sudo sed -i 's/listen       80;/listen       80;\n\tlisten       81;/g' /etc/nginx/nginx.conf
   - sudo systemctl enable nginx
   - sudo systemctl enable sshd
+  - grubby --args="net.ifnames=0" --update-kernel=ALL
   - sudo shutdown
