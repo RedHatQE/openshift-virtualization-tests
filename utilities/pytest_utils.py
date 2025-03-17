@@ -17,7 +17,7 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
-    HPP_VOLUME_MODE_ACCESS_MODE,
+    HPP_CAPABILITIES,
     POD_SECURITY_NAMESPACE_LABELS,
     TIMEOUT_2MIN,
     StorageClassNames,
@@ -27,8 +27,8 @@ from utilities.infra import exit_pytest_execution
 from utilities.storage import HOSTPATH_CSI, HppCsiStorageClass
 
 HPP_STORAGE_CLASSES = {
-    HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE,
-    HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE,
+    HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES,
+    HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES,
 }
 
 LOGGER = logging.getLogger(__name__)
