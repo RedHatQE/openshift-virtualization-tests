@@ -69,6 +69,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "ovs_brcnv",
     "node_remediation",
     "swap",
+    "numa",
 ]
 
 TEAM_MARKERS = {

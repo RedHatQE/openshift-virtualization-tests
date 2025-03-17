@@ -5,7 +5,7 @@ from bitmath import parse_string_unsafe
 from ocp_resources.performance_profile import PerformanceProfile
 
 from utilities.constants import AMD, INTEL
-from utilities.infra import ExecCommandOnPod, exit_pytest_execution
+from utilities.infra import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info
 
 LOGGER = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ def virt_special_infra_sanity(
     schedulable_nodes,
     gpu_nodes,
     nodes_with_supported_gpus,
-    workers_utility_pods,
     sriov_workers,
     workers,
 ):
@@ -52,19 +51,6 @@ def virt_special_infra_sanity(
             LOGGER.info("Verify cluster doesn't have DPDK enabled")
             if PerformanceProfile(name="dpdk").exists:
                 failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
-
-    def _verify_numa(_schedulable_nodes, _workers_utility_pods):
-        if any(item.get_closest_marker("numa") for item in request.session.items):
-            LOGGER.info("Verify cluster has NUMA")
-            cat_cmd = "cat /etc/kubernetes/kubelet.conf"
-            single_numa_node_cmd = f"{cat_cmd} | grep -i single-numa-node"
-            topology_manager_cmd = f"{cat_cmd} | grep -w TopologyManager"
-            for cmd in (single_numa_node_cmd, topology_manager_cmd):
-                for node in _schedulable_nodes:
-                    pod_exec = ExecCommandOnPod(utility_pods=_workers_utility_pods, node=node)
-                    out = pod_exec.exec(command=cmd, ignore_rc=True)
-                    if not out:
-                        failed_verifications_list.append(f"Cluster does not have {cmd.split()[-1]} enabled")
 
     def _verify_sriov(_sriov_workers):
         if any(item.get_closest_marker("sriov") for item in request.session.items):
@@ -100,7 +86,6 @@ def virt_special_infra_sanity(
         _verify_cpumanager_workers(_schedulable_nodes=schedulable_nodes)
         _verify_gpu(_gpu_nodes=gpu_nodes, _nodes_with_supported_gpus=nodes_with_supported_gpus)
         _verfify_no_dpdk()
-        _verify_numa(_schedulable_nodes=schedulable_nodes, _workers_utility_pods=workers_utility_pods)
         _verify_sriov(_sriov_workers=sriov_workers)
         _verify_evmcs_support(_schedulable_nodes=schedulable_nodes)
         _verify_hugepages_1gi(_workers=workers)
