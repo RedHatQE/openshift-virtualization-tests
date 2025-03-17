@@ -20,6 +20,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     GO_VERSION_STR,
     INSTANCE_TYPE_LABELS,
     KUBE_VERSION_STR,
@@ -1230,3 +1232,22 @@ def validate_metric_value_with_round_down(
     except TimeoutExpiredError:
         LOGGER.info(f"Metric int value of: {metric_name} is: {sample}, expected value:{expected_value}")
         raise
+
+
+def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[str, str]:
+    binding_name_and_type = None
+    for binding_name in ["masquerade", "bridge", "sriov"]:
+        if vm_interface.get(binding_name):
+            binding_name_and_type = {BINDING_NAME: binding_name, BINDING_TYPE: "core"}
+    assert binding_name_and_type, f"vm interface {vm_interface} has not valid binding name."
+    return binding_name_and_type
+
+
+def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
+    vnic_info_metric_result = prometheus.query_sampler(query=metric_name)[0].get("metric")
+    mismatch_vnic_info = {}
+    for info, expected_value in vnic_info_to_compare.items():
+        actual_value = vnic_info_metric_result.get(info)
+        if actual_value != expected_value:
+            mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
+    assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
