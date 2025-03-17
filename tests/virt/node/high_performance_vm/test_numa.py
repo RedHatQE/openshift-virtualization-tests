@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from ocp_resources.sriov_network import SriovNetwork
 
@@ -9,10 +11,27 @@ from tests.utils import (
     get_vm_cpu_list,
 )
 from utilities.constants import SRIOV
+from utilities.infra import ExecCommandOnPod
 from utilities.network import sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager, pytest.mark.numa]
+LOGGER = logging.getLogger(__name__)
+
+pytestmark = [pytest.mark.cpu_manager, pytest.mark.numa, pytest.mark.usefixtures("fail_if_no_numa")]
+
+
+@pytest.fixture(scope="module")
+def fail_if_no_numa(schedulable_nodes, workers_utility_pods):
+    LOGGER.info("Verify cluster has NUMA")
+    cat_cmd = "cat /etc/kubernetes/kubelet.conf"
+    single_numa_node_cmd = f"{cat_cmd} | grep -i single-numa-node"
+    topology_manager_cmd = f"{cat_cmd} | grep -w TopologyManager"
+    for cmd in (single_numa_node_cmd, topology_manager_cmd):
+        for node in schedulable_nodes:
+            pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+            out = pod_exec.exec(command=cmd, ignore_rc=True)
+            if not out:
+                pytest.fail(f"Cluster does not have {cmd.split()[-1]} enabled")
 
 
 @pytest.fixture(scope="module")
