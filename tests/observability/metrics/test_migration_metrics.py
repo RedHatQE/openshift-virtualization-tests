@@ -283,7 +283,6 @@ class TestKubevirtVmiMigrationStartAndEnd:
     def test_metric_kubevirt_vmi_migration_start_time_seconds(
         self,
         prometheus,
-        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,
     ):
@@ -301,7 +300,6 @@ class TestKubevirtVmiMigrationStartAndEnd:
     def test_metric_kubevirt_vmi_migration_end_time_seconds(
         self,
         prometheus,
-        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,
         migration_succeeded_scope_class,
