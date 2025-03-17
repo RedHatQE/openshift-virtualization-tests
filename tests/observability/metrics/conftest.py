@@ -1047,3 +1047,8 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
+
+
+@pytest.fixture()
+def allocatable_nodes(nodes):
+    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
