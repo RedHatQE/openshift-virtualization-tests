@@ -169,6 +169,7 @@ from utilities.network import (
     get_cluster_cni_type,
     network_device,
     network_nad,
+    wait_for_node_marked_by_bridge,
     wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
@@ -1773,13 +1774,14 @@ def bridge_on_one_node(worker_node1):
 
 
 @pytest.fixture(scope="session")
-def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace):
+def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace, worker_node1):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=bridge_on_one_node.bridge_name,
         interface_name=bridge_on_one_node.bridge_name,
         namespace=kmp_enabled_namespace,
     ) as nad:
+        wait_for_node_marked_by_bridge(bridge_nad=nad, node=worker_node1)
         yield nad
 
 
@@ -2418,15 +2420,19 @@ def migration_policy_with_bandwidth():
         yield mp
 
 
+@pytest.fixture(scope="class")
+def migration_policy_with_bandwidth_scope_class():
+    with MigrationPolicy(
+        name="migration-policy",
+        bandwidth_per_migration="128Ki",
+        vmi_selector=MIGRATION_POLICY_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
 @pytest.fixture(scope="session")
 def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_gpu_node(gpu_nodes):
-    if not gpu_nodes:
-        pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
 
 
 @pytest.fixture()

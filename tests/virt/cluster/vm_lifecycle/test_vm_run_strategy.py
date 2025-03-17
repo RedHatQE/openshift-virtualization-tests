@@ -90,9 +90,9 @@ RUN_STRATEGY_SHUTDOWN_STATUS = {
 
 
 @pytest.fixture()
-def skip_run_strategy_halted(run_strategy_matrix__class__):
+def xfail_vm_shutdown_run_strategy_halted(run_strategy_matrix__class__):
     if run_strategy_matrix__class__ == HALTED:
-        pytest.skip("Skip test for VM with Halted runStrategy")
+        pytest.xfail(reason="Shutdown is not supported for Halted runStrategy")
 
 
 def updated_vm_run_strategy(run_strategy, vm_for_test):
@@ -249,7 +249,7 @@ class TestRunStrategyAdvancedActions:
     def test_run_strategy_shutdown(
         self,
         lifecycle_vm,
-        skip_run_strategy_halted,
+        xfail_vm_shutdown_run_strategy_halted,
         matrix_updated_vm_run_strategy,
         start_vm_if_not_running,
     ):

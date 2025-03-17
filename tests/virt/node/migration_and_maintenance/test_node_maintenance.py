@@ -31,9 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [
-    pytest.mark.post_upgrade,
-]
+pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
@@ -206,12 +204,12 @@ class TestNodeMaintenanceRHEL:
                 "vm_name": "wind-template-node-cordon-and-drain",
                 "template_labels": WINDOWS_LATEST_LABELS,
             },
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
     ],
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "skip_on_psi_cluster",
     "skip_if_no_common_modern_cpu",
     "skip_access_mode_rwo_scope_class",
     "cluster_modern_cpu_model_scope_class",

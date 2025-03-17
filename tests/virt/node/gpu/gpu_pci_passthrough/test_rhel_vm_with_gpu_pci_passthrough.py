@@ -23,10 +23,9 @@ from utilities.virt import CIRROS_IMAGE, VirtualMachineForTests
 
 pytestmark = [
     pytest.mark.post_upgrade,
-    pytest.mark.usefixtures(
-        "fail_if_device_unbound_to_vfiopci_driver",
-        "hco_cr_with_permitted_hostdevices",
-    ),
+    pytest.mark.special_infra,
+    pytest.mark.gpu,
+    pytest.mark.usefixtures("fail_if_device_unbound_to_vfiopci_driver", "hco_cr_with_permitted_hostdevices"),
 ]
 
 ALLOCATABLE = "allocatable"
