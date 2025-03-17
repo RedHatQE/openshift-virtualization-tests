@@ -83,4 +83,3 @@ KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS = (
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
-
