@@ -67,12 +67,12 @@ def hot_plug_instance_type(cpu_for_migration):
 
 
 @pytest.fixture()
-def hotplugged_six_sockets_instance_type(instance_type_hotplug_vm, unprivileged_client):
+def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm, unprivileged_client):
     hotplug_resource_and_wait_hotplug_migration_finish(
         vm=instance_type_hotplug_vm, client=unprivileged_client, sockets=SIX_CPU_SOCKETS
     )
     yield
-    clean_up_migration_jobs(client=unprivileged_client, vm=instance_type_hotplug_vm)
+    clean_up_migration_jobs(client=admin_client, vm=instance_type_hotplug_vm)
 
 
 @pytest.fixture(scope="class")
