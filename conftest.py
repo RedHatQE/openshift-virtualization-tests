@@ -251,6 +251,12 @@ def pytest_addoption(parser):
         default=False,
         help="Skip artifactory environment variable checks. To be used for tests that does not need articatory access",
     )
+    session_group.addoption(
+        "--skip-virt-sanity-check",
+        action="store_true",
+        default=False,
+        help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
+    )
 
 
 def pytest_cmdline_main(config):
