@@ -25,70 +25,67 @@ def virt_special_infra_sanity(
     """Performs verification that cluster has all required capabilities for virt special_infra marked tests."""
 
     def _verify_not_psi_cluster(_is_psi_cluster):
-        if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
-            LOGGER.info("Verify running on BM cluster")
-            if _is_psi_cluster:
-                failed_verifications_list.append("Cluster should be BM and not PSI")
+        LOGGER.info("Verify running on BM cluster")
+        if _is_psi_cluster:
+            failed_verifications_list.append("Cluster should be BM and not PSI")
 
     def _verify_cpumanager_workers(_schedulable_nodes):
-        if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
-            LOGGER.info("Verify cluster nodes have CPU Manager labels")
-            if not any([node.labels.cpumanager == "true" for node in _schedulable_nodes]):
-                failed_verifications_list.append("Cluster does't have CPU Manager")
+        LOGGER.info("Verify cluster nodes have CPU Manager labels")
+        if not any([node.labels.cpumanager == "true" for node in _schedulable_nodes]):
+            failed_verifications_list.append("Cluster does't have CPU Manager")
 
     def _verify_gpu(_gpu_nodes, _nodes_with_supported_gpus):
-        if any(item.get_closest_marker("gpu") for item in request.session.items):
-            LOGGER.info("Verify cluster nodes have enough supported GPU cards")
-            if not _gpu_nodes:
-                failed_verifications_list.append("Cluster doesn't have any GPU nodes")
-            if not _nodes_with_supported_gpus:
-                failed_verifications_list.append("Cluster doesn't have any nodes with supported GPUs")
-            if len(_nodes_with_supported_gpus) < 2:
-                failed_verifications_list.append(f"Cluster has only {len(_nodes_with_supported_gpus)} node with GPU")
+        LOGGER.info("Verify cluster nodes have enough supported GPU cards")
+        if not _gpu_nodes:
+            failed_verifications_list.append("Cluster doesn't have any GPU nodes")
+        if not _nodes_with_supported_gpus:
+            failed_verifications_list.append("Cluster doesn't have any nodes with supported GPUs")
+        if len(_nodes_with_supported_gpus) < 2:
+            failed_verifications_list.append(f"Cluster has only {len(_nodes_with_supported_gpus)} node with GPU")
 
     def _verfify_no_dpdk():
-        if any(item.get_closest_marker("gpu") for item in request.session.items):
-            LOGGER.info("Verify cluster doesn't have DPDK enabled")
-            if PerformanceProfile(name="dpdk").exists:
-                failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
+        LOGGER.info("Verify cluster doesn't have DPDK enabled")
+        if PerformanceProfile(name="dpdk").exists:
+            failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
 
     def _verify_sriov(_sriov_workers):
-        if any(item.get_closest_marker("sriov") for item in request.session.items):
-            LOGGER.info("Verify cluster has worker node with SR-IOV card")
-            if not _sriov_workers:
-                failed_verifications_list.append("Cluster does not have any SR-IOV workers")
+        LOGGER.info("Verify cluster has worker node with SR-IOV card")
+        if not _sriov_workers:
+            failed_verifications_list.append("Cluster does not have any SR-IOV workers")
 
     def _verify_evmcs_support(_schedulable_nodes):
-        if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
-            LOGGER.info("Verify cluster nodes support VMX cpu fixture")
-            for node in _schedulable_nodes:
-                if not any([
-                    label == "cpu-feature.node.kubevirt.io/vmx" and value == "true"
-                    for label, value in node.labels.items()
-                ]):
-                    failed_verifications_list.append("Cluster does not have any node that supports VMX cpu feature")
+        LOGGER.info("Verify cluster nodes support VMX cpu fixture")
+        for node in _schedulable_nodes:
+            if not any([
+                label == "cpu-feature.node.kubevirt.io/vmx" and value == "true" for label, value in node.labels.items()
+            ]):
+                failed_verifications_list.append("Cluster does not have any node that supports VMX cpu feature")
 
     def _verify_hugepages_1gi(_workers):
-        if any(item.get_closest_marker("hugepages") for item in request.session.items):
-            LOGGER.info("Verify cluster has 1Gi hugepages enabled")
-            if not any([
-                parse_string_unsafe(worker.instance.status.allocatable["hugepages-1Gi"]) >= parse_string_unsafe("1Gi")
-                for worker in _workers
-            ]):
-                failed_verifications_list.append("Cluster does not have hugepages-1Gi")
+        LOGGER.info("Verify cluster has 1Gi hugepages enabled")
+        if not any([
+            parse_string_unsafe(worker.instance.status.allocatable["hugepages-1Gi"]) >= parse_string_unsafe("1Gi")
+            for worker in _workers
+        ]):
+            failed_verifications_list.append("Cluster does not have hugepages-1Gi")
 
     skip_virt_sanity_check = "--skip-virt-sanity-check"
     failed_verifications_list = []
 
     if not request.session.config.getoption(skip_virt_sanity_check):
         LOGGER.info("Verifying that cluster has all required capabilities for special_infra marked tests")
-        _verify_not_psi_cluster(_is_psi_cluster=is_psi_cluster)
-        _verify_cpumanager_workers(_schedulable_nodes=schedulable_nodes)
-        _verify_gpu(_gpu_nodes=gpu_nodes, _nodes_with_supported_gpus=nodes_with_supported_gpus)
-        _verfify_no_dpdk()
-        _verify_sriov(_sriov_workers=sriov_workers)
-        _verify_evmcs_support(_schedulable_nodes=schedulable_nodes)
-        _verify_hugepages_1gi(_workers=workers)
+        if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
+            _verify_not_psi_cluster(_is_psi_cluster=is_psi_cluster)
+            _verify_evmcs_support(_schedulable_nodes=schedulable_nodes)
+        if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
+            _verify_cpumanager_workers(_schedulable_nodes=schedulable_nodes)
+        if any(item.get_closest_marker("gpu") for item in request.session.items):
+            _verify_gpu(_gpu_nodes=gpu_nodes, _nodes_with_supported_gpus=nodes_with_supported_gpus)
+            _verfify_no_dpdk()
+        if any(item.get_closest_marker("sriov") for item in request.session.items):
+            _verify_sriov(_sriov_workers=sriov_workers)
+        if any(item.get_closest_marker("hugepages") for item in request.session.items):
+            _verify_hugepages_1gi(_workers=workers)
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
 
