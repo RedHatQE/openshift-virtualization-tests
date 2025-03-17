@@ -240,3 +240,11 @@ class TestKubevirtApiRequestDeprecatedTotal:
             metric_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
             expected_value=str(generated_api_deprecated_requests),
         )
+
+
+class TestAllocatableNodes:
+    @pytest.mark.polarion("CNV-11818")
+    def test_metirc_kubevirt_allocatable_nodes(self, prometheus, allocatable_nodes):
+        validate_metrics_value(
+            prometheus=prometheus, metric_name="kubevirt_allocatable_nodes", expected_value=f"{len(allocatable_nodes)}"
+        )
