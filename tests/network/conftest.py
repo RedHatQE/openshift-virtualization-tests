@@ -200,7 +200,7 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
+def network_sanity(hosts_common_available_ports, junitxml_plugin, request, istio_system_namespace):
     """
     Ensures the test cluster meets network requirements before executing tests.
     A failure in these checks results in pytest exiting with a predefined
@@ -229,8 +229,22 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
             else:
                 LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
 
+    def _verify_service_mesh():
+        if any(item.get_closest_marker("service_mesh") for item in request.session.items):
+            LOGGER.info("Verifying if the cluster supports running service-mesh tests...")
+            if not istio_system_namespace:
+                failure_msgs.append(
+                    f"Service mesh operator is not installed, the '{ISTIO_SYSTEM_DEFAULT_NS}' namespace does not exist"
+                )
+            else:
+                LOGGER.info(
+                    "Validated service mesh operator is running against a valid cluster with "
+                    f"'{ISTIO_SYSTEM_DEFAULT_NS}' namespace"
+                )
+
     _verify_multi_nic()
     _verify_dpdk()
+    _verify_service_mesh()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
