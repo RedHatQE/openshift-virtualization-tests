@@ -310,7 +310,7 @@ def test_custom_data_import_cron_via_hco(
 def test_opt_out_custom_data_import_cron_via_hco_not_deleted(
     admin_client,
     updated_hco_with_custom_data_import_cron_scope_function,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     golden_images_namespace,
 ):
     LOGGER.info("Test Custom DataImportCron is not deleted after opt-out")
@@ -345,7 +345,7 @@ class TestDataImportCronDefaultStorageClass:
 def test_data_import_cron_deletion_on_opt_out(
     golden_images_data_import_crons_scope_function,
     existing_golden_images_volumes_scope_function,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
 ):
     LOGGER.info("Verify DataImportCrons are deleted after opt-out.")
     wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons_scope_function)
@@ -422,7 +422,7 @@ def test_custom_data_import_cron_image_updated_via_hco(
 def test_data_import_cron_recreated_after_opt_out_opt_in(
     admin_client,
     golden_images_namespace,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     enabled_common_boot_image_import_feature_gate_scope_function,
 ):
     LOGGER.info("Verify dataImportCron is re-created after opt-out -> opt-in")

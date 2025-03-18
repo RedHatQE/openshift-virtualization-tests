@@ -8,10 +8,10 @@ from utilities.constants import (
 pytestmark = pytest.mark.gating
 
 
-@pytest.mark.usefixtures("disabled_common_boot_image_import_feature_gate_scope_class")
+@pytest.mark.usefixtures("disabled_common_boot_image_import_hco_spec_scope_class")
 class TestDisableCommonBootImageImport:
     @pytest.mark.polarion("CNV-7473")
-    def test_disable_featuregate_verify_hco_cr_and_ssp_cr(
+    def test_disable_spec_verify_hco_cr_and_ssp_cr(
         self,
         ssp_cr_spec,
     ):

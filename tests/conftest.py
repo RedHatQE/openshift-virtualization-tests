@@ -1939,13 +1939,13 @@ def ipv6_supported_cluster(cluster_service_network):
 
 
 @pytest.fixture()
-def disabled_common_boot_image_import_feature_gate_scope_function(
+def disabled_common_boot_image_import_hco_spec_scope_function(
     admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
     golden_images_data_import_crons_scope_function,
 ):
-    yield from utilities.hco.disable_common_boot_image_import_feature_gate(
+    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
         admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         golden_images_namespace=golden_images_namespace,
@@ -1969,13 +1969,13 @@ def label_schedulable_nodes(schedulable_nodes):
 
 
 @pytest.fixture(scope="class")
-def disabled_common_boot_image_import_feature_gate_scope_class(
+def disabled_common_boot_image_import_hco_spec_scope_class(
     admin_client,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
     golden_images_data_import_crons_scope_class,
 ):
-    yield from utilities.hco.disable_common_boot_image_import_feature_gate(
+    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
         admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_class,
         golden_images_namespace=golden_images_namespace,
