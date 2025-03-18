@@ -20,6 +20,8 @@ DEFAULT_MIGRATION_POLICY_PARAMETERS = {
     "completionTimeoutPerGiB": 800,
 }
 
+pytestmark = pytest.mark.arm
+
 
 def assert_applied_migration_policy(vmi, expected_policy):
     applied_policy = vmi.instance.status.migrationState.migrationPolicyName
