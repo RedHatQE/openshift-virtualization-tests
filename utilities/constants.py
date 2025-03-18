@@ -314,7 +314,7 @@ DV_DISK = "dv-disk"
 # Upgrade tests configuration
 DEPENDENCY_SCOPE_SESSION = "session"
 
-# Feature gates
+# hco spec
 ENABLE_COMMON_BOOT_IMAGE_IMPORT = "enableCommonBootImageImport"
 
 # Common templates constants
