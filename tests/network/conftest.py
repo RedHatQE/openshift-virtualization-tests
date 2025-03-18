@@ -207,6 +207,7 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin, request, istio
     return code and a message recorded in JUnit XML.
     """
     failure_msgs = []
+    collected_tests = request.session.items
 
     def _verify_multi_nic():
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
@@ -218,19 +219,19 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin, request, istio
             LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
 
     def _verify_dpdk():
-        if any(item.get_closest_marker("dpdk") for item in request.session.items):
+        if any(test.get_closest_marker("dpdk") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running DPDK tests...")
             dpdk_performance_profile_name = "dpdk"
             if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
                 failure_msgs.append(
                     f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
-                    "does not exist."
+                    "does not exist"
                 )
             else:
                 LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
 
     def _verify_service_mesh():
-        if any(item.get_closest_marker("service_mesh") for item in request.session.items):
+        if any(test.get_closest_marker("service_mesh") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running service-mesh tests...")
             if not istio_system_namespace:
                 failure_msgs.append(
