@@ -13,7 +13,7 @@ from tests.os_params import (
 from utilities.constants import Images
 from utilities.virt import running_vm, vm_instance_from_template
 
-pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.cpu_manager]
+pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -158,6 +158,7 @@ class TestHighPerformanceTemplatesRHEL:
     ],
     indirect=True,
 )
+@pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("high_performance_vm", "cputune_is_in_dumpxml")
 class TestHighPerformanceTemplatesWindows:
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::win_cpu_request")
