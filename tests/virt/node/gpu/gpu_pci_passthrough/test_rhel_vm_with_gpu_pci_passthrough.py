@@ -16,10 +16,14 @@ from tests.virt.node.gpu.utils import (
     verify_gpu_device_exists_on_node,
     verify_gpu_expected_count_updated_on_node,
 )
-from tests.virt.utils import pause_optional_migrate_unpause_and_check_connectivity, running_sleep_in_linux
+from tests.virt.utils import running_sleep_in_linux
 from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import get_node_selector_dict
-from utilities.virt import CIRROS_IMAGE, VirtualMachineForTests
+from utilities.virt import (
+    CIRROS_IMAGE,
+    VirtualMachineForTests,
+    pause_optional_migrate_unpause_and_check_connectivity,
+)
 
 pytestmark = [
     pytest.mark.post_upgrade,
