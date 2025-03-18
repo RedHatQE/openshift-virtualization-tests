@@ -335,21 +335,21 @@ def wait_for_hco_version(client, hco_ns_name, cnv_version):
         raise
 
 
-def disable_common_boot_image_import_feature_gate(
+def disable_common_boot_image_import_hco_spec(
     admin_client,
     hco_resource,
     golden_images_namespace,
     golden_images_data_import_crons,
 ):
-    if hco_resource.instance.spec.featureGates[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
-        update_common_boot_image_import_feature_gate(
+    if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
+        update_common_boot_image_import_spec(
             hco_resource=hco_resource,
-            enable_feature_gate=False,
+            enable=False,
         )
         wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons)
         yield
-        # Always enable enableCommonBootImageImport feature gate after test execution
-        enable_common_boot_image_import_feature_gate_wait_for_data_import_cron(
+        # Always enable enableCommonBootImageImport spec after test execution
+        enable_common_boot_image_import_spec_wait_for_data_import_cron(
             hco_resource=hco_resource,
             admin_client=admin_client,
             namespace=golden_images_namespace,
@@ -358,38 +358,37 @@ def disable_common_boot_image_import_feature_gate(
         yield
 
 
-def enable_common_boot_image_import_feature_gate_wait_for_data_import_cron(hco_resource, admin_client, namespace):
+def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource, admin_client, namespace):
     hco_namespace = Namespace(name=hco_resource.namespace)
-    update_common_boot_image_import_feature_gate(
+    update_common_boot_image_import_spec(
         hco_resource=hco_resource,
-        enable_feature_gate=True,
+        enable=True,
     )
     wait_for_at_least_one_auto_update_data_import_cron(admin_client=admin_client, namespace=namespace)
     wait_for_ssp_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
-def update_common_boot_image_import_feature_gate(hco_resource, enable_feature_gate):
-    def _wait_for_feature_gate_update(_hco_resource, _enable_feature_gate):
-        LOGGER.info(f"Wait for HCO {ENABLE_COMMON_BOOT_IMAGE_IMPORT} feature gate to be set to {_enable_feature_gate}.")
+def update_common_boot_image_import_spec(hco_resource, enable):
+    def _wait_for_spec_update(_hco_resource, _enable):
+        LOGGER.info(f"Wait for HCO {ENABLE_COMMON_BOOT_IMAGE_IMPORT} spec to be set to {_enable}.")
         try:
             for sample in TimeoutSampler(
                 wait_timeout=TIMEOUT_2MIN,
                 sleep=5,
-                func=lambda: _hco_resource.instance.spec.featureGates[ENABLE_COMMON_BOOT_IMAGE_IMPORT]
-                == _enable_feature_gate,
+                func=lambda: _hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT] == _enable,
             ):
                 if sample:
                     return
         except TimeoutExpiredError:
-            LOGGER.error(f"{ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not updated to {_enable_feature_gate}")
+            LOGGER.error(f"{ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not updated to {_enable}")
             raise
 
     editor = ResourceEditor(
-        patches={hco_resource: {"spec": {"featureGates": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable_feature_gate}}}},
+        patches={hco_resource: {"spec": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}},
     )
     editor.update(backup_resources=True)
-    _wait_for_feature_gate_update(_hco_resource=hco_resource, _enable_feature_gate=enable_feature_gate)
+    _wait_for_spec_update(_hco_resource=hco_resource, _enable=enable)
 
 
 def get_hco_namespace(admin_client, namespace="openshift-cnv"):

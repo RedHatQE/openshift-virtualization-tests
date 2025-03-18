@@ -14,7 +14,7 @@ from ocp_resources.volume_snapshot import VolumeSnapshot
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.constants import DATA_IMPORT_CRON_ENABLE, TIMEOUT_3MIN
 from utilities.hco import (
-    disable_common_boot_image_import_feature_gate,
+    disable_common_boot_image_import_hco_spec,
     update_hco_templates_spec,
     wait_for_auto_boot_config_stabilization,
 )
@@ -152,13 +152,13 @@ def rhel9_cached_snapshot(
 
 
 @pytest.fixture()
-def disabled_common_boot_image_import_feature_gate_rhel9_scope_function(
+def disabled_common_boot_image_import_hco_spec_rhel9_scope_function(
     admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
     rhel9_data_import_cron,
 ):
-    yield from disable_common_boot_image_import_feature_gate(
+    yield from disable_common_boot_image_import_hco_spec(
         admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         golden_images_namespace=golden_images_namespace,
@@ -223,7 +223,7 @@ def rhel9_golden_image_vm(
 @pytest.mark.polarion("CNV-10721")
 def test_automatic_update_for_system_cached_snapshot(
     rhel9_cached_snapshot,
-    disabled_common_boot_image_import_feature_gate_rhel9_scope_function,
+    disabled_common_boot_image_import_hco_spec_rhel9_scope_function,
     rhel9_data_source_scope_module,
 ):
     rhel9_data_source_scope_module.wait_for_condition(

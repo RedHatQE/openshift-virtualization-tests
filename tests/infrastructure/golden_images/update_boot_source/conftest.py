@@ -16,7 +16,7 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 from utilities.constants import TIMEOUT_2MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
-    enable_common_boot_image_import_feature_gate_wait_for_data_import_cron,
+    enable_common_boot_image_import_spec_wait_for_data_import_cron,
 )
 from utilities.storage import RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL
 
@@ -29,7 +29,7 @@ def enabled_common_boot_image_import_feature_gate_scope_function(
     hyperconverged_resource_scope_function,
     golden_images_namespace,
 ):
-    enable_common_boot_image_import_feature_gate_wait_for_data_import_cron(
+    enable_common_boot_image_import_spec_wait_for_data_import_cron(
         hco_resource=hyperconverged_resource_scope_function,
         admin_client=admin_client,
         namespace=golden_images_namespace,
@@ -42,7 +42,7 @@ def enabled_common_boot_image_import_feature_gate_scope_class(
     hyperconverged_resource_scope_class,
     golden_images_namespace,
 ):
-    enable_common_boot_image_import_feature_gate_wait_for_data_import_cron(
+    enable_common_boot_image_import_spec_wait_for_data_import_cron(
         hco_resource=hyperconverged_resource_scope_class,
         admin_client=admin_client,
         namespace=golden_images_namespace,
