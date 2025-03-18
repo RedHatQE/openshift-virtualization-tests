@@ -285,14 +285,13 @@ class TestKubevirtVmiMigrationStartAndEnd:
         prometheus,
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,
+        vm_migration_state,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmi_migration_start_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",
             expected_value=str(
-                timestamp_to_seconds(
-                    timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
-                ),
+                timestamp_to_seconds(timestamp=vm_migration_state.startTimestamp),
             ),
         )
 
@@ -303,13 +302,10 @@ class TestKubevirtVmiMigrationStartAndEnd:
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,
         migration_succeeded_scope_class,
+        vm_migration_state,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmi_migration_end_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",
-            expected_value=str(
-                timestamp_to_seconds(
-                    timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.endTimestamp
-                )
-            ),
+            expected_value=str(timestamp_to_seconds(timestamp=vm_migration_state.endTimestamp)),
         )
