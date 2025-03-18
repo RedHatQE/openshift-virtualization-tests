@@ -26,7 +26,7 @@ def virtctl_libguestfs_by_user(
     guestfs_proc.send("\n\n")
     guestfs_proc.expect("$", timeout=TIMEOUT_1MIN)
     yield guestfs_proc
-    guestfs_proc.sendcontrol(char="d")
+    guestfs_proc.send("exit\n")
     guestfs_proc.expect(pexpect.EOF, timeout=TIMEOUT_1MIN)
     guestfs_proc.close()
     Pod(
