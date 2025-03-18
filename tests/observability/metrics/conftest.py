@@ -1051,3 +1051,8 @@ def initiate_metric_value(request, prometheus):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture()
+def vm_migration_state(vm_for_migration_metrics_test):
+    return vm_for_migration_metrics_test.vmi.instance.status.migrationState
