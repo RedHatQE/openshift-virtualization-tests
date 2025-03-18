@@ -208,6 +208,7 @@ def shutdown_vm_guest_os(vm):
     ],
     indirect=True,
 )
+@pytest.mark.arm
 @pytest.mark.gating
 class TestRunStrategyBaseActions:
     @pytest.mark.parametrize(

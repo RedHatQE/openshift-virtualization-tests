@@ -259,6 +259,7 @@ def test_clone_windows_vm(
     "cloning_job_fedora_vm",
 )
 class TestVMCloneAndMigrate:
+    @pytest.mark.arm
     @pytest.mark.polarion("CNV-10333")
     def test_clone_vm_with_labels_annotations_smbios(
         self,
@@ -288,6 +289,7 @@ class TestVMCloneAndMigrate:
             f"Excluded: {ANNOTATION_TO_EXCLUDE_STR}"
         )
 
+    @pytest.mark.arm
     @pytest.mark.polarion("CNV-10354")
     def test_check_new_mac_address_on_clone(self, fedora_target_vm_instance):
         for iface in fedora_target_vm_instance.spec.template.spec.domain.devices.interfaces:
@@ -295,6 +297,7 @@ class TestVMCloneAndMigrate:
                 f"MAC Address on the target VM is not correct: {iface.macAddress}"
             )
 
+    @pytest.mark.arm
     @pytest.mark.polarion("CNV-10355")
     def test_check_new_smbios_serial_on_clone(self, fedora_target_vm_instance):
         current_serial = fedora_target_vm_instance.spec.template.spec.domain.get("firmware", {}).get("serial")
@@ -320,6 +323,7 @@ class TestVMCloneAndMigrate:
         ],
         indirect=True,
     )
+    @pytest.mark.arm
     @pytest.mark.polarion("CNV-10294")
     def test_clone_vm_with_clone_as_source(self, cloning_job_scope_function, target_vm_scope_function):
         check_disk_count_in_vm(vm=target_vm_scope_function)

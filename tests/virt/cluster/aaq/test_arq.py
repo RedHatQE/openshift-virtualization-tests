@@ -42,6 +42,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.arm
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "first_pod_for_aaq_test",
@@ -96,6 +97,7 @@ class TestARQCanManagePods:
     "vm_for_aaq_test_in_gated_state",
 )
 class TestARQCanManageVMs:
+    @pytest.mark.arm
     @pytest.mark.dependency(name=f"{TESTS_VM_CLASS_NAME}::vm_gated")
     @pytest.mark.polarion("CNV-11235")
     def test_arq_vm_gated_when_quota_reached(
@@ -127,6 +129,7 @@ class TestARQCanManageVMs:
         ],
         indirect=True,
     )
+    @pytest.mark.arm
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11269")
     def test_arq_gated_vm_started_when_quota_increased(
