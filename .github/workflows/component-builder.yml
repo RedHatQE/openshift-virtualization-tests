@@ -1,0 +1,51 @@
+name: "Component Builder"
+on:
+  pull_request_target:
+    paths:
+      - 'containers/fedora/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  guest-fedora-amd64:
+    runs-on: ubuntu-latest
+    env:
+      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
+      FEDORA_VERSION: 41
+      CPU_ARCH: amd64
+      FULL_EMULATION: "true"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies for VM build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-system-x86 \
+            libvirt-daemon-system \
+            virtinst cloud-image-utils \
+            libguestfs-tools
+      - name: Tweak hosted runner to enable 'virt-sysprep'
+        # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
+        run: sudo chmod 0644 /boot/vmlinuz*
+      - name: Fetch base Fedora image
+        working-directory: ./containers/fedora
+        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.11"
+      - name: Create VM
+        working-directory: ./containers/fedora
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
+          ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
+        run: ./build.sh
+      - name: Report artifacts
+        working-directory: ./containers/fedora
+        run: |
+          ls -la
+          podman images
