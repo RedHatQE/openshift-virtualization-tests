@@ -68,7 +68,8 @@ def assert_metrics_values(
     Args:
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
-
+        migration_metrics_dict: Dictionary with metrics by the status it checks
+        prometheus: Prometheus object
     Raises:
         AssertionError: If any metric's value does not match with expected value.
     """
