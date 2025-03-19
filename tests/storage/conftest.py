@@ -356,13 +356,13 @@ def temp_router_cert(tmpdir, router_cert_secret):
 
 
 @pytest.fixture()
-def skip_from_container():
+def xfail_if_running_from_container():
     if os.environ.get(CNV_TESTS_CONTAINER):
-        pytest.skip("Skipping the test because it's running from the container")
+        pytest.xfail("Skipping the test because it's running from the container")
 
 
 @pytest.fixture()
-def enabled_ca(skip_from_container, temp_router_cert):
+def enabled_ca(xfail_if_running_from_container, temp_router_cert):
     update_ca_trust_command = "sudo update-ca-trust"
     ca_path = "/etc/pki/ca-trust/source/anchors/"
     # copy to the trusted secure list and update
