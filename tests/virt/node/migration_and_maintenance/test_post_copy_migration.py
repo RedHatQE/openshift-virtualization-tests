@@ -139,7 +139,7 @@ class TestPostCopyMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
     )
-    @pytest.mark.jira("CNV-48348", run=False)
+    @pytest.mark.jira("CNV-58187", run=False)
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu", depends=[f"{TESTS_CLASS_NAME}::node_drain"])
     @pytest.mark.polarion("CNV-11423")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
@@ -149,7 +149,7 @@ class TestPostCopyMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
-    @pytest.mark.jira("CNV-48348", run=False)
+    @pytest.mark.jira("CNV-58187", run=False)
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-11424")
     def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):

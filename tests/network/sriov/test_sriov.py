@@ -13,8 +13,9 @@ from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.special_infra, pytest.mark.sriov]
 
-@pytest.mark.special_infra
+
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4

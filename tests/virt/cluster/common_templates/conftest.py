@@ -198,7 +198,7 @@ def golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_cl
 @pytest.fixture()
 def xfail_guest_agent_info_on_win2025(windows_os_matrix__class__):
     # Bug fixed on qemu-ga but not get the latest build, skip win-2025 until get the latest build
-    if "win-2025" in [*windows_os_matrix__class__][0] and is_jira_open(jira_id="CNV-52655"):
+    if "win-2025" in [*windows_os_matrix__class__][0] and is_jira_open(jira_id="CNV-58186"):
         pytest.xfail(reason="Expected failure on Windows 2025 until the latest Guest Agent build is available")
 
 

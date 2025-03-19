@@ -55,7 +55,6 @@ from utilities.infra import (
     ExecCommandOnPod,
     get_artifactory_config_map,
     get_artifactory_secret,
-    is_jira_open,
 )
 from utilities.storage import (
     create_cirros_dv_for_snapshot_dict,
@@ -357,14 +356,13 @@ def temp_router_cert(tmpdir, router_cert_secret):
 
 
 @pytest.fixture()
-def skip_from_container_if_jira_18870_not_closed():
-    jira_id = "CNV-18870"
-    if os.environ.get(CNV_TESTS_CONTAINER) and is_jira_open(jira_id=jira_id):
-        pytest.skip(f"Skipping the test because it's running from the container and jira card {jira_id} not closed")
+def xfail_if_running_from_container():
+    if os.environ.get(CNV_TESTS_CONTAINER):
+        pytest.xfail("Skipping the test because it's running from the container")
 
 
 @pytest.fixture()
-def enabled_ca(skip_from_container_if_jira_18870_not_closed, temp_router_cert):
+def enabled_ca(xfail_if_running_from_container, temp_router_cert):
     update_ca_trust_command = "sudo update-ca-trust"
     ca_path = "/etc/pki/ca-trust/source/anchors/"
     # copy to the trusted secure list and update

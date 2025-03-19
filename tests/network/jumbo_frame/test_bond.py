@@ -27,6 +27,8 @@ pytestmark = [
         "hyperconverged_ovs_annotations_enabled_scope_session",
         "workers_type",
     ),
+    pytest.mark.special_infra,
+    pytest.mark.jumbo_frame,
 ]
 
 
