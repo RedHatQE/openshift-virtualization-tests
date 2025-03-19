@@ -120,4 +120,3 @@ and new multi-arch image is validated with tag '41.rev-250318'.
 Now new tag is created for existing '41' as '41.prev', then new tag for '41.rev-250318' is
 created as '41'. This way there will be very minimal impact for test runs that
 tried to pull the latest fedora container image with tag '41'
-
