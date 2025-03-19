@@ -1,13 +1,21 @@
 import pytest
 from ocp_resources.resource import Resource
 
+from utilities.constants import PVC
+
 pytestmark = [pytest.mark.tier3, pytest.mark.special_infra]
 
 
-@pytest.mark.usefixtures("extracted_kubevirt_tekton_resources", "processed_yaml_files")
-@pytest.mark.polarion("CNV-11721")
+@pytest.mark.parametrize(
+    "pipelinerun_for_disk_uploader",
+    [
+        pytest.param("vm", marks=pytest.mark.polarion("CNV-11721")),
+        pytest.param(PVC, marks=pytest.mark.polarion("CNV-11785")),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("extracted_kubevirt_tekton_resources", "processed_yaml_files", "vm_for_disk_uploader")
 def test_disk_uploader_pipelinerun(
-    vm_for_disk_uploader,
     pipelinerun_for_disk_uploader,
     final_status_pipelinerun_for_disk_uploader,
 ):
