@@ -1020,7 +1020,7 @@ class VirtualMachineForTests(VirtualMachine):
 
     @property
     def virtctl_port_forward_cmd(self):
-        return f"{VIRTCTL} port-forward --stdio=true {self.name}.{self.namespace} {SSH_PORT_22}"
+        return f"{VIRTCTL} port-forward --stdio=true vm/{self.name}.{self.namespace} {SSH_PORT_22}"
 
     @property
     def login_params(self):
@@ -2382,3 +2382,8 @@ def validate_libvirt_persistent_domain(vm):
         command=shlex.split("virsh list --persistent"), container="compute"
     )
     assert vm.vmi.Status.RUNNING.lower() in domain
+
+
+def get_nodes_gpu_info(util_pods, node):
+    pod_exec = utilities.infra.ExecCommandOnPod(utility_pods=util_pods, node=node)
+    return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")

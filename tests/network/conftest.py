@@ -10,6 +10,7 @@ import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_config_openshift_io import Network
+from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
@@ -59,21 +60,21 @@ def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
 
 
 @pytest.fixture()
-def skip_if_not_ipv4_supported_cluster_from_mtx(
+def fail_if_not_ipv4_supported_cluster_from_mtx(
     request,
     ipv4_supported_cluster,
 ):
     if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster:
-        pytest.skip("IPv4 is not supported in this cluster")
+        pytest.fail(reason="IPv4 is not supported in this cluster")
 
 
 @pytest.fixture()
-def skip_if_not_ipv6_supported_cluster_from_mtx(
+def fail_if_not_ipv6_supported_cluster_from_mtx(
     request,
     ipv6_supported_cluster,
 ):
     if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster:
-        pytest.skip("IPv6 is not supported in this cluster")
+        pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
 @pytest.fixture()
@@ -100,13 +101,6 @@ def istio_system_namespace(admin_client):
     return Namespace(name=ISTIO_SYSTEM_DEFAULT_NS, client=admin_client).exists
 
 
-@pytest.fixture(scope="session")
-def skip_if_service_mesh_not_installed(istio_system_namespace):
-    # Service mesh not installed if the cluster doesn't have ISTIO-SYSTEM ns
-    if not istio_system_namespace:
-        pytest.skip("Cannot run the test. Service Mesh not installed")
-
-
 @pytest.fixture(scope="module")
 def sriov_workers_node1(sriov_workers):
     """
@@ -121,16 +115,6 @@ def sriov_workers_node2(sriov_workers):
     Get second worker nodes with SR-IOV capabilities
     """
     return sriov_workers[1]
-
-
-@pytest.fixture(scope="class")
-def skip_insufficient_sriov_workers(sriov_workers):
-    """
-    This function will make sure at least 2 worker nodes has SR-IOV capability
-    else tests will be skip.
-    """
-    if len(sriov_workers) < 2:
-        pytest.skip("Test requires at least 2 SR-IOV worker nodes")
 
 
 @pytest.fixture(scope="session")
@@ -202,13 +186,6 @@ def cluster_hardware_mtu(network_overhead, cluster_network_mtu):
     return cluster_network_mtu + network_overhead
 
 
-@pytest.fixture(scope="session")
-def skip_when_no_jumbo_frame_support(cluster_network_mtu, network_overhead):
-    # 7950 is the minimal hardware MTU for jumbo frame support we currently have, on PSI clusters.
-    if cluster_network_mtu < (7950 - network_overhead):
-        pytest.skip(f"Cluster network MTU {cluster_network_mtu} not suitable for jumbo traffic.")
-
-
 @pytest.fixture(scope="module")
 def cnao_deployment(hco_namespace):
     return get_deployment_by_name(
@@ -223,18 +200,79 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def network_sanity(hosts_common_available_ports, junitxml_plugin):
+def network_sanity(
+    hosts_common_available_ports,
+    junitxml_plugin,
+    request,
+    istio_system_namespace,
+    cluster_network_mtu,
+    network_overhead,
+):
     """
-    Perform verification that the cluster is a multi-nic one otherwise exit run
+    Ensures the test cluster meets network requirements before executing tests.
+    A failure in these checks results in pytest exiting with a predefined
+    return code and a message recorded in JUnit XML.
     """
-    # set a non-zero return code to indicate failure of network sanity
-    network_sanity_failure_return_code = 91
-    LOGGER.info("Verify cluster running network tests is a multi-nic one")
-    if len(hosts_common_available_ports) <= 1:
+    failure_msgs = []
+    collected_tests = request.session.items
+
+    def _verify_multi_nic():
+        LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
+        if len(hosts_common_available_ports) <= 1:
+            failure_msgs.append(
+                f"Cluster lacks multiple NICs, only {hosts_common_available_ports} common available ports found"
+            )
+        else:
+            LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
+
+    def _verify_dpdk():
+        if any(test.get_closest_marker("dpdk") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running DPDK tests...")
+            dpdk_performance_profile_name = "dpdk"
+            if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
+                failure_msgs.append(
+                    f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
+                    "does not exist"
+                )
+            else:
+                LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
+
+    def _verify_service_mesh():
+        if any(test.get_closest_marker("service_mesh") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running service-mesh tests...")
+            if not istio_system_namespace:
+                failure_msgs.append(
+                    f"Service mesh operator is not installed, the '{ISTIO_SYSTEM_DEFAULT_NS}' namespace does not exist"
+                )
+            else:
+                LOGGER.info(
+                    "Validated service mesh operator is running against a valid cluster with "
+                    f"'{ISTIO_SYSTEM_DEFAULT_NS}' namespace"
+                )
+
+    def _verify_jumbo_frame():
+        if any(test.get_closest_marker("jumbo_frame") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running jumbo frame tests...")
+            minimum_required_mtu = 7950 - network_overhead
+            if cluster_network_mtu < minimum_required_mtu:
+                failure_msgs.append(
+                    f"Cluster's network MTU is too small to support jumbo frame tests "
+                    f"Current MTU: {cluster_network_mtu}, Minimum required MTU: {minimum_required_mtu}."
+                )
+            else:
+                LOGGER.info(f"Cluster supports jumbo frame tests with an MTU of {cluster_network_mtu}")
+
+    _verify_multi_nic()
+    _verify_dpdk()
+    _verify_service_mesh()
+    _verify_jumbo_frame()
+
+    if failure_msgs:
+        err_msg = "\n".join(failure_msgs)
+        LOGGER.error(f"Network cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
+            message=err_msg,
+            return_code=91,
             filename="network_cluster_sanity_failure.txt",
-            return_code=network_sanity_failure_return_code,
-            message=f"Cluster is not a multinic cluster, with {hosts_common_available_ports} common available ports",
             junitxml_property=junitxml_plugin,
         )
-    LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")

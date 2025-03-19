@@ -6,6 +6,8 @@ from tests.network.service_mesh.utils import (
 )
 from tests.network.utils import assert_authentication_request
 
+pytestmark = pytest.mark.service_mesh
+
 
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
