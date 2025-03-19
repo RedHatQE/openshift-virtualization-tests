@@ -21,6 +21,8 @@ pytestmark = [
     pytest.mark.usefixtures(
         "hyperconverged_ovs_annotations_enabled_scope_session",
     ),
+    pytest.mark.special_infra,
+    pytest.mark.jumbo_frame,
 ]
 
 

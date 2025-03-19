@@ -8,6 +8,11 @@ import pytest
 from tests.network.utils import assert_no_ping, get_destination_ip_address
 from utilities.network import assert_ping_successful
 
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.jumbo_frame,
+]
+
 
 class TestJumboPodNetworkOnly:
     @pytest.mark.ipv4
