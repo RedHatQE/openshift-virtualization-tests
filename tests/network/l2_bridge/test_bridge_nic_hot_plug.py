@@ -621,6 +621,7 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
 
     @pytest.mark.special_infra
     @pytest.mark.ipv4
+    @pytest.mark.sriov
     @pytest.mark.polarion("CNV-10647")
     def test_connectivity_of_hot_plugged_sriov_interface(
         self,

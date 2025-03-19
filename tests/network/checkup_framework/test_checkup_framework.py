@@ -47,6 +47,8 @@ def test_disconnected_network_job_failure(
     )
 
 
+@pytest.mark.special_infra
+@pytest.mark.sriov
 @pytest.mark.polarion("CNV-9535")
 def test_disconnected_network_sriov_job_failure(
     latency_disconnected_configmap_sriov,
@@ -245,6 +247,7 @@ class TestCheckupLatencyLinuxBridgeNad:
 
 
 @pytest.mark.special_infra
+@pytest.mark.sriov
 class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10418")
     def test_basic_configmap_sriov_network(
