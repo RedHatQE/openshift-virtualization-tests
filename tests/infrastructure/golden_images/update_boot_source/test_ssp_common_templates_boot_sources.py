@@ -171,7 +171,7 @@ def test_common_templates_boot_source_reference(base_templates):
 def test_vm_with_uploaded_golden_image_opt_out(
     admin_client,
     golden_images_namespace,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     opted_out_rhel9_data_source,
     vm_without_boot_source,
     rhel9_dv,
