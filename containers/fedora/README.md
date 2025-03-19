@@ -69,3 +69,55 @@ The resulting files are stored in the fedora_build directory:
 1. Compressed VM Image: A compressed .qcow2 file.
 2. Dockerfile: Used to build the container image.
 3. Container Image Tarball.
+
+### Step 6: Creating multi-arch image manifest
+After building VM images for Fedora AMD64 and ARM64 architectures,the
+following procedure should help in building multi-arch image manifest
+
+1. Create a new tag for container images with revision number.
+
+Note: Revision number is required to prevent override of existing tags
+in the container image 'quay.io/openshift-cnv/qe-cnv-tests-fedora'.
+Revision number is optional for the very first build of Fedora container
+image. Revision number is created with naming
+convention as *.rev-YYMMDD* suffixed to the image tag.
+
+```bash
+podman tag localhost/fedora:41-amd64 quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[.rev-250316]
+podman tag localhost/fedora:41-arm64 quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[.rev-250316]
+```
+
+2. Create a new multi-arch image manifest with the images
+```bash
+podman manifest create quay.io/openshift-cnv/qe-cnv-tests-fedora:41[.rev-250316] \
+  quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[.rev-250316] \
+  quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[.rev-250316]
+```
+
+3. Inspect the multi-arch image manifest
+```bash
+podman manifest inspect quay.io/openshift-cnv/qe-cnv-tests-fedora:41[.rev-250317] | jq '.manifests[]|."platform"|."architecture"'
+```
+The above should list *amd64* and *arm64* as output, which means that architecture specific images are now part of image
+manifest
+
+4. Push the images and multi-arch image manifest
+```bash
+podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[.rev-250317]
+podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[.rev-250317]
+podman manifest push quay.io/openshift-cnv/qe-cnv-tests-fedora:41[.rev-250317] --all --format=v2s2
+```
+
+5. Update quay.io
+
+Once the new multi-arch image is validated, current latest tag for 'qe-cnv-tests-fedora'
+is archived and then new latest tag is made to point to the new multi-arch image manifest.
+This is performed from quay.io web UI.
+
+For example, if the latest tag for 'qe-cnv-tests-fedora' is '41'
+and new multi-arch image is validated with tag '41.rev-250318'.
+
+Now new tag is created for existing '41' as '41.prev', then new tag for '41.rev-250318' is
+created as '41'. This way there will be very minimal impact for test runs that
+tried to pull the latest fedora container image with tag '41'
+
