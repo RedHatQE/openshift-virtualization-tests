@@ -207,6 +207,7 @@ def network_sanity(
     istio_system_namespace,
     cluster_network_mtu,
     network_overhead,
+    ipv6_supported_cluster,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -262,10 +263,19 @@ def network_sanity(
             else:
                 LOGGER.info(f"Cluster supports jumbo frame tests with an MTU of {cluster_network_mtu}")
 
+    def _verify_ipv6():
+        if any(test.get_closest_marker("ipv6") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running IPV6 tests...")
+            if not ipv6_supported_cluster:
+                failure_msgs.append("IPv6 is not supported in this cluster")
+            else:
+                LOGGER.info("Validated network lane is running against an IPV6 supported cluster")
+
     _verify_multi_nic()
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
+    _verify_ipv6()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
