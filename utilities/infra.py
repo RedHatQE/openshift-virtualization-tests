@@ -446,6 +446,10 @@ def wait_for_consistent_resource_conditions(
     )
     try:
         for sample in samples:
+            if not sample:
+                LOGGER.warning(f"resource_kind={resource_kind.__name__}: Does not exist yet")
+                continue
+
             status_conditions = sample[0].instance.get("status", {}).get("conditions")
             if status_conditions:
                 actual_conditions = {
