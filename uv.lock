@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = "==3.12.*"
 
 [[package]]
@@ -161,7 +160,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -714,7 +713,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5c/d9/9cc919c3730eff2a5
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "4.18.3"
+version = "4.18.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -736,7 +735,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9e/2e/ffc536dda3b24f4e7b3e721c28d7e747d324747ff1a71325b6d6c600c74a/openshift_python_wrapper-4.18.3.tar.gz", hash = "sha256:e410997950102fece25d65cb5b366162a51867a3a562b6f5fc3a6b5a4e65de00", size = 6654307 }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/39/e0c7465f2623addfc4acb46ad1068e2bbca5e78905e3fdeff4b3db6a7c13/openshift_python_wrapper-4.18.4.tar.gz", hash = "sha256:65b6322623948c2d1d18c7a3e274f2afec80324934b8c5db70f407b76b4b6a58", size = 6654819 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
