@@ -207,6 +207,7 @@ def network_sanity(
     istio_system_namespace,
     cluster_network_mtu,
     network_overhead,
+    sriov_workers,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -262,10 +263,29 @@ def network_sanity(
             else:
                 LOGGER.info(f"Cluster supports jumbo frame tests with an MTU of {cluster_network_mtu}")
 
+    def _verify_sriov():
+        if any(test.get_closest_marker("sriov") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running SRIOV tests...")
+            if not Namespace(name=py_config["sriov_namespace"]).exists:
+                failure_msgs.append(
+                    f"SRIOV operator is not installed, the '{py_config['sriov_namespace']}' namespace does not exist"
+                )
+            if len(sriov_workers) < 2:
+                failure_msgs.append(
+                    "SRIOV tests require at least 2 SRIOV-capable worker nodes, but fewer were detected"
+                )
+            else:
+                LOGGER.info(
+                    "Validated SRIOV operator is running against a valid cluster with "
+                    f"'{py_config['sriov_namespace']}' namespace and "
+                    f"has {len(sriov_workers)} SRIOV-capable worker nodes"
+                )
+
     _verify_multi_nic()
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
+    _verify_sriov()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
