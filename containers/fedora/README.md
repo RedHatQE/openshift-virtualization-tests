@@ -78,8 +78,8 @@ following procedure should help in building multi-arch image manifest
 
 Note: Revision number is required to prevent overriding of existing tags
 in the container image 'qe-cnv-tests-fedora'. Revision number is not
-required for the very first build of Fedora container image.Revision 
-number is created with naming convention as *.rev-YYMMDD* suffixed to 
+required for the very first build of Fedora container image.Revision
+number is created with naming convention as *.rev-YYMMDD* suffixed to
 the image tag.
 
 Make sure that the chosen tag does not exists already for the fedora
@@ -135,7 +135,7 @@ For example, if the latest tag for 'qe-cnv-tests-fedora' is '41'
 and new multi-arch image is validated with tag '41.rev-250318'.
 
 Check if there is an existing 'rev-xxxxxx' tag associated with the active tag (i.e) 41.
-In this case, new tag for uploaded multi-arch image manifest can be created same 
+In this case, new tag for uploaded multi-arch image manifest can be created same
 as active tag (i.e) 41
 Otherwise:
 a. New tag is created for the active tag '41' as '41.rev-xxxxxx'
