@@ -15,7 +15,7 @@ from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST
+from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
     HTTP,
@@ -684,15 +684,15 @@ def test_vm_from_dv_on_different_node(
             {
                 "dv_name": "dv-win-19",
                 "source": HTTP,
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN19_RAW}",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "vm_name": f"vm-win-{py_config['latest_windows_os_dict']['os_version']}",
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "vm_name": f"vm-win-{WINDOWS_11['os_version']}",
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                 "ssh": True,
             },
-            {"os_version": py_config["latest_windows_os_dict"]["os_version"]},
+            {"os_version": WINDOWS_11["os_version"]},
             marks=pytest.mark.polarion("CNV-3637"),
         ),
     ],

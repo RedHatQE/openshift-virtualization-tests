@@ -15,6 +15,7 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
 import tests.storage.utils as storage_utils
+from tests.os_params import WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
 from tests.storage.utils import (
     assert_use_populator,
     create_vm_and_verify_image_permission,
@@ -414,14 +415,14 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
         pytest.param(
             {
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "remote_name": py_config["latest_windows_os_dict"]["image_path"],
-                "image_file": py_config["latest_windows_os_dict"]["image_name"],
+                "remote_name": WINDOWS_11["image_path"],
+                "image_file": WINDOWS_11["image_name"],
             },
             {
-                "vm_name": f"vm-win-{py_config['latest_windows_os_dict']['os_version']}",
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "vm_name": f"vm-win-{WINDOWS_11['os_version']}",
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                 "ssh": True,
-                "os_version": py_config["latest_windows_os_dict"]["os_version"],
+                "os_version": WINDOWS_11["os_version"],
             },
             marks=(pytest.mark.polarion("CNV-3410")),
         ),
