@@ -167,6 +167,7 @@ def fedora_target_vm_instance(fedora_target_vm):
     ],
     indirect=True,
 )
+@pytest.mark.arm
 def test_clone_vm_two_pvc_disks(
     vm_with_dv_for_cloning,
     files_created_on_pvc_disks,
@@ -253,6 +254,7 @@ def test_clone_windows_vm(
     ],
     indirect=True,
 )
+@pytest.mark.arm
 @pytest.mark.gating
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",

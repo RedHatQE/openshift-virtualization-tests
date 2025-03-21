@@ -30,7 +30,7 @@ from utilities.virt import (
     wait_for_console,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm]
 
 
 LOGGER = logging.getLogger(__name__)
