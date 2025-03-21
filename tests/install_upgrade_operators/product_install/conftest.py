@@ -25,7 +25,7 @@ from utilities.constants import (
     ICSP_FILE,
     IDMS_FILE,
     INFO_STR,
-    PENDING_STR,
+    PENDING_STATE,
     PRODUCTION_CATALOG_SOURCE,
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
@@ -246,7 +246,7 @@ def alert_dictionary_hco_not_installed():
             "severity": INFO_STR,
             "operator_health_impact": CRITICAL_STR,
         },
-        "state": PENDING_STR,
+        "state": PENDING_STATE,
     }
 
 

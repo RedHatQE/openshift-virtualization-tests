@@ -3,7 +3,7 @@ import pytest
 from tests.observability.constants import KUBEVIRT_STR_LOWER, KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
-    PENDING_STR,
+    PENDING_STATE,
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     VIRT_API,
@@ -45,7 +45,7 @@ class TestLowReadyVirtOperatorCount:
                         "operator_health_impact": WARNING_STR,
                         "kubernetes_operator_component": KUBEVIRT_STR_LOWER,
                     },
-                    "state": PENDING_STR,
+                    "state": PENDING_STATE,
                     "check_alert_cleaned": True,
                 },
                 marks=(pytest.mark.polarion("CNV-11380")),
@@ -108,7 +108,7 @@ class TestVirtHandlerDaemonSet:
                         "operator_health_impact": WARNING_STR,
                         "kubernetes_operator_component": KUBEVIRT_STR_LOWER,
                     },
-                    "state": PENDING_STR,
+                    "state": PENDING_STATE,
                     "check_alert_cleaned": True,
                 },
                 marks=pytest.mark.polarion("CNV-3814"),
