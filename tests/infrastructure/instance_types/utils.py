@@ -1,8 +1,11 @@
+import re
+import shlex
 from typing import Literal
 
 from ocp_resources.controller_revision import ControllerRevision
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
+from pyhelper_utils.shell import run_ssh_commands
 
 
 def get_mismatch_vendor_label(resources_list):
@@ -42,4 +45,35 @@ def assert_instance_revision_and_memory_update(
     )
     assert guest_memory == updated_memory, (
         "The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
+    )
+
+
+def check_dmesg_for_pattern(vm, dmesg_pattern):
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(f"sudo dmesg | grep -i '{dmesg_pattern}' || true"))[
+        0
+    ]
+
+
+def assert_dmesg(vm, dmesg_pattern, expected_status):
+    output = check_dmesg_for_pattern(vm=vm, dmesg_pattern=dmesg_pattern)
+    assert re.search(dmesg_pattern, output, re.IGNORECASE), (
+        f"Expected pattern '{expected_status}' not found in dmesg logs. Found: {output}"
+    )
+
+
+def assert_secure_boot_mokutil_status(vm, expected_status):
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].strip().lower()
+    assert expected_status.lower() in re.sub(r"\s+", " ", output.strip()).lower(), (
+        f"Expected Secure Boot status '{expected_status}' not found inside the guest OS. Found: {output}"
+    )
+
+
+def assert_kernel_lockdown_mode(vm, lockdown_mode="none"):
+    output = (
+        run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("cat /sys/kernel/security/lockdown"))[0].strip().lower()
+    )
+    guest_lockdown_mode = output.split("[")[1].split("]")[0]
+    assert guest_lockdown_mode != lockdown_mode, (
+        f"Kernel lockdown mode is '{guest_lockdown_mode}'. Secure Boot may not be enforcing security restrictions. "
+        f"Expected mode: {lockdown_mode}"
     )
