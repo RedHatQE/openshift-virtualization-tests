@@ -23,6 +23,7 @@ from utilities.constants import (
     DATA_SOURCE_NAME,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
+    HPP_CAPABILITIES,
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
@@ -47,6 +48,7 @@ from utilities.constants import (
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
+from utilities.storage import HppCsiStorageClass
 
 global config
 
@@ -133,9 +135,14 @@ storage_class_matrix = [
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
 
 default_storage_class, default_storage_class_configuration = _get_default_storage_class(sc_list=storage_class_matrix)

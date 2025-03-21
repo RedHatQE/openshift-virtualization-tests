@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest_testconfig
 
-from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DEPLOYMENTS, ALL_CNV_PODS, HPP_VOLUME_MODE_ACCESS_MODE
+from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DEPLOYMENTS, ALL_CNV_PODS, HPP_CAPABILITIES
 from utilities.storage import HppCsiStorageClass
 
 global config
@@ -15,8 +15,8 @@ cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 
 
 storage_class_matrix = [
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_VOLUME_MODE_ACCESS_MODE},
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_VOLUME_MODE_ACCESS_MODE},
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
 
 
