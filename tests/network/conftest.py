@@ -200,13 +200,22 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
+def network_sanity(
+    hosts_common_available_ports,
+    junitxml_plugin,
+    request,
+    istio_system_namespace,
+    cluster_network_mtu,
+    network_overhead,
+    sriov_workers,
+):
     """
     Ensures the test cluster meets network requirements before executing tests.
     A failure in these checks results in pytest exiting with a predefined
     return code and a message recorded in JUnit XML.
     """
     failure_msgs = []
+    collected_tests = request.session.items
 
     def _verify_multi_nic():
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
@@ -218,19 +227,65 @@ def network_sanity(hosts_common_available_ports, junitxml_plugin, request):
             LOGGER.info(f"Validated network lane is running against a multinic-cluster: {hosts_common_available_ports}")
 
     def _verify_dpdk():
-        if any(item.get_closest_marker("dpdk") for item in request.session.items):
+        if any(test.get_closest_marker("dpdk") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running DPDK tests...")
             dpdk_performance_profile_name = "dpdk"
             if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
                 failure_msgs.append(
                     f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
-                    "does not exist."
+                    "does not exist"
                 )
             else:
                 LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
 
+    def _verify_service_mesh():
+        if any(test.get_closest_marker("service_mesh") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running service-mesh tests...")
+            if not istio_system_namespace:
+                failure_msgs.append(
+                    f"Service mesh operator is not installed, the '{ISTIO_SYSTEM_DEFAULT_NS}' namespace does not exist"
+                )
+            else:
+                LOGGER.info(
+                    "Validated service mesh operator is running against a valid cluster with "
+                    f"'{ISTIO_SYSTEM_DEFAULT_NS}' namespace"
+                )
+
+    def _verify_jumbo_frame():
+        if any(test.get_closest_marker("jumbo_frame") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running jumbo frame tests...")
+            minimum_required_mtu = 7950 - network_overhead
+            if cluster_network_mtu < minimum_required_mtu:
+                failure_msgs.append(
+                    f"Cluster's network MTU is too small to support jumbo frame tests "
+                    f"Current MTU: {cluster_network_mtu}, Minimum required MTU: {minimum_required_mtu}."
+                )
+            else:
+                LOGGER.info(f"Cluster supports jumbo frame tests with an MTU of {cluster_network_mtu}")
+
+    def _verify_sriov():
+        if any(test.get_closest_marker("sriov") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running SRIOV tests...")
+            if not Namespace(name=py_config["sriov_namespace"]).exists:
+                failure_msgs.append(
+                    f"SRIOV operator is not installed, the '{py_config['sriov_namespace']}' namespace does not exist"
+                )
+            if len(sriov_workers) < 2:
+                failure_msgs.append(
+                    "SRIOV tests require at least 2 SRIOV-capable worker nodes, but fewer were detected"
+                )
+            else:
+                LOGGER.info(
+                    "Validated SRIOV operator is running against a valid cluster with "
+                    f"'{py_config['sriov_namespace']}' namespace and "
+                    f"has {len(sriov_workers)} SRIOV-capable worker nodes"
+                )
+
     _verify_multi_nic()
     _verify_dpdk()
+    _verify_service_mesh()
+    _verify_jumbo_frame()
+    _verify_sriov()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
