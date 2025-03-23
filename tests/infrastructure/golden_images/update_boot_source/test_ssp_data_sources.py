@@ -380,7 +380,7 @@ def test_opt_in_all_referenced_data_sources_in_templates_exist(
 
 @pytest.mark.polarion("CNV-8234")
 def test_opt_out_all_referenced_data_sources_in_templates_exist(
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_names_from_templates_scope_function,
     golden_images_data_sources_scope_function,
 ):
@@ -444,7 +444,7 @@ def test_upload_dv_for_auto_update_dangling_data_sources(
 
 @pytest.mark.polarion("CNV-7668")
 def test_opt_out_data_source_reconciles_after_deletion(
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
 ):
     delete_data_source_and_wait_for_reconciliation(
@@ -454,7 +454,7 @@ def test_opt_out_data_source_reconciles_after_deletion(
 
 @pytest.mark.polarion("CNV-8095")
 def test_opt_out_data_source_reconciles_after_update(
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     updated_opted_out_data_source_scope_function,
 ):
     wait_for_data_source_reconciliation_after_update(
@@ -464,7 +464,7 @@ def test_opt_out_data_source_reconciles_after_update(
 
 @pytest.mark.polarion("CNV-8100")
 def test_opt_out_data_source_update(
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
 ):
     LOGGER.info("Verify DataSources are updated to not reference auto-update PVCs")
@@ -493,7 +493,7 @@ def test_opt_out_custom_data_sources_not_deleted(
     admin_client,
     golden_images_namespace,
     updated_hco_with_custom_data_import_cron_scope_function,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
 ):
     custom_data_source_name = updated_hco_with_custom_data_import_cron_scope_function["spec"]["managedDataSource"]
     LOGGER.info(f"Verify custom DataSource {custom_data_source_name} is not deleted after opt-out")
@@ -516,7 +516,7 @@ def test_opt_out_custom_data_sources_not_deleted(
     indirect=True,
 )
 def test_data_source_with_existing_golden_image_pvc(
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     data_source_by_name_scope_function,
     created_dv_for_data_import_cron_managed_data_source_scope_function,
     enabled_common_boot_image_import_feature_gate_scope_function,
@@ -546,7 +546,7 @@ def test_data_source_with_existing_golden_image_pvc(
 @pytest.mark.usefixtures(
     "data_source_by_name_scope_class",
     "data_source_referenced_volume_scope_class",
-    "disabled_common_boot_image_import_feature_gate_scope_class",
+    "disabled_common_boot_image_import_hco_spec_scope_class",
     "created_dv_for_data_import_cron_managed_data_source_scope_class",
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
@@ -601,7 +601,7 @@ class TestDataSourcesOptInLabel:
     "data_source_by_name_scope_class",
     "data_source_by_name_managing_data_import_cron_scope_class",
     "data_source_referenced_volume_scope_class",
-    "disabled_common_boot_image_import_feature_gate_scope_class",
+    "disabled_common_boot_image_import_hco_spec_scope_class",
     "created_dv_for_data_import_cron_managed_data_source_scope_class",
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",

@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestEnableCommonBootImageImport:
     @pytest.mark.polarion("CNV-7626")
-    def test_set_featuregate_enable_common_boot_image_import_true_ssp_cr(
+    def test_set_enable_common_boot_image_import_true_ssp_cr(
         self,
         ssp_cr_spec,
     ):
@@ -26,13 +26,13 @@ class TestEnableCommonBootImageImport:
 
 
 @pytest.mark.polarion("CNV-7778")
-def test_enable_and_delete_featuregate_enable_common_boot_image_import_hco_cr(
+def test_enable_and_delete_spec_enable_common_boot_image_import_hco_cr(
     admin_client,
     hco_namespace,
-    disabled_common_boot_image_import_feature_gate_scope_function,
+    disabled_common_boot_image_import_hco_spec_scope_function,
     hyperconverged_resource_scope_function,
 ):
     wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
-    assert not hyperconverged_resource_scope_function.instance.spec["featureGates"][ENABLE_COMMON_BOOT_IMAGE_IMPORT], (
-        f"FeatureGate {ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not disabled."
+    assert not hyperconverged_resource_scope_function.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT], (
+        f"Spec {ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not disabled in HCO."
     )

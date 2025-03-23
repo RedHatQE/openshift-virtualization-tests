@@ -12,8 +12,6 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.secret import Secret
 from ocp_resources.task import Task
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import py_config
 
@@ -28,7 +26,6 @@ from tests.infrastructure.tekton.utils import (
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     OS_FLAVOR_FEDORA,
-    PVC,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
     TIMEOUT_1MIN,
@@ -45,7 +42,7 @@ from utilities.infra import (
     get_artifactory_secret,
     get_resources_by_name_prefix,
 )
-from utilities.storage import create_dv
+from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
@@ -60,6 +57,7 @@ VOLUME_NAME = "VOLUME_NAME"
 IMAGE_DESTINATION = "IMAGE_DESTINATION"
 PUSH_TIMEOUT = "PUSH_TIMEOUT"
 SECRET_NAME = "SECRET_NAME"
+
 
 COMMON_PIPELINEREF_PARAMS = {
     WINDOWS_EFI_INSTALLER_STR: {
@@ -312,7 +310,7 @@ def pipelinerun_from_pipeline_template(
     ]
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def quay_disk_uploader_secret(custom_pipeline_namespace):
     with Secret(
         name="quay-disk-uploader-secret",
@@ -323,38 +321,23 @@ def quay_disk_uploader_secret(custom_pipeline_namespace):
         yield quay_disk_uploader_secret
 
 
-@pytest.fixture()
-def created_fedora_dv_for_disk_uploader(admin_client, golden_images_namespace, custom_pipeline_namespace):
-    with create_dv(
-        dv_name="fedora-dv-disk-uploader",
-        namespace=custom_pipeline_namespace.name,
-        source=PVC,
-        source_pvc=DataSource(
-            name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name
-        ).instance.spec.source.pvc.name,
-        source_namespace=golden_images_namespace.name,
-        size="35Gi",  # Keeping size of the data volume, slightly larger than the data source (~32Gi)
-        client=admin_client,
-        storage_class=py_config["default_storage_class"],
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
-@pytest.fixture()
-def vm_for_disk_uploader(custom_pipeline_namespace, admin_client, created_fedora_dv_for_disk_uploader):
+@pytest.fixture(scope="module")
+def vm_for_disk_uploader(admin_client, custom_pipeline_namespace, golden_images_namespace):
     with VirtualMachineForTests(
         name="fedora-vm-diskuploader",
         namespace=custom_pipeline_namespace.name,
         client=admin_client,
-        data_volume=created_fedora_dv_for_disk_uploader,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.small"),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
     ) as vm:
         yield vm
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def pipeline_disk_uploader(
     admin_client,
     custom_pipeline_namespace,
@@ -375,19 +358,19 @@ def pipelinerun_for_disk_uploader(
     custom_pipeline_namespace,
     quay_disk_uploader_secret,
     pipeline_disk_uploader,
-    created_fedora_dv_for_disk_uploader,
     vm_for_disk_uploader,
+    request,
 ):
     pipeline_run_params = {
-        EXPORT_SOURCE_KIND: "vm",
-        EXPORT_SOURCE_NAME: vm_for_disk_uploader.name,
-        VOLUME_NAME: created_fedora_dv_for_disk_uploader.name,
+        EXPORT_SOURCE_KIND: request.param,
+        EXPORT_SOURCE_NAME: (vm_for_disk_uploader.name if request.param == "vm" else OS_FLAVOR_FEDORA),
+        VOLUME_NAME: OS_FLAVOR_FEDORA,
         IMAGE_DESTINATION: "quay.io/openshift-cnv/tekton-tasks",
         SECRET_NAME: quay_disk_uploader_secret.name,
     }
 
     with PipelineRun(
-        name="pipelinerun-disk-uploader",
+        name=f"pipelinerun-disk-uploader-{request.param}",
         namespace=custom_pipeline_namespace.name,
         client=admin_client,
         params=pipeline_run_params,

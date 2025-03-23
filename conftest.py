@@ -69,6 +69,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "ovs_brcnv",
     "node_remediation",
     "swap",
+    "numa",
 ]
 
 TEAM_MARKERS = {
@@ -250,6 +251,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Skip artifactory environment variable checks. To be used for tests that does not need articatory access",
+    )
+    session_group.addoption(
+        "--skip-virt-sanity-check",
+        action="store_true",
+        default=False,
+        help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
     )
 
 

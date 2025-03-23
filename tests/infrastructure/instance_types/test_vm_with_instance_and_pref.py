@@ -1,9 +1,12 @@
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
-from ocp_resources.controller_revision import ControllerRevision
 from ocp_resources.resource import ResourceEditor
 
-from tests.infrastructure.instance_types.constants import UPDATED_MEMORY_2Gi, UPDATED_MEMORY_3Gi
+from tests.infrastructure.instance_types.constants import UPDATED_MEMORY_3Gi
+from tests.infrastructure.instance_types.utils import (
+    assert_instance_revision_and_memory_update,
+    get_controller_revision,
+)
 from utilities.constants import Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -21,24 +24,18 @@ CLOCK_TIMER = {
 
 
 @pytest.fixture()
-def rhel_vm_spec(rhel_vm_with_instance_type_and_preference):
-    return rhel_vm_with_instance_type_and_preference.instance.spec
+def instance_controller_revision(rhel_vm_with_instance_type_and_preference):
+    return get_controller_revision(vm_instance=rhel_vm_with_instance_type_and_preference, ref_type="instancetype")
 
 
 @pytest.fixture()
-def instance_controller_revision(rhel_vm_with_instance_type_and_preference, rhel_vm_spec):
-    return ControllerRevision(
-        name=rhel_vm_spec.instancetype.revisionName,
-        namespace=rhel_vm_with_instance_type_and_preference.namespace,
-    )
+def pref_controller_revision(rhel_vm_with_instance_type_and_preference):
+    return get_controller_revision(vm_instance=rhel_vm_with_instance_type_and_preference, ref_type="preference")
 
 
 @pytest.fixture()
-def pref_controller_revision(rhel_vm_with_instance_type_and_preference, rhel_vm_spec):
-    return ControllerRevision(
-        name=rhel_vm_spec.preference.revisionName,
-        namespace=rhel_vm_with_instance_type_and_preference.namespace,
-    )
+def old_revision_name(instance_controller_revision):
+    yield instance_controller_revision.name
 
 
 @pytest.fixture()
@@ -61,21 +58,6 @@ def updated_instance_type(instance_type_for_test_scope_class, updated_memory):
 
 
 @pytest.fixture()
-def old_revision_name(
-    rhel_vm_with_instance_type_and_preference,
-):
-    yield rhel_vm_with_instance_type_and_preference.instance.spec.instancetype.revisionName
-
-
-@pytest.fixture()
-def deleted_revision_name_restart_vm(rhel_vm_with_instance_type_and_preference):
-    ResourceEditor(
-        patches={rhel_vm_with_instance_type_and_preference: {"spec": {"instancetype": {"revisionName": ""}}}}
-    ).update()
-    rhel_vm_with_instance_type_and_preference.restart(wait=True)
-
-
-@pytest.fixture()
 def recreated_vm(rhel_vm_with_instance_type_and_preference):
     rhel_vm_with_instance_type_and_preference.clean_up()
     rhel_vm_with_instance_type_and_preference.deploy(wait=True)
@@ -85,16 +67,6 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
         check_ssh_connectivity=False,
     )
     yield rhel_vm_with_instance_type_and_preference
-
-
-def validate_revision_name_update(vm_for_test, old_revision_name, updated_memory):
-    guest_memory = vm_for_test.vmi.instance.spec.domain.memory.guest
-    assert vm_for_test.instance.spec.instancetype.revisionName != old_revision_name, (
-        "The revisionName is still {old_revision_name}, not updated after editing"
-    )
-    assert guest_memory == updated_memory, (
-        "The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
-    )
 
 
 @pytest.mark.parametrize(
@@ -199,31 +171,6 @@ class TestVmWithInstanceTypeAndPref:
         "updated_memory",
         [
             pytest.param(
-                {"updated_memory": UPDATED_MEMORY_2Gi},
-                marks=pytest.mark.polarion("CNV-9898"),
-            )
-        ],
-        indirect=True,
-    )
-    def test_edit_instancetype_with_delete_revision_name(
-        self,
-        updated_memory,
-        rhel_vm_with_instance_type_and_preference,
-        old_revision_name,
-        updated_instance_type,
-        deleted_revision_name_restart_vm,
-    ):
-        validate_revision_name_update(
-            vm_for_test=rhel_vm_with_instance_type_and_preference,
-            old_revision_name=old_revision_name,
-            updated_memory=updated_memory,
-        )
-
-    @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
-    @pytest.mark.parametrize(
-        "updated_memory",
-        [
-            pytest.param(
                 {"updated_memory": UPDATED_MEMORY_3Gi},
                 marks=pytest.mark.polarion("CNV-9911"),
             )
@@ -237,7 +184,7 @@ class TestVmWithInstanceTypeAndPref:
         updated_instance_type,
         recreated_vm,
     ):
-        validate_revision_name_update(
+        assert_instance_revision_and_memory_update(
             vm_for_test=recreated_vm,
             old_revision_name=old_revision_name,
             updated_memory=updated_memory,

@@ -9,14 +9,12 @@ import copy
 # so we expect that the initial configuration will differ from the
 # default one.
 from tests.install_upgrade_operators.constants import (
-    FG_ENABLED,
     HCO_CR_CERT_CONFIG_CA_KEY,
     HCO_CR_CERT_CONFIG_DURATION_KEY,
     HCO_CR_CERT_CONFIG_KEY,
     HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY,
     HCO_CR_CERT_CONFIG_SERVER_KEY,
 )
-from utilities.constants import ENABLE_COMMON_BOOT_IMAGE_IMPORT
 
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 CERTC_DEFAULT_48H = "48h0m0s"
@@ -305,9 +303,3 @@ NP_WORKLOADS_VALUE_HCO_CR = {
     },
 }
 NP_WORKLOADS_VALUE_CDI_CR = NP_WORKLOADS_VALUE_HCO_CR["nodePlacement"]
-
-# this dict is a simple way to access HCO CR default value for featuregates that can be toggled from either HCO CR
-# or KubeVirt CR
-KV_CR_FEATUREGATES_HCO_CR_DEFAULTS = {
-    ENABLE_COMMON_BOOT_IMAGE_IMPORT: FG_ENABLED,
-}

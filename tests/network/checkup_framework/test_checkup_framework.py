@@ -10,7 +10,10 @@ from tests.network.checkup_framework.utils import (
     wait_for_job_finish,
 )
 
-pytestmark = pytest.mark.usefixtures("framework_resources")
+pytestmark = [
+    pytest.mark.usefixtures("framework_resources"),
+    pytest.mark.tier3,
+]
 
 CNCF_IO_RESOURCE = Resource.ApiGroup.K8S_CNI_CNCF_IO
 CONNECTIVITY_ISSUE_ERROR_REGEX_MESSAGE = "run: ping parser: no connectivity - 100% packet loss"
@@ -44,6 +47,8 @@ def test_disconnected_network_job_failure(
     )
 
 
+@pytest.mark.special_infra
+@pytest.mark.sriov
 @pytest.mark.polarion("CNV-9535")
 def test_disconnected_network_sriov_job_failure(
     latency_disconnected_configmap_sriov,
@@ -242,6 +247,7 @@ class TestCheckupLatencyLinuxBridgeNad:
 
 
 @pytest.mark.special_infra
+@pytest.mark.sriov
 class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10418")
     def test_basic_configmap_sriov_network(
