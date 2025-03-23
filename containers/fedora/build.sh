@@ -11,11 +11,12 @@ trap cleanup EXIT
 
 [ -z "${FEDORA_IMAGE}" ] && echo "Set the env variable FEDORA_IMAGE" && exit 1
 [ -z "${FEDORA_VERSION}" ] && echo "Set the env variable FEDORA_VERSION" && exit 1
+[ -z "${CPU_ARCH}" ] && echo "Set the env variable CPU_ARCH" && exit 1
 
 BUILD_DIR="fedora_build"
 CLOUD_INIT_ISO="cidata.iso"
 NAME="fedora${FEDORA_VERSION}"
-FEDORA_CONTAINER_IMAGE="localhost/fedora:${FEDORA_VERSION}"
+FEDORA_CONTAINER_IMAGE="localhost/fedora:${FEDORA_VERSION}-${CPU_ARCH}"
 
 IMAGE_BUILD_CMD=$(which podman 2>/dev/null || which docker)
 if [ -z $IMAGE_BUILD_CMD ]; then
@@ -28,14 +29,11 @@ if [ $CPU_ARCH = "amd64" ]; then
     VIRT_TYPE="kvm"
 elif [ $CPU_ARCH = "arm64" ]; then
     CPU_ARCH_CODE="aarch64"
-    FEDORA_CONTAINER_IMAGE="${FEDORA_CONTAINER_IMAGE}-${CPU_ARCH}"
     VIRT_TYPE="qemu"
 else
     echo "Use the value amd64 or arm64 for CPU_ARCH env variable"
     exit 1
 fi
-
-mkdir $BUILD_DIR
 
 FEDORA_PASSWORD=$(uv run get_fedora_password.py)
 PASSWORD_PLACEHOLDER="CHANGE_ME"
@@ -73,6 +71,7 @@ fi
 
 rm -f "${CLOUD_INIT_ISO}"
 
+mkdir $BUILD_DIR
 echo "Snapshot image"
 qemu-img convert -c -O qcow2 "${FEDORA_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
 
@@ -88,6 +87,6 @@ echo "Build container image"
 ${IMAGE_BUILD_CMD} build -f Dockerfile --arch="${CPU_ARCH}" -t "${FEDORA_CONTAINER_IMAGE}" .
 
 echo "Save container image as TAR"
-${IMAGE_BUILD_CMD} save --output "fedora-${FEDORA_VERSION}.tar" "${FEDORA_CONTAINER_IMAGE}"
+${IMAGE_BUILD_CMD} save --output "fedora${FEDORA_VERSION}-${CPU_ARCH}.tar" "${FEDORA_CONTAINER_IMAGE}"
 popd
 echo "Fedora image located in ${BUILD_DIR}/"
