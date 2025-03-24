@@ -464,7 +464,7 @@ def assert_use_populator(pvc, storage_class, cluster_csi_drivers_names):
 def wait_for_processes_exit_successfully(processes, timeout):
     try:
         for object_name in processes:
-            process = processes[object_name]
+            process = sprocesses[object_name]
             process.join(timeout)
             if process.exception:
                 raise process.exception
