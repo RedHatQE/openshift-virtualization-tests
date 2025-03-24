@@ -1,4 +1,5 @@
 from kubernetes.dynamic.exceptions import InternalServerError
+from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
 from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
@@ -513,6 +514,7 @@ EXPECTED_STATUS_CONDITIONS = {
     CDI: DEFAULT_RESOURCE_CONDITIONS,
     SSP: DEFAULT_RESOURCE_CONDITIONS,
     NetworkAddonsConfig: DEFAULT_RESOURCE_CONDITIONS,
+    AAQ: DEFAULT_RESOURCE_CONDITIONS,
 }
 MACHINE_CONFIG_PODS_TO_COLLECT = [
     "machine-config-operator",
