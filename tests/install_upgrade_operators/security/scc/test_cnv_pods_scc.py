@@ -52,11 +52,11 @@ def test_openshift_io_scc_exists(cnv_pods):
 
 
 @pytest.fixture()
-def pods_not_whitelisted_or_anyuid(is_jira_53226_open, cnv_pods):
+def pods_not_allowed_or_anyuid(is_jira_58482_open, cnv_pods):
     pod_names = []
     for pod in cnv_pods:
         # Ignore passt-binding-cni pods as those will be removed in upcoming builds
-        if is_jira_53226_open and pod.name.startswith("passt-binding-cni"):
+        if is_jira_58482_open and pod.name.startswith("passt-binding-cni"):
             continue
 
         annotations = pod.instance.metadata.annotations.get("openshift.io/scc")
@@ -68,10 +68,10 @@ def pods_not_whitelisted_or_anyuid(is_jira_53226_open, cnv_pods):
 
 
 @pytest.mark.polarion("CNV-4211")
-def test_pods_scc_in_allowlist(pods_not_whitelisted_or_anyuid):
+def test_pods_scc_in_allowlist(pods_not_allowed_or_anyuid):
     """
     Validate that Pods in openshift-cnv have SCC from a predefined allowlist
     """
-    assert not pods_not_whitelisted_or_anyuid, (
-        f"Pods not conforming to SCC annotation conditions: pods={pods_not_whitelisted_or_anyuid}"
+    assert not pods_not_allowed_or_anyuid, (
+        f"Pods not conforming to SCC annotation conditions: pods={pods_not_allowed_or_anyuid}"
     )
