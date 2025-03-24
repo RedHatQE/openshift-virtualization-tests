@@ -208,6 +208,7 @@ def network_sanity(
     cluster_network_mtu,
     network_overhead,
     sriov_workers,
+    ipv4_supported_cluster,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -281,11 +282,20 @@ def network_sanity(
                     f"has {len(sriov_workers)} SRIOV-capable worker nodes"
                 )
 
+    def _verify_ipv4():
+        if any(test.get_closest_marker("ipv4") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running IPV4 tests...")
+            if not ipv4_supported_cluster:
+                failure_msgs.append("IPv4 is not supported in this cluster")
+            else:
+                LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
+
     _verify_multi_nic()
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
+    _verify_ipv4()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
