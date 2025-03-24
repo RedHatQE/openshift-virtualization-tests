@@ -8,8 +8,8 @@ from pytest_testconfig import config as py_config
 from tests.observability.metrics.utils import (
     validate_vmi_node_cpu_affinity_with_prometheus,
 )
+from tests.observability.utils import validate_metrics_value
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
-from tests.utils import validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 KUBEVIRT_VM_TAG = f"{Resource.ApiGroup.KUBEVIRT_IO}/vm"

@@ -38,7 +38,6 @@ from utilities.data_collector import (
 from utilities.infra import (
     generate_openshift_pull_secret_file,
     get_csv_by_name,
-    get_node_selector_dict,
     get_prometheus_k8s_token,
     get_related_images_name_and_version,
     get_subscription,
@@ -52,7 +51,7 @@ from utilities.operator import (
     update_subscription_source,
     wait_for_mcp_update_completion,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, get_oc_image_info, running_vm
+from utilities.virt import get_oc_image_info
 
 LOGGER = logging.getLogger(__name__)
 POD_STR_NOT_MANAGED_BY_HCO = "hostpath-"
@@ -604,16 +603,3 @@ def upgraded_odf(
     updated_odf_subscription_source,
 ):
     wait_for_odf_update(target_version=odf_version)
-
-
-@pytest.fixture()
-def vm_with_node_selector_for_upgrade(namespace, worker_node1):
-    name = "vm-with-node-selector"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm

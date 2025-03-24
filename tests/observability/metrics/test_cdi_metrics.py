@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.metrics.utils import expected_metric_labels_and_values
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import CDI_OPERATOR
 
 

@@ -2902,3 +2902,16 @@ def nmstate_namespace(admin_client):
 @pytest.fixture()
 def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv6_supported_cluster and not ipv4_supported_cluster
+
+
+@pytest.fixture()
+def vm_with_node_selector_for_upgrade(namespace, worker_node1):
+    name = "vm-with-node-selector"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm

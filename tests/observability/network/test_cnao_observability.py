@@ -5,7 +5,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CNAO_KUBEMACPOOL_MANAGER_UP,
     KUBEVIRT_CNAO_OPERATOR_UP,
 )
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, TIMEOUT_5MIN
 
 

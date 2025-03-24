@@ -16,7 +16,7 @@ from tests.observability.metrics.utils import (
     get_vm_metrics,
     validate_metric_value_within_range,
 )
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]

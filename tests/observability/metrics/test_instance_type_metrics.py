@@ -12,7 +12,7 @@ from tests.observability.metrics.utils import (
     wait_for_prometheus_query_result_matches_expected_value,
     wait_for_prometheus_query_result_node_value_update,
 )
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     INSTANCE_TYPE_STR,

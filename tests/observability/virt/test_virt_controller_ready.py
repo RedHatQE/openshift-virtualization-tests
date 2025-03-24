@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import VIRT_CONTROLLER
 
 

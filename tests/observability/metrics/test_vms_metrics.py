@@ -26,8 +26,8 @@ from tests.observability.metrics.utils import (
     validate_metric_value_within_range,
     validate_vnic_info,
 )
+from tests.observability.utils import validate_metrics_value
 from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
-from tests.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,

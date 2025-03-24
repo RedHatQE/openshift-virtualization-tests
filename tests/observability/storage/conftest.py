@@ -6,7 +6,7 @@ from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError
 
-from tests.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import HOSTPATH_PROVISIONER, HOSTPATH_PROVISIONER_CSI, TIMEOUT_2MIN
 from utilities.infra import get_pod_by_name_prefix, scale_deployment_replicas
 

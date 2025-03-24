@@ -17,7 +17,6 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource, ResourceEditor
-from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -30,7 +29,6 @@ from utilities.constants import (
     FIRING_STATE,
     HCO_CATALOG_SOURCE,
     IMAGE_CRON_STR,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -52,7 +50,6 @@ from utilities.infra import (
     wait_for_consistent_resource_conditions,
     wait_for_version_explorer_response,
 )
-from utilities.monitoring import get_metrics_value
 from utilities.operator import (
     approve_install_plan,
     get_hco_csv_name_by_version,
@@ -717,21 +714,3 @@ def wait_for_odf_update(target_version: str) -> None:
         if not sample:
             return
         LOGGER.info(f"Following odf csvs are not updated: {','.join(sample)}")
-
-
-def wait_for_greater_than_zero_metric_value(prometheus: Prometheus, metric_name: str) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample and int(sample) > 0:
-                return
-    except TimeoutExpiredError:
-        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non zero")
-        raise

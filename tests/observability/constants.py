@@ -37,3 +37,4 @@ SSP_ALERTS_LIST = [
     "SSPCommonTemplatesModificationReverted",
     SSP_HIGH_RATE_REJECTED_VMS,
 ]
+KUBEVIRT_VMI_NUMBER_OF_OUTDATED = "kubevirt_vmi_number_of_outdated"
