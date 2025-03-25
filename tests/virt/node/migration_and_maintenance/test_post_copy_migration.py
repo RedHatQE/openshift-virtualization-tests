@@ -118,6 +118,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
                 "additional_labels": VM_LABEL,
             },
             id="WIN-VM",
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
     ],
     indirect=True,
@@ -125,9 +126,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
 class TestPostCopyMigration:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-11421")
-    def test_migrate_vm(
-        self, skip_windows_if_on_psi_cluster, hotplugged_vm, vm_background_process_id, migrated_hotplugged_vm
-    ):
+    def test_migrate_vm(self, hotplugged_vm, vm_background_process_id, migrated_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 
@@ -140,7 +139,7 @@ class TestPostCopyMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
     )
-    @pytest.mark.jira("CNV-48348", run=False)
+    @pytest.mark.jira("CNV-58187", run=False)
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu", depends=[f"{TESTS_CLASS_NAME}::node_drain"])
     @pytest.mark.polarion("CNV-11423")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
@@ -150,7 +149,7 @@ class TestPostCopyMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
-    @pytest.mark.jira("CNV-48348", run=False)
+    @pytest.mark.jira("CNV-58187", run=False)
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-11424")
     def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):

@@ -90,7 +90,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-8712")
     def test_efi_secureboot_enabled_by_default(
         self,
-        skip_if_os_version_below_rhel9,
+        xfail_on_rhel_version_below_rhel9,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         """Test CNV common templates EFI secureboot status"""
@@ -175,7 +175,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-6531")
     def test_virtctl_guest_agent_fs_info(
         self,
-        skip_guest_agent_on_rhel,
+        xfail_rhel_with_old_guest_agent,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         validate_fs_info_virtctl_vs_linux_os(
@@ -256,7 +256,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     def test_efi_secureboot_disabled(
         self,
-        skip_if_os_version_below_rhel9,
+        xfail_on_rhel_version_below_rhel9,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         vm = golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class

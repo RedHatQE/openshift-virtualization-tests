@@ -1,4 +1,3 @@
-import bitmath
 import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
@@ -17,16 +16,6 @@ def assert_vmi_free_page_reporting(vm, expected_free_page_reporting):
     assert actual_free_page_reporting == expected_free_page_reporting, (
         f"expected free_page_reporting to be {expected_free_page_reporting}, got {actual_free_page_reporting}"
     )
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_hugepages_1gi(workers):
-    if not any([
-        bitmath.parse_string_unsafe(worker.instance.status.allocatable["hugepages-1Gi"])
-        >= bitmath.parse_string_unsafe("1Gi")
-        for worker in workers
-    ]):
-        pytest.skip("Only run on a Cluster with node that has enough huge pages")
 
 
 @pytest.fixture(scope="class")
@@ -146,7 +135,9 @@ def test_free_page_reporting_in_vm_with_dedicated_cpu(vm_with_dedicated_cpu):
 
 
 @pytest.mark.polarion("CNV-10597")
-def test_free_page_reporting_in_vm_with_hugepages(skip_if_no_hugepages_1gi, vm_with_hugepages):
+@pytest.mark.special_infra
+@pytest.mark.hugepage
+def test_free_page_reporting_in_vm_with_hugepages(vm_with_hugepages):
     assert_vmi_free_page_reporting(
         vm=vm_with_hugepages,
         expected_free_page_reporting="off",
