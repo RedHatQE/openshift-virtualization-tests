@@ -36,9 +36,11 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    create_windows10_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -82,6 +84,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
@@ -651,13 +654,21 @@ def generated_network_traffic(vm_for_test):
     run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
 
 
+@pytest.fixture()
+def generated_network_traffic_windows_vm(windows_vm_for_test):
+    windows_vm_for_test.ssh_exec.run_command(
+        command=shlex.split(f"ping {windows_vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}")
+    )
+
+
 @pytest.fixture(scope="class")
 def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
-    )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+    return get_interface_name_from_vm(vm=vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test_interface_name(windows_vm_for_test):
+    return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")
@@ -1068,3 +1079,15 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test(namespace, unprivileged_client):
+    with create_windows10_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="win-vm-for-test",
+        storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
+    ) as vm:
+        yield vm
