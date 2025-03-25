@@ -249,13 +249,13 @@ def assert_ssh_alive(ssh_vm, src_ip):
         sleep=1,
         func=run_ssh_commands,
         host=ssh_vm.ssh_exec,
-        commands=[shlex.split("sudo netstat -tulpan | grep ssh")],
+        commands=[shlex.split("sudo ss -tupan | grep ssh")],
     )
     try:
         for sample in sampler:
             if sample:
                 for line in sample:
-                    if src_ip in line and "ESTABLISHED" in line:
+                    if src_ip in line and "ESTAB" in line:
                         LOGGER.info(f"SSH connection from {src_ip} to {ssh_vm.name} is alive")
                         return
     except TimeoutExpiredError:
