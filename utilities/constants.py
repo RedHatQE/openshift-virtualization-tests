@@ -791,9 +791,11 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }
