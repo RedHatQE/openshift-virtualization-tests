@@ -145,16 +145,6 @@ storage_class_matrix = [
     {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
 
-storage_class_matrix_snapshot_matrix = []
-for storage_class in storage_class_matrix:
-    storage_class_name = [*storage_class][0]
-    # import ipdb
-    # ipdb.set_trace()
-    if storage_class[storage_class_name]["snapshot"] is True:
-        storage_class_matrix_snapshot_matrix.append(storage_class)
-# import ipdb
-# ipdb.set_trace()
-
 default_storage_class, default_storage_class_configuration = _get_default_storage_class(sc_list=storage_class_matrix)
 default_volume_mode = default_storage_class_configuration["volume_mode"]
 default_access_mode = default_storage_class_configuration["access_mode"]

@@ -8,13 +8,13 @@ def foo_matrix(matrix):
 from ocp_resources.storage_class import StorageClass
 
 
-# def snapshot_matrix(matrix):
-#     matrix_to_return = []
-#     for storage_class in matrix:
-#         storage_class_name = [*storage_class][0]
-#         if storage_class[storage_class_name]["snapshot"] is True:
-#             matrix_to_return.append(storage_class)
-#     return matrix_to_return
+def snapshot_matrix(matrix):
+    matrix_to_return = []
+    for storage_class in matrix:
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["snapshot"] is True:
+            matrix_to_return.append(storage_class)
+    return matrix_to_return
 
 
 def without_snapshot_capability_matrix(matrix):

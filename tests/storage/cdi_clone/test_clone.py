@@ -242,14 +242,14 @@ def test_disk_image_after_clone(
             },
             marks=(pytest.mark.polarion("CNV-3545"), pytest.mark.gating()),
         ),
-        # pytest.param(
-        #     {
-        #         "dv_name": "dv-source-win",
-        #         "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-        #         "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-        #     },
-        #     marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
-        # ),
+        pytest.param(
+            {
+                "dv_name": "dv-source-win",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
+            },
+            marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
+        ),
     ],
     indirect=True,
 )
@@ -268,9 +268,9 @@ def test_successful_snapshot_clone(
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()
-        # if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
-        #     with create_vm_from_dv(dv=cdv) as vm_dv:
-        #         check_disk_count_in_vm(vm=vm_dv)
+        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
+            with create_vm_from_dv(dv=cdv) as vm_dv:
+                check_disk_count_in_vm(vm=vm_dv)
         pvc = cdv.pvc
         assert_use_populator(
             pvc=pvc,

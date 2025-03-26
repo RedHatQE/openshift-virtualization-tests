@@ -635,7 +635,6 @@ def pytest_sessionstart(session):
         log_level=session.config.getoption("log_cli_level") or logging.INFO,
     )
 
-    ######### py_config_scs = py_config.get("storage_class_matrix", [])
     # Save the default storage_class_matrix before it is updated
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
