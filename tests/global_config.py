@@ -136,6 +136,16 @@ storage_class_matrix = [
             "default": True,
         }
     },
+    {
+        StorageClassNames.GPFS: {
+            "volume_mode": DataVolume.VolumeMode.FILE,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+            "default": False,
+        }
+    },
 ]
 
 default_storage_class, default_storage_class_configuration = _get_default_storage_class(sc_list=storage_class_matrix)
