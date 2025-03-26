@@ -282,7 +282,7 @@ def vm_for_restricted_namespace_cloning_test(
         os_flavor=OS_FLAVOR_CIRROS,
         service_accounts=[restricted_namespace_service_account.name],
         client=unprivileged_client,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False)

@@ -348,7 +348,7 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
             dv_name="template-dv",
             storage_class=data_volume_multi_wffc_storage_scope_function.storage_class,
         ),
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     ) as vm:
         validate_vm_and_disk_count(vm=vm)
         # Add DV
@@ -374,7 +374,7 @@ def test_wffc_vm_with_two_data_volume_templates(
             dv_name="template-dv-1",
             storage_class=storage_class,
         ),
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     ) as vm:
         add_dv_to_vm(
             vm=vm,

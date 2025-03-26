@@ -192,7 +192,7 @@ def cirros_vm_for_online_resize(
         name=cirros_vm_name,
         namespace=namespace.name,
         data_volume=cirros_dv_for_online_resize,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         os_flavor=OS_FLAVOR_CIRROS,
     ) as vm:
         yield vm
