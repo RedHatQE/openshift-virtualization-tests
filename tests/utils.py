@@ -595,7 +595,7 @@ def create_cirros_vm(
         name=vm_name,
         namespace=dv_metadata["namespace"],
         os_flavor=OS_FLAVOR_CIRROS,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         node_selector=node,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,

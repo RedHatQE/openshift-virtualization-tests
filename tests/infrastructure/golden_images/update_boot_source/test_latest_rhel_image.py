@@ -27,7 +27,7 @@ def rhel_vm(request, unprivileged_client, namespace):
         client=unprivileged_client,
         namespace=namespace.name,
         image=request.param["image"],
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm)
         yield vm

@@ -159,7 +159,7 @@ def rhel_vm_from_existing_dv(imported_dv_second_namespace):
         vm_name="rhel-vm-from-existing-dv",
         start=True,
         os_flavor=OS_FLAVOR_RHEL,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=True)
         write_file(

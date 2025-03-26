@@ -37,7 +37,7 @@ def chaos_vm_rhel9_for_snapshot(admin_client, chaos_namespace, chaos_dv_rhel9_fo
         name="vm-chaos-snapshot",
         namespace=chaos_namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={
             "metadata": chaos_dv_rhel9_for_snapshot.res["metadata"],
             "spec": chaos_dv_rhel9_for_snapshot.res["spec"],
