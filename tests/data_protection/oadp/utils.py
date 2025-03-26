@@ -161,7 +161,7 @@ def create_rhel_vm(
         name=vm_name,
         namespace=dv_metadata["namespace"],
         os_flavor=OS_FLAVOR_RHEL,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:

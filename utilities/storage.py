@@ -997,7 +997,7 @@ def create_vm_from_dv(
     os_flavor=OS_FLAVOR_CIRROS,
     node_selector=None,
     cpu_model=None,
-    memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+    memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
 ):
     with virt_util.VirtualMachineForTests(
@@ -1007,7 +1007,7 @@ def create_vm_from_dv(
         image=image,
         node_selector=node_selector,
         cpu_model=cpu_model,
-        memory_requests=memory_requests,
+        memory_guest=memory_guest,
         os_flavor=os_flavor,
     ) as vm:
         if start:
