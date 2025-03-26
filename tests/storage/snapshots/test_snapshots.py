@@ -16,7 +16,6 @@ from tests.storage.snapshots.constants import (
     ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
-    ERROR_MSG_VM_IS_RUNNING,
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
