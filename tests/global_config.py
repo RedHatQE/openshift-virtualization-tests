@@ -128,8 +128,6 @@ cnv_vm_resource_requests_units_matrix = [
 
 bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
-# storage_class_matrix can be overwritten to include hostpath-csi-pvc-block and hostpath-csi-basic along with ocs,
-# via command line argument. Example usage can be found in README.md.
 storage_class_matrix = [
     {
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
