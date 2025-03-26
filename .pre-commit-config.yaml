@@ -47,7 +47,7 @@ repos:
         args: [--config=.flake8]
         additional_dependencies:
           [
-            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.5",
+            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.10",
             "flake8-mutable",
             "pep8-naming",
           ]
@@ -68,7 +68,16 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        exclude: 'test_(.*).py$'
+        exclude: "test_(.*).py$"
         additional_dependencies:
-          ["types-PyYAML", "types-requests", "types-paramiko", "types-beautifulsoup4", "pytest", "types-xmltodict",
-          "types-setuptools", "types-pexpect", "types-netaddr"]
+          [
+            "types-PyYAML",
+            "types-requests",
+            "types-paramiko",
+            "types-beautifulsoup4",
+            "pytest",
+            "types-xmltodict",
+            "types-setuptools",
+            "types-pexpect",
+            "types-netaddr",
+          ]
