@@ -152,17 +152,13 @@ class TestRestoreSnapshots:
         snapshots_with_content,
     ):
         cirros_vm_for_snapshot.start(wait=True)
-        with pytest.raises(
-            ApiException,
-            match=ERROR_MSG_VM_IS_RUNNING,
-        ):
-            with VirtualMachineRestore(
-                name="restore-snapshot-cnv-5048",
-                namespace=cirros_vm_for_snapshot.namespace,
-                vm_name=cirros_vm_for_snapshot.name,
-                snapshot_name=snapshots_with_content[0].name,
-            ):
-                return
+        with VirtualMachineRestore(
+            name="restore-snapshot-cnv-5048",
+            namespace=cirros_vm_for_snapshot.namespace,
+            vm_name=cirros_vm_for_snapshot.name,
+            snapshot_name=snapshots_with_content[0].name,
+        ) as vmrestore:
+            assert vmrestore, "Validation webhook rejected snapshot restore of running VM"
 
     @pytest.mark.parametrize(
         "cirros_vm_name, snapshots_with_content, namespace",
