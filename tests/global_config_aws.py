@@ -15,12 +15,18 @@ storage_class_matrix = [
         StorageClassNames.PORTWORX_CSI_DB_SHARED: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
         }
     },
     {
         StorageClassNames.TRIDENT_CSI_FSX: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
@@ -28,6 +34,9 @@ storage_class_matrix = [
         StorageClassNames.IO2_CSI: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
         }
     },
 ]

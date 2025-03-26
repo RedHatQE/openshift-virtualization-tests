@@ -15,6 +15,9 @@ storage_class_matrix = [
         StorageClassNames.RH_INTERNAL_NFS: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },

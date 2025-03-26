@@ -13,6 +13,9 @@ storage_class_matrix = [
         StorageClassNames.NFS: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": False,
+            "online_resize": False,
+            "wffc": False,
             "default": True,
         }
     },
