@@ -8,6 +8,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.pod import Pod
@@ -23,12 +24,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    TIMEOUT_2MIN,
-    TIMEOUT_30MIN,
-    Images,
-)
+from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_30MIN, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
@@ -487,3 +483,29 @@ def clean_up_multiprocess(processes, object_list):
             print(f"Error killing process {process}, associated with {object_name}: {e}")
         finally:
             process.close()
+
+
+def wait_for_data_import_cron_ready_and_updated(namespace, name):
+    up_to_date_status = "UpToDate"
+    LOGGER.info(f"Wait for dataimportcron '{name}' in '{namespace}' to be '{up_to_date_status}'")
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=get_data_import_cron_conditions,
+            namespace=namespace,
+            name=name,
+        ):
+            if sample:
+                return True
+    except TimeoutExpiredError:
+        fail_msg = f"failed to reach {up_to_date_status} status True"
+        LOGGER.error(f"The dataimportcron {name} {fail_msg}")
+        raise
+
+
+def get_data_import_cron_conditions(namespace, name):
+    data_import_cron = DataImportCron(namespace=namespace, name=name)
+    for condition in data_import_cron.instance.status.get("conditions"):
+        if condition["type"] == "UpToDate":
+            return condition["status"]

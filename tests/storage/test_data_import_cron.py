@@ -15,6 +15,7 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.utils import wait_for_data_import_cron_ready_and_updated
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
@@ -25,6 +26,8 @@ from utilities.constants import (
     Images,
 )
 from utilities.storage import (
+    create_dummy_first_consumer_pod,
+    sc_volume_binding_mode_is_wffc,
     wait_for_succeeded_dv,
     wait_for_volume_snapshot_ready_to_use,
 )
@@ -205,6 +208,63 @@ def second_object_cleanup(
     resource_class(namespace=namespace.name, name=second_object_name).clean_up()
 
 
+@pytest.fixture()
+def data_import_cron_pvc_source(
+    unprivileged_client,
+    data_import_cron_namespace,
+    storage_class_with_filesystem_volume_mode,
+    pvc_for_source_data_import_cron,
+):
+    # cron_template_spec = golden_images_data_import_cron_spec.template.spec
+    with DataImportCron(
+        name="pvc-import-cron",
+        namespace=data_import_cron_namespace.name,
+        schedule="*/1 * * * *",
+        managed_data_source="pvc-import-datasource",
+        annotations=BIND_IMMEDIATE_ANNOTATION,
+        template={
+            "spec": {
+                "source": {
+                    "pvc": {
+                        "name": pvc_for_source_data_import_cron.name,
+                        "namespace": pvc_for_source_data_import_cron.namespace,
+                    }
+                },
+                "sourceFormat": "pvc",
+                "volumeMode": "Filesystem",
+                "storage": {
+                    "storageClassName": storage_class_with_filesystem_volume_mode,
+                    "accessModes": [PersistentVolumeClaim.AccessMode.RWO],
+                    "resources": {"requests": {"storage": "10Gi"}},
+                },
+            }
+        },
+    ) as data_import_cron:
+        wait_for_data_import_cron_ready_and_updated(
+            namespace=data_import_cron_namespace.name, name=data_import_cron.name
+        )
+        yield data_import_cron
+
+
+@pytest.fixture()
+def pvc_for_source_data_import_cron(
+    namespace, storage_class_with_filesystem_volume_mode, storage_class_name_scope_module
+):
+    with PersistentVolumeClaim(
+        name="source-pvc-test",
+        namespace=namespace.name,
+        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
+        size="1Gi",
+        storage_class=storage_class_with_filesystem_volume_mode,
+    ) as pvc:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
+            # For PVC to bind on WFFC, it must be consumed
+            # (this was previously solved by hard coding hostpath_node at all times)
+            create_dummy_first_consumer_pod(pvc=pvc)
+        pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=60)
+        yield pvc
+
+
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-7602")
 def test_data_import_cron_garbage_collection(
@@ -224,3 +284,16 @@ def test_data_import_cron_garbage_collection(
     assert resource_class(namespace=namespace.name, name=second_object_name).exists, (
         f"Second {resource_class.kind} '{second_object_name}' does not exist"
     )
+
+
+class TestDataImportCronPvcSource:
+    @pytest.mark.polarion("CNV-11842")
+    def test_data_import_cron_with_pvc_source_ready(
+        self, namespace, pvc_for_source_data_import_cron, data_import_cron_pvc_source
+    ):
+        pvc_uid = pvc_for_source_data_import_cron.instance.metadata.uid
+        digest_full = data_import_cron_pvc_source.instance.status.currentImports[0].Digest
+        digest_uid = digest_full.split("uid:")[1]  # Extract just the UUID part
+        assert pvc_for_source_data_import_cron.instance.metadata.uid == digest_uid, (
+            f"PVC UID {pvc_uid} does not match DataImportCron Digest {digest_uid}"
+        )
