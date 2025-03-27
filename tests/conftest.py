@@ -2902,3 +2902,11 @@ def nmstate_namespace(admin_client):
 @pytest.fixture()
 def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv6_supported_cluster and not ipv4_supported_cluster
+
+
+@pytest.fixture()
+def data_import_cron_namespace(unprivileged_client):
+    yield from create_ns(
+        unprivileged_client=unprivileged_client,
+        name="data-import-cron-using-default-sc",
+    )

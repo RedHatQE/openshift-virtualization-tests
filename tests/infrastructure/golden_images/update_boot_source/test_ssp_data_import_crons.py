@@ -21,7 +21,6 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 )
 from utilities.constants import BIND_IMMEDIATE_ANNOTATION, TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import create_ns
 from utilities.ssp import (
     get_data_import_crons,
     matrix_auto_boot_data_import_cron_prefixes,
@@ -166,14 +165,6 @@ def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace
     ) as vm:
         running_vm(vm=vm)
         yield vm
-
-
-@pytest.fixture()
-def data_import_cron_namespace(unprivileged_client):
-    yield from create_ns(
-        unprivileged_client=unprivileged_client,
-        name="data-import-cron-using-default-sc",
-    )
 
 
 @pytest.fixture()
