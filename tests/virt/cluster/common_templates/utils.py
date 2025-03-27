@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 
 import bitmath
 import pytest
-from ocp_resources.resource import ResourceEditor
 from packaging import version
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -16,8 +15,6 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
     TCP_TIMEOUT_30SEC,
-    TIMEOUT_3MIN,
-    TIMEOUT_5SEC,
     TIMEOUT_15SEC,
     TIMEOUT_90SEC,
 )
@@ -28,7 +25,7 @@ from utilities.infra import (
     run_virtctl_command,
 )
 from utilities.ssp import get_windows_os_info
-from utilities.virt import restart_vm_wait_for_running_vm
+from utilities.virt import delete_guestosinfo_keys, get_virtctl_os_info
 
 LOGGER = logging.getLogger(__name__)
 
@@ -219,37 +216,6 @@ def validate_user_info_virtctl_vs_windows_os(vm):
         f"Data mismatch {data_mismatch}!"
         f"\nVirtctl: {virtctl_info}\nCNV: {cnv_info}\nLibvirt: {libvirt_info}\nOS: {windows_info}"
     )
-
-
-# Guest agent info gather functions.
-def get_virtctl_os_info(vm):
-    """
-    Returns OS data dict in format:
-    {
-        "guestAgentVersion": guestAgentVersion,
-        "hostname": hostname,
-        "os": {
-            "name": name,
-            "kernelRelease": kernelRelease,
-            "version": version,
-            "prettyName": prettyName,
-            "versionId": versionId,
-            "kernelVersion": kernelVersion,
-            "machine": machine,
-            "id": id,
-        },
-        "timezone": timezone",
-    }
-
-    """
-    cmd = ["guestosinfo", vm.name]
-    res, output, err = run_virtctl_command(command=cmd, namespace=vm.namespace)
-    if not res:
-        LOGGER.error(f"Failed to get guest-agent info via virtctl. Error: {err}")
-        return
-    data = json.loads(output)
-
-    return delete_guestosinfo_keys(data=data)
 
 
 def get_cnv_os_info(vm):
@@ -447,27 +413,6 @@ def get_linux_user_info(ssh_exec):
     }
 
 
-def validate_virtctl_guest_agent_data_over_time(vm):
-    """
-    Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
-
-    Returns:
-        bool: True - if virtctl guest info is available after timeout else False
-    """
-    samples = TimeoutSampler(wait_timeout=TIMEOUT_3MIN, sleep=TIMEOUT_5SEC, func=get_virtctl_os_info, vm=vm)
-    consecutive_check = 0
-    try:
-        for sample in samples:
-            if not sample:
-                consecutive_check += 1
-                if consecutive_check == 3:
-                    return False
-            else:
-                consecutive_check = 0
-    except TimeoutExpiredError:
-        return True
-
-
 # Guest agent test related functions.
 def guest_agent_disk_info_parser(disk_info):
     for disk in disk_info:
@@ -521,18 +466,6 @@ def check_guest_agent_sampler_data(sampler):
                 exp,
             ]
         )
-
-
-def delete_guestosinfo_keys(data):
-    """
-    supportedCommands - removed as the data is used for internal guest agent validations
-    fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
-    fsFreezeStatus - removed as it is not related to GA validations
-    """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
-    [data.pop(key, None) for key in removed_keys]
-
-    return data
 
 
 def check_machine_type(vm):
@@ -675,34 +608,6 @@ def check_vm_xml_tablet_device(vm):
     assert tablet_dict_from_xml["alias"]["@name"] == f"ua-{vm_instance_tablet_device_dict['name']}", "Wrong device name"
 
 
-def assert_vm_xml_efi(vm, secure_boot_enabled=True):
-    LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.privileged_vmi.xml_dict["domain"]["os"]
-    ovmf_path = "/usr/share/OVMF"
-    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
-    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
-    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
-    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
-    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
-    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
-    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
-    os_secure = "yes" if secure_boot_enabled else "no"
-    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
-    assert vmi_xml_os_secure == os_secure, (
-        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
-    )
-    assert vmi_xml_efi_vars_path == efi_vars_path, (
-        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
-    )
-
-
-def assert_linux_efi(vm):
-    """
-    Verify guest OS is using EFI.
-    """
-    run_ssh_commands(host=vm.ssh_exec, commands=["ls", "-ld", "/sys/firmware/efi"])
-
-
 def assert_windows_efi(vm):
     """
     Verify guest OS is using EFI.
@@ -713,10 +618,3 @@ def assert_windows_efi(vm):
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0]
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
-
-
-def update_vm_efi_spec_and_restart(vm, spec=None, wait_for_interfaces=True):
-    ResourceEditor({
-        vm: {"spec": {"template": {"spec": {"domain": {"firmware": {"bootloader": {"efi": spec or {}}}}}}}}
-    }).update()
-    restart_vm_wait_for_running_vm(vm=vm, wait_for_interfaces=wait_for_interfaces)
