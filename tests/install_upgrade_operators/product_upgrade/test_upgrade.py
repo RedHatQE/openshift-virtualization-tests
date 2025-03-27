@@ -15,6 +15,7 @@ pytestmark = pytest.mark.usefixtures(
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.product_upgrade_test
 @pytest.mark.sno
 @pytest.mark.upgrade
 @pytest.mark.upgrade_custom
