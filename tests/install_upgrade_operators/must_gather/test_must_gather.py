@@ -373,6 +373,9 @@ class TestMustGatherCluster:
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
         crd_name = kubevirt_crd_by_type.name
         for version in kubevirt_crd_by_type.instance.spec.versions:
+            if not version.served:
+                LOGGER.warning(f"Skipping {version.name} for {crd_name} because it is not served")
+                continue
             resource_objs = admin_client.resources.get(
                 api_version=version.name,
                 kind=kubevirt_crd_by_type.instance.spec.names.kind,
