@@ -109,6 +109,7 @@ class ArchImages:
         class Cdi:
             QCOW2_IMG = "cirros-qcow2.img"
             DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+            DEFAULT_DV_SIZE = "1Gi"
 
 
 def get_test_images_arch_class() -> Any:
@@ -121,12 +122,12 @@ def get_test_images_arch_class() -> Any:
 # Choose the Image class according to the architecture. Default: x86_64
 Images = get_test_images_arch_class()
 
-
 # Virtctl constants
 VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
+S390X = "s390x"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
