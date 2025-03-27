@@ -84,6 +84,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name

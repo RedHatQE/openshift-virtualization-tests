@@ -1266,6 +1266,7 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
+<<<<<<< HEAD
 @contextmanager
 def create_windows10_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
     artifactory_secret = get_artifactory_secret(namespace=namespace)
@@ -1321,6 +1322,9 @@ def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, 
     }
 
 
+=======
+<<<<<<< HEAD
+>>>>>>> 6105d5f (Adding windows vm to vmi metrics tests)
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -1337,3 +1341,33 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
     return {}
+
+@contextmanager
+def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
+    artifactory_secret = get_artifactory_secret(namespace=namespace)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+    dv = DataVolume(
+        name=dv_name,
+        namespace=namespace,
+        storage_class=storage_class,
+        source="http",
+        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN10_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=client,
+        api_name="storage",
+        secret=artifactory_secret,
+        cert_configmap=artifactory_config_map.name,
+    )
+    dv.to_dict()
+    with VirtualMachineForTestsFromTemplate(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+    cleanup_artifactory_secret_and_config_map(
+        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+    )
