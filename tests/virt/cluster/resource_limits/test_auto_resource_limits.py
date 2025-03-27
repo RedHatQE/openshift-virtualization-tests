@@ -11,7 +11,10 @@ from utilities.virt import (
     running_vm,
 )
 
-pytestmark = pytest.mark.usefixtures("auto_resource_limits_enabled_on_hco")
+pytestmark = [
+    pytest.mark.usefixtures("auto_resource_limits_enabled_on_hco"),
+    pytest.mark.arm,
+]
 
 RESOURCE_QUOTA_CPU_LIMIT = 5
 RESOURCE_QUOTA_MEMORY_LIMIT = "5Gi"

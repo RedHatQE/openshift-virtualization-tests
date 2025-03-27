@@ -17,6 +17,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.virt import wait_for_kubevirt_conditions
 
+pytestmark = pytest.mark.arm
+
 LOGGER = logging.getLogger(__name__)
 MANAGED_RESOURCE_NAME1 = "kubevirt-apiserver"
 MANAGED_RESOURCE_NAME2 = "kubevirt-ca"

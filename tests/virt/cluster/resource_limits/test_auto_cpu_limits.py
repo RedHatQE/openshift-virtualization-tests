@@ -61,6 +61,7 @@ def labeled_namespace_with_cpu_limit(admin_client, namespace):
     label_project(name=namespace.name, label=CPU_LIMIT_LABEL, admin_client=admin_client)
 
 
+@pytest.mark.arm
 @pytest.mark.usefixtures(
     "auto_cpu_limit_enabled_on_hco",
 )

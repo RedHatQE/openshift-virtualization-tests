@@ -18,7 +18,7 @@ from tests.os_params import RHEL_LATEST, RHEL_LATEST_OS
 from utilities.constants import TIMEOUT_10MIN
 from utilities.virt import migrate_vm_and_verify, running_vm
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm]
 
 
 LOGGER = logging.getLogger(__name__)
