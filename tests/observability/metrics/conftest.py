@@ -36,6 +36,7 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    create_windows10_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -82,6 +83,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
@@ -464,7 +466,7 @@ def updated_dommemstat(single_metric_vm):
 @pytest.fixture()
 def vmi_domain_total_memory_in_bytes_from_vm(single_metric_vm):
     return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=single_metric_vm.vmi.get_dommemstat(),
+        vmi_dommemstat=single_metric_vm.privileged_vmi.get_dommemstat(),
         domain_memory_string="actual",
     )
 
@@ -665,18 +667,6 @@ def initial_total_created_vms(prometheus, namespace):
     return get_metric_sum_value(
         prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
     )
-
-
-@pytest.fixture()
-def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
-    return {
-        "guest_os_kernel_release": run_ssh_commands(host=single_metric_vm.ssh_exec, commands=shlex.split("uname -r"))[
-            0
-        ].strip(),
-        "namespace": single_metric_vm.namespace,
-        NODE_STR: single_metric_vm.vmi.virt_launcher_pod.node.name,
-        "vmi_pod": single_metric_vm.vmi.virt_launcher_pod.name,
-    }
 
 
 @pytest.fixture()
@@ -1068,3 +1058,111 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+# ------------------------Changes from here------------------------#
+# @pytest.fixture(scope="class")
+# def windows_vm_for_test(
+#     request,
+#     namespace,
+#     unprivileged_client,
+#     golden_image_data_source_scope_class,
+# ):
+#     """Create Windows 10/11 VM, Run VM and wait for WSL2 guest to start"""
+#     win_ver = request.param["win_ver"]
+#     with VirtualMachineForTestsFromTemplate(
+#         name=f"{win_ver}-wsl2",
+#         namespace=namespace.name,
+#         client=unprivileged_client,
+#         data_source=golden_image_data_source_scope_class,
+#         memory_guest=Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
+#         cpu_cores=4,
+#     ) as vm:
+#         running_vm(vm=vm)
+#         yield vm
+
+
+@pytest.fixture()
+def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
+    return get_vmi_memory_domain_metric_value_from_prometheus(
+        prometheus=prometheus,
+        vmi_name=windows_vm_for_test.vmi.name,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+    )
+
+
+@pytest.fixture()
+def updated_dommemstat_windows(windows_vm_for_test):
+    run_ssh_commands(
+        host=windows_vm_for_test.ssh_exec,
+        commands=shlex.split("wsl stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s *> output.log &"),
+    )
+    # give the stress-ng command some time to build up load on the vm
+    pause_unpause_dommemstat(vm=windows_vm_for_test)
+    yield
+    pause_unpause_dommemstat(vm=windows_vm_for_test, period=1)
+
+
+@pytest.fixture()
+def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
+    return get_vmi_dommemstat_from_vm(
+        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
+        domain_memory_string="actual",
+    )
+
+
+@pytest.fixture()
+def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
+    return metric_vmi_guest_os_kernel_release_info_from_vm(vm=single_metric_vm)
+
+
+@pytest.fixture()
+def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
+    return metric_vmi_guest_os_kernel_release_info_from_vm(vm=windows_vm_for_test, windows=True)
+
+
+@pytest.fixture()
+def vm_info_to_compare(single_metric_vm):
+    return info_to_compare_from_vm(vm=single_metric_vm)
+
+
+@pytest.fixture()
+def vm_info_to_compare_windows(windows_vm_for_test):
+    return info_to_compare_from_vm(vm=windows_vm_for_test)
+
+
+def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
+    return {
+        "name": vm.name,
+        "namespace": vm.namespace,
+        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
+        "status": vm.instance.status.printableStatus,
+    }
+
+
+def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
+    guest_os_kernel_release = run_ssh_commands(
+        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
+    )[0].strip()
+    guest_os_kernel_release_windows = None
+    if windows:
+        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
+    assert guest_os_kernel_release_windows
+    return {
+        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
+        "namespace": vm.namespace,
+        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
+        "vmi_pod": vm.vmi.virt_launcher_pod.name,
+    }
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test(namespace, unprivileged_client):
+    with create_windows10_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="win-vm-for-test",
+        storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
+    ) as vm:
+        yield vm

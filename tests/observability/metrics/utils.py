@@ -3,6 +3,7 @@ import re
 import shlex
 import urllib
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional, Union
 
@@ -16,6 +17,7 @@ from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
+from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -49,12 +51,20 @@ from utilities.constants import (
     U1_SMALL,
     USED,
     VIRT_HANDLER,
+    Images,
 )
-from utilities.infra import ExecCommandOnPod, get_pod_by_name_prefix
+from utilities.infra import (
+    ExecCommandOnPod,
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
+    get_pod_by_name_prefix,
+)
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1251,3 +1261,34 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
+
+
+@contextmanager
+def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
+    artifactory_secret = get_artifactory_secret(namespace=namespace)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+    dv = DataVolume(
+        name=dv_name,
+        namespace=namespace,
+        storage_class=storage_class,
+        source="http",
+        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN10_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=client,
+        api_name="storage",
+        secret=artifactory_secret,
+        cert_configmap=artifactory_config_map.name,
+    )
+    dv.to_dict()
+    with VirtualMachineForTestsFromTemplate(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+    cleanup_artifactory_secret_and_config_map(
+        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+    )
