@@ -1584,7 +1584,9 @@ def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:
     vm_devices = vm.instance.spec.template.spec.domain.devices
     if vm_devices.gpus:
         error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-    assert vm_status not in error_list, f"VM {vm.name} error status: {vm_status}"
+    assert vm_status not in error_list, (
+        f"VM {vm.name} error status: {vm_status}\nVM status: {vm.instance.get('status')}"
+    )
 
 
 def wait_for_running_vm(
