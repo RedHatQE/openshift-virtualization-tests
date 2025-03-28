@@ -122,9 +122,9 @@ def perm_destination_service_account(request, destination_namespace, restricted_
 
 
 @pytest.fixture(scope="module")
-def skip_when_no_unprivileged_client_available(unprivileged_client):
+def fail_when_no_unprivileged_client_available(unprivileged_client):
     if not unprivileged_client:
-        pytest.skip("No unprivileged client available, skipping test")
+        pytest.fail("No unprivileged_client available, failing the test")
 
 
 @pytest.fixture()

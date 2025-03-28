@@ -32,7 +32,7 @@ from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
-    pytest.mark.usefixtures("skip_when_no_unprivileged_client_available"),
+    pytest.mark.usefixtures("fail_when_no_unprivileged_client_available"),
     pytest.mark.post_upgrade,
 ]
 
