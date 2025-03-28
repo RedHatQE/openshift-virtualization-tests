@@ -64,7 +64,6 @@ def simple_rhel_vm(admin_client, namespace):
         name="rhel-vm-with-instance-type",
         namespace=namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         yield vm
 
