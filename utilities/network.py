@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+from typing import Any
 
 import netaddr
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -172,6 +173,12 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
                 self.set_interface(interface=_port)
 
         super().to_dict()
+
+    def update(self, resource_dict: dict[str, Any]) -> None:
+        initial_success_status_time = self._get_last_successful_transition_time()
+        super().update(resource_dict=resource_dict)
+        if resource_dict.get("spec") and initial_success_status_time:
+            self._wait_for_nncp_status_update(initial_transition_time=initial_success_status_time)
 
 
 class LinuxBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPolicy):
