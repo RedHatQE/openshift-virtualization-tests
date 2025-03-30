@@ -55,7 +55,7 @@ def rhel_vm_with_storage_preference(
         client=unprivileged_client,
         name="rhel-vm-with-storage-pref",
         namespace=namespace.name,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         vm_preference=vm_storage_class_preference,
         data_volume_template=fedora_data_volume_template,
     ) as vm:
