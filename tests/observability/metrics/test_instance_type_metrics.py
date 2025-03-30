@@ -145,13 +145,14 @@ class TestInstanceTypeLabling:
         self,
         prometheus,
         rhel_vm_with_instancetype_and_preference_for_cloning,
+        guest_os_info_and_instance_type_name,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=METRIC_SUM_QUERY.format(
                 metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR,
-                instance_type_name=rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
-                os_name=rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
+                instance_type_name=guest_os_info_and_instance_type_name["instance_type_name"],
+                os_name=guest_os_info_and_instance_type_name["os_name"],
             ),
             expected_value="2",
         )
@@ -161,13 +162,14 @@ class TestInstanceTypeLabling:
         self,
         prometheus,
         rhel_vm_with_instancetype_and_preference_for_cloning,
+        guest_os_info_and_instance_type_name,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=METRIC_SUM_QUERY.format(
                 metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
-                instance_type_name=rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
-                os_name=rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
+                instance_type_name=guest_os_info_and_instance_type_name["instance_type_name"],
+                os_name=guest_os_info_and_instance_type_name["os_name"],
             ),
             expected_value="2",
         )

@@ -6,6 +6,7 @@ import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -62,6 +63,7 @@ from utilities.constants import (
     COUNT_FIVE,
     NODE_STR,
     ONE_CPU_CORE,
+    OS_FLAVOR_FEDORA,
     PVC,
     SOURCE_POD,
     SSP_OPERATOR,
@@ -84,7 +86,13 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
 from utilities.ssp import verify_ssp_pod_is_running
-from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
+from utilities.storage import (
+    create_dv,
+    data_volume_template_with_source_ref_dict,
+    is_snapshot_supported_by_sc,
+    vm_snapshot,
+    wait_for_cdi_worker_pod,
+)
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -1040,6 +1048,30 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="disk-allocation-size-vm",
+        namespace=namespace.name,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
+    return PersistentVolumeClaim(
+        name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
+        namespace=vm_for_vm_disk_allocation_size_test.namespace,
+    ).instance.spec.resources.requests.storage
+
+
+@pytest.fixture()
 def vnic_info_from_vm_or_vmi(request, running_metric_vm):
     vm_instance = (
         running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
@@ -1055,3 +1087,11 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture(scope="class")
+def guest_os_info_and_instance_type_name(rhel_vm_with_instancetype_and_preference_for_cloning):
+    return {
+        "instance_type_name": rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
+        "os_name": rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
+    }
