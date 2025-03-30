@@ -16,7 +16,6 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     INSTANCE_TYPE_STR,
-    PREFERENCE_STR,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     Images,
 )
@@ -43,7 +42,7 @@ def updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm(
         query=KUBEVIRT_VMI_PHASE_COUNT.format(
             node_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name,
             instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
-            preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+            os_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.instance.status.guestOSInfo.name,
         ),
         expected_value="1",
     )
@@ -59,7 +58,7 @@ def updated_kubevirt_vmi_phase_count_metric_with_instancetype_vm(
         query=KUBEVIRT_VMI_PHASE_COUNT.format(
             node_name=running_rhel_vm_with_instance_type_and_preference.vmi.node.name,
             instance_type=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
-            preference=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+            os_name=running_rhel_vm_with_instance_type_and_preference.vmi.instance.status.guestOSInfo.name,
         ),
         expected_value="1",
     )
@@ -136,8 +135,6 @@ class TestInstanceType:
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "kubevirt_vmi_phase_count_metric_no_value",
-    "cnv_vmi_status_running_count_metric_no_value",
     "rhel_vm_with_instancetype_and_preference_for_cloning",
     "cloning_job_scope_class",
     "validated_preference_instance_type_of_target_vm",
@@ -154,7 +151,7 @@ class TestInstanceTypeLabling:
             metric_name=METRIC_SUM_QUERY.format(
                 metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR,
                 instance_type_name=rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
-                preference=rhel_vm_with_instancetype_and_preference_for_cloning.vm_preference.name,
+                os_name=rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
             ),
             expected_value="2",
         )
@@ -170,7 +167,7 @@ class TestInstanceTypeLabling:
             metric_name=METRIC_SUM_QUERY.format(
                 metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
                 instance_type_name=rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
-                preference=rhel_vm_with_instancetype_and_preference_for_cloning.vm_preference.name,
+                os_name=rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
             ),
             expected_value="2",
         )

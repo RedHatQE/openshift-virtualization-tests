@@ -101,7 +101,6 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
-    PREFERENCE_STR,
     RHEL9_PREFERENCE,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
@@ -2586,7 +2585,7 @@ def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_cl
         vm_instance_type=VirtualMachineClusterInstancetype(
             name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
         ),
-        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
+        vm_preference=VirtualMachineClusterPreference(name=RHEL9_PREFERENCE),
         os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(
