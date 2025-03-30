@@ -495,6 +495,18 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         )
 
 
+class TestVmDiskAllocatedSize:
+    @pytest.mark.polarion("CNV-11817")
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes(
+        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
+            expected_value=pvc_size_bytes,
+        )
+
+
 class TestVmVnicInfo:
     @pytest.mark.parametrize(
         "vnic_info_from_vm_or_vmi, query",

@@ -2901,3 +2901,11 @@ def nmstate_namespace(admin_client):
 @pytest.fixture()
 def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv6_supported_cluster and not ipv4_supported_cluster
+
+
+@pytest.fixture(scope="class")
+def guest_os_info_and_instance_type_name(rhel_vm_with_instancetype_and_preference_for_cloning):
+    return {
+        "instance_type_name": rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
+        "os_name": rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
+    }
