@@ -43,16 +43,16 @@ def base_vm_cluster_instancetypes():
     )
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def golden_image_vm_with_instance_type(
     unprivileged_client,
     namespace,
     golden_images_namespace,
     modern_cpu_for_migration,
-    instance_type_rhel_os_matrix__class__,
-    storage_class_matrix__class__,
+    instance_type_rhel_os_matrix__module__,
+    storage_class_matrix__module__,
 ):
-    os_name = [*instance_type_rhel_os_matrix__class__][0]
+    os_name = [*instance_type_rhel_os_matrix__module__][0]
     return VirtualMachineForTests(
         client=unprivileged_client,
         name=f"{os_name}-vm-with-instance-type",
@@ -61,10 +61,10 @@ def golden_image_vm_with_instance_type(
         vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
-                name=instance_type_rhel_os_matrix__class__[os_name][DATA_SOURCE_NAME],
+                name=instance_type_rhel_os_matrix__module__[os_name][DATA_SOURCE_NAME],
                 namespace=golden_images_namespace.name,
             ),
-            storage_class=[*storage_class_matrix__class__][0],
+            storage_class=[*storage_class_matrix__module__][0],
         ),
         cpu_model=modern_cpu_for_migration,
     )

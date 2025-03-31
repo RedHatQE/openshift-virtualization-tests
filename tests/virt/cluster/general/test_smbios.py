@@ -6,8 +6,8 @@ Test SMBIOS values from kubevirt config are:
 
 import pytest
 
-from tests.virt.cluster.utils import check_smbios_defaults, check_vm_xml_smbios
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from tests.virt.cluster.utils import check_smbios_defaults
+from utilities.virt import VirtualMachineForTests, check_vm_xml_smbios, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating]
 

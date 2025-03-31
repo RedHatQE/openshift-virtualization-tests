@@ -1,8 +1,10 @@
+import shlex
 from typing import Literal
 
 from ocp_resources.controller_revision import ControllerRevision
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
+from pyhelper_utils.shell import run_ssh_commands
 
 
 def get_mismatch_vendor_label(resources_list):
@@ -43,3 +45,18 @@ def assert_instance_revision_and_memory_update(
     assert guest_memory == updated_memory, (
         "The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
     )
+
+
+def assert_secure_boot_dmesg(vm: VirtualMachine) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo dmesg | grep -i secureboot"))[0]
+    assert "enabled" in output.lower(), f"Secure Boot was not enabled at boot time. Found: {output}"
+
+
+def assert_secure_boot_mokutil_status(vm: VirtualMachine) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].lower()
+    assert "enabled" in output, f"Secure Boot is not enabled. Found: {output}"
+
+
+def assert_kernel_lockdown_mode(vm: VirtualMachine) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("cat /sys/kernel/security/lockdown"))[0]
+    assert "[none]" not in output, f"Kernel lockdown mode is not '[none]'. Found: {output}"
