@@ -40,12 +40,9 @@ def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function
 
 
 @pytest.mark.polarion("CNV-7261")
-def test_no_new_cnv_pods_added(is_jira_53226_open, cnv_pods, cnv_jobs):
+def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
     all_pods = ALL_CNV_PODS.copy()
     all_pods.append(HPP_POOL)
-    # Until those pods are removed in upcoming builds, we should add them to all pods to avoid failures
-    if is_jira_53226_open:
-        all_pods.append("passt-binding-cni")
 
     new_pods = [
         pod.name

@@ -13,16 +13,12 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8509")
-def test_no_new_cnv_daemonset_added(is_jira_53226_open, sno_cluster, cnv_daemonset_names):
+def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names):
     """
     Since cnv deployments image validations are done via polarion parameterization, this test has been added
     to catch any new cnv deployments that is not part of cnv_deployment_matrix
     """
     cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if not sno_cluster else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
-
-    # daemonset passt-binding-cni will be removed with upcoming builds
-    if is_jira_53226_open:
-        cnv_daemonset_names.remove("passt-binding-cni")
 
     assert sorted(cnv_daemonset_names) == sorted(cnv_daemonsets), (
         f"New cnv daemonsets found: {set(cnv_daemonset_names) - set(cnv_daemonsets)}"
