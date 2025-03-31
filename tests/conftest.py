@@ -203,6 +203,7 @@ from utilities.virt import (
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
+    start_and_fetch_processid_on_linux_vm,
     target_vm_from_cloning_job,
     vm_instance_from_template,
     wait_for_kv_stabilize,
@@ -2902,3 +2903,21 @@ def nmstate_namespace(admin_client):
 @pytest.fixture()
 def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv6_supported_cluster and not ipv4_supported_cluster
+
+
+@pytest.fixture(scope="class")
+def ping_process_in_rhel_os():
+    def _start_ping(vm):
+        return start_and_fetch_processid_on_linux_vm(
+            vm=vm,
+            process_name="ping",
+            args="localhost",
+        )
+
+    return _start_ping
+
+
+@pytest.fixture(scope="module")
+def smbios_from_kubevirt_config(kubevirt_config_scope_module):
+    """Extract SMBIOS default from kubevirt CR."""
+    return kubevirt_config_scope_module["smbios"]

@@ -7,24 +7,24 @@ import logging
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
-    assert_linux_efi,
-    assert_vm_xml_efi,
     check_machine_type,
     check_vm_xml_clock,
     check_vm_xml_hyperv,
     validate_fs_info_virtctl_vs_linux_os,
     validate_os_info_virtctl_vs_linux_os,
     validate_user_info_virtctl_vs_linux_os,
-    validate_virtctl_guest_agent_data_over_time,
     vm_os_version,
 )
-from tests.virt.utils import validate_pause_optional_migrate_unpause_linux_vm
 from utilities import console
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
+    assert_linux_efi,
+    assert_vm_xml_efi,
     migrate_vm_and_verify,
     running_vm,
     validate_libvirt_persistent_domain,
+    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
 
