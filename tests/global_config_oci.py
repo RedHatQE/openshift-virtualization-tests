@@ -26,9 +26,6 @@ storage_class_matrix = [
         StorageClassNames.OCI: {
             VOLUME_MODE: DataVolume.VolumeMode.BLOCK,
             ACCESS_MODE: DataVolume.AccessMode.RWX,
-            "snapshot": True,
-            "online_resize": True,
-            "wffc": True,
             "default": True,
         }
     },
