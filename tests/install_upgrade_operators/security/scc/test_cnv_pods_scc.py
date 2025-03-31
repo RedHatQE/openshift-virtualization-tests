@@ -14,6 +14,7 @@ from utilities.constants import (
     HOSTPATH_PROVISIONER,
     HOSTPATH_PROVISIONER_CSI,
     LINUX_BRIDGE,
+    PASST_BINDING_CNI,
 )
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
@@ -32,6 +33,7 @@ POD_SCC_ALLOWLIST = [
     "ovs-cni-marker",
     "kubevirt-handler",
     "kubevirt-node-labeller",
+    PASST_BINDING_CNI,
 ]
 
 
@@ -52,13 +54,9 @@ def test_openshift_io_scc_exists(cnv_pods):
 
 
 @pytest.fixture()
-def pods_not_allowed_or_anyuid(is_jira_58482_open, cnv_pods):
+def pods_not_allowed_or_anyuid(cnv_pods):
     pod_names = []
     for pod in cnv_pods:
-        # Ignore passt-binding-cni pods as those will be removed in upcoming builds
-        if is_jira_58482_open and pod.name.startswith("passt-binding-cni"):
-            continue
-
         annotations = pod.instance.metadata.annotations.get("openshift.io/scc")
         if (
             annotations != "anyuid" or not pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR)
