@@ -318,18 +318,6 @@ def ping_process_in_fedora_os(
 
 
 @pytest.fixture(scope="class")
-def ping_process_in_rhel_os(
-    golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
-):
-    process_name = "ping"
-    return start_and_fetch_processid_on_linux_vm(
-        vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
-        process_name=process_name,
-        args="localhost",
-    )
-
-
-@pytest.fixture(scope="class")
 def regedit_process_in_windows_os(
     golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
 ):

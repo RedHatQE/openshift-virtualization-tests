@@ -1029,10 +1029,6 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
 @pytest.fixture()
 def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
     metric_name = KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(vm_name=vm_for_snapshot_for_metrics_test.name)
-    # wait_for_non_empty_metrics_value(
-    #     prometheus=prometheus,
-    #     metric_name=metric_name
-    # )
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_30SEC,
@@ -1042,8 +1038,10 @@ def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus,
     sample = None
     try:
         for sample in samples:
-            if sample and sample[0].get("metric"):
-                return sample[0].get("metric")
+            if sample:
+                metric = sample[0].get("metric")
+                if metric:
+                    return metric
     except TimeoutExpiredError:
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
