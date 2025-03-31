@@ -617,6 +617,7 @@ class StorageClassNames:
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     IO2_CSI = "io2-csi"
     IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    OCI = "oci-bv"
 
 
 # Namespace constants
