@@ -2083,12 +2083,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
 
 
 @pytest.fixture(scope="session")
-def skip_on_ocp_upgrade(pytestconfig):
-    if pytestconfig.option.upgrade == "ocp":
-        pytest.skip("This test is not supported for OCP upgrade")
-
-
-@pytest.fixture(scope="session")
 def rhel9_http_image_url():
     return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 

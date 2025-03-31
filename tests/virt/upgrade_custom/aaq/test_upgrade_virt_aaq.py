@@ -14,13 +14,17 @@ from utilities.constants import DEPENDENCY_SCOPE_SESSION
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures(
-    "enabled_aaq_feature_gate_scope_session",
-)
+pytestmark = [
+    pytest.mark.upgrade_custom,
+    pytest.mark.cnv_upgrade,
+    pytest.mark.ocp_upgrade,
+    pytest.mark.usefixtures(
+        "enabled_aaq_feature_gate_scope_session",
+    ),
+]
 
 
 @pytest.mark.sno
-@pytest.mark.upgrade_custom
 class TestUpgradeVirtAAQ:
     """Pre-upgrade tests"""
 
