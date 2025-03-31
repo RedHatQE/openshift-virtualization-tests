@@ -192,7 +192,7 @@ def vm_from_template(
     cpu_model,
     template_labels,
     networks=None,
-    run_strategy=None,
+    run_strategy=VirtualMachine.RunStrategy.HALTED,
     eviction_strategy=None,
 ):
     with VirtualMachineForTestsFromTemplate(
