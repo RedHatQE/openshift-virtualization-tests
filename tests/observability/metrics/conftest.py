@@ -55,7 +55,6 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
-    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
@@ -74,9 +73,11 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
+    TIMEOUT_30SEC,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
@@ -1027,12 +1028,25 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
 
 @pytest.fixture()
 def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    wait_for_non_empty_metrics_value(
-        prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-            vm_name=vm_for_snapshot_for_metrics_test.name
-        ),
+    metric_name = KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(vm_name=vm_for_snapshot_for_metrics_test.name)
+    # wait_for_non_empty_metrics_value(
+    #     prometheus=prometheus,
+    #     metric_name=metric_name
+    # )
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_30SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
     )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and sample[0].get("metric"):
+                return sample[0].get("metric")
+    except TimeoutExpiredError:
+        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
+        raise
 
 
 @pytest.fixture(scope="class")

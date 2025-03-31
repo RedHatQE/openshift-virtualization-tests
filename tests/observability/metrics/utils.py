@@ -1202,13 +1202,15 @@ def compare_metric_file_system_values_with_vm_file_system_values(
 
 
 def expected_metric_labels_and_values(
-    prometheus: Prometheus, metric_name: str, expected_labels_and_values: dict[str, str]
+    expected_labels_and_values: dict[str, str], values_from_prometheus: dict[str, str]
 ) -> None:
-    metric_output = prometheus.query_sampler(query=metric_name)[0].get("metric")
     mismatch = {
-        label: {f"{label} metric result: {metric_output.get(label)}, expected_label_results: {expected_label_results}"}
+        label: {
+            f"{label} metric result: {values_from_prometheus.get(label)}, "
+            f"expected_label_results: {expected_label_results}"
+        }
         for label, expected_label_results in expected_labels_and_values.items()
-        if metric_output.get(label) != expected_label_results
+        if values_from_prometheus.get(label) != expected_label_results
     }
     assert not mismatch, f"There is a missmatch in expected values and metric result: {mismatch}"
 
