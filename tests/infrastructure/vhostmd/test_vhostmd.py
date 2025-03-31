@@ -110,7 +110,6 @@ def run_vm_dump_metrics(vm):
     )[0]
 
 
-@pytest.mark.gating
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_function, vhostmd_vm1, vhostmd_vm2,",
     [
