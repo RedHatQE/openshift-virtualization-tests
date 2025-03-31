@@ -17,10 +17,15 @@ from utilities.data_collector import collect_alerts_data
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.upgrade,
+    pytest.mark.upgrade_custom,
+    pytest.mark.cnv_upgrade,
+    pytest.mark.ocp_upgrade,
+    pytest.mark.sno,
+]
 
-@pytest.mark.upgrade_custom
-@pytest.mark.sno
-@pytest.mark.upgrade
+
 class TestUpgradeIUO:
     """Post-upgrade tests"""
 
@@ -32,7 +37,6 @@ class TestUpgradeIUO:
     )
     def test_alerts_fired_during_upgrade(
         self,
-        skip_on_eus_upgrade,
         prometheus_scope_function,
         fired_alerts_during_upgrade,
     ):
@@ -45,6 +49,7 @@ class TestUpgradeIUO:
             collect_alerts_data()
             raise AssertionError(f"Following alerts were fired during upgrade: {fired_alerts_during_upgrade}")
 
+    @pytest.mark.eus_upgrade
     @pytest.mark.polarion("CNV-6866")
     @pytest.mark.order(before=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, after=IUO_CNV_ALERT_ORDERING_NODE_ID)
     @pytest.mark.dependency(
@@ -55,6 +60,7 @@ class TestUpgradeIUO:
         LOGGER.info("Verify nodes taints after upgrade.")
         verify_nodes_taints_after_upgrade(nodes=nodes, nodes_taints_before_upgrade=nodes_taints_before_upgrade)
 
+    @pytest.mark.eus_upgrade
     @pytest.mark.polarion("CNV-6924")
     @pytest.mark.order(before=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, after=IUO_CNV_ALERT_ORDERING_NODE_ID)
     @pytest.mark.dependency(

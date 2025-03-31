@@ -335,28 +335,27 @@ def mark_tests_by_team(item: Item) -> None:
 def filter_upgrade_tests(
     items: list[Item],
     config: Config,
-    upgrade_markers: list[str],
 ) -> tuple[list[Item], list[Item]]:
     upgrade_tests, non_upgrade_tests = [], []
+    upgrade_markers = {"upgrade", "upgrade_custom"}
+    chosen_upgrade_markers = {marker for marker in upgrade_markers if config.getoption(f"--{marker}")}
+    upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
 
     for item in items:
-        if set(upgrade_markers).intersection(set(item.keywords)):
+        if upgrade_markers_to_collect.intersection(set(item.keywords)):
             upgrade_tests.append(item)
         else:
             non_upgrade_tests.append(item)
 
-    if any(config.getoption(f"--{marker}") for marker in upgrade_markers):
-        # If performing OCP upgrade, remove tests marked with pytest.mark.cnv_upgrade.
-        # If performing CNV upgrade, remove test marked with pytest.mark.ocp_upgrade,
-        # and determine if we are running the cnv upgrade test for production source or for stage/osbs.
-        cnv_source = config.getoption("--cnv-source")
-
+    # If upgrade marker configured, select specific upgrade tests by marker, and discard the others.
+    if chosen_upgrade_markers:
         upgrade_tests, discard = remove_upgrade_tests_based_on_config(
-            cnv_source=cnv_source,
+            cnv_source=config.getoption("--cnv-source"),
             upgrade_tests=upgrade_tests,
         )
         return upgrade_tests, [*non_upgrade_tests, *discard]
 
+    # If no upgrade marker in config, discard all upgrade tests.
     return non_upgrade_tests, upgrade_tests
 
 
@@ -366,42 +365,28 @@ def remove_upgrade_tests_based_on_config(
 ) -> tuple[list[Item], list[Item]]:
     """
     Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
+    If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
+    If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
+    If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
+    In addition, determine if we are running the cnv upgrade test for production source or for stage/osbs.
 
     Args:
         cnv_source(str): cnv source option.
         upgrade_tests(list): list of upgrade tests.
     """
-    ocp_upgrade_test = None
-    cnv_upgrade_test_with_prod_src = None
-    cnv_upgrade_test_no_prod_src = None
-    eus_upgrade_test = None
-    cnv_upgrade_tests: list[Item] = []
+    keep: list[Item] = []
+    marker_str = f"{py_config['upgraded_product']}_upgrade"
 
     for test in upgrade_tests:
-        if "ocp_upgrade" in test.keywords:
-            ocp_upgrade_test = test
-        elif "eus_upgrade" in test.keywords:
-            eus_upgrade_test = test
-        elif "cnv_upgrade" in test.keywords:
-            cnv_upgrade_tests.append(test)
-            if "production_source" in test.name:
-                cnv_upgrade_test_with_prod_src = test
-            else:
-                cnv_upgrade_test_no_prod_src = test
+        if marker_str == "cnv_upgrade" and "cnv_upgrade_process" in test.name:
+            # choose the right cnv_upgrade test according to cnv_source.
+            # production cnv_upgrade_test if prod source, otherwise the stage/osbs one
+            if (cnv_source == "production") == ("production_source" in test.name):
+                keep.append(test)
+        elif marker_str in test.keywords:
+            keep.append(test)
 
-    if py_config["upgraded_product"] == "cnv":
-        tests_to_remove = [
-            cnv_upgrade_test_no_prod_src if cnv_source == "production" else cnv_upgrade_test_with_prod_src,
-            ocp_upgrade_test,
-            eus_upgrade_test,
-        ]
-    elif py_config["upgraded_product"] == "ocp":
-        tests_to_remove = [*cnv_upgrade_tests, eus_upgrade_test]
-    else:
-        tests_to_remove = [*cnv_upgrade_tests, ocp_upgrade_test]
-
-    discard = [test for test in tests_to_remove if test is not None]
-    keep = [test for test in upgrade_tests if test not in discard]
+    discard = [test for test in upgrade_tests if test not in keep]
     return keep, discard
 
 
@@ -486,15 +471,7 @@ def pytest_collection_modifyitems(session, config, items):
 
         mark_tests_by_team(item=item)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
-    if config.getoption("--upgrade_custom"):
-        keep, discard = filter_upgrade_tests(items=items, config=config, upgrade_markers=["upgrade_custom"])
-    #  Collect only 'upgrade' tests when running pytest with --upgrade
-    elif config.getoption("--upgrade"):
-        keep, discard = filter_upgrade_tests(items=items, config=config, upgrade_markers=["upgrade"])
-    #  For non-upgrade tests we should exclude both markers: 'upgrade' and 'upgrade_custom'
-    else:
-        keep, discard = filter_upgrade_tests(items=items, config=config, upgrade_markers=["upgrade", "upgrade_custom"])
-
+    keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep
     if discard:
         config.hook.pytest_deselected(items=discard)
