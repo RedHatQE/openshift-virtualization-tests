@@ -1,14 +1,14 @@
 import pytest_testconfig
 
 from utilities.constants import (
-    S390X,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    PREFERENCE_STR,
-    Images,
     NET_UTIL_CONTAINER_IMAGE,
+    PREFERENCE_STR,
+    S390X,
+    Images,
 )
 
-#Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"   ## chnage for x86 and s390x also
+# Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"   ## chnage for x86 and s390x also
 Images.Fedora.FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
 Images.Rhel.RHEL9_5_IMG = "rhel-95-s390x.qcow2"
 Images.Fedora.FEDORA_CONTAINER_IMAGE = "quay.io/chandramerla/qe-cnv-tests-fedora:40-s390x"
