@@ -38,12 +38,12 @@ from utilities.constants import (
     MTU_9000,
     OVS_BRIDGE,
     SRIOV,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_30SEC,
+    TIMEOUT_90SEC,
     WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -129,7 +129,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
     def _does_port_match_type(nns, port_name, port_type):
         # From time to time the NNS interfaces take longer to get updated with the new port
         samples = TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
+            wait_timeout=TIMEOUT_90SEC,
             sleep=1,
             func=lambda: [_iface for _iface in nns.interfaces if _iface["name"] == port_name],
         )
