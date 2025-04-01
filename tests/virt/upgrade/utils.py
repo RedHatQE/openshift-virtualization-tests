@@ -1,4 +1,5 @@
 import logging
+import shlex
 from datetime import datetime
 
 import pytest
@@ -7,6 +8,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
+from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
@@ -184,7 +186,7 @@ def verify_run_strategy_vmi_status(run_strategy_vmi_list):
     return run_strategy_vmi_list
 
 
-def vm_is_not_migrateable(vm):
+def vm_is_migrateable(vm):
     vm_spec = vm.instance.spec
     vm_access_modes = (
         vm.get_storage_configuration()
@@ -193,5 +195,28 @@ def vm_is_not_migrateable(vm):
     )
     if DataVolume.AccessMode.RWO in vm_access_modes:
         LOGGER.info(f"Cannot migrate a VM {vm.name} with RWO PVC.")
-        return True
-    return False
+        return False
+    return True
+
+
+def get_vm_boot_time(vm):
+    boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+
+
+def verify_linux_boot_time(vm_list, initial_boot_time):
+    rebooted_vms = {}
+    for vm in vm_list:
+        if vm_is_migrateable(vm=vm):
+            current_boot_time = get_vm_boot_time(vm=vm)
+            if initial_boot_time[vm.name] != current_boot_time:
+                rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+def verify_windows_boot_time(windows_vm, initial_boot_time):
+    if vm_is_migrateable(vm=windows_vm):
+        current_boot_time = get_vm_boot_time(vm=windows_vm)
+        assert initial_boot_time == current_boot_time, (
+            f"Boot time for Windows VM changed:\n initial: {initial_boot_time}\n current: {current_boot_time}"
+        )
