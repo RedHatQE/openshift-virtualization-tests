@@ -84,7 +84,6 @@ class Images:
         ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
         ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
         DEFAULT_DV_SIZE = "70Gi"
-        WSL2_DV_SIZE = "40Gi"
         DEFAULT_MEMORY_SIZE = "8Gi"
         DEFAULT_MEMORY_SIZE_WSL = "12Gi"
         DEFAULT_CPU_CORES = 4
