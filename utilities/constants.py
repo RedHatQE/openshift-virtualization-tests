@@ -350,6 +350,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -371,6 +372,7 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
@@ -410,6 +412,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
