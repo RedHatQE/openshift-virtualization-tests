@@ -29,8 +29,14 @@ from utilities.network import (
 LOGGER = logging.getLogger(__name__)
 DEPENDENCIES_NODE_ID_PREFIX = f"{os.path.abspath(__file__)}::TestUpgradeNetwork"
 
+pytestmark = [
+    pytest.mark.upgrade,
+    pytest.mark.ocp_upgrade,
+    pytest.mark.cnv_upgrade,
+    pytest.mark.eus_upgrade,
+]
 
-@pytest.mark.upgrade
+
 @pytest.mark.usefixtures("running_vm_with_bridge")
 class TestUpgradeNetwork:
     """Pre-upgrade tests"""

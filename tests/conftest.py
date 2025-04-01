@@ -202,6 +202,7 @@ from utilities.virt import (
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
+    start_and_fetch_processid_on_linux_vm,
     target_vm_from_cloning_job,
     vm_instance_from_template,
     wait_for_kv_stabilize,
@@ -2081,12 +2082,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
 
 
 @pytest.fixture(scope="session")
-def skip_on_ocp_upgrade(pytestconfig):
-    if pytestconfig.option.upgrade == "ocp":
-        pytest.skip("This test is not supported for OCP upgrade")
-
-
-@pytest.fixture(scope="session")
 def rhel9_http_image_url():
     return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 
@@ -2909,3 +2904,21 @@ def guest_os_info_and_instance_type_name(rhel_vm_with_instancetype_and_preferenc
         "instance_type_name": rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
         "os_name": rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
     }
+
+
+@pytest.fixture(scope="class")
+def ping_process_in_rhel_os():
+    def _start_ping(vm):
+        return start_and_fetch_processid_on_linux_vm(
+            vm=vm,
+            process_name="ping",
+            args="localhost",
+        )
+
+    return _start_ping
+
+
+@pytest.fixture(scope="module")
+def smbios_from_kubevirt_config(kubevirt_config_scope_module):
+    """Extract SMBIOS default from kubevirt CR."""
+    return kubevirt_config_scope_module["smbios"]
