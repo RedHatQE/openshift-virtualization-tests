@@ -6,7 +6,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import PODS_STR
-from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
+from tests.virt.utils import check_arq_status_values, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     AAQ_VIRTUAL_RESOURCES,
     AAQ_VMI_POD_USAGE,
@@ -22,6 +22,7 @@ def restart_vm_wait_for_gated_state(vm):
     vm.restart()
     vmi_old_pod.wait_deleted()
     vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
+    wait_for_virt_launcher_pod(vmi=vm.vmi)
     wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
 
 

@@ -3,18 +3,11 @@ Check VM, VMI, POD owner references
 """
 
 import pytest
-from timeout_sampler import TimeoutSampler
 
+from tests.virt.utils import wait_for_virt_launcher_pod
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = pytest.mark.post_upgrade
-
-
-def _wait_for_virt_launcher_pod(vmi):
-    samples = TimeoutSampler(wait_timeout=30, sleep=1, func=lambda: vmi.virt_launcher_pod)
-    for sample in samples:
-        if sample:
-            return
 
 
 @pytest.fixture()
@@ -24,10 +17,11 @@ def fedora_vm(unprivileged_client, namespace):
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        client=unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()
-        _wait_for_virt_launcher_pod(vmi=vm.vmi)
+        wait_for_virt_launcher_pod(vmi=vm.vmi)
         yield vm
 
 

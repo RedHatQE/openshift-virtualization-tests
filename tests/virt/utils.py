@@ -17,11 +17,13 @@ from utilities.constants import (
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15SEC,
+    TIMEOUT_30SEC,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -334,3 +336,14 @@ def get_match_expressions_dict(nodes_list):
             }
         ]
     }
+
+
+def wait_for_virt_launcher_pod(vmi):
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_1SEC, func=lambda: vmi.virt_launcher_pod)
+    try:
+        for sample in samples:
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Virt-laucher pod for VMI {vmi.name} was not found!")
+        raise

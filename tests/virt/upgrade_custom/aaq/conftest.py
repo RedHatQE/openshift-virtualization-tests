@@ -5,7 +5,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL
 from tests.virt.upgrade_custom.aaq.constants import UPGRADE_QUOTA_FOR_ONE_VMI
-from tests.virt.utils import enable_aaq_feature_gate, wait_when_pod_in_gated_state
+from tests.virt.utils import enable_aaq_feature_gate, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.infra import (
     create_ns,
 )
@@ -70,6 +70,7 @@ def vm_for_arq_upgrade_test_in_gated_state(namespace_for_arq_upgrade_test):
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
+        wait_for_virt_launcher_pod(vmi=vm.vmi)
         wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
         yield vm
 
