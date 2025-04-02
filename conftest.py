@@ -28,7 +28,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5MIN, NamespacesNames
+from utilities.constants import TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -707,6 +707,14 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     return namespace_str
 
 
+def calculate_must_gather_timer(test_start_time):
+    if test_start_time > 0:
+        return int(datetime.datetime.now().strftime("%s")) - test_start_time
+    else:
+        LOGGER.warning(f"Could not get start time of test. Collecting must-gather for last {TIMEOUT_5MIN}s")
+        return TIMEOUT_5MIN
+
+
 def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], report: TestReport | CollectReport) -> None:
     BASIC_LOGGER.error(report.longreprtext)
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
@@ -724,21 +732,18 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
             except Exception as db_exception:
                 test_start_time = 0
                 LOGGER.warning(f"Error: {db_exception} in accessing database.")
-            if not test_start_time:
-                since_time = TIMEOUT_5MIN
-                LOGGER.warning(
-                    f"Could not get start time of test: {test_name}. Collecting must-gather for {since_time}s"
-                )
-            else:
-                # if the test duration is 0 seconds, collect must-gather for past 60 seconds
-                since_time = (int(datetime.datetime.now().strftime("%s")) - test_start_time) or TIMEOUT_1MIN
+
             try:
                 collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")
-                collect_default_cnv_must_gather_with_vm_gather(since_time=since_time, target_dir=collection_dir)
+                collect_default_cnv_must_gather_with_vm_gather(
+                    since_time=calculate_must_gather_timer(test_start_time=test_start_time), target_dir=collection_dir
+                )
                 if inspect_str:
                     target_dir = os.path.join(collection_dir, "inspect_collection")
                     inspect_command = (
-                        f"{INSPECT_BASE_COMMAND} {inspect_str} --since={since_time}s --dest-dir={target_dir}"
+                        f"{INSPECT_BASE_COMMAND} {inspect_str} "
+                        f"--since={calculate_must_gather_timer(test_start_time=test_start_time)}s "
+                        f"--dest-dir={target_dir}"
                     )
                     LOGGER.info(f"running inspect command on {inspect_command}")
                     run_command(
