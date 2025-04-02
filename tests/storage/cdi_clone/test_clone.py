@@ -51,9 +51,9 @@ def create_vm_from_clone_dv_template(
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=OS_FLAVOR_FEDORA,
         client=client,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_template_dict(
             target_dv_name=dv_name,
             target_dv_namespace=namespace_name,

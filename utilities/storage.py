@@ -296,7 +296,7 @@ def get_downloaded_artifact(remote_name, local_name):
     Download image or artifact to local tmpdir path
     """
     artifactory_header = utilities.infra.get_artifactory_header()
-    url = f"{get_test_artifact_server_url()}{remote_name}"
+    url = f"https://download.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
     resp = requests.head(
         url,
         headers=artifactory_header,
@@ -995,7 +995,7 @@ def create_vm_from_dv(
     vm_name="cirros-vm",
     image=None,
     start=True,
-    os_flavor=OS_FLAVOR_CIRROS,
+    os_flavor=OS_FLAVOR_FEDORA,
     node_selector=None,
     cpu_model=None,
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
