@@ -16,7 +16,6 @@ from tests.storage.utils import (
     create_windows_vm_validate_guest_agent_info,
 )
 from utilities.constants import (
-    OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
