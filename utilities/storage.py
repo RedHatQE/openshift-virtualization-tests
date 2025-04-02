@@ -32,7 +32,6 @@ from utilities.constants import (
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
-    OS_FLAVOR_CIRROS,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
     TIMEOUT_1SEC,
@@ -296,7 +295,7 @@ def get_downloaded_artifact(remote_name, local_name):
     Download image or artifact to local tmpdir path
     """
     artifactory_header = utilities.infra.get_artifactory_header()
-    url = f"https://download.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
+    url = "https://download.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
     resp = requests.head(
         url,
         headers=artifactory_header,
