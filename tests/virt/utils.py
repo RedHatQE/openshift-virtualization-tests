@@ -334,3 +334,14 @@ def get_match_expressions_dict(nodes_list):
             }
         ]
     }
+
+
+def wait_for_virt_launcher_pod(vmi):
+    samples = TimeoutSampler(wait_timeout=30, sleep=1, func=lambda: vmi.virt_launcher_pod)
+    try:
+        for sample in samples:
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Virt-laucher pod for VMI {vmi.name} was not found!")
+        raise
