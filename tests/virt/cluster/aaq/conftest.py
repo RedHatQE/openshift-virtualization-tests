@@ -23,7 +23,7 @@ from tests.virt.cluster.aaq.utils import (
     wait_for_aacrq_object_created,
 )
 from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL, ACRQ_TEST
-from tests.virt.utils import enable_aaq_feature_gate, wait_when_pod_in_gated_state
+from tests.virt.utils import enable_aaq_feature_gate, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     POD_CONTAINER_SPEC,
     POD_SECURITY_CONTEXT_SPEC,
@@ -146,6 +146,7 @@ def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
+        wait_for_virt_launcher_pod(vmi=vm.vmi)
         wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
         yield vm
 
