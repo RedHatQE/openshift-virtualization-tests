@@ -1038,10 +1038,8 @@ def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus,
     sample = None
     try:
         for sample in samples:
-            if sample:
-                metric = sample[0].get("metric")
-                if metric:
-                    return metric
+            if sample and sample[0].get("metric"):
+                return sample[0]["metric"]
     except TimeoutExpiredError:
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
