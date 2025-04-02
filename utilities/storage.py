@@ -32,6 +32,8 @@ from utilities.constants import (
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
+    OS_FLAVOR_FEDORA,
+    OS_FLAVOR_CIRROS,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
     TIMEOUT_1SEC,
