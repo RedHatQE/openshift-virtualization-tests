@@ -1253,3 +1253,21 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
+
+
+def metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_30SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and sample[0].get("metric"):
+                return sample[0]["metric"]
+    except TimeoutExpiredError:
+        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
+        raise
+    return {}

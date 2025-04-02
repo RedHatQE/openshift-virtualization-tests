@@ -30,7 +30,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
@@ -73,11 +72,9 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    TIMEOUT_30SEC,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
@@ -1024,25 +1021,6 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
         "persistentvolumeclaim": restored_pvc_name,
         "namespace": vm_snapshot_for_metric_test.namespace,
     }
-
-
-@pytest.fixture()
-def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    metric_name = KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(vm_name=vm_for_snapshot_for_metrics_test.name)
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=metric_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample and sample[0].get("metric"):
-                return sample[0]["metric"]
-    except TimeoutExpiredError:
-        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
-        raise
 
 
 @pytest.fixture(scope="class")
