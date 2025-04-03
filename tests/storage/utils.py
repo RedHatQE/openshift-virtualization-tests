@@ -398,12 +398,12 @@ def create_cirros_dv(
     access_modes=None,
     volume_mode=None,
     client=None,
-    dv_size=Images.Fedora.DEFAULT_DV_SIZE,
+    dv_size=Images.Cirros.DEFAULT_DV_SIZE,
 ):
     with create_dv(
         dv_name=f"dv-{name}",
         namespace=namespace,
-        url="https://archives.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         size=dv_size,
         storage_class=storage_class,
         access_modes=access_modes,
