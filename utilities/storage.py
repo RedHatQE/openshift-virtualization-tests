@@ -1008,7 +1008,7 @@ def create_vm_from_dv(
         image=image,
         node_selector=node_selector,
         cpu_model=cpu_model,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=memory_guest,
         os_flavor=os_flavor,
     ) as vm:
         if start:
