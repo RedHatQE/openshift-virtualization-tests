@@ -63,25 +63,32 @@ NETWORK_PREFERENCE_LIST = [
 
 def start_vm_with_cluster_preference(client, preference_name, namespace_name):
     cluster_preference = VirtualMachineClusterPreference(name=preference_name)
+    cluster_spec = cluster_preference.instance.spec
+    cpu_guest = cluster_spec.requirements.cpu.guest
+    spread_options = getattr(cluster_spec.cpu, "spreadOptions", None)
 
-    vm_args = {
-        "client": client,
-        "name": f"rhel-vm-with-{preference_name}",
-        "namespace": namespace_name,
-        # TODO add corresponding images to the VM based on preference
-        "image": Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        "memory_guest": cluster_preference.instance.spec.requirements.memory.guest,
-        "cpu_sockets": cluster_preference.instance.spec.requirements.cpu.guest,
-        "vm_preference": cluster_preference,
-    }
+    sockets = cpu_guest
+    cores = None
+    threads = None
 
-    if preference_name == "rhel.9.realtime":
-        vm_args.update({
-            "cpu_cores": cluster_preference.instance.spec.requirements.cpu.guest,
-            "cpu_threads": cluster_preference.instance.spec.requirements.cpu.guest,
-        })
+    # Default ratio is 2 if not specified
+    if spread_options:
+        cores = spread_options.get("ratio", 2)
+        sockets = max(1, cpu_guest // cores)
+        threads = 1
 
-    with VirtualMachineForTests(**vm_args) as vm:
+    with VirtualMachineForTests(
+        client=client,
+        name=f"rhel-vm-with-{preference_name}",
+        namespace=namespace_name,
+        # TODO: Add corresponding images to the VM based on preference
+        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        memory_guest=cluster_spec.requirements.memory.guest,
+        cpu_sockets=sockets,
+        cpu_cores=cores,
+        cpu_threads=threads,
+        vm_preference=cluster_preference,
+    ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
