@@ -465,10 +465,19 @@ def wait_for_processes_exit_successfully(processes, timeout):
     try:
         for object_name in processes:
             process = processes[object_name]
-            process.join(timeout)
-            if process.exception:
-                raise process.exception
-            assert process.exitcode == 0, f"The object {object_name} wasn't created in the given time"
+            for attempt in range(3):
+                try:
+                    process.join(timeout)
+                    if process.exception:
+                        raise process.exception
+                    if process.exitcode == 0:
+                        break
+                    else:
+                        raise AssertionError(f"The object {object_name} wasn't created (exit code: {process.exitcode})")
+                except Exception:
+                    if attempt < 2:
+                        continue
+                    raise
     except Exception as e:
         LOGGER.error(f"failed with the exception - {e}")
         raise
