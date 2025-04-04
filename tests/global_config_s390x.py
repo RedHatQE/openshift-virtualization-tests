@@ -2,9 +2,9 @@ from typing import Any
 
 import pytest_testconfig
 
+import utilities.constants
 from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    OS_FLAVOR_CIRROS,
     PREFERENCE_STR,
     S390X,
     Images,
@@ -22,7 +22,7 @@ Images.Cirros.DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
 Images.Cirros.DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
 Images.Cirros.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
-OS_FLAVOR_CIRROS = "fedora"
+ utilities.constant.OS_FLAVOR_CIRROS = "fedora"
 
 Images.Cdi.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cdi.DIR = Images.Fedora.DIR
