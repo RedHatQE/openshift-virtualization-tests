@@ -703,6 +703,21 @@ wheels = [
 ]
 
 [[package]]
+name = "openshift-python-scale-utilities"
+version = "0.1.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openshift-python-utilities" },
+    { name = "openshift-python-wrapper" },
+    { name = "pytest" },
+    { name = "python-simple-logger" },
+    { name = "timeout-sampler" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/1b/f52df5a81d50fba88fcf0303c00d5d9c8941d90e6ab9945d54a4a7dbf96f/openshift_python_scale_utilities-0.1.1.3-py3-none-any.whl", hash = "sha256:c024069338664dfdd455c882f9616f366920add9cd5433e6790227fc58ad9337", size = 11565 },
+]
+
+[[package]]
 name = "openshift-python-utilities"
 version = "6.0.10"
 source = { registry = "https://pypi.org/simple" }
@@ -779,6 +794,7 @@ dependencies = [
     { name = "jsons" },
     { name = "kubernetes" },
     { name = "netaddr" },
+    { name = "openshift-python-scale-utilities" },
     { name = "openshift-python-utilities" },
     { name = "openshift-python-wrapper" },
     { name = "openstacksdk" },
@@ -830,6 +846,7 @@ requires-dist = [
     { name = "jsons", specifier = ">=1.6.3" },
     { name = "kubernetes", specifier = "~=31.0.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
+    { name = "openshift-python-scale-utilities", specifier = "==0.1.1.3" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
     { name = "openshift-python-wrapper", specifier = "~=11.0.10" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
@@ -1489,6 +1506,7 @@ wheels = [
 name = "ruff"
 version = "0.11.3"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/93/f51326459536f64876c932ed26c54fad11775dfda9a690966a8a8a3388d2/ruff-0.11.3.tar.gz", hash = "sha256:8d5fcdb3bb359adc12b757ed832ee743993e7474b9de714bb9ea13c4a8458bf9", size = 3902954 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/54/34341a6363405eea37d05d0062d3f4bff4b268b08e8f4f36fb6f4593b653/ruff-0.11.3-py3-none-linux_armv6l.whl", hash = "sha256:cb893a5eedff45071d52565300a20cd4ac088869e156b25e0971cb98c06f5dd7", size = 10097109 },
     { url = "https://files.pythonhosted.org/packages/ee/33/636511dcacae6710660aa1d746c98f1b63d969b5b04fb4dcaf9a3b068a3f/ruff-0.11.3-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:58edd48af0e201e2f494789de80f5b2f2b46c9a2991a12ea031254865d5f6aa3", size = 10896580 },
