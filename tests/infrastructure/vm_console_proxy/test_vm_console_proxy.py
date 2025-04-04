@@ -9,7 +9,7 @@ from utilities.vnc_utils import VNCConnection
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("feature_gate_for_vm_console_proxy")
+@pytest.mark.usefixtures("enabled_vm_console_proxy_spec")
 class TestVmConsoleProxyEnablement:
     @pytest.mark.dependency(name="test_vm_proxy_cluster_resources_available")
     @pytest.mark.polarion("CNV-10416")
