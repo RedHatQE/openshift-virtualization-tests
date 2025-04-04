@@ -7,6 +7,7 @@ from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     PREFERENCE_STR,
     S390X,
+    OS_FLAVOR_CIRROS,
     Images,
 )
 
@@ -21,7 +22,8 @@ Images.Cirros.DIR = Images.Fedora.DIR
 Images.Cirros.DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
 Images.Cirros.DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
 Images.Cirros.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
-utilities.constants.OS_FLAVOR_CIRROS = "fedora"
+Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
+OS_FLAVOR_CIRROS = "fedora"
 
 Images.Cdi.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cdi.DIR = Images.Fedora.DIR
