@@ -724,7 +724,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/18/7f/39e5c057fb49c6420
 [[package]]
 name = "openshift-python-wrapper"
 version = "11.0.42"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/sbahar619/openshift-python-wrapper.git?rev=fix-nncp-consecutive-updates#9a9f2a330c4788b088f05e7f69f81dc9f00c7433" }
 dependencies = [
     { name = "click" },
     { name = "cloup" },
@@ -745,7 +745,6 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/a2/46d7a09b3bcb9e0aedf9431d36dde9004725058fde2d35fd58c04ee9062f/openshift_python_wrapper-11.0.42.tar.gz", hash = "sha256:90fbfdc91581b8c21547f092f6e25e5573235ec9327de5be857e0c27dc6256a3", size = 7077024 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
