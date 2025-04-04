@@ -136,9 +136,7 @@ def updated_icsp_descheduler(
     )
 
     yield
-    delete_existing_icsp_idms(
-        name=f"iib-{openshift_current_version.lstrip('v').replace('.', '')}", is_idms_file=is_idms_cluster
-    )
+    delete_existing_icsp_idms(name="aosqe-index", is_idms_file=is_idms_cluster)
 
     wait_for_mcp_updated_condition_true(
         machine_config_pools_list=machine_config_pools,
