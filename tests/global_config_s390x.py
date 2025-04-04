@@ -2,12 +2,11 @@ from typing import Any
 
 import pytest_testconfig
 
-import utilities.constants
 from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
+    OS_FLAVOR_CIRROS,
     PREFERENCE_STR,
     S390X,
-    OS_FLAVOR_CIRROS,
     Images,
 )
 
