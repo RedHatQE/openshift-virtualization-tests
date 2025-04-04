@@ -208,6 +208,7 @@ def shutdown_vm_guest_os(vm):
     ],
     indirect=True,
 )
+@pytest.mark.arm
 @pytest.mark.gating
 class TestRunStrategyBaseActions:
     @pytest.mark.parametrize(
@@ -245,6 +246,7 @@ class TestRunStrategyBaseActions:
     indirect=True,
 )
 class TestRunStrategyAdvancedActions:
+    @pytest.mark.arm
     @pytest.mark.polarion("CNV-5054")
     def test_run_strategy_shutdown(
         self,
@@ -288,6 +290,7 @@ class TestRunStrategyAdvancedActions:
         ],
         indirect=True,
     )
+    @pytest.mark.arm
     def test_run_strategy_pause_unpause_vmi(
         self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running
     ):
