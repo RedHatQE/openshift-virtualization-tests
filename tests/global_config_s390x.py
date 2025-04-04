@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest_testconfig
 
+import utilities.constants
 from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     PREFERENCE_STR,
@@ -20,7 +21,7 @@ Images.Cirros.DIR = Images.Fedora.DIR
 Images.Cirros.DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
 Images.Cirros.DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
 Images.Cirros.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
-OS_FLAVOR_CIRROS = "fedora"
+utilities.constants.OS_FLAVOR_CIRROS = "fedora"
 
 Images.Cdi.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cdi.DIR = Images.Fedora.DIR
