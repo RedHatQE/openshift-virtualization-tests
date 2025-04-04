@@ -1,7 +1,7 @@
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import retry
 
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5SEC
 
 
 class MemoryDumpPhaseCompletedError(Exception):
@@ -13,7 +13,7 @@ class MemoryDumpPhaseRemovedError(Exception):
 
 
 @retry(
-    wait_timeout=TIMEOUT_2MIN,
+    wait_timeout=TIMEOUT_3MIN,
     sleep=TIMEOUT_5SEC,
     exceptions_dict={MemoryDumpPhaseCompletedError: []},
 )

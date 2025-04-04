@@ -5,7 +5,7 @@ Automation for Memory Dump
 import pytest
 from pytest_testconfig import config as py_config
 
-from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.os_params import WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
 
 
@@ -16,13 +16,13 @@ from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
         pytest.param(
             {
                 "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST["image_path"],
+                "image": WINDOWS_11["image_path"],
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "dv_size": WINDOWS_11["dv_size"],
             },
             {
                 "vm_name": "windows-vm-mem",
-                "template_labels": WINDOWS_LATEST_LABELS,
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
             },
             marks=pytest.mark.polarion("CNV-8518"),
         ),
