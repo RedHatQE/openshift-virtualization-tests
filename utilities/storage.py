@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import kubernetes
 import requests
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
@@ -1097,19 +1098,11 @@ def get_data_sources_managed_by_data_import_cron(namespace):
     )
 
 
-def re_import_boot_sources(admin_client, namespace):
+def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) -> bool:
     """
-    Delete DataVolumes, VolumeSnapshots, and DataImportCrons from a namespace,
-    in order to re-import the common boot sources.
-    Args:
-        admin_client (:obj: `DynamicClient`): admin client.
-        namespace (str): namespace name.
+    Verify that the boot sources are re-imported while changing a storage class.
     """
     try:
-        utilities.infra.delete_resources_from_namespace_by_type(
-            resources_types=[DataVolume, VolumeSnapshot],
-            namespace=namespace,
-        )
         for data_source in get_data_sources_managed_by_data_import_cron(namespace=namespace):
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")
             utilities.infra.wait_for_consistent_resource_conditions(
@@ -1121,6 +1114,7 @@ def re_import_boot_sources(admin_client, namespace):
                 consecutive_checks_count=6,
                 resource_name=data_source.name,
             )
+        return True
     except (TimeoutExpiredError, Exception) as exception:
         fail_message = (
             "Failed to re-import boot sources, exiting the pytest execution"
@@ -1128,7 +1122,7 @@ def re_import_boot_sources(admin_client, namespace):
             else str(exception)
         )
         LOGGER.error(fail_message)
-        return True
+        return False
 
 
 @contextmanager
