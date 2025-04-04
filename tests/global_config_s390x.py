@@ -22,7 +22,7 @@ Images.Cirros.DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
 Images.Cirros.DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
 Images.Cirros.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
- utilities.constant.OS_FLAVOR_CIRROS = "fedora"
+utilities.constant.OS_FLAVOR_CIRROS = "fedora"
 
 Images.Cdi.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
 Images.Cdi.DIR = Images.Fedora.DIR
