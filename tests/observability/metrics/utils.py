@@ -35,6 +35,7 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
+    NODE_STR,
     RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
@@ -681,7 +682,7 @@ def wait_for_metrics_match(prometheus: Prometheus, vm: VirtualMachine, expected_
     metric_value = get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=vm.vmi.name,
-        query="kubevirt_vmi_memory_used_bytes",
+        query=f"kubevirt_vmi_memory_used_bytes{{name='{vm.name}'}}",
     )
     LOGGER.info(f"Matching current metric value '{metric_value}' with expected value '{expected_value}'")
     return expected_value == metric_value
@@ -698,8 +699,8 @@ def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -
     return matched_vmi_domain_memory_bytes
 
 
-def get_used_memory_vmi_dommemstat(vm: VirtualMachine) -> int:
-    vmi_dommemstat = vm.vmi.get_dommemstat()
+def get_used_memory_vmi_dommemstat(vm: VirtualMachineForTestsFromTemplate) -> int:
+    vmi_dommemstat = vm.privileged_vmi.get_dommemstat()
     available_memory = get_vmi_dommemstat_from_vm(vmi_dommemstat=vmi_dommemstat, domain_memory_string="available")
     usable_memory = get_vmi_dommemstat_from_vm(vmi_dommemstat=vmi_dommemstat, domain_memory_string="usable")
 
@@ -711,7 +712,7 @@ def pause_unpause_dommemstat(vm: VirtualMachineForTests, period: int = 0) -> Non
     vm.privileged_vmi.execute_virsh_command(command=f"dommemstat --period {period}")
 
 
-def assert_vmi_dommemstat_with_metric_value(prometheus: Prometheus, vm: VirtualMachine) -> None:
+def assert_vmi_dommemstat_with_metric_value(prometheus: Prometheus, vm: VirtualMachineForTestsFromTemplate) -> None:
     vmi_used_memory_dommemstat = get_used_memory_vmi_dommemstat(vm=vm)
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -1292,3 +1293,27 @@ def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
     )
+
+
+def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
+    return {
+        "name": vm.name,
+        "namespace": vm.namespace,
+        "status": vm.instance.status.printableStatus.lower(),
+    }
+
+
+def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
+    guest_os_kernel_release = run_ssh_commands(
+        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
+    )[0].strip()
+    guest_os_kernel_release_windows = None
+    if windows:
+        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
+    assert guest_os_kernel_release_windows
+    return {
+        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
+        "namespace": vm.namespace,
+        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
+        "vmi_pod": vm.vmi.virt_launcher_pod.name,
+    }

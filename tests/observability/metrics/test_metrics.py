@@ -3,6 +3,7 @@ import pytest
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
+    KUBEVIRT_VM_INFO,
     KUBEVIRT_VMI_INFO,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -18,6 +19,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
+from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -142,26 +144,9 @@ def test_cnv_installation_with_hco_cr_metrics(
     )
 
 
-# New parametraization.
-# @pytest.mark.parametrize(
-#     "golden_image_data_volume_scope_class, windows_vm_for_test",
-#     [
-#         pytest.param(
-#             {
-#                 "dv_name": "dv-win10-wsl2",
-#                 "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_WSL2_IMG),
-#                 "storage_class": py_config["default_storage_class"],
-#                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-#             },
-#             {"win_ver": "win-10"},
-#             id="Windows-10",
-#         ),
-#     ],
-#     indirect=True,
-# )
-# @pytest.mark.usefixtures("golden_image_data_volume_scope_class", "windows_vm_for_test")
-# ----------------------------------------------------------------------------------------#
 class TestVMIMetrics:
+    """Fedora vms"""
+
     @pytest.mark.polarion("CNV-8262")
     def test_vmi_domain_total_memory_bytes(
         self,
@@ -175,8 +160,37 @@ class TestVMIMetrics:
             f"is not matching with metrics value {vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 
-    # New test for windows
-    @pytest.mark.polarion("CNV-25454425")
+    @pytest.mark.polarion("CNV-8931")
+    def test_vmi_used_memory_bytes(
+        self,
+        prometheus,
+        single_metric_vm,
+        updated_dommemstat,
+    ):
+        """This test will check the used memory of VMI with given metrics output in bytes."""
+        assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
+
+    @pytest.mark.polarion("CNV-11400")
+    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, single_metric_vmi_guest_os_kernel_release_info):
+        compare_kubevirt_vmi_info_metric_with_vm_info(
+            prometheus=prometheus,
+            query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
+            expected_value="1",
+            values_to_compare=single_metric_vmi_guest_os_kernel_release_info,
+        )
+
+    @pytest.mark.polarion("CNV-11862")
+    def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, vm_info_to_compare):
+        compare_kubevirt_vmi_info_metric_with_vm_info(
+            prometheus=prometheus,
+            query=KUBEVIRT_VM_INFO.format(vm_name=single_metric_vm.name),
+            expected_value="1",
+            values_to_compare=vm_info_to_compare,
+        )
+
+    """Windows vms"""
+
+    @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
         self,
         windows_vm_for_test,
@@ -193,41 +207,22 @@ class TestVMIMetrics:
             f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 
-    # ----------------------------------#
-    @pytest.mark.polarion("CNV-35656")
-    def test_vmi_used_memory_bytes(
-        self,
-        prometheus,
-        single_metric_vm,
-        updated_dommemstat,
-    ):
-        """This test will check the used memory of VMI with given metrics output in bytes."""
-        assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
-
-    # @pytest.mark.polarion("CNV-8931")
-    # new Test
-    @pytest.mark.polarion("CNV-45354696")
+    @pytest.mark.polarion("CNV-11860")
     def test_vmi_used_memory_bytes_windows(
         self,
         prometheus,
         windows_vm_for_test,
         updated_dommemstat_windows,
     ):
+        if is_jira_open(jira_id="CNV-59552"):
+            pytest.xfail(
+                reason="Expected failure, "
+                "there is a bug with this metric on windows vms because of virsh dommemstat command."
+            )
         """This test will check the used memory of VMI with given metrics output in bytes."""
         assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
 
-    # --------------------------------------#
-    @pytest.mark.polarion("CNV-11400")
-    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, single_metric_vmi_guest_os_kernel_release_info):
-        compare_kubevirt_vmi_info_metric_with_vm_info(
-            prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
-            expected_value="1",
-            values_to_compare=single_metric_vmi_guest_os_kernel_release_info,
-        )
-
-    # New tests
-    @pytest.mark.polarion("CNV-467564")
+    @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
@@ -236,26 +231,14 @@ class TestVMIMetrics:
             values_to_compare=vmi_guest_os_kernel_release_info_windows,
         )
 
-    @pytest.mark.polarion("CNV-68584")
-    def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, vm_info_to_compare):
-        compare_kubevirt_vmi_info_metric_with_vm_info(
-            prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
-            expected_value="1",
-            values_to_compare=vm_info_to_compare,
-        )
-
-    @pytest.mark.polarion("CNV-5674343")
+    @pytest.mark.polarion("CNV-11863")
     def test_metric_kubevirt_vm_info_windows(self, prometheus, windows_vm_for_test, vm_info_to_compare_windows):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=windows_vm_for_test.name),
+            query=KUBEVIRT_VM_INFO.format(vm_name=windows_vm_for_test.name),
             expected_value="1",
             values_to_compare=vm_info_to_compare_windows,
         )
-
-
-# ------------------------------------------------------#
 
 
 class TestMemoryDeltaFromRequestedBytes:

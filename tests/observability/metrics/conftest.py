@@ -47,7 +47,9 @@ from tests.observability.metrics.utils import (
     get_vmi_dommemstat_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
+    info_to_compare_from_vm,
     metric_result_output_dict_by_mountpoint,
+    metric_vmi_guest_os_kernel_release_info_from_vm,
     pause_unpause_dommemstat,
     restart_cdi_worker_pod,
     run_node_command,
@@ -64,7 +66,6 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
-    NODE_STR,
     ONE_CPU_CORE,
     PVC,
     SOURCE_POD,
@@ -1129,31 +1130,6 @@ def vm_info_to_compare(single_metric_vm):
 @pytest.fixture()
 def vm_info_to_compare_windows(windows_vm_for_test):
     return info_to_compare_from_vm(vm=windows_vm_for_test)
-
-
-def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
-    return {
-        "name": vm.name,
-        "namespace": vm.namespace,
-        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
-        "status": vm.instance.status.printableStatus,
-    }
-
-
-def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
-    guest_os_kernel_release = run_ssh_commands(
-        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
-    )[0].strip()
-    guest_os_kernel_release_windows = None
-    if windows:
-        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-    assert guest_os_kernel_release_windows
-    return {
-        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
-        "namespace": vm.namespace,
-        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
-        "vmi_pod": vm.vmi.virt_launcher_pod.name,
-    }
 
 
 @pytest.fixture(scope="class")
