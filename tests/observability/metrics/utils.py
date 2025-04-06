@@ -1371,3 +1371,27 @@ def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
     )
+
+
+def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
+    return {
+        "name": vm.name,
+        "namespace": vm.namespace,
+        "status": vm.instance.status.printableStatus.lower(),
+    }
+
+
+def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
+    guest_os_kernel_release = run_ssh_commands(
+        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
+    )[0].strip()
+    guest_os_kernel_release_windows = None
+    if windows:
+        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
+    assert guest_os_kernel_release_windows
+    return {
+        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
+        "namespace": vm.namespace,
+        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
+        "vmi_pod": vm.vmi.virt_launcher_pod.name,
+    }
