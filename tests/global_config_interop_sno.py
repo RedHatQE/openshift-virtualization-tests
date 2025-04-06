@@ -11,6 +11,9 @@ storage_class_matrix = [
         "sno-storage": {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWO,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": True,
         }
     },
 ]

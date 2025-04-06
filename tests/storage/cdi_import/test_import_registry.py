@@ -105,7 +105,7 @@ def test_public_registry_multiple_data_volume(namespace, storage_class_name_scop
                 namespace=namespace.name,
                 os_flavor=OS_FLAVOR_FEDORA,
                 data_volume=vm,
-                memory_requests=FEDORA_VM_MEMORY_SIZE,
+                memory_guest=FEDORA_VM_MEMORY_SIZE,
             )
             rvm.deploy()
             vms.append(rvm)
@@ -170,7 +170,7 @@ def test_public_registry_data_volume(
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_requests=FEDORA_VM_MEMORY_SIZE,
+            memory_guest=FEDORA_VM_MEMORY_SIZE,
             wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
@@ -216,7 +216,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_requests=FEDORA_VM_MEMORY_SIZE,
+            memory_guest=FEDORA_VM_MEMORY_SIZE,
             wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)

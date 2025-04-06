@@ -38,16 +38,15 @@ from utilities.constants import (
     MTU_9000,
     OVS_BRIDGE,
     SRIOV,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_30SEC,
+    TIMEOUT_90SEC,
     WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 IFACE_UP_STATE = NodeNetworkConfigurationPolicy.Interface.State.UP
@@ -130,7 +129,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
     def _does_port_match_type(nns, port_name, port_type):
         # From time to time the NNS interfaces take longer to get updated with the new port
         samples = TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
+            wait_timeout=TIMEOUT_90SEC,
             sleep=1,
             func=lambda: [_iface for _iface in nns.interfaces if _iface["name"] == port_name],
         )
@@ -502,18 +501,7 @@ def get_vmi_ip_v4_by_name(vm, name):
         utilities.virt.wait_for_vm_interfaces(vmi=vmi)
         return _extract_interface_ips()
 
-    # TODO: Investigate why on BMs (bm02+03-cnvqe2-rdu2) it takes so long for the IP to be seen in the VMI.
-    # When Jira ticket CNV-19348 is closed: 1. Revert the wait_timout back to 2 minutes; 2. the check of the
-    # workers_type is redundant.
-    wait_timeout = (
-        TIMEOUT_8MIN
-        if (
-            (os.environ[WORKERS_TYPE] == utilities.infra.ClusterHosts.Type.PHYSICAL)
-            and is_jira_open(jira_id="CNV-19348")
-        )
-        else TIMEOUT_2MIN
-    )
-    sampler = TimeoutSampler(wait_timeout=wait_timeout, sleep=1, func=_get_interface_ips)
+    sampler = TimeoutSampler(wait_timeout=TIMEOUT_2MIN, sleep=1, func=_get_interface_ips)
     try:
         for ip_addresses in sampler:
             for ip_address in ip_addresses:

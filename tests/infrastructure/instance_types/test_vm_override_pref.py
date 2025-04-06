@@ -12,7 +12,7 @@ def rhel_vm_with_preference(namespace, admin_client, vm_preference_for_test):
             name="rhel-vm-with-preference",
             namespace=namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-            memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+            memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
             vm_preference=vm_preference,
             disk_type="scsi",
         ) as vm:

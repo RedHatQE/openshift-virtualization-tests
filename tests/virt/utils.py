@@ -7,8 +7,7 @@ import bitmath
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, get_client
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
+from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -18,11 +17,13 @@ from utilities.constants import (
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15SEC,
+    TIMEOUT_30SEC,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -36,11 +37,11 @@ from utilities.virt import (
     fetch_pid_from_windows_vm,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
+    pause_optional_migrate_unpause_and_check_connectivity,
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
     verify_vm_migrated,
     wait_for_migration_finished,
-    wait_for_running_vm,
     wait_for_updated_kv_value,
 )
 
@@ -308,31 +309,9 @@ def enable_aaq_feature_gate(client, hco_namespace, hyperconverged_resource, enab
         LOGGER.info("AAQ system PODs removed.")
 
 
-def pause_optional_migrate_unpause_and_check_connectivity(vm, migrate=False):
-    vmi = VirtualMachineInstance(client=get_client(), name=vm.vmi.name, namespace=vm.vmi.namespace)
-    vmi.pause(wait=True)
-    if migrate:
-        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-    vmi.unpause(wait=True)
-    LOGGER.info("Verify VM is running and ready after unpause")
-    wait_for_running_vm(vm=vm)
-
-
 def kill_processes_by_name_windows(vm, process_name):
     cmd = shlex.split(f"taskkill /F /IM {process_name}")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
-
-
-def validate_pause_optional_migrate_unpause_linux_vm(vm, pre_pause_pid=None, migrate=False):
-    proc_name = OS_PROC_NAME["linux"]
-    if not pre_pause_pid:
-        pre_pause_pid = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=proc_name, args="localhost")
-    pause_optional_migrate_unpause_and_check_connectivity(vm=vm, migrate=migrate)
-    post_pause_pid = fetch_pid_from_linux_vm(vm=vm, process_name=proc_name)
-    kill_processes_by_name_linux(vm=vm, process_name=proc_name)
-    assert post_pause_pid == pre_pause_pid, (
-        f"PID mismatch!\nPre pause PID is: {pre_pause_pid}\nPost pause PID is: {post_pause_pid}"
-    )
 
 
 def validate_pause_optional_migrate_unpause_windows_vm(vm, pre_pause_pid=None, migrate=False):
@@ -357,3 +336,14 @@ def get_match_expressions_dict(nodes_list):
             }
         ]
     }
+
+
+def wait_for_virt_launcher_pod(vmi):
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_1SEC, func=lambda: vmi.virt_launcher_pod)
+    try:
+        for sample in samples:
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Virt-laucher pod for VMI {vmi.name} was not found!")
+        raise
