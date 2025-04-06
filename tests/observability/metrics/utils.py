@@ -1255,7 +1255,7 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
-def metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
+def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_30SEC,
