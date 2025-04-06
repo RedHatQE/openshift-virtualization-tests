@@ -37,7 +37,10 @@ class TestCpuUsageMetrics:
             ),
         ],
     )
-    def test_vmi_non_empty_cpu_metrics(self, prometheus, query, running_metric_vm):
+    def test_vmi_non_empty_cpu_metrics(self, prometheus, query, running_metric_vm, windows_vm_for_test):
         wait_for_non_empty_metrics_value(
             prometheus=prometheus, metric_name=query.format(vm_name=running_metric_vm.name)
+        )
+        wait_for_non_empty_metrics_value(
+            prometheus=prometheus, metric_name=query.format(vm_name=windows_vm_for_test.name)
         )
