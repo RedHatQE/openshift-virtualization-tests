@@ -84,7 +84,6 @@ class Images:
         ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
         ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
         DEFAULT_DV_SIZE = "70Gi"
-        WSL2_DV_SIZE = "40Gi"
         DEFAULT_MEMORY_SIZE = "8Gi"
         DEFAULT_MEMORY_SIZE_WSL = "12Gi"
         DEFAULT_CPU_CORES = 4
@@ -351,6 +350,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -372,6 +372,7 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
@@ -411,6 +412,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -616,7 +618,8 @@ class StorageClassNames:
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     IO2_CSI = "io2-csi"
-    IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    GPFS = "ibm-spectrum-scale-sample"
+    OCI = "oci-bv"
 
 
 # Namespace constants
@@ -791,9 +794,11 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }

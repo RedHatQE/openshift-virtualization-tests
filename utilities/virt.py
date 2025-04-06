@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import Any
+from typing import Any, Dict
 
 import bitmath
 import jinja2
@@ -57,6 +57,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
+    OS_PROC_NAME,
     ROOTDISK,
     SSH_PORT_22,
     TCP_TIMEOUT_30SEC,
@@ -1579,12 +1580,15 @@ def get_rhel_os_dict(rhel_version):
 
 
 def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:
-    vm_status = vm.printable_status
+    status = vm.instance.get("status")
+    printable_status = status.get("printableStatus")
     error_list = VM_ERROR_STATUSES.copy()
     vm_devices = vm.instance.spec.template.spec.domain.devices
     if vm_devices.gpus:
         error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-    assert vm_status not in error_list, f"VM {vm.name} error status: {vm_status}"
+    assert printable_status not in error_list, (
+        f"VM {vm.name} error printable status: {printable_status}\nVM status:\n{status}"
+    )
 
 
 def wait_for_running_vm(
@@ -2387,3 +2391,149 @@ def validate_libvirt_persistent_domain(vm):
 def get_nodes_gpu_info(util_pods, node):
     pod_exec = utilities.infra.ExecCommandOnPod(utility_pods=util_pods, node=node)
     return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")
+
+
+def assert_linux_efi(vm: VirtualMachine) -> None:
+    """
+    Verify guest OS is using EFI.
+    """
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
+
+
+def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachine, migrate: bool = False) -> None:
+    vmi = VirtualMachineInstance(client=get_client(), name=vm.vmi.name, namespace=vm.vmi.namespace)
+    vmi.pause(wait=True)
+    if migrate:
+        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+    vmi.unpause(wait=True)
+    LOGGER.info("Verify VM is running and ready after unpause")
+    wait_for_running_vm(vm=vm)
+
+
+def validate_pause_optional_migrate_unpause_linux_vm(
+    vm: VirtualMachine, pre_pause_pid: int | None = None, migrate: bool = False
+) -> None:
+    proc_name = OS_PROC_NAME["linux"]
+    if not pre_pause_pid:
+        pre_pause_pid = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=proc_name, args="localhost")
+    pause_optional_migrate_unpause_and_check_connectivity(vm=vm, migrate=migrate)
+    post_pause_pid = fetch_pid_from_linux_vm(vm=vm, process_name=proc_name)
+    kill_processes_by_name_linux(vm=vm, process_name=proc_name)
+    assert post_pause_pid == pre_pause_pid, (
+        f"PID mismatch!\n Pre pause PID is: {pre_pause_pid}\n Post pause PID is: {post_pause_pid}"
+    )
+
+
+def check_vm_xml_smbios(vm: VirtualMachine, cm_values: Dict[str, str]) -> None:
+    """
+    Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
+    config map.
+    """
+
+    LOGGER.info("Verify VM XML - SMBIOS values.")
+    smbios_vm = vm.privileged_vmi.xml_dict["domain"]["sysinfo"]["system"]["entry"]
+    smbios_vm_dict = {entry["@name"]: entry["#text"] for entry in smbios_vm}
+    assert smbios_vm, "VM XML missing SMBIOS values."
+    results = {
+        "manufacturer": smbios_vm_dict["manufacturer"] == cm_values["manufacturer"],
+        "product": smbios_vm_dict["product"] == cm_values["product"],
+        "family": smbios_vm_dict["family"] == cm_values["family"],
+        "version": smbios_vm_dict["version"] == cm_values["version"],
+    }
+    LOGGER.info(f"Results: {results}")
+    assert all(results.values())
+
+
+def assert_vm_xml_efi(vm: VirtualMachine, secure_boot_enabled: bool = True) -> None:
+    LOGGER.info("Verify VM XML - EFI secureBoot values.")
+    xml_dict_os = vm.privileged_vmi.xml_dict["domain"]["os"]
+    ovmf_path = "/usr/share/OVMF"
+    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
+    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
+    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
+    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
+    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
+    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
+    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
+    os_secure = "yes" if secure_boot_enabled else "no"
+    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
+    assert vmi_xml_os_secure == os_secure, (
+        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
+    )
+    assert vmi_xml_efi_vars_path == efi_vars_path, (
+        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
+    )
+
+
+def update_vm_efi_spec_and_restart(
+    vm: VirtualMachine, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
+) -> None:
+    ResourceEditor({
+        vm: {"spec": {"template": {"spec": {"domain": {"firmware": {"bootloader": {"efi": spec or {}}}}}}}}
+    }).update()
+    restart_vm_wait_for_running_vm(vm=vm, wait_for_interfaces=wait_for_interfaces)
+
+
+def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    supportedCommands - removed as the data is used for internal guest agent validations
+    fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
+    fsFreezeStatus - removed as it is not related to GA validations
+    """
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    [data.pop(key, None) for key in removed_keys]
+
+    return data
+
+
+# Guest agent info gather functions.
+def get_virtctl_os_info(vm: VirtualMachine) -> dict[str, Any] | None:
+    """
+    Returns OS data dict in format:
+    {
+        "guestAgentVersion": guestAgentVersion,
+        "hostname": hostname,
+        "os": {
+            "name": name,
+            "kernelRelease": kernelRelease,
+            "version": version,
+            "prettyName": prettyName,
+            "versionId": versionId,
+            "kernelVersion": kernelVersion,
+            "machine": machine,
+            "id": id,
+        },
+        "timezone": timezone",
+    }
+
+    """
+    cmd = ["guestosinfo", vm.name]
+    res, output, err = utilities.infra.run_virtctl_command(command=cmd, namespace=vm.namespace)
+    if not res:
+        LOGGER.error(f"Failed to get guest-agent info via virtctl. Error: {err}")
+        return None
+    data = json.loads(output)
+
+    return delete_guestosinfo_keys(data=data)
+
+
+def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
+    """
+    Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
+
+    Returns:
+        bool: True - if virtctl guest info is available after timeout else False
+    """
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_3MIN, sleep=TIMEOUT_5SEC, func=get_virtctl_os_info, vm=vm)
+    consecutive_check = 0
+    try:
+        for sample in samples:
+            if not sample:
+                consecutive_check += 1
+                if consecutive_check == 3:
+                    return False
+            else:
+                consecutive_check = 0
+    except TimeoutExpiredError:
+        return True
+    return False

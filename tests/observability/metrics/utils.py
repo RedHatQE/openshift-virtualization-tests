@@ -1265,7 +1265,7 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
 
 
 @contextmanager
-def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
+def create_windows10_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(

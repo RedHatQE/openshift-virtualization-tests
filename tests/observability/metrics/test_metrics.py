@@ -217,7 +217,7 @@ class TestVMIMetrics:
         if is_jira_open(jira_id="CNV-59552"):
             pytest.xfail(
                 reason="Expected failure, "
-                "there is a bug with this metric on windows vms because of virsh dommemstat command."
+                "there is a bug (CNV-59552) with this metric on windows vms because of virsh dommemstat command."
             )
         """This test will check the used memory of VMI with given metrics output in bytes."""
         assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)

@@ -316,17 +316,6 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 
 
 @pytest.fixture(scope="session")
-def is_eus_upgrade(pytestconfig):
-    return pytestconfig.option.upgrade == EUS
-
-
-@pytest.fixture(scope="session")
-def skip_on_eus_upgrade(is_eus_upgrade):
-    if is_eus_upgrade:
-        pytest.skip("This test is not supported for EUS upgrade")
-
-
-@pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     # Get the shortest path to the target (EUS) version
     upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
