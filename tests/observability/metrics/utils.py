@@ -1202,13 +1202,15 @@ def compare_metric_file_system_values_with_vm_file_system_values(
 
 
 def expected_metric_labels_and_values(
-    prometheus: Prometheus, metric_name: str, expected_labels_and_values: dict[str, str]
+    expected_labels_and_values: dict[str, str], values_from_prometheus: dict[str, str]
 ) -> None:
-    metric_output = prometheus.query_sampler(query=metric_name)[0].get("metric")
     mismatch = {
-        label: {f"{label} metric result: {metric_output.get(label)}, expected_label_results: {expected_label_results}"}
+        label: {
+            f"{label} metric result: {values_from_prometheus.get(label)}, "
+            f"expected_label_results: {expected_label_results}"
+        }
         for label, expected_label_results in expected_labels_and_values.items()
-        if metric_output.get(label) != expected_label_results
+        if values_from_prometheus.get(label) != expected_label_results
     }
     assert not mismatch, f"There is a missmatch in expected values and metric result: {mismatch}"
 
@@ -1251,3 +1253,21 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
+
+
+def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_30SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and sample[0].get("metric"):
+                return sample[0]["metric"]
+    except TimeoutExpiredError:
+        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
+        raise
+    return {}
