@@ -4,13 +4,14 @@ import os
 import shlex
 
 from ocp_resources.namespace import Namespace
+from ocp_resources.node import Node
 from ocp_resources.resource import get_client
 from ocp_utilities.monitoring import Prometheus
 from pytest_testconfig import config as py_config
 
 import utilities.hco
 import utilities.infra
-from utilities.constants import TIMEOUT_20MIN
+from utilities.constants import TIMEOUT_20MIN, NODE_ROLE_KUBERNETES_IO
 from utilities.must_gather import run_must_gather
 
 LOGGER = logging.getLogger(__name__)
@@ -88,6 +89,7 @@ def collect_vnc_screenshot_for_vms(vm_name: str, vm_namespace: str) -> None:
 
 
 def collect_ocp_must_gather(since_time):
+    # TODO: get nodes with control-plane label
     base_directory = get_data_collector_dir()
     LOGGER.info(f"Collecting OCP must-gather data under: {base_directory}, for time {since_time} seconds.")
     run_must_gather(target_base_dir=base_directory, since=f"{since_time}s", timeout=f"{TIMEOUT_20MIN}s")
@@ -101,10 +103,17 @@ def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir):
     must_gather_image = [
         image["image"] for image in cnv_csv.instance.spec.relatedImages if "must-gather" in image["name"]
     ][0]
+
+    # run on a control plane node
+    control_plane_node = list(Node.get(
+        client=get_client(),
+        label_selector=f"{NODE_ROLE_KUBERNETES_IO}/control-plane"
+    ))[0]
     run_must_gather(
         image_url=must_gather_image,
         target_base_dir=target_dir,
         since=f"{since_time}s",
+        node_name=control_plane_node.name,
         script_name="/usr/bin/gather",
         flag_names="vms_details",
     )
