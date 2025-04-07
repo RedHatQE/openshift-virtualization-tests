@@ -153,6 +153,7 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
     update_subscription_source(
         subscription=cnv_subscription_scope_session,
         subscription_source=cnv_registry_source["cnv_subscription_source"],
+        subscription_channel=py_config["cnv_subscription_channel"],
     )
 
 
