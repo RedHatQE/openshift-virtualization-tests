@@ -30,7 +30,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
@@ -55,7 +54,6 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
-    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
@@ -1023,16 +1021,6 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
         "persistentvolumeclaim": restored_pvc_name,
         "namespace": vm_snapshot_for_metric_test.namespace,
     }
-
-
-@pytest.fixture()
-def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    wait_for_non_empty_metrics_value(
-        prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-            vm_name=vm_for_snapshot_for_metrics_test.name
-        ),
-    )
 
 
 @pytest.fixture(scope="class")
