@@ -11,7 +11,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.hco
 import utilities.infra
-from utilities.constants import TIMEOUT_20MIN, NODE_ROLE_KUBERNETES_IO
+from utilities.constants import NODE_ROLE_KUBERNETES_IO, TIMEOUT_20MIN
 from utilities.must_gather import run_must_gather
 
 LOGGER = logging.getLogger(__name__)
@@ -105,10 +105,9 @@ def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir):
     ][0]
 
     # run on a control plane node
-    control_plane_node = list(Node.get(
-        client=get_client(),
-        label_selector=f"{NODE_ROLE_KUBERNETES_IO}/control-plane"
-    ))[0]
+    control_plane_node = list(Node.get(client=get_client(), label_selector=f"{NODE_ROLE_KUBERNETES_IO}/control-plane"))[
+        0
+    ]
     run_must_gather(
         image_url=must_gather_image,
         target_base_dir=target_dir,
