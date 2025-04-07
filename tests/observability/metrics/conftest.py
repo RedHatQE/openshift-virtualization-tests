@@ -23,12 +23,10 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     BINDING_NAME,
     BINDING_TYPE,
-    CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
-    KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -54,7 +52,6 @@ from tests.observability.metrics.utils import (
     run_vm_commands,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
-    wait_for_no_metrics_value,
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
@@ -588,16 +585,6 @@ def zero_upload_dv_restart_count(ready_uploaded_dv):
 
 
 @pytest.fixture(scope="class")
-def kubevirt_vmi_phase_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR)
-
-
-@pytest.fixture(scope="class")
-def cnv_vmi_status_running_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=CNV_VMI_STATUS_RUNNING_COUNT)
-
-
-@pytest.fixture(scope="class")
 def validated_preference_instance_type_of_target_vm(
     rhel_vm_with_instancetype_and_preference_for_cloning, cloning_job_scope_class
 ):
@@ -1100,3 +1087,11 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture(scope="class")
+def guest_os_info_and_instance_type_name(rhel_vm_with_instancetype_and_preference_for_cloning):
+    return {
+        "instance_type_name": rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name,
+        "os_name": rhel_vm_with_instancetype_and_preference_for_cloning.vmi.instance.status.guestOSInfo.name,
+    }

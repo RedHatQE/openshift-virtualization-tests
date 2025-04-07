@@ -27,16 +27,13 @@ from tests.observability.metrics.constants import (
     KUBE_VERSION_STR,
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
-    METRIC_SUM_QUERY,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
-    RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_8MIN,
@@ -45,8 +42,6 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
-    TIMEOUT_40SEC,
-    U1_SMALL,
     USED,
     VIRT_HANDLER,
 )
@@ -850,32 +845,6 @@ def fail_if_not_zero_restartcount(dv: DataVolume) -> None:
 
     if restartcount != 0:
         pytest.fail(f"dv {dv.name} restartcount is not zero,\n actual restartcount: {restartcount}")
-
-
-def wait_for_no_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_3MIN,
-        sleep=TIMEOUT_40SEC,
-        func=prometheus.query,
-        query=METRIC_SUM_QUERY.format(
-            metric_name=metric_name,
-            instance_type_name=U1_SMALL,
-            preference=RHEL9_PREFERENCE,
-        ),
-    )
-    counter = 0
-    sample = None
-    try:
-        for sample in samples:
-            if not sample.get("data").get("result"):
-                counter += 1
-                if counter >= 3:
-                    return
-            else:
-                counter = 0
-    except TimeoutExpiredError:
-        LOGGER.error(f"There is another vms on the cluster: {sample}")
-        raise
 
 
 def assert_virtctl_version_equal_metric_output(
