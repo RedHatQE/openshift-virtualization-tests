@@ -10,6 +10,7 @@ def run_must_gather(
     image_url: str = "",
     target_base_dir: str = "",
     script_name: str = "",
+    node_name: str = "",
     flag_names: str = "",
     timeout: str = f"{TIMEOUT_15MIN}s",
     since: str | None = None,
@@ -22,6 +23,7 @@ def run_must_gather(
             If not specified, OpenShift's default must-gather image will be used.
         target_base_dir (str, optional): path to base directory
         script_name (str, optional): must-gather script name or path
+        node_name (str, optional): node name to run the must gather pod on.
         flag_names (str, optional): comma separated list of must-gather flags
             Examples: "oc adm must-gather --image=quay.io/kubevirt/must-gather -- /usr/bin/gather --default"
 
@@ -38,12 +40,14 @@ def run_must_gather(
         base_command += f" --dest-dir={target_base_dir}"
     if image_url:
         base_command += f" --image={image_url}"
-    if script_name:
-        base_command += f" -- {script_name}"
+    if node_name:
+        base_command += f" --node-name={node_name}"
     if since:
         base_command += f" --since={since}"
     if timeout:
         base_command += f" --timeout={timeout}"
+    if script_name:
+        base_command += f" -- {script_name}"
     # flag_name must be the last argument
     if flag_names:
         flag_string = "".join([f" --{flag_name}" for flag_name in flag_names.split(",")])
@@ -69,6 +73,7 @@ def collect_must_gather(
     script_name="/usr/bin/gather",
     flag_names="",
     timeout="",
+    node_name="",
 ):
     """
     Run must gather command and puts the content in directory.
@@ -79,6 +84,7 @@ def collect_must_gather(
         script_name (str): must-gather script name or path
         flag_names (str, optional): comma separated list of must-gather flags
         timeout (str, optional): runs the debug pods for specified duration
+        node_name (str):
 
     Returns:
         str: output directory with must gather content
@@ -87,6 +93,7 @@ def collect_must_gather(
         image_url=must_gather_image_url,
         target_base_dir=must_gather_tmpdir,
         script_name=script_name,
+        node_name=node_name,
         flag_names=flag_names,
         timeout=timeout,
     )
