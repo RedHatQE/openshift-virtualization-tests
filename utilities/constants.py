@@ -53,6 +53,7 @@ class Images:
         RHEL9_3_IMG = "rhel-93.qcow2"
         RHEL9_4_IMG = "rhel-94.qcow2"
         RHEL9_5_IMG = "rhel-95.qcow2"
+        RHEL9_6_IMG = "rhel-96.qcow2"
         RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
         RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
         RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
