@@ -232,22 +232,30 @@ Note: OCP images information can be found at: <https://openshift-release.apps.ci
 Currently, automation supports ocp upgrades using stable, ci, nightly and rc images for ocp
 
 #### CNV upgrade
+Parameters:
+
+| Parameter Name  |      Requirement      |  Default Value  |    Possible Value     |
+|:----------------|:---------------------:|:---------------:|:---------------------:|
+| `--cnv-version` |     **Required**      |        -        |         4.Y.z         |
+| `--cnv-image`   |     **Required**      |        -        |     -image path-      |
+| `--cnv-source`  |     **Optional**      |      osbs       | osbs, fbc, production |
+| `--cnv-channel` |     **Optional**      |     stable      |   stable, candidate   |
 
 Command to run entire upgrade test suite for cnv upgrade, including pre and post upgrade validation:
 
 ```bash
---upgrade cnv --cnv-version <target_version> --cnv-source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 Command to run only cnv upgrade test, without any pre/post validation:
 
 ```bash
--m product_upgrade_test --upgrade cnv --cnv-version <target_version> --cnv source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+-m cnv_upgrade --upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following command could be used:
 ```bash
---upgrade cnv --cnv-version 4.Y.z --cnv-source osbs --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version 4.Y.z --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 #### EUS upgrade
