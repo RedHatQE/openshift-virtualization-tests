@@ -15,9 +15,10 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -35,6 +36,7 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
+    OS_FLAVOR_WINDOWS,
     RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
@@ -64,7 +66,7 @@ from utilities.infra import (
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
-from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1300,11 +1302,13 @@ def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class)
         cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
-    with VirtualMachineForTestsFromTemplate(
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
         name=vm_name,
         namespace=namespace,
         client=client,
-        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)
