@@ -38,7 +38,7 @@ from ocp_utilities.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.infra
 from utilities.console import Console
@@ -1579,16 +1579,22 @@ def get_rhel_os_dict(rhel_version):
     raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
 
 
-def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:
+@retry(
+    wait_timeout=TIMEOUT_2MIN,
+    sleep=TIMEOUT_5SEC,
+    exceptions_dict={AssertionError: []},
+)
+def assert_vm_not_error_status(vm: VirtualMachineForTests) -> bool:
     status = vm.instance.get("status")
     printable_status = status.get("printableStatus")
     error_list = VM_ERROR_STATUSES.copy()
     vm_devices = vm.instance.spec.template.spec.domain.devices
     if vm_devices.gpus:
         error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-    assert printable_status not in error_list, (
-        f"VM {vm.name} error printable status: {printable_status}\nVM status:\n{status}"
-    )
+    if printable_status not in error_list:
+        return True
+    LOGGER.warning(f"VM {vm.name} error printable status: {printable_status}")
+    raise AssertionError(f"VM status:\n{status}")
 
 
 def wait_for_running_vm(
