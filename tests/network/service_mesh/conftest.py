@@ -36,7 +36,7 @@ from tests.network.utils import (
     authentication_request,
 )
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
-from utilities.infra import add_scc_to_service_account, create_ns, unique_name
+from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
 from utilities.virt import running_vm, vm_console_run_commands, wait_for_console
 
 LOGGER = logging.getLogger(__name__)
@@ -441,3 +441,8 @@ def vmi_http_server(vm_fedora_with_service_mesh_annotation):
         vm=vm_fedora_with_service_mesh_annotation,
         commands=[f'while true ; do  echo -e "HTTP/1.1 200 OK\n\n $(date)" | nc -l -p {SERVICE_MESH_PORT}  ; done &'],
     )
+
+
+@pytest.fixture(scope="module")
+def label_istio_injection_namespace(namespace, admin_client):
+    label_project(name=namespace.name, label={"istio-injection": "enabled"}, admin_client=admin_client)
