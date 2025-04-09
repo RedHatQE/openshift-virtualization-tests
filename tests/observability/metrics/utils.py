@@ -15,9 +15,10 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -36,6 +37,7 @@ from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
     NODE_STR,
+    OS_FLAVOR_WINDOWS,
     RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
@@ -763,6 +765,7 @@ def wait_for_prometheus_query_result_matches_expected_value(prometheus: Promethe
         func=prometheus.query_sampler,
         query=query,
     )
+    sample = None
     try:
         for sample in sampler:
             if sample and sample[0].get("value") and sample[0]["value"][1] == expected_value:
@@ -893,6 +896,7 @@ def assert_virtctl_version_equal_metric_output(
     virtctl_server_version: dict[str, str], metric_output: list[dict[str, dict[str, str]]]
 ) -> None:
     mismatch_result = []
+    metric_result = None
     for virt_handler_pod_metrics in metric_output:
         metric_result = virt_handler_pod_metrics.get("metric")
         if metric_result:
@@ -1266,65 +1270,6 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
-<<<<<<< HEAD
-@contextmanager
-def create_windows10_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN10_WSL2_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    with VirtualMachineForTestsFromTemplate(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
-
-
-def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
-    return {
-        "name": vm.name,
-        "namespace": vm.namespace,
-        "status": vm.instance.status.printableStatus.lower(),
-    }
-
-
-def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
-    guest_os_kernel_release = run_ssh_commands(
-        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
-    )[0].strip()
-    guest_os_kernel_release_windows = None
-    if windows:
-        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-    assert guest_os_kernel_release_windows
-    return {
-        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
-        "namespace": vm.namespace,
-        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
-        "vmi_pod": vm.vmi.virt_launcher_pod.name,
-    }
-
-
-=======
-<<<<<<< HEAD
->>>>>>> 6105d5f (Adding windows vm to vmi metrics tests)
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -1342,8 +1287,9 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         raise
     return {}
 
+
 @contextmanager
-def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
+def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
@@ -1351,7 +1297,7 @@ def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
         namespace=namespace,
         storage_class=storage_class,
         source="http",
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN10_WSL2_IMG),
+        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=client,
         api_name="storage",
@@ -1359,11 +1305,13 @@ def create_windows10_vm(dv_name, namespace, client, vm_name, storage_class):
         cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
-    with VirtualMachineForTestsFromTemplate(
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
         name=vm_name,
         namespace=namespace,
         client=client,
-        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)
@@ -1377,7 +1325,7 @@ def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
     return {
         "name": vm.name,
         "namespace": vm.namespace,
-        "status": vm.instance.status.printableStatus.lower(),
+        "status": vm.printable_status.lower(),
     }
 
 

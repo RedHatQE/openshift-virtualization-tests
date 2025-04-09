@@ -19,7 +19,6 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
-from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -208,18 +207,13 @@ class TestVMIMetrics:
         )
 
     @pytest.mark.polarion("CNV-11860")
+    @pytest.mark.jira("CNV-59552")
     def test_vmi_used_memory_bytes_windows(
         self,
         prometheus,
         windows_vm_for_test,
         updated_dommemstat_windows,
     ):
-        if is_jira_open(jira_id="CNV-59552"):
-            pytest.xfail(
-                reason="Expected failure, "
-                "there is a bug (CNV-59552) with this metric on windows vms because of virsh dommemstat command."
-            )
-        """This test will check the used memory of VMI with given metrics output in bytes."""
         assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
 
     @pytest.mark.polarion("CNV-11861")
