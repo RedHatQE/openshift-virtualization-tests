@@ -1266,7 +1266,6 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
-
 @contextmanager
 def create_windows10_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
     artifactory_secret = get_artifactory_secret(namespace=namespace)
@@ -1321,6 +1320,7 @@ def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, 
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
     }
 
+
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -1337,4 +1337,3 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
     return {}
-
