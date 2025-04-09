@@ -22,6 +22,7 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     expected_metric_labels_and_values,
+    get_metric_labels_non_empty_value,
     timestamp_to_seconds,
     validate_metric_value_within_range,
     validate_vnic_info,
@@ -484,14 +485,15 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         vm_for_snapshot_for_metrics_test,
         restored_vm_using_snapshot,
         snapshot_labels_for_testing,
-        kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value,
     ):
         expected_metric_labels_and_values(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-                vm_name=vm_for_snapshot_for_metrics_test.name
-            ),
             expected_labels_and_values=snapshot_labels_for_testing,
+            values_from_prometheus=get_metric_labels_non_empty_value(
+                prometheus=prometheus,
+                metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
+                    vm_name=vm_for_snapshot_for_metrics_test.name
+                ),
+            ),
         )
 
 
