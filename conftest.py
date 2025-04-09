@@ -122,6 +122,12 @@ def pytest_addoption(parser):
         default="osbs",
         choices=["production", "fbc", "osbs"],
     )
+    install_upgrade_group.addoption(
+        "--cnv-channel",
+        help="Subscription channel for CNV index image",
+        default="stable",
+        choices=["stable", "candidate"],
+    )
 
     # OCP upgrade options
     install_upgrade_group.addoption(
@@ -287,6 +293,7 @@ def pytest_cmdline_main(config):
     # tests.upgrade_params.UPGRADE_TEST_DEPENDENCY_NODE_ID which is needed for pytest dependency marker
     py_config["upgraded_product"] = upgrade_option or config.getoption("--upgrade_custom") or "cnv"
     py_config["cnv_source"] = config.getoption("--cnv-source")
+    py_config["cnv_subscription_channel"] = config.getoption("--cnv-channel")
 
     # [rhel|fedora|windows|centos]-os-matrix and latest-[rhel|fedora|windows|centos] are mutually exclusive
     rhel_os_violation = config.getoption("rhel_os_matrix") and config.getoption("latest_rhel")
