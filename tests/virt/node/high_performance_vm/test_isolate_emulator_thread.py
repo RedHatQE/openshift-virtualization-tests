@@ -76,6 +76,7 @@ class TestIsolateEmulatorThread:
 
     @pytest.mark.dependency(name=ISOLATE_EMULATOR_THREAD)
     @pytest.mark.polarion("CNV-6744")
+    @pytest.mark.arm
     def test_isolate_emulator_thread(
         self,
         isolated_emulatorthread_vm,
