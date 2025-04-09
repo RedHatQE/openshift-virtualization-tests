@@ -68,6 +68,7 @@ def registered_rhsm(rhsm_vm):
 # which can't access Redhat internal service, like "subscription.rhsm.stage.redhat.com"
 # and we don't have any external alternative for it.
 @pytest.mark.redhat_internal_dependency
+@pytest.mark.arm
 def test_rhel_yum_update(
     unprivileged_client,
     namespace,

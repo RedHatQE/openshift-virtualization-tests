@@ -36,6 +36,7 @@ def iothreads_policy_vm(
         yield iothreads_policy_vm
 
 
+@pytest.mark.arm
 @pytest.mark.gating
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_class,",
