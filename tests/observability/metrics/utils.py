@@ -3,6 +3,7 @@ import re
 import shlex
 import urllib
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional, Union
 
@@ -14,6 +15,8 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -33,6 +36,7 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
+    OS_FLAVOR_WINDOWS,
     RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
@@ -49,12 +53,20 @@ from utilities.constants import (
     U1_SMALL,
     USED,
     VIRT_HANDLER,
+    Images,
 )
-from utilities.infra import ExecCommandOnPod, get_pod_by_name_prefix
+from utilities.infra import (
+    ExecCommandOnPod,
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
+    get_pod_by_name_prefix,
+)
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1271,3 +1283,36 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
     return {}
+
+
+@contextmanager
+def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
+    artifactory_secret = get_artifactory_secret(namespace=namespace)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+    dv = DataVolume(
+        name=dv_name,
+        namespace=namespace,
+        storage_class=storage_class,
+        source="http",
+        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=client,
+        api_name="storage",
+        secret=artifactory_secret,
+        cert_configmap=artifactory_config_map.name,
+    )
+    dv.to_dict()
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+    cleanup_artifactory_secret_and_config_map(
+        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+    )
