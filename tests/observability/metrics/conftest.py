@@ -37,7 +37,7 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
-    create_windows10_vm,
+    create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -86,7 +86,6 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
-    StorageClassNames,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
@@ -1115,11 +1114,11 @@ def allocatable_nodes(nodes):
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test(namespace, unprivileged_client):
-    with create_windows10_vm(
+    with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="win-vm-for-test",
-        storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
+        storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm

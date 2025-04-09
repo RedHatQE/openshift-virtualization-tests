@@ -15,8 +15,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
 from tests.storage.snapshots.utils import assert_directory_existence
-from tests.storage.utils import set_permissions
-from tests.utils import create_windows19_vm
+from tests.storage.utils import create_windows19_vm, set_permissions
 from utilities.constants import TIMEOUT_10MIN, UNPRIVILEGED_USER
 
 LOGGER = logging.getLogger(__name__)
