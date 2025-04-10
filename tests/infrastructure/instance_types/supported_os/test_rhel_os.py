@@ -30,6 +30,7 @@ TESTS_CLASS_MIGRATION = "TestVMMigrationAndState"
 TESTS_MIGRATE_VM = f"{TESTS_CLASS_MIGRATION}::test_migrate_vm"
 
 
+@pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
 class TestVMCreationAndValidation:
@@ -143,6 +144,7 @@ class TestVMMigrationAndState:
         )
 
 
+@pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
 @pytest.mark.order(-1)
