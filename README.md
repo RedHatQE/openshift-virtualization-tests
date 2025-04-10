@@ -86,11 +86,15 @@ nameserver 192.168.8.1
 
 ### Architecture support
 
-Default arch is `x86_64`
-You can export the desired arch to use the matching test Images:
+Default arch for the test images is `x86_64`
+
+You can export the desired arch and add the matching class with under the `ArchImages` class:
 ```
-export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=s390x
-export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=arm64
+export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=x86_64
+```
+```
+class ArchImages:
+    class X86_64:
 ```
 
 ### Using custom cluster management binaries

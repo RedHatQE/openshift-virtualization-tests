@@ -111,44 +111,6 @@ class ArchImages:
             QCOW2_IMG = "cirros-qcow2.img"
             DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
 
-    class S390X:
-        class Cirros:
-            pass
-
-        class Rhel:
-            pass
-
-        class Windows:
-            pass
-
-        class Fedora:
-            pass
-
-        class CentOS:
-            pass
-
-        class Cdi:
-            pass
-
-    class ARM64:
-        class Cirros:
-            pass
-
-        class Rhel:
-            pass
-
-        class Windows:
-            pass
-
-        class Fedora:
-            pass
-
-        class CentOS:
-            pass
-
-        class Cdi:
-            pass
-
 
 def get_test_images_arch_class() -> Any:
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
