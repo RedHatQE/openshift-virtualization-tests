@@ -17,11 +17,15 @@ EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{S390X}"
 NET_UTIL_CONTAINER_IMAGE = "quay.io/chandramerla/qe-cnv-tests-net-util-container:centos-stream-9"
 
 # No support for cirros on s390x.  Use Fedora instead
+Images.Cirros.RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
+Images.Cirros.RAW_IMG_GZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.gz"
+Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
+Images.Cirros.QCOW2_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
+Images.Cirros.QCOW2_IMG_GZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.gz"
+Images.Cirros.QCOW2_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.xz"
 Images.Cirros.DIR = Images.Fedora.DIR
 Images.Cirros.DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
 Images.Cirros.DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
-Images.Cirros.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
-Images.Cirros.RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
 utilities.constants.OS_FLAVOR_CIRROS = "fedora"
 
 Images.Cdi.QCOW2_IMG = Images.Fedora.FEDORA41_IMG
