@@ -111,7 +111,11 @@ class NodeNetworkConfigurationPolicy(Nncp):
         return self._desired_state
 
     def clean_up(self) -> bool:
-        self._delete_interfaces()
+        if to_delete_interfaces := self._interfaces_for_deletion():
+            with self._confirm_status_success_on_update():
+                ResourceEditor(
+                    patches={self: {"spec": {"desiredState": {"interfaces": to_delete_interfaces}}}}
+                ).update()
         return super().clean_up()
 
     @retry(
@@ -143,13 +147,11 @@ class NodeNetworkConfigurationPolicy(Nncp):
                 raise NNCPConfigurationFailed(f"{self.name} failed on condition:\n{condition}")
         return {}
 
-    def _delete_interfaces(self) -> None:
-        desired_state = deepcopy(self.desired_state)
-        for iface in desired_state["interfaces"]:
+    def _interfaces_for_deletion(self) -> list[Interface]:
+        to_delete_interfaces = deepcopy(self.desired_state["interfaces"])
+        for iface in to_delete_interfaces:
             iface["state"] = Nncp.Interface.State.ABSENT
-        if desired_state["interfaces"]:
-            with self._confirm_status_success_on_update():
-                ResourceEditor(patches={self: {"spec": {"desiredState": desired_state}}}).update()
+        return to_delete_interfaces
 
     @contextlib.contextmanager
     def _confirm_status_success_on_update(self) -> Iterator[None]:
