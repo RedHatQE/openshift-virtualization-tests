@@ -17,6 +17,16 @@ from ocp_resources.validating_webhook_config import ValidatingWebhookConfigurati
 
 import utilities.network
 from tests.network.constants import EXPECTED_CNAO_COMP_NAMES
+from tests.network.libs.nodenetworkconfigurationpolicy import (
+    STP,
+    Bridge,
+    BridgeOptions,
+    DesiredState,
+    Interface,
+    IPv4,
+    IPv6,
+    NodeNetworkConfigurationPolicy,
+)
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
@@ -149,21 +159,41 @@ def check_components(network_addons_config_scope_session):
 
 @pytest.fixture(scope="module")
 def net_add_op_bridge_device(worker_node1):
-    with utilities.network.network_device(
-        interface_type=LINUX_BRIDGE,
-        nncp_name="test-network-operator",
-        interface_name="net-add-br",
+    desired_state = DesiredState(
+        interfaces=[
+            Interface(
+                name="net-add-br",
+                state=NodeNetworkConfigurationPolicy.Interface.State.UP,
+                type=LINUX_BRIDGE,
+                ipv4=IPv4(enabled=False),
+                ipv6=IPv6(enabled=False),
+                bridge=Bridge(BridgeOptions(STP(enabled=False))),
+            )
+        ]
+    )
+    with NodeNetworkConfigurationPolicy(
+        name="test-network-operator",
+        desired_state=desired_state,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-    ) as br_dev:
-        yield br_dev
+    ) as nncp:
+        nncp.wait_for_status_success()
+        yield nncp
 
 
 @pytest.fixture(scope="module")
 def net_add_op_br1test_nad(namespace, net_add_op_bridge_device):
+    bridge_name = next(
+        (
+            interface.name
+            for interface in net_add_op_bridge_device.desired_state_spec.interfaces
+            if interface.type == LINUX_BRIDGE
+        ),
+    )
+
     with utilities.network.network_nad(
         nad_type=LINUX_BRIDGE,
-        nad_name=net_add_op_bridge_device.bridge_name,
-        interface_name=net_add_op_bridge_device.bridge_name,
+        nad_name=bridge_name,
+        interface_name=bridge_name,
         namespace=namespace,
     ) as nad:
         yield nad
