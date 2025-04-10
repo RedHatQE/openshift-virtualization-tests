@@ -1,12 +1,18 @@
 import logging
 from collections import Counter
+from contextlib import contextmanager
 
 import bitmath
+from ocp_resources.deployment import Deployment
+from ocp_resources.kube_descheduler import KubeDescheduler
 from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.descheduler.constants import (
+    DESCHEDULER_DEPLOYMENT_NAME,
+    DESCHEDULER_NAMESPACE_NAME,
+    DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
     RUNNING_PING_PROCESS_NAME_IN_VM,
 )
@@ -14,6 +20,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
     TIMEOUT_15MIN,
     TIMEOUT_20SEC,
 )
@@ -47,7 +54,7 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
         client,
         cpu_model,
         body,
-        cpu_requests=None,
+        cpu_cores,
         descheduler_eviction=True,
         node_selector_labels=None,
         vm_affinity=None,
@@ -59,7 +66,7 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
             memory_guest=memory_guest,
             cpu_model=cpu_model,
             body=body,
-            cpu_requests=cpu_requests,
+            cpu_cores=cpu_cores,
             node_selector_labels=node_selector_labels,
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             vm_affinity=vm_affinity,
@@ -253,7 +260,7 @@ def deploy_vms(
             name=vm_name,
             namespace=namespace_name,
             client=client,
-            cpu_requests=deployment_size["cpu"],
+            cpu_cores=deployment_size["cpu"],
             memory_guest=deployment_size["memory"].bytes,
             cpu_model=cpu_model,
             descheduler_eviction=descheduler_eviction,
@@ -304,3 +311,39 @@ def verify_at_least_one_vm_migrated(vms, node_before):
     for sample in samples:
         if not all(node_before.name == node for node in sample):
             return sample
+
+
+@contextmanager
+def create_kube_descheduler(profiles, profile_customizations):
+    with KubeDescheduler(
+        name="cluster",
+        namespace=DESCHEDULER_NAMESPACE_NAME,
+        profiles=profiles,
+        descheduling_interval_seconds=DESCHEDULING_INTERVAL_120SEC,
+        mode="Automatic",
+        management_state="Managed",
+        profile_customizations=profile_customizations,
+    ) as kd:
+        deployment = Deployment(
+            name=DESCHEDULER_DEPLOYMENT_NAME,
+            namespace=DESCHEDULER_NAMESPACE_NAME,
+        )
+        deployment.wait()
+        deployment.wait_for_replicas()
+        yield kd
+
+
+def wait_for_overutilized_soft_taint(node, taint_expected):
+    taint_key = f"{DESCHEDULER_SOFT_TAINT_KEY}/overutilized"
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_10MIN,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: any(taint_key in taint.values() for taint in node.instance.spec.taints),
+    )
+    try:
+        for sample in sampler:
+            if sample == taint_expected:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error("Soft taint was not added/removed in time")
+        raise

@@ -431,15 +431,6 @@ def eus_applied_all_icsp(
     )
 
 
-@pytest.fixture(scope="session")
-def active_machine_config_pools(machine_config_pools):
-    return [
-        machine_config_pool
-        for machine_config_pool in machine_config_pools
-        if machine_config_pool.instance.status.machineCount > 0
-    ]
-
-
 @pytest.fixture()
 def machine_config_pools_conditions(active_machine_config_pools):
     return get_machine_config_pools_conditions(machine_config_pools=active_machine_config_pools)
