@@ -6,9 +6,17 @@ from ocp_resources.template import Template
 
 from utilities.constants import (
     ARM_64,
+    DV_SIZE_STR,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FLAVOR_STR,
+    IMAGE_NAME_STR,
+    IMAGE_PATH_STR,
+    LATEST_RELEASE_STR,
+    OS_STR,
+    OS_VERSION_STR,
     PREFERENCE_STR,
+    TEMPLATE_LABELS_STR,
+    WORKLOAD_STR,
     Images,
 )
 from utilities.infra import get_latest_os_dict_list
@@ -18,15 +26,6 @@ global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", 
 
 Images.Cirros.RAW_IMG_XZ = "cirros-0.4.0-aarch64-disk.raw.xz"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{ARM_64}"
-
-IMAGE_NAME_STR = "image_name"
-IMAGE_PATH_STR = "image_path"
-DV_SIZE_STR = "dv_size"
-TEMPLATE_LABELS_STR = "template_labels"
-OS_STR = "os"
-WORKLOAD_STR = "workload"
-LATEST_RELEASE_STR = "latest_released"
-OS_VERSION_STR = "os_version"
 
 rhel_os_matrix = [
     {

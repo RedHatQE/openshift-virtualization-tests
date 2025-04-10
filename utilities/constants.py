@@ -804,3 +804,13 @@ HPP_CAPABILITIES = {
     "online_resize": False,
     "wffc": True,
 }
+
+# Common templates matrix constants
+IMAGE_NAME_STR = "image_name"
+IMAGE_PATH_STR = "image_path"
+DV_SIZE_STR = "dv_size"
+TEMPLATE_LABELS_STR = "template_labels"
+OS_STR = "os"
+WORKLOAD_STR = "workload"
+LATEST_RELEASE_STR = "latest_released"
+OS_VERSION_STR = "os_version"
