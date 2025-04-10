@@ -85,13 +85,15 @@ nameserver 192.168.8.1
 ```
 
 ### Architecture support
-
 Default arch for the test images is `x86_64`
+Supported archs: `x86_64`
 
-You can export the desired arch (`x86_64`, `arm64`, `s390x`) and add the matching class under the `ArchImages` class:
+Export the desired arch:
 ```
-export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=x86_64
+export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=<desired-architecture>
 ```
+
+Images for different architectures are managed under [utilities/constants.py](utilities/constants.py) - `ArchImages`
 
 ### Using custom cluster management binaries
 
