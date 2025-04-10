@@ -84,6 +84,15 @@ following like to your system `/etc/resolv.conf`:
 nameserver 192.168.8.1
 ```
 
+### Architecture support
+
+Default arch is `x86_64`
+You can export the desired arch to use the matching test Images:
+```
+export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=s390x
+export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=arm64
+```
+
 ### Using custom cluster management binaries
 
 If you need to use custom or system `kubectl`, `virtctl` or `oc` instead of wrappers from `local-cluster`,
