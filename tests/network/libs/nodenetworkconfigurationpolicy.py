@@ -1,10 +1,13 @@
+import contextlib
+from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Any
 
 from ocp_resources.exceptions import NNCPConfigurationFailed
 from ocp_resources.node_network_configuration_policy_latest import NodeNetworkConfigurationPolicy as Nncp
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import retry
 
 WAIT_FOR_STATUS_TIMEOUT_SEC = 90
@@ -109,15 +112,19 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
     def clean_up(self) -> bool:
         self._delete_interfaces()
-        self.wait_for_status_success()
         return super().clean_up()
 
     @retry(
         wait_timeout=WAIT_FOR_STATUS_TIMEOUT_SEC,
         sleep=WAIT_FOR_STATUS_INTERVAL_SEC,
-        exceptions_dict={AssertionError: []},  # Using a no-op exception so any other error will be raised
+        exceptions_dict={},  # Using a no-op exception so any other error will be raised
     )
-    def wait_for_status_success(self) -> dict[str, Any]:
+    def wait_for_status_success(self, last_success_timestamp: str = "") -> dict[str, Any]:
+        date_format = "%Y-%m-%dT%H:%M:%SZ"
+        initial_transition_datetime = (
+            datetime.strptime(last_success_timestamp, date_format) if last_success_timestamp else None
+        )
+
         conditions = (
             condition
             for condition in self.instance.status.conditions
@@ -126,8 +133,12 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
         for condition in conditions:
             if condition["type"] == Nncp.Condition.AVAILABLE:
-                self.logger.info(f"{self.kind}/{self.name} configured successfully")
-                return condition
+                if (
+                    not initial_transition_datetime
+                    or datetime.strptime(condition["lastTransitionTime"], date_format) > initial_transition_datetime
+                ):
+                    self.logger.info(f"{self.kind}/{self.name} configured successfully")
+                    return condition
             if condition["type"] == Nncp.Condition.DEGRADED:
                 raise NNCPConfigurationFailed(f"{self.name} failed on condition:\n{condition}")
         return {}
@@ -137,4 +148,35 @@ class NodeNetworkConfigurationPolicy(Nncp):
         for iface in desired_state["interfaces"]:
             iface["state"] = Nncp.Interface.State.ABSENT
         if desired_state["interfaces"]:
-            ResourceEditor(patches={self: {"spec": {"desiredState": desired_state}}}).update()
+            with self._confirm_status_success_on_update():
+                ResourceEditor(patches={self: {"spec": {"desiredState": desired_state}}}).update()
+
+    @contextlib.contextmanager
+    def _confirm_status_success_on_update(self) -> Iterator[None]:
+        # The current time-stamp of the NNCP's available status will change after the NNCP is updated, therefore
+        # it must be fetched and stored before the update, and compared with the new time-stamp after.
+        initial_success_status_time = self._get_last_successful_transition_time()
+
+        yield
+
+        # In case the update has been executed before the NNCP reached a success status,
+        # initial_success_status_time is empty and the wait is treated without considering the timestamp.
+        self.wait_for_status_success(last_success_timestamp=initial_success_status_time)
+
+    def _get_last_successful_transition_time(self) -> str:
+        for condition in self.instance.status.conditions:
+            if condition["type"] == Conditions.Type.AVAILABLE and condition["status"] == Resource.Condition.Status.TRUE:
+                return condition["lastTransitionTime"]
+        return ""
+
+
+class Conditions:
+    class Type:
+        DEGRADED = "Degraded"
+        AVAILABLE = "Available"
+
+    class Reason:
+        CONFIGURATION_PROGRESSING = "ConfigurationProgressing"
+        SUCCESSFULLY_CONFIGURED = "SuccessfullyConfigured"
+        FAILED_TO_CONFIGURE = "FailedToConfigure"
+        NO_MATCHING_NODE = "NoMatchingNode"
