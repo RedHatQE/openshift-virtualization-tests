@@ -114,9 +114,9 @@ class ArchImages:
 
 def get_test_images_arch_class() -> Any:
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
-    if arch not in ("x86_64", "arm64", "s390x"):
+    if arch != "x86_64":
         raise ValueError(f"{arch} architecture in not supported")
-    return eval(f"{ArchImages.__name__}.{arch.title()}")
+    return getattr(ArchImages, arch.title())
 
 
 # Choose the Image class according to the architecture. Default: x86_64
