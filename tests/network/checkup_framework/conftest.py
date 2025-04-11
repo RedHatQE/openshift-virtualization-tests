@@ -5,6 +5,7 @@ import re
 
 import pytest
 import requests
+from ocp_resources.config_map import ConfigMap
 from ocp_resources.resource import Resource
 from ocp_resources.role_binding import RoleBinding
 from packaging.version import Version
@@ -27,6 +28,7 @@ from tests.network.checkup_framework.utils import (
     checkup_role_binding,
     create_checkup_job,
     create_latency_configmap,
+    dpdk_checkup_config,
     generate_checkup_resources_role,
     generate_checkup_service_account,
     get_job,
@@ -827,16 +829,18 @@ def sriov_network_for_dpdk(sriov_node_policy, sriov_namespace, dpdk_checkup_name
 
 @pytest.fixture()
 def dpdk_configmap_same_node(dpdk_checkup_namespace, sriov_network_for_dpdk, worker_node1, traffic_gen_image):
-    with create_latency_configmap(
-        namespace_name=dpdk_checkup_namespace.name,
-        network_attachment_definition_name=sriov_network_for_dpdk.name,
-        configmap_name=DEFAULT_DPDK_CONFIGMAP_NAME,
-        traffic_pps=DPDK_NORMAL_TRAFFIC,
-        dpdk_gen_target_node=worker_node1.name,
-        dpdk_test_target_node=worker_node1.name,
-        dpdk_vmgen_container_diskimage=traffic_gen_image,
-        dpdk_vmtest_container_diskimage=VM_UNDER_TEST,
-        timeout=f"{DPDK_15_TIMEOUT}m",
+    with ConfigMap(
+        namespace=dpdk_checkup_namespace.name,
+        name=DEFAULT_DPDK_CONFIGMAP_NAME,
+        data=dpdk_checkup_config(
+            network_attachment_definition_name=sriov_network_for_dpdk.name,
+            traffic_pps=DPDK_NORMAL_TRAFFIC,
+            traffic_gen_target_node=worker_node1.name,
+            vm_under_test_target_node=worker_node1.name,
+            traffic_gen_container_diskimage=traffic_gen_image,
+            vm_under_test_container_diskimage=VM_UNDER_TEST,
+            timeout=f"{DPDK_15_TIMEOUT}m",
+        ),
     ) as configmap:
         yield configmap
 
@@ -845,16 +849,18 @@ def dpdk_configmap_same_node(dpdk_checkup_namespace, sriov_network_for_dpdk, wor
 def dpdk_high_traffic_configmap_same_node(
     dpdk_checkup_namespace, sriov_network_for_dpdk, worker_node1, traffic_gen_image
 ):
-    with create_latency_configmap(
-        namespace_name=dpdk_checkup_namespace.name,
-        network_attachment_definition_name=sriov_network_for_dpdk.name,
-        configmap_name=DEFAULT_DPDK_CONFIGMAP_NAME,
-        traffic_pps=DPDK_HIGH_TRAFFIC,
-        dpdk_gen_target_node=worker_node1.name,
-        dpdk_test_target_node=worker_node1.name,
-        dpdk_vmgen_container_diskimage=traffic_gen_image,
-        dpdk_vmtest_container_diskimage=VM_UNDER_TEST,
-        timeout=f"{DPDK_15_TIMEOUT}m",
+    with ConfigMap(
+        namespace=dpdk_checkup_namespace.name,
+        name=DEFAULT_DPDK_CONFIGMAP_NAME,
+        data=dpdk_checkup_config(
+            network_attachment_definition_name=sriov_network_for_dpdk.name,
+            traffic_pps=DPDK_HIGH_TRAFFIC,
+            traffic_gen_target_node=worker_node1.name,
+            vm_under_test_target_node=worker_node1.name,
+            traffic_gen_container_diskimage=traffic_gen_image,
+            vm_under_test_container_diskimage=VM_UNDER_TEST,
+            timeout=f"{DPDK_15_TIMEOUT}m",
+        ),
     ) as configmap:
         yield configmap
 
@@ -863,16 +869,18 @@ def dpdk_high_traffic_configmap_same_node(
 def dpdk_high_traffic_configmap_different_node(
     dpdk_checkup_namespace, sriov_network_for_dpdk, worker_node1, worker_node2, traffic_gen_image
 ):
-    with create_latency_configmap(
-        namespace_name=dpdk_checkup_namespace.name,
-        network_attachment_definition_name=sriov_network_for_dpdk.name,
-        configmap_name=DEFAULT_DPDK_CONFIGMAP_NAME,
-        traffic_pps=DPDK_HIGH_TRAFFIC,
-        dpdk_gen_target_node=worker_node1.name,
-        dpdk_test_target_node=worker_node2.name,
-        dpdk_vmgen_container_diskimage=traffic_gen_image,
-        dpdk_vmtest_container_diskimage=VM_UNDER_TEST,
-        timeout=f"{DPDK_15_TIMEOUT}m",
+    with ConfigMap(
+        namespace=dpdk_checkup_namespace.name,
+        name=DEFAULT_DPDK_CONFIGMAP_NAME,
+        data=dpdk_checkup_config(
+            network_attachment_definition_name=sriov_network_for_dpdk.name,
+            traffic_pps=DPDK_HIGH_TRAFFIC,
+            traffic_gen_target_node=worker_node1.name,
+            vm_under_test_target_node=worker_node2.name,
+            traffic_gen_container_diskimage=traffic_gen_image,
+            vm_under_test_container_diskimage=VM_UNDER_TEST,
+            timeout=f"{DPDK_15_TIMEOUT}m",
+        ),
     ) as configmap:
         yield configmap
 
