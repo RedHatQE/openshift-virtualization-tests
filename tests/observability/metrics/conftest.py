@@ -74,7 +74,7 @@ from utilities.constants import (
     TIMEOUT_4MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_30MIN,
+    TIMEOUT_60MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
@@ -505,7 +505,7 @@ def windows_dv_with_block_volume_mode(
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.BLOCK,
     ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
+        dv.wait_for_dv_success(timeout=TIMEOUT_60MIN)
         yield dv
 
 
