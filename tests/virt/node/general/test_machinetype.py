@@ -108,6 +108,7 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
     migrate_vm_and_verify(vm=vm)
 
 
+@pytest.mark.arm
 @pytest.mark.parametrize(
     "vm",
     [
@@ -241,6 +242,7 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
             pytest.fail("VM created with invalid machine type.")
 
 
+@pytest.mark.arm
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5658")
 def test_major_release_machine_type(machine_type_from_kubevirt_config):
@@ -260,6 +262,7 @@ def test_machine_type_as_rhel_9_4(machine_type_from_kubevirt_config):
     )
 
 
+@pytest.mark.arm
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_function, vm_from_template_scope_function, expected_machine_type",
     [
