@@ -17,6 +17,7 @@ Images.Fedora.FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
 Images.Rhel.RHEL9_5_IMG = "rhel-95-s390x.qcow2"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{S390X}"
 
+
 # No support for cirros on s390x.  Use Fedora instead
 class Cirros:
     RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
@@ -29,13 +30,18 @@ class Cirros:
     DIR = Images.Fedora.DIR
     DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
     DEFAULT_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
+
+
 Images.Cirros = Cirros
 utilities.constants.OS_FLAVOR_CIRROS = "fedora"
+
 
 class Cdi:
     QCOW2_IMG = Images.Fedora.FEDORA41_IMG
     DIR = Images.Fedora.DIR
     DEFAULT_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
+
+
 Images.Cdi = Cdi
 
 for _dir in dir():
