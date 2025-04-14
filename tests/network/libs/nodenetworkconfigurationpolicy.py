@@ -110,13 +110,13 @@ class NodeNetworkConfigurationPolicy(Nncp):
     def desired_state_spec(self) -> DesiredState:
         return self._desired_state
 
-    def clean_up(self) -> bool:
+    def clean_up(self, wait: bool = True, timeout: int | None = None) -> bool:
         if to_delete_interfaces := self._interfaces_for_deletion():
             with self._confirm_status_success_on_update():
                 ResourceEditor(
                     patches={self: {"spec": {"desiredState": {"interfaces": to_delete_interfaces}}}}
                 ).update()
-        return super().clean_up()
+        return super().clean_up(wait=wait, timeout=timeout)
 
     @retry(
         wait_timeout=WAIT_FOR_STATUS_TIMEOUT_SEC,
@@ -132,18 +132,18 @@ class NodeNetworkConfigurationPolicy(Nncp):
         conditions = (
             condition
             for condition in self.instance.status.conditions
-            if condition["status"] == Nncp.Condition.Status.TRUE
+            if condition["status"] == Resource.Condition.Status.TRUE
         )
 
         for condition in conditions:
-            if condition["type"] == Nncp.Condition.AVAILABLE:
+            if condition["type"] == Resource.Condition.AVAILABLE:
                 if (
                     not initial_transition_datetime
                     or datetime.strptime(condition["lastTransitionTime"], date_format) > initial_transition_datetime
                 ):
                     self.logger.info(f"{self.kind}/{self.name} configured successfully")
                     return condition
-            if condition["type"] == Nncp.Condition.DEGRADED:
+            if condition["type"] == Resource.Condition.DEGRADED:
                 raise NNCPConfigurationFailed(f"{self.name} failed on condition:\n{condition}")
         return {}
 
@@ -167,18 +167,9 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
     def _get_last_successful_transition_time(self) -> str:
         for condition in self.instance.status.conditions:
-            if condition["type"] == Conditions.Type.AVAILABLE and condition["status"] == Resource.Condition.Status.TRUE:
+            if (
+                condition["type"] == Resource.Condition.AVAILABLE
+                and condition["status"] == Resource.Condition.Status.TRUE
+            ):
                 return condition["lastTransitionTime"]
         return ""
-
-
-class Conditions:
-    class Type:
-        DEGRADED = "Degraded"
-        AVAILABLE = "Available"
-
-    class Reason:
-        CONFIGURATION_PROGRESSING = "ConfigurationProgressing"
-        SUCCESSFULLY_CONFIGURED = "SuccessfullyConfigured"
-        FAILED_TO_CONFIGURE = "FailedToConfigure"
-        NO_MATCHING_NODE = "NoMatchingNode"
