@@ -16,7 +16,6 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_SERVER_KEY,
 )
 
-DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 CERTC_DEFAULT_48H = "48h0m0s"
 CERTC_DEFAULT_24H = "24h0m0s"
 CERTC_DEFAULT_12H = "12h0m0s"
