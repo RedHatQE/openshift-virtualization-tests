@@ -27,7 +27,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -36,6 +35,7 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -62,6 +62,7 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     NODE_STR,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
@@ -1088,3 +1089,15 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test(namespace, admin_client):
+    with create_windows11_wsl2_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=admin_client,
+        vm_name="win-vm-for-test",
+        storage_class=py_config["default_storage_class"],
+    ) as vm:
+        yield vm
