@@ -5,7 +5,7 @@ import urllib
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Union
 
 import bitmath
 import pytest
@@ -1289,7 +1289,9 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
 
 
 @contextmanager
-def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
+def create_windows11_wsl2_vm(
+    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str
+) -> Generator:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
@@ -1321,7 +1323,7 @@ def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class)
     )
 
 
-def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
+def get_vm_compariosn_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
     return {
         "name": vm.name,
         "namespace": vm.namespace,
@@ -1329,7 +1331,7 @@ def info_to_compare_from_vm(vm: VirtualMachineForTests) -> dict[str, str]:
     }
 
 
-def metric_vmi_guest_os_kernel_release_info_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
+def get_vmi_guest_os_kernel_release_info_metric_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
     guest_os_kernel_release = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
     )[0].strip()

@@ -44,12 +44,12 @@ from tests.observability.metrics.utils import (
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
     get_resource_object,
+    get_vm_compariosn_info_dict,
     get_vmi_dommemstat_from_vm,
+    get_vmi_guest_os_kernel_release_info_metric_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
-    info_to_compare_from_vm,
     metric_result_output_dict_by_mountpoint,
-    metric_vmi_guest_os_kernel_release_info_from_vm,
     pause_unpause_dommemstat,
     restart_cdi_worker_pod,
     run_node_command,
@@ -1111,22 +1111,22 @@ def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
 
 @pytest.fixture()
 def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
-    return metric_vmi_guest_os_kernel_release_info_from_vm(vm=single_metric_vm)
+    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=single_metric_vm)
 
 
 @pytest.fixture()
 def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
-    return metric_vmi_guest_os_kernel_release_info_from_vm(vm=windows_vm_for_test, windows=True)
+    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=windows_vm_for_test, windows=True)
 
 
 @pytest.fixture()
-def vm_info_to_compare(single_metric_vm):
-    return info_to_compare_from_vm(vm=single_metric_vm)
+def linux_vm_info_to_compare(single_metric_vm):
+    return get_vm_compariosn_info_dict(vm=single_metric_vm)
 
 
 @pytest.fixture()
-def vm_info_to_compare_windows(windows_vm_for_test):
-    return info_to_compare_from_vm(vm=windows_vm_for_test)
+def windows_vm_info_to_compare(windows_vm_for_test):
+    return get_vm_compariosn_info_dict(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")

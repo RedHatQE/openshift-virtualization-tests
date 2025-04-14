@@ -143,9 +143,7 @@ def test_cnv_installation_with_hco_cr_metrics(
     )
 
 
-class TestVMIMetrics:
-    """Fedora vms"""
-
+class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-8262")
     def test_vmi_domain_total_memory_bytes(
         self,
@@ -179,16 +177,16 @@ class TestVMIMetrics:
         )
 
     @pytest.mark.polarion("CNV-11862")
-    def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, vm_info_to_compare):
+    def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, linux_vm_info_to_compare):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VM_INFO.format(vm_name=single_metric_vm.name),
             expected_value="1",
-            values_to_compare=vm_info_to_compare,
+            values_to_compare=linux_vm_info_to_compare,
         )
 
-    """Windows vms"""
 
+class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
         self,
@@ -226,12 +224,12 @@ class TestVMIMetrics:
         )
 
     @pytest.mark.polarion("CNV-11863")
-    def test_metric_kubevirt_vm_info_windows(self, prometheus, windows_vm_for_test, vm_info_to_compare_windows):
+    def test_metric_kubevirt_vm_info_windows(self, prometheus, windows_vm_for_test, windows_vm_info_to_compare):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VM_INFO.format(vm_name=windows_vm_for_test.name),
             expected_value="1",
-            values_to_compare=vm_info_to_compare_windows,
+            values_to_compare=windows_vm_info_to_compare,
         )
 
 
