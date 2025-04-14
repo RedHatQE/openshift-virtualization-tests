@@ -12,9 +12,9 @@ from utilities.constants import (
 
 Images.Fedora.FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
 Images.Rhel.RHEL9_5_IMG = "rhel-95-s390x.qcow2"
-Images.Fedora.FEDORA_CONTAINER_IMAGE = "quay.io/chandramerla/qe-cnv-tests-fedora:40-s390x"
+Images.Fedora.FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:41"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{S390X}"
-NET_UTIL_CONTAINER_IMAGE = "quay.io/chandramerla/qe-cnv-tests-net-util-container:centos-stream-9"
+NET_UTIL_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-net-util-container:centos-stream-9"
 
 # No support for cirros on s390x.  Use Fedora instead
 Images.Cirros.RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
