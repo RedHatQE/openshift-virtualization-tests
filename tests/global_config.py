@@ -21,18 +21,25 @@ from utilities.constants import (
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
     DATA_SOURCE_NAME,
+    DV_SIZE_STR,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
+    IMAGE_NAME_STR,
+    IMAGE_PATH_STR,
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
+    LATEST_RELEASE_STR,
     LINUX_BRIDGE,
+    OS_STR,
+    OS_VERSION_STR,
     OVS_BRIDGE,
     PREFERENCE_STR,
     PRODUCTION_CATALOG_SOURCE,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
+    TEMPLATE_LABELS_STR,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
@@ -43,6 +50,7 @@ from utilities.constants import (
     WIN_2K25,
     WIN_10,
     WIN_11,
+    WORKLOAD_STR,
     Images,
     NamespacesNames,
     StorageClassNames,
@@ -186,15 +194,6 @@ data_import_cron_matrix = [
     {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
     {"rhel10-beta": {"instance_type": "u1.medium", "preference": "rhel.10"}},
 ]
-
-IMAGE_NAME_STR = "image_name"
-IMAGE_PATH_STR = "image_path"
-DV_SIZE_STR = "dv_size"
-TEMPLATE_LABELS_STR = "template_labels"
-OS_STR = "os"
-WORKLOAD_STR = "workload"
-LATEST_RELEASE_STR = "latest_released"
-OS_VERSION_STR = "os_version"
 
 rhel_os_matrix = [
     {
