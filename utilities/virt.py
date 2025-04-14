@@ -2217,7 +2217,7 @@ def wait_for_kv_stabilize(admin_client, hco_namespace):
 
 def get_oc_image_info(  # type: ignore[return]
     image: str, pull_secret: str | None = None, architecture: str = LINUX_AMD_64
-) -> dict[str, Any] | Any:
+) -> dict[str, Any]:
     def _get_image_json(cmd: str) -> dict[str, Any]:
         return json.loads(run_command(command=shlex.split(cmd), check=False)[1])
 
@@ -2236,7 +2236,7 @@ def get_oc_image_info(  # type: ignore[return]
             if sample:
                 return sample
     except TimeoutExpiredError:
-        LOGGER.error(f"Failed to parse {base_command}\noutput: {sample}")
+        LOGGER.error(f"Failed to parse {base_command}")
         raise
 
 
