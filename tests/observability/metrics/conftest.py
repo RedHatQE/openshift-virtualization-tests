@@ -36,6 +36,7 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -1088,3 +1089,15 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test(namespace, unprivileged_client):
+    with create_windows11_wsl2_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="win-vm-for-test",
+        storage_class=py_config["default_storage_class"],
+    ) as vm:
+        yield vm
