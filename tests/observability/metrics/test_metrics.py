@@ -168,12 +168,12 @@ class TestVMIMetricsLinuxVms:
         assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
 
     @pytest.mark.polarion("CNV-11400")
-    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, single_metric_vmi_guest_os_kernel_release_info):
+    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
             expected_value="1",
-            values_to_compare=single_metric_vmi_guest_os_kernel_release_info,
+            values_to_compare=vmi_guest_os_kernel_release_info_linux,
         )
 
     @pytest.mark.polarion("CNV-11862")
@@ -200,7 +200,7 @@ class TestVMIMetricsWindowsVms:
             == windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus
         ), (
             f"VM {windows_vm_for_test.name}'s domain memory total {vmi_domain_total_memory_in_bytes_from_windows_vm} "
-            f"is not matching with metrics value "
+            "is not matching with metrics value "
             f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 

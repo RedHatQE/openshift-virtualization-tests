@@ -44,7 +44,7 @@ from tests.observability.metrics.utils import (
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
     get_resource_object,
-    get_vm_compariosn_info_dict,
+    get_vm_comparison_info_dict,
     get_vmi_dommemstat_from_vm,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
@@ -1093,7 +1093,7 @@ def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheu
 def updated_dommemstat_windows(windows_vm_for_test):
     run_ssh_commands(
         host=windows_vm_for_test.ssh_exec,
-        commands=shlex.split("wsl stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s *> output.log &"),
+        commands=shlex.split("wsl nohup bash -c stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"),
     )
     # give the stress-ng command some time to build up load on the vm
     pause_unpause_dommemstat(vm=windows_vm_for_test)
@@ -1110,7 +1110,7 @@ def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
 
 
 @pytest.fixture()
-def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
+def vmi_guest_os_kernel_release_info_linux(single_metric_vm):
     return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=single_metric_vm)
 
 
@@ -1121,12 +1121,12 @@ def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
 
 @pytest.fixture()
 def linux_vm_info_to_compare(single_metric_vm):
-    return get_vm_compariosn_info_dict(vm=single_metric_vm)
+    return get_vm_comparison_info_dict(vm=single_metric_vm)
 
 
 @pytest.fixture()
 def windows_vm_info_to_compare(windows_vm_for_test):
-    return get_vm_compariosn_info_dict(vm=windows_vm_for_test)
+    return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")

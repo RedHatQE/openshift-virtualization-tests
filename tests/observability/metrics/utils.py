@@ -1323,7 +1323,7 @@ def create_windows11_wsl2_vm(
     )
 
 
-def get_vm_compariosn_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
+def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
     return {
         "name": vm.name,
         "namespace": vm.namespace,
@@ -1338,9 +1338,11 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(vm: VirtualMachineForTes
     guest_os_kernel_release_windows = None
     if windows:
         guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-    assert guest_os_kernel_release_windows
+        assert guest_os_kernel_release_windows
     return {
-        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2) if windows else guest_os_kernel_release,
+        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2)
+        if windows and guest_os_kernel_release_windows
+        else guest_os_kernel_release,
         "namespace": vm.namespace,
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
