@@ -53,6 +53,7 @@ class Images:
         RHEL9_3_IMG = "rhel-93.qcow2"
         RHEL9_4_IMG = "rhel-94.qcow2"
         RHEL9_5_IMG = "rhel-95.qcow2"
+        RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
         RHEL9_6_IMG = "rhel-96.qcow2"
         RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
         RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
@@ -803,3 +804,13 @@ HPP_CAPABILITIES = {
     "online_resize": False,
     "wffc": True,
 }
+
+# Common templates matrix constants
+IMAGE_NAME_STR = "image_name"
+IMAGE_PATH_STR = "image_path"
+DV_SIZE_STR = "dv_size"
+TEMPLATE_LABELS_STR = "template_labels"
+OS_STR = "os"
+WORKLOAD_STR = "workload"
+LATEST_RELEASE_STR = "latest_released"
+OS_VERSION_STR = "os_version"
