@@ -13,6 +13,7 @@ from utilities.constants import (
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 
+
 # No support for cirros on s390x.  Use Fedora instead
 class Cirros(Images.Cirros):
     RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
@@ -26,10 +27,12 @@ class Cirros(Images.Cirros):
     DEFAULT_DV_SIZE = "10Gi"
     DEFAULT_MEMORY_SIZE = "1Gi"
 
+
 class Cdi(Images.Cdi):
     QCOW2_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
     DIR = "cnv-tests/fedora-images"
     DEFAULT_DV_SIZE = "10Gi"
+
 
 Images.Cirros = Cirros
 utilities.constants.OS_FLAVOR_CIRROS = "fedora"
