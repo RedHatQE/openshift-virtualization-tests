@@ -16,7 +16,7 @@ from tests.virt.node.gpu.constants import (
     VGPU_GRID_NAME_STR,
 )
 from tests.virt.node.gpu.utils import wait_for_manager_pods_deployed
-from utilities.constants import TIMEOUT_5SEC, TIMEOUT_20SEC
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod, label_nodes
 
@@ -39,8 +39,8 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
 
     On the Worker Node on which GPU Device exists, Check if the
     mdev_bus needed for vGPU is availble.
-    If it's not available, this means the simple-kmod-driver-container
-    Pod might not be in running state in nvidia-driver namespace.
+    If it's not available, this means the nvidia-vgpu-manager-daemonset
+    Pod might not be in running state in nvidia-gpu-operator namespace.
     """
     desired_bus = "mdev_bus"
     non_existent_mdev_bus_nodes = []
@@ -48,7 +48,7 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
         pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
         try:
             for sample in TimeoutSampler(
-                wait_timeout=TIMEOUT_20SEC,
+                wait_timeout=TIMEOUT_1MIN,
                 sleep=TIMEOUT_5SEC,
                 func=pod_exec.exec,
                 command=f"ls /sys/class | grep {desired_bus} || true",
@@ -61,7 +61,7 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
         pytest.fail(
             reason=(
                 f"On these nodes: {non_existent_mdev_bus_nodes} {desired_bus} is not available."
-                "Ensure that in 'nvidia-driver' namespace simple-kmod-driver-container Pod is Running."
+                "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
             )
         )
 
