@@ -9,6 +9,7 @@ from libs.vm.vm import BaseVirtualMachine
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 RETRY_INTERVAL_SEC: Final[int] = 5
+IP_ADDRESS: Final[str] = "ipAddress"
 
 
 class VMInterfaceSpecNotFoundError(Exception):
@@ -38,7 +39,7 @@ def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceFiel
         return _lookup_iface_status(
             vm=vm,
             iface_name=iface_name,
-            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface["ipAddress"],
+            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS],
         )
     except TimeoutExpiredError:
         raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")

@@ -143,7 +143,7 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
     return False
 
 
-def generate_cloud_init_data(data):
+def generate_cloud_init_data(data: dict[Any, Any]):
     """
     Generate cloud init data from a dictionary.
 
