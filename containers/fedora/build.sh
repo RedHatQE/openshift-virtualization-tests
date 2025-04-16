@@ -24,19 +24,24 @@ if [ -z $IMAGE_BUILD_CMD ]; then
     exit 1
 fi
 
-if [ $CPU_ARCH = "amd64" ]; then
-    CPU_ARCH_CODE="x86_64"
-    VIRT_TYPE="kvm"
-elif [ $CPU_ARCH = "arm64" ]; then
-    CPU_ARCH_CODE="aarch64"
-    VIRT_TYPE="qemu"
-elif [ $CPU_ARCH = "s390x" ]; then
-    CPU_ARCH_CODE="s390x"
-    VIRT_TYPE="qemu"
-else
-    echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
-    exit 1
-fi
+case "$CPU_ARCH" in
+    "amd64")
+        CPU_ARCH_CODE="x86_64"
+        VIRT_TYPE="kvm"
+	;;
+    "arm64")
+        CPU_ARCH_CODE="aarch64"
+        VIRT_TYPE="qemu"
+	;;
+    "s390x")
+        CPU_ARCH_CODE="s390x"
+        VIRT_TYPE="qemu"
+	;;
+    *)
+        echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
+        exit 1
+	;;
+esac
 
 FEDORA_PASSWORD=$(uv run get_fedora_password.py)
 PASSWORD_PLACEHOLDER="CHANGE_ME"
