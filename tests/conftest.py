@@ -85,7 +85,6 @@ from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
-    HOSTPATH_CSI_BASIC,
     HOTFIX_STR,
     INSTANCE_TYPE_STR,
     INTEL,
@@ -169,6 +168,7 @@ from utilities.network import (
     get_cluster_cni_type,
     network_device,
     network_nad,
+    wait_for_node_marked_by_bridge,
     wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
@@ -186,10 +186,10 @@ from utilities.storage import (
     get_storage_class_with_specified_volume_mode,
     get_test_artifact_server_url,
     is_snapshot_supported_by_sc,
-    re_import_boot_sources,
     remove_default_storage_classes,
     sc_is_hpp_with_immediate_volume_binding,
     update_default_sc,
+    verify_boot_sources_reimported,
 )
 from utilities.virt import (
     VirtualMachineForCloning,
@@ -203,6 +203,7 @@ from utilities.virt import (
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
+    start_and_fetch_processid_on_linux_vm,
     target_vm_from_cloning_job,
     vm_instance_from_template,
     wait_for_kv_stabilize,
@@ -712,18 +713,6 @@ def workers_type(workers_utility_pods, installing_cnv):
     LOGGER.info(f"Cluster workers are: {virtual}")
     os.environ[WORKERS_TYPE] = virtual
     return virtual
-
-
-@pytest.fixture(scope="module")
-def skip_if_workers_vms(workers_type):
-    if workers_type == ClusterHosts.Type.VIRTUAL:
-        pytest.skip("Test should run only BM cluster")
-
-
-@pytest.fixture(scope="module")
-def skip_if_workers_bms(workers_type):
-    if workers_type == ClusterHosts.Type.PHYSICAL:
-        pytest.skip("This test(s) cannot run on BM cluster.")
 
 
 @pytest.fixture(scope="session")
@@ -1373,30 +1362,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
 
 
 @pytest.fixture(scope="session")
-def skip_test_if_no_nfs_sc(cluster_storage_classes_names):
-    """
-    Skip test if no NFS storage class available
-    """
-    if StorageClassNames.NFS not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {StorageClassNames.NFS} storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
-        )
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_csi_basic_sc(cluster_storage_classes_names):
-    """
-    Skip test if no CSI basic storage class available
-    """
-    if HOSTPATH_CSI_BASIC not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {HOSTPATH_CSI_BASIC} basic storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
-        )
-
-
-@pytest.fixture(scope="session")
 def hyperconverged_ovs_annotations_enabled_scope_session(
     admin_client,
     hco_namespace,
@@ -1773,13 +1738,14 @@ def bridge_on_one_node(worker_node1):
 
 
 @pytest.fixture(scope="session")
-def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace):
+def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace, worker_node1):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=bridge_on_one_node.bridge_name,
         interface_name=bridge_on_one_node.bridge_name,
         namespace=kmp_enabled_namespace,
     ) as nad:
+        wait_for_node_marked_by_bridge(bridge_nad=nad, node=worker_node1)
         yield nad
 
 
@@ -1974,13 +1940,13 @@ def ipv6_supported_cluster(cluster_service_network):
 
 
 @pytest.fixture()
-def disabled_common_boot_image_import_feature_gate_scope_function(
+def disabled_common_boot_image_import_hco_spec_scope_function(
     admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
     golden_images_data_import_crons_scope_function,
 ):
-    yield from utilities.hco.disable_common_boot_image_import_feature_gate(
+    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
         admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         golden_images_namespace=golden_images_namespace,
@@ -2004,13 +1970,13 @@ def label_schedulable_nodes(schedulable_nodes):
 
 
 @pytest.fixture(scope="class")
-def disabled_common_boot_image_import_feature_gate_scope_class(
+def disabled_common_boot_image_import_hco_spec_scope_class(
     admin_client,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
     golden_images_data_import_crons_scope_class,
 ):
-    yield from utilities.hco.disable_common_boot_image_import_feature_gate(
+    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
         admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_class,
         golden_images_namespace=golden_images_namespace,
@@ -2026,12 +1992,6 @@ def golden_images_data_import_crons_scope_class(admin_client, golden_images_name
 @pytest.fixture(scope="session")
 def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
-
-
-@pytest.fixture(scope="session")
-def skip_if_compact_cluster(compact_cluster):
-    if compact_cluster:
-        pytest.skip("Test cannot run on compact cluster")
 
 
 @pytest.fixture()
@@ -2120,12 +2080,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
     if os.path.isfile(vm_ssh_key_file):
         os.unlink(vm_ssh_key_file)
     del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture(scope="session")
-def skip_on_ocp_upgrade(pytestconfig):
-    if pytestconfig.option.upgrade == "ocp":
-        pytest.skip("This test is not supported for OCP upgrade")
 
 
 @pytest.fixture(scope="session")
@@ -2418,15 +2372,19 @@ def migration_policy_with_bandwidth():
         yield mp
 
 
+@pytest.fixture(scope="class")
+def migration_policy_with_bandwidth_scope_class():
+    with MigrationPolicy(
+        name="migration-policy",
+        bandwidth_per_migration="128Ki",
+        vmi_selector=MIGRATION_POLICY_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
 @pytest.fixture(scope="session")
 def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_gpu_node(gpu_nodes):
-    if not gpu_nodes:
-        pytest.skip("Only run on a Cluster with at-least one GPU Worker node")
 
 
 @pytest.fixture()
@@ -2659,22 +2617,22 @@ def updated_default_storage_class_ocs_virt(
         )
         == "false"
     ):
-        failed_update_boot_sources = False
+        boot_source_imported_successfully = False
         with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
             with update_default_sc(default=True, storage_class=ocs_storage_class):
-                failed_update_boot_sources = re_import_boot_sources(
+                boot_source_imported_successfully = verify_boot_sources_reimported(
                     admin_client=admin_client,
                     namespace=golden_images_namespace.name,
                 )
-                if not failed_update_boot_sources:
+                if boot_source_imported_successfully:
                     yield
 
-        # on teardown, delete the boot sources and wait for the original sources to re-create
-        re_import_boot_sources(
+        # on teardown, wait for the original sources to re-create
+        verify_boot_sources_reimported(
             admin_client=admin_client,
             namespace=golden_images_namespace.name,
         )
-        if failed_update_boot_sources:
+        if not boot_source_imported_successfully:
             exit_pytest_execution(message=f"Failed to set {ocs_storage_class.name} as default storage class")
     else:
         yield
@@ -2939,3 +2897,21 @@ def nmstate_namespace(admin_client):
 @pytest.fixture()
 def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv6_supported_cluster and not ipv4_supported_cluster
+
+
+@pytest.fixture(scope="class")
+def ping_process_in_rhel_os():
+    def _start_ping(vm):
+        return start_and_fetch_processid_on_linux_vm(
+            vm=vm,
+            process_name="ping",
+            args="localhost",
+        )
+
+    return _start_ping
+
+
+@pytest.fixture(scope="module")
+def smbios_from_kubevirt_config(kubevirt_config_scope_module):
+    """Extract SMBIOS default from kubevirt CR."""
+    return kubevirt_config_scope_module["smbios"]

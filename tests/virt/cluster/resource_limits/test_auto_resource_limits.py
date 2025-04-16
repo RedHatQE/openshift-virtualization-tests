@@ -1,38 +1,18 @@
 import bitmath
 import pytest
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource_quota import ResourceQuota
 
 from tests.utils import hotplug_resource_and_wait_hotplug_migration_finish
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
 )
 
-pytestmark = pytest.mark.usefixtures("auto_resource_limits_enabled_on_hco")
-
 RESOURCE_QUOTA_CPU_LIMIT = 5
 RESOURCE_QUOTA_MEMORY_LIMIT = "5Gi"
 
 CPU_SOCKET_HOTPLUG = 3
-
-
-@pytest.fixture(scope="module")
-def auto_resource_limits_enabled_on_hco(hyperconverged_resource_scope_module):
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_module: {
-                "spec": {
-                    "featureGates": {"autoResourceLimits": True},
-                }
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
 
 
 @pytest.fixture()

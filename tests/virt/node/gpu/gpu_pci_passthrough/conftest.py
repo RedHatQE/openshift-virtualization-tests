@@ -7,13 +7,11 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 
 from tests.virt.node.gpu.constants import DEVICE_ID_STR, GPU_DEVICE_NAME_STR, NVIDIA_VFIO_MANAGER_DS
-from tests.virt.node.gpu.utils import (
-    get_nodes_gpu_info,
-    wait_for_manager_pods_deployed,
-)
+from tests.virt.node.gpu.utils import wait_for_manager_pods_deployed
 from utilities.constants import KERNEL_DRIVER
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import label_nodes
+from utilities.virt import get_nodes_gpu_info
 
 
 @pytest.fixture(scope="session")

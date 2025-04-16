@@ -76,7 +76,7 @@ def hotplugged_vm(
 
 
 @pytest.fixture()
-def hotplugged_sockets_memory_guest(request, hotplugged_vm, unprivileged_client):
+def hotplugged_sockets_memory_guest(request, admin_client, hotplugged_vm, unprivileged_client):
     param = request.param
     if param.get("skip_migration"):
         hotplug_spec_vm(vm=hotplugged_vm, sockets=param.get("sockets"), memory_guest=param.get("memory_guest"))
@@ -88,7 +88,7 @@ def hotplugged_sockets_memory_guest(request, hotplugged_vm, unprivileged_client)
             memory_guest=param.get("memory_guest"),
         )
     yield
-    clean_up_migration_jobs(client=unprivileged_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 
 @pytest.fixture()
@@ -118,9 +118,3 @@ def migration_policy_with_allow_auto_converge(namespace):
         allow_auto_converge=True,
     ):
         yield
-
-
-@pytest.fixture(scope="class")
-def skip_windows_if_on_psi_cluster(is_psi_cluster, hotplugged_vm):
-    if is_psi_cluster and "windows" in hotplugged_vm.name:
-        pytest.skip("This test should be skipped on a PSI cluster")

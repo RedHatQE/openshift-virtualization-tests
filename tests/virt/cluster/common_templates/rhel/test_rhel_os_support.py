@@ -7,26 +7,26 @@ import logging
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
-    assert_linux_efi,
-    assert_vm_xml_efi,
     check_machine_type,
     restart_qemu_guest_agent_service,
-    update_vm_efi_spec_and_restart,
     validate_fs_info_virtctl_vs_linux_os,
     validate_os_info_virtctl_vs_linux_os,
     validate_user_info_virtctl_vs_linux_os,
-    validate_virtctl_guest_agent_data_over_time,
     vm_os_version,
 )
-from tests.virt.cluster.utils import check_vm_xml_smbios
-from tests.virt.utils import validate_pause_optional_migrate_unpause_linux_vm
 from utilities import console
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
+    assert_linux_efi,
+    assert_vm_xml_efi,
     check_qemu_guest_agent_installed,
+    check_vm_xml_smbios,
     migrate_vm_and_verify,
     running_vm,
+    update_vm_efi_spec_and_restart,
     validate_libvirt_persistent_domain,
+    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
 
@@ -90,7 +90,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-8712")
     def test_efi_secureboot_enabled_by_default(
         self,
-        skip_if_os_version_below_rhel9,
+        xfail_on_rhel_version_below_rhel9,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         """Test CNV common templates EFI secureboot status"""
@@ -175,7 +175,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-6531")
     def test_virtctl_guest_agent_fs_info(
         self,
-        skip_guest_agent_on_rhel,
+        xfail_rhel_with_old_guest_agent,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         validate_fs_info_virtctl_vs_linux_os(
@@ -235,7 +235,9 @@ class TestCommonTemplatesRhel:
     ):
         validate_pause_optional_migrate_unpause_linux_vm(
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
-            pre_pause_pid=ping_process_in_rhel_os,
+            pre_pause_pid=ping_process_in_rhel_os(
+                golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
+            ),
         )
 
     @pytest.mark.polarion("CNV-6007")
@@ -256,7 +258,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     def test_efi_secureboot_disabled(
         self,
-        skip_if_os_version_below_rhel9,
+        xfail_on_rhel_version_below_rhel9,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
         vm = golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class

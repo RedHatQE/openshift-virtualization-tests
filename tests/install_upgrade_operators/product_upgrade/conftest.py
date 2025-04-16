@@ -153,6 +153,7 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
     update_subscription_source(
         subscription=cnv_subscription_scope_session,
         subscription_source=cnv_registry_source["cnv_subscription_source"],
+        subscription_channel=py_config["cnv_subscription_channel"],
     )
 
 
@@ -313,17 +314,6 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
         before_upgrade_alerts=fired_alerts_before_upgrade,
         base_directory=alert_dir,
     )
-
-
-@pytest.fixture(scope="session")
-def is_eus_upgrade(pytestconfig):
-    return pytestconfig.option.upgrade == EUS
-
-
-@pytest.fixture(scope="session")
-def skip_on_eus_upgrade(is_eus_upgrade):
-    if is_eus_upgrade:
-        pytest.skip("This test is not supported for EUS upgrade")
 
 
 @pytest.fixture(scope="session")

@@ -122,9 +122,9 @@ def perm_destination_service_account(request, destination_namespace, restricted_
 
 
 @pytest.fixture(scope="module")
-def skip_when_no_unprivileged_client_available(unprivileged_client):
+def fail_when_no_unprivileged_client_available(unprivileged_client):
     if not unprivileged_client:
-        pytest.skip("No unprivileged client available, skipping test")
+        pytest.fail("No unprivileged_client available, failing the test")
 
 
 @pytest.fixture()
@@ -282,7 +282,7 @@ def vm_for_restricted_namespace_cloning_test(
         os_flavor=OS_FLAVOR_CIRROS,
         service_accounts=[restricted_namespace_service_account.name],
         client=unprivileged_client,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False)

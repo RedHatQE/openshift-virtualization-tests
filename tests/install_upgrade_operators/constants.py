@@ -1,5 +1,3 @@
-from utilities.constants import ENABLE_COMMON_BOOT_IMAGE_IMPORT
-
 SECTION_TITLE = "section_title"
 FILE_SUFFIX = "file_suffix"
 HCO_CR_CERT_CONFIG_CA_KEY = "ca"
@@ -14,7 +12,6 @@ TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
 # featuregates:
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
-NON_ROOT = "nonRoot"
 DISABLE_MDEV_CONFIGURATION = "disableMDevConfiguration"
 PERSISTENT_RESERVATION = "persistentReservation"
 FG_DISABLED = False
@@ -51,9 +48,7 @@ EXPECTED_CDI_HARDCODED_FEATUREGATES = [
 HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
-    ENABLE_COMMON_BOOT_IMAGE_IMPORT: FG_ENABLED,
     PERSISTENT_RESERVATION: FG_DISABLED,
-    "deployVmConsoleProxy": FG_DISABLED,
     "autoResourceLimits": FG_DISABLED,
     "alignCPUs": FG_DISABLED,
     "enableApplicationAwareQuota": FG_DISABLED,

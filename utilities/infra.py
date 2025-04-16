@@ -45,6 +45,7 @@ from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.exceptions import NodeNotReadyError, NodeUnschedulableError
 from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
@@ -1426,6 +1427,18 @@ def get_nodes_cpu_model(nodes):
 
     :return: Dict of nodes and associated cpu models
     """
+    if is_jira_open(jira_id="CNV-57387"):
+        obsolete_cpu = [
+            "core",
+            "kvm",
+            "n270",
+            "pentium",
+            "qemu",
+            "486",
+        ]
+        EXCLUDED_CPU_MODELS.extend(obsolete_cpu)
+        EXCLUDED_OLD_CPU_MODELS.extend(obsolete_cpu)
+
     nodes_cpu_model = {"common": {}, "modern": {}}
     for node in nodes:
         nodes_cpu_model["common"][node.name] = set()
@@ -1516,7 +1529,7 @@ def get_linux_os_info(ssh_exec):
     }
 
 
-def validate_os_info_vmi_vs_linux_os(vm):
+def validate_os_info_vmi_vs_linux_os(vm: VirtualMachine) -> None:
     vmi_info = utilities.virt.get_guest_os_info(vmi=vm.vmi)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)["os"]
 

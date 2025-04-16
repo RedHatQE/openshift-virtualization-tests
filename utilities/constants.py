@@ -1,4 +1,5 @@
 from kubernetes.dynamic.exceptions import InternalServerError
+from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
 from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
@@ -52,6 +53,8 @@ class Images:
         RHEL9_3_IMG = "rhel-93.qcow2"
         RHEL9_4_IMG = "rhel-94.qcow2"
         RHEL9_5_IMG = "rhel-95.qcow2"
+        RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
+        RHEL9_6_IMG = "rhel-96.qcow2"
         RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
         RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
         RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
@@ -83,16 +86,14 @@ class Images:
         ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
         ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
         DEFAULT_DV_SIZE = "70Gi"
-        WSL2_DV_SIZE = "40Gi"
         DEFAULT_MEMORY_SIZE = "8Gi"
         DEFAULT_MEMORY_SIZE_WSL = "12Gi"
         DEFAULT_CPU_CORES = 4
         DEFAULT_CPU_THREADS = 2
 
     class Fedora:
-        FEDORA40_IMG = "Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
         FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:40"
+        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
         DISK_DEMO = "fedora-cloud-registry-disk-demo"
         DIR = f"{BASE_IMAGES_DIR}/fedora-images"
         DEFAULT_DV_SIZE = "10Gi"
@@ -315,7 +316,7 @@ DV_DISK = "dv-disk"
 # Upgrade tests configuration
 DEPENDENCY_SCOPE_SESSION = "session"
 
-# Feature gates
+# hco spec
 ENABLE_COMMON_BOOT_IMAGE_IMPORT = "enableCommonBootImageImport"
 
 # Common templates constants
@@ -351,6 +352,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -372,6 +374,7 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
@@ -411,6 +414,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -514,6 +518,7 @@ EXPECTED_STATUS_CONDITIONS = {
     CDI: DEFAULT_RESOURCE_CONDITIONS,
     SSP: DEFAULT_RESOURCE_CONDITIONS,
     NetworkAddonsConfig: DEFAULT_RESOURCE_CONDITIONS,
+    AAQ: DEFAULT_RESOURCE_CONDITIONS,
 }
 MACHINE_CONFIG_PODS_TO_COLLECT = [
     "machine-config-operator",
@@ -615,7 +620,8 @@ class StorageClassNames:
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     IO2_CSI = "io2-csi"
-    IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    GPFS = "ibm-spectrum-scale-sample"
+    OCI = "oci-bv"
 
 
 # Namespace constants
@@ -790,9 +796,21 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }
+
+# Common templates matrix constants
+IMAGE_NAME_STR = "image_name"
+IMAGE_PATH_STR = "image_path"
+DV_SIZE_STR = "dv_size"
+TEMPLATE_LABELS_STR = "template_labels"
+OS_STR = "os"
+WORKLOAD_STR = "workload"
+LATEST_RELEASE_STR = "latest_released"
+OS_VERSION_STR = "os_version"

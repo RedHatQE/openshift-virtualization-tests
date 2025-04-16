@@ -22,8 +22,10 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     expected_metric_labels_and_values,
+    get_metric_labels_non_empty_value,
     timestamp_to_seconds,
     validate_metric_value_within_range,
+    validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
@@ -37,15 +39,10 @@ from utilities.constants import (
     USED,
 )
 from utilities.infra import get_node_selector_dict
+from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_vm_metric_value(prometheus, metric, vm):
-    query = f"{metric}{{name='{vm.name}'}}"
-    metric_results = prometheus.query(query=query)["data"]["result"]
-    return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
 def get_last_transition_time(vm):
@@ -61,17 +58,16 @@ def check_vm_last_transition_metric_value(prometheus, metric, vm):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
-        func=get_vm_metric_value,
+        func=get_metrics_value,
         prometheus=prometheus,
-        metric=metric,
-        vm=vm,
+        metrics_name=f"{metric}{{name='{vm.name}'}}",
     )
     sample, last_transition_time = None, None
     try:
         for sample in samples:
             if sample:
                 last_transition_time = get_last_transition_time(vm=vm)
-                if sample == last_transition_time:
+                if int(sample) == last_transition_time:
                     break
     except TimeoutExpiredError:
         LOGGER.error(f"Metric value: {sample} does not match vm's last transition timestamp: {last_transition_time}")
@@ -259,7 +255,7 @@ class TestVMStatusLastTransitionMetrics:
     indirect=True,
 )
 @pytest.mark.usefixtures("vm_for_test")
-class TestVmConsolesMetrics:
+class TestVmConsolesAndVmCreateDateTimestampMetrics:
     @pytest.mark.polarion("CNV-11024")
     def test_kubevirt_console_active_connections(self, prometheus, vm_for_test, connected_vm_console_successfully):
         validate_metrics_value(
@@ -274,6 +270,14 @@ class TestVmConsolesMetrics:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=vm_for_test.name),
             expected_value="1",
+        )
+
+    @pytest.mark.polarion("CNV-11805")
+    def test_metric_kubevirt_vm_create_date_timestamp_seconds(self, prometheus, vm_for_test):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_create_date_timestamp_seconds{{name='{vm_for_test.name}'}}",
+            expected_value=str(timestamp_to_seconds(timestamp=vm_for_test.instance.metadata.creationTimestamp)),
         )
 
 
@@ -481,12 +485,50 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         vm_for_snapshot_for_metrics_test,
         restored_vm_using_snapshot,
         snapshot_labels_for_testing,
-        kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value,
     ):
         expected_metric_labels_and_values(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-                vm_name=vm_for_snapshot_for_metrics_test.name
-            ),
             expected_labels_and_values=snapshot_labels_for_testing,
+            values_from_prometheus=get_metric_labels_non_empty_value(
+                prometheus=prometheus,
+                metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
+                    vm_name=vm_for_snapshot_for_metrics_test.name
+                ),
+            ),
+        )
+
+
+class TestVmDiskAllocatedSize:
+    @pytest.mark.polarion("CNV-11817")
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes(
+        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
+            expected_value=pvc_size_bytes,
+        )
+
+
+class TestVmVnicInfo:
+    @pytest.mark.parametrize(
+        "vnic_info_from_vm_or_vmi, query",
+        [
+            pytest.param(
+                "vm",
+                "kubevirt_vm_vnic_info{{name='{vm_name}'}}",
+                marks=pytest.mark.polarion("CNV-11812"),
+            ),
+            pytest.param(
+                "vmi",
+                "kubevirt_vmi_vnic_info{{name='{vm_name}'}}",
+                marks=pytest.mark.polarion("CNV-11811"),
+            ),
+        ],
+        indirect=["vnic_info_from_vm_or_vmi"],
+    )
+    def test_metric_kubevirt_vm_vnic_info(self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi, query):
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=vnic_info_from_vm_or_vmi,
+            metric_name=query.format(vm_name=running_metric_vm.name),
         )

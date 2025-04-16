@@ -32,7 +32,7 @@ from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
-    pytest.mark.usefixtures("skip_when_no_unprivileged_client_available"),
+    pytest.mark.usefixtures("fail_when_no_unprivileged_client_available"),
     pytest.mark.post_upgrade,
 ]
 
@@ -63,7 +63,7 @@ def create_vm_negative(
             os_flavor=OS_FLAVOR_CIRROS,
             service_accounts=service_accounts,
             client=unprivileged_client,
-            memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+            memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
             data_volume_template=get_dv_template(data_volume_clone_settings=data_volume_clone_settings),
         ):
             return

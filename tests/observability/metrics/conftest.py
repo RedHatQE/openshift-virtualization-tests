@@ -6,6 +6,7 @@ import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -20,6 +21,8 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -27,12 +30,12 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
+    binding_name_and_type_from_vm_or_vmi,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -51,7 +54,6 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
-    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
@@ -62,6 +64,7 @@ from utilities.constants import (
     COUNT_FIVE,
     NODE_STR,
     ONE_CPU_CORE,
+    OS_FLAVOR_FEDORA,
     PVC,
     SOURCE_POD,
     SSP_OPERATOR,
@@ -84,7 +87,13 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
 from utilities.ssp import verify_ssp_pod_is_running
-from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
+from utilities.storage import (
+    create_dv,
+    data_volume_template_with_source_ref_dict,
+    is_snapshot_supported_by_sc,
+    vm_snapshot,
+    wait_for_cdi_worker_pod,
+)
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -672,6 +681,7 @@ def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
         ].strip(),
         "namespace": single_metric_vm.namespace,
         NODE_STR: single_metric_vm.vmi.virt_launcher_pod.node.name,
+        "vmi_pod": single_metric_vm.vmi.virt_launcher_pod.name,
     }
 
 
@@ -1013,16 +1023,6 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
     }
 
 
-@pytest.fixture()
-def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    wait_for_non_empty_metrics_value(
-        prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-            vm_name=vm_for_snapshot_for_metrics_test.name
-        ),
-    )
-
-
 @pytest.fixture(scope="class")
 def template_validator_finalizer(hco_namespace):
     deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name)
@@ -1046,3 +1046,45 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
+
+
+@pytest.fixture()
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="disk-allocation-size-vm",
+        namespace=namespace.name,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
+    return PersistentVolumeClaim(
+        name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
+        namespace=vm_for_vm_disk_allocation_size_test.namespace,
+    ).instance.spec.resources.requests.storage
+
+
+@pytest.fixture()
+def vnic_info_from_vm_or_vmi(request, running_metric_vm):
+    vm_instance = (
+        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
+    )
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
+    return {
+        "vnic_name": vm_instance.networks[0].name,
+        BINDING_NAME: binding_name_and_type[BINDING_NAME],
+        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+    }
+
+
+@pytest.fixture()
+def allocatable_nodes(nodes):
+    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]

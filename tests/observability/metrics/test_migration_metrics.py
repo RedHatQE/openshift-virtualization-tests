@@ -12,8 +12,13 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
-from tests.observability.metrics.utils import get_metric_sum_value, wait_for_non_empty_metrics_value
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN
+from tests.observability.metrics.utils import (
+    get_metric_sum_value,
+    timestamp_to_seconds,
+    wait_for_non_empty_metrics_value,
+)
+from tests.observability.utils import validate_metrics_value
+from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
 from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -102,20 +107,32 @@ def initial_migration_metrics_values(prometheus, migration_metrics_dict):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace):
+def vm_for_migration_metrics_test(namespace, cpu_for_migration):
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, check_ssh_connectivity=False)
         yield vm
 
 
 @pytest.fixture()
 def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
+@pytest.fixture(scope="class")
+def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
@@ -152,6 +169,13 @@ def vm_with_node_selector_vmim(vm_with_node_selector):
 @pytest.fixture()
 def migration_succeeded(vm_migration_metrics_vmim):
     vm_migration_metrics_vmim.wait_for_status(status=vm_migration_metrics_vmim.Status.SUCCEEDED, timeout=TIMEOUT_3MIN)
+
+
+@pytest.fixture(scope="class")
+def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
+    vm_migration_metrics_vmim_scope_class.wait_for_status(
+        status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
+    )
 
 
 class TestMigrationMetrics:
@@ -218,13 +242,12 @@ class TestMigrationMetrics:
             metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
         )
 
+
+class TestKubevirtVmiMigrationMetrics:
     @pytest.mark.parametrize(
         "query",
         [
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
-                marks=(pytest.mark.polarion("CNV-11417")),
-            ),
+            pytest.param(KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES, marks=(pytest.mark.polarion("CNV-11417"))),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
                 marks=(pytest.mark.polarion("CNV-11600")),
@@ -239,16 +262,54 @@ class TestMigrationMetrics:
             ),
         ],
     )
-    def test_kubevirt_vmi_migration_data_processed_bytes(
+    def test_kubevirt_vmi_migration_metrics(
         self,
         prometheus,
         namespace,
         admin_client,
-        migration_policy_with_bandwidth,
+        migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
-        vm_migration_metrics_vmim,
+        vm_migration_metrics_vmim_scope_class,
         query,
     ):
         wait_for_non_empty_metrics_value(
-            prometheus=prometheus, metric_name=query.format(vm_name=vm_for_migration_metrics_test.name)
+            prometheus=prometheus,
+            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m])",
+        )
+
+
+class TestKubevirtVmiMigrationStartAndEnd:
+    @pytest.mark.polarion("CNV-11809")
+    def test_metric_kubevirt_vmi_migration_start_time_seconds(
+        self,
+        prometheus,
+        vm_for_migration_metrics_test,
+        vm_migration_metrics_vmim_scope_class,
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vmi_migration_start_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",
+            expected_value=str(
+                timestamp_to_seconds(
+                    timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
+                ),
+            ),
+        )
+
+    @pytest.mark.polarion("CNV-11810")
+    def test_metric_kubevirt_vmi_migration_end_time_seconds(
+        self,
+        prometheus,
+        vm_for_migration_metrics_test,
+        vm_migration_metrics_vmim_scope_class,
+        migration_succeeded_scope_class,
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vmi_migration_end_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",
+            expected_value=str(
+                timestamp_to_seconds(
+                    timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.endTimestamp
+                )
+            ),
         )

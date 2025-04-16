@@ -13,7 +13,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.9
+    rev: v0.11.5
     hooks:
       - id: ruff
         stages: [pre-commit]
@@ -41,13 +41,13 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
   - repo: https://github.com/PyCQA/flake8
-    rev: "7.1.2"
+    rev: "7.2.0"
     hooks:
       - id: flake8
         args: [--config=.flake8]
         additional_dependencies:
           [
-            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.5",
+            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.10",
             "flake8-mutable",
             "pep8-naming",
           ]
@@ -60,7 +60,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: "v8.24.0"
+    rev: "v8.24.3"
     hooks:
       - id: gitleaks
 
@@ -68,7 +68,16 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        exclude: 'test_(.*).py$'
+        exclude: "test_(.*).py$"
         additional_dependencies:
-          ["types-PyYAML", "types-requests", "types-paramiko", "types-beautifulsoup4", "pytest", "types-xmltodict",
-          "types-setuptools", "types-pexpect", "types-netaddr"]
+          [
+            "types-PyYAML",
+            "types-requests",
+            "types-paramiko",
+            "types-beautifulsoup4",
+            "pytest",
+            "types-xmltodict",
+            "types-setuptools",
+            "types-pexpect",
+            "types-netaddr",
+          ]
