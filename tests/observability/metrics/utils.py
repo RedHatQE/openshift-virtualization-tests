@@ -719,14 +719,10 @@ def wait_vmi_dommemstat_match_with_metric_value(prometheus: Prometheus, vm: Virt
                 prometheus_metric_value = get_metrics_value(
                     prometheus=prometheus, metrics_name=f"kubevirt_vmi_memory_used_bytes{{name='{vm.name}'}}"
                 )
-                LOGGER.info(
-                    f"metric value from prometheus: {prometheus_metric_value}, used memory from dommmemstat "
-                    f"command: {sample}"
-                )
                 if sample == int(prometheus_metric_value):
                     return
     except TimeoutExpiredError:
-        LOGGER.info(
+        LOGGER.error(
             f"metric value doesn't match with dommemstat, value from prometheus: {prometheus_metric_value}, "
             f"used memory from dommmemstat command: {sample}"
         )
@@ -1340,9 +1336,10 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(vm: VirtualMachineForTes
     )[0].strip()
     if windows:
         guest_os_kernel_release = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-        assert guest_os_kernel_release, "os kernal release version not found."
+        assert guest_os_kernel_release, "OS kernel release version not found."
+        guest_os_kernel_release = guest_os_kernel_release.group(2)
     return {
-        "guest_os_kernel_release": guest_os_kernel_release.group(2),
+        "guest_os_kernel_release": guest_os_kernel_release,
         "namespace": vm.namespace,
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
