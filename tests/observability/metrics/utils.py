@@ -680,16 +680,6 @@ def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, v
     return value[0]
 
 
-def wait_for_metrics_match(prometheus: Prometheus, vm: VirtualMachine, expected_value: int) -> bool:
-    metric_value = get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=vm.vmi.name,
-        query=f"kubevirt_vmi_memory_used_bytes{{name='{vm.name}'}}",
-    )
-    LOGGER.info(f"Matching current metric value '{metric_value}' with expected value '{expected_value}'")
-    return expected_value == metric_value
-
-
 def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
     # Find string from list in the dommemstat and convert to bytes from KiB.
     vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
@@ -714,20 +704,33 @@ def pause_unpause_dommemstat(vm: VirtualMachineForTests, period: int = 0) -> Non
     vm.privileged_vmi.execute_virsh_command(command=f"dommemstat --period {period}")
 
 
-def assert_vmi_dommemstat_with_metric_value(prometheus: Prometheus, vm: VirtualMachineForTestsFromTemplate) -> None:
-    vmi_used_memory_dommemstat = get_used_memory_vmi_dommemstat(vm=vm)
+def wait_vmi_dommemstat_match_with_metric_value(prometheus: Prometheus, vm: VirtualMachineForTestsFromTemplate) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=15,
-        func=wait_for_metrics_match,
-        prometheus=prometheus,
+        func=get_used_memory_vmi_dommemstat,
         vm=vm,
-        expected_value=vmi_used_memory_dommemstat,
     )
-
-    for sample in samples:
-        if sample:
-            return
+    sample = None
+    prometheus_metric_value = None
+    try:
+        for sample in samples:
+            if sample:
+                prometheus_metric_value = get_metrics_value(
+                    prometheus=prometheus, metrics_name=f"kubevirt_vmi_memory_used_bytes{{name='{vm.name}'}}"
+                )
+                LOGGER.info(
+                    f"metric value from prometheus: {prometheus_metric_value}, used memory from dommmemstat "
+                    f"command: {sample}"
+                )
+                if sample == int(prometheus_metric_value):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.info(
+            f"metric value doesn't match with dommemstat, value from prometheus: {prometheus_metric_value}, "
+            f"used memory from dommmemstat command: {sample}"
+        )
+        raise
 
 
 def get_resource_object(
@@ -1335,14 +1338,11 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(vm: VirtualMachineForTes
     guest_os_kernel_release = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
     )[0].strip()
-    guest_os_kernel_release_windows = None
     if windows:
-        guest_os_kernel_release_windows = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-        assert guest_os_kernel_release_windows
+        guest_os_kernel_release = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
+        assert guest_os_kernel_release, "os kernal release version not found."
     return {
-        "guest_os_kernel_release": guest_os_kernel_release_windows.group(2)
-        if windows and guest_os_kernel_release_windows
-        else guest_os_kernel_release,
+        "guest_os_kernel_release": guest_os_kernel_release.group(2),
         "namespace": vm.namespace,
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,

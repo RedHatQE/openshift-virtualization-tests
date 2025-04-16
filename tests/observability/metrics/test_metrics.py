@@ -12,10 +12,10 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     assert_vm_metric_virt_handler_pod,
-    assert_vmi_dommemstat_with_metric_value,
     compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
     validate_metric_value_within_range,
+    wait_vmi_dommemstat_match_with_metric_value,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
@@ -165,7 +165,7 @@ class TestVMIMetricsLinuxVms:
         updated_dommemstat,
     ):
         """This test will check the used memory of VMI with given metrics output in bytes."""
-        assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
+        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
 
     @pytest.mark.polarion("CNV-11400")
     def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
@@ -212,7 +212,7 @@ class TestVMIMetricsWindowsVms:
         windows_vm_for_test,
         updated_dommemstat_windows,
     ):
-        assert_vmi_dommemstat_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
+        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
 
     @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):

@@ -463,7 +463,6 @@ def updated_dommemstat(single_metric_vm):
         vms=[single_metric_vm],
         commands=["stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"],
     )
-    # give the stress-ng command some time to build up load on the vm
     pause_unpause_dommemstat(vm=single_metric_vm)
     yield
     pause_unpause_dommemstat(vm=single_metric_vm, period=1)
@@ -1095,7 +1094,6 @@ def updated_dommemstat_windows(windows_vm_for_test):
         host=windows_vm_for_test.ssh_exec,
         commands=shlex.split("wsl nohup bash -c stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"),
     )
-    # give the stress-ng command some time to build up load on the vm
     pause_unpause_dommemstat(vm=windows_vm_for_test)
     yield
     pause_unpause_dommemstat(vm=windows_vm_for_test, period=1)
