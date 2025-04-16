@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Final
 
-import yaml
-
 NETWORK_DATA: Final[str] = "networkData"
 
 
