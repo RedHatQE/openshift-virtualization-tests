@@ -30,8 +30,11 @@ if [ $CPU_ARCH = "amd64" ]; then
 elif [ $CPU_ARCH = "arm64" ]; then
     CPU_ARCH_CODE="aarch64"
     VIRT_TYPE="qemu"
+elif [ $CPU_ARCH = "s390x" ]; then
+    CPU_ARCH_CODE="s390x"
+    VIRT_TYPE="qemu"
 else
-    echo "Use the value amd64 or arm64 for CPU_ARCH env variable"
+    echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
     exit 1
 fi
 
@@ -71,7 +74,7 @@ fi
 
 rm -f "${CLOUD_INIT_ISO}"
 
-mkdir $BUILD_DIR
+mkdir -p $BUILD_DIR
 echo "Snapshot image"
 qemu-img convert -c -O qcow2 "${FEDORA_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
 

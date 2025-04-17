@@ -324,7 +324,7 @@ def test_successful_import_basic_auth(
         namespace=namespace.name,
         url=get_file_url(url=images_internal_http_server["http_auth"], file_name=file_name),
         content_type=content_type,
-        size="500Mi",
+        size=DEFAULT_DV_SIZE,
         secret=internal_http_secret,
         storage_class=storage_class_name_scope_module,
     ) as dv:
