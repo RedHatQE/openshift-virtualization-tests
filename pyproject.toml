@@ -16,7 +16,10 @@ warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = "libs.*"
+module = [
+  "libs.*",
+  "tests.network.libs.*"
+]
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
