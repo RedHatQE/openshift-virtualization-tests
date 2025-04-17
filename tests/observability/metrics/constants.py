@@ -69,6 +69,7 @@ KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT = (
     "mount_point='{mountpoint}'}}"
 )
 KUBEVIRT_VMI_INFO = "kubevirt_vmi_info{{name='{vm_name}'}}"
+KUBEVIRT_VM_INFO = "kubevirt_vm_info{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES = (
     "kubevirt_vmi_memory_available_bytes{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
 )
