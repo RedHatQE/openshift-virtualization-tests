@@ -11,7 +11,6 @@ KEY_PATH_SEPARATOR = "->"
 TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
 # featuregates:
-DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 DISABLE_MDEV_CONFIGURATION = "disableMDevConfiguration"
 PERSISTENT_RESERVATION = "persistentReservation"
 FG_DISABLED = False
@@ -46,10 +45,8 @@ EXPECTED_CDI_HARDCODED_FEATUREGATES = [
     "HonorWaitForFirstConsumer",
 ]
 HCO_DEFAULT_FEATUREGATES = {
-    DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
     PERSISTENT_RESERVATION: FG_DISABLED,
-    "autoResourceLimits": FG_DISABLED,
     "alignCPUs": FG_DISABLED,
     "enableApplicationAwareQuota": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
