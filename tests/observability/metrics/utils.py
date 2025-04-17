@@ -57,6 +57,7 @@ from utilities.storage import wait_for_dv_expected_restart_count
 from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
+RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
 CURL_QUERY = "curl -k https://localhost:8443/metrics"
 PING = "ping"
@@ -1271,3 +1272,108 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
     return {}
+
+
+def get_virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_api_pod):
+    return int(
+        bitmath.Byte(
+            int(
+                get_pod_by_name_prefix(
+                    dyn_client=admin_client,
+                    pod_prefix=highest_memory_usage_virt_api_pod,
+                    namespace=hco_namespace,
+                ).execute(command=RSS_MEMORY_COMMAND)
+            )
+        ).MiB
+    )
+
+
+def get_highest_memory_usage_virt_api_pod(hco_namespace):
+    oc_adm_top_pod_output = (
+        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} -l kubevirt.io=virt-api"))[1]
+        .strip()
+        .split("\n")[1:]
+    )
+    virt_api_with_highest_memory_usage = max(
+        {pod.split()[0]: int(bitmath.parse_string_unsafe(pod.split()[2])) for pod in oc_adm_top_pod_output}.items(),
+        key=lambda pod: pod[1],
+    )
+    return {
+        "virt_api_pod": virt_api_with_highest_memory_usage[0],
+        "memory_usage": virt_api_with_highest_memory_usage[1],
+    }
+
+
+def get_virt_api_requested_memory(hco_namespace, admin_client, highest_memory_usage_virt_api_pod):
+    return float(
+        bitmath.parse_string_unsafe(
+            get_pod_by_name_prefix(
+                dyn_client=admin_client,
+                pod_prefix=highest_memory_usage_virt_api_pod,
+                namespace=hco_namespace,
+            )
+            .instance.spec.containers[0]
+            .resources.requests.memory
+        )
+    )
+
+
+def expected_kubevirt_memory_delta_from_requested_bytes_working_set(hco_namespace, admin_client):
+    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod(hco_namespace=hco_namespace)
+    virt_api_requested_memory = get_virt_api_requested_memory(
+        hco_namespace=hco_namespace,
+        admin_client=admin_client,
+        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod["virt_api_pod"],
+    )
+    return float(bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte)
+
+
+def expected_kubevirt_memory_delta_from_requested_bytes_rss(admin_client, hco_namespace):
+    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod(hco_namespace=hco_namespace)[
+        "virt_api_pod"
+    ]
+    virt_api_rss_memory = get_virt_api_rss_memory(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod,
+    )
+    virt_api_requested_memory = get_virt_api_requested_memory(
+        hco_namespace=hco_namespace,
+        admin_client=admin_client,
+        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod,
+    )
+    return float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte)
+
+
+def validate_memory_delta_metrics_value_within_range(
+    prometheus: Prometheus, metric_name: str, rss: bool, admin_client, hco_namespace, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample: Union[int, float] = 0
+    expected_value = None
+    try:
+        for sample in samples:
+            if sample:
+                sample = abs(float(sample))
+                if rss:
+                    expected_value = expected_kubevirt_memory_delta_from_requested_bytes_rss(
+                        admin_client=admin_client, hco_namespace=hco_namespace
+                    )
+                else:
+                    expected_value = expected_kubevirt_memory_delta_from_requested_bytes_working_set(
+                        admin_client=admin_client, hco_namespace=hco_namespace
+                    )
+                if sample * 0.95 <= abs(expected_value) <= sample * 1.05:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.info(
+            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
+            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
+        )
+        raise
