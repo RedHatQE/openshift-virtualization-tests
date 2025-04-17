@@ -3,6 +3,7 @@ VM to VM connectivity
 """
 
 import pytest
+from ocp_resources.resource import Resource
 
 from utilities.constants import IPV4_STR, IPV6_STR
 from utilities.infra import get_node_selector_dict
@@ -10,7 +11,7 @@ from utilities.network import (
     compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm, vm_console_run_commands
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_run_commands
 
 
 @pytest.fixture()
@@ -61,12 +62,18 @@ def pod_net_vmb(
 
 @pytest.fixture()
 def pod_net_running_vma(pod_net_vma):
-    return running_vm(vm=pod_net_vma, wait_for_cloud_init=True)
+    pod_net_vma.vmi.wait_for_condition(
+        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
+    )
+    return pod_net_vma
 
 
 @pytest.fixture()
 def pod_net_running_vmb(pod_net_vmb):
-    return running_vm(vm=pod_net_vmb, wait_for_cloud_init=True)
+    pod_net_vmb.vmi.wait_for_condition(
+        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
+    )
+    return pod_net_vmb
 
 
 @pytest.fixture(scope="module")
