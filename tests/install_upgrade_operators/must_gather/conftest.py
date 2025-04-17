@@ -605,7 +605,8 @@ def collected_vm_details_must_gather_from_vm_node(
     yield collect_must_gather(
         must_gather_tmpdir=target_path,
         must_gather_image_url=must_gather_image_url,
-        flag_names=f"node-name={must_gather_vm.vmi.node.name},vms_details",
+        flag_names="vms_details",
+        node_name=must_gather_vm.vmi.node.name,
     )
     clean_up_collected_must_gather(failed=(request.session.testsfailed - before_fail_count), target_path=target_path)
 
