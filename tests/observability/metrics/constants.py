@@ -80,5 +80,7 @@ KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES = "kubevirt_vmi_migration_dirty_m
 KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS = (
     "kubevirt_vmsnapshot_persistentvolumeclaim_labels{{vm_name='{vm_name}'}}"
 )
+KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_TOTAL = "kubevirt_vmi_network_receive_packets_total"
+KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL = "kubevirt_vmi_network_transmit_packets_total"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
