@@ -93,7 +93,7 @@ class Images:
 
     class Fedora:
         FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+        FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:40-s390x"
         DISK_DEMO = "fedora-cloud-registry-disk-demo"
         DIR = f"{BASE_IMAGES_DIR}/fedora-images"
         DEFAULT_DV_SIZE = "10Gi"
@@ -107,6 +107,7 @@ class Images:
     class Cdi:
         QCOW2_IMG = "cirros-qcow2.img"
         DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+        DEFAULT_DV_SIZE = "1Gi"
 
 
 # Virtctl constants
@@ -114,6 +115,7 @@ VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
+S390X = "s390x"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
@@ -539,7 +541,7 @@ BASE_EXCEPTIONS_DICT: dict[type[Exception], list[str]] = {
 }
 
 # Container images
-NET_UTIL_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-net-util-container:centos-stream-9"
+NET_UTIL_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-net-util-container:centos-stream-9"
 
 
 OC_ADM_LOGS_COMMAND = "oc adm node-logs"
