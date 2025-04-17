@@ -700,10 +700,6 @@ def get_used_memory_vmi_dommemstat(vm: VirtualMachineForTestsFromTemplate) -> in
     return int(available_memory - usable_memory)
 
 
-def pause_unpause_dommemstat(vm: VirtualMachineForTests, period: int = 0) -> None:
-    vm.privileged_vmi.execute_virsh_command(command=f"dommemstat --period {period}")
-
-
 def wait_vmi_dommemstat_match_with_metric_value(prometheus: Prometheus, vm: VirtualMachineForTestsFromTemplate) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,

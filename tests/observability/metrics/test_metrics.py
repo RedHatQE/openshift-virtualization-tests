@@ -162,7 +162,6 @@ class TestVMIMetricsLinuxVms:
         self,
         prometheus,
         single_metric_vm,
-        updated_dommemstat,
     ):
         """This test will check the used memory of VMI with given metrics output in bytes."""
         wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
@@ -210,7 +209,6 @@ class TestVMIMetricsWindowsVms:
         self,
         prometheus,
         windows_vm_for_test,
-        updated_dommemstat_windows,
     ):
         wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
 

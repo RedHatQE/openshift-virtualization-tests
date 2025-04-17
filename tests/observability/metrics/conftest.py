@@ -50,7 +50,6 @@ from tests.observability.metrics.utils import (
     get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
-    pause_unpause_dommemstat,
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
@@ -455,17 +454,6 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
         vmi_name=single_metric_vm.vmi.name,
         query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     )
-
-
-@pytest.fixture()
-def updated_dommemstat(single_metric_vm):
-    run_vm_commands(
-        vms=[single_metric_vm],
-        commands=["stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"],
-    )
-    pause_unpause_dommemstat(vm=single_metric_vm)
-    yield
-    pause_unpause_dommemstat(vm=single_metric_vm, period=1)
 
 
 @pytest.fixture()
@@ -1086,17 +1074,6 @@ def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheu
         vmi_name=windows_vm_for_test.vmi.name,
         query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     )
-
-
-@pytest.fixture()
-def updated_dommemstat_windows(windows_vm_for_test):
-    run_ssh_commands(
-        host=windows_vm_for_test.ssh_exec,
-        commands=shlex.split("wsl nohup bash -c stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"),
-    )
-    pause_unpause_dommemstat(vm=windows_vm_for_test)
-    yield
-    pause_unpause_dommemstat(vm=windows_vm_for_test, period=1)
 
 
 @pytest.fixture()
