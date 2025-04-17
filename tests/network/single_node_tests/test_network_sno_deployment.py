@@ -20,6 +20,7 @@ def network_daemonset_deployment_resources(admin_client, hco_namespace):
 
 
 @pytest.mark.polarion("CNV-8255")
+@pytest.mark.single_nic
 def test_desired_number_of_cnao_pods_on_sno_cluster(
     network_daemonset_deployment_resources,
 ):
