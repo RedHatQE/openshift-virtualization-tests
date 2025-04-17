@@ -10,6 +10,7 @@ from tests.data_protection.oadp.utils import (
     create_rhel_vm,
     is_storage_class_support_volume_mode,
 )
+from utilities import console
 from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, Images
 from utilities.infra import create_ns
 from utilities.storage import (
@@ -119,6 +120,7 @@ def rhel_vm_with_data_volume_template(
             vm=vm,
             filename=FILE_NAME_FOR_BACKUP,
             content=TEXT_TO_TEST,
+            console_impl=console.RHEL,
             stop_vm=False,
         )
         yield vm
@@ -153,7 +155,7 @@ def velero_restore_first_namespace_with_datamover(
 
 
 @pytest.fixture()
-def rhel_vm_from_existing_dv(imported_dv_second_namespace):
+def rhel_vm_from_existing_dv(imported_dv_second_namespace, stopped_vm):
     with create_vm_from_dv(
         dv=imported_dv_second_namespace,
         vm_name="rhel-vm-from-existing-dv",
@@ -166,7 +168,8 @@ def rhel_vm_from_existing_dv(imported_dv_second_namespace):
             vm=vm,
             filename=FILE_NAME_FOR_BACKUP,
             content=TEXT_TO_TEST,
-            stop_vm=False,
+            console_impl=console.RHEL,
+            stop_vm=stopped_vm,
         )
         yield vm
 
@@ -244,3 +247,8 @@ def velero_restore_second_namespace_with_datamover(
         timeout=TIMEOUT_8MIN,
     ) as restore:
         yield restore
+
+
+@pytest.fixture()
+def stopped_vm(request):
+    return request.param.get("stopped_vm")
