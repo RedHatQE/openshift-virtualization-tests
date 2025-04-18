@@ -25,6 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.arm
 
+
 def wait_for_vm_uid_mismatch(vmi, vmi_old_uid):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
