@@ -18,6 +18,7 @@ pytestmark = pytest.mark.usefixtures(
     "updated_aaq_allocation_method",
 )
 class TestAAQDifferentAllocationMethods:
+    @pytest.mark.arm
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods")
     @pytest.mark.polarion("CNV-11242")
     def test_aaq_with_virtual_resources_allocation_methods(
@@ -41,6 +42,7 @@ class TestAAQDifferentAllocationMethods:
     ):
         migrate_vm_and_verify(vm=vm_for_aaq_allocation_methods_test)
 
+    @pytest.mark.arm
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
     @pytest.mark.polarion("CNV-11248")
     def test_aaq_different_allocation_memory_overcommit(
