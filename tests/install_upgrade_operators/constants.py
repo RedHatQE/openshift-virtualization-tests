@@ -50,7 +50,6 @@ HCO_DEFAULT_FEATUREGATES = {
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
     PERSISTENT_RESERVATION: FG_DISABLED,
     "alignCPUs": FG_DISABLED,
-    "enableApplicationAwareQuota": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
