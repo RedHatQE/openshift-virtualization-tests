@@ -10,6 +10,8 @@ from ocp_resources.node_network_configuration_policy_latest import NodeNetworkCo
 from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import retry
 
+from tests.network.libs.apimachinery import dict_normalization_for_dataclass
+
 WAIT_FOR_STATUS_TIMEOUT_SEC = 90
 WAIT_FOR_STATUS_INTERVAL_SEC = 5
 
@@ -97,14 +99,9 @@ class NodeNetworkConfigurationPolicy(Nncp):
         self._desired_state = desired_state
         super().__init__(
             name=name,
-            desired_state=asdict(desired_state, dict_factory=self._dict_normalization),
+            desired_state=asdict(desired_state, dict_factory=dict_normalization_for_dataclass),
             node_selector=node_selector,
         )
-
-    @staticmethod
-    def _dict_normalization(data: list[tuple[str, Any]]) -> dict[str, Any]:
-        """Filter out none values and converts key characters containing underscores into dashes."""
-        return {key.replace("_", "-"): val for (key, val) in data if val is not None}
 
     @property
     def desired_state_spec(self) -> DesiredState:
