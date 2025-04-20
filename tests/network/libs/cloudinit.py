@@ -1,6 +1,8 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any, Final
 
+from tests.network.libs.apimachinery import dict_normalization_for_dataclass
+
 NETWORK_DATA: Final[str] = "networkData"
 
 
@@ -54,9 +56,4 @@ def cloudinit(netdata: NetworkData) -> dict[str, Any]:
 
 
 def todict(netdata: NetworkData) -> dict[str, Any]:
-    return asdict(obj=netdata, dict_factory=_dict_normalization)
-
-
-def _dict_normalization(data: list[tuple[str, Any]]) -> dict[str, Any]:
-    """Filter out none values and converts key characters containing underscores into dashes."""
-    return {key.replace("_", "-"): val for (key, val) in data if val is not None}
+    return asdict(obj=netdata, dict_factory=dict_normalization_for_dataclass)
