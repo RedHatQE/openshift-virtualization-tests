@@ -2,6 +2,7 @@ import os
 from typing import Any
 
 import pytest_testconfig
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.template import Template
 
 from utilities.constants import (
@@ -9,6 +10,7 @@ from utilities.constants import (
     DV_SIZE_STR,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FLAVOR_STR,
+    HPP_CAPABILITIES,
     IMAGE_NAME_STR,
     IMAGE_PATH_STR,
     LATEST_RELEASE_STR,
@@ -18,14 +20,31 @@ from utilities.constants import (
     TEMPLATE_LABELS_STR,
     WORKLOAD_STR,
     Images,
+    StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
+from utilities.storage import HppCsiStorageClass
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 
 Images.Cirros.RAW_IMG_XZ = "cirros-0.4.0-aarch64-disk.raw.xz"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{ARM_64}"
+
+
+storage_class_matrix = [
+    {
+        StorageClassNames.TRIDENT_CSI_NFS: {
+            "volume_mode": DataVolume.VolumeMode.FILE,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+            "default": True,
+        }
+    },
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
+]
 
 rhel_os_matrix = [
     {
