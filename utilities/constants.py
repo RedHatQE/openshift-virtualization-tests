@@ -619,6 +619,7 @@ class StorageClassNames:
     PORTWORX_CSI_DB_SHARED = "px-csi-db-shared"
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
+    TRIDENT_CSI_NFS = "trident-csi-nfs"
     IO2_CSI = "io2-csi"
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
