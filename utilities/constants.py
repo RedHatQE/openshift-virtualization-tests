@@ -1,3 +1,6 @@
+import os
+from typing import Any
+
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
@@ -28,85 +31,97 @@ BASE_IMAGES_DIR = "cnv-tests"
 NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
 
 
-class Images:
-    class Cirros:
-        RAW_IMG = "cirros-0.4.0-x86_64-disk.raw"
-        RAW_IMG_GZ = "cirros-0.4.0-x86_64-disk.raw.gz"
-        RAW_IMG_XZ = "cirros-0.4.0-x86_64-disk.raw.xz"
-        QCOW2_IMG = "cirros-0.4.0-x86_64-disk.qcow2"
-        QCOW2_IMG_GZ = "cirros-0.4.0-x86_64-disk.qcow2.gz"
-        QCOW2_IMG_XZ = "cirros-0.4.0-x86_64-disk.qcow2.xz"
-        DISK_DEMO = "cirros-registry-disk-demo"
-        DIR = f"{BASE_IMAGES_DIR}/cirros-images"
-        DEFAULT_DV_SIZE = "1Gi"
-        DEFAULT_MEMORY_SIZE = "64M"
+class ArchImages:
+    class X86_64:  # noqa: N801
+        class Cirros:
+            RAW_IMG = "cirros-0.4.0-x86_64-disk.raw"
+            RAW_IMG_GZ = "cirros-0.4.0-x86_64-disk.raw.gz"
+            RAW_IMG_XZ = "cirros-0.4.0-x86_64-disk.raw.xz"
+            QCOW2_IMG = "cirros-0.4.0-x86_64-disk.qcow2"
+            QCOW2_IMG_GZ = "cirros-0.4.0-x86_64-disk.qcow2.gz"
+            QCOW2_IMG_XZ = "cirros-0.4.0-x86_64-disk.qcow2.xz"
+            DISK_DEMO = "cirros-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/cirros-images"
+            DEFAULT_DV_SIZE = "1Gi"
+            DEFAULT_MEMORY_SIZE = "64M"
 
-    class Rhel:
-        RHEL7_8_IMG = "rhel-78.qcow2"
-        RHEL7_9_IMG = "rhel-79.qcow2"
-        RHEL8_0_IMG = "rhel-8.qcow2"
-        RHEL8_2_IMG = "rhel-82.qcow2"
-        RHEL8_2_EFI_IMG = "rhel-82-efi.qcow2"
-        RHEL8_8_IMG = "rhel-88.qcow2"
-        RHEL8_9_IMG = "rhel-89.qcow2"
-        RHEL8_10_IMG = "rhel-810.qcow2"
-        RHEL9_3_IMG = "rhel-93.qcow2"
-        RHEL9_4_IMG = "rhel-94.qcow2"
-        RHEL9_5_IMG = "rhel-95.qcow2"
-        RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
-        RHEL9_6_IMG = "rhel-96.qcow2"
-        RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
-        RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
-        DIR = f"{BASE_IMAGES_DIR}/rhel-images"
-        DEFAULT_DV_SIZE = "20Gi"
-        DEFAULT_MEMORY_SIZE = "1.5Gi"
+        class Rhel:
+            RHEL7_8_IMG = "rhel-78.qcow2"
+            RHEL7_9_IMG = "rhel-79.qcow2"
+            RHEL8_0_IMG = "rhel-8.qcow2"
+            RHEL8_2_IMG = "rhel-82.qcow2"
+            RHEL8_2_EFI_IMG = "rhel-82-efi.qcow2"
+            RHEL8_8_IMG = "rhel-88.qcow2"
+            RHEL8_9_IMG = "rhel-89.qcow2"
+            RHEL8_10_IMG = "rhel-810.qcow2"
+            RHEL9_3_IMG = "rhel-93.qcow2"
+            RHEL9_4_IMG = "rhel-94.qcow2"
+            RHEL9_5_IMG = "rhel-95.qcow2"
+            RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
+            RHEL9_6_IMG = "rhel-96.qcow2"
+            RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
+            RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
+            RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
+            DIR = f"{BASE_IMAGES_DIR}/rhel-images"
+            DEFAULT_DV_SIZE = "20Gi"
+            DEFAULT_MEMORY_SIZE = "1.5Gi"
 
-    class Windows:
-        WIN10_IMG = "win_10_uefi.qcow2"
-        WIN10_WSL2_IMG = "win_10_wsl2_uefi.qcow2"
-        WIN10_ISO_IMG = "Win10_22H2_English_x64.iso"
-        WIN2k16_IMG = "win_2k16_uefi.qcow2"
-        WIN2k19_IMG = "win_2k19_uefi.qcow2"
-        WIN2k25_IMG = "win_2k25_uefi.qcow2"
-        WIN2k19_HA_IMG = "win_2019_virtio.qcow2"
-        WIN11_IMG = "win_11.qcow2"
-        WIN11_WSL2_IMG = "win_11_wsl2.qcow2"
-        WIN11_ISO_IMG = "en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso"
-        WIN19_RAW = "win_2k19_uefi.raw"
-        WIN2022_IMG = "win_2022.qcow2"
-        WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
-        WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
-        DIR = f"{BASE_IMAGES_DIR}/windows-images"
-        RAW_DIR = f"{DIR}/raw_images"
-        UEFI_WIN_DIR = f"{DIR}/uefi"
-        HA_DIR = f"{DIR}/HA-images"
-        ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
-        ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
-        ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
-        ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
-        DEFAULT_DV_SIZE = "70Gi"
-        DEFAULT_MEMORY_SIZE = "8Gi"
-        DEFAULT_MEMORY_SIZE_WSL = "12Gi"
-        DEFAULT_CPU_CORES = 4
-        DEFAULT_CPU_THREADS = 2
+        class Windows:
+            WIN10_IMG = "win_10_uefi.qcow2"
+            WIN10_WSL2_IMG = "win_10_wsl2_uefi.qcow2"
+            WIN10_ISO_IMG = "Win10_22H2_English_x64.iso"
+            WIN2k16_IMG = "win_2k16_uefi.qcow2"
+            WIN2k19_IMG = "win_2k19_uefi.qcow2"
+            WIN2k25_IMG = "win_2k25_uefi.qcow2"
+            WIN2k19_HA_IMG = "win_2019_virtio.qcow2"
+            WIN11_IMG = "win_11.qcow2"
+            WIN11_WSL2_IMG = "win_11_wsl2.qcow2"
+            WIN11_ISO_IMG = "en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso"
+            WIN19_RAW = "win_2k19_uefi.raw"
+            WIN2022_IMG = "win_2022.qcow2"
+            WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
+            WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
+            DIR = f"{BASE_IMAGES_DIR}/windows-images"
+            RAW_DIR = f"{DIR}/raw_images"
+            UEFI_WIN_DIR = f"{DIR}/uefi"
+            HA_DIR = f"{DIR}/HA-images"
+            ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
+            ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
+            ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
+            ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
+            DEFAULT_DV_SIZE = "70Gi"
+            DEFAULT_MEMORY_SIZE = "8Gi"
+            DEFAULT_MEMORY_SIZE_WSL = "12Gi"
+            DEFAULT_CPU_CORES = 4
+            DEFAULT_CPU_THREADS = 2
 
-    class Fedora:
-        FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
-        DISK_DEMO = "fedora-cloud-registry-disk-demo"
-        DIR = f"{BASE_IMAGES_DIR}/fedora-images"
-        DEFAULT_DV_SIZE = "10Gi"
-        DEFAULT_MEMORY_SIZE = "1Gi"
+        class Fedora:
+            FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
+            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+            DISK_DEMO = "fedora-cloud-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
+            DEFAULT_DV_SIZE = "10Gi"
+            DEFAULT_MEMORY_SIZE = "1Gi"
 
-    class CentOS:
-        CENTOS_STREAM_9_IMG = "CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2"
-        DIR = f"{BASE_IMAGES_DIR}/centos-images"
-        DEFAULT_DV_SIZE = "15Gi"
+        class CentOS:
+            CENTOS_STREAM_9_IMG = "CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2"
+            DIR = f"{BASE_IMAGES_DIR}/centos-images"
+            DEFAULT_DV_SIZE = "15Gi"
 
-    class Cdi:
-        QCOW2_IMG = "cirros-qcow2.img"
-        DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+        class Cdi:
+            QCOW2_IMG = "cirros-qcow2.img"
+            DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+
+
+def get_test_images_arch_class() -> Any:
+    arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
+    if arch not in ("x86_64",):
+        raise ValueError(f"{arch} architecture in not supported")
+    return getattr(ArchImages, arch.title())
+
+
+# Choose the Image class according to the architecture. Default: x86_64
+Images = get_test_images_arch_class()
 
 
 # Virtctl constants
