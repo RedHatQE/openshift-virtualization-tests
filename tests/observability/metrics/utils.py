@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import shlex
 import urllib
@@ -1369,11 +1370,8 @@ def validate_memory_delta_metrics_value_within_range(
                     expected_value = expected_kubevirt_memory_delta_from_requested_bytes_working_set(
                         admin_client=admin_client, hco_namespace=hco_namespace
                     )
-                if sample * 0.95 <= abs(expected_value) <= sample * 1.05:
+                if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
-        LOGGER.info(
-            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
-            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
-        )
+        LOGGER.info(f"{sample} should be within 5% of {expected_value}")
         raise
