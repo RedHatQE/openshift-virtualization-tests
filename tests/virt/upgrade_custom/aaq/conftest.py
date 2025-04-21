@@ -5,7 +5,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL
 from tests.virt.upgrade_custom.aaq.constants import UPGRADE_QUOTA_FOR_ONE_VMI
-from tests.virt.utils import enable_aaq_feature_gate, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
+from tests.virt.utils import enable_aaq_in_hco, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.infra import (
     create_ns,
 )
@@ -18,8 +18,8 @@ from utilities.virt import (
 
 # AAQ Upgrade
 @pytest.fixture(scope="session")
-def enabled_aaq_feature_gate_scope_session(admin_client, hco_namespace, hyperconverged_resource_scope_session):
-    with enable_aaq_feature_gate(
+def enabled_aaq_in_hco_scope_session(admin_client, hco_namespace, hyperconverged_resource_scope_session):
+    with enable_aaq_in_hco(
         client=admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_session,

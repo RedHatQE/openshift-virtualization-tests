@@ -35,7 +35,7 @@ TESTS_VM_CLASS_NAME = "TestARQCanManageVMs"
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "enabled_aaq_feature_gate_scope_package",
+        "enabled_aaq_in_hco_scope_package",
         "updated_namespace_with_aaq_label",
     ),
     pytest.mark.gating,

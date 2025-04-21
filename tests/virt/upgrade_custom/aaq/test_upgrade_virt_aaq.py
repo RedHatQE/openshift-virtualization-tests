@@ -19,7 +19,7 @@ pytestmark = [
     pytest.mark.cnv_upgrade,
     pytest.mark.ocp_upgrade,
     pytest.mark.usefixtures(
-        "enabled_aaq_feature_gate_scope_session",
+        "enabled_aaq_in_hco_scope_session",
     ),
 ]
 
