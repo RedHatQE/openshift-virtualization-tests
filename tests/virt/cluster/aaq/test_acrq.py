@@ -12,7 +12,7 @@ TESTS_ACRQ_CLASS_NAME = "TestApplicationAwareClusterResourceQuota"
 
 
 @pytest.mark.usefixtures(
-    "enabled_aaq_feature_gate_scope_package",
+    "enabled_aaq_in_hco_scope_package",
     "enabled_acrq_support",
     "updated_namespace_with_aaq_label",
     "application_aware_cluster_resource_quota",
