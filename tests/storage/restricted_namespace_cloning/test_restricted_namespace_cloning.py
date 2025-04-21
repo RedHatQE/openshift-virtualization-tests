@@ -28,7 +28,7 @@ from utilities.storage import create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("skip_when_no_unprivileged_client_available")
+pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available")
 
 
 @pytest.mark.sno

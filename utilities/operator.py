@@ -624,13 +624,20 @@ def update_image_in_catalog_source(dyn_client, image, catalog_source_name, cr_na
         wait_for_package_manifest_to_exist(dyn_client=dyn_client, catalog_name=catalog_source_name, cr_name=cr_name)
 
 
-def update_subscription_source(subscription, subscription_source):
-    LOGGER.info(f"Update subscription {subscription.name} source to {subscription_source}")
+def update_subscription_source(
+    subscription: Subscription,
+    subscription_source: str,
+    subscription_channel: str,
+) -> None:
+    LOGGER.info(
+        f"Update subscription {subscription.name} source to {subscription_source} on {subscription_channel} channel"
+    )
     ResourceEditor({
         subscription: {
             "spec": {
-                "source": subscription_source,
+                "channel": subscription_channel,
                 "installPlanApproval": "Manual",
+                "source": subscription_source,
             }
         }
     }).update()

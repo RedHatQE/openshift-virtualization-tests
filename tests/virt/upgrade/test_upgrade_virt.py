@@ -16,9 +16,11 @@ from tests.upgrade_params import (
 )
 from tests.virt.upgrade.utils import (
     mismatching_src_pvc_names,
+    verify_linux_boot_time,
     verify_run_strategy_vmi_status,
     verify_vms_ssh_connectivity,
-    vm_is_not_migrateable,
+    verify_windows_boot_time,
+    vm_is_migrateable,
 )
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
@@ -53,7 +55,7 @@ class TestUpgradeVirt:
     @pytest.mark.polarion("CNV-2974")
     @pytest.mark.order("first")
     @pytest.mark.dependency(name=VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID)
-    def test_is_vm_running_before_upgrade(self, vms_for_upgrade):
+    def test_is_vm_running_before_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:
             assert vm.vmi.status == VirtualMachineInstance.Status.RUNNING
 
@@ -89,9 +91,8 @@ class TestUpgradeVirt:
     )
     def test_migration_before_upgrade(self, skip_if_no_common_cpu, vms_for_upgrade):
         for vm in vms_for_upgrade:
-            if vm_is_not_migrateable(vm=vm):
-                continue
-            migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+            if vm_is_migrateable(vm=vm):
+                migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6999")
@@ -114,6 +115,7 @@ class TestUpgradeVirt:
     def test_windows_vm_before_upgrade(
         self,
         windows_vm,
+        windows_boot_time_before_upgrade,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
 
@@ -149,9 +151,10 @@ class TestUpgradeVirt:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_is_vm_running_after_upgrade(self, vms_for_upgrade):
+    def test_is_vm_running_after_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
+        verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-2980")
@@ -220,8 +223,10 @@ class TestUpgradeVirt:
     def test_windows_vm_after_upgrade(
         self,
         windows_vm,
+        windows_boot_time_before_upgrade,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
+        verify_windows_boot_time(windows_vm=windows_vm, initial_boot_time=windows_boot_time_before_upgrade)
 
     @pytest.mark.polarion("CNV-2979")
     @pytest.mark.order(
@@ -241,10 +246,9 @@ class TestUpgradeVirt:
     )
     def test_migration_after_upgrade(self, vms_for_upgrade):
         for vm in vms_for_upgrade:
-            if vm_is_not_migrateable(vm=vm):
-                continue
-            migrate_vm_and_verify(vm=vm)
-            vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
+            if vm_is_migrateable(vm=vm):
+                migrate_vm_and_verify(vm=vm)
+                vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-3682")

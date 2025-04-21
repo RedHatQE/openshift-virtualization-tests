@@ -32,7 +32,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
 )
 from tests.os_params import FEDORA_LATEST
 from utilities.constants import ARM_64, COUNT_FIVE
-from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection]
 
@@ -44,8 +43,6 @@ def kubevirt_architecture_configuration_scope_session(
     kubevirt_resource_scope_session,
     nodes_cpu_architecture,
 ):
-    # TODO: When the bug CNV-58483 is resolved, return following object directly:
-    # kubevirt_resource_scope_session.instance.spec.configuration.architectureConfiguration
     kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
         "architectureConfiguration"
     ][nodes_cpu_architecture]
@@ -53,7 +50,7 @@ def kubevirt_architecture_configuration_scope_session(
     # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
     # '/usr/share/AAVMF' but the files in this location are symlinked to
     # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
-    if nodes_cpu_architecture == ARM_64 and is_jira_open(jira_id="CNV-58483"):
+    if nodes_cpu_architecture == ARM_64:
         kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
     return kubevirt_architecture_config
 
@@ -208,13 +205,9 @@ class TestMustGatherVmDetails:
             format_regex = executed_bridge_link_show_command
         elif "machine_type" in format_regex:
             format_regex = format_regex.format(
-                # TODO: directly use the object.machineType when the bug CNV-58483 is resolved
-                # and the fixture was updated to return the kubevirt architectureConfiguration object directly
                 machine_type=kubevirt_architecture_configuration_scope_session["machineType"]
             )
         elif "ovmfpath" in format_regex:
-            # TODO: directly use the object.ovmfPath when the bug CNV-58483 is resolved
-            # and the fixture was updated to return the kubevirt architectureConfiguration object directly
             format_regex = format_regex.format(ovmfpath=kubevirt_architecture_configuration_scope_session["ovmfPath"])
         LOGGER.info(
             f"Results from search: "

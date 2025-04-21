@@ -9,9 +9,12 @@ global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
 storage_class_matrix = [
     {
-        StorageClassNames.IBM_SPECTRUM_SCALE: {
+        StorageClassNames.GPFS: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
