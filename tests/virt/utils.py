@@ -268,14 +268,8 @@ def flatten_dict(dictionary, parent_key=""):
 
 
 @contextmanager
-def enable_aaq_feature_gate(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {
-        hyperconverged_resource: {
-            "spec": {
-                "featureGates": {"enableApplicationAwareQuota": True},
-            }
-        }
-    }
+def enable_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
+    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
     if enable_acrq_support:
         patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
             "allowApplicationAwareClusterResourceQuota": True
