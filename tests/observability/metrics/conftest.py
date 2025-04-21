@@ -499,7 +499,7 @@ def windows_dv_with_block_volume_mode(
     with create_dv(
         dv_name="test-dv-windows-image",
         namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN19_RAW),
+        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
         storage_class=storage_class_with_block_volume_mode,
         client=unprivileged_client,
