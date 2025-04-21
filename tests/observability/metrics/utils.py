@@ -1326,7 +1326,9 @@ def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
     }
 
 
-def get_vmi_guest_os_kernel_release_info_metric_from_vm(vm: VirtualMachineForTests, windows=False) -> dict[str, str]:
+def get_vmi_guest_os_kernel_release_info_metric_from_vm(
+    vm: VirtualMachineForTests, windows: bool = False
+) -> dict[str, str]:
     guest_os_kernel_release = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
     )[0].strip()
