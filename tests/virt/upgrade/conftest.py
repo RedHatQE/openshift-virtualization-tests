@@ -72,27 +72,29 @@ def vms_for_upgrade(
     rhel_latest_os_params,
     sno_cluster,
     vm_with_instancetypes_for_upgrade,
+    pytestconfig,
 ):
     vms_list = [vm_with_instancetypes_for_upgrade]
     try:
-        for data_source in datasources_for_upgrade:
-            vm = VirtualMachineForTestsFromTemplate(
-                name=data_source.name.replace("ds", "vm")[0:26],
-                namespace=upgrade_namespace_scope_session.name,
-                client=unprivileged_client,
-                labels=Template.generate_template_labels(**rhel_latest_os_params["rhel_template_labels"]),
-                data_source=data_source,
-                cpu_model=cpu_for_migration,
-                sno_cluster=sno_cluster,
-            )
-            vm.deploy()
-            vms_list.append(vm)
-            vm.start(timeout=TIMEOUT_40MIN, wait=False)
+        if "gating" not in pytestconfig.getoption("markexpr"):
+            for data_source in datasources_for_upgrade:
+                vm = VirtualMachineForTestsFromTemplate(
+                    name=data_source.name.replace("ds", "vm")[0:26],
+                    namespace=upgrade_namespace_scope_session.name,
+                    client=unprivileged_client,
+                    labels=Template.generate_template_labels(**rhel_latest_os_params["rhel_template_labels"]),
+                    data_source=data_source,
+                    cpu_model=cpu_for_migration,
+                    sno_cluster=sno_cluster,
+                )
+                vm.deploy()
+                vms_list.append(vm)
+                vm.start(timeout=TIMEOUT_40MIN, wait=False)
 
-        for vm in vms_list:
-            running_vm(vm=vm, wait_for_cloud_init=True)
+            for vm in vms_list:
+                running_vm(vm=vm, wait_for_cloud_init=True)
 
-        yield vms_list
+            yield vms_list
 
     finally:
         for vm in vms_list:
