@@ -42,6 +42,7 @@ class TestUpgrade:
             nodes=nodes,
         )
 
+    @pytest.mark.gating
     @pytest.mark.cnv_upgrade
     @pytest.mark.polarion("CNV-2991")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
@@ -82,6 +83,7 @@ class TestUpgrade:
             expected_images=related_images_from_target_csv.values(),
         )
 
+    @pytest.mark.gating
     @pytest.mark.cnv_upgrade
     @pytest.mark.polarion("CNV-9933")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
