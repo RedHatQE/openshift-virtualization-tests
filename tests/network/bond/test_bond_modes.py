@@ -7,6 +7,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 import pytest
+from ocp_resources.resource import Resource
 
 from utilities.constants import TIMEOUT_9MIN
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict, get_node_selector_name
@@ -15,7 +16,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = [
     pytest.mark.sno,
@@ -201,7 +202,10 @@ def test_bond_created(workers_utility_pods, matrix_bond_modes_bond):
 
 @pytest.mark.polarion("CNV-4383")
 def test_vm_started(bond_modes_vm):
-    running_vm(vm=bond_modes_vm, check_ssh_connectivity=False, wait_for_interfaces=False)
+    bond_modes_vm.start(wait=True)
+    bond_modes_vm.vmi.wait_for_condition(
+        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
+    )
 
 
 @pytest.mark.polarion("CNV-6583")
@@ -226,10 +230,9 @@ def test_active_backup_bond_with_fail_over_mac(
 def test_vm_bond_with_fail_over_mac_started(
     vm_with_fail_over_mac_bond,
 ):
-    running_vm(
-        vm=vm_with_fail_over_mac_bond,
-        check_ssh_connectivity=False,
-        wait_for_interfaces=False,
+    vm_with_fail_over_mac_bond.start(wait=True)
+    vm_with_fail_over_mac_bond.vmi.wait_for_condition(
+        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
     )
 
 
