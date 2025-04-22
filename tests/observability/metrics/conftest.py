@@ -1043,10 +1043,16 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 @pytest.fixture()
 def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
-    return PersistentVolumeClaim(
-        name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
-        namespace=vm_for_vm_disk_allocation_size_test.namespace,
-    ).instance.spec.resources.requests.storage
+    return str(
+        int(
+            bitmath.parse_string_unsafe(
+                PersistentVolumeClaim(
+                    name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
+                    namespace=vm_for_vm_disk_allocation_size_test.namespace,
+                ).instance.spec.resources.requests.storage
+            ).Byte.bytes
+        )
+    )
 
 
 @pytest.fixture()
