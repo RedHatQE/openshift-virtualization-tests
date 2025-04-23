@@ -1,6 +1,5 @@
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 
@@ -8,17 +7,16 @@ from tests.utils import (
     assert_guest_os_cpu_count,
     assert_restart_required_condition,
     clean_up_migration_jobs,
-    hotplug_instance_type_vm,
-    hotplug_resource_and_verify_hotplug,
+    hotplug_instance_type_vm_and_verify,
+    update_vm_instancetype_name,
 )
 from utilities.constants import (
-    EIGHT_CPU_SOCKETS,
     FOUR_CPU_SOCKETS,
-    FOUR_GI_MEMORY,
     SIX_CPU_SOCKETS,
     TEN_CPU_SOCKETS,
     Images,
 )
+from utilities.ssp import cluster_instance_type_for_hot_plug
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import (
     VirtualMachineForTests,
@@ -37,7 +35,7 @@ def instance_type_hotplug_vm(
     namespace,
     unprivileged_client,
     golden_image_data_source_scope_class,
-    hot_plug_instance_type,
+    four_sockets_instance_type,
 ):
     with VirtualMachineForTests(
         name="rhel-hotplug-instance-type-vm",
@@ -46,30 +44,40 @@ def instance_type_hotplug_vm(
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_scope_class
         ),
-        vm_instance_type=hot_plug_instance_type,
+        vm_instance_type=four_sockets_instance_type,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def hot_plug_instance_type(cpu_for_migration):
-    with VirtualMachineClusterInstancetype(
-        name="hot-plug-instance-type",
-        memory={"guest": FOUR_GI_MEMORY},
-        cpu={
-            "guest": FOUR_CPU_SOCKETS,
-            "model": cpu_for_migration,
-            "maxSockets": EIGHT_CPU_SOCKETS,
-        },
+def four_sockets_instance_type(cpu_for_migration):
+    with cluster_instance_type_for_hot_plug(
+        guest_sockets=FOUR_CPU_SOCKETS, cpu_model=cpu_for_migration
+    ) as instance_type:
+        yield instance_type
+
+
+@pytest.fixture(scope="class")
+def six_sockets_instance_type(cpu_for_migration):
+    with cluster_instance_type_for_hot_plug(
+        guest_sockets=SIX_CPU_SOCKETS, cpu_model=cpu_for_migration
+    ) as instance_type:
+        yield instance_type
+
+
+@pytest.fixture(scope="class")
+def ten_sockets_instance_type(cpu_for_migration):
+    with cluster_instance_type_for_hot_plug(
+        guest_sockets=TEN_CPU_SOCKETS, cpu_model=cpu_for_migration
     ) as instance_type:
         yield instance_type
 
 
 @pytest.fixture()
-def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm, unprivileged_client):
-    hotplug_resource_and_verify_hotplug(
-        vm=instance_type_hotplug_vm, client=unprivileged_client, sockets=SIX_CPU_SOCKETS
+def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm, six_sockets_instance_type):
+    hotplug_instance_type_vm_and_verify(
+        vm=instance_type_hotplug_vm, client=admin_client, instance_type=six_sockets_instance_type
     )
     yield
     clean_up_migration_jobs(client=admin_client, vm=instance_type_hotplug_vm)
@@ -112,22 +120,25 @@ class TestCPUHotPlugInstanceType:
     def test_migrate_snapshot_hotplugged_vm(self, hotplug_vm_snapshot_instance_type, instance_type_hotplug_vm):
         migrate_vm_and_verify(vm=instance_type_hotplug_vm, check_ssh_connectivity=True)
 
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
+    @pytest.mark.dependency(
+        name=f"{TESTS_CLASS_NAME}::decrease_cpu_value", depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"]
+    )
+    @pytest.mark.polarion("CNV-11404")
+    def test_decrease_cpu_value(self, instance_type_hotplug_vm, four_sockets_instance_type):
+        update_vm_instancetype_name(vm=instance_type_hotplug_vm, instance_type_name=four_sockets_instance_type.name)
+        assert_restart_required_condition(
+            vm=instance_type_hotplug_vm, expected_message="Reduction of CPU socket count requires a restart"
+        )
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::decrease_cpu_value"])
     @pytest.mark.polarion("CNV-11403")
     def test_restart_hotplugged_vm(self, instance_type_hotplug_vm):
         restart_vm_wait_for_running_vm(vm=instance_type_hotplug_vm)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
-    @pytest.mark.polarion("CNV-11404")
-    def test_decrease_cpu_value(self, instance_type_hotplug_vm):
-        hotplug_instance_type_vm(vm=instance_type_hotplug_vm, sockets=FOUR_CPU_SOCKETS)
-        assert_restart_required_condition(
-            vm=instance_type_hotplug_vm, expected_message="Reduction of CPU socket count requires a restart"
-        )
-
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
     @pytest.mark.polarion("CNV-11405")
-    def test_hotplug_cpu_above_max_value(self, instance_type_hotplug_vm):
+    @pytest.mark.jira("CNV-60474", run=False)
+    def test_hotplug_cpu_above_max_value(self, instance_type_hotplug_vm, ten_sockets_instance_type):
         with pytest.raises(UnprocessibleEntityError):
-            hotplug_instance_type_vm(vm=instance_type_hotplug_vm, sockets=TEN_CPU_SOCKETS)
+            update_vm_instancetype_name(vm=instance_type_hotplug_vm, instance_type_name=ten_sockets_instance_type.name)
             pytest.fail("Socket value set higher than max value!")
