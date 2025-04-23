@@ -95,7 +95,7 @@ class ArchImages:
 
         class Fedora:
             FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+            FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:41"
             DISK_DEMO = "fedora-cloud-registry-disk-demo"
             DIR = f"{BASE_IMAGES_DIR}/fedora-images"
             DEFAULT_DV_SIZE = "10Gi"
@@ -138,7 +138,7 @@ class ArchImages:
 
         class Fedora:
             FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
-            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+            FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:41"
             DISK_DEMO = "fedora-cloud-registry-disk-demo"
             DIR = f"{BASE_IMAGES_DIR}/fedora-images"
             DEFAULT_DV_SIZE = "10Gi"
@@ -576,7 +576,7 @@ BASE_EXCEPTIONS_DICT: dict[type[Exception], list[str]] = {
 }
 
 # Container images
-NET_UTIL_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-net-util-container:centos-stream-9"
+NET_UTIL_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-net-util-container:centos-stream-9"
 
 
 OC_ADM_LOGS_COMMAND = "oc adm node-logs"
