@@ -39,12 +39,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def feature_gate_for_vm_console_proxy(hyperconverged_resource_scope_class):
+def enabled_vm_console_proxy_spec(hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "featureGates": {"deployVmConsoleProxy": True},
+                    "deployVmConsoleProxy": True,
                 }
             }
         },

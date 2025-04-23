@@ -5,12 +5,12 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.kubevirt import KubeVirt
 from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_8_10, RHEL_8_10_TEMPLATE_LABELS
 from tests.virt.node.general.constants import MachineTypesNames
 from utilities.hco import is_hco_tainted, update_hco_annotations
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
+    get_rhel_os_dict,
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
     running_vm,
@@ -19,6 +19,9 @@ from utilities.virt import (
 
 pytestmark = pytest.mark.post_upgrade
 LOGGER = logging.getLogger(__name__)
+
+RHEL_8_10 = get_rhel_os_dict(rhel_version="rhel-8-10")
+RHEL_8_10_TEMPLATE_LABELS = RHEL_8_10["template_labels"]
 
 
 def validate_machine_type(expected_machine_type, vm):

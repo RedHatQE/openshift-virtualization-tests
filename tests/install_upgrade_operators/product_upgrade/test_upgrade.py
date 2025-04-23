@@ -15,6 +15,7 @@ pytestmark = pytest.mark.usefixtures(
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.product_upgrade_test
 @pytest.mark.sno
 @pytest.mark.upgrade
 @pytest.mark.upgrade_custom
@@ -26,7 +27,7 @@ class TestUpgrade:
         self,
         admin_client,
         nodes,
-        machine_config_pools,
+        active_machine_config_pools,
         machine_config_pools_conditions,
         extracted_ocp_version_from_image_url,
         updated_ocp_upgrade_channel,
@@ -36,11 +37,12 @@ class TestUpgrade:
         verify_upgrade_ocp(
             admin_client=admin_client,
             target_ocp_version=extracted_ocp_version_from_image_url,
-            machine_config_pools_list=machine_config_pools,
+            machine_config_pools_list=active_machine_config_pools,
             initial_mcp_conditions=machine_config_pools_conditions,
             nodes=nodes,
         )
 
+    @pytest.mark.gating
     @pytest.mark.cnv_upgrade
     @pytest.mark.polarion("CNV-2991")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
@@ -81,6 +83,7 @@ class TestUpgrade:
             expected_images=related_images_from_target_csv.values(),
         )
 
+    @pytest.mark.gating
     @pytest.mark.cnv_upgrade
     @pytest.mark.polarion("CNV-9933")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)

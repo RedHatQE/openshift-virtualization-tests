@@ -10,6 +10,7 @@ import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
@@ -24,7 +25,7 @@ from tests.storage.snapshots.utils import (
     fail_to_create_snapshot_no_permissions,
     start_windows_vm_after_restore,
 )
-from utilities.constants import LS_COMMAND
+from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.storage import run_command_on_cirros_vm_and_check_output
 
 LOGGER = logging.getLogger(__name__)
@@ -151,13 +152,34 @@ class TestRestoreSnapshots:
         snapshots_with_content,
     ):
         cirros_vm_for_snapshot.start(wait=True)
+
+        # snapshot restore with online VM should create vmstore object
+        # with 'status.complete=False', 'status.conditions.ready="False"'
+        # and 'status.conditions.progress="False"'
         with VirtualMachineRestore(
             name="restore-snapshot-cnv-5048",
             namespace=cirros_vm_for_snapshot.namespace,
             vm_name=cirros_vm_for_snapshot.name,
             snapshot_name=snapshots_with_content[0].name,
         ) as vmrestore:
-            assert vmrestore, "Validation webhook rejected snapshot restore of running VM"
+            try:
+                for sampler in TimeoutSampler(
+                    wait_timeout=TIMEOUT_1MIN,
+                    sleep=TIMEOUT_10SEC,
+                    func=lambda: (
+                        not vmrestore.instance.status.get("complete")
+                        and vmrestore.instance.status.get("conditions")[0].get("status") == "False"
+                        and vmrestore.instance.status.get("conditions")[1].get("status") == "False"
+                    ),
+                ):
+                    if sampler:
+                        break
+            except TimeoutExpiredError:
+                LOGGER.error("Snapshot restore should not succeed with running VM")
+                raise
+            # Snapshot restore should be successful once the VM is stopped
+            cirros_vm_for_snapshot.stop(wait=True)
+            vmrestore.wait_restore_done()
 
     @pytest.mark.parametrize(
         "cirros_vm_name, snapshots_with_content, namespace",

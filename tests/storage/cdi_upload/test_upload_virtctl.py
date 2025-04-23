@@ -331,7 +331,7 @@ def test_virtctl_image_upload_with_exist_pvc(
                 name="cnv-3727-vm",
                 namespace=empty_pvc.namespace,
                 os_flavor=OS_FLAVOR_CIRROS,
-                memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+                memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
                 pvc=empty_pvc,
             ) as vm:
                 running_vm(vm=vm, wait_for_interfaces=False)

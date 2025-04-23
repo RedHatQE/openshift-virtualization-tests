@@ -13,6 +13,7 @@ from pytest_testconfig import py_config
 
 from tests.virt.upgrade.utils import (
     get_all_migratable_vms,
+    get_vm_boot_time,
     validate_vms_pod_updated,
     wait_for_automatic_vm_migrations,
 )
@@ -71,27 +72,29 @@ def vms_for_upgrade(
     rhel_latest_os_params,
     sno_cluster,
     vm_with_instancetypes_for_upgrade,
+    pytestconfig,
 ):
     vms_list = [vm_with_instancetypes_for_upgrade]
     try:
-        for data_source in datasources_for_upgrade:
-            vm = VirtualMachineForTestsFromTemplate(
-                name=data_source.name.replace("ds", "vm")[0:26],
-                namespace=upgrade_namespace_scope_session.name,
-                client=unprivileged_client,
-                labels=Template.generate_template_labels(**rhel_latest_os_params["rhel_template_labels"]),
-                data_source=data_source,
-                cpu_model=cpu_for_migration,
-                sno_cluster=sno_cluster,
-            )
-            vm.deploy()
-            vms_list.append(vm)
-            vm.start(timeout=TIMEOUT_40MIN, wait=False)
+        if "gating" not in pytestconfig.getoption("markexpr"):
+            for data_source in datasources_for_upgrade:
+                vm = VirtualMachineForTestsFromTemplate(
+                    name=data_source.name.replace("ds", "vm")[0:26],
+                    namespace=upgrade_namespace_scope_session.name,
+                    client=unprivileged_client,
+                    labels=Template.generate_template_labels(**rhel_latest_os_params["rhel_template_labels"]),
+                    data_source=data_source,
+                    cpu_model=cpu_for_migration,
+                    sno_cluster=sno_cluster,
+                )
+                vm.deploy()
+                vms_list.append(vm)
+                vm.start(timeout=TIMEOUT_40MIN, wait=False)
 
-        for vm in vms_list:
-            running_vm(vm=vm, wait_for_cloud_init=True)
+            for vm in vms_list:
+                running_vm(vm=vm, wait_for_cloud_init=True)
 
-        yield vms_list
+            yield vms_list
 
     finally:
         for vm in vms_list:
@@ -192,7 +195,7 @@ def vm_from_template(
     cpu_model,
     template_labels,
     networks=None,
-    run_strategy=None,
+    run_strategy=VirtualMachine.RunStrategy.HALTED,
     eviction_strategy=None,
 ):
     with VirtualMachineForTestsFromTemplate(
@@ -315,3 +318,16 @@ def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_imag
         source=generate_data_source_dict(dv=run_strategy_golden_image_dv),
     ) as ds:
         yield ds
+
+
+@pytest.fixture(scope="session")
+def linux_boot_time_before_upgrade(vms_for_upgrade):
+    boot_time_dict = {}
+    for vm in vms_for_upgrade:
+        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
+    yield boot_time_dict
+
+
+@pytest.fixture(scope="session")
+def windows_boot_time_before_upgrade(windows_vm):
+    yield get_vm_boot_time(vm=windows_vm)
