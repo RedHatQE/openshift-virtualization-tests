@@ -125,7 +125,7 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE = "1Gi"
 
         class Rhel:
-            RHEL9_5_IMG = "rhel-95.qcow2"
+            RHEL9_5_IMG = "rhel-95-s390x.qcow2"
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
             RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
