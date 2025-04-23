@@ -126,8 +126,6 @@ class ArchImages:
 
         class Rhel:
             RHEL9_5_IMG = "rhel-95.qcow2"
-            RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
-            RHEL9_6_IMG = "rhel-96.qcow2"
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
             RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
@@ -163,6 +161,7 @@ def get_test_images_arch_class() -> Any:
 
 # Choose the Image class according to the architecture. Default: x86_64
 Images = get_test_images_arch_class()
+
 
 # Virtctl constants
 VIRTCTL = "virtctl"
