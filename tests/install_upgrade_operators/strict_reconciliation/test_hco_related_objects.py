@@ -29,6 +29,7 @@ class TestRelatedObjects:
         self,
         admin_client,
         hco_namespace,
+        skip_if_hco_bearer_token_bug_open,
         ocp_resource_by_name,
         pre_update_resource_version,
         updated_resource_labels,
