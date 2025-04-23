@@ -152,6 +152,7 @@ class ArchImages:
             DIR = f"{BASE_IMAGES_DIR}/fedora-images"
             DEFAULT_DV_SIZE = "10Gi"
 
+
 def get_test_images_arch_class() -> Any:
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
     if arch not in ("x86_64", "s390x"):

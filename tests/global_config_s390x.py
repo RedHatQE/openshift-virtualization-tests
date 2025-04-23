@@ -7,7 +7,6 @@ from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     PREFERENCE_STR,
     S390X,
-    Images,
 )
 
 global config
