@@ -341,3 +341,17 @@ def wait_for_virt_launcher_pod(vmi):
     except TimeoutExpiredError:
         LOGGER.error(f"Virt-laucher pod for VMI {vmi.name} was not found!")
         raise
+
+
+def validate_machine_type(vm, expected_machine_type):
+    vm_machine_type = vm.instance.spec.template.spec.domain.machine.type
+    vmi_machine_type = vm.vmi.instance.spec.domain.machine.type
+
+    assert vm_machine_type == vmi_machine_type == expected_machine_type, (
+        "Created VM's machine type does not match the request. "
+        f"Expected: {expected_machine_type} VM: {vm_machine_type}, VMI: {vmi_machine_type}"
+    )
+    vmi_xml_machine_type = vm.privileged_vmi.xml_dict["domain"]["os"]["type"]["@machine"]
+    assert vmi_xml_machine_type == expected_machine_type, (
+        f"libvirt machine type {vmi_xml_machine_type} does not match expected type {expected_machine_type}"
+    )
