@@ -113,7 +113,7 @@ class ArchImages:
             DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
             DEFAULT_DV_SIZE = "1Gi"
 
-    class s390x:  # noqa: N801
+    class S390X:  # noqa: N801
         class Cirros:
             RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
             RAW_IMG_GZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.gz"
@@ -127,7 +127,12 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE = "1Gi"
 
         class Rhel:
+            RHEL7_8_IMG = ""
+            RHEL7_9_IMG = ""
+            RHEL8_8_IMG = ""
+            RHEL8_10_IMG = ""
             RHEL9_5_IMG = "rhel-95-s390x.qcow2"
+            RHEL9_6_IMG = ""
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
             RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
@@ -136,7 +141,15 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE = "1.5Gi"
 
         class Windows:
-            pass
+            WIN10_IMG = ""
+            WIN2k16_IMG = ""
+            WIN2k19_IMG = ""
+            WIN2k25_IMG = ""
+            WIN11_IMG = ""
+            WIN2022_IMG = ""
+            DIR = f"{BASE_IMAGES_DIR}/windows-images"
+            UEFI_WIN_DIR = f"{DIR}/uefi"
+            DEFAULT_DV_SIZE = "70Gi"
 
         class Fedora:
             FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
@@ -147,7 +160,9 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE = "1Gi"
 
         class CentOS:
-            pass
+            CENTOS_STREAM_9_IMG = ""
+            DIR = f"{BASE_IMAGES_DIR}/centos-images"
+            DEFAULT_DV_SIZE = "15Gi"
 
         class Cdi:
             QCOW2_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
