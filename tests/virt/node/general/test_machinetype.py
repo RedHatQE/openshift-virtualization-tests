@@ -2,15 +2,13 @@ import logging
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
-from ocp_resources.kubevirt import KubeVirt
-from pytest_testconfig import config as py_config
 
 from tests.virt.node.general.constants import MachineTypesNames
-from utilities.hco import is_hco_tainted, update_hco_annotations
+from tests.virt.utils import validate_machine_type
+from utilities.hco import update_hco_annotations
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    get_rhel_os_dict,
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
     running_vm,
@@ -19,46 +17,6 @@ from utilities.virt import (
 
 pytestmark = pytest.mark.post_upgrade
 LOGGER = logging.getLogger(__name__)
-
-RHEL_8_10 = get_rhel_os_dict(rhel_version="rhel-8-10")
-RHEL_8_10_TEMPLATE_LABELS = RHEL_8_10["template_labels"]
-
-
-def validate_machine_type(expected_machine_type, vm):
-    vm_machine_type = vm.instance.spec.template.spec.domain.machine.type
-    vmi_machine_type = vm.vmi.instance.spec.domain.machine.type
-
-    assert vm_machine_type == vmi_machine_type == expected_machine_type, (
-        f"Created VM's machine type does not match the request. "
-        f"Expected: {expected_machine_type} VM: {vm_machine_type}, VMI: {vmi_machine_type}"
-    )
-    vmi_xml_machine_type = vm.privileged_vmi.xml_dict["domain"]["os"]["type"]["@machine"]
-    assert vmi_xml_machine_type == expected_machine_type, (
-        f"libvirt machine type {vmi_xml_machine_type} does not match expected type {expected_machine_type}"
-    )
-
-
-@pytest.fixture()
-def updated_hco_emulated_machine_i440fx(
-    hyperconverged_resource_scope_function,
-    admin_client,
-    hco_namespace,
-):
-    annotations_path = "architectureConfiguration"
-    with update_hco_annotations(
-        resource=hyperconverged_resource_scope_function,
-        path=annotations_path,
-        value={"amd64": {"emulatedMachines": ["q35*", "pc-q35*", "pc-i440fx-rhel7.6.0"]}},
-        resource_list=[KubeVirt],
-    ):
-        wait_for_updated_kv_value(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
-            path=[annotations_path, "amd64", "emulatedMachines"],
-            value=["q35*", "pc-q35*", "pc-i440fx-rhel7.6.0"],
-        )
-        yield
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
 
 
 @pytest.fixture()
@@ -260,40 +218,4 @@ def test_machine_type_as_rhel_9_4(machine_type_from_kubevirt_config):
     assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_4, (
         f"Machine type value is {machine_type_from_kubevirt_config}"
         f"does not match with {MachineTypesNames.pc_q35_rhel9_4}"
-    )
-
-
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, vm_from_template_scope_function, expected_machine_type",
-    [
-        pytest.param(
-            {
-                "dv_name": RHEL_8_10_TEMPLATE_LABELS["os"],
-                "image": RHEL_8_10["image_path"],
-                "dv_size": RHEL_8_10["dv_size"],
-                "storage_class": py_config["default_storage_class"],
-            },
-            {
-                "vm_name": "legacy-vm",
-                "template_labels": RHEL_8_10_TEMPLATE_LABELS,
-                "machine_type": MachineTypesNames.pc_i440fx_rhel7_6,
-            },
-            MachineTypesNames.pc_i440fx_rhel7_6,
-            marks=pytest.mark.polarion("CNV-7311"),
-        )
-    ],
-    indirect=[
-        "golden_image_data_volume_scope_function",
-        "vm_from_template_scope_function",
-    ],
-)
-def test_legacy_machine_type(
-    updated_hco_emulated_machine_i440fx,
-    golden_image_data_volume_scope_function,
-    vm_from_template_scope_function,
-    expected_machine_type,
-):
-    validate_machine_type(
-        vm=vm_from_template_scope_function,
-        expected_machine_type=expected_machine_type,
     )
