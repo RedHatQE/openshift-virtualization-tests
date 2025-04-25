@@ -287,23 +287,24 @@ def get_pod_container_error_status(pod):
 def get_not_running_pods(pods, filter_pods_by_name=None):
     pods_not_running = []
     for pod in pods:
-        pod_instance = pod.instance
-        if filter_pods_by_name and filter_pods_by_name in pod.name:
-            LOGGER.warning(f"Ignoring pod: {pod.name} for pod state validations.")
-            continue
-        container_status_error = get_pod_container_error_status(pod=pod)
-        if container_status_error:
-            pods_not_running.append({pod.name: container_status_error})
         try:
-            # Waits for all pods in a given namespace to be in final healthy state(running/completed).
-            # We also need to keep track of pods marked for deletion as not running. This would ensure any
-            # pod that was spinned up in place of pod marked for deletion, reaches healthy state before end
-            # of this check
-            if pod_instance.metadata.get("deletionTimestamp") or pod_instance.status.phase not in (
-                pod.Status.RUNNING,
-                pod.Status.SUCCEEDED,
-            ):
-                pods_not_running.append({pod.name: pod.status})
+            pod_instance = pod.instance
+            if filter_pods_by_name and filter_pods_by_name in pod.name:
+                LOGGER.warning(f"Ignoring pod: {pod.name} for pod state validations.")
+                continue
+            container_status_error = get_pod_container_error_status(pod=pod)
+            if container_status_error:
+                pods_not_running.append({pod.name: container_status_error})
+
+                # Waits for all pods in a given namespace to be in final healthy state(running/completed).
+                # We also need to keep track of pods marked for deletion as not running. This would ensure any
+                # pod that was spinned up in place of pod marked for deletion, reaches healthy state before end
+                # of this check
+                if pod_instance.metadata.get("deletionTimestamp") or pod_instance.status.phase not in (
+                    pod.Status.RUNNING,
+                    pod.Status.SUCCEEDED,
+                ):
+                    pods_not_running.append({pod.name: pod.status})
         except (ResourceNotFoundError, NotFoundError):
             LOGGER.warning(f"Ignoring pod {pod.name} that disappeared during cluster sanity check")
             pods_not_running.append({pod.name: "Deleted"})
@@ -331,10 +332,10 @@ def wait_for_pods_running(
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
-        func=get_not_running_pods,
-        pods=list(Pod.get(dyn_client=admin_client, namespace=namespace.name)),
-        filter_pods_by_name=filter_pods_by_name,
-        exceptions_dict={NotFoundError: []},
+        func=lambda: get_not_running_pods(
+            pods=list(Pod.get(dyn_client=admin_client, namespace=namespace.name)),
+            filter_pods_by_name=filter_pods_by_name,
+        ),
     )
     sample = None
     try:
