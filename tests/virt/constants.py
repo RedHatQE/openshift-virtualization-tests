@@ -3,8 +3,8 @@ import bitmath
 VIRT_PROCESS_MEMORY_LIMITS = {
     "virt-launcher-monitor": bitmath.MiB(25),
     "virt-launcher": bitmath.MiB(100),
-    "virtqemud": bitmath.MiB(35),
-    "virtlogd": bitmath.MiB(20),
+    "virtqemud": bitmath.MiB(40),
+    "virtlogd": bitmath.MiB(25),
 }
 
 
