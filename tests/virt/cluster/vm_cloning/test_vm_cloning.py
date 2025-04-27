@@ -305,7 +305,7 @@ class TestVMCloneAndMigrate:
         )
 
     @pytest.mark.polarion("CNV-10320")
-    def test_migrate_the_vm_clone(self, skip_if_no_common_cpu, fedora_target_vm):
+    def test_migrate_the_vm_clone(self, fedora_target_vm):
         migrate_vm_and_verify(vm=fedora_target_vm)
 
     @pytest.mark.parametrize(
