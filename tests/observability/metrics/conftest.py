@@ -1071,7 +1071,7 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
-  
+
 
 @pytest.fixture()
 def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
@@ -1108,7 +1108,7 @@ def linux_vm_info_to_compare(single_metric_vm):
 @pytest.fixture()
 def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
-  
+
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test(namespace, unprivileged_client):

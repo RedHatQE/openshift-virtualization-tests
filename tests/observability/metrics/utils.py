@@ -1317,6 +1317,7 @@ def create_windows11_wsl2_vm(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
     )
 
+
 def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
     return {
         "name": vm.name,
