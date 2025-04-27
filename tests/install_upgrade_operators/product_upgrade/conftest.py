@@ -88,7 +88,7 @@ def updated_image_content_source_policy(
     admin_client,
     nodes,
     tmpdir_factory,
-    machine_config_pools,
+    active_machine_config_pools,
     machine_config_pools_conditions,
     cnv_image_url,
     cnv_image_name,
@@ -119,7 +119,7 @@ def updated_image_content_source_policy(
     )
     apply_icsp_idms(
         file_paths=[file_path],
-        machine_config_pools=machine_config_pools,
+        machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
         is_idms_file=is_idms_cluster,
@@ -431,9 +431,18 @@ def eus_applied_all_icsp(
     )
 
 
+@pytest.fixture(scope="session")
+def active_machine_config_pools(machine_config_pools):
+    return [
+        machine_config_pool
+        for machine_config_pool in machine_config_pools
+        if machine_config_pool.instance.status.machineCount > 0
+    ]
+
+
 @pytest.fixture()
-def machine_config_pools_conditions(machine_config_pools):
-    return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
+def machine_config_pools_conditions(active_machine_config_pools):
+    return get_machine_config_pools_conditions(machine_config_pools=active_machine_config_pools)
 
 
 @pytest.fixture(scope="session")

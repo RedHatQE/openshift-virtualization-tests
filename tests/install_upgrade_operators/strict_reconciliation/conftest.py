@@ -16,8 +16,9 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_resource_version_update,
 )
 from tests.utils import wait_for_cr_labels_change
-from utilities.constants import TIMEOUT_1MIN, VERSION_LABEL_KEY
+from utilities.constants import HCO_BEARER_AUTH, TIMEOUT_1MIN, VERSION_LABEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
@@ -205,3 +206,14 @@ def updated_resource_labels(ocp_resource_by_name):
     ):
         wait_for_cr_labels_change(expected_value=expected_labels, component=ocp_resource_by_name, timeout=TIMEOUT_1MIN)
         yield expected_labels
+
+
+@pytest.fixture(scope="package")
+def is_jira_59518_open():
+    return is_jira_open(jira_id="CNV-59518")
+
+
+@pytest.fixture()
+def skip_if_hco_bearer_token_bug_open(is_jira_59518_open, ocp_resource_by_name):
+    if is_jira_59518_open and ocp_resource_by_name.name == HCO_BEARER_AUTH:
+        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 59518 bug")

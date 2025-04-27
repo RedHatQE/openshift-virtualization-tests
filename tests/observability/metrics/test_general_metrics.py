@@ -45,27 +45,27 @@ def fedora_vm_without_name_in_label(
         yield vm
 
 
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, vm_from_template_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
-            {
-                "vm_name": "rhel-latest",
-                "template_labels": RHEL_LATEST_LABELS,
-                "guest_agent": False,
-                "ssh": False,
-            },
-        ),
-    ],
-    indirect=True,
-)
 class TestVmiNodeCpuAffinity:
+    @pytest.mark.parametrize(
+        "golden_image_data_volume_scope_class, vm_from_template_scope_class",
+        [
+            pytest.param(
+                {
+                    "dv_name": RHEL_LATEST_OS,
+                    "image": RHEL_LATEST["image_path"],
+                    "storage_class": py_config["default_storage_class"],
+                    "dv_size": RHEL_LATEST["dv_size"],
+                },
+                {
+                    "vm_name": "rhel-latest",
+                    "template_labels": RHEL_LATEST_LABELS,
+                    "guest_agent": False,
+                    "ssh": False,
+                },
+            ),
+        ],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-7295")
     def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, vm_from_template_scope_class):
         validate_vmi_node_cpu_affinity_with_prometheus(
