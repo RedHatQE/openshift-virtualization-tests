@@ -20,9 +20,7 @@ from tests.observability.metrics.utils import (
     indirect=True,
 )
 @pytest.mark.usefixtures("vm_for_test", "vm_for_test_interface_name")
-class TestVmiNetworkMetrics:
-    """fedora vms"""
-
+class TestVmiNetworkMetricsLinux:
     @pytest.mark.parametrize(
         "metric_dict",
         [
@@ -57,8 +55,8 @@ class TestVmiNetworkMetrics:
             interface_name=vm_for_test_interface_name,
         )
 
-    """Windows vms"""
 
+class TestVmiNetworkMetricsWindows:
     @pytest.mark.parametrize(
         "metric_dict",
         [

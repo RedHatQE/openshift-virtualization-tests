@@ -1080,8 +1080,8 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
-  
-  
+
+
 @pytest.fixture()
 def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
     return get_vmi_memory_domain_metric_value_from_prometheus(

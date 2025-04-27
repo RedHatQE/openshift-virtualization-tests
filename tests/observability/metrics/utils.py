@@ -1273,39 +1273,6 @@ def get_interface_name_from_vm(vm: VirtualMachineForTests):
     return interface_name
 
 
-@contextmanager
-def create_windows11_wsl2_vm(dv_name, namespace, client, vm_name, storage_class):
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    with VirtualMachineForTests(
-        os_flavor=OS_FLAVOR_WINDOWS,
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
-
-
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
