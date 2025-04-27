@@ -1,11 +1,13 @@
 from collections import OrderedDict
 
+from ocp_resources.resource import Resource
+
 from utilities.constants import IPV6_STR
 from utilities.network import (
     compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 def create_running_vm(
@@ -37,7 +39,10 @@ def create_running_vm(
         ),
         client=client,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.vmi.wait_for_condition(
+            condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
+        )
         yield vm
 
 

@@ -16,7 +16,10 @@ warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = "libs.*"
+module = [
+  "libs.*",
+  "tests.network.libs.*"
+]
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
@@ -55,7 +58,7 @@ dependencies = [
   "pytest>=8.3.3",
   "pytest-benchmark>=5.1.0",
   "pytest-dependency>=0.6.0",
-  "pytest-jira>=0.3.21",
+  "pytest-jira~=0.3.21",
   "pytest-order>=1.3.0",
   "pytest-progress>=1.3.0",
   "pytest-testconfig>=0.2.0",

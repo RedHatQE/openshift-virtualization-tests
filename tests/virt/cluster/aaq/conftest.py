@@ -23,7 +23,7 @@ from tests.virt.cluster.aaq.utils import (
     wait_for_aacrq_object_created,
 )
 from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL, ACRQ_TEST
-from tests.virt.utils import enable_aaq_feature_gate, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
+from tests.virt.utils import enable_aaq_in_hco, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     POD_CONTAINER_SPEC,
     POD_SECURITY_CONTEXT_SPEC,
@@ -47,8 +47,8 @@ LOGGER = logging.getLogger(__name__)
 
 # AAQ - ApplicationAwareQuota, operator for managing resource quotas per component
 @pytest.fixture(scope="package")
-def enabled_aaq_feature_gate_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
-    with enable_aaq_feature_gate(
+def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
+    with enable_aaq_in_hco(
         client=admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_package,
