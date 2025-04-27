@@ -1579,6 +1579,8 @@ hostpath-provisioner-operator:
     - delete
     - list
     - watch
+hyperconverged-cluster-cli-download:
+  cluster_permission: []
 hyperconverged-cluster-operator:
   cluster_permission:
   - apiGroups:
@@ -1704,6 +1706,7 @@ hyperconverged-cluster-operator:
     - ''
     resources:
     - pods
+    - nodes
     verbs:
     - get
     - list
@@ -1711,11 +1714,13 @@ hyperconverged-cluster-operator:
   - apiGroups:
     - ''
     resources:
-    - nodes
+    - secrets
     verbs:
     - get
     - list
     - watch
+    - create
+    - update
   - apiGroups:
     - ''
     resources:
@@ -1840,11 +1845,24 @@ hyperconverged-cluster-operator:
     resources:
     - clusterversions
     - infrastructures
-    - ingresses
     - networks
     verbs:
     - get
     - list
+  - apiGroups:
+    - config.openshift.io
+    resources:
+    - ingresses
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - config.openshift.io
+    resources:
+    - ingresses/status
+    verbs:
+    - update
   - apiGroups:
     - config.openshift.io
     resources:
@@ -1890,6 +1908,14 @@ hyperconverged-cluster-operator:
     - create
     - update
     - delete
+    - patch
+  - apiGroups:
+    - route.openshift.io
+    resources:
+    - routes/custom-host
+    verbs:
+    - create
+    - update
     - patch
   - apiGroups:
     - operators.coreos.com
@@ -2423,10 +2449,12 @@ kubevirt-operator:
   - apiGroups:
     - subresources.kubevirt.io
     resources:
+    - virtualmachines/stop
     - virtualmachineinstances/addvolume
     - virtualmachineinstances/removevolume
     - virtualmachineinstances/freeze
     - virtualmachineinstances/unfreeze
+    - virtualmachineinstances/reset
     - virtualmachineinstances/softreboot
     - virtualmachineinstances/sev/setupsession
     - virtualmachineinstances/sev/injectlaunchsecret
@@ -2530,6 +2558,14 @@ kubevirt-operator:
     verbs:
     - list
     - watch
+  - apiGroups:
+    - batch
+    resources:
+    - jobs
+    verbs:
+    - create
+    - get
+    - delete
   - apiGroups:
     - kubevirt.io
     resources:
@@ -2641,6 +2677,7 @@ kubevirt-operator:
     - virtualmachineinstances/freeze
     - virtualmachineinstances/unfreeze
     - virtualmachineinstances/softreboot
+    - virtualmachineinstances/reset
     - virtualmachineinstances/sev/setupsession
     - virtualmachineinstances/sev/injectlaunchsecret
     verbs:
@@ -2660,7 +2697,6 @@ kubevirt-operator:
     - virtualmachines/restart
     - virtualmachines/addvolume
     - virtualmachines/removevolume
-    - virtualmachines/migrate
     - virtualmachines/memorydump
     verbs:
     - update
@@ -2677,7 +2713,6 @@ kubevirt-operator:
     - virtualmachineinstances
     - virtualmachineinstancepresets
     - virtualmachineinstancereplicasets
-    - virtualmachineinstancemigrations
     verbs:
     - get
     - delete
@@ -2687,6 +2722,14 @@ kubevirt-operator:
     - list
     - watch
     - deletecollection
+  - apiGroups:
+    - kubevirt.io
+    resources:
+    - virtualmachineinstancemigrations
+    verbs:
+    - get
+    - list
+    - watch
   - apiGroups:
     - snapshot.kubevirt.io
     resources:
@@ -2790,6 +2833,7 @@ kubevirt-operator:
     - virtualmachineinstances/freeze
     - virtualmachineinstances/unfreeze
     - virtualmachineinstances/softreboot
+    - virtualmachineinstances/reset
     - virtualmachineinstances/sev/setupsession
     - virtualmachineinstances/sev/injectlaunchsecret
     verbs:
@@ -2809,7 +2853,6 @@ kubevirt-operator:
     - virtualmachines/restart
     - virtualmachines/addvolume
     - virtualmachines/removevolume
-    - virtualmachines/migrate
     - virtualmachines/memorydump
     verbs:
     - update
@@ -2826,13 +2869,20 @@ kubevirt-operator:
     - virtualmachineinstances
     - virtualmachineinstancepresets
     - virtualmachineinstancereplicasets
-    - virtualmachineinstancemigrations
     verbs:
     - get
     - delete
     - create
     - update
     - patch
+    - list
+    - watch
+  - apiGroups:
+    - kubevirt.io
+    resources:
+    - virtualmachineinstancemigrations
+    verbs:
+    - get
     - list
     - watch
   - apiGroups:
@@ -3013,6 +3063,25 @@ kubevirt-operator:
     - get
     - list
     - watch
+  - apiGroups:
+    - subresources.kubevirt.io
+    resources:
+    - virtualmachines/migrate
+    verbs:
+    - update
+  - apiGroups:
+    - kubevirt.io
+    resources:
+    - virtualmachineinstancemigrations
+    verbs:
+    - get
+    - delete
+    - create
+    - update
+    - patch
+    - list
+    - watch
+    - deletecollection
   - apiGroups:
     - authentication.k8s.io
     resources:
@@ -3153,7 +3222,19 @@ ssp-operator:
   - apiGroups:
     - ''
     resources:
+    - configmaps
+    verbs:
+    - create
+    - delete
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - ''
+    resources:
     - endpoints
+    - persistentvolumeclaims/status
+    - persistentvolumes
     - pods
     verbs:
     - get
@@ -3162,6 +3243,7 @@ ssp-operator:
   - apiGroups:
     - ''
     resources:
+    - namespaces
     - services
     verbs:
     - create
@@ -3171,8 +3253,29 @@ ssp-operator:
     - update
     - watch
   - apiGroups:
+    - ''
+    resources:
+    - persistentvolumeclaims
+    - serviceaccounts
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ''
+    resources:
+    - serviceaccounts/token
+    verbs:
+    - create
+  - apiGroups:
     - admissionregistration.k8s.io
     resources:
+    - validatingadmissionpolicies
+    - validatingadmissionpolicybindings
     - validatingwebhookconfigurations
     verbs:
     - create
@@ -3226,29 +3329,7 @@ ssp-operator:
     - cdi.kubevirt.io
     resources:
     - dataimportcrons
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - cdi.kubevirt.io
-    resources:
     - datasources
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - cdi.kubevirt.io
-    resources:
     - datavolumes
     verbs:
     - create
@@ -3272,153 +3353,14 @@ ssp-operator:
     verbs:
     - get
   - apiGroups:
-    - ''
-    resources:
-    - configmaps
-    verbs:
-    - create
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - configmaps
-    - serviceaccounts
-    verbs:
-    - create
-    - delete
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - namespaces
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - persistentvolumeclaims
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - persistentvolumeclaims/status
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - persistentvolumes
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - pods
-    verbs:
-    - create
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - secrets
-    verbs:
-    - create
-    - get
-    - list
-    - patch
-  - apiGroups:
-    - ''
-    resources:
-    - serviceaccounts
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - ''
-    resources:
-    - serviceaccounts/token
-    verbs:
-    - create
-  - apiGroups:
-    - ''
-    resources:
-    - services
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - instancetype.kubevirt.io
-    resources:
-    - virtualmachineclusterinstancetypes
-    verbs:
-    - delete
-    - list
-    - watch
-  - apiGroups:
-    - instancetype.kubevirt.io
-    resources:
-    - virtualmachineclusterpreferences
-    verbs:
-    - delete
-    - list
-    - watch
-  - apiGroups:
     - kubevirt.io
     resources:
     - virtualmachineinstances
     - virtualmachines
     verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - kubevirt.io
-    resources:
-    - virtualmachines
-    verbs:
     - get
     - list
     - watch
-  - apiGroups:
-    - kubevirt.io
-    resources:
-    - virtualmachines/finalizers
-    verbs:
-    - get
   - apiGroups:
     - monitoring.coreos.com
     resources:
@@ -3434,39 +3376,6 @@ ssp-operator:
     resources:
     - clusterrolebindings
     - clusterroles
-    verbs:
-    - create
-    - delete
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - rbac.authorization.k8s.io
-    resources:
-    - clusterrolebindings
-    - clusterroles
-    - rolebindings
-    verbs:
-    - create
-    - delete
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - rbac.authorization.k8s.io
-    resources:
-    - clusterroles
-    - rolebindings
-    verbs:
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - rbac.authorization.k8s.io
-    resources:
-    - clusterroles
-    - rolebindings
-    - roles
     verbs:
     - create
     - delete
@@ -3506,11 +3415,6 @@ ssp-operator:
     - ssp.kubevirt.io
     resources:
     - ssps/finalizers
-    verbs:
-    - update
-  - apiGroups:
-    - ssp.kubevirt.io
-    resources:
     - ssps/status
     verbs:
     - update
@@ -3520,37 +3424,6 @@ ssp-operator:
     - virtualmachineinstances/vnc
     verbs:
     - get
-  - apiGroups:
-    - subresources.kubevirt.io
-    resources:
-    - virtualmachines/restart
-    - virtualmachines/start
-    - virtualmachines/stop
-    verbs:
-    - update
-  - apiGroups:
-    - tekton.dev
-    resources:
-    - pipelines
-    verbs:
-    - create
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - tekton.dev
-    resources:
-    - tasks
-    verbs:
-    - list
-    - update
-    - watch
-  - apiGroups:
-    - template.openshift.io
-    resources:
-    - processedtemplates
-    verbs:
-    - create
   - apiGroups:
     - template.openshift.io
     resources:
