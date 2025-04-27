@@ -1,0 +1,67 @@
+import logging
+
+from utilities.constants import TIMEOUT_1MIN
+
+LOGGER = logging.getLogger(__name__)
+
+import pytest
+from ocp_resources.mig_cluster import MigCluster
+from ocp_resources.mig_plan import MigPlan
+from ocp_resources.resource import ResourceEditor
+from pytest_testconfig import config as py_config
+
+OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
+
+
+@pytest.fixture(scope="module")
+def mig_cluster():
+    mig_cluster = MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE)
+    assert mig_cluster.exists, f"MigCluster {MigCluster.name} does not exists"
+    return mig_cluster
+
+
+@pytest.fixture(scope="module")
+def mig_cluster_ref_dict(mig_cluster):
+    return {"name": f"{mig_cluster.name}", "namespace": f"{mig_cluster.namespace}"}
+
+
+@pytest.fixture()
+def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
+    with MigPlan(
+        name="storage-mig-plan",
+        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
+        src_mig_cluster_ref=mig_cluster_ref_dict,
+        dest_mig_cluster_ref=mig_cluster_ref_dict,
+        live_migrate=True,
+        namespaces=[namespace.name],
+        refresh=False,
+    ) as mig_plan:
+        mig_plan.wait_for_condition(
+            condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
+        )
+        # Edit the target storageClass, accessModes, volumeMode
+        mig_plan_dict = mig_plan.instance.to_dict()
+        mig_plan_persistent_volumes_dict = mig_plan_dict["spec"]["persistentVolumes"][0].copy()
+        mig_plan_persistent_volumes_dict["selection"]["storageClass"] = f"{target_storage_class}"
+        mig_plan_persistent_volumes_dict["pvc"]["accessModes"][0] = "auto"
+        mig_plan_persistent_volumes_dict["pvc"]["volumeMode"] = "auto"
+        patch = {mig_plan: {"spec": {"persistentVolumes": [mig_plan_persistent_volumes_dict]}}}
+        ResourceEditor(patches=patch).update()
+        yield mig_plan
+
+
+@pytest.mark.parametrize(
+    "source_vm_for_storage_class_migration, target_storage_class",
+    [
+        pytest.param(
+            {"source_storage_class": py_config["source_storage_class_for_storage_migration"]},
+            {"target_storage_class": py_config["target_storage_class_for_storage_migration"]},
+            marks=pytest.mark.polarion("CNV-"),
+        )
+    ],
+    indirect=True,
+)
+def test_vm_for_sc_mig(source_vm_for_storage_class_migration, target_storage_class, storage_mig_plan):
+    LOGGER.info("HEY")
+    import ipdb
+    ipdb.set_trace()

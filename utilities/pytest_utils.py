@@ -121,6 +121,23 @@ def config_default_storage_class(session):
         py_config["default_access_mode"] = default_storage_class_configuration["access_mode"]
 
 
+def config_storage_classes_for_storage_migration(session):
+    # Storage class selection order:
+    # 1. --source-storage-class-for-storage-migration,
+    #    --target-storage-class-for-storage-migration from command line
+    # 2. global_config source_storage_class_for_storage_migration and target_storage_class_for_storage_migration
+    cmd_source_storage_class = session.config.getoption(name="source_storage_class_for_storage_migration")
+    cmd_target_storage_class = session.config.getoption(name="target_storage_class_for_storage_migration")
+    if cmd_source_storage_class:
+        py_config["source_storage_class_for_storage_migration"] = cmd_source_storage_class
+    if cmd_target_storage_class:
+        py_config["target_storage_class_for_storage_migration"] = cmd_target_storage_class
+    LOGGER.info(
+        f"Source storage class for storage migration: {py_config['source_storage_class_for_storage_migration']}, "
+        f"Target: {py_config['target_storage_class_for_storage_migration']}"
+    )
+
+
 def separator(symbol_, val=None):
     terminal_width = shutil.get_terminal_size(fallback=(120, 40))[0]
     if not val:
