@@ -5,7 +5,7 @@ import pytest
 from kubernetes.client import ApiException
 
 from utilities.network import LINUX_BRIDGE, network_device, network_nad
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
@@ -95,19 +95,6 @@ def vm_with_mac_address(
 
 
 @pytest.fixture()
-def running_vm_mac_addresses(vm_with_mac_address):
-    running_vm(
-        vm=vm_with_mac_address,
-        check_ssh_connectivity=False,
-        wait_for_interfaces=False,
-    )
-    vm_interfaces = vm_with_mac_address.get_interfaces()
-    for interface in vm_interfaces:
-        LOGGER.info(f"interface_name {interface['name']} was allocated with MAC address {interface[MAC_ADDRESS]}")
-    return vm_interfaces[1][MAC_ADDRESS]
-
-
-@pytest.fixture()
 def dry_run_vm_with_mac_address(
     unprivileged_client,
     namespace,
@@ -130,11 +117,12 @@ def dry_run_vm_with_mac_address(
 def test_dry_run_mac_not_saved(
     dry_run_vma_mac_address,
     vm_with_mac_address,
-    running_vm_mac_addresses,
 ):
     """Assure that the MAC address given to a VM created in dry-run mode is still available in the MAC-pool."""
-    assert dry_run_vma_mac_address == running_vm_mac_addresses, (
-        f"{vm_with_mac_address.name} MAC address is {running_vm_mac_addresses}"
+    vm_interfaces = vm_with_mac_address.get_interfaces()
+    secondary_net_mac = vm_interfaces[1][MAC_ADDRESS]
+    assert dry_run_vma_mac_address == secondary_net_mac, (
+        f"{vm_with_mac_address.name} MAC address is {secondary_net_mac}"
         f" and not {dry_run_vma_mac_address}, as it should be."
     )
 
