@@ -498,6 +498,7 @@ CNV_OPERATORS = [
     HYPERCONVERGED_CLUSTER_OPERATOR,
     "kubevirt-operator",
     SSP_OPERATOR,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
 ]
 # Node labels
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
