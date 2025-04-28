@@ -6,6 +6,7 @@ LOGGER = logging.getLogger(__name__)
 
 import pytest
 from ocp_resources.mig_cluster import MigCluster
+from ocp_resources.mig_migration import MigMigration
 from ocp_resources.mig_plan import MigPlan
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
@@ -50,6 +51,32 @@ def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
         yield mig_plan
 
 
+#   migrateState: true
+#   quiescePods: true
+#   stage: false
+
+
+@pytest.fixture()
+def storage_mig_migration(storage_mig_plan):
+    with MigMigration(
+        name="mig-migration-abc",
+        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
+        mig_plan_ref={"name": f"{storage_mig_plan.name}", "namespace": f"{storage_mig_plan.namespace}"},
+        migrate_state=True,
+        quiesce_pods=True, # CutOver -> Start migration
+        stage=False,
+    ) as mig_migration:
+        mig_migration.wait_for_condition(
+            condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
+        )
+        mig_migration.wait_for_condition(
+            condition=mig_migration.Condition.Type.SUCCEEDED , status=mig_migration.Condition.Status.TRUE
+        )
+        yield mig_migration
+
+
+
+
 @pytest.mark.parametrize(
     "source_vm_for_storage_class_migration, target_storage_class",
     [
@@ -61,7 +88,7 @@ def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
     ],
     indirect=True,
 )
-def test_vm_for_sc_mig(source_vm_for_storage_class_migration, target_storage_class, storage_mig_plan):
+def test_vm_for_sc_mig(source_vm_for_storage_class_migration, target_storage_class, storage_mig_plan, storage_mig_migration):
     LOGGER.info("HEY")
     import ipdb
     ipdb.set_trace()
