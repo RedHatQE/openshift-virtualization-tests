@@ -1285,13 +1285,13 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
     return {}
 
 
-def get_virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_api_pod):
+def get_pod_memory_stats(admin_client, hco_namespace, pod_prefix):
     return int(
         bitmath.Byte(
             int(
                 get_pod_by_name_prefix(
                     dyn_client=admin_client,
-                    pod_prefix=highest_memory_usage_virt_api_pod,
+                    pod_prefix=pod_prefix,
                     namespace=hco_namespace,
                 ).execute(command=RSS_MEMORY_COMMAND)
             )
@@ -1299,7 +1299,7 @@ def get_virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_vi
     )
 
 
-def get_highest_memory_usage_virt_api_pod(hco_namespace):
+def get_highest_memory_usage_virt_api_pod_dict(hco_namespace):
     oc_adm_top_pod_output = (
         run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} -l kubevirt.io=virt-api"))[1]
         .strip()
@@ -1310,17 +1310,17 @@ def get_highest_memory_usage_virt_api_pod(hco_namespace):
         key=lambda pod: pod[1],
     )
     return {
-        "virt_api_pod": virt_api_with_highest_memory_usage[0],
+        "virt_api_pod_name": virt_api_with_highest_memory_usage[0],
         "memory_usage": virt_api_with_highest_memory_usage[1],
     }
 
 
-def get_virt_api_requested_memory(hco_namespace, admin_client, highest_memory_usage_virt_api_pod):
+def get_pod_requested_memory(hco_namespace, admin_client, pod_prefix):
     return float(
         bitmath.parse_string_unsafe(
             get_pod_by_name_prefix(
                 dyn_client=admin_client,
-                pod_prefix=highest_memory_usage_virt_api_pod,
+                pod_prefix=pod_prefix,
                 namespace=hco_namespace,
             )
             .instance.spec.containers[0]
@@ -1330,28 +1330,26 @@ def get_virt_api_requested_memory(hco_namespace, admin_client, highest_memory_us
 
 
 def expected_kubevirt_memory_delta_from_requested_bytes_working_set(hco_namespace, admin_client):
-    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod(hco_namespace=hco_namespace)
-    virt_api_requested_memory = get_virt_api_requested_memory(
+    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)
+    virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
         admin_client=admin_client,
-        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod["virt_api_pod"],
+        pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod_name"],
     )
     return float(bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte)
 
 
 def expected_kubevirt_memory_delta_from_requested_bytes_rss(admin_client, hco_namespace):
-    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod(hco_namespace=hco_namespace)[
-        "virt_api_pod"
-    ]
-    virt_api_rss_memory = get_virt_api_rss_memory(
+    virt_api_pod_name = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)["virt_api_pod_name"]
+    virt_api_rss_memory = get_pod_memory_stats(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
-        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod,
+        pod_prefix=virt_api_pod_name,
     )
-    virt_api_requested_memory = get_virt_api_requested_memory(
+    virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
         admin_client=admin_client,
-        highest_memory_usage_virt_api_pod=highest_memory_usage_virt_api_pod,
+        pod_prefix=virt_api_pod_name,
     )
     return float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte)
 
