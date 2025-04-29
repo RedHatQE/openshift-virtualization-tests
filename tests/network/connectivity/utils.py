@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-from ocp_resources.resource import Resource
-
 from utilities.constants import IPV6_STR
 from utilities.network import (
     compose_cloud_init_data_dict,
@@ -40,9 +38,7 @@ def create_running_vm(
         client=client,
     ) as vm:
         vm.start(wait=True)
-        vm.vmi.wait_for_condition(
-            condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-        )
+        vm.wait_for_agent_connected()
         yield vm
 
 
