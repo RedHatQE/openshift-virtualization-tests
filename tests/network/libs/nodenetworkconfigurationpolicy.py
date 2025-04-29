@@ -129,7 +129,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
         conditions = (
             condition
-            for condition in self.instance.status.conditions
+            for condition in self.instance.get("status", {}).get("conditions", {})
             if condition["status"] == Resource.Condition.Status.TRUE
         )
 
