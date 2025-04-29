@@ -61,17 +61,13 @@ def pod_net_vmb(
 
 @pytest.fixture()
 def pod_net_running_vma(pod_net_vma):
-    pod_net_vma.vmi.wait_for_condition(
-        condition=pod_net_vma.Condition.Type.AGENT_CONNECTED, status=pod_net_vma.Condition.Status.TRUE
-    )
+    pod_net_vma.wait_for_agent_connected()
     return pod_net_vma
 
 
 @pytest.fixture()
 def pod_net_running_vmb(pod_net_vmb):
-    pod_net_vmb.vmi.wait_for_condition(
-        condition=pod_net_vmb.Condition.Type.AGENT_CONNECTED, status=pod_net_vmb.Condition.Status.TRUE
-    )
+    pod_net_vmb.wait_for_agent_connected()
     return pod_net_vmb
 
 

@@ -10,7 +10,7 @@ from ocp_resources.pod import Pod
 from tests.virt.cluster.utils import verify_pods_priority_class_value
 from utilities.constants import VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 
 
 LOGGER = logging.getLogger(__name__)
