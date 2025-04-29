@@ -75,6 +75,7 @@ dependencies = [
   "urllib3>=2.2.3",
   "xmltodict>=0.14.2",
   "openshift-python-wrapper~=11.0.10",
+  "marshmallow~=3.26.1",
 ]
 
 [tool.hatch.build.targets.wheel]
