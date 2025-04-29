@@ -98,25 +98,6 @@ VM_ERROR_STATUSES = [
 ]
 
 
-def wait_for_guest_agent(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> None:
-    LOGGER.info(f"Wait until guest agent is active on {vmi.name}")
-
-    sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
-    try:
-        for sample in sampler:
-            agent_status = [
-                condition
-                for condition in sample.get("status", {}).get("conditions", {})
-                if condition.get("type") == "AgentConnected" and condition.get("status") == "True"
-            ]
-            if agent_status:
-                return
-
-    except TimeoutExpiredError:
-        LOGGER.error(f"Guest agent is not installed or not active on {vmi.name}")
-        raise
-
-
 def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool:
     """
     Wait until guest agent report VMI network interfaces.
@@ -132,7 +113,12 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
         TimeoutExpiredError: After timeout reached.
     """
     # Waiting for guest agent connection before checking guest agent interfaces report
-    wait_for_guest_agent(vmi=vmi, timeout=timeout)
+    LOGGER.info(f"Wait until guest agent is active on {vmi.name}")
+    vmi.wait_for_condition(
+        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+        status=VirtualMachineInstance.Condition.Status.TRUE,
+        timeout=timeout,
+    )
     LOGGER.info(f"Wait for {vmi.name} network interfaces")
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
     for sample in sampler:
@@ -1062,6 +1048,13 @@ class VirtualMachineForTests(VirtualMachine):
     @property
     def privileged_vmi(self):
         return VirtualMachineInstance(client=get_client(), name=self.name, namespace=self.namespace)
+
+    def wait_for_agent_connected(self, timeout: int = TIMEOUT_5MIN):
+        self.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+            timeout=timeout,
+        )
 
 
 class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):

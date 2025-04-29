@@ -1,7 +1,6 @@
 import ipaddress
 
 import pytest
-from ocp_resources.resource import Resource
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
@@ -67,7 +66,7 @@ def udn_affinity_label():
 def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
     with udn_vm(namespace_name=udn_namespace.name, name="vma-udn", template_labels=dict((udn_affinity_label,))) as vm:
         vm.start(wait=True)
-        vm.vmi.wait_for_condition(condition="AgentConnected", status=Resource.Condition.Status.TRUE)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -75,7 +74,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 def vmb_udn_non_migratable(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
     with udn_vm(namespace_name=udn_namespace.name, name="vmb-udn", template_labels=dict((udn_affinity_label,))) as vm:
         vm.start(wait=True)
-        vm.vmi.wait_for_condition(condition="AgentConnected", status=Resource.Condition.Status.TRUE)
+        vm.wait_for_agent_connected()
         yield vm
 
 

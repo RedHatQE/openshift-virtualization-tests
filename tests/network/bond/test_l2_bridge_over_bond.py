@@ -5,7 +5,6 @@ Connectivity over bond bridge on secondary interface
 from collections import OrderedDict
 
 import pytest
-from ocp_resources.resource import Resource
 
 import utilities.network
 from tests.network.libs import cloudinit as netcloud
@@ -177,9 +176,7 @@ def ovs_linux_bond_bridge_attached_vms(ovs_linux_bond_bridge_attached_vma, ovs_l
     vms = (ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb)
     for vm in vms:
         vm.wait_for_ready_status(status=True)
-        vm.vmi.wait_for_condition(
-            condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-        )
+        vm.wait_for_agent_connected()
     yield vms
 
 
