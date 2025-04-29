@@ -101,6 +101,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             name=name,
             desired_state=asdict(desired_state, dict_factory=dict_normalization_for_dataclass),
             node_selector=node_selector,
+            wait_for_resource=True,
         )
 
     @property
