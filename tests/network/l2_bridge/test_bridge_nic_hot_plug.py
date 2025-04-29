@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from libs.net import netattachdef
 from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
@@ -26,7 +27,7 @@ from utilities.network import (
     get_vmi_ip_v4_by_name,
     network_nad,
 )
-from utilities.virt import migrate_vm_and_verify, running_vm
+from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [
     pytest.mark.special_infra,
@@ -403,7 +404,10 @@ def mac_addresses_before_restart(running_vm_for_nic_hot_plug, hot_plugged_interf
 @pytest.fixture()
 def mac_addresses_after_restart(running_vm_for_nic_hot_plug, hot_plugged_interface_name):
     running_vm_for_nic_hot_plug.restart(wait=True)
-    running_vm(vm=running_vm_for_nic_hot_plug)
+    running_vm_for_nic_hot_plug.vmi.wait_for_condition(
+        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+        status=VirtualMachineInstance.Condition.Status.TRUE,
+    )
 
     return get_primary_and_hot_plugged_mac_addresses(
         vm=running_vm_for_nic_hot_plug,
