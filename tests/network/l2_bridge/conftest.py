@@ -4,6 +4,7 @@ import shlex
 from ipaddress import ip_interface
 
 import pytest
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.network.constants import DHCP_IP_RANGE_END, DHCP_IP_RANGE_START
@@ -23,7 +24,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     prepare_cloud_init_user_data,
-    running_vm,
 )
 
 #: Test setup
@@ -322,7 +322,11 @@ def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, unprivil
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+        )
         yield vm
 
 
@@ -347,7 +351,11 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+        )
         yield vm
 
 

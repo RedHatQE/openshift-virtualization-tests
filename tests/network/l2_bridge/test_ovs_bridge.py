@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import pytest
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.network.constants import BRCNV
 from tests.network.utils import vm_for_brcnv_tests
@@ -12,7 +13,7 @@ from utilities.network import (
     get_vmi_ip_v4_by_name,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 OVS_BR = "test-ovs-br"
 SEC_IFACE_SUBNET = "10.0.200"
@@ -123,7 +124,11 @@ def vma_with_ovs_based_l2(
 
 @pytest.fixture()
 def running_vma_with_ovs_based_l2(vma_with_ovs_based_l2):
-    return running_vm(vm=vma_with_ovs_based_l2, wait_for_cloud_init=True)
+    vma_with_ovs_based_l2.vmi.wait_for_condition(
+        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+        status=VirtualMachineInstance.Condition.Status.TRUE,
+    )
+    return vma_with_ovs_based_l2
 
 
 @pytest.fixture()
@@ -160,7 +165,11 @@ def vmb_with_ovs_based_l2(
 
 @pytest.fixture()
 def running_vmb_with_ovs_based_l2(vmb_with_ovs_based_l2):
-    return running_vm(vm=vmb_with_ovs_based_l2, wait_for_cloud_init=True)
+    vmb_with_ovs_based_l2.vmi.wait_for_condition(
+        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+        status=VirtualMachineInstance.Condition.Status.TRUE,
+    )
+    return vmb_with_ovs_based_l2
 
 
 @pytest.mark.ipv4
