@@ -8,10 +8,13 @@ from utilities.virt import migrate_vm_and_verify
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestAAQDifferentAllocationMethods"
 
-pytestmark = pytest.mark.usefixtures(
-    "enabled_aaq_in_hco_scope_package",
-    "updated_namespace_with_aaq_label",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enabled_aaq_in_hco_scope_package",
+        "updated_namespace_with_aaq_label",
+    ),
+    pytest.mark.arm64,
+]
 
 
 @pytest.mark.usefixtures(

@@ -6,7 +6,7 @@ from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
-from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.vm.spec import (
@@ -71,6 +71,12 @@ class BaseVirtualMachine(VirtualMachine):
             timeout=timeout,
             verify_commands_output=True,
             command_output=True,
+        )
+
+    def wait_for_agent_connected(self) -> None:
+        self.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
         )
 
 

@@ -42,6 +42,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.arm64
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "first_pod_for_aaq_test",
@@ -90,6 +91,7 @@ class TestARQCanManagePods:
         second_pod_for_aaq_test_in_gated_state.wait_for_status(status=Pod.Status.RUNNING)
 
 
+@pytest.mark.arm64
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "vm_for_aaq_test",
@@ -205,6 +207,7 @@ class TestARQSupportCPUHotplug:
         wait_when_pod_in_gated_state(pod=hotplugged_target_pod)
 
 
+@pytest.mark.arm64
 class TestARQSupportMemoryHotplug:
     @pytest.mark.parametrize(
         "hotplugged_resource",
