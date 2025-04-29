@@ -7,7 +7,7 @@ import pytest
 from utilities.constants import CLOUD_INIT_NO_CLOUD
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 @pytest.fixture()
