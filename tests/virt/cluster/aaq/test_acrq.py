@@ -11,6 +11,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_ACRQ_CLASS_NAME = "TestApplicationAwareClusterResourceQuota"
 
 
+@pytest.mark.arm64
 @pytest.mark.usefixtures(
     "enabled_aaq_in_hco_scope_package",
     "enabled_acrq_support",
