@@ -45,7 +45,7 @@ def fedora_vm_without_name_in_label(
         yield vm
 
 
-class TestVmiNodeCpuAffinity:
+class TestVmiNodeCpuAffinityLinux:
     @pytest.mark.parametrize(
         "golden_image_data_volume_scope_class, vm_from_template_scope_class",
         [
@@ -73,12 +73,13 @@ class TestVmiNodeCpuAffinity:
             prometheus=prometheus,
         )
 
+
+class TestVmiNodeCpuAffinityWindows:
     @pytest.mark.polarion("CNV-11883")
     def test_kubevirt_vmi_node_cpu_affinity_windows_vm(self, prometheus, windows_vm_for_test):
         validate_vmi_node_cpu_affinity_with_prometheus(
             vm=windows_vm_for_test,
             prometheus=prometheus,
-            windows=True,
         )
 
 
