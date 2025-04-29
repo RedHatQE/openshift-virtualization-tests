@@ -7,7 +7,7 @@ from ocp_resources.template import Template
 
 from tests.utils import (
     clean_up_migration_jobs,
-    hotplug_resource_and_wait_hotplug_migration_finish,
+    hotplug_resource_and_verify_hotplug,
     hotplug_spec_vm,
 )
 from tests.virt.utils import append_feature_gate_to_hco
@@ -81,7 +81,7 @@ def hotplugged_sockets_memory_guest(request, admin_client, hotplugged_vm, unpriv
     if param.get("skip_migration"):
         hotplug_spec_vm(vm=hotplugged_vm, sockets=param.get("sockets"), memory_guest=param.get("memory_guest"))
     else:
-        hotplug_resource_and_wait_hotplug_migration_finish(
+        hotplug_resource_and_verify_hotplug(
             vm=hotplugged_vm,
             client=unprivileged_client,
             sockets=param.get("sockets"),

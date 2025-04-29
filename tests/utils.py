@@ -169,18 +169,20 @@ def get_image_name_from_csv(image_string, csv_related_images):
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 
 
-def hotplug_resource_and_wait_hotplug_migration_finish(vm, client, sockets=None, memory_guest=None):
+def hotplug_resource_and_verify_hotplug(vm, client, sockets=None, memory_guest=None):
     assert sockets or memory_guest, "No resource for update provided!!!"
-    assert not (sockets and memory_guest), "Hotpluging both cpu and memory at once is not supported!"
 
     if vm.instance.spec.get("instancetype"):
         hotplug_instance_type_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
     else:
         hotplug_spec_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
+    verify_hotplug(vm=vm, client=client, sockets=sockets, memory_guest=memory_guest)
+
+
+def verify_hotplug(vm, client, sockets=None, memory_guest=None):
     vmim = get_created_migration_job(vm=vm, client=client)
     wait_for_migration_finished(vm=vm, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
     wait_for_ssh_connectivity(vm=vm)
-
     vmi_spec_domain = vm.vmi.instance.spec.domain
     if sockets:
         assert vmi_spec_domain.cpu.sockets == sockets, (
