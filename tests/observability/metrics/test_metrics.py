@@ -62,12 +62,14 @@ class TestMetricsWindows:
         This test also validates ability to pull metric information from a given vm's virt-handler pod and validates
         appropriate information exists for that metrics.
         """
-        if is_jira_open(jira_id="CNV-59679"):
-            if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS:
-                pytest.xfail(
-                    f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
-                    f"any value for windows vm"
-                )
+        if (
+            is_jira_open(jira_id="CNV-59679")
+            and cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS
+        ):
+            pytest.xfail(
+                f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
+                f"any value for windows vm"
+            )
 
         get_vm_metrics(
             prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=windows_vm_for_test.name
