@@ -2,7 +2,7 @@ import bitmath
 import pytest
 from ocp_resources.resource_quota import ResourceQuota
 
-from tests.utils import hotplug_resource_and_wait_hotplug_migration_finish
+from tests.utils import hotplug_resource_and_verify_hotplug
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -45,7 +45,7 @@ def vm_auto_resource_limits(request, namespace, unprivileged_client, cpu_for_mig
 
 @pytest.fixture()
 def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_client):
-    hotplug_resource_and_wait_hotplug_migration_finish(
+    hotplug_resource_and_verify_hotplug(
         vm=vm_auto_resource_limits, client=unprivileged_client, sockets=CPU_SOCKET_HOTPLUG
     )
 

@@ -9,7 +9,7 @@ from tests.utils import (
     assert_restart_required_codition,
     clean_up_migration_jobs,
     hotplug_instance_type_vm,
-    hotplug_resource_and_wait_hotplug_migration_finish,
+    hotplug_resource_and_verify_hotplug,
 )
 from utilities.constants import (
     EIGHT_CPU_SOCKETS,
@@ -68,7 +68,7 @@ def hot_plug_instance_type(cpu_for_migration):
 
 @pytest.fixture()
 def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm, unprivileged_client):
-    hotplug_resource_and_wait_hotplug_migration_finish(
+    hotplug_resource_and_verify_hotplug(
         vm=instance_type_hotplug_vm, client=unprivileged_client, sockets=SIX_CPU_SOCKETS
     )
     yield
