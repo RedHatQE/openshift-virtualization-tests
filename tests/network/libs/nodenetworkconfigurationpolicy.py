@@ -101,6 +101,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             name=name,
             desired_state=asdict(desired_state, dict_factory=dict_normalization_for_dataclass),
             node_selector=node_selector,
+            wait_for_resource=True,
         )
 
     @property
@@ -128,7 +129,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
 
         conditions = (
             condition
-            for condition in self.instance.status.conditions
+            for condition in self.instance.get("status", {}).get("conditions", {})
             if condition["status"] == Resource.Condition.Status.TRUE
         )
 
