@@ -13,6 +13,8 @@ from utilities.virt import (
     wait_for_vm_interfaces,
 )
 
+pytestmark = pytest.mark.arm64
+
 LOGGER = logging.getLogger(__name__)
 
 
