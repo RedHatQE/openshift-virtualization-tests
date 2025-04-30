@@ -159,6 +159,7 @@ def updated_common_templates_non_existent_ns(
     )
 
 
+@pytest.mark.gating
 @pytest.mark.usefixtures("updated_common_template_custom_ns")
 class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
