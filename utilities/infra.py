@@ -284,8 +284,10 @@ def get_pod_container_error_status(pod):
             return waiting_container["reason"] if waiting_container.get("reason") else waiting_container
 
 
-def get_not_running_pods(pods, filter_pods_by_name=None):
+def get_not_running_pods(pods=None, dyn_client=None, namespace=None, filter_pods_by_name=None):
+    pods = pods if pods else list(Pod.get(dyn_client=dyn_client, namespace=namespace.name))
     pods_not_running = []
+
     for pod in pods:
         try:
             pod_instance = pod.instance
@@ -332,10 +334,10 @@ def wait_for_pods_running(
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: get_not_running_pods(
-            pods=list(Pod.get(dyn_client=admin_client, namespace=namespace.name)),
-            filter_pods_by_name=filter_pods_by_name,
-        ),
+        func=get_not_running_pods,
+        dyn_client=admin_client,
+        namespace=namespace,
+        filter_pods_by_name=filter_pods_by_name,
     )
     sample = None
     try:
