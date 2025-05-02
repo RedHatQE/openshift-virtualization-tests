@@ -192,7 +192,7 @@ data_import_cron_matrix = [
     {"fedora": {"instance_type": "u1.medium", "preference": "fedora"}},
     {"rhel8": {"instance_type": "u1.medium", "preference": "rhel.8"}},
     {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
-    {"rhel10-beta": {"instance_type": "u1.medium", "preference": "rhel.10"}},
+    {"rhel10": {"instance_type": "u1.medium", "preference": "rhel.10"}},
 ]
 
 rhel_os_matrix = [
