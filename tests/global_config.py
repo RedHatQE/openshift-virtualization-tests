@@ -398,7 +398,7 @@ instance_type_rhel_os_matrix = [
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             INSTANCE_TYPE_STR: "u1.medium",
             PREFERENCE_STR: "rhel.10",
-            DATA_SOURCE_NAME: "rhel10-beta",
+            DATA_SOURCE_NAME: "rhel10",
             LATEST_RELEASE_STR: True,
         }
     },
