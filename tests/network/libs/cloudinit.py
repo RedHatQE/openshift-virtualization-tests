@@ -1,6 +1,8 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any, Final
 
+import yaml
+
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
 
 NETWORK_DATA: Final[str] = "networkData"
@@ -51,9 +53,33 @@ class NetworkData:
     ethernets: dict[str, EthernetDevice]
 
 
+@dataclass
+class UserData:
+    """Represents user configuration for cloud-init."""
+
+    users: list[Any]
+    """
+    Part of cloud-init's 'users and groups' module:
+    https://cloudinit.readthedocs.io/en/latest/reference/modules.html#users-and-groups
+    """
+
+
+def todict(no_cloud: NetworkData | UserData) -> dict[str, Any]:
+    return asdict(obj=no_cloud, dict_factory=dict_normalization_for_dataclass)
+
+
+def asyaml(no_cloud: NetworkData | UserData) -> str:
+    return yaml.safe_dump(todict(no_cloud=no_cloud), sort_keys=False)
+
+
+def format_cloud_config(userdata: UserData) -> str:
+    """
+    Formats UserData as a cloud-init '#cloud-config' file.
+    See: https://cloudinit.readthedocs.io/en/latest/explanation/format.html#headers-and-content-types
+    """
+    body = yaml.safe_dump(todict(no_cloud=userdata), sort_keys=False)
+    return f"#cloud-config\n{body}"
+
+
 def cloudinit(netdata: NetworkData) -> dict[str, Any]:
-    return {NETWORK_DATA: todict(netdata)}
-
-
-def todict(netdata: NetworkData) -> dict[str, Any]:
-    return asdict(obj=netdata, dict_factory=dict_normalization_for_dataclass)
+    return {NETWORK_DATA: todict(no_cloud=netdata)}

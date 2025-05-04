@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 from ocp_resources.exceptions import NNCPConfigurationFailed
@@ -14,6 +15,7 @@ from tests.network.libs.apimachinery import dict_normalization_for_dataclass
 
 WAIT_FOR_STATUS_TIMEOUT_SEC = 90
 WAIT_FOR_STATUS_INTERVAL_SEC = 5
+DEFAULT_OVN_EXTERNAL_BRIDGE = "br-ex"  # Default name for OVN-Kubernetes external bridge
 
 
 @dataclass
@@ -66,6 +68,21 @@ class Interface:
 
 
 @dataclass
+class BridgeMappings:
+    class State(Enum):
+        PRESENT = "present"
+
+    localnet: str
+    bridge: str
+    state: str
+
+
+@dataclass
+class OVN:
+    bridge_mappings: list[BridgeMappings]
+
+
+@dataclass
 class DesiredState:
     """
     Represents the desired network configuration for NMstate.
@@ -73,7 +90,8 @@ class DesiredState:
     https://nmstate.io/devel/yaml_api.html
     """
 
-    interfaces: list[Interface]
+    interfaces: list[Interface] | None = None
+    ovn: OVN | None = None
 
 
 class NodeNetworkConfigurationPolicy(Nncp):
@@ -109,11 +127,14 @@ class NodeNetworkConfigurationPolicy(Nncp):
         return self._desired_state
 
     def clean_up(self, wait: bool = True, timeout: int | None = None) -> bool:
+        desired_state: dict[str, Any] = {}
         if to_delete_interfaces := self._interfaces_for_deletion():
+            desired_state["interfaces"] = to_delete_interfaces
+        if to_delete_ovn := self._ovn_for_deletion():
+            desired_state["ovn"] = to_delete_ovn
+        if desired_state:
             with self._confirm_status_success_on_update():
-                ResourceEditor(
-                    patches={self: {"spec": {"desiredState": {"interfaces": to_delete_interfaces}}}}
-                ).update()
+                ResourceEditor(patches={self: {"spec": {"desiredState": desired_state}}}).update()
         return super().clean_up(wait=wait, timeout=timeout)
 
     @retry(
@@ -146,10 +167,16 @@ class NodeNetworkConfigurationPolicy(Nncp):
         return {}
 
     def _interfaces_for_deletion(self) -> list[Interface]:
-        to_delete_interfaces = deepcopy(self.desired_state["interfaces"])
+        to_delete_interfaces = deepcopy(self.desired_state.get("interfaces", []))
         for iface in to_delete_interfaces:
             iface["state"] = Nncp.Interface.State.ABSENT
         return to_delete_interfaces
+
+    def _ovn_for_deletion(self) -> OVN:
+        to_delete_ovn = deepcopy(self.desired_state.get("ovn", {}))
+        for bridge_mapping in to_delete_ovn.get("bridge-mappings", []):
+            bridge_mapping["state"] = Nncp.Interface.State.ABSENT
+        return to_delete_ovn
 
     @contextlib.contextmanager
     def _confirm_status_success_on_update(self) -> Iterator[None]:

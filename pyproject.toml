@@ -18,7 +18,8 @@ warn_redundant_casts = true
 [[tool.mypy.overrides]]
 module = [
   "libs.*",
-  "tests.network.libs.*"
+  "tests.network.libs.*",
+  "tests.network.localnet.*"
 ]
 disallow_untyped_calls = true
 disallow_untyped_defs = true

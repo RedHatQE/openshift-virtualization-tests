@@ -38,8 +38,8 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
     vmi_spec.volumes = vmi_spec.volumes or []
 
     disk, volume = containerdisk_storage(image=fedora_image())
-    vmi_spec.domain.devices.disks.append(disk)
-    vmi_spec.volumes.append(volume)
+    vmi_spec.domain.devices.disks.insert(0, disk)
+    vmi_spec.volumes.insert(0, volume)
 
     vmi_spec.domain.cpu = vmi_spec.domain.cpu or CPU(cores=1)
     vmi_spec.domain.memory = vmi_spec.domain.memory or Memory(guest="1Gi")
