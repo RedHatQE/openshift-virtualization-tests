@@ -54,7 +54,7 @@ class Images:
         RHEL9_5_IMG = "rhel-95.qcow2"
         RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
         RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
+        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10/rhel-guest-image"
         DIR = f"{BASE_IMAGES_DIR}/rhel-images"
         DEFAULT_DV_SIZE = "20Gi"
         DEFAULT_MEMORY_SIZE = "1.5Gi"
@@ -339,7 +339,7 @@ UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
-RHEL10_BETA_GUEST = "rhel10-beta-guest"
+RHEL10_GUEST = "rhel10-guest"
 VIRTIO = "virtio"
 VIRTIO_WIN = "virtio-win"
 NGINX_CONF = "nginx-conf"
@@ -401,7 +401,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS: CONFIGMAP_STR},
     {RHEL8_GUEST: IMAGESTREAM_STR},
     {RHEL9_GUEST: IMAGESTREAM_STR},
-    {RHEL10_BETA_GUEST: IMAGESTREAM_STR},
+    {RHEL10_GUEST: IMAGESTREAM_STR},
     {VIRTIO_WIN: CONFIGMAP_STR},
     {VIRTIO_WIN: ROLE_STR},
     {VIRTIO_WIN: ROLEBINDING_STR},
