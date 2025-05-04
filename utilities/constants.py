@@ -840,7 +840,6 @@ KUBEVIRT_VMI_STORAGE_READ_TRAFFIC_BYTES_TOTAL = "kubevirt_vmi_storage_read_traff
 KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL = "kubevirt_vmi_vcpu_wait_seconds_total"
 KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_in_traffic_bytes"
 KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_out_traffic_bytes"
-KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE = "kubevirt_vmi_memory_domain_bytes"
 KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL = "kubevirt_vmi_memory_pgminfault_total"
 
 MONITORING_METRICS = [

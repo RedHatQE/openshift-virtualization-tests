@@ -63,7 +63,7 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -473,7 +473,7 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
@@ -1099,7 +1099,7 @@ def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheu
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
