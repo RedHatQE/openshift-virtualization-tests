@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from typing import Any, Final
 
 from kubernetes.dynamic import DynamicClient
@@ -28,6 +29,25 @@ class CNIPluginBridgeConfig(CNIPluginConfig):
     vlan: int | None = None
     macspoofchk: bool | None = None
     disableContainerInterface: bool | None = None  # noqa: N815
+
+
+@dataclass
+class CNIPluginOvnK8sConfig(CNIPluginConfig):
+    """
+    CNI OVN-Kubernetes Plugin
+    Ref:
+    https://docs.openshift.com/container-platform/4.14/networking/multiple_networks/
+    configuring-additional-network.html#configuration-ovnk-network-plugin-json-object_
+    configuring-additional-network
+    """
+
+    type: str = field(default="ovn-k8s-cni-overlay", init=False)
+    topology: str
+    netAttachDefName: str  # noqa: N815
+    vlanID: int | None = None  # noqa: N815
+
+    class Topology(Enum):
+        LOCALNET = "localnet"
 
 
 @dataclass
