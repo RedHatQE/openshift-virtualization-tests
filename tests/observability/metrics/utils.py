@@ -1285,7 +1285,7 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
     return {}
 
 
-def get_pod_memory_stats(admin_client, hco_namespace, pod_prefix):
+def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_prefix: str) -> int:
     return int(
         bitmath.Byte(
             int(
@@ -1299,7 +1299,7 @@ def get_pod_memory_stats(admin_client, hco_namespace, pod_prefix):
     )
 
 
-def get_highest_memory_usage_virt_api_pod_dict(hco_namespace):
+def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str):
     oc_adm_top_pod_output = (
         run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} -l kubevirt.io=virt-api"))[1]
         .strip()
@@ -1315,7 +1315,7 @@ def get_highest_memory_usage_virt_api_pod_dict(hco_namespace):
     }
 
 
-def get_pod_requested_memory(hco_namespace, admin_client, pod_prefix):
+def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
     return float(
         bitmath.parse_string_unsafe(
             get_pod_by_name_prefix(
@@ -1329,33 +1329,33 @@ def get_pod_requested_memory(hco_namespace, admin_client, pod_prefix):
     )
 
 
-def expected_kubevirt_memory_delta_from_requested_bytes_working_set(hco_namespace, admin_client):
+def expected_kubevirt_memory_delta_from_requested_bytes(
+    hco_namespace: str, admin_client: DynamicClient, rss: bool
+) -> float:
     highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)
+    virt_api_pod_name = highest_memory_usage_virt_api_pod["virt_api_pod_name"]
     virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
         admin_client=admin_client,
-        pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod_name"],
+        pod_prefix=virt_api_pod_name,
     )
+    if rss:
+        virt_api_rss_memory = get_pod_memory_stats(
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            pod_prefix=virt_api_pod_name,
+        )
+        return float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte)
     return float(bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte)
 
 
-def expected_kubevirt_memory_delta_from_requested_bytes_rss(admin_client, hco_namespace):
-    virt_api_pod_name = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)["virt_api_pod_name"]
-    virt_api_rss_memory = get_pod_memory_stats(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        pod_prefix=virt_api_pod_name,
-    )
-    virt_api_requested_memory = get_pod_requested_memory(
-        hco_namespace=hco_namespace,
-        admin_client=admin_client,
-        pod_prefix=virt_api_pod_name,
-    )
-    return float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte)
-
-
 def validate_memory_delta_metrics_value_within_range(
-    prometheus: Prometheus, metric_name: str, rss: bool, admin_client, hco_namespace, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus,
+    metric_name: str,
+    rss: bool,
+    admin_client: DynamicClient,
+    hco_namespace: str,
+    timeout: int = TIMEOUT_4MIN,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
@@ -1370,14 +1370,9 @@ def validate_memory_delta_metrics_value_within_range(
         for sample in samples:
             if sample:
                 sample = abs(float(sample))
-                if rss:
-                    expected_value = expected_kubevirt_memory_delta_from_requested_bytes_rss(
-                        admin_client=admin_client, hco_namespace=hco_namespace
-                    )
-                else:
-                    expected_value = expected_kubevirt_memory_delta_from_requested_bytes_working_set(
-                        admin_client=admin_client, hco_namespace=hco_namespace
-                    )
+                expected_value = expected_kubevirt_memory_delta_from_requested_bytes(
+                    admin_client=admin_client, hco_namespace=hco_namespace, rss=True if rss else False
+                )
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
