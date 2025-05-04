@@ -98,6 +98,7 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
     indirect=False,
 )
 @pytest.mark.gating
+@pytest.mark.single_nic
 def test_connectivity_over_pod_network(
     ip_family,
     pod_net_vma,

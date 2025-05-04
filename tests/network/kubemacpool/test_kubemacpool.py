@@ -120,6 +120,7 @@ class TestNegatives:
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4405")
+@pytest.mark.single_nic
 def test_kmp_down(namespace, kmp_down):
     with pytest.raises(ApiException):
         with VirtualMachineForTests(name="kmp-down-vm", namespace=namespace.name):
