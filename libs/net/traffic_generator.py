@@ -77,6 +77,10 @@ class Client:
     def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
         _stop_process(vm=self._vm, cmd=self._cmd)
 
+    @property
+    def vm(self) -> BaseVirtualMachine:
+        return self._vm
+
     def is_running(self) -> bool:
         return _is_process_running(vm=self._vm, cmd=self._cmd)
 
