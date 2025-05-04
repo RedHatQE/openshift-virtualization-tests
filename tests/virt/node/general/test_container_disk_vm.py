@@ -3,6 +3,7 @@ import pytest
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
+@pytest.mark.arm64
 @pytest.mark.smoke
 @pytest.mark.polarion("CNV-5501")
 def test_container_disk_vm(
