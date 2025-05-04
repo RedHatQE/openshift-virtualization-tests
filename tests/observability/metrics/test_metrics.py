@@ -16,26 +16,11 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     VIRT_API,
     VIRT_HANDLER,
 )
-from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
-METRICS_WITH_WINDOWS_VM_BUGS = [
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-]
 
 
 class TestMetricsLinux:
@@ -57,22 +42,8 @@ class TestMetricsLinux:
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
-        self, prometheus, windows_vm_for_test, cnv_vmi_monitoring_metrics_matrix__function__
+        self, prometheus, windows_vm_for_test, xfail_if_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__
     ):
-        """
-        Tests validating ability to perform various prometheus api queries on various metrics against a given vm.
-        This test also validates ability to pull metric information from a given vm's virt-handler pod and validates
-        appropriate information exists for that metrics.
-        """
-        if (
-            is_jira_open(jira_id="CNV-59679")
-            and cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS
-        ):
-            pytest.xfail(
-                f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
-                f"any value for windows vm"
-            )
-
         get_vm_metrics(
             prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=windows_vm_for_test.name
         )
