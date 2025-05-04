@@ -7,7 +7,7 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 def check_vm_dumpxml(vm, cores=None, sockets=None, threads=None):
