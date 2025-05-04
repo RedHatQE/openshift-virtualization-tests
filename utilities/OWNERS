@@ -1,10 +1,10 @@
 approvers:
-  - dbasunag
   - vsibirsk
   - dshchedr
+  - rnetser
 reviewers:
-  - dbasunag
   - RoniKishner
   - vsibirsk
   - dshchedr
   - geetikakay
+  - rnetser
