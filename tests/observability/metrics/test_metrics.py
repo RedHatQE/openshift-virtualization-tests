@@ -231,56 +231,43 @@ class TestVMIMetricsWindowsVms:
 
 
 class TestMemoryDeltaFromRequestedBytes:
-    @pytest.mark.polarion("CNV-11632")
-    def test_metric_kubevirt_memory_delta_from_requested_bytes_working_set(
-        self, prometheus, admin_client, hco_namespace
-    ):
+    @pytest.mark.parametrize(
+        "metric, rss",
+        [
+            pytest.param(
+                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
+                f"reason='memory_working_set_delta_from_request'}}",
+                False,
+                marks=pytest.mark.polarion("CNV-11632"),
+                id="test_metric_kubevirt_memory_delta_from_requested_bytes_working_set",
+            ),
+            pytest.param(
+                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
+                f"reason='memory_rss_delta_from_request'}}",
+                True,
+                marks=pytest.mark.polarion("CNV-11633"),
+                id="test_metric_kubevirt_memory_delta_from_requested_bytes_rss",
+            ),
+            pytest.param(
+                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_working_set_delta_from_request'}}",
+                False,
+                marks=pytest.mark.polarion("CNV-11690"),
+                id="test_metric_cnv_abnormal_working_set",
+            ),
+            pytest.param(
+                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
+                True,
+                marks=pytest.mark.polarion("CNV-11691"),
+                id="test_metric_cnv_abnormal_rss",
+            ),
+        ],
+        indirect=False,
+    )
+    def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
         validate_memory_delta_metrics_value_within_range(
             prometheus=prometheus,
-            metric_name=f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-            f"reason='memory_working_set_delta_from_request'}}",
-            rss=False,
-            admin_client=admin_client,
-            hco_namespace=hco_namespace.name,
-        )
-
-    @pytest.mark.polarion("CNV-11633")
-    def test_metric_kubevirt_memory_delta_from_requested_bytes_rss(
-        self,
-        prometheus,
-        admin_client,
-        hco_namespace,
-    ):
-        validate_memory_delta_metrics_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-            f"reason='memory_rss_delta_from_request'}}",
-            rss=True,
-            admin_client=admin_client,
-            hco_namespace=hco_namespace.name,
-        )
-
-    @pytest.mark.polarion("CNV-11690")
-    def test_metric_cnv_abnormal_working_set(
-        self,
-        prometheus,
-        admin_client,
-        hco_namespace,
-    ):
-        validate_memory_delta_metrics_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"cnv_abnormal{{container='{VIRT_API}', reason='memory_working_set_delta_from_request'}}",
-            rss=False,
-            admin_client=admin_client,
-            hco_namespace=hco_namespace.name,
-        )
-
-    @pytest.mark.polarion("CNV-11691")
-    def test_metric_cnv_abnormal_rss(self, prometheus, admin_client, hco_namespace):
-        validate_memory_delta_metrics_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
-            rss=True,
+            metric_name=metric,
+            rss=rss,
             admin_client=admin_client,
             hco_namespace=hco_namespace.name,
         )
