@@ -683,7 +683,6 @@ def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, v
 def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
     # Find string from list in the dommemstat and convert to bytes from KiB.
     vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
-
     assert vmi_domain_memory_match, (
         f"No match '{domain_memory_string}' found for VM's domain memory in VMI's dommemstat {vmi_dommemstat}"
     )

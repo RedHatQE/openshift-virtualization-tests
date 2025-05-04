@@ -1143,6 +1143,18 @@ def windows_vm_for_test(namespace, admin_client):
         yield vm
 
 
+@pytest.fixture(scope="module")
+def windows_vm_for_test_scope_module(namespace, admin_client):
+    with create_windows11_wsl2_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=admin_client,
+        vm_name="win-vm-for-test",
+        storage_class=py_config["default_storage_class"],
+    ) as vm:
+        yield vm
+
+
 @pytest.fixture()
 def xfail_if_metric_has_bug(cnv_vmi_monitoring_metrics_matrix__function__):
     if (

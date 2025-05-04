@@ -42,12 +42,20 @@ class TestMetricsLinux:
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
-        self, prometheus, windows_vm_for_test, xfail_if_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__
+        self,
+        prometheus,
+        windows_vm_for_test_scope_module,
+        xfail_if_metric_has_bug,
+        cnv_vmi_monitoring_metrics_matrix__function__,
     ):
         get_vm_metrics(
-            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=windows_vm_for_test.name
+            prometheus=prometheus,
+            query=cnv_vmi_monitoring_metrics_matrix__function__,
+            vm_name=windows_vm_for_test_scope_module.name,
         )
-        assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test)
+        assert_vm_metric_virt_handler_pod(
+            query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test_scope_module
+        )
 
 
 @pytest.mark.polarion("CNV-10438")
@@ -106,7 +114,7 @@ class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
         self,
-        windows_vm_for_test,
+        windows_vm_for_test_scope_module,
         vmi_domain_total_memory_in_bytes_from_windows_vm,
         windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus,
     ):
@@ -115,8 +123,8 @@ class TestVMIMetricsWindowsVms:
             vmi_domain_total_memory_in_bytes_from_windows_vm
             == windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus
         ), (
-            f"VM {windows_vm_for_test.name}'s domain memory total {vmi_domain_total_memory_in_bytes_from_windows_vm} "
-            "is not matching with metrics value "
+            f"VM {windows_vm_for_test_scope_module.name}'s domain memory total "
+            f"{vmi_domain_total_memory_in_bytes_from_windows_vm} is not matching with metrics value "
             f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 
@@ -125,24 +133,28 @@ class TestVMIMetricsWindowsVms:
     def test_vmi_used_memory_bytes_windows(
         self,
         prometheus,
-        windows_vm_for_test,
+        windows_vm_for_test_scope_module,
     ):
-        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
+        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test_scope_module)
 
     @pytest.mark.polarion("CNV-11861")
-    def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):
+    def test_kubevirt_vmi_info_windows(
+        self, prometheus, windows_vm_for_test_scope_module, vmi_guest_os_kernel_release_info_windows
+    ):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=windows_vm_for_test.name),
+            query=KUBEVIRT_VMI_INFO.format(vm_name=windows_vm_for_test_scope_module.name),
             expected_value="1",
             values_to_compare=vmi_guest_os_kernel_release_info_windows,
         )
 
     @pytest.mark.polarion("CNV-11863")
-    def test_metric_kubevirt_vm_info_windows(self, prometheus, windows_vm_for_test, windows_vm_info_to_compare):
+    def test_metric_kubevirt_vm_info_windows(
+        self, prometheus, windows_vm_for_test_scope_module, windows_vm_info_to_compare
+    ):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
-            query=KUBEVIRT_VM_INFO.format(vm_name=windows_vm_for_test.name),
+            query=KUBEVIRT_VM_INFO.format(vm_name=windows_vm_for_test_scope_module.name),
             expected_value="1",
             values_to_compare=windows_vm_info_to_compare,
         )
