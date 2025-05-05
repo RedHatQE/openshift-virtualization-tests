@@ -16,7 +16,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 BOND_NAME = "jfbond1"
 BRIDGE_NAME = "brbond1"
@@ -188,12 +188,14 @@ def bond_bridge_attached_vmb(
 
 @pytest.fixture(scope="class")
 def running_bond_bridge_attached_vma(bond_bridge_attached_vma):
-    return running_vm(vm=bond_bridge_attached_vma, wait_for_cloud_init=True)
+    bond_bridge_attached_vma.wait_for_agent_connected()
+    return bond_bridge_attached_vma
 
 
 @pytest.fixture(scope="class")
 def running_bond_bridge_attached_vmb(bond_bridge_attached_vmb):
-    return running_vm(vm=bond_bridge_attached_vmb, wait_for_cloud_init=True)
+    bond_bridge_attached_vmb.wait_for_agent_connected()
+    return bond_bridge_attached_vmb
 
 
 class TestBondJumboFrame:

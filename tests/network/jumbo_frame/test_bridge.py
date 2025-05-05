@@ -15,7 +15,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = [
     pytest.mark.usefixtures(
@@ -106,7 +106,8 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -128,7 +129,8 @@ def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_br
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
