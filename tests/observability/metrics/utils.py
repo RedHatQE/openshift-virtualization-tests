@@ -1265,7 +1265,7 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
-def get_interface_name_from_vm(vm: VirtualMachineForTests):
+def get_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
     interface_name = vm.privileged_vmi.virt_launcher_pod.execute(
         command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
     )

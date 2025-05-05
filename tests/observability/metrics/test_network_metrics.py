@@ -9,6 +9,9 @@ from tests.observability.metrics.utils import (
     validate_vmi_network_receive_and_transmit_packets_total,
 )
 
+RX_PACKETS_METRIC = {"metric_name": KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_TOTAL, "packets_kind": "rx_packets"}
+TX_PACKETS_METRIC = {"metric_name": KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL, "packets_kind": "tx_packets"}
+
 
 @pytest.mark.parametrize(
     "vm_for_test",
@@ -25,11 +28,11 @@ class TestVmiNetworkMetricsLinux:
         "metric_dict",
         [
             pytest.param(
-                {"metric_name": KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_TOTAL, "packets_kind": "rx_packets"},
+                RX_PACKETS_METRIC,
                 marks=(pytest.mark.polarion("CNV-11176")),
             ),
             pytest.param(
-                {"metric_name": KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL, "packets_kind": "tx_packets"},
+                TX_PACKETS_METRIC,
                 marks=(pytest.mark.polarion("CNV-11220")),
             ),
         ],
@@ -61,11 +64,11 @@ class TestVmiNetworkMetricsWindows:
         "metric_dict",
         [
             pytest.param(
-                {"metric_name": KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_TOTAL, "packets_kind": "rx_packets"},
+                RX_PACKETS_METRIC,
                 marks=(pytest.mark.polarion("CNV-11843")),
             ),
             pytest.param(
-                {"metric_name": KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL, "packets_kind": "tx_packets"},
+                TX_PACKETS_METRIC,
                 marks=(pytest.mark.polarion("CNV-11844")),
             ),
         ],
