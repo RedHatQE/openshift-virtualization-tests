@@ -182,7 +182,6 @@ def ovs_linux_bond_bridge_attached_vms(ovs_linux_bond_bridge_attached_vma, ovs_l
 
 class TestBondConnectivity:
     @pytest.mark.ipv4
-    @pytest.mark.gating
     @pytest.mark.polarion("CNV-3366")
     def test_bond(
         self,
