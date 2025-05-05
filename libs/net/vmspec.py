@@ -4,11 +4,12 @@ from typing import Any, Final
 from kubernetes.dynamic.client import ResourceField
 from timeout_sampler import TimeoutExpiredError, retry
 
-from libs.vm.spec import Network
+from libs.vm.spec import Devices, Interface, Network, SpecDisk, VMISpec, Volume
 from libs.vm.vm import BaseVirtualMachine
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 RETRY_INTERVAL_SEC: Final[int] = 5
+IP_ADDRESS: Final[str] = "ipAddress"
 
 
 class VMInterfaceSpecNotFoundError(Exception):
@@ -38,7 +39,7 @@ def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceFiel
         return _lookup_iface_status(
             vm=vm,
             iface_name=iface_name,
-            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface["ipAddress"],
+            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS],
         )
     except TimeoutExpiredError:
         raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
@@ -78,3 +79,21 @@ def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
         if network.pod is not None:
             return Network(**network)
     raise VMInterfaceSpecNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
+
+
+def add_network_interface(vmi_spec: VMISpec, network: Network, interface: Interface) -> VMISpec:
+    vmi_spec.networks = vmi_spec.networks or []
+    vmi_spec.networks.append(network)
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.interfaces = vmi_spec.domain.devices.interfaces or []
+    vmi_spec.domain.devices.interfaces.append(interface)
+    return vmi_spec
+
+
+def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpec:
+    vmi_spec.volumes = vmi_spec.volumes or []
+    vmi_spec.volumes.append(volume)
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
+    vmi_spec.domain.devices.disks.append(disk)
+    return vmi_spec

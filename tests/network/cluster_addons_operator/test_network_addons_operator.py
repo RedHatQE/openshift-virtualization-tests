@@ -215,6 +215,7 @@ def net_add_op_bridge_attached_vm(namespace, net_add_op_br1test_nad):
 
 @pytest.mark.gating
 @pytest.mark.post_upgrade
+@pytest.mark.single_nic
 @pytest.mark.polarion("CNV-2520")
 def test_component_installed_by_operator(network_addons_config_scope_session):
     """
@@ -246,6 +247,7 @@ def test_linux_bridge_functionality(net_add_op_bridge_attached_vm):
 
 
 @pytest.mark.polarion("CNV-6754")
+@pytest.mark.single_nic
 def test_cnao_labels(
     admin_client,
     network_addons_config_scope_session,
