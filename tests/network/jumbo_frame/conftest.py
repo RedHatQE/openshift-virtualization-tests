@@ -10,7 +10,6 @@ from tests.network.jumbo_frame.utils import (
 from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.infra import get_node_selector_dict
 from utilities.network import get_vmi_ip_v4_by_name, network_device, network_nad
-from utilities.virt import running_vm
 
 
 @pytest.fixture(scope="class")
@@ -26,7 +25,8 @@ def running_vma_jumbo_primary_interface_worker_1(
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -43,7 +43,8 @@ def running_vmb_jumbo_primary_interface_worker_2(
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -60,7 +61,8 @@ def running_vmc_jumbo_primary_interface_worker_1(
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -80,7 +82,8 @@ def running_vmd_jumbo_primary_interface_and_secondary_interface(
         cloud_init_data=cloud_init_data,
         networks={secondary_linux_bridge_nad.name: secondary_linux_bridge_nad.name},
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -100,7 +103,8 @@ def running_vme_jumbo_primary_interface_and_secondary_interface(
         cloud_init_data=cloud_init_data,
         networks={secondary_linux_bridge_nad.name: secondary_linux_bridge_nad.name},
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
