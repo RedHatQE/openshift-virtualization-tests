@@ -1132,11 +1132,11 @@ def windows_vm_info_to_compare(windows_vm_for_test):
 
 
 @pytest.fixture(scope="class")
-def windows_vm_for_test(namespace, admin_client):
+def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        client=admin_client,
+        client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
@@ -1144,11 +1144,11 @@ def windows_vm_for_test(namespace, admin_client):
 
 
 @pytest.fixture(scope="module")
-def windows_vm_for_test_scope_module(namespace, admin_client):
+def windows_vm_for_test_scope_module(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        client=admin_client,
+        client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:

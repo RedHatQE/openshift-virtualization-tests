@@ -318,7 +318,7 @@ def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
         vm (VirtualMachineForTests): A VirtualMachineForTests
 
     """
-    pod = vm.vmi.virt_handler_pod
+    pod = vm.privileged_vmi.virt_handler_pod
     output = parse_vm_metric_results(raw_output=pod.execute(command=["bash", "-c", f"{CURL_QUERY}"]))
     assert output, f'No query output found from {VIRT_HANDLER} pod "{pod.name}" for query: "{CURL_QUERY}"'
     metrics_list = []
