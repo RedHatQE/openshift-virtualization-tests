@@ -8,7 +8,7 @@ from tests.network.utils import wait_for_address_on_iface
 from utilities.constants import LINUX_BRIDGE, NMSTATE_HANDLER
 from utilities.infra import get_daemonset_by_name, get_node_pod, get_node_selector_dict, name_prefix
 from utilities.network import network_device
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,12 +58,14 @@ def nmstate_vmb(schedulable_nodes, worker_node2, namespace, unprivileged_client)
 
 @pytest.fixture(scope="module")
 def running_nmstate_vma(nmstate_vma):
-    return running_vm(vm=nmstate_vma)
+    nmstate_vma.wait_for_agent_connected()
+    return nmstate_vma
 
 
 @pytest.fixture(scope="module")
 def running_nmstate_vmb(nmstate_vmb):
-    return running_vm(vm=nmstate_vmb)
+    nmstate_vmb.wait_for_agent_connected()
+    return nmstate_vmb
 
 
 @pytest.fixture(scope="module")

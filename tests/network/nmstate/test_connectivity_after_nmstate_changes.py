@@ -25,7 +25,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 BRIDGE_NAME = "br-nmstate"
@@ -152,12 +152,14 @@ def nmstate_linux_bridge_attached_vmb(
 
 @pytest.fixture(scope="class")
 def nmstate_linux_bridge_attached_running_vma(nmstate_linux_bridge_attached_vma):
-    return running_vm(vm=nmstate_linux_bridge_attached_vma, wait_for_cloud_init=True)
+    nmstate_linux_bridge_attached_vma.wait_for_agent_connected()
+    return nmstate_linux_bridge_attached_vma
 
 
 @pytest.fixture(scope="class")
 def nmstate_linux_bridge_attached_running_vmb(nmstate_linux_bridge_attached_vmb):
-    return running_vm(vm=nmstate_linux_bridge_attached_vmb, wait_for_cloud_init=True)
+    nmstate_linux_bridge_attached_vmb.wait_for_agent_connected()
+    return nmstate_linux_bridge_attached_vmb
 
 
 @pytest.fixture(scope="class")
