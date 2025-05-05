@@ -1131,20 +1131,8 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="class")
-def windows_vm_for_test(namespace, unprivileged_client):
-    with create_windows11_wsl2_vm(
-        dv_name="dv-for-windows",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_name="win-vm-for-test",
-        storage_class=py_config["default_storage_class"],
-    ) as vm:
-        yield vm
-
-
 @pytest.fixture(scope="module")
-def windows_vm_for_test_scope_module(namespace, unprivileged_client):
+def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
