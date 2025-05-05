@@ -143,6 +143,7 @@ class TestPrimaryUdn:
 
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
+    @pytest.mark.gating
     def test_connectivity_is_preserved_after_live_migration(self, vma_udn, server, client):
         migrate_vm_and_verify(vm=vma_udn)
         assert is_tcp_connection(server=server, client=client)
