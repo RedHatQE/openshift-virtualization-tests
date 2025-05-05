@@ -148,7 +148,6 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
 # note: the order of fixtures is important because we should first create the
 # device before attaching a VMI to it
 @pytest.mark.sno
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-2235")
 def test_bridge_marker_device_exists(bridge_device_on_all_nodes, bridge_attached_vmi_for_bridge_marker_device_exists):
     """Check that VMI successfully starts when bridge device is present."""
