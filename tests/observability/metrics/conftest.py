@@ -40,16 +40,17 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_file_system_metric_mountpoints_existence,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
+    get_pvc_size_bytes,
     get_resource_object,
     get_vm_comparison_info_dict,
     get_vmi_dommemstat_from_vm,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
-    metric_result_output_dict_by_mountpoint,
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
@@ -757,35 +758,27 @@ def vm_for_test_snapshot(vm_for_test):
 
 
 @pytest.fixture()
-def dfs_info(vm_for_test):
+def dfs_info_linux(vm_for_test):
     return disk_file_system_info(vm=vm_for_test)
 
 
 @pytest.fixture()
-def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, dfs_info):
-    capacity_or_used = request.param
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_15SEC,
-        func=metric_result_output_dict_by_mountpoint,
-        prometheus=prometheus,
-        capacity_or_used=capacity_or_used,
-        vm_name=vm_for_test.name,
+def dfs_info_windows(windows_vm_for_test):
+    return disk_file_system_info(vm=windows_vm_for_test)
+
+
+@pytest.fixture()
+def file_system_metric_mountpoints_existence_linux(request, prometheus, vm_for_test, dfs_info_linux):
+    get_file_system_metric_mountpoints_existence(
+        prometheus=prometheus, capacity_or_used=request.param, vm=vm_for_test, dfs_info=dfs_info_linux
     )
-    mount_points_with_value_zero = None
-    try:
-        for sample in samples:
-            if sample:
-                if [mount_point for mount_point in dfs_info if not sample.get(mount_point)]:
-                    continue
-                mount_points_with_value_zero = {
-                    mount_point: float(sample[mount_point]) for mount_point in sample if int(sample[mount_point]) == 0
-                }
-                if not mount_points_with_value_zero:
-                    return
-    except TimeoutExpiredError:
-        LOGGER.info(f"There is at least one mount point with value zero: {mount_points_with_value_zero}")
-        raise
+
+
+@pytest.fixture()
+def file_system_metric_mountpoints_existence_windows(request, prometheus, windows_vm_for_test, dfs_info_windows):
+    get_file_system_metric_mountpoints_existence(
+        prometheus=prometheus, capacity_or_used=request.param, vm=windows_vm_for_test, dfs_info=dfs_info_windows
+    )
 
 
 @pytest.fixture(scope="class")
@@ -1042,17 +1035,13 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 
 @pytest.fixture()
-def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
-    return str(
-        int(
-            bitmath.parse_string_unsafe(
-                PersistentVolumeClaim(
-                    name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
-                    namespace=vm_for_vm_disk_allocation_size_test.namespace,
-                ).instance.spec.resources.requests.storage
-            ).Byte.bytes
-        )
-    )
+def pvc_size_bytes_linux(vm_for_vm_disk_allocation_size_test):
+    return get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test)
+
+
+@pytest.fixture()
+def pvc_size_bytes_windows(windows_vm_for_test):
+    return get_pvc_size_bytes(vm=windows_vm_for_test)
 
 
 @pytest.fixture()

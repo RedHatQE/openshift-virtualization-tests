@@ -11,6 +11,7 @@ import bitmath
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
@@ -1174,6 +1175,7 @@ def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str
     return {
         info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
         for info in mount_points_and_values_dict.values()
+        if "used-bytes" in info and "total-bytes" in info
     }
 
 
@@ -1342,3 +1344,43 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
     }
+
+
+def get_file_system_metric_mountpoints_existence(
+    prometheus: Prometheus, capacity_or_used: str, vm: VirtualMachineForTests, dfs_info: dict[str, dict[str, str]]
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_15SEC,
+        func=metric_result_output_dict_by_mountpoint,
+        prometheus=prometheus,
+        capacity_or_used=capacity_or_used,
+        vm_name=vm.name,
+    )
+    mount_points_with_value_zero = None
+    try:
+        for sample in samples:
+            if sample:
+                if [mount_point for mount_point in dfs_info if not sample.get(mount_point)]:
+                    continue
+                mount_points_with_value_zero = {
+                    mount_point: float(sample[mount_point]) for mount_point in sample if int(sample[mount_point]) == 0
+                }
+                if not mount_points_with_value_zero:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.info(f"There is at least one mount point with value zero: {mount_points_with_value_zero}")
+        raise
+
+
+def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+    return str(
+        int(
+            bitmath.parse_string_unsafe(
+                PersistentVolumeClaim(
+                    name=vm.instance.spec.dataVolumeTemplates[0].metadata.name,
+                    namespace=vm.namespace,
+                ).instance.spec.resources.requests.storage
+            ).Byte.bytes
+        )
+    )

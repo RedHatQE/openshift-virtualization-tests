@@ -301,9 +301,9 @@ class TestVmiMemoryCachedBytes:
 
 
 @pytest.mark.parametrize("vm_for_test", [pytest.param("file-system-metrics")], indirect=True)
-class TestVmiFileSystemMetrics:
+class TestVmiFileSystemMetricsLinux:
     @pytest.mark.parametrize(
-        "file_system_metric_mountpoints_existence, capacity_or_used",
+        "file_system_metric_mountpoints_existence_linux, capacity_or_used",
         [
             pytest.param(
                 CAPACITY,
@@ -318,15 +318,50 @@ class TestVmiFileSystemMetrics:
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
-        indirect=["file_system_metric_mountpoints_existence"],
+        indirect=["file_system_metric_mountpoints_existence_linux"],
     )
-    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes(
-        self, prometheus, vm_for_test, file_system_metric_mountpoints_existence, dfs_info, capacity_or_used
+    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
+        self, prometheus, vm_for_test, file_system_metric_mountpoints_existence_linux, dfs_info_linux, capacity_or_used
     ):
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=vm_for_test,
-            mount_point=list(dfs_info.keys())[0],
+            mount_point=list(dfs_info_linux.keys())[0],
+            capacity_or_used=capacity_or_used,
+        )
+
+
+class TestVmiFileSystemMetricsWindows:
+    @pytest.mark.parametrize(
+        "file_system_metric_mountpoints_existence_windows, capacity_or_used",
+        [
+            pytest.param(
+                CAPACITY,
+                CAPACITY,
+                marks=pytest.mark.polarion("CNV-11917"),
+                id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
+            ),
+            pytest.param(
+                USED,
+                USED,
+                marks=pytest.mark.polarion("CNV-11918"),
+                id="test_metric_kubevirt_vmi_filesystem_used_bytes",
+            ),
+        ],
+        indirect=["file_system_metric_mountpoints_existence_windows"],
+    )
+    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
+        self,
+        prometheus,
+        windows_vm_for_test,
+        file_system_metric_mountpoints_existence_windows,
+        dfs_info_windows,
+        capacity_or_used,
+    ):
+        compare_metric_file_system_values_with_vm_file_system_values(
+            prometheus=prometheus,
+            vm_for_test=windows_vm_for_test,
+            mount_point=list(dfs_info_windows.keys())[0],
             capacity_or_used=capacity_or_used,
         )
 
@@ -497,15 +532,27 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         )
 
 
-class TestVmDiskAllocatedSize:
+class TestVmDiskAllocatedSizeLinux:
     @pytest.mark.polarion("CNV-11817")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
-        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes
+        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes_linux
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
-            expected_value=pvc_size_bytes,
+            expected_value=pvc_size_bytes_linux,
+        )
+
+
+class TestVmDiskAllocatedSizeWindows:
+    @pytest.mark.polarion("CNV-11916")
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(
+        self, prometheus, windows_vm_for_test, pvc_size_bytes_windows
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{windows_vm_for_test.name}'}}",
+            expected_value=pvc_size_bytes_windows,
         )
 
 
