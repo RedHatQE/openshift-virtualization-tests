@@ -50,6 +50,7 @@ class TestConnectivityLinuxBridge:
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-11125")
     @pytest.mark.ipv6
+    @pytest.mark.single_nic
     @pytest.mark.jira("CNV-58529", run=True)
     def test_ipv6_linux_bridge(
         self,
