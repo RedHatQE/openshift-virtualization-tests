@@ -106,7 +106,6 @@ class TestConnectivityLinuxBridge:
 
 @pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
 class TestConnectivityOVSBridge:
-    @pytest.mark.gating
     @pytest.mark.post_upgrade
     @pytest.mark.parametrize(
         "use_default_bridge",
