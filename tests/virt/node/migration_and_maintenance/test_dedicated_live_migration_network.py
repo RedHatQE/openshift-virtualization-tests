@@ -196,7 +196,6 @@ class TestDedicatedLiveMigrationNetwork:
     def test_migrate_vm_via_dedicated_network(
         self,
         cluster_cpu_model_scope_module,
-        skip_if_no_common_cpu,
         workers_utility_pods,
         migration_interface,
         virt_handler_pods_with_migration_network,

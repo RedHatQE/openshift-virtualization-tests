@@ -143,7 +143,6 @@ def test_vm_with_limits_overrides_global_vlaues(
     indirect=True,
 )
 def test_auto_limits_with_cpu_hotplug(
-    skip_if_no_common_cpu,
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
     hotplugged_vm_with_cpu_auto_limits,

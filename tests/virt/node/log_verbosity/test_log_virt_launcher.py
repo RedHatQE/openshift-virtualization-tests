@@ -111,7 +111,6 @@ class TestProgressOfMigrationInVirtLauncher:
     @pytest.mark.polarion("CNV-9058")
     def test_progress_of_vm_migration_in_virt_launcher_pod(
         self,
-        skip_if_no_common_cpu,
         skip_access_mode_rwo_scope_function,
         updated_log_verbosity_config,
         vm_for_migration_progress_test,

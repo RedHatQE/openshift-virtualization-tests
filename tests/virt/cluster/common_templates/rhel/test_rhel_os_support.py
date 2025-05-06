@@ -232,7 +232,6 @@ class TestCommonTemplatesRhel:
     )
     def test_migrate_vm(
         self,
-        skip_if_no_common_cpu,
         skip_access_mode_rwo_scope_class,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
