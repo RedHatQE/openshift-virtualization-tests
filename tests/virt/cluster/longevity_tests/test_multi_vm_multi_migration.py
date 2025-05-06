@@ -13,11 +13,7 @@ from tests.virt.cluster.longevity_tests.constants import (
 )
 from tests.virt.cluster.longevity_tests.utils import run_migration_loop
 
-pytestmark = [
-    pytest.mark.usefixtures("skip_if_no_common_modern_cpu"),
-    pytest.mark.longevity,
-    pytest.mark.special_infra,
-]
+pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
 
 
 @pytest.mark.parametrize(

@@ -143,7 +143,6 @@ def test_node_drain_using_console_fedora(
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "skip_if_no_common_cpu",
     "cluster_cpu_model_scope_class",
     "skip_access_mode_rwo_scope_class",
     "golden_image_data_volume_multi_storage_scope_class",
@@ -210,7 +209,6 @@ class TestNodeMaintenanceRHEL:
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "skip_if_no_common_modern_cpu",
     "skip_access_mode_rwo_scope_class",
     "cluster_modern_cpu_model_scope_class",
     "golden_image_data_volume_multi_storage_scope_class",

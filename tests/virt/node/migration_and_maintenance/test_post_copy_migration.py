@@ -27,11 +27,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_if_no_common_modern_cpu",
-    "skip_access_mode_rwo_scope_module",
-    "created_post_copy_migration_policy",
-)
+pytestmark = pytest.mark.usefixtures("skip_access_mode_rwo_scope_module", "created_post_copy_migration_policy")
 
 
 LOGGER = logging.getLogger(__name__)

@@ -14,6 +14,7 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
+from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
@@ -1410,7 +1411,25 @@ def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int
     )
 
 
+def virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
+    vl_name = vm_for_test.vmi.virt_launcher_pod.name
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
+        raise
+
+
 def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
+    virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
     match = re.search(
         r"\b(\d+Mi)\b",
         run_command(

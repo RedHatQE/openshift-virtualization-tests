@@ -361,6 +361,7 @@ class TestVmiFileSystemMetricsWindows:
             vm_for_test=windows_vm_for_test,
             mount_point=list(dfs_info_windows.keys())[0],
             capacity_or_used=capacity_or_used,
+            windows=True,
         )
 
 
