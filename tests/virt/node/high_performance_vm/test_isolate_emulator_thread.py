@@ -95,9 +95,6 @@ class TestIsolateEmulatorThread:
     @pytest.mark.dependency(depends=[ISOLATE_EMULATOR_THREAD])
     @pytest.mark.polarion("CNV-10554")
     def test_vm_with_isolate_emulator_thread_live_migrates(
-        self,
-        skip_if_no_common_cpu,
-        skip_access_mode_rwo_scope_function,
-        isolated_emulatorthread_vm,
+        self, skip_access_mode_rwo_scope_function, isolated_emulatorthread_vm
     ):
         migrate_vm_and_verify(vm=isolated_emulatorthread_vm)

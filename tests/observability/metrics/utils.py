@@ -6,7 +6,7 @@ import urllib
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator, Optional, Union
+from typing import Any, Generator, Optional
 
 import bitmath
 import pytest
@@ -653,7 +653,7 @@ def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Opt
 
 
 def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: VirtualMachineForTests) -> None:
-    vm_cpu = vm.instance.spec.template.spec.domain.cpu
+    vm_cpu = vm.vmi.instance.spec.domain.cpu
     cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
     LOGGER.info(f"Cpu count from vm {vm.name}: {cpu_count_from_vm}")
     cpu_info_from_prometheus = get_vm_cpu_info_from_prometheus(prometheus=prometheus, vm_name=vm.name)
@@ -917,7 +917,7 @@ def validate_metric_value_within_range(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             if sample:
@@ -1237,7 +1237,7 @@ def validate_metric_value_with_round_down(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             sample = round(float(sample))
@@ -1300,18 +1300,16 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
 
 
 def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str):
-    oc_adm_top_pod_output = (
-        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} -l kubevirt.io=virt-api"))[1]
+    virt_api_with_highest_memory_usage = (
+        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} --sort-by memory -l kubevirt.io=virt-api"))[
+            1
+        ]
         .strip()
         .split("\n")[1:]
-    )
-    virt_api_with_highest_memory_usage = max(
-        {pod.split()[0]: int(bitmath.parse_string_unsafe(pod.split()[2])) for pod in oc_adm_top_pod_output}.items(),
-        key=lambda pod: pod[1],
-    )
+    )[0].split()
     return {
         "virt_api_pod_name": virt_api_with_highest_memory_usage[0],
-        "memory_usage": virt_api_with_highest_memory_usage[1],
+        "memory_usage": int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2])),
     }
 
 
@@ -1364,7 +1362,7 @@ def validate_memory_delta_metrics_value_within_range(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     expected_value = None
     try:
         for sample in samples:
@@ -1376,7 +1374,7 @@ def validate_memory_delta_metrics_value_within_range(
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
-        LOGGER.info(f"{sample} should be within 5% of {expected_value}")
+        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
 
 
