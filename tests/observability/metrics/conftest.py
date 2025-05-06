@@ -31,6 +31,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -40,7 +41,6 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
-    get_file_system_metric_mountpoints_existence,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -54,6 +54,7 @@ from tests.observability.metrics.utils import (
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+    wait_for_file_system_metric_mountpoints_existence,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
@@ -108,7 +109,6 @@ UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
-RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
 
 
@@ -764,20 +764,13 @@ def dfs_info_linux(vm_for_test):
 
 @pytest.fixture()
 def dfs_info_windows(windows_vm_for_test):
-    return disk_file_system_info(vm=windows_vm_for_test)
+    return disk_file_system_info(vm=windows_vm_for_test, windows=True)
 
 
 @pytest.fixture()
 def file_system_metric_mountpoints_existence_linux(request, prometheus, vm_for_test, dfs_info_linux):
-    get_file_system_metric_mountpoints_existence(
+    wait_for_file_system_metric_mountpoints_existence(
         prometheus=prometheus, capacity_or_used=request.param, vm=vm_for_test, dfs_info=dfs_info_linux
-    )
-
-
-@pytest.fixture()
-def file_system_metric_mountpoints_existence_windows(request, prometheus, windows_vm_for_test, dfs_info_windows):
-    get_file_system_metric_mountpoints_existence(
-        prometheus=prometheus, capacity_or_used=request.param, vm=windows_vm_for_test, dfs_info=dfs_info_windows
     )
 
 
@@ -843,23 +836,6 @@ def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_a
 
 
 @pytest.fixture()
-def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    return int(
-        bitmath.parse_string_unsafe(
-            re.search(
-                r"\b(\d+Mi)\b",
-                run_command(
-                    command=shlex.split(
-                        f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
-                    ),
-                    check=False,
-                )[1],
-            ).group(1)
-        ).bytes
-    )
-
-
-@pytest.fixture()
 def virt_launcher_pod_metrics_resource_exists(vm_for_test):
     vl_name = vm_for_test.vmi.virt_launcher_pod.name
     samples = TimeoutSampler(
@@ -875,20 +851,6 @@ def virt_launcher_pod_metrics_resource_exists(vm_for_test):
     except TimeoutExpiredError:
         LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
         raise
-
-
-@pytest.fixture()
-def vm_memory_rss_bytes(vm_for_test):
-    return int(vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
-
-
-@pytest.fixture(scope="class")
-def vm_virt_launcher_pod_requested_memory(vm_for_test):
-    return int(
-        bitmath.parse_string_unsafe(
-            vm_for_test.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
-        ).bytes
-    )
 
 
 @pytest.fixture()

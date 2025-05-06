@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import shlex
 import urllib
@@ -32,6 +33,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
     METRIC_SUM_QUERY,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
@@ -1163,7 +1165,7 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
         raise
 
 
-def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
+def disk_file_system_info(vm: VirtualMachineForTests, windows: bool = False) -> dict[str, dict[str, str]]:
     lines = re.findall(
         r"fs.(\d).(mountpoint|total-bytes|used-bytes)\s+:\s+(.*)\s+",
         vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
@@ -1172,21 +1174,32 @@ def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str
     mount_points_and_values_dict: dict[str, dict[str, str]] = {}
     for fs_id, label, value in lines:
         mount_points_and_values_dict.setdefault(fs_id, {})[label] = value
-    return {
-        info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
-        for info in mount_points_and_values_dict.values()
-        if "used-bytes" in info and "total-bytes" in info
-    }
+    if windows:
+        return {
+            info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
+            for info in mount_points_and_values_dict.values()
+            if "used-bytes" in info and "total-bytes" in info
+        }
+    else:
+        return {
+            info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
+            for info in mount_points_and_values_dict.values()
+        }
 
 
 def compare_metric_file_system_values_with_vm_file_system_values(
-    prometheus: Prometheus, vm_for_test: VirtualMachineForTests, mount_point: str, capacity_or_used: str
+    prometheus: Prometheus,
+    vm_for_test: VirtualMachineForTests,
+    mount_point: str,
+    capacity_or_used: str,
+    windows: bool = False,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_15SEC,
         func=disk_file_system_info,
         vm=vm_for_test,
+        windows=windows,
     )
     sample = None
     metric_value = None
@@ -1203,7 +1216,7 @@ def compare_metric_file_system_values_with_vm_file_system_values(
                         ),
                     )
                 )
-                if metric_value * 0.95 <= float(sample[mount_point].get(capacity_or_used)) <= metric_value * 1.05:
+                if math.isclose(metric_value, float(sample[mount_point].get(capacity_or_used)), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
         LOGGER.info(
@@ -1346,8 +1359,11 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def get_file_system_metric_mountpoints_existence(
-    prometheus: Prometheus, capacity_or_used: str, vm: VirtualMachineForTests, dfs_info: dict[str, dict[str, str]]
+def wait_for_file_system_metric_mountpoints_existence(
+    prometheus: Prometheus,
+    capacity_or_used: str,
+    vm: VirtualMachineForTests,
+    dfs_info: dict[str, dict[str, str]],
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
@@ -1369,7 +1385,7 @@ def get_file_system_metric_mountpoints_existence(
                 if not mount_points_with_value_zero:
                     return
     except TimeoutExpiredError:
-        LOGGER.info(f"There is at least one mount point with value zero: {mount_points_with_value_zero}")
+        LOGGER.error(f"There is at least one mount point with value zero: {mount_points_with_value_zero}")
         raise
 
 
@@ -1384,3 +1400,58 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
             ).Byte.bytes
         )
     )
+
+
+def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int:
+    return int(
+        bitmath.parse_string_unsafe(
+            vm.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
+        ).bytes
+    )
+
+
+def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
+    match = re.search(
+        r"\b(\d+Mi)\b",
+        run_command(
+            command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace}"),
+            check=False,
+        )[1],
+    )
+    assert match, "vm memory working set not found"
+    return int(bitmath.parse_string_unsafe(match.group(1)).bytes)
+
+
+def get_vm_memory_rss_bytes(vm: VirtualMachineForTests) -> int:
+    return int(vm.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
+
+
+def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
+    prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests, working_set=False, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample: Union[int, float] = 0
+    expected_value = None
+    try:
+        for sample in samples:
+            if sample:
+                sample = abs(float(sample))
+                expected_value = (
+                    get_vm_virt_launcher_pod_requested_memory(vm=vm) - get_vm_memory_working_set_bytes(vm=vm)
+                    if working_set
+                    else get_vm_memory_rss_bytes(vm=vm)
+                )
+                if math.isclose(sample, abs(expected_value), rel_tol=0.05):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
+            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
+        )
+        raise

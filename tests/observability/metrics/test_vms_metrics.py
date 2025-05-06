@@ -25,6 +25,7 @@ from tests.observability.metrics.utils import (
     get_metric_labels_non_empty_value,
     timestamp_to_seconds,
     validate_metric_value_within_range,
+    validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
@@ -333,28 +334,25 @@ class TestVmiFileSystemMetricsLinux:
 
 class TestVmiFileSystemMetricsWindows:
     @pytest.mark.parametrize(
-        "file_system_metric_mountpoints_existence_windows, capacity_or_used",
+        "capacity_or_used",
         [
             pytest.param(
-                CAPACITY,
                 CAPACITY,
                 marks=pytest.mark.polarion("CNV-11917"),
                 id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
             ),
             pytest.param(
                 USED,
-                USED,
                 marks=pytest.mark.polarion("CNV-11918"),
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
-        indirect=["file_system_metric_mountpoints_existence_windows"],
+        indirect=False,
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
         self,
         prometheus,
         windows_vm_for_test,
-        file_system_metric_mountpoints_existence_windows,
         dfs_info_windows,
         capacity_or_used,
     ):
@@ -453,25 +451,26 @@ class TestVmResourceLimits:
 @pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
 class TestVmFreeMemoryBytes:
     @pytest.mark.polarion("CNV-11692")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_working_set_bytes
-    ):
-        validate_metric_value_within_range(
+    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(self, prometheus, vm_for_test):
+        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes"
             f"{{pod='{vm_for_test.vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_working_set_bytes,
+            vm=vm_for_test,
+            working_set=True,
         )
 
     @pytest.mark.polarion("CNV-11693")
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_rss_bytes
+        self,
+        prometheus,
+        vm_for_test,
     ):
-        validate_metric_value_within_range(
+        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_rss"
             f"{{pod='{vm_for_test.privileged_vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_rss_bytes,
+            vm=vm_for_test,
         )
 
 
