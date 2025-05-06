@@ -13,7 +13,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
-    running_vm,
     vm_console_run_commands,
     wait_for_console,
 )
@@ -33,7 +32,8 @@ def running_vm_static(
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -51,7 +51,8 @@ def running_vm_for_migration(
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 

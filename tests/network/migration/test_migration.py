@@ -37,8 +37,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
-    restart_vm_wait_for_running_vm,
-    running_vm,
 )
 
 PING_LOG = "ping.log"
@@ -181,17 +179,20 @@ def brcnv_vm_for_migration(
 
 @pytest.fixture(scope="module")
 def running_vma(vma):
-    return running_vm(vm=vma, wait_for_cloud_init=True)
+    vma.wait_for_agent_connected()
+    return vma
 
 
 @pytest.fixture(scope="module")
 def running_vmb(vmb):
-    return running_vm(vm=vmb, wait_for_cloud_init=True)
+    vmb.wait_for_agent_connected()
+    return vmb
 
 
 @pytest.fixture()
 def restarted_vmb(running_vmb):
-    restart_vm_wait_for_running_vm(vm=running_vmb, check_ssh_connectivity=False)
+    running_vmb.restart(wait=True)
+    running_vmb.wait_for_agent_connected()
 
 
 @pytest.fixture(scope="module")
