@@ -21,6 +21,7 @@ def virt_special_infra_sanity(
     nodes_with_supported_gpus,
     sriov_workers,
     workers,
+    nodes_cpu_virt_extension,
 ):
     """Performs verification that cluster has all required capabilities for virt special_infra marked tests."""
 
@@ -53,13 +54,21 @@ def virt_special_infra_sanity(
         if not _sriov_workers:
             failed_verifications_list.append("Cluster does not have any SR-IOV workers")
 
-    def _verify_evmcs_support(_schedulable_nodes):
-        LOGGER.info("Verify cluster nodes support VMX cpu fixture")
-        for node in _schedulable_nodes:
-            if not any([
-                label == "cpu-feature.node.kubevirt.io/vmx" and value == "true" for label, value in node.labels.items()
-            ]):
-                failed_verifications_list.append("Cluster does not have any node that supports VMX cpu feature")
+    def _verify_evmcs_support(_schedulable_nodes, _nodes_cpu_virt_extension):
+        if _nodes_cpu_virt_extension:
+            LOGGER.info(f"Verify cluster nodes support {_nodes_cpu_virt_extension.upper()} cpu fixture")
+            for node in _schedulable_nodes:
+                if not any([
+                    label == f"cpu-feature.node.kubevirt.io/{_nodes_cpu_virt_extension}" and value == "true"
+                    for label, value in node.labels.items()
+                ]):
+                    failed_verifications_list.append(
+                        f"Cluster does not have any node that supports {_nodes_cpu_virt_extension.upper()} cpu feature"
+                    )
+        else:
+            failed_verifications_list.append(
+                "Hardware virtualization related tests are supported only on cluster with INTEL/AMD based CPUs"
+            )
 
     def _verify_hugepages_1gi(_workers):
         LOGGER.info("Verify cluster has 1Gi hugepages enabled")
@@ -76,7 +85,9 @@ def virt_special_infra_sanity(
         LOGGER.info("Verifying that cluster has all required capabilities for special_infra marked tests")
         if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
             _verify_not_psi_cluster(_is_psi_cluster=is_psi_cluster)
-            _verify_evmcs_support(_schedulable_nodes=schedulable_nodes)
+            _verify_evmcs_support(
+                _schedulable_nodes=schedulable_nodes, _nodes_cpu_virt_extension=nodes_cpu_virt_extension
+            )
         if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
             _verify_cpumanager_workers(_schedulable_nodes=schedulable_nodes)
         if any(item.get_closest_marker("gpu") for item in request.session.items):
