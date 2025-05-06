@@ -142,7 +142,6 @@ class TestRHELTabletDevice:
         self,
         skip_access_mode_rwo_scope_class,
         cluster_cpu_model_scope_class,
-        skip_if_no_common_cpu,
         golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function,
     ):
         migrate_vm_and_verify(

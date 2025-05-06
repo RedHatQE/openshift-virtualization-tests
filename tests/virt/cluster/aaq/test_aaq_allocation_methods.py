@@ -37,11 +37,7 @@ class TestAAQDifferentAllocationMethods:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
     @pytest.mark.polarion("CNV-11387")
-    def test_aaq_vm_migration_with_different_allocation(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_allocation_methods_test,
-    ):
+    def test_aaq_vm_migration_with_different_allocation(self, vm_for_aaq_allocation_methods_test):
         migrate_vm_and_verify(vm=vm_for_aaq_allocation_methods_test)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])

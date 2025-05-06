@@ -275,12 +275,7 @@ class TestSysprep:
 
     @pytest.mark.polarion("CNV-6761")
     def test_migrate_vm_with_sysprep_cm(
-        self,
-        skip_access_mode_rwo_scope_class,
-        skip_if_no_common_modern_cpu,
-        sysprep_vm,
-        migrated_sysprep_vm,
-        sysprep_vm_hostname,
+        self, skip_access_mode_rwo_scope_class, sysprep_vm, migrated_sysprep_vm, sysprep_vm_hostname
     ):
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)
 

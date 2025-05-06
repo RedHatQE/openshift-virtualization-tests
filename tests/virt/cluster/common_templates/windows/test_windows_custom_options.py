@@ -211,9 +211,7 @@ class TestCustomWindowsOptions:
 
     @pytest.mark.polarion("CNV-7886")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migration", depends=[f"{TESTS_CLASS_NAME}::boot"])
-    def test_windows_custom_options_migration(
-        self, skip_if_no_common_modern_cpu, skip_access_mode_rwo_scope_class, custom_windows_vm
-    ):
+    def test_windows_custom_options_migration(self, skip_access_mode_rwo_scope_class, custom_windows_vm):
         with VirtualMachineInstanceMigration(
             name="custom-windows-vm-migration",
             namespace=custom_windows_vm.namespace,

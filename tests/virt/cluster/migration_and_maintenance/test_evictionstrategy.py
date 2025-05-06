@@ -135,7 +135,6 @@ class TestEvictionStrategy:
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
         self,
         unprivileged_client,
-        skip_if_no_common_cpu,
         vm_from_template_scope_class,
         drained_node,
     ):
@@ -192,11 +191,9 @@ class TestEvictionStrategy:
     def test_hco_evictionstrategy_none_vm_evictionstrategy_livemigrate(
         self,
         unprivileged_client,
-        skip_if_no_common_cpu,
         vm_from_template_scope_class,
         hco_cr_with_evictionstrategy_none,
         added_vm_evictionstrategy,
-        vmi_old_uid,
         drained_node,
     ):
         check_migration_process_after_node_drain(dyn_client=unprivileged_client, vm=vm_from_template_scope_class)

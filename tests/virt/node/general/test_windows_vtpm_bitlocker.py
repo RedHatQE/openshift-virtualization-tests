@@ -174,10 +174,5 @@ class TestBitLockerVTPM:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::bitlocker_encryption"])
     @pytest.mark.polarion("CNV-10309")
-    def test_migrate_encrypted_vm(
-        self,
-        skip_if_no_common_modern_cpu,
-        skip_access_mode_rwo_scope_function,
-        migrated_encrypted_vm,
-    ):
+    def test_migrate_encrypted_vm(self, skip_access_mode_rwo_scope_function, migrated_encrypted_vm):
         restart_vm_wait_for_running_vm(vm=migrated_encrypted_vm)

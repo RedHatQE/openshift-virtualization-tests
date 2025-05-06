@@ -121,8 +121,6 @@ class TestWSL2:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::wsl2_guest"])
     @pytest.mark.polarion("CNV-5462")
-    def test_migration_with_wsl2_guest(
-        self, skip_if_no_common_modern_cpu, skip_access_mode_rwo_scope_function, migrated_wsl2_vm
-    ):
+    def test_migration_with_wsl2_guest(self, skip_access_mode_rwo_scope_function, migrated_wsl2_vm):
         verify_wsl2_guest_works(vm=migrated_wsl2_vm)
         assert_windows_host_resource_usage(vm=migrated_wsl2_vm)

@@ -183,10 +183,5 @@ class TestVMCanUseSwap:
 
     @pytest.mark.dependency(depends=["test_virt_launcher_pod_use_swap"])
     @pytest.mark.polarion("CNV-11259")
-    def test_migrate_vm_using_swap(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_swap_usage_test,
-        migration_policy_with_allow_auto_converge,
-    ):
+    def test_migrate_vm_using_swap(self, vm_for_swap_usage_test, migration_policy_with_allow_auto_converge):
         migrate_vm_and_verify(vm=vm_for_swap_usage_test, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN)
