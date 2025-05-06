@@ -17,7 +17,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 ETH1_INTERFACE_NAME = "eth1"
 BRIDGE_NAME = "br1macspoof"
@@ -149,12 +149,14 @@ def linux_bridge_attached_vmb(
 
 @pytest.fixture(scope="class")
 def linux_bridge_attached_running_vma(linux_bridge_attached_vma):
-    return running_vm(vm=linux_bridge_attached_vma, wait_for_cloud_init=True)
+    linux_bridge_attached_vma.wait_for_agent_connected()
+    return linux_bridge_attached_vma
 
 
 @pytest.fixture(scope="class")
 def linux_bridge_attached_running_vmb(linux_bridge_attached_vmb):
-    return running_vm(vm=linux_bridge_attached_vmb, wait_for_cloud_init=True)
+    linux_bridge_attached_vmb.wait_for_agent_connected()
+    return linux_bridge_attached_vmb
 
 
 @pytest.fixture(scope="class")
@@ -211,4 +213,4 @@ def vms_without_mac_spoof(
         vm.start(wait=True)
 
     for vm in stopped_vms:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.wait_for_agent_connected()
