@@ -651,7 +651,7 @@ def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Opt
 
 
 def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: VirtualMachineForTests) -> None:
-    vm_cpu = vm.instance.spec.template.spec.domain.cpu
+    vm_cpu = vm.vmi.instance.spec.domain.cpu
     cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
     LOGGER.info(f"Cpu count from vm {vm.name}: {cpu_count_from_vm}")
     cpu_info_from_prometheus = get_vm_cpu_info_from_prometheus(prometheus=prometheus, vm_name=vm.name)
