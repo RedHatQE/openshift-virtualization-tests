@@ -17,7 +17,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     fetch_pid_from_linux_vm,
-    running_vm,
     vm_console_run_commands,
 )
 
@@ -49,7 +48,8 @@ def create_flat_overlay_vm(
         cloud_init_data=cloud_init_data,
         node_selector=get_node_selector_dict(node_selector=worker_node_hostname),
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
