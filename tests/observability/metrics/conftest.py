@@ -31,9 +31,9 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
-    RSS_MEMORY_COMMAND,
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,

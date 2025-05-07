@@ -32,6 +32,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
     METRIC_SUM_QUERY,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
@@ -71,7 +72,6 @@ from utilities.storage import wait_for_dv_expected_restart_count
 from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
 
 LOGGER = logging.getLogger(__name__)
-RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
 CURL_QUERY = "curl -k https://localhost:8443/metrics"
 PING = "ping"
@@ -1299,7 +1299,7 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
     )
 
 
-def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str):
+def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str) -> dict[str, Any]:
     virt_api_with_highest_memory_usage = (
         run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} --sort-by memory -l kubevirt.io=virt-api"))[
             1
@@ -1369,7 +1369,7 @@ def validate_memory_delta_metrics_value_within_range(
             if sample:
                 sample = abs(float(sample))
                 expected_value = expected_kubevirt_memory_delta_from_requested_bytes(
-                    admin_client=admin_client, hco_namespace=hco_namespace, rss=True if rss else False
+                    admin_client=admin_client, hco_namespace=hco_namespace, rss=rss
                 )
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
