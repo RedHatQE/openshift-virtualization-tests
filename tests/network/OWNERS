@@ -1,6 +1,7 @@
 root-approvers: False
 approvers:
   - EdDev
+  - rnetser
 reviewers:
   - yossisegev
   - Anatw
