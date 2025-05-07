@@ -154,7 +154,6 @@ class TestCommonTemplatesCentos:
     def test_migrate_vm(
         self,
         skip_access_mode_rwo_scope_class,
-        skip_if_no_common_cpu,
         golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
     ):
         """Test SSH connectivity after migration"""

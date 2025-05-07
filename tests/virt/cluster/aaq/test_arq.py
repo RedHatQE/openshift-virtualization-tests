@@ -111,11 +111,7 @@ class TestARQCanManageVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11282")
-    def test_arq_vm_migration_allowed_when_quota_reached(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_test,
-    ):
+    def test_arq_vm_migration_allowed_when_quota_reached(self, vm_for_aaq_test):
         migrate_vm_and_verify(vm=vm_for_aaq_test)
 
     @pytest.mark.parametrize(
@@ -153,11 +149,7 @@ class TestARQCanManageVMs:
     )
     @pytest.mark.polarion("CNV-11236")
     def test_arq_vm_active_and_migratable_when_lower_quota_applied(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_test,
-        updated_arq_quota,
-        migrated_arq_vm,
+        self, vm_for_aaq_test, updated_arq_quota, migrated_arq_vm
     ):
         restart_vm_wait_for_gated_state(vm=vm_for_aaq_test)
 
