@@ -23,6 +23,7 @@ from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     expected_metric_labels_and_values,
     get_metric_labels_non_empty_value,
+    get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_within_range,
     validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
@@ -322,12 +323,17 @@ class TestVmiFileSystemMetricsLinux:
         indirect=["file_system_metric_mountpoints_existence_linux"],
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
-        self, prometheus, vm_for_test, file_system_metric_mountpoints_existence_linux, dfs_info_linux, capacity_or_used
+        self,
+        prometheus,
+        vm_for_test,
+        file_system_metric_mountpoints_existence,
+        disk_file_system_info_linux,
+        capacity_or_used,
     ):
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=vm_for_test,
-            mount_point=list(dfs_info_linux.keys())[0],
+            mount_point=list(disk_file_system_info_linux.keys())[0],
             capacity_or_used=capacity_or_used,
         )
 
@@ -353,13 +359,13 @@ class TestVmiFileSystemMetricsWindows:
         self,
         prometheus,
         windows_vm_for_test,
-        dfs_info_windows,
+        disk_file_system_info_windows,
         capacity_or_used,
     ):
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=windows_vm_for_test,
-            mount_point=list(dfs_info_windows.keys())[0],
+            mount_point=list(disk_file_system_info_windows.keys())[0],
             capacity_or_used=capacity_or_used,
             windows=True,
         )
@@ -535,24 +541,24 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
 class TestVmDiskAllocatedSizeLinux:
     @pytest.mark.polarion("CNV-11817")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
-        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes_linux
+        self,
+        prometheus,
+        vm_for_vm_disk_allocation_size_test,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
-            expected_value=pvc_size_bytes_linux,
+            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test),
         )
 
 
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
-    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(
-        self, prometheus, windows_vm_for_test, pvc_size_bytes_windows
-    ):
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{windows_vm_for_test.name}'}}",
-            expected_value=pvc_size_bytes_windows,
+            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test),
         )
 
 

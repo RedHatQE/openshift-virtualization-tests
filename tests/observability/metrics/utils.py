@@ -6,7 +6,7 @@ import urllib
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator, Optional, Union
+from typing import Any, Generator, Optional
 
 import bitmath
 import pytest
@@ -919,7 +919,7 @@ def validate_metric_value_within_range(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             if sample:
@@ -1166,7 +1166,7 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
         raise
 
 
-def disk_file_system_info(vm: VirtualMachineForTests, windows: bool = False) -> dict[str, dict[str, str]]:
+def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
     lines = re.findall(
         r"fs.(\d).(mountpoint|total-bytes|used-bytes)\s+:\s+(.*)\s+",
         vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
@@ -1175,17 +1175,13 @@ def disk_file_system_info(vm: VirtualMachineForTests, windows: bool = False) -> 
     mount_points_and_values_dict: dict[str, dict[str, str]] = {}
     for fs_id, label, value in lines:
         mount_points_and_values_dict.setdefault(fs_id, {})[label] = value
-    if windows:
-        return {
-            info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
-            for info in mount_points_and_values_dict.values()
-            if "used-bytes" in info and "total-bytes" in info
-        }
-    else:
-        return {
-            info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
-            for info in mount_points_and_values_dict.values()
-        }
+    file_system_info = {
+        info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
+        for info in mount_points_and_values_dict.values()
+        if "used-bytes" in info and "total-bytes" in info
+    }
+    assert file_system_info, "No mountpoints found with value."
+    return file_system_info
 
 
 def compare_metric_file_system_values_with_vm_file_system_values(
@@ -1193,14 +1189,12 @@ def compare_metric_file_system_values_with_vm_file_system_values(
     vm_for_test: VirtualMachineForTests,
     mount_point: str,
     capacity_or_used: str,
-    windows: bool = False,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_15SEC,
         func=disk_file_system_info,
         vm=vm_for_test,
-        windows=windows,
     )
     sample = None
     metric_value = None
@@ -1251,7 +1245,7 @@ def validate_metric_value_with_round_down(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             sample = round(float(sample))
@@ -1360,36 +1354,6 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def wait_for_file_system_metric_mountpoints_existence(
-    prometheus: Prometheus,
-    capacity_or_used: str,
-    vm: VirtualMachineForTests,
-    dfs_info: dict[str, dict[str, str]],
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_15SEC,
-        func=metric_result_output_dict_by_mountpoint,
-        prometheus=prometheus,
-        capacity_or_used=capacity_or_used,
-        vm_name=vm.name,
-    )
-    mount_points_with_value_zero = None
-    try:
-        for sample in samples:
-            if sample:
-                if [mount_point for mount_point in dfs_info if not sample.get(mount_point)]:
-                    continue
-                mount_points_with_value_zero = {
-                    mount_point: float(sample[mount_point]) for mount_point in sample if int(sample[mount_point]) == 0
-                }
-                if not mount_points_with_value_zero:
-                    return
-    except TimeoutExpiredError:
-        LOGGER.error(f"There is at least one mount point with value zero: {mount_points_with_value_zero}")
-        raise
-
-
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
     return str(
         int(
@@ -1455,7 +1419,7 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     expected_value = None
     try:
         for sample in samples:
