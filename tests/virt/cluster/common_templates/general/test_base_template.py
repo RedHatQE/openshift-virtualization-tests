@@ -11,9 +11,9 @@ from xml.etree import ElementTree
 import bitmath
 import jsons
 import pytest
+from ocp_resources.node import Node
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
-from ocp_resources.node import Node
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
@@ -42,9 +42,9 @@ VM_EXPECTED_ANNOTATION_KEYS = [
 ]
 
 CLUSTER_ARCH = next(Node.get()).api.get().items[0].status.nodeInfo.architecture
-SUFFIX=""
+SUFFIX = ""
 if CLUSTER_ARCH == "s390x":
-    SUFFIX="-s390x"
+    SUFFIX = "-s390x"
 
 
 def fetch_osinfo_memory(osinfo_file_path, memory_test, resources_arch):
@@ -97,7 +97,7 @@ def check_default_and_validation_memory(get_base_templates, osinfo_memory_value,
 
 def get_rhel_templates_list():
     rhel_major_releases_list = ["7", "8", "9"]
-    if CLUSTER_ARCH=="s390x":
+    if CLUSTER_ARCH == "s390x":
         rhel_major_releases_list = ["8", "9"]
     return [
         f"rhel{release}-{workload}-{flavor}{SUFFIX}"
@@ -108,7 +108,9 @@ def get_rhel_templates_list():
 
 
 def get_fedora_templates_list():
-    return [f"fedora-{workload}-{flavor}{SUFFIX}" for flavor in FEDORA_FLAVORS_LIST for workload in LINUX_WORKLOADS_LIST]
+    return [
+        f"fedora-{workload}-{flavor}{SUFFIX}" for flavor in FEDORA_FLAVORS_LIST for workload in LINUX_WORKLOADS_LIST
+    ]
 
 
 def get_windows_templates_list():
