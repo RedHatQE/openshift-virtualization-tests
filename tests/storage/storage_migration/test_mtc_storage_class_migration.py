@@ -1,15 +1,16 @@
 import logging
 
-from utilities.constants import TIMEOUT_1MIN
-
-LOGGER = logging.getLogger(__name__)
-
 import pytest
 from ocp_resources.mig_cluster import MigCluster
 from ocp_resources.mig_migration import MigMigration
 from ocp_resources.mig_plan import MigPlan
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
+
+from tests.storage.storage_migration.utils import CONTENT, FILE_BEFORE_STORAGE_MIGRATION, check_file_in_vm
+from utilities.constants import TIMEOUT_1MIN
+
+LOGGER = logging.getLogger(__name__)
 
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
@@ -51,11 +52,6 @@ def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
         yield mig_plan
 
 
-#   migrateState: true
-#   quiescePods: true
-#   stage: false
-
-
 @pytest.fixture()
 def storage_mig_migration(storage_mig_plan):
     with MigMigration(
@@ -63,32 +59,46 @@ def storage_mig_migration(storage_mig_plan):
         namespace=OPENSHIFT_MIGRATION_NAMESPACE,
         mig_plan_ref={"name": f"{storage_mig_plan.name}", "namespace": f"{storage_mig_plan.namespace}"},
         migrate_state=True,
-        quiesce_pods=True, # CutOver -> Start migration
+        quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
     ) as mig_migration:
         mig_migration.wait_for_condition(
             condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
         )
         mig_migration.wait_for_condition(
-            condition=mig_migration.Condition.Type.SUCCEEDED , status=mig_migration.Condition.Status.TRUE
+            condition=mig_migration.Condition.Type.SUCCEEDED, status=mig_migration.Condition.Status.TRUE
         )
         yield mig_migration
 
 
-
-
 @pytest.mark.parametrize(
-    "source_vm_for_storage_class_migration, target_storage_class",
+    "source_storage_class, target_storage_class",
     [
         pytest.param(
             {"source_storage_class": py_config["source_storage_class_for_storage_migration"]},
             {"target_storage_class": py_config["target_storage_class_for_storage_migration"]},
             marks=pytest.mark.polarion("CNV-"),
+            id="source_a_target_b",
         )
     ],
     indirect=True,
 )
-def test_vm_for_sc_mig(source_vm_for_storage_class_migration, target_storage_class, storage_mig_plan, storage_mig_migration):
+def test_vm_for_sc_mig(
+    source_vm_for_storage_class_migration,
+    written_file_to_vm_before_migration,
+    target_storage_class,
+    storage_mig_plan,
+    storage_mig_migration,
+    deleted_completed_virt_launcher_source_pod,
+    deleted_old_dv,
+):
     LOGGER.info("HEY")
-    import ipdb
-    ipdb.set_trace()
+
+    check_file_in_vm(
+        vm=source_vm_for_storage_class_migration,
+        file_name=FILE_BEFORE_STORAGE_MIGRATION,
+        file_content=CONTENT,
+    )
+
+    # import ipdb
+    # ipdb.set_trace()
