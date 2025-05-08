@@ -4,7 +4,7 @@ import pytest
 from ocp_utilities.exceptions import CommandExecFailed
 
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,12 +41,14 @@ def ovs_bond_vmb(schedulable_nodes, namespace, unprivileged_client, node_with_bo
 
 @pytest.fixture(scope="module")
 def running_ovs_bond_vma(ovs_bond_vma):
-    return running_vm(vm=ovs_bond_vma)
+    ovs_bond_vma.wait_for_agent_connected()
+    return ovs_bond_vma
 
 
 @pytest.fixture(scope="module")
 def running_ovs_bond_vmb(ovs_bond_vmb):
-    return running_vm(vm=ovs_bond_vma)
+    ovs_bond_vmb.wait_for_agent_connected()
+    return ovs_bond_vmb
 
 
 def get_interface_by_attribute(all_connections, att):
