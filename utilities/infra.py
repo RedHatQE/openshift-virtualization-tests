@@ -18,7 +18,6 @@ from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
 
 import netaddr
-import packaging.version
 import paramiko
 import pytest
 import requests
@@ -52,6 +51,7 @@ from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
     assert_nodes_schedulable,
 )
+from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
@@ -1315,26 +1315,34 @@ def wait_for_version_explorer_response(api_end_point, query_string):
             return sample
 
 
-def get_latest_z_stream(minor_version):
+def stable_channel_released_to_prod(channels):
+    for item in channels:
+        if item.get("channel") == "stable":
+            return item.get("released_to_prod")
+    return False
+
+
+def get_latest_stable_released_z_stream(minor_version):
     builds = wait_for_version_explorer_response(
         api_end_point="GetBuildsWithErrata",
         query_string=f"minor_version={minor_version}",
     )["builds"]
+
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE":
+        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(build["channels"]):
+            build_version = Version(version=build["csv_version"])
             if latest_z_stream:
-                current_build_version = packaging.version.parse(version=build["csv_version"])
-                if current_build_version > latest_z_stream:
-                    latest_z_stream = current_build_version
+                if build_version > latest_z_stream:
+                    latest_z_stream = build_version
             else:
-                latest_z_stream = packaging.version.parse(version=build["csv_version"])
+                latest_z_stream = Version(version=build["csv_version"])
     return str(latest_z_stream) if latest_z_stream else None
 
 
 def get_cnv_version_by_iib(iib):
     return str(
-        packaging.version.parse(
+        Version(
             version=wait_for_version_explorer_response(
                 api_end_point="GetBuildByIIB",
                 query_string=f"iib_number={iib}",
