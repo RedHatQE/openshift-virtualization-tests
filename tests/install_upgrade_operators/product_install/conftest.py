@@ -2,7 +2,6 @@ import logging
 import os
 
 import bitmath
-import packaging
 import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
@@ -10,6 +9,7 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.resource import get_client
+from packaging.version import Version
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
@@ -39,7 +39,7 @@ from utilities.infra import (
     get_cluster_platform,
     get_cnv_version_by_iib,
     get_csv_by_name,
-    get_latest_z_stream,
+    get_latest_stable_released_z_stream,
 )
 from utilities.operator import (
     create_catalog_source,
@@ -301,12 +301,13 @@ def installed_hpp(cluster_backend_storage, hpp_volume_size):
 def cnv_version_to_install(is_production_source, openshift_current_version, cnv_image_url):
     latest_z_stream = None
     if is_production_source:
-        ocp_version = packaging.version.parse(version=openshift_current_version)
-        latest_z_stream = get_latest_z_stream(minor_version=f"v{ocp_version.major}.{ocp_version.minor}")
+        ocp_version = Version(version=openshift_current_version)
+        latest_z_stream = get_latest_stable_released_z_stream(minor_version=f"v{ocp_version.major}.{ocp_version.minor}")
         LOGGER.info(
-            f"Using production catalog source for: {ocp_version}, CNV latest released version: {latest_z_stream}"
+            f"Using production catalog source for: {ocp_version}, CNV latest stable released version: {latest_z_stream}"
         )
     else:
+        # TODO: change to support candidate/stable channel.
         latest_z_stream = get_cnv_version_by_iib(iib=cnv_image_url.split(":")[-1])
         LOGGER.info(f"Using iib image {cnv_image_url}: CNV version associated: {latest_z_stream}")
     if not latest_z_stream:

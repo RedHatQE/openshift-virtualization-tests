@@ -34,7 +34,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.install]
 
 
-@pytest.mark.install
 @pytest.mark.polarion("CNV-10072")
 @pytest.mark.order(before=CNV_INSTALLATION_TEST)
 def test_cnv_installation_without_hco_cr_alert(
@@ -64,7 +63,6 @@ def test_cnv_installation_without_hco_cr_metrics(
     )
 
 
-@pytest.mark.install
 @pytest.mark.polarion("CNV-9311")
 @pytest.mark.dependency(name=CNV_INSTALLATION_TEST)
 def test_cnv_installation(admin_client, cnv_version_to_install, created_cnv_namespace, created_hco_cr):
