@@ -32,7 +32,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     fedora_vm_body,
-    restart_vm_wait_for_running_vm,
     running_vm,
     wait_for_vm_interfaces,
 )
@@ -83,7 +82,8 @@ def sriov_vm(
     if worker:
         vm_kwargs["node_selector"] = get_node_selector_dict(node_selector=worker.name)
     with VirtualMachineForTests(**vm_kwargs) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -154,11 +154,6 @@ def sriov_vm1(index_number, sriov_workers_node1, namespace, unprivileged_client,
 
 
 @pytest.fixture(scope="class")
-def running_sriov_vm1(sriov_vm1):
-    return running_vm(vm=sriov_vm1)
-
-
-@pytest.fixture(scope="class")
 def sriov_vm2(index_number, unprivileged_client, sriov_workers_node2, namespace, sriov_network):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
@@ -169,11 +164,6 @@ def sriov_vm2(index_number, unprivileged_client, sriov_workers_node2, namespace,
         ip_config="10.200.1.2/24",
         sriov_network=sriov_network,
     )
-
-
-@pytest.fixture(scope="class")
-def running_sriov_vm2(sriov_vm2):
-    return running_vm(vm=sriov_vm2)
 
 
 @pytest.fixture(scope="class")
@@ -196,11 +186,6 @@ def sriov_vm3(
 
 
 @pytest.fixture(scope="class")
-def running_sriov_vm3(sriov_vm3):
-    return running_vm(vm=sriov_vm3)
-
-
-@pytest.fixture(scope="class")
 def sriov_vm4(
     index_number,
     sriov_workers_node2,
@@ -220,25 +205,22 @@ def sriov_vm4(
 
 
 @pytest.fixture(scope="class")
-def running_sriov_vm4(sriov_vm4):
-    return running_vm(vm=sriov_vm4)
-
-
-@pytest.fixture(scope="class")
-def vm4_interfaces(running_sriov_vm4):
-    sampler = TimeoutSampler(wait_timeout=60, sleep=10, func=lambda: running_sriov_vm4.vmi.interfaces)
+def vm4_interfaces(sriov_vm4):
+    sampler = TimeoutSampler(wait_timeout=60, sleep=10, func=lambda: sriov_vm4.vmi.interfaces)
     for sample in sampler:
         if len(sample) == 2:
             # 2 is used to make sure that number of interfaces before reboot are 2 then proceed.
             # Later this will be compared with number of interfaces after reboot.
             return sample
-        wait_for_vm_interfaces(vmi=running_sriov_vm4.vmi)
+        wait_for_vm_interfaces(vmi=sriov_vm4.vmi)
 
 
 @pytest.fixture(params=list(range(1, 6)))
-def restarted_sriov_vm4(request, running_sriov_vm4):
+def restarted_sriov_vm4(request, sriov_vm4):
     LOGGER.info(f"Reboot number {request.param}")
-    return restart_vm_wait_for_running_vm(vm=running_sriov_vm4)
+    sriov_vm4.restart(wait=True)
+    sriov_vm4.wait_for_agent_connected()
+    return sriov_vm4
 
 
 def get_vm_sriov_network_mtu(vm):
@@ -262,11 +244,11 @@ def set_vm_sriov_network_mtu(vm, mtu):
 
 
 @pytest.fixture()
-def sriov_network_mtu_9000(sriov_vm1, sriov_vm2, running_sriov_vm1, running_sriov_vm2):
-    vms = (running_sriov_vm1, running_sriov_vm2)
+def sriov_network_mtu_9000(sriov_vm1, sriov_vm2):
+    vms = (sriov_vm1, sriov_vm2)
     default_mtu = (
-        get_vm_sriov_network_mtu(vm=running_sriov_vm1),
-        get_vm_sriov_network_mtu(vm=running_sriov_vm2),
+        get_vm_sriov_network_mtu(vm=sriov_vm1),
+        get_vm_sriov_network_mtu(vm=sriov_vm2),
     )
     for vm in vms:
         set_vm_sriov_network_mtu(vm=vm, mtu=MTU_9000)
@@ -285,11 +267,6 @@ def sriov_vm_migrate(index_number, unprivileged_client, namespace, sriov_network
         ip_config="10.200.1.3/24",
         sriov_network=sriov_network,
     )
-
-
-@pytest.fixture(scope="class")
-def running_sriov_vm_migrate(sriov_vm_migrate):
-    return running_vm(vm=sriov_vm_migrate)
 
 
 @pytest.fixture(scope="class")

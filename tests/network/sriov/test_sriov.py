@@ -25,12 +25,10 @@ class TestPingConnectivity:
         sriov_network,
         sriov_vm1,
         sriov_vm2,
-        running_sriov_vm1,
-        running_sriov_vm2,
     ):
         assert_ping_successful(
-            src_vm=running_sriov_vm1,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm2, name=sriov_network.name),
+            src_vm=sriov_vm1,
+            dst_ip=get_vmi_ip_v4_by_name(vm=sriov_vm2, name=sriov_network.name),
         )
 
     @pytest.mark.ipv4
@@ -40,13 +38,11 @@ class TestPingConnectivity:
         sriov_network,
         sriov_vm1,
         sriov_vm2,
-        running_sriov_vm1,
-        running_sriov_vm2,
         sriov_network_mtu_9000,
     ):
         assert_ping_successful(
-            src_vm=running_sriov_vm1,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm2, name=sriov_network.name),
+            src_vm=sriov_vm1,
+            dst_ip=get_vmi_ip_v4_by_name(vm=sriov_vm2, name=sriov_network.name),
             packet_size=MTU_9000,
         )
 
@@ -57,12 +53,10 @@ class TestPingConnectivity:
         sriov_network_vlan,
         sriov_vm3,
         sriov_vm4,
-        running_sriov_vm3,
-        running_sriov_vm4,
     ):
         assert_ping_successful(
-            src_vm=running_sriov_vm3,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm4, name=sriov_network_vlan.name),
+            src_vm=sriov_vm3,
+            dst_ip=get_vmi_ip_v4_by_name(vm=sriov_vm4, name=sriov_network_vlan.name),
         )
 
     @pytest.mark.ipv4
@@ -72,12 +66,10 @@ class TestPingConnectivity:
         sriov_network_vlan,
         sriov_vm1,
         sriov_vm4,
-        running_sriov_vm1,
-        running_sriov_vm4,
     ):
         assert_no_ping(
-            src_vm=running_sriov_vm1,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm4, name=sriov_network_vlan.name),
+            src_vm=sriov_vm1,
+            dst_ip=get_vmi_ip_v4_by_name(vm=sriov_vm4, name=sriov_network_vlan.name),
         )
 
     @pytest.mark.post_upgrade
@@ -85,7 +77,6 @@ class TestPingConnectivity:
     def test_sriov_interfaces_post_reboot(
         self,
         sriov_vm4,
-        running_sriov_vm4,
         vm4_interfaces,
         restarted_sriov_vm4,
     ):
@@ -102,13 +93,11 @@ class TestSriovLiveMigration:
         sriov_network,
         sriov_vm_migrate,
         sriov_vm2,
-        running_sriov_vm_migrate,
-        running_sriov_vm2,
     ):
         migrate_vm_and_verify(vm=sriov_vm_migrate, check_ssh_connectivity=True)
         assert_ping_successful(
-            src_vm=running_sriov_vm2,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_sriov_vm_migrate, name=sriov_network.name),
+            src_vm=sriov_vm2,
+            dst_ip=get_vmi_ip_v4_by_name(vm=sriov_vm_migrate, name=sriov_network.name),
         )
 
 
