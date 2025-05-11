@@ -9,7 +9,7 @@ from pytest_testconfig import config as py_config
 from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
-    assert_restart_required_codition,
+    assert_restart_required_condition,
     hotplug_spec_vm,
 )
 from utilities.constants import (
@@ -111,7 +111,7 @@ class TestCPUHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10698")
     def test_decrease_cpu_value(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        assert_restart_required_codition(
+        assert_restart_required_condition(
             vm=hotplugged_vm, expected_message="Reduction of CPU socket count requires a restart"
         )
 
@@ -120,7 +120,7 @@ class TestCPUHotPlug:
     def test_hotplug_cpu_above_max_value(self, hotplugged_vm):
         with pytest.raises(UnprocessibleEntityError):
             hotplug_spec_vm(vm=hotplugged_vm, sockets=TEN_CPU_SOCKETS)
-            pytest.fail("Socket value set higher then max value!")
+            pytest.fail("Socket value set higher than max value!")
 
 
 @pytest.mark.parametrize(
@@ -200,7 +200,7 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10682")
     def test_reduce_memory_below_start_value(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        assert_restart_required_codition(
+        assert_restart_required_condition(
             vm=hotplugged_vm,
             expected_message="memory updated in template spec to a value lower than what the VM started with",
         )
