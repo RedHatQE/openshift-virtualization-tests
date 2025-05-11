@@ -16,12 +16,16 @@ LOGGER = logging.getLogger(__name__)
             marks=pytest.mark.polarion("CNV-10302"),
             id="VirtualMachine_as_source",
         ),
-        pytest.param(  # TODO: this won't be backported to 4.19; need to remove test after 4.19 branch created
+        pytest.param(
             {
                 "source_name": "non-existing-vm-snapshot",
                 "source_kind": "VirtualMachineSnapshot",
             },
-            marks=[pytest.mark.polarion("CNV-10303"), pytest.mark.jira("CNV-42213", run=False)],
+            marks=[
+                pytest.mark.polarion("CNV-10303"),
+                # TODO: this won't be backported to 4.19; need to remove test after 4.19 branch created
+                pytest.mark.jira("CNV-42213", run=False),
+            ],
             id="VirtualMachineSnapshot_as_source",
         ),
     ],
