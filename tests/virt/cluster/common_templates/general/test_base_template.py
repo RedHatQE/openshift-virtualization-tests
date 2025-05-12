@@ -12,9 +12,8 @@ import bitmath
 import jsons
 import kubernetes
 import pytest
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
-from ocp_resources.resource import Resource
+from ocp_resources.resource import get_client
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
@@ -44,9 +43,7 @@ VM_EXPECTED_ANNOTATION_KEYS = [
     Template.VMAnnotations.WORKLOAD,
 ]
 
-kubeconfig = os.getenv(KUBECONFIG)
-kubeclient = DynamicClient(client=kubernetes.config.new_client_from_config(config_file=kubeconfig))
-CLUSTER_ARCH = (infra.get_nodes_cpu_architecture(nodes=Node.get(dyn_client=kubeclient)),)
+CLUSTER_ARCH = infra.get_nodes_cpu_architecture(nodes=Node.get(dyn_client=get_client()))
 SUFFIX = ""
 if CLUSTER_ARCH == "s390x":
     SUFFIX = "-s390x"
