@@ -18,8 +18,10 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_VM_YAML
+from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, KUBECONFIG, Images
 from utilities import infra
-from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, Images
+
+from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -42,8 +44,9 @@ VM_EXPECTED_ANNOTATION_KEYS = [
     Template.VMAnnotations.WORKLOAD,
 ]
 
-
-CLUSTER_ARCH = architecture = (infra.get_nodes_cpu_architecture(nodes=Node.get()),)
+kubeconfig = os.getenv(KUBECONFIG)
+kubeclient = DynamicClient(client=kubernetes.config.new_client_from_config(config_file=kubeconfig))
+CLUSTER_ARCH = infra.get_nodes_cpu_architecture(nodes=Node.get(dyn_client=kubeclient)),
 SUFFIX = ""
 if CLUSTER_ARCH == "s390x":
     SUFFIX = "-s390x"
