@@ -14,6 +14,7 @@ import tempfile
 import time
 import zipfile
 from contextlib import contextmanager
+from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
 
 import netaddr
@@ -1550,3 +1551,8 @@ def verify_image_info(image_url, generated_pulled_secret, nodes_cpu_architecture
             f"--registry-config={generated_pulled_secret} --filter-by-os={nodes_cpu_architecture}"
         ),
     )
+
+
+@cache
+def cache_admin_client():
+    return get_client()
