@@ -6,7 +6,6 @@ from packaging import version
 from tests.utils import vm_object_from_template
 from tests.virt.cluster.common_templates.utils import xfail_old_guest_agent_version
 from utilities.constants import REGEDIT_PROC_NAME
-from utilities.infra import is_jira_open
 from utilities.storage import create_or_update_data_source, data_volume
 from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
@@ -193,13 +192,6 @@ def golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_cl
         os_matrix=windows_os_matrix__class__,
         data_source_object=golden_image_data_source_multi_windows_os_multi_storage_scope_class,
     )
-
-
-@pytest.fixture()
-def xfail_guest_agent_info_on_win2025(windows_os_matrix__class__):
-    # Bug fixed on qemu-ga but not get the latest build, skip win-2025 until get the latest build
-    if "win-2025" in [*windows_os_matrix__class__][0] and is_jira_open(jira_id="CNV-52655"):
-        pytest.xfail(reason="Expected failure on Windows 2025 until the latest Guest Agent build is available")
 
 
 # Tablet

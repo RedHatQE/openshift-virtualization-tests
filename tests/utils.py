@@ -255,14 +255,14 @@ def assert_guest_os_memory_amount(vm, spec_memory_amount):
     )
 
 
-def assert_restart_required_codition(vm, expected_message):
-    def _get_restart_required_codition(vm):
+def assert_restart_required_condition(vm, expected_message):
+    def _get_restart_required_condition(vm):
         return [condition for condition in vm.instance.status.conditions if condition.type == "RestartRequired"][0]
 
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_10SEC,
         sleep=TIMEOUT_1SEC,
-        func=_get_restart_required_codition,
+        func=_get_restart_required_condition,
         vm=vm,
     )
     try:

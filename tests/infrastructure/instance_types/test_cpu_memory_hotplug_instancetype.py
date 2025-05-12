@@ -6,7 +6,7 @@ from pytest_testconfig import config as py_config
 
 from tests.utils import (
     assert_guest_os_cpu_count,
-    assert_restart_required_codition,
+    assert_restart_required_condition,
     clean_up_migration_jobs,
     hotplug_instance_type_vm,
     hotplug_resource_and_verify_hotplug,
@@ -121,7 +121,7 @@ class TestCPUHotPlugInstanceType:
     @pytest.mark.polarion("CNV-11404")
     def test_decrease_cpu_value(self, instance_type_hotplug_vm):
         hotplug_instance_type_vm(vm=instance_type_hotplug_vm, sockets=FOUR_CPU_SOCKETS)
-        assert_restart_required_codition(
+        assert_restart_required_condition(
             vm=instance_type_hotplug_vm, expected_message="Reduction of CPU socket count requires a restart"
         )
 
@@ -130,4 +130,4 @@ class TestCPUHotPlugInstanceType:
     def test_hotplug_cpu_above_max_value(self, instance_type_hotplug_vm):
         with pytest.raises(UnprocessibleEntityError):
             hotplug_instance_type_vm(vm=instance_type_hotplug_vm, sockets=TEN_CPU_SOCKETS)
-            pytest.fail("Socket value set higher then max value!")
+            pytest.fail("Socket value set higher than max value!")
