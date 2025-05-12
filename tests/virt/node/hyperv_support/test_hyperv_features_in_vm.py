@@ -1,18 +1,19 @@
 import logging
 
 import pytest
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import py_config
 
 from tests.os_params import (
     FEDORA_LATEST,
-    FEDORA_LATEST_LABELS,
     FEDORA_LATEST_OS,
     WINDOWS_LATEST,
-    WINDOWS_LATEST_LABELS,
     WINDOWS_LATEST_OS,
 )
-from utilities.constants import VIRT_LAUNCHER
-from utilities.virt import vm_instance_from_template
+from utilities.constants import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS, VIRT_LAUNCHER
+from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,17 +24,45 @@ def hyperv_vm(
     unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
+    hyperv_instance_type,
+    hyperv_preference,
 ):
-    hyperv_dict = request.param.get("hyperv_dict")
-    if hyperv_dict:
-        request.param["vm_dict"] = {"spec": {"template": {"spec": {"domain": {"features": {"hyperv": hyperv_dict}}}}}}
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+    with VirtualMachineForTests(
+        name=request.param.get("vm_name"),
+        namespace=namespace.name,
+        client=unprivileged_client,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=golden_image_data_source_scope_class
+        ),
+        disk_type=None,
+        vm_instance_type=hyperv_instance_type,
+        vm_preference=hyperv_preference,
+        os_flavor=request.param.get("os_flavor"),
     ) as vm:
+        running_vm(vm=vm)
         yield vm
+
+
+@pytest.fixture()
+def hyperv_instance_type(request):
+    with VirtualMachineClusterInstancetype(
+        name="hyperv-instance-type",
+        memory={"guest": "8Gi"},
+        cpu={"guest": 2, "model": request.param.get("model")},
+    ) as hyperv_instance_type:
+        yield hyperv_instance_type
+
+
+@pytest.fixture()
+def hyperv_preference(request):
+    hyperv_preference_dict = VirtualMachineClusterPreference(
+        name=request.param.get("preference_name")
+    ).instance.to_dict()
+    hyperv_preference_dict["metadata"] = {"name": "hyperv-cluster-preference"}
+    if hyperv_dict := request.param.get("hyperv_dict"):
+        hyperv_preference_dict["spec"]["features"].update(hyperv_dict)
+    with VirtualMachineClusterPreference(kind_dict=hyperv_preference_dict) as hyperv_preference:
+        yield hyperv_preference
 
 
 def get_hyperv_enabled_labels(instance_labels):
@@ -74,21 +103,18 @@ def verify_evmcs_related_attributes(vmi_xml_dict):
 @pytest.mark.high_resource_vm
 class TestWindowsHyperVFlags:
     @pytest.mark.parametrize(
-        "hyperv_vm",
+        "hyperv_vm, hyperv_instance_type, hyperv_preference",
         [
             pytest.param(
-                {
-                    "vm_name": "win-vm-with-default-hyperv-features",
-                    "template_labels": WINDOWS_LATEST_LABELS,
-                },
+                {"vm_name": "win-vm-with-default-hyperv-features", "os_flavor": OS_FLAVOR_WINDOWS},
+                {},
+                {"preference_name": "windows.2k19"},
                 marks=(pytest.mark.polarion("CNV-7247")),
             ),
             pytest.param(
-                {
-                    "vm_name": "win-vm-with-host-passthrough",
-                    "template_labels": WINDOWS_LATEST_LABELS,
-                    "vm_dict": {"spec": {"template": {"spec": {"domain": {"cpu": {"model": "host-passthrough"}}}}}},
-                },
+                {"vm_name": "win-vm-with-host-passthrough", "os_flavor": OS_FLAVOR_WINDOWS},
+                {"model": "host-passthrough"},
+                {"preference_name": "windows.2k19"},
                 marks=(pytest.mark.polarion("CNV-7248")),
             ),
         ],
@@ -119,13 +145,14 @@ class TestWindowsHyperVFlags:
         )
 
     @pytest.mark.parametrize(
-        "hyperv_vm",
+        "hyperv_vm, hyperv_instance_type, hyperv_preference",
         [
             pytest.param(
+                {"vm_name": "win-vm-with-added-hyperv-features", "os_flavor": OS_FLAVOR_WINDOWS},
+                {},
                 {
-                    "vm_name": "win-vm-with-added-hyperv-features",
-                    "template_labels": WINDOWS_LATEST_LABELS,
-                    "hyperv_dict": {"vendorid": {"vendorid": "randomid"}},
+                    "preference_name": "windows.2k19",
+                    "hyperv_dict": {"preferredHyperv": {"vendorid": {"vendorid": "randomid"}}},
                 },
                 marks=(pytest.mark.polarion("CNV-6087")),
             ),
@@ -141,14 +168,12 @@ class TestWindowsHyperVFlags:
         assert vendor_id["@state"] == "on" and vendor_id["@value"] == "randomid", f"Vendor id in libvirt: {vendor_id}"
 
     @pytest.mark.parametrize(
-        "hyperv_vm",
+        "hyperv_vm, hyperv_instance_type, hyperv_preference",
         [
             pytest.param(
-                {
-                    "vm_name": "win-vm-with-evmcs-feature",
-                    "template_labels": WINDOWS_LATEST_LABELS,
-                    "hyperv_dict": {"evmcs": {}},
-                },
+                {"vm_name": "win-vm-with-evmcs-feature", "os_flavor": OS_FLAVOR_WINDOWS},
+                {},
+                {"preference_name": "windows.2k19"},
                 marks=pytest.mark.polarion("CNV-6202"),
             ),
         ],
@@ -174,14 +199,12 @@ class TestWindowsHyperVFlags:
 )
 class TestFedoraHyperVFlags:
     @pytest.mark.parametrize(
-        "hyperv_vm",
+        "hyperv_vm, hyperv_instance_type, hyperv_preference",
         [
             pytest.param(
-                {
-                    "vm_name": "fedora-vm-with-evmcs-feature",
-                    "template_labels": FEDORA_LATEST_LABELS,
-                    "hyperv_dict": {"evmcs": {}},
-                },
+                {"vm_name": "fedora-vm-with-evmcs-feature", "os_flavor": OS_FLAVOR_FEDORA},
+                {},
+                {"preference_name": "fedora", "hyperv_dict": {"preferredHyperv": {"evmcs": {}}}},
                 marks=pytest.mark.polarion("CNV-6090"),
             ),
         ],
