@@ -22,6 +22,9 @@ from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS
 from utilities import infra
 from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, KUBECONFIG, Images
 
+import kubernetes
+from kubernetes.dynamic import DynamicClient
+
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 LOGGER = logging.getLogger(__name__)
