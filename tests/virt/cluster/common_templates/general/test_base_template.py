@@ -10,6 +10,7 @@ from xml.etree import ElementTree
 
 import bitmath
 import jsons
+import kubernetes
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
@@ -21,9 +22,6 @@ from tests.os_params import FEDORA_LATEST_LABELS
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_VM_YAML
 from utilities import infra
 from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, KUBECONFIG, Images
-
-import kubernetes
-from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
