@@ -19,6 +19,7 @@ from pytest_testconfig import config as py_config
 from tests.os_params import FEDORA_LATEST_LABELS
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_VM_YAML
 from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, Images
+from utilities import infra
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -41,7 +42,8 @@ VM_EXPECTED_ANNOTATION_KEYS = [
     Template.VMAnnotations.WORKLOAD,
 ]
 
-CLUSTER_ARCH = next(Node.get()).api.get().items[0].status.nodeInfo.architecture
+
+CLUSTER_ARCH = architecture=infra.get_nodes_cpu_architecture(nodes=Node.get()),
 SUFFIX = ""
 if CLUSTER_ARCH == "s390x":
     SUFFIX = "-s390x"
@@ -114,6 +116,8 @@ def get_fedora_templates_list():
 
 
 def get_windows_templates_list():
+    if CLUSTER_ARCH == "s390x":
+        return []
     windows10 = "windows10"
     windows11 = "windows11"
     windows_os_list = [windows10, windows11, "windows2k16", "windows2k19", "windows2k22", "windows2k25"]
