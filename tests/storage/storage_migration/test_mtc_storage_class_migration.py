@@ -9,11 +9,9 @@ TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 
 
 @pytest.mark.parametrize(
-    "source_storage_class, target_storage_class, vms_for_storage_class_migration",
+    "vms_for_storage_class_migration",
     [
         pytest.param(
-            {"source_storage_class": py_config["storage_class_for_storage_migration_a"]},
-            {"target_storage_class": py_config["storage_class_for_storage_migration_b"]},
             {
                 "vms_fixtures": [
                     "vm_for_storage_class_migration_with_instance_type",
@@ -28,7 +26,18 @@ TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 )
 class TestStorageClassMigrationAtoB:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b")
-    @pytest.mark.polarion("CNV-")
+    @pytest.mark.parametrize(
+        "source_storage_class, target_storage_class",
+        [
+            pytest.param(
+                {"source_storage_class": py_config["storage_class_for_storage_migration_a"]},
+                {"target_storage_class": py_config["storage_class_for_storage_migration_b"]},
+                marks=pytest.mark.polarion("CNV-"),
+                id="source_a_target_b_storage_mig",
+            )
+        ],
+        indirect=True,
+    )
     def test_vm_storage_class_migration_a_to_b(
         self,
         source_storage_class,
