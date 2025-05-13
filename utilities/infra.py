@@ -274,14 +274,17 @@ def wait_for_pods_deletion(pods):
         pod.wait_deleted()
 
 
-def get_pod_container_error_status(pod):
-    pod_instance_status = pod.instance.status
-
-    # Check the containerStatuses and if any containers is in waiting state, return that information:
-    for container_status in pod_instance_status.get("containerStatuses", []):
-        waiting_container = container_status.get("state", {}).get("waiting")
-        if waiting_container:
-            return waiting_container["reason"] if waiting_container.get("reason") else waiting_container
+def get_pod_container_error_status(pod: Pod) -> str | None:
+    try:
+        pod_instance_status = pod.instance.status
+        # Check the containerStatuses and if any container is in waiting state, return that information:
+        for container_status in pod_instance_status.get("containerStatuses", []):
+            if waiting_container := container_status.get("state", {}).get("waiting"):
+                return waiting_container["reason"] if waiting_container.get("reason") else waiting_container
+        return None
+    except NotFoundError:
+        LOGGER.error(f"Pod {pod.name} was not found")
+        raise
 
 
 def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list[dict[str, str]]:
