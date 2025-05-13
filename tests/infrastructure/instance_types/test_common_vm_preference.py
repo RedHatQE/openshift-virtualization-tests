@@ -11,21 +11,31 @@ from utilities.virt import VirtualMachineForTests, running_vm
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
-def start_vm_with_cluster_preference(client, preference_name, namespace_name):
-    cluster_preference = VirtualMachineClusterPreference(name=preference_name)
-    cluster_spec = cluster_preference.instance.spec
-    cpu_guest = cluster_spec.requirements.cpu.guest
-    spread_options = getattr(cluster_spec.cpu, "spreadOptions", None)
+def _extract_resources_from_cluster_preference_spec(cluster_preference_spec):
+    memory_guest = (
+        cluster_preference_spec.get("requirements", {}).get("memory", {}).get("guest")
+        or Images.Rhel.DEFAULT_MEMORY_SIZE
+    )
+    spread_options = cluster_preference_spec.get("cpu", {}).get("spreadOptions", {})
 
-    sockets = cpu_guest
+    sockets = None
     cores = None
     threads = None
 
-    # Default ratio is 2 if not specified
-    if spread_options:
-        cores = spread_options.get("ratio", 2)
+    if cpu_guest := cluster_preference_spec.get("requirements", {}).get("cpu", {}).get("guest"):
+        cores = spread_options.get("ratio", 2) if spread_options else 1
         sockets = max(1, cpu_guest // cores)
         threads = 1
+
+    return memory_guest, sockets, cores, threads
+
+
+def start_vm_with_cluster_preference(client, preference_name, namespace_name):
+    cluster_preference = VirtualMachineClusterPreference(client=client, name=preference_name)
+
+    memory_guest, sockets, cores, threads = _extract_resources_from_cluster_preference_spec(
+        cluster_preference_spec=cluster_preference.instance.spec
+    )
 
     with VirtualMachineForTests(
         client=client,
@@ -33,7 +43,7 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
         namespace=namespace_name,
         # TODO: Add corresponding images to the VM based on preference
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        memory_guest=cluster_spec.requirements.memory.guest,
+        memory_guest=memory_guest,
         cpu_sockets=sockets,
         cpu_cores=cores,
         cpu_threads=threads,
