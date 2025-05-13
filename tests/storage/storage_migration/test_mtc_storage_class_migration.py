@@ -1,12 +1,8 @@
-import logging
-
 import pytest
 from pytest_testconfig import config as py_config
 
 from tests.storage.storage_migration.utils import CONTENT, FILE_BEFORE_STORAGE_MIGRATION, check_file_in_vm
 from utilities.virt import migrate_vm_and_verify
-
-LOGGER = logging.getLogger(__name__)
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
