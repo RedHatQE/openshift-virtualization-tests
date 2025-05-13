@@ -4,8 +4,8 @@ from ocp_resources.virtual_machine import VirtualMachine
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
 
-FILE_BEFORE_STORAGE_MIGRATION = "file-before-storage-migration.txt"
-CONTENT = "hey"
+FILE_BEFORE_STORAGE_MIGRATION = "file-before-storage-migration"
+CONTENT = "some-content"
 
 
 def get_source_virt_launcher_pod(vm: VirtualMachine) -> Pod:

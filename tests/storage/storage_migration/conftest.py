@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_source import DataSource
@@ -27,9 +25,6 @@ from utilities.constants import (
 )
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file
 from utilities.virt import VirtualMachineForTests, running_vm
-
-LOGGER = logging.getLogger(__name__)
-
 
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
