@@ -197,12 +197,12 @@ def pytest_addoption(parser):
         help="Overwrite default storage class in storage_class_matrix",
     )
     storage_group.addoption(
-        "--source-storage-class-for-storage-migration",
-        help="Storage class for the source VMs for storage migration tests",
+        "--storage-class-for-storage-migration-a",
+        help="Storage class A for the VM storage migration tests",
     )
     storage_group.addoption(
-        "--target-storage-class-for-storage-migration",
-        help="Storage class for the target VMs for storage migration tests",
+        "--storage-class-for-storage-migration-b",
+        help="Storage class B for the VM storage migration tests",
     )
 
     # Cluster sanity addoption

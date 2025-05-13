@@ -1,104 +1,89 @@
 import logging
 
 import pytest
-from ocp_resources.mig_cluster import MigCluster
-from ocp_resources.mig_migration import MigMigration
-from ocp_resources.mig_plan import MigPlan
-from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
 
 from tests.storage.storage_migration.utils import CONTENT, FILE_BEFORE_STORAGE_MIGRATION, check_file_in_vm
-from utilities.constants import TIMEOUT_1MIN
+from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 
-OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
-
-
-@pytest.fixture(scope="module")
-def mig_cluster():
-    mig_cluster = MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE)
-    assert mig_cluster.exists, f"MigCluster {MigCluster.name} does not exists"
-    return mig_cluster
-
-
-@pytest.fixture(scope="module")
-def mig_cluster_ref_dict(mig_cluster):
-    return {"name": f"{mig_cluster.name}", "namespace": f"{mig_cluster.namespace}"}
-
-
-@pytest.fixture()
-def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
-    with MigPlan(
-        name="storage-mig-plan",
-        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
-        src_mig_cluster_ref=mig_cluster_ref_dict,
-        dest_mig_cluster_ref=mig_cluster_ref_dict,
-        live_migrate=True,
-        namespaces=[namespace.name],
-        refresh=False,
-    ) as mig_plan:
-        mig_plan.wait_for_condition(
-            condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
-        )
-        # Edit the target storageClass, accessModes, volumeMode
-        mig_plan_dict = mig_plan.instance.to_dict()
-        mig_plan_persistent_volumes_dict = mig_plan_dict["spec"]["persistentVolumes"][0].copy()
-        mig_plan_persistent_volumes_dict["selection"]["storageClass"] = f"{target_storage_class}"
-        mig_plan_persistent_volumes_dict["pvc"]["accessModes"][0] = "auto"
-        mig_plan_persistent_volumes_dict["pvc"]["volumeMode"] = "auto"
-        patch = {mig_plan: {"spec": {"persistentVolumes": [mig_plan_persistent_volumes_dict]}}}
-        ResourceEditor(patches=patch).update()
-        yield mig_plan
-
-
-@pytest.fixture()
-def storage_mig_migration(storage_mig_plan):
-    with MigMigration(
-        name="mig-migration-abc",
-        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
-        mig_plan_ref={"name": f"{storage_mig_plan.name}", "namespace": f"{storage_mig_plan.namespace}"},
-        migrate_state=True,
-        quiesce_pods=True,  # CutOver -> Start migration
-        stage=False,
-    ) as mig_migration:
-        mig_migration.wait_for_condition(
-            condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
-        )
-        mig_migration.wait_for_condition(
-            condition=mig_migration.Condition.Type.SUCCEEDED, status=mig_migration.Condition.Status.TRUE
-        )
-        yield mig_migration
+TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
+TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 
 
 @pytest.mark.parametrize(
-    "source_storage_class, target_storage_class",
+    "source_storage_class, target_storage_class, vms_for_storage_class_migration",
     [
         pytest.param(
-            {"source_storage_class": py_config["source_storage_class_for_storage_migration"]},
-            {"target_storage_class": py_config["target_storage_class_for_storage_migration"]},
-            marks=pytest.mark.polarion("CNV-"),
+            {"source_storage_class": py_config["storage_class_for_storage_migration_a"]},
+            {"target_storage_class": py_config["storage_class_for_storage_migration_b"]},
+            {
+                "vms_fixtures": [
+                    "vm_for_storage_class_migration_with_instance_type",
+                    "vm_for_storage_class_migration_from_template_with_data_source",
+                    "vm_for_storage_class_migration_from_template_with_dv",
+                ]
+            },
             id="source_a_target_b",
         )
     ],
     indirect=True,
 )
-def test_vm_for_sc_mig(
-    source_vm_for_storage_class_migration,
-    written_file_to_vm_before_migration,
-    target_storage_class,
-    storage_mig_plan,
-    storage_mig_migration,
-    deleted_completed_virt_launcher_source_pod,
-    deleted_old_dv,
-):
-    LOGGER.info("HEY")
+class TestStorageClassMigrationAtoB:
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b")
+    @pytest.mark.polarion("CNV-")
+    def test_vm_storage_class_migration_a_to_b(
+        self,
+        source_storage_class,
+        running_vms_for_storage_class_migration,
+        written_file_to_vms_before_migration,
+        storage_mig_plan,
+        storage_mig_migration,
+        deleted_completed_virt_launcher_source_pod,
+        deleted_old_dv,
+    ):
+        for vm in running_vms_for_storage_class_migration:
+            check_file_in_vm(
+                vm=vm,
+                file_name=FILE_BEFORE_STORAGE_MIGRATION,
+                file_content=CONTENT,
+            )
 
-    check_file_in_vm(
-        vm=source_vm_for_storage_class_migration,
-        file_name=FILE_BEFORE_STORAGE_MIGRATION,
-        file_content=CONTENT,
-    )
+    @pytest.mark.polarion("CNV-")
+    def test_migrate_vms_after_storage_migration(self, running_vms_for_storage_class_migration):
+        for vm in running_vms_for_storage_class_migration:
+            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
 
-    # import ipdb
-    # ipdb.set_trace()
+
+@pytest.mark.parametrize(
+    "source_storage_class, target_storage_class, vms_for_storage_class_migration",
+    [
+        pytest.param(
+            {"source_storage_class": py_config["storage_class_for_storage_migration_b"]},
+            {"target_storage_class": py_config["storage_class_for_storage_migration_a"]},
+            {"vms_fixtures": ["vm_for_storage_class_migration_with_instance_type"]},
+            id="source_b_target_a",
+        )
+    ],
+    indirect=True,
+)
+class TestStorageClassMigrationBtoA:
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_B_TO_A}::test_vm_storage_class_migration_b_to_a")
+    @pytest.mark.polarion("CNV-")
+    def test_vm_storage_class_migration_b_to_a(
+        self,
+        source_storage_class,
+        running_vms_for_storage_class_migration,
+        written_file_to_vms_before_migration,
+        storage_mig_plan,
+        storage_mig_migration,
+        deleted_completed_virt_launcher_source_pod,
+        deleted_old_dv,
+    ):
+        for vm in running_vms_for_storage_class_migration:
+            check_file_in_vm(
+                vm=vm,
+                file_name=FILE_BEFORE_STORAGE_MIGRATION,
+                file_content=CONTENT,
+            )

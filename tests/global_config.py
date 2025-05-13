@@ -166,8 +166,8 @@ default_storage_class, default_storage_class_configuration = _get_default_storag
 default_volume_mode = default_storage_class_configuration["volume_mode"]
 default_access_mode = default_storage_class_configuration["access_mode"]
 
-source_storage_class_for_storage_migration = HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC
-target_storage_class_for_storage_migration = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_for_storage_migration_a = HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC
+storage_class_for_storage_migration_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 
 link_aggregation_mode_matrix = [
     "active-backup",
