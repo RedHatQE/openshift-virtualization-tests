@@ -773,6 +773,7 @@ dependencies = [
     { name = "pytest-testconfig" },
     { name = "python-benedict" },
     { name = "python-rrmngmnt" },
+    { name = "python-simple-logger" },
     { name = "python-utility-scripts" },
     { name = "pyvmomi" },
     { name = "pyyaml" },
@@ -825,6 +826,7 @@ requires-dist = [
     { name = "pytest-testconfig", specifier = ">=0.2.0" },
     { name = "python-benedict", specifier = ">=0.34.0" },
     { name = "python-rrmngmnt", specifier = ">=0.1.32" },
+    { name = "python-simple-logger", specifier = ">=2.0.13" },
     { name = "python-utility-scripts", specifier = ">=1.0.1" },
     { name = "pyvmomi", specifier = ">=8.0.3.0.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
@@ -1280,12 +1282,12 @@ wheels = [
 
 [[package]]
 name = "python-simple-logger"
-version = "2.0.12"
+version = "2.0.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorlog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/24/93/26d51d219b396781cece0a5025992c80f29dcc55216855c3e379a9c57d5b/python_simple_logger-2.0.12.tar.gz", hash = "sha256:6311940638bad71c6b80f0591aaf3b36a7c9110056eab3544709c2ee676ffdb9", size = 9412, upload-time = "2025-05-08T14:29:28.856Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/d4/2533c1b15a5a64eab475dceea1fb1b6d1590230dd257cd04fe3c3a284f7c/python_simple_logger-2.0.13.tar.gz", hash = "sha256:24f66784e48f6fa635de9d0d9738e41516adebfb930b4ee88b938ca06bbb18e9", size = 9450, upload-time = "2025-05-12T15:43:50.573Z" }
 
 [[package]]
 name = "python-slugify"
