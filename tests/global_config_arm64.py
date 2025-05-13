@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from typing import Any
 
 import pytest_testconfig
@@ -65,6 +66,11 @@ rhel_os_matrix = [
 
 latest_rhel_os_dict = get_latest_os_dict_list(os_list=[rhel_os_matrix])[0]
 
+# Modify instance_type_rhel_os_matrix for arm64
+instance_type_rhel_os_matrix = deepcopy(config["instance_type_rhel_os_matrix"])  # noqa: F821
+for os_matrix_dict in instance_type_rhel_os_matrix:
+    for os_params in os_matrix_dict.values():
+        os_params[PREFERENCE_STR] += f".{ARM_64}"
 
 for _dir in dir():
     if not config:  # noqa: F821
