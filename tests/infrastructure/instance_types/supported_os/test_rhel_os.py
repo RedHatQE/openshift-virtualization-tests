@@ -30,6 +30,7 @@ TESTS_CLASS_MIGRATION = "TestVMMigrationAndState"
 TESTS_MIGRATE_VM = f"{TESTS_CLASS_MIGRATION}::test_migrate_vm"
 
 
+@pytest.mark.arm64
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
@@ -114,12 +115,11 @@ class TestVMFeatures:
         check_vm_xml_smbios(vm=golden_image_vm_with_instance_type, cm_values=smbios_from_kubevirt_config)
 
 
+@pytest.mark.arm64
 class TestVMMigrationAndState:
     @pytest.mark.polarion("CNV-11714")
     @pytest.mark.dependency(name=TESTS_MIGRATE_VM, depends=[TEST_START_VM_TEST_NAME])
-    def test_migrate_vm(
-        self, skip_if_no_common_modern_cpu, skip_access_mode_rwo_scope_class, golden_image_vm_with_instance_type
-    ):
+    def test_migrate_vm(self, skip_access_mode_rwo_scope_class, golden_image_vm_with_instance_type):
         migrate_vm_and_verify(vm=golden_image_vm_with_instance_type, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=golden_image_vm_with_instance_type)
 
@@ -144,6 +144,7 @@ class TestVMMigrationAndState:
         )
 
 
+@pytest.mark.arm64
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
