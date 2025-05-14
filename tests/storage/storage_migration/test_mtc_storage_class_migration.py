@@ -1,7 +1,12 @@
 import pytest
 from pytest_testconfig import config as py_config
 
-from tests.storage.storage_migration.utils import CONTENT, FILE_BEFORE_STORAGE_MIGRATION, check_file_in_vm
+from tests.storage.storage_migration.utils import (
+    CONTENT,
+    FILE_BEFORE_STORAGE_MIGRATION,
+    check_file_in_vm,
+    verify_linux_vms_boot_time_after_storage_migration,
+)
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -32,7 +37,7 @@ class TestStorageClassMigrationAtoB:
             pytest.param(
                 {"source_storage_class": py_config["storage_class_for_storage_migration_a"]},
                 {"target_storage_class": py_config["storage_class_for_storage_migration_b"]},
-                marks=pytest.mark.polarion("CNV-"),
+                marks=pytest.mark.polarion("CNV-11500"),
                 id="source_a_target_b_storage_mig",
             )
         ],
@@ -43,11 +48,16 @@ class TestStorageClassMigrationAtoB:
         source_storage_class,
         running_vms_for_storage_class_migration,
         written_file_to_vms_before_migration,
+        linux_vms_boot_time_before_storage_migration,
         storage_mig_plan,
         storage_mig_migration,
         deleted_completed_virt_launcher_source_pod,
         deleted_old_dv,
     ):
+        verify_linux_vms_boot_time_after_storage_migration(
+            vm_list=running_vms_for_storage_class_migration,
+            initial_boot_time=linux_vms_boot_time_before_storage_migration,
+        )
         for vm in running_vms_for_storage_class_migration:
             check_file_in_vm(
                 vm=vm,
@@ -81,11 +91,16 @@ class TestStorageClassMigrationBtoA:
         source_storage_class,
         running_vms_for_storage_class_migration,
         written_file_to_vms_before_migration,
+        linux_vms_boot_time_before_storage_migration,
         storage_mig_plan,
         storage_mig_migration,
         deleted_completed_virt_launcher_source_pod,
         deleted_old_dv,
     ):
+        verify_linux_vms_boot_time_after_storage_migration(
+            vm_list=running_vms_for_storage_class_migration,
+            initial_boot_time=linux_vms_boot_time_before_storage_migration,
+        )
         for vm in running_vms_for_storage_class_migration:
             check_file_in_vm(
                 vm=vm,

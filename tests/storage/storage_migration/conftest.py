@@ -24,7 +24,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm
 
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
@@ -110,12 +110,12 @@ def target_storage_class(request):
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_with_instance_type(
-    admin_client, namespace, golden_images_fedora_data_source, source_storage_class, cpu_for_migration
+    unprivileged_client, namespace, golden_images_fedora_data_source, source_storage_class, cpu_for_migration
 ):
     with VirtualMachineForTests(
         name="vm-with-instance-type",
         namespace=namespace.name,
-        client=admin_client,  # TODO replace to unpriv before merge
+        client=unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
@@ -131,12 +131,12 @@ def vm_for_storage_class_migration_with_instance_type(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_data_source(
-    admin_client, namespace, golden_images_rhel9_data_source, source_storage_class, cpu_for_migration
+    unprivileged_client, namespace, golden_images_rhel9_data_source, source_storage_class, cpu_for_migration
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
         namespace=namespace.name,
-        client=admin_client,  # TODO replace to unpriv before merge
+        client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_images_rhel9_data_source,
@@ -151,7 +151,7 @@ def vm_for_storage_class_migration_from_template_with_data_source(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_dv(
-    admin_client,
+    unprivileged_client,
     namespace,
     source_storage_class,
     cpu_for_migration,
@@ -174,7 +174,7 @@ def vm_for_storage_class_migration_from_template_with_dv(
     with VirtualMachineForTests(
         name="vm-from-template-and-imported-dv",
         namespace=namespace.name,
-        client=admin_client,  # TODO replace to unpriv before merge
+        client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
@@ -196,6 +196,14 @@ def running_vms_for_storage_class_migration(vms_for_storage_class_migration):
     for vm in vms_for_storage_class_migration:
         running_vm(vm=vm)
     yield vms_for_storage_class_migration
+
+
+@pytest.fixture(scope="class")
+def linux_vms_boot_time_before_storage_migration(running_vms_for_storage_class_migration):
+    boot_time_dict = {}
+    for vm in running_vms_for_storage_class_migration:
+        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
+    yield boot_time_dict
 
 
 @pytest.fixture(scope="class")
