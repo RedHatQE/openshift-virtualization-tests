@@ -22,6 +22,8 @@ from utilities.hco import (
 COMPONENT = "ssp"
 REPLICAS = 5
 
+pytestmark = [pytest.mark.arm64]
+
 
 @pytest.fixture(scope="class")
 def json_patched_ssp(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):

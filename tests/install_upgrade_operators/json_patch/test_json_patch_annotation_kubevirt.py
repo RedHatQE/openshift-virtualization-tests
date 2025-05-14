@@ -21,6 +21,8 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
+pytestmark = [pytest.mark.arm64]
+
 
 @pytest.fixture(scope="class")
 def json_patched_kubevirt(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
