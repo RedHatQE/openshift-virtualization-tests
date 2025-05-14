@@ -208,6 +208,7 @@ def shutdown_vm_guest_os(vm):
     ],
     indirect=True,
 )
+@pytest.mark.arm64
 @pytest.mark.gating
 class TestRunStrategyBaseActions:
     @pytest.mark.parametrize(
@@ -312,7 +313,6 @@ class TestRunStrategyAdvancedActions:
     )
     def test_run_strategy_migrate_vm(
         self,
-        skip_if_no_common_cpu,
         skip_access_mode_rwo_scope_function,
         lifecycle_vm,
         request_updated_vm_run_strategy,

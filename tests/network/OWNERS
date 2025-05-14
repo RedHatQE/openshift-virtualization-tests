@@ -1,4 +1,8 @@
+root-approvers: False
+approvers:
+  - EdDev
 reviewers:
   - yossisegev
   - Anatw
   - sbahar619
+  - EdDev

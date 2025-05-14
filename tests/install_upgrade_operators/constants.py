@@ -12,7 +12,6 @@ TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
 # featuregates:
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
-NON_ROOT = "nonRoot"
 DISABLE_MDEV_CONFIGURATION = "disableMDevConfiguration"
 PERSISTENT_RESERVATION = "persistentReservation"
 FG_DISABLED = False
@@ -28,19 +27,13 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
     "Snapshot",
     "HotplugVolumes",
     "ExpandDisks",
-    "GPU",
     "HostDevices",
-    "NetworkBindingPlugins",
-    "WithHostModelCPU",
-    "HypervStrictCheck",
     "VMExport",
     "KubevirtSeccompProfile",
-    "DisableCustomSELinuxPolicy",
     "VMPersistentState",
-    "VMLiveUpdateFeatures",
-    "DynamicPodInterfaceNaming",
-    "VolumeMigration",
-    "VolumesUpdateStrategy",
+    "InstancetypeReferencePolicy",
+    "WithHostModelCPU",
+    "HypervStrictCheck",
 ]
 EXPECTED_CDI_HARDCODED_FEATUREGATES = [
     "DataVolumeClaimAdoption",
@@ -50,10 +43,7 @@ HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
     PERSISTENT_RESERVATION: FG_DISABLED,
-    "deployVmConsoleProxy": FG_DISABLED,
-    "autoResourceLimits": FG_DISABLED,
     "alignCPUs": FG_DISABLED,
-    "enableApplicationAwareQuota": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"

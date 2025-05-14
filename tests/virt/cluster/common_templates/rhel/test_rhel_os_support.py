@@ -7,26 +7,26 @@ import logging
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
-    assert_linux_efi,
-    assert_vm_xml_efi,
     check_machine_type,
     restart_qemu_guest_agent_service,
-    update_vm_efi_spec_and_restart,
     validate_fs_info_virtctl_vs_linux_os,
     validate_os_info_virtctl_vs_linux_os,
     validate_user_info_virtctl_vs_linux_os,
-    validate_virtctl_guest_agent_data_over_time,
     vm_os_version,
 )
-from tests.virt.cluster.utils import check_vm_xml_smbios
-from tests.virt.utils import validate_pause_optional_migrate_unpause_linux_vm
 from utilities import console
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
+    assert_linux_efi,
+    assert_vm_xml_efi,
     check_qemu_guest_agent_installed,
+    check_vm_xml_smbios,
     migrate_vm_and_verify,
     running_vm,
+    update_vm_efi_spec_and_restart,
     validate_libvirt_persistent_domain,
+    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
 
@@ -38,6 +38,7 @@ TESTS_CLASS_NAME = "TestCommonTemplatesRhel"
 
 
 class TestCommonTemplatesRhel:
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
@@ -52,6 +53,7 @@ class TestCommonTemplatesRhel:
         LOGGER.info("Create VM from template.")
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class.create(wait=True)
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
@@ -63,6 +65,7 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
@@ -75,6 +78,7 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-3318")
@@ -99,6 +103,7 @@ class TestCommonTemplatesRhel:
         assert_vm_xml_efi(vm=vm)
         assert_linux_efi(vm=vm)
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-3306")
@@ -109,6 +114,7 @@ class TestCommonTemplatesRhel:
         label = vm.instance.spec.template.metadata["labels"]["kubevirt.io/domain"]
         assert label == vm.name, f"Wrong domain label: {label}"
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(
@@ -122,6 +128,7 @@ class TestCommonTemplatesRhel:
             tcp_timeout=120
         ), "Failed to login via SSH"
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(
@@ -134,6 +141,7 @@ class TestCommonTemplatesRhel:
             ssh_exec=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class.ssh_exec
         ), "qemu guest agent package is not installed"
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
     @pytest.mark.polarion("CNV-3513")
@@ -142,6 +150,7 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
     @pytest.mark.polarion("CNV-4195")
@@ -159,6 +168,7 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
     @pytest.mark.polarion("CNV-4550")
@@ -170,6 +180,7 @@ class TestCommonTemplatesRhel:
                 vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
             )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
     @pytest.mark.polarion("CNV-6531")
@@ -182,12 +193,14 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-3671")
     def test_vm_machine_type(self, golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class):
         check_machine_type(vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class)
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-4201")
@@ -201,6 +214,7 @@ class TestCommonTemplatesRhel:
             cm_values=smbios_from_kubevirt_config,
         )
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5916")
@@ -209,6 +223,7 @@ class TestCommonTemplatesRhel:
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
         )
 
+    @pytest.mark.arm64
     @pytest.mark.smoke
     @pytest.mark.polarion("CNV-3038")
     @pytest.mark.dependency(
@@ -217,7 +232,6 @@ class TestCommonTemplatesRhel:
     )
     def test_migrate_vm(
         self,
-        skip_if_no_common_cpu,
         skip_access_mode_rwo_scope_class,
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
     ):
@@ -226,6 +240,7 @@ class TestCommonTemplatesRhel:
         migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=vm)
 
+    @pytest.mark.arm64
     @pytest.mark.polarion("CNV-5902")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(
@@ -235,9 +250,12 @@ class TestCommonTemplatesRhel:
     ):
         validate_pause_optional_migrate_unpause_linux_vm(
             vm=golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class,
-            pre_pause_pid=ping_process_in_rhel_os,
+            pre_pause_pid=ping_process_in_rhel_os(
+                golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
+            ),
         )
 
+    @pytest.mark.arm64
     @pytest.mark.polarion("CNV-6007")
     @pytest.mark.dependency(
         depends=[
@@ -264,6 +282,7 @@ class TestCommonTemplatesRhel:
         assert_vm_xml_efi(vm=vm, secure_boot_enabled=False)
         assert_linux_efi(vm=vm)
 
+    @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])

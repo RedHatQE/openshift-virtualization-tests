@@ -5,19 +5,16 @@ def foo_matrix(matrix):
     return matrix
 """
 
-from ocp_resources.resource import get_client
 from ocp_resources.storage_class import StorageClass
 
-from utilities.storage import is_snapshot_supported_by_sc, sc_volume_binding_mode_is_wffc
+from utilities.infra import cache_admin_client
 
 
 def snapshot_matrix(matrix):
     matrix_to_return = []
     for storage_class in matrix:
-        if is_snapshot_supported_by_sc(
-            sc_name=[*storage_class][0],
-            client=get_client(),
-        ):
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["snapshot"] is True:
             matrix_to_return.append(storage_class)
     return matrix_to_return
 
@@ -25,10 +22,8 @@ def snapshot_matrix(matrix):
 def without_snapshot_capability_matrix(matrix):
     matrix_to_return = []
     for storage_class in matrix:
-        if not is_snapshot_supported_by_sc(
-            sc_name=[*storage_class][0],
-            client=get_client(),
-        ):
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["snapshot"] is False:
             matrix_to_return.append(storage_class)
     return matrix_to_return
 
@@ -36,8 +31,9 @@ def without_snapshot_capability_matrix(matrix):
 def online_resize_matrix(matrix):
     matrix_to_return = []
     for storage_class in matrix:
-        storage_class_object = StorageClass(name=[*storage_class][0])
-        if storage_class_object.instance.get("allowVolumeExpansion"):
+        # storage_class object must have allowVolumeExpansion: true
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["online_resize"] is True:
             matrix_to_return.append(storage_class)
     return matrix_to_return
 
@@ -50,14 +46,19 @@ def hpp_matrix(matrix):
     ]
 
     for storage_class in matrix:
-        if StorageClass(name=[*storage_class][0]).instance.provisioner in hpp_sc_provisioners:
+        if (
+            StorageClass(client=cache_admin_client(), name=[*storage_class][0]).instance.provisioner
+            in hpp_sc_provisioners
+        ):
             matrix_to_return.append(storage_class)
+
     return matrix_to_return
 
 
 def wffc_matrix(matrix):
     matrix_to_return = []
     for storage_class in matrix:
-        if sc_volume_binding_mode_is_wffc(sc=[*storage_class][0]):
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["wffc"] is True:
             matrix_to_return.append(storage_class)
     return matrix_to_return

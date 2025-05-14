@@ -9,7 +9,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import clean_up_migration_jobs, hotplug_resource_and_wait_hotplug_migration_finish, hotplug_spec_vm
+from tests.utils import clean_up_migration_jobs, hotplug_resource_and_verify_hotplug, hotplug_spec_vm
 from tests.virt.cluster.aaq.constants import (
     ACRQ_QUOTA_HARD_SPEC,
     ARQ_QUOTA_HARD_SPEC,
@@ -23,7 +23,7 @@ from tests.virt.cluster.aaq.utils import (
     wait_for_aacrq_object_created,
 )
 from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL, ACRQ_TEST
-from tests.virt.utils import enable_aaq_feature_gate, wait_when_pod_in_gated_state
+from tests.virt.utils import enable_aaq_in_hco, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     POD_CONTAINER_SPEC,
     POD_SECURITY_CONTEXT_SPEC,
@@ -47,8 +47,8 @@ LOGGER = logging.getLogger(__name__)
 
 # AAQ - ApplicationAwareQuota, operator for managing resource quotas per component
 @pytest.fixture(scope="package")
-def enabled_aaq_feature_gate_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
-    with enable_aaq_feature_gate(
+def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
+    with enable_aaq_in_hco(
         client=admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_package,
@@ -146,6 +146,7 @@ def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
+        wait_for_virt_launcher_pod(vmi=vm.vmi)
         wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
         yield vm
 
@@ -257,7 +258,7 @@ def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 @pytest.fixture()
 def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test, admin_client):
-    hotplug_resource_and_wait_hotplug_migration_finish(
+    hotplug_resource_and_verify_hotplug(
         vm=hotplug_vm_for_aaq_test,
         client=unprivileged_client,
         sockets=request.param.get("sockets"),

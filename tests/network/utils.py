@@ -7,7 +7,6 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.service import Service
-from ocp_resources.service_mesh_member_roll import ServiceMeshMemberRoll
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -15,7 +14,6 @@ from tests.network.constants import BRCNV, SERVICE_MESH_PORT
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
-    ISTIO_SYSTEM_DEFAULT_NS,
     OS_FLAVOR_FEDORA,
     SSH_PORT_22,
     TIMEOUT_1MIN,
@@ -43,7 +41,6 @@ range {DHCP_IP_RANGE_START} {DHCP_IP_RANGE_END};
 }}
 EOF
 """
-SERVICE_MESH_VM_MEMORY_REQ = "128M"
 SERVICE_MESH_INJECT_ANNOTATION = "sidecar.istio.io/inject"
 
 
@@ -69,27 +66,6 @@ class ServiceMeshDeploymentService(Service):
         ]
         if self.port_name:
             self.res["spec"]["ports"][0]["name"] = self.port_name
-
-
-class ServiceMeshMemberRollForTests(ServiceMeshMemberRoll):
-    def __init__(
-        self,
-        members,
-    ):
-        """
-        Service Mesh Member Roll creation
-        Args:
-            members (list): Namespaces to be added to Service Mesh
-        """
-        super().__init__(
-            name="default",
-            namespace=ISTIO_SYSTEM_DEFAULT_NS,
-        )
-        self.members = members
-
-    def to_dict(self):
-        super().to_dict()
-        self.res["spec"] = {"members": self.members}
 
 
 class FedoraVirtualMachineForServiceMesh(VirtualMachineForTests):
@@ -249,15 +225,13 @@ def assert_ssh_alive(ssh_vm, src_ip):
         sleep=1,
         func=run_ssh_commands,
         host=ssh_vm.ssh_exec,
-        commands=[shlex.split("sudo netstat -tulpan | grep ssh")],
+        commands=[shlex.split(f"sudo ss -o state established '( sport = 22 ) and dst = {src_ip}' --no-header")],
     )
     try:
         for sample in sampler:
             if sample:
-                for line in sample:
-                    if src_ip in line and "ESTABLISHED" in line:
-                        LOGGER.info(f"SSH connection from {src_ip} to {ssh_vm.name} is alive")
-                        return
+                LOGGER.info(f"SSH connection from {src_ip} to {ssh_vm.name} is alive")
+                return
     except TimeoutExpiredError:
         LOGGER.error(f"SSH connection from {src_ip} is not alive")
         raise

@@ -10,14 +10,6 @@ from utilities.constants import (
 
 KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE = "kubevirt_ssp_template_validator_rejected_increase"
 
-
-KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
-    "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"
-)
-KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
-
 KUBEVIRT_CNAO_OPERATOR_UP = "kubevirt_cnao_operator_up"
 KUBEVIRT_CNAO_CR_READY = "kubevirt_cnao_cr_ready"
 KUBEVIRT_CNAO_KUBEMACPOOL_DUPLICATE_MACS = "kubevirt_cnao_kubemacpool_duplicate_macs"
@@ -69,6 +61,7 @@ KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT = (
     "mount_point='{mountpoint}'}}"
 )
 KUBEVIRT_VMI_INFO = "kubevirt_vmi_info{{name='{vm_name}'}}"
+KUBEVIRT_VM_INFO = "kubevirt_vm_info{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES = (
     "kubevirt_vmi_memory_available_bytes{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
 )

@@ -7,7 +7,6 @@ import logging
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
-    assert_vm_xml_efi,
     assert_windows_efi,
     check_machine_type,
     check_vm_xml_hyperv,
@@ -15,12 +14,17 @@ from tests.virt.cluster.common_templates.utils import (
     validate_fs_info_virtctl_vs_windows_os,
     validate_os_info_virtctl_vs_windows_os,
     validate_user_info_virtctl_vs_windows_os,
-    validate_virtctl_guest_agent_data_over_time,
 )
-from tests.virt.cluster.utils import check_vm_xml_smbios
 from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
-from utilities.virt import migrate_vm_and_verify, running_vm, validate_libvirt_persistent_domain
+from utilities.virt import (
+    assert_vm_xml_efi,
+    check_vm_xml_smbios,
+    migrate_vm_and_verify,
+    running_vm,
+    validate_libvirt_persistent_domain,
+    validate_virtctl_guest_agent_data_over_time,
+)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
@@ -67,7 +71,6 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-3512")
     def test_vmi_guest_agent_info(
         self,
-        xfail_guest_agent_info_on_win2025,
         golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
     ):
         """Test Guest OS agent info."""
@@ -80,7 +83,6 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-4196")
     def test_virtctl_guest_agent_os_info(
         self,
-        xfail_guest_agent_info_on_win2025,
         golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
     ):
         validate_os_info_virtctl_vs_windows_os(
@@ -161,7 +163,6 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-3335")
     def test_migrate_vm(
         self,
-        skip_if_no_common_modern_cpu,
         skip_access_mode_rwo_scope_class,
         golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
     ):

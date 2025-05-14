@@ -84,7 +84,26 @@ following like to your system `/etc/resolv.conf`:
 nameserver 192.168.8.1
 ```
 
-### Using custom cluster management binaries
+## Test Images Architecture Support
+
+The tests can dynamically select test images based on the system's architecture. This is controlled by the environment variable `OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH`. Supported architectures include:
+
+- `x86_64` (default)
+
+### Usage
+The architecture-specific test images class is selected automatically based on the `OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH` environment variable. If the variable is not set, the default architecture `x86_64` is used.
+
+Ensure the environment variable is set correctly before running the tests:
+
+```bash
+export OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH=<desired-architecture>
+```
+
+If an unsupported architecture is specified, a `ValueError` will be raised.
+
+Images for different architectures are managed under [utilities/constants.py](utilities/constants.py) - `ArchImages`
+
+## Using custom cluster management binaries
 
 If you need to use custom or system `kubectl`, `virtctl` or `oc` instead of wrappers from `local-cluster`,
 define `KUBECTL`, `CNV_TESTS_VIRTCTL_BIN` and `CNV_TESTS_OC_BIN` environment variables to point to the binaries.
@@ -218,7 +237,7 @@ Command to run entire upgrade test suite for ocp upgrade, including pre and post
 Command to run only ocp upgrade test, without any pre/post validation:
 
 ```bash
--m ocp_upgrade --upgrade ocp --ocp-image <ocp_image_to_upgrade_to>
+-m product_upgrade_test --upgrade ocp --ocp-image <ocp_image_to_upgrade_to>
 ```
 
 To upgrade to ocp version: 4.10.16, using <https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com/releasestream/4-stable/release/4.10.16>, following command can be used:
@@ -232,22 +251,30 @@ Note: OCP images information can be found at: <https://openshift-release.apps.ci
 Currently, automation supports ocp upgrades using stable, ci, nightly and rc images for ocp
 
 #### CNV upgrade
+Parameters:
+
+| Parameter Name  |      Requirement      |  Default Value  |    Possible Value     |
+|:----------------|:---------------------:|:---------------:|:---------------------:|
+| `--cnv-version` |     **Required**      |        -        |         4.Y.z         |
+| `--cnv-image`   |     **Required**      |        -        |     -image path-      |
+| `--cnv-source`  |     **Optional**      |      osbs       | osbs, fbc, production |
+| `--cnv-channel` |     **Optional**      |     stable      |   stable, candidate   |
 
 Command to run entire upgrade test suite for cnv upgrade, including pre and post upgrade validation:
 
 ```bash
---upgrade cnv --cnv-version <target_version> --cnv-source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 Command to run only cnv upgrade test, without any pre/post validation:
 
 ```bash
--m cnv_upgrade --upgrade cnv --cnv-version <target_version> --cnv source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+-m cnv_upgrade --upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following command could be used:
 ```bash
---upgrade cnv --cnv-version 4.Y.z --cnv-source osbs --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version 4.Y.z --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 #### EUS upgrade

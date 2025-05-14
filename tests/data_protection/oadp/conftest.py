@@ -10,7 +10,7 @@ from tests.data_protection.oadp.utils import (
     create_rhel_vm,
     is_storage_class_support_volume_mode,
 )
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, Images
+from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, TIMEOUT_15MIN, Images
 from utilities.infra import create_ns
 from utilities.storage import (
     check_upload_virtctl_result,
@@ -159,7 +159,7 @@ def rhel_vm_from_existing_dv(imported_dv_second_namespace):
         vm_name="rhel-vm-from-existing-dv",
         start=True,
         os_flavor=OS_FLAVOR_RHEL,
-        memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=True)
         write_file(
@@ -241,6 +241,6 @@ def velero_restore_second_namespace_with_datamover(
         included_namespaces=velero_backup_second_namespace_using_datamover.included_namespaces,
         name="datamover-restore-ns2",
         backup_name=velero_backup_second_namespace_using_datamover.name,
-        timeout=TIMEOUT_8MIN,
+        timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore

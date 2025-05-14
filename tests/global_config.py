@@ -21,17 +21,29 @@ from utilities.constants import (
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
     DATA_SOURCE_NAME,
+    DV_SIZE_STR,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
+    HPP_CAPABILITIES,
+    IMAGE_NAME_STR,
+    IMAGE_PATH_STR,
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
+    KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
+    LATEST_RELEASE_STR,
     LINUX_BRIDGE,
+    OS_STR,
+    OS_VERSION_STR,
     OVS_BRIDGE,
     PREFERENCE_STR,
     PRODUCTION_CATALOG_SOURCE,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
+    TEMPLATE_LABELS_STR,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
@@ -42,11 +54,13 @@ from utilities.constants import (
     WIN_2K25,
     WIN_10,
     WIN_11,
+    WORKLOAD_STR,
     Images,
     NamespacesNames,
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
+from utilities.storage import HppCsiStorageClass
 
 global config
 
@@ -124,18 +138,28 @@ cnv_vm_resource_requests_units_matrix = [
 ]
 
 
+cnv_cpu_usage_metrics_matrix = [
+    KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR,
+]
+
 bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
-# storage_class_matrix can be overwritten to include hostpath-csi-pvc-block and hostpath-csi-basic along with ocs,
-# via command line argument. Example usage can be found in README.md.
 storage_class_matrix = [
     {
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
 
 default_storage_class, default_storage_class_configuration = _get_default_storage_class(sc_list=storage_class_matrix)
@@ -179,17 +203,8 @@ data_import_cron_matrix = [
     {"fedora": {"instance_type": "u1.medium", "preference": "fedora"}},
     {"rhel8": {"instance_type": "u1.medium", "preference": "rhel.8"}},
     {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
-    {"rhel10-beta": {"instance_type": "u1.medium", "preference": "rhel.10"}},
+    {"rhel10": {"instance_type": "u1.medium", "preference": "rhel.10"}},
 ]
-
-IMAGE_NAME_STR = "image_name"
-IMAGE_PATH_STR = "image_path"
-DV_SIZE_STR = "dv_size"
-TEMPLATE_LABELS_STR = "template_labels"
-OS_STR = "os"
-WORKLOAD_STR = "workload"
-LATEST_RELEASE_STR = "latest_released"
-OS_VERSION_STR = "os_version"
 
 rhel_os_matrix = [
     {
@@ -258,14 +273,14 @@ rhel_os_matrix = [
         }
     },
     {
-        "rhel-9-5": {
-            OS_VERSION_STR: "9.5",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_5_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_5_IMG),
+        "rhel-9-6": {
+            OS_VERSION_STR: "9.6",
+            IMAGE_NAME_STR: Images.Rhel.RHEL9_6_IMG,
+            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_6_IMG),
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.5",
+                OS_STR: "rhel9.6",
                 WORKLOAD_STR: Template.Workload.SERVER,
                 FLAVOR_STR: Template.Flavor.TINY,
             },
@@ -394,7 +409,7 @@ instance_type_rhel_os_matrix = [
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             INSTANCE_TYPE_STR: "u1.medium",
             PREFERENCE_STR: "rhel.10",
-            DATA_SOURCE_NAME: "rhel10-beta",
+            DATA_SOURCE_NAME: "rhel10",
             LATEST_RELEASE_STR: True,
         }
     },

@@ -208,6 +208,7 @@ def network_sanity(
     cluster_network_mtu,
     network_overhead,
     sriov_workers,
+    ipv4_supported_cluster,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -217,7 +218,11 @@ def network_sanity(
     failure_msgs = []
     collected_tests = request.session.items
 
-    def _verify_multi_nic():
+    def _verify_multi_nic(request=request):
+        marker_args = request.config.getoption("-m")
+        if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
+            LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
+            return
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
         if len(hosts_common_available_ports) <= 1:
             failure_msgs.append(
@@ -281,11 +286,20 @@ def network_sanity(
                     f"has {len(sriov_workers)} SRIOV-capable worker nodes"
                 )
 
-    _verify_multi_nic()
+    def _verify_ipv4():
+        if any(test.get_closest_marker("ipv4") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running IPV4 tests...")
+            if not ipv4_supported_cluster:
+                failure_msgs.append("IPv4 is not supported in this cluster")
+            else:
+                LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
+
+    _verify_multi_nic(request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
+    _verify_ipv4()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)

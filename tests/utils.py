@@ -169,18 +169,20 @@ def get_image_name_from_csv(image_string, csv_related_images):
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 
 
-def hotplug_resource_and_wait_hotplug_migration_finish(vm, client, sockets=None, memory_guest=None):
+def hotplug_resource_and_verify_hotplug(vm, client, sockets=None, memory_guest=None):
     assert sockets or memory_guest, "No resource for update provided!!!"
-    assert not (sockets and memory_guest), "Hotpluging both cpu and memory at once is not supported!"
 
     if vm.instance.spec.get("instancetype"):
         hotplug_instance_type_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
     else:
         hotplug_spec_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
+    verify_hotplug(vm=vm, client=client, sockets=sockets, memory_guest=memory_guest)
+
+
+def verify_hotplug(vm, client, sockets=None, memory_guest=None):
     vmim = get_created_migration_job(vm=vm, client=client)
     wait_for_migration_finished(vm=vm, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
     wait_for_ssh_connectivity(vm=vm)
-
     vmi_spec_domain = vm.vmi.instance.spec.domain
     if sockets:
         assert vmi_spec_domain.cpu.sockets == sockets, (
@@ -253,14 +255,14 @@ def assert_guest_os_memory_amount(vm, spec_memory_amount):
     )
 
 
-def assert_restart_required_codition(vm, expected_message):
-    def _get_restart_required_codition(vm):
+def assert_restart_required_condition(vm, expected_message):
+    def _get_restart_required_condition(vm):
         return [condition for condition in vm.instance.status.conditions if condition.type == "RestartRequired"][0]
 
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_10SEC,
         sleep=TIMEOUT_1SEC,
-        func=_get_restart_required_codition,
+        func=_get_restart_required_condition,
         vm=vm,
     )
     try:
@@ -595,7 +597,7 @@ def create_cirros_vm(
         name=vm_name,
         namespace=dv_metadata["namespace"],
         os_flavor=OS_FLAVOR_CIRROS,
-        memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         node_selector=node,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,

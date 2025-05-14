@@ -1,4 +1,8 @@
+import os
+from typing import Any
+
 from kubernetes.dynamic.exceptions import InternalServerError
+from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
 from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
@@ -27,84 +31,98 @@ BASE_IMAGES_DIR = "cnv-tests"
 NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
 
 
-class Images:
-    class Cirros:
-        RAW_IMG = "cirros-0.4.0-x86_64-disk.raw"
-        RAW_IMG_GZ = "cirros-0.4.0-x86_64-disk.raw.gz"
-        RAW_IMG_XZ = "cirros-0.4.0-x86_64-disk.raw.xz"
-        QCOW2_IMG = "cirros-0.4.0-x86_64-disk.qcow2"
-        QCOW2_IMG_GZ = "cirros-0.4.0-x86_64-disk.qcow2.gz"
-        QCOW2_IMG_XZ = "cirros-0.4.0-x86_64-disk.qcow2.xz"
-        DISK_DEMO = "cirros-registry-disk-demo"
-        DIR = f"{BASE_IMAGES_DIR}/cirros-images"
-        DEFAULT_DV_SIZE = "1Gi"
-        DEFAULT_MEMORY_SIZE = "64M"
+class ArchImages:
+    class X86_64:  # noqa: N801
+        class Cirros:
+            RAW_IMG = "cirros-0.4.0-x86_64-disk.raw"
+            RAW_IMG_GZ = "cirros-0.4.0-x86_64-disk.raw.gz"
+            RAW_IMG_XZ = "cirros-0.4.0-x86_64-disk.raw.xz"
+            QCOW2_IMG = "cirros-0.4.0-x86_64-disk.qcow2"
+            QCOW2_IMG_GZ = "cirros-0.4.0-x86_64-disk.qcow2.gz"
+            QCOW2_IMG_XZ = "cirros-0.4.0-x86_64-disk.qcow2.xz"
+            DISK_DEMO = "cirros-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/cirros-images"
+            DEFAULT_DV_SIZE = "1Gi"
+            DEFAULT_MEMORY_SIZE = "64M"
 
-    class Rhel:
-        RHEL7_8_IMG = "rhel-78.qcow2"
-        RHEL7_9_IMG = "rhel-79.qcow2"
-        RHEL8_0_IMG = "rhel-8.qcow2"
-        RHEL8_2_IMG = "rhel-82.qcow2"
-        RHEL8_2_EFI_IMG = "rhel-82-efi.qcow2"
-        RHEL8_8_IMG = "rhel-88.qcow2"
-        RHEL8_9_IMG = "rhel-89.qcow2"
-        RHEL8_10_IMG = "rhel-810.qcow2"
-        RHEL9_3_IMG = "rhel-93.qcow2"
-        RHEL9_4_IMG = "rhel-94.qcow2"
-        RHEL9_5_IMG = "rhel-95.qcow2"
-        RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
-        RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
-        DIR = f"{BASE_IMAGES_DIR}/rhel-images"
-        DEFAULT_DV_SIZE = "20Gi"
-        DEFAULT_MEMORY_SIZE = "1.5Gi"
+        class Rhel:
+            RHEL7_8_IMG = "rhel-78.qcow2"
+            RHEL7_9_IMG = "rhel-79.qcow2"
+            RHEL8_0_IMG = "rhel-8.qcow2"
+            RHEL8_2_IMG = "rhel-82.qcow2"
+            RHEL8_2_EFI_IMG = "rhel-82-efi.qcow2"
+            RHEL8_8_IMG = "rhel-88.qcow2"
+            RHEL8_9_IMG = "rhel-89.qcow2"
+            RHEL8_10_IMG = "rhel-810.qcow2"
+            RHEL9_3_IMG = "rhel-93.qcow2"
+            RHEL9_4_IMG = "rhel-94.qcow2"
+            RHEL9_5_IMG = "rhel-95.qcow2"
+            RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
+            RHEL9_6_IMG = "rhel-96.qcow2"
+            RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
+            RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
+            # TODO: change back to registry.redhat.io when rhel10 is available
+            RHEL10_REGISTRY_GUEST_IMG = "registry.stage.redhat.io/rhel10/rhel-guest-image"
+            DIR = f"{BASE_IMAGES_DIR}/rhel-images"
+            DEFAULT_DV_SIZE = "20Gi"
+            DEFAULT_MEMORY_SIZE = "1.5Gi"
 
-    class Windows:
-        WIN10_IMG = "win_10_uefi.qcow2"
-        WIN10_WSL2_IMG = "win_10_wsl2_uefi.qcow2"
-        WIN10_ISO_IMG = "Win10_22H2_English_x64.iso"
-        WIN2k16_IMG = "win_2k16_uefi.qcow2"
-        WIN2k19_IMG = "win_2k19_uefi.qcow2"
-        WIN2k25_IMG = "win_2k25_uefi.qcow2"
-        WIN2k19_HA_IMG = "win_2019_virtio.qcow2"
-        WIN11_IMG = "win_11.qcow2"
-        WIN11_WSL2_IMG = "win_11_wsl2.qcow2"
-        WIN11_ISO_IMG = "en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso"
-        WIN19_RAW = "win_2k19_uefi.raw"
-        WIN2022_IMG = "win_2022.qcow2"
-        WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
-        WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
-        DIR = f"{BASE_IMAGES_DIR}/windows-images"
-        RAW_DIR = f"{DIR}/raw_images"
-        UEFI_WIN_DIR = f"{DIR}/uefi"
-        HA_DIR = f"{DIR}/HA-images"
-        ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
-        ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
-        ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
-        ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
-        DEFAULT_DV_SIZE = "70Gi"
-        WSL2_DV_SIZE = "40Gi"
-        DEFAULT_MEMORY_SIZE = "8Gi"
-        DEFAULT_MEMORY_SIZE_WSL = "12Gi"
-        DEFAULT_CPU_CORES = 4
-        DEFAULT_CPU_THREADS = 2
+        class Windows:
+            WIN10_IMG = "win_10_uefi.qcow2"
+            WIN10_WSL2_IMG = "win_10_wsl2_uefi.qcow2"
+            WIN10_ISO_IMG = "Win10_22H2_English_x64.iso"
+            WIN2k16_IMG = "win_2k16_uefi.qcow2"
+            WIN2k19_IMG = "win_2k19_uefi.qcow2"
+            WIN2k25_IMG = "win_2k25_uefi.qcow2"
+            WIN2k19_HA_IMG = "win_2019_virtio.qcow2"
+            WIN11_IMG = "win_11.qcow2"
+            WIN11_WSL2_IMG = "win_11_wsl2.qcow2"
+            WIN11_ISO_IMG = "en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso"
+            WIN19_RAW = "win_2k19_uefi.raw"
+            WIN2022_IMG = "win_2022.qcow2"
+            WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
+            WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
+            DIR = f"{BASE_IMAGES_DIR}/windows-images"
+            RAW_DIR = f"{DIR}/raw_images"
+            UEFI_WIN_DIR = f"{DIR}/uefi"
+            HA_DIR = f"{DIR}/HA-images"
+            ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
+            ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
+            ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
+            ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
+            DEFAULT_DV_SIZE = "70Gi"
+            DEFAULT_MEMORY_SIZE = "8Gi"
+            DEFAULT_MEMORY_SIZE_WSL = "12Gi"
+            DEFAULT_CPU_CORES = 4
+            DEFAULT_CPU_THREADS = 2
 
-    class Fedora:
-        FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-        FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
-        DISK_DEMO = "fedora-cloud-registry-disk-demo"
-        DIR = f"{BASE_IMAGES_DIR}/fedora-images"
-        DEFAULT_DV_SIZE = "10Gi"
-        DEFAULT_MEMORY_SIZE = "1Gi"
+        class Fedora:
+            FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
+            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+            DISK_DEMO = "fedora-cloud-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
+            DEFAULT_DV_SIZE = "10Gi"
+            DEFAULT_MEMORY_SIZE = "1Gi"
 
-    class CentOS:
-        CENTOS_STREAM_9_IMG = "CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2"
-        DIR = f"{BASE_IMAGES_DIR}/centos-images"
-        DEFAULT_DV_SIZE = "15Gi"
+        class CentOS:
+            CENTOS_STREAM_9_IMG = "CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2"
+            DIR = f"{BASE_IMAGES_DIR}/centos-images"
+            DEFAULT_DV_SIZE = "15Gi"
 
-    class Cdi:
-        QCOW2_IMG = "cirros-qcow2.img"
-        DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+        class Cdi:
+            QCOW2_IMG = "cirros-qcow2.img"
+            DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+
+
+def get_test_images_arch_class() -> Any:
+    arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
+    if arch not in ("x86_64",):
+        raise ValueError(f"{arch} architecture in not supported")
+    return getattr(ArchImages, arch.title())
+
+
+# Choose the Image class according to the architecture. Default: x86_64
+Images = get_test_images_arch_class()
 
 
 # Virtctl constants
@@ -339,7 +357,7 @@ UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
-RHEL10_BETA_GUEST = "rhel10-beta-guest"
+RHEL10_GUEST = "rhel10-guest"
 VIRTIO = "virtio"
 VIRTIO_WIN = "virtio-win"
 NGINX_CONF = "nginx-conf"
@@ -350,6 +368,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -371,6 +390,7 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
@@ -398,7 +418,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS: CONFIGMAP_STR},
     {RHEL8_GUEST: IMAGESTREAM_STR},
     {RHEL9_GUEST: IMAGESTREAM_STR},
-    {RHEL10_BETA_GUEST: IMAGESTREAM_STR},
+    {RHEL10_GUEST: IMAGESTREAM_STR},
     {VIRTIO_WIN: CONFIGMAP_STR},
     {VIRTIO_WIN: ROLE_STR},
     {VIRTIO_WIN: ROLEBINDING_STR},
@@ -410,6 +430,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -478,6 +499,7 @@ CNV_OPERATORS = [
     HYPERCONVERGED_CLUSTER_OPERATOR,
     "kubevirt-operator",
     SSP_OPERATOR,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
 ]
 # Node labels
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
@@ -513,6 +535,7 @@ EXPECTED_STATUS_CONDITIONS = {
     CDI: DEFAULT_RESOURCE_CONDITIONS,
     SSP: DEFAULT_RESOURCE_CONDITIONS,
     NetworkAddonsConfig: DEFAULT_RESOURCE_CONDITIONS,
+    AAQ: DEFAULT_RESOURCE_CONDITIONS,
 }
 MACHINE_CONFIG_PODS_TO_COLLECT = [
     "machine-config-operator",
@@ -613,8 +636,10 @@ class StorageClassNames:
     PORTWORX_CSI_DB_SHARED = "px-csi-db-shared"
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
+    TRIDENT_CSI_NFS = "trident-csi-nfs"
     IO2_CSI = "io2-csi"
-    IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    GPFS = "ibm-spectrum-scale-sample"
+    OCI = "oci-bv"
 
 
 # Namespace constants
@@ -789,9 +814,28 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }
+
+KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
+    "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"
+)
+KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
+KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
+KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
+
+# Common templates matrix constants
+IMAGE_NAME_STR = "image_name"
+IMAGE_PATH_STR = "image_path"
+DV_SIZE_STR = "dv_size"
+TEMPLATE_LABELS_STR = "template_labels"
+OS_STR = "os"
+WORKLOAD_STR = "workload"
+LATEST_RELEASE_STR = "latest_released"
+OS_VERSION_STR = "os_version"

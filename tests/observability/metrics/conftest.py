@@ -6,6 +6,7 @@ import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -29,13 +30,13 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
@@ -43,18 +44,18 @@ from tests.observability.metrics.utils import (
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
     get_resource_object,
+    get_vm_comparison_info_dict,
     get_vmi_dommemstat_from_vm,
+    get_vmi_guest_os_kernel_release_info_metric_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
-    pause_unpause_dommemstat,
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
-    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
@@ -63,8 +64,8 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
-    NODE_STR,
     ONE_CPU_CORE,
+    OS_FLAVOR_FEDORA,
     PVC,
     SOURCE_POD,
     SSP_OPERATOR,
@@ -87,7 +88,13 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
 from utilities.ssp import verify_ssp_pod_is_running
-from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
+from utilities.storage import (
+    create_dv,
+    data_volume_template_with_source_ref_dict,
+    is_snapshot_supported_by_sc,
+    vm_snapshot,
+    wait_for_cdi_worker_pod,
+)
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -450,21 +457,9 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
 
 
 @pytest.fixture()
-def updated_dommemstat(single_metric_vm):
-    run_vm_commands(
-        vms=[single_metric_vm],
-        commands=["stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"],
-    )
-    # give the stress-ng command some time to build up load on the vm
-    pause_unpause_dommemstat(vm=single_metric_vm)
-    yield
-    pause_unpause_dommemstat(vm=single_metric_vm, period=1)
-
-
-@pytest.fixture()
 def vmi_domain_total_memory_in_bytes_from_vm(single_metric_vm):
     return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=single_metric_vm.vmi.get_dommemstat(),
+        vmi_dommemstat=single_metric_vm.privileged_vmi.get_dommemstat(),
         domain_memory_string="actual",
     )
 
@@ -493,7 +488,7 @@ def windows_dv_with_block_volume_mode(
     with create_dv(
         dv_name="test-dv-windows-image",
         namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN19_RAW),
+        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
         storage_class=storage_class_with_block_volume_mode,
         client=unprivileged_client,
@@ -665,18 +660,6 @@ def initial_total_created_vms(prometheus, namespace):
     return get_metric_sum_value(
         prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
     )
-
-
-@pytest.fixture()
-def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
-    return {
-        "guest_os_kernel_release": run_ssh_commands(host=single_metric_vm.ssh_exec, commands=shlex.split("uname -r"))[
-            0
-        ].strip(),
-        "namespace": single_metric_vm.namespace,
-        NODE_STR: single_metric_vm.vmi.virt_launcher_pod.node.name,
-        "vmi_pod": single_metric_vm.vmi.virt_launcher_pod.name,
-    }
 
 
 @pytest.fixture()
@@ -1017,16 +1000,6 @@ def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for
     }
 
 
-@pytest.fixture()
-def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    wait_for_non_empty_metrics_value(
-        prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-            vm_name=vm_for_snapshot_for_metrics_test.name
-        ),
-    )
-
-
 @pytest.fixture(scope="class")
 def template_validator_finalizer(hco_namespace):
     deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name)
@@ -1053,6 +1026,36 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="disk-allocation-size-vm",
+        namespace=namespace.name,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
+    return str(
+        int(
+            bitmath.parse_string_unsafe(
+                PersistentVolumeClaim(
+                    name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
+                    namespace=vm_for_vm_disk_allocation_size_test.namespace,
+                ).instance.spec.resources.requests.storage
+            ).Byte.bytes
+        )
+    )
+
+
+@pytest.fixture()
 def vnic_info_from_vm_or_vmi(request, running_metric_vm):
     vm_instance = (
         running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
@@ -1068,3 +1071,52 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+
+
+@pytest.fixture()
+def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
+    return get_vmi_memory_domain_metric_value_from_prometheus(
+        prometheus=prometheus,
+        vmi_name=windows_vm_for_test.vmi.name,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+    )
+
+
+@pytest.fixture()
+def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
+    return get_vmi_dommemstat_from_vm(
+        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
+        domain_memory_string="actual",
+    )
+
+
+@pytest.fixture()
+def vmi_guest_os_kernel_release_info_linux(single_metric_vm):
+    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=single_metric_vm)
+
+
+@pytest.fixture()
+def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
+    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=windows_vm_for_test, windows=True)
+
+
+@pytest.fixture()
+def linux_vm_info_to_compare(single_metric_vm):
+    return get_vm_comparison_info_dict(vm=single_metric_vm)
+
+
+@pytest.fixture()
+def windows_vm_info_to_compare(windows_vm_for_test):
+    return get_vm_comparison_info_dict(vm=windows_vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test(namespace, unprivileged_client):
+    with create_windows11_wsl2_vm(
+        dv_name="dv-for-windows",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="win-vm-for-test",
+        storage_class=py_config["default_storage_class"],
+    ) as vm:
+        yield vm
