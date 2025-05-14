@@ -4,11 +4,11 @@ import pytest
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from libs.net import netattachdef
 from libs.net.traffic_generator import Client, Server
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.localnet.liblocalnet import NETWORK_NAME, localnet_nad, localnet_vm
+from tests.network.libs import cluster_user_defined_network as libcudn
+from tests.network.localnet.liblocalnet import LOCALNET_TEST_LABEL, NETWORK_NAME, localnet_cudn, localnet_vm
 from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
 )
@@ -40,12 +40,12 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
 
 @pytest.fixture(scope="module")
 def namespace_localnet_1() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns1")  # type: ignore
+    yield from create_ns(name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)  # type: ignore
 
 
 @pytest.fixture(scope="module")
 def namespace_localnet_2() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns2")  # type: ignore
+    yield from create_ns(name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)  # type: ignore
 
 
 @pytest.fixture(scope="module")
@@ -54,33 +54,34 @@ def vlan_id(vlan_index_number: Generator[int]) -> int:
 
 
 @pytest.fixture(scope="module")
-def nad_localnet_1(
-    namespace_localnet_1: Namespace, vlan_id: int
-) -> Generator[netattachdef.NetworkAttachmentDefinition]:
-    with localnet_nad(namespace=namespace_localnet_1.name, name="test-localnet-nad1", vlan_id=vlan_id) as nad:
-        yield nad
+def cudn_localnet(
+    vlan_id: int,
+    namespace_localnet_1: Namespace,
+    namespace_localnet_2: Namespace,
+) -> Generator[libcudn.ClusterUserDefinedNetwork]:
+    with localnet_cudn(
+        name=NETWORK_NAME, match_labels=LOCALNET_TEST_LABEL, vlan_id=vlan_id, physical_network_name=NETWORK_NAME
+    ) as cudn:
+        cudn.wait_for_status_success()
+        yield cudn
 
 
 @pytest.fixture(scope="module")
-def nad_localnet_2(
-    namespace_localnet_2: Namespace, vlan_id: int
-) -> Generator[netattachdef.NetworkAttachmentDefinition]:
-    with localnet_nad(namespace=namespace_localnet_2.name, name="test-localnet-nad2", vlan_id=vlan_id) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="module")
-def vm_localnet_1(nad_localnet_1: netattachdef.NetworkAttachmentDefinition) -> Generator[BaseVirtualMachine]:
+def vm_localnet_1(
+    namespace_localnet_1: Namespace, cudn_localnet: libcudn.ClusterUserDefinedNetwork
+) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
-        namespace=nad_localnet_1.namespace, name="test-vm1", network=nad_localnet_1.name, cidr="10.0.0.1/24"
+        namespace=namespace_localnet_1.name, name="test-vm1", network=cudn_localnet.name, cidr="10.0.0.1/24"
     ) as vm:
         yield vm
 
 
 @pytest.fixture(scope="module")
-def vm_localnet_2(nad_localnet_2: netattachdef.NetworkAttachmentDefinition) -> Generator[BaseVirtualMachine]:
+def vm_localnet_2(
+    namespace_localnet_2: Namespace, cudn_localnet: libcudn.ClusterUserDefinedNetwork
+) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
-        namespace=nad_localnet_2.namespace, name="test-vm2", network=nad_localnet_2.name, cidr="10.0.0.2/24"
+        namespace=namespace_localnet_2.name, name="test-vm2", network=cudn_localnet.name, cidr="10.0.0.2/24"
     ) as vm:
         yield vm
 
