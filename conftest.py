@@ -40,7 +40,6 @@ from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityE
 from utilities.logger import setup_logging
 from utilities.pytest_utils import (
     config_default_storage_class,
-    config_storage_classes_for_storage_migration,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     get_artifactory_server_url,
@@ -195,14 +194,6 @@ def pytest_addoption(parser):
     storage_group.addoption(
         "--default-storage-class",
         help="Overwrite default storage class in storage_class_matrix",
-    )
-    storage_group.addoption(
-        "--storage-class-for-storage-migration-a",
-        help="Storage class A for the VM storage migration tests",
-    )
-    storage_group.addoption(
-        "--storage-class-for-storage-migration-b",
-        help="Storage class B for the VM storage migration tests",
     )
 
     # Cluster sanity addoption
@@ -653,11 +644,7 @@ def pytest_sessionstart(session):
                     items_list.append(item)
 
         py_config[key] = items_list
-
     config_default_storage_class(session=session)
-
-    config_storage_classes_for_storage_migration(session=session)
-
     # Set py_config["servers"] and py_config["os_login_param"]
     # Send --tc=server_url:<url> to override servers URL
     if not skip_if_pytest_flags_exists(pytest_config=session.config):

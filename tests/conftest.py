@@ -2944,7 +2944,4 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 
 @pytest.fixture(scope="module")
 def golden_images_fedora_data_source(golden_images_namespace):
-    fedora_data_source = DataSource(namespace=golden_images_namespace.name, name=OS_FLAVOR_FEDORA)
-    if fedora_data_source.exists:
-        return fedora_data_source
-    raise ResourceNotFoundError(f"{OS_FLAVOR_FEDORA} DataSource was not found")
+    return DataSource(namespace=golden_images_namespace.name, name=OS_FLAVOR_FEDORA, ensure_exists=True)

@@ -12,9 +12,7 @@ CONTENT = "some-content"
 def get_source_virt_launcher_pod(vm: VirtualMachine) -> Pod:
     source_pod_name = vm.vmi.instance.to_dict().get("status", {}).get("migrationState", {}).get("sourcePod")
     assert source_pod_name, "Source pod name is not found in VMI status.migrationState.sourcePod"
-    source_pod = Pod(name=source_pod_name, namespace=vm.namespace)
-    assert source_pod.exists, f"Pod {source_pod_name} is not found"
-    return source_pod
+    return Pod(name=source_pod_name, namespace=vm.namespace, ensure_exists=True)
 
 
 def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> None:
