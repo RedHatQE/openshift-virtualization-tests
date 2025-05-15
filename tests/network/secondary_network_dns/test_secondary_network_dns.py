@@ -37,7 +37,7 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.usefixtures(
-    "enabled_kube_secondary_dns_feature_gate",
+    "enabled_kube_secondary_dns",
     "exposed_kubernetes_secondary_dns_service",
 )
 
@@ -147,10 +147,10 @@ def network_security_rule_for_virtual_workers(
 
 
 @pytest.fixture(scope="module")
-def enabled_kube_secondary_dns_feature_gate(hyperconverged_resource_scope_module):
+def enabled_kube_secondary_dns(hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_module: {"spec": {"featureGates": {"deployKubeSecondaryDNS": True}}},
+            hyperconverged_resource_scope_module: {"spec": {"deployKubeSecondaryDNS": True}},
         },
         list_resource_reconcile=[NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
@@ -180,7 +180,7 @@ def available_kubernetes_secondary_dns_service_port_number(
 @pytest.fixture(scope="module")
 def created_dns_nodeport_service(
     hco_namespace,
-    enabled_kube_secondary_dns_feature_gate,
+    enabled_kube_secondary_dns,
     available_kubernetes_secondary_dns_service_port_number,
     kubernetes_secondary_dns_deployment,
 ):
