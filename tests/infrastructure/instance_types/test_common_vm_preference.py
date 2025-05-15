@@ -1,9 +1,11 @@
 import pytest
+from ocp_resources.custom_resource_definition import CustomResourceDefinition
+from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
 
-from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
+from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label, verify_no_deprecated_field_in_api
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
 from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -131,3 +133,12 @@ def test_common_preference_owner(base_vm_cluster_preferences):
         ):
             failed_preferences.append(vm_cluster_preference.name)
     assert not failed_preferences, f"The following preferences do no have {VIRT_OPERATOR} owner: {failed_preferences}"
+
+
+@pytest.mark.post_upgrade
+@pytest.mark.polarion("CNV-11952")
+def test_common_preference_deprecated_fields(admin_client, base_vm_cluster_preferences):
+    vm_preference_crd = CustomResourceDefinition(
+        name=f"virtualmachineclusterpreferences.{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}"
+    )
+    verify_no_deprecated_field_in_api(crd_to_test=vm_preference_crd, cluster_resources_list=base_vm_cluster_preferences)

@@ -1,9 +1,12 @@
+import re
 import shlex
-from typing import Literal
+from typing import Any, Literal
 
 from ocp_resources.controller_revision import ControllerRevision
+from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
 
 
@@ -60,3 +63,48 @@ def assert_secure_boot_mokutil_status(vm: VirtualMachine) -> None:
 def assert_kernel_lockdown_mode(vm: VirtualMachine) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("cat /sys/kernel/security/lockdown"))[0]
     assert "[none]" not in output, f"Kernel lockdown mode is not '[none]'. Found: {output}"
+
+
+def verify_no_deprecated_field_in_api(
+    crd_to_test: CustomResourceDefinition, cluster_resources_list: list[VirtualMachineClusterPreference]
+):
+    current_api_version_dict = [
+        version_dict
+        for version_dict in crd_to_test.instance.to_dict()["spec"]["versions"]
+        if version_dict.get("deprecated") is not True
+    ][0]
+    api_deprecated_fields = find_deprecated_fields_in_api(api_dict=current_api_version_dict)
+    deprecated_fields_in_use = []
+    for deprecated_field in api_deprecated_fields:
+        for vm_cluster_preference in cluster_resources_list:
+            if is_field_used(field_path=deprecated_field, resource_dict=vm_cluster_preference.instance.to_dict()):
+                deprecated_fields_in_use.append(deprecated_field)
+    assert not deprecated_fields_in_use, f"The following deprecated fields are used: {deprecated_fields_in_use}"
+
+
+def find_deprecated_fields_in_api(api_dict: dict[str, Any] | list[Any], path: str = "") -> list[str]:
+    deprecated_fields = []
+
+    if isinstance(api_dict, dict):
+        for key, value in api_dict.items():
+            current_path = f"{path}.{key}" if path else key
+            if key == "description" and isinstance(value, str) and "deprecated" in value.lower():
+                deprecated_fields.append(path)
+            elif isinstance(value, (dict, list)):
+                deprecated_fields.extend(find_deprecated_fields_in_api(value, current_path))
+    elif isinstance(api_dict, list):
+        for index, item in enumerate(api_dict):
+            current_path = f"{path}[{index}]"
+            deprecated_fields.extend(find_deprecated_fields_in_api(item, current_path))
+
+    return deprecated_fields
+
+
+def is_field_used(field_path: str, resource_dict: dict) -> bool:
+    keys = re.split(r"\.properties\.", field_path.split(".spec", 1)[-1])
+    current_dict_value = resource_dict
+    for key in keys:
+        if not isinstance(current_dict_value, dict) or key not in current_dict_value:
+            return False
+        current_dict_value = current_dict_value[key]
+    return True
