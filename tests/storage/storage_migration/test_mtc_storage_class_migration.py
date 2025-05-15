@@ -11,6 +11,8 @@ from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
+STORAGE_CLASS_A = "storage_class_for_storage_migration_a"
+STORAGE_CLASS_B = "storage_class_for_storage_migration_b"
 
 
 @pytest.mark.parametrize(
@@ -35,8 +37,8 @@ class TestStorageClassMigrationAtoB:
         "source_storage_class, target_storage_class",
         [
             pytest.param(
-                {"source_storage_class": py_config["storage_class_for_storage_migration_a"]},
-                {"target_storage_class": py_config["storage_class_for_storage_migration_b"]},
+                {"source_storage_class": py_config[STORAGE_CLASS_A]},
+                {"target_storage_class": py_config[STORAGE_CLASS_B]},
                 marks=pytest.mark.polarion("CNV-11500"),
                 id="source_a_target_b_storage_mig",
             )
@@ -75,8 +77,8 @@ class TestStorageClassMigrationAtoB:
     "source_storage_class, target_storage_class, vms_for_storage_class_migration",
     [
         pytest.param(
-            {"source_storage_class": py_config["storage_class_for_storage_migration_b"]},
-            {"target_storage_class": py_config["storage_class_for_storage_migration_a"]},
+            {"source_storage_class": py_config[STORAGE_CLASS_B]},
+            {"target_storage_class": py_config[STORAGE_CLASS_A]},
             {"vms_fixtures": ["vm_for_storage_class_migration_with_instance_type"]},
             id="source_b_target_a",
         )
