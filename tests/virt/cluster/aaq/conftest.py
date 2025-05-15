@@ -9,7 +9,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import clean_up_migration_jobs, hotplug_resource_and_verify_hotplug, hotplug_spec_vm
+from tests.utils import clean_up_migration_jobs, hotplug_spec_vm, hotplug_spec_vm_and_verify_hotplug
 from tests.virt.cluster.aaq.constants import (
     ACRQ_QUOTA_HARD_SPEC,
     ARQ_QUOTA_HARD_SPEC,
@@ -258,7 +258,7 @@ def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 @pytest.fixture()
 def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test, admin_client):
-    hotplug_resource_and_verify_hotplug(
+    hotplug_spec_vm_and_verify_hotplug(
         vm=hotplug_vm_for_aaq_test,
         client=unprivileged_client,
         sockets=request.param.get("sockets"),
