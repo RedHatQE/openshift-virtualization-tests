@@ -1,5 +1,4 @@
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.mig_cluster import MigCluster
@@ -31,30 +30,20 @@ OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
 @pytest.fixture(scope="module")
 def golden_images_rhel9_data_source(golden_images_namespace):
-    rhel_9 = "rhel9"
-    rhel_data_source = DataSource(namespace=golden_images_namespace.name, name=rhel_9)
-    if rhel_data_source.exists:
-        return rhel_data_source
-    raise ResourceNotFoundError(f"{rhel_9} DataSource was not found")
+    return DataSource(namespace=golden_images_namespace.name, name="rhel9", ensure_exists=True)
 
 
 @pytest.fixture(scope="module")
 def mig_cluster():
-    mig_cluster = MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE)
-    assert mig_cluster.exists, f"MigCluster {MigCluster.name} does not exists"
-    return mig_cluster
-
-
-@pytest.fixture(scope="module")
-def mig_cluster_ref_dict(mig_cluster):
-    return {"name": f"{mig_cluster.name}", "namespace": f"{mig_cluster.namespace}"}
+    return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, ensure_exists=True)
 
 
 @pytest.fixture(scope="class")
-def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
+def storage_mig_plan(namespace, mig_cluster, target_storage_class):
+    mig_cluster_ref_dict = {"name": mig_cluster.name, "namespace": mig_cluster.namespace}
     with MigPlan(
         name="storage-mig-plan",
-        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
+        namespace=mig_cluster.namespace,
         src_mig_cluster_ref=mig_cluster_ref_dict,
         dest_mig_cluster_ref=mig_cluster_ref_dict,
         live_migrate=True,
@@ -68,7 +57,7 @@ def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
         mig_plan_dict = mig_plan.instance.to_dict()
         mig_plan_persistent_volumes_dict = mig_plan_dict["spec"]["persistentVolumes"].copy()
         for pvc_dict in mig_plan_persistent_volumes_dict:
-            pvc_dict["selection"]["storageClass"] = f"{target_storage_class}"
+            pvc_dict["selection"]["storageClass"] = target_storage_class
             pvc_dict["pvc"]["accessModes"][0] = "auto"
             pvc_dict["pvc"]["volumeMode"] = "auto"
         patch = {mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}
@@ -80,8 +69,8 @@ def storage_mig_plan(mig_cluster_ref_dict, namespace, target_storage_class):
 def storage_mig_migration(storage_mig_plan):
     with MigMigration(
         name="mig-migration-abc",
-        namespace=OPENSHIFT_MIGRATION_NAMESPACE,
-        mig_plan_ref={"name": f"{storage_mig_plan.name}", "namespace": f"{storage_mig_plan.namespace}"},
+        namespace=storage_mig_plan.namespace,
+        mig_plan_ref={"name": storage_mig_plan.name, "namespace": storage_mig_plan.namespace},
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
@@ -100,6 +89,7 @@ def storage_mig_migration(storage_mig_plan):
 
 @pytest.fixture(scope="class")
 def source_storage_class(request):
+    # Storage class for the original VMs creation
     return request.param["source_storage_class"]
 
 
@@ -187,6 +177,8 @@ def vm_for_storage_class_migration_from_template_with_dv(
 @pytest.fixture(scope="class")
 def vms_for_storage_class_migration(request):
     # Only fixtures from the "vms_fixtures" test param will be called
+    # Only VMs that are listed in "vms_fixtures" param will be created
+    # VM fixtures that are not listed in the param will not be called, and those VMs will not be created
     vms = [request.getfixturevalue(argname=vm_fixture) for vm_fixture in request.param["vms_fixtures"]]
     yield vms
 
@@ -200,10 +192,7 @@ def running_vms_for_storage_class_migration(vms_for_storage_class_migration):
 
 @pytest.fixture(scope="class")
 def linux_vms_boot_time_before_storage_migration(running_vms_for_storage_class_migration):
-    boot_time_dict = {}
-    for vm in running_vms_for_storage_class_migration:
-        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
-    yield boot_time_dict
+    yield {vm.name: get_vm_boot_time(vm=vm) for vm in running_vms_for_storage_class_migration}
 
 
 @pytest.fixture(scope="class")
@@ -229,6 +218,5 @@ def deleted_completed_virt_launcher_source_pod(running_vms_for_storage_class_mig
 def deleted_old_dv(running_vms_for_storage_class_migration):
     for vm in running_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
-        dv = DataVolume(name=dv_name, namespace=vm.namespace)
-        assert dv.exists, f"DataVolume {dv_name} is not found"
+        dv = DataVolume(name=dv_name, namespace=vm.namespace, ensure_exists=True)
         dv.delete(wait=True)
