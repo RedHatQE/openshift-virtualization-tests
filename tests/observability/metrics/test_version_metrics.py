@@ -6,6 +6,8 @@ from tests.observability.metrics.constants import GO_VERSION_STR, KUBE_VERSION_S
 from tests.observability.metrics.utils import assert_virtctl_version_equal_metric_output
 from utilities.infra import run_virtctl_command
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.fixture()
 def virtctl_go_kube_server_version():

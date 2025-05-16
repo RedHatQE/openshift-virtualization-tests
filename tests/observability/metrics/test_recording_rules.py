@@ -3,7 +3,7 @@ from ocp_resources.resource import Resource
 
 from utilities.constants import KUBEVIRT_VIRT_OPERATOR_UP, VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER, VIRT_OPERATOR
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 virt_label_dict = {
     VIRT_API: f"{Resource.ApiGroup.KUBEVIRT_IO}={VIRT_API}",

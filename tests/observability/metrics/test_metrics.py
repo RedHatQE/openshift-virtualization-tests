@@ -143,6 +143,7 @@ def test_cnv_installation_with_hco_cr_metrics(
     )
 
 
+@pytest.mark.arm64
 class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-8262")
     def test_vmi_domain_total_memory_bytes(
@@ -231,6 +232,7 @@ class TestVMIMetricsWindowsVms:
         )
 
 
+@pytest.mark.arm64
 class TestMemoryDeltaFromRequestedBytes:
     @pytest.mark.polarion("CNV-11632")
     def test_metric_kubevirt_memory_delta_from_requested_bytes_working_set(
@@ -277,6 +279,7 @@ class TestMemoryDeltaFromRequestedBytes:
         )
 
 
+@pytest.mark.arm64
 class TestKubeDaemonsetStatusNumberReady:
     @pytest.mark.polarion("CNV-11727")
     def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
@@ -287,6 +290,7 @@ class TestKubeDaemonsetStatusNumberReady:
         )
 
 
+@pytest.mark.arm64
 class TestKubevirtApiRequestDeprecatedTotal:
     @pytest.mark.polarion("CNV-11739")
     def test_metric_kubevirt_api_request_deprecated_total(self, prometheus, generated_api_deprecated_requests):
@@ -297,6 +301,7 @@ class TestKubevirtApiRequestDeprecatedTotal:
         )
 
 
+@pytest.mark.arm64
 class TestAllocatableNodes:
     @pytest.mark.polarion("CNV-11818")
     def test_metirc_kubevirt_allocatable_nodes(self, prometheus, allocatable_nodes):

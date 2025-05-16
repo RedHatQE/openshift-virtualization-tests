@@ -3,6 +3,8 @@ from ocp_resources.service_monitor import ServiceMonitor
 
 from utilities.constants import VIRT_OPERATOR
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.fixture()
 def kubevirt_prometheus_service_monitor_list(admin_client):
