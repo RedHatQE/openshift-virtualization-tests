@@ -5,7 +5,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
-from tests.virt.node.general.constants import MachineTypesNames
+from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import validate_machine_type
 from utilities.constants import Images
 from utilities.hco import is_hco_tainted, update_hco_annotations
