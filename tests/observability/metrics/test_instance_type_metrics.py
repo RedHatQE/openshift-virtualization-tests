@@ -22,6 +22,8 @@ from utilities.constants import (
 )
 from utilities.virt import migrate_vm_and_verify, running_vm
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.fixture(scope="class")
 def migrated_instance_type_vm(prometheus, rhel_vm_with_cluster_instance_type_and_preference):

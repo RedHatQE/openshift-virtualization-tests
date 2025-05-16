@@ -8,6 +8,8 @@ from tests.observability.metrics.constants import (
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, TIMEOUT_5MIN
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.mark.usefixtures("disabled_virt_operator", "invalid_cnao_operator")
 class TestCnaoDown:

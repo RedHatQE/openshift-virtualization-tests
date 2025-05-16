@@ -44,6 +44,8 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.arm64
+
 
 def get_last_transition_time(vm):
     for condition in vm.instance.get("status", {}).get("conditions"):

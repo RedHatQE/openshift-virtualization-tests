@@ -4,7 +4,7 @@ from pytest_testconfig import config as py_config
 from tests.observability.metrics import utils
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
 
-pytestmark = pytest.mark.sno
+pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 METRIC_QUERY = 'kubevirt_vmi_phase_count{{os="{os_name}", flavor="{flavor}", workload="{workload}"}}'
 SUM_QUERY = f"sum({METRIC_QUERY})"
 

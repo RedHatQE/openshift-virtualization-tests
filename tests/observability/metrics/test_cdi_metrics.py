@@ -4,6 +4,8 @@ from tests.observability.metrics.utils import expected_metric_labels_and_values,
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import CDI_OPERATOR
 
+pytestmark = [pytest.mark.arm64]
+
 
 @pytest.mark.polarion("CNV-10557")
 def test_kubevirt_cdi_clone_pods_high_restart(

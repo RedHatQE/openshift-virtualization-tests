@@ -15,7 +15,7 @@ from utilities.monitoring import validate_alerts
 
 VIRT_CONTROLLER_REST_ERRORS_HIGH = "VirtControllerRESTErrorsHigh"
 
-pytestmark = pytest.mark.usefixtures("initial_virt_operator_replicas")
+pytestmark = [pytest.mark.usefixtures("initial_virt_operator_replicas"), pytest.mark.arm64]
 
 
 @pytest.mark.usefixtures(

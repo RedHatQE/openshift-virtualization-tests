@@ -10,7 +10,10 @@ from utilities.constants import (
 )
 from utilities.monitoring import validate_alerts
 
-pytestmark = [pytest.mark.usefixtures("skip_if_hpp_not_exist", "hpp_condition_available_scope_module")]
+pytestmark = [
+    pytest.mark.usefixtures("skip_if_hpp_not_exist", "hpp_condition_available_scope_module"),
+    pytest.mark.arm64,
+]
 
 LOGGER = logging.getLogger(__name__)
 

@@ -5,6 +5,8 @@ from tests.observability.metrics.utils import (
     validate_vmi_network_receive_and_transmit_packets_total,
 )
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.mark.parametrize(
     "vm_for_test",

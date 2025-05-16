@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestCpuUsageMetrics:
+    @pytest.mark.arm64
     @pytest.mark.parametrize(
         "query",
         [

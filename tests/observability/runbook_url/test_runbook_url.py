@@ -8,6 +8,8 @@ from utilities.constants import CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.arm64
+
 
 def get_downstream_runbook_url(alert_name):
     return f"https://github.com/openshift/runbooks/blob/master/alerts/openshift-virtualization-operator/{alert_name}.md"

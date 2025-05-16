@@ -45,6 +45,7 @@ def fedora_vm_without_name_in_label(
         yield vm
 
 
+@pytest.mark.arm64
 class TestVmiNodeCpuAffinityLinux:
     @pytest.mark.parametrize(
         "golden_image_data_volume_scope_class, vm_from_template_scope_class",
@@ -84,6 +85,7 @@ class TestVmiNodeCpuAffinityWindows:
         )
 
 
+@pytest.mark.arm64
 class TestVmNameInLabel:
     @pytest.mark.polarion("CNV-8582")
     def test_vm_name_in_virt_launcher_label(self, fedora_vm_without_name_in_label):
@@ -101,6 +103,7 @@ class TestVmNameInLabel:
         )
 
 
+@pytest.mark.arm64
 class TestVirtHCOSingleStackIpv6:
     @pytest.mark.ipv6
     @pytest.mark.polarion("CNV-11740")

@@ -4,6 +4,8 @@ from tests.observability.metrics.constants import KUBEVIRT_VM_CREATED_TOTAL_STR
 from tests.observability.metrics.utils import wait_for_expected_metric_value_sum
 from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE
 
+pytestmark = pytest.mark.arm64
+
 
 class TestTotalCreatedInstanceType:
     @pytest.mark.polarion("CNV-10771")

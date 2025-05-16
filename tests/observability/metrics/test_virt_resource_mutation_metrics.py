@@ -26,7 +26,7 @@ from utilities.constants import (
     VIRTCTL_CLI_DOWNLOADS,
 )
 
-pytestmark = pytest.mark.sno
+pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 LOGGER = logging.getLogger(__name__)
 
 COMPONENT_CONFIG = {
