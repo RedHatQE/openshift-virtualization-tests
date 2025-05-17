@@ -11,12 +11,14 @@ from xml.etree import ElementTree
 import bitmath
 import jsons
 import pytest
-from ocp_resources.resource import Resource
+from ocp_resources.node import Node
+from ocp_resources.resource import get_client
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_VM_YAML
+from utilities import infra
 from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, Images
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -39,6 +41,11 @@ VM_EXPECTED_ANNOTATION_KEYS = [
     Template.VMAnnotations.OS,
     Template.VMAnnotations.WORKLOAD,
 ]
+
+CLUSTER_ARCH = infra.get_nodes_cpu_architecture(nodes=Node.get(dyn_client=get_client()))
+SUFFIX = ""
+if CLUSTER_ARCH == "s390x":
+    SUFFIX = "-s390x"
 
 
 def fetch_osinfo_memory(osinfo_file_path, memory_test, resources_arch):
@@ -91,8 +98,10 @@ def check_default_and_validation_memory(get_base_templates, osinfo_memory_value,
 
 def get_rhel_templates_list():
     rhel_major_releases_list = ["7", "8", "9"]
+    if CLUSTER_ARCH == "s390x":
+        rhel_major_releases_list = ["8", "9"]
     return [
-        f"rhel{release}-{workload}-{flavor}"
+        f"rhel{release}-{workload}-{flavor}{SUFFIX}"
         for release in rhel_major_releases_list
         for flavor in LINUX_FLAVORS_LIST
         for workload in LINUX_WORKLOADS_LIST
@@ -100,10 +109,14 @@ def get_rhel_templates_list():
 
 
 def get_fedora_templates_list():
-    return [f"fedora-{workload}-{flavor}" for flavor in FEDORA_FLAVORS_LIST for workload in LINUX_WORKLOADS_LIST]
+    return [
+        f"fedora-{workload}-{flavor}{SUFFIX}" for flavor in FEDORA_FLAVORS_LIST for workload in LINUX_WORKLOADS_LIST
+    ]
 
 
 def get_windows_templates_list():
+    if CLUSTER_ARCH == "s390x":
+        return []
     windows10 = "windows10"
     windows11 = "windows11"
     windows_os_list = [windows10, windows11, "windows2k16", "windows2k19", "windows2k22", "windows2k25"]
@@ -122,7 +135,7 @@ def get_windows_templates_list():
 def get_centos_templates_list():
     centos_releases_list = ["-stream9"]
     return [
-        f"centos{release}-{workload}-{flavor}"
+        f"centos{release}-{workload}-{flavor}{SUFFIX}"
         for release in centos_releases_list
         for flavor in LINUX_FLAVORS_LIST
         for workload in [Template.Workload.SERVER, Template.Workload.DESKTOP]
