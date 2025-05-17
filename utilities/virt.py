@@ -1550,27 +1550,33 @@ def get_guest_os_info(vmi):
 
 
 def get_windows_os_dict(windows_version):
-    windows_os_dict = [
-        os_dict
-        for win_os in py_config["system_windows_os_matrix"]
-        for os_name, os_dict in win_os.items()
-        if os_name == windows_version
-    ]
-    if windows_os_dict:
-        return windows_os_dict[0]
-    raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+    if system_windows_os_matrix := py_config.get("system_windows_os_matrix"):
+        windows_os_dict = [
+            os_dict
+            for win_os in system_windows_os_matrix
+            for os_name, os_dict in win_os.items()
+            if os_name == windows_version
+        ]
+        if windows_os_dict:
+            return windows_os_dict[0]
+        raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+
+    return {}
 
 
 def get_rhel_os_dict(rhel_version):
-    rhel_os_dict = [
-        os_dict
-        for rhel_os in py_config["system_rhel_os_matrix"]
-        for os_name, os_dict in rhel_os.items()
-        if os_name == rhel_version
-    ]
-    if rhel_os_dict:
-        return rhel_os_dict[0]
-    raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+    if py_system_rhel_os_matrix := py_config.get("system_rhel_os_matrix"):
+        rhel_os_dict = [
+            os_dict
+            for rhel_os in py_system_rhel_os_matrix
+            for os_name, os_dict in rhel_os.items()
+            if os_name == rhel_version
+        ]
+        if rhel_os_dict:
+            return rhel_os_dict[0]
+        raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+
+    return {}
 
 
 def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:

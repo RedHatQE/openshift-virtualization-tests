@@ -585,24 +585,24 @@ def pytest_sessionstart(session):
         # with runtime windows_os_matrix value(s).
         # Some tests extract a single OS from the matrix and may fail if running with
         # passed values from cli
-        py_config["system_windows_os_matrix"] = py_config["windows_os_matrix"]
-        py_config["system_rhel_os_matrix"] = py_config["rhel_os_matrix"]
+        if windows_os_matrix := py_config.get("windows_os_matrix"):
+            py_config["system_windows_os_matrix"] = windows_os_matrix
+
+        if rhel_os_matrix := py_config.get("rhel_os_matrix"):
+            py_config["system_rhel_os_matrix"] = rhel_os_matrix
 
         # Update OS matrix list with the latest OS if running with os_group
-        if session.config.getoption("latest_rhel"):
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=py_config["rhel_os_matrix"])]
-        if session.config.getoption("latest_windows"):
-            py_config["windows_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["windows_os_matrix"])
-            ]
-        if session.config.getoption("latest_centos"):
-            py_config["centos_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["centos_os_matrix"])
-            ]
-        if session.config.getoption("latest_fedora"):
-            py_config["fedora_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
-            ]
+        if session.config.getoption("latest_rhel") and rhel_os_matrix:
+            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
+
+        if session.config.getoption("latest_windows") and windows_os_matrix:
+            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
+
+        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
+            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
+
+        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
+            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
 
     data_collector_dict = set_data_collector_values()
     shutil.rmtree(
