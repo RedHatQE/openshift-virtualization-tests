@@ -17,3 +17,7 @@ INTERNAL_HTTP_CONFIGMAP_NAME = "internal-https-configmap"
 HTTPS_CONFIG_MAP_NAME = "https-cert"
 HTTP = "http"
 HTTPS = "https"
+
+QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+FEDORA_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
+FEDORA_VM_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
