@@ -11,6 +11,8 @@ from tests.install_upgrade_operators.utils import (
 from utilities.exceptions import ResourceValueError
 from utilities.infra import is_jira_open
 
+pytestmark = pytest.mark.arm64
+
 WHITELIST_STRING_LIST = [
     "dockercfg",
     "token",

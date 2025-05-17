@@ -9,7 +9,7 @@ from utilities.constants import (
 )
 from utilities.hco import wait_for_auto_boot_config_stabilization
 
-pytestmark = pytest.mark.gating
+pytestmark = [pytest.mark.gating, pytest.mark.arm64]
 
 LOGGER = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from utilities.constants import (
     HCO_WEBHOOK,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.mark.gating
