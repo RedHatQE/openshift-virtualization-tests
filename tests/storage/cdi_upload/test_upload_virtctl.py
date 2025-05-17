@@ -37,6 +37,7 @@ pytestmark = pytest.mark.post_upgrade
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
+DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
 POPULATED_STR = "populated"
 NON_CSI_POPULATED_STR = "imported/cloned/updated"
 
@@ -165,7 +166,7 @@ def test_virtctl_image_upload_dv(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -206,7 +207,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_function,
         insecure=True,
@@ -237,7 +238,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -265,7 +266,7 @@ def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_c
         with virtctl_upload_dv(
             namespace=namespace.name,
             name=dv.name,
-            size="1Gi",
+            size=DEFAULT_DV_SIZE,
             image_path=LOCAL_PATH,
             insecure=True,
             storage_class=storage_class_name_scope_module,
@@ -318,7 +319,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         pvc=True,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
@@ -352,7 +353,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -361,7 +362,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
         with virtctl_upload_dv(
             namespace=namespace.name,
             name=pvc_name,
-            size="1Gi",
+            size=DEFAULT_DV_SIZE,
             image_path=LOCAL_PATH,
             storage_class=storage_class_name_scope_module,
             insecure=True,
@@ -395,7 +396,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -456,7 +457,7 @@ def test_disk_image_after_upload_virtctl(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
