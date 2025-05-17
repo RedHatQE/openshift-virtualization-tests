@@ -13,7 +13,6 @@ from pytest_testconfig import py_config
 
 from tests.virt.upgrade.utils import (
     get_all_migratable_vms,
-    get_vm_boot_time,
     validate_vms_pod_updated,
     wait_for_automatic_vm_migrations,
 )
@@ -38,6 +37,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     get_base_templates_list,
+    get_vm_boot_time,
     running_vm,
 )
 
