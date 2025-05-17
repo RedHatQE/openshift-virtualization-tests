@@ -1322,7 +1322,7 @@ def stable_channel_released_to_prod(channels):
     return False
 
 
-def get_latest_stable_released_z_stream(minor_version):
+def get_latest_stable_released_z_stream_info(minor_version):
     builds = wait_for_version_explorer_response(
         api_end_point="GetBuildsWithErrata",
         query_string=f"minor_version={minor_version}",
@@ -1330,27 +1330,31 @@ def get_latest_stable_released_z_stream(minor_version):
 
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(build["channels"]):
+        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
             build_version = Version(version=build["csv_version"])
             if latest_z_stream:
                 if build_version > latest_z_stream:
                     latest_z_stream = build_version
             else:
-                latest_z_stream = Version(version=build["csv_version"])
-    return str(latest_z_stream) if latest_z_stream else None
+                latest_z_stream = build_version
+    return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 
 
-def get_cnv_version_by_iib(iib):
-    return str(
-        Version(
-            version=wait_for_version_explorer_response(
-                api_end_point="GetBuildByIIB",
-                query_string=f"iib_number={iib}",
-            )["cnv_version"]
-            .replace(".rhel9", "")
-            .split("-")[0]
-        )
+def get_cnv_info_by_iib(iib):
+    build_info = wait_for_version_explorer_response(
+        api_end_point="GetBuildByIIB",
+        query_string=f"iib_number={iib}",
     )
+    return get_build_info_dict(
+        version=str(Version(build_info["cnv_version"].split(".rhel9")[0])), channel=build_info["channel"]
+    )
+
+
+def get_build_info_dict(version, channel="stable"):
+    return {
+        "version": version,
+        "channel": channel,
+    }
 
 
 def get_deployment_by_name(namespace_name, deployment_name):

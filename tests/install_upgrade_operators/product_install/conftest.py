@@ -9,7 +9,6 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.resource import get_client
-from packaging.version import Version
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
@@ -37,9 +36,9 @@ from utilities.data_collector import (
 from utilities.infra import (
     create_ns,
     get_cluster_platform,
-    get_cnv_version_by_iib,
+    get_cnv_info_by_iib,
     get_csv_by_name,
-    get_latest_stable_released_z_stream,
+    get_latest_stable_released_z_stream_info,
 )
 from utilities.operator import (
     create_catalog_source,
@@ -178,13 +177,14 @@ def installed_cnv_subscription(
     is_production_source,
     hyperconverged_catalog_source,
     created_cnv_namespace,
+    cnv_version_to_install_info,
 ):
-    catalogsource_name = PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name
     return create_subscription(
         subscription_name=HCO_SUBSCRIPTION,
         package_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
-        catalogsource_name=catalogsource_name,
+        catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name,
+        channel_name=cnv_version_to_install_info["channel"],
     )
 
 
@@ -198,7 +198,7 @@ def cnv_install_plan_installed(
     admin_client,
     created_cnv_namespace,
     updated_subscription_with_install_plan,
-    cnv_version_to_install,
+    cnv_version_to_install_info,
 ):
     install_plan = InstallPlan(
         client=admin_client,
@@ -207,7 +207,7 @@ def cnv_install_plan_installed(
     )
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_5MIN)
     csv = get_csv_by_name(
-        csv_name=get_hco_csv_name_by_version(cnv_target_version=cnv_version_to_install),
+        csv_name=get_hco_csv_name_by_version(cnv_target_version=cnv_version_to_install_info["version"]),
         admin_client=admin_client,
         namespace=created_cnv_namespace.name,
     )
@@ -298,18 +298,19 @@ def installed_hpp(cluster_backend_storage, hpp_volume_size):
 
 
 @pytest.fixture(scope="session")
-def cnv_version_to_install(is_production_source, openshift_current_version, cnv_image_url):
+def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_image_url):
     latest_z_stream = None
     if is_production_source:
-        ocp_version = Version(version=openshift_current_version)
-        latest_z_stream = get_latest_stable_released_z_stream(minor_version=f"v{ocp_version.major}.{ocp_version.minor}")
+        latest_z_stream = get_latest_stable_released_z_stream_info(
+            minor_version=f"v{ocp_current_version.major}.{ocp_current_version.minor}"
+        )
         LOGGER.info(
-            f"Using production catalog source for: {ocp_version}, CNV latest stable released version: {latest_z_stream}"
+            f"Using production catalog source for: {ocp_current_version},"
+            f" CNV latest stable released version info: {latest_z_stream}"
         )
     else:
-        # TODO: change to support candidate/stable channel.
-        latest_z_stream = get_cnv_version_by_iib(iib=cnv_image_url.split(":")[-1])
-        LOGGER.info(f"Using iib image {cnv_image_url}: CNV version associated: {latest_z_stream}")
+        latest_z_stream = get_cnv_info_by_iib(iib=cnv_image_url.split(":")[-1])
+        LOGGER.info(f"Using iib image {cnv_image_url}: CNV version info associated: {latest_z_stream}")
     if not latest_z_stream:
         pytest.exit(reason="CNV version can't be determined for this run", returncode=INSTALLATION_VERSION_MISMATCH)
     return latest_z_stream
