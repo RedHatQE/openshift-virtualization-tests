@@ -14,9 +14,8 @@ from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.cluster_version import ClusterVersion
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
-from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.resource import Resource
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -606,11 +605,6 @@ def get_build_info_by_version(version: str, errata_status: str = "true") -> dict
         api_end_point="GetSuccessfulBuildsByVersion",
         query_string=query_string,
     )
-
-
-def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) -> None:
-    for mcp in mcp:
-        ResourceEditor(patches={mcp: {"spec": {"paused": paused}}}).update()
 
 
 def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: list[str]) -> None:

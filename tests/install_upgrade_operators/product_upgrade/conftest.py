@@ -22,7 +22,6 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     perform_cnv_upgrade,
     run_ocp_upgrade_command,
     set_workload_update_methods_hco,
-    update_mcp_paused_spec,
     verify_upgrade_ocp,
     wait_for_hco_csv_creation,
     wait_for_hco_upgrade,
@@ -31,6 +30,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
+from tests.utils import update_mcp_paused_spec
 from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
     get_data_collector_base_directory,
@@ -429,15 +429,6 @@ def eus_applied_all_icsp(
         nodes=nodes,
         is_idms_file=is_idms_cluster,
     )
-
-
-@pytest.fixture(scope="session")
-def active_machine_config_pools(machine_config_pools):
-    return [
-        machine_config_pool
-        for machine_config_pool in machine_config_pools
-        if machine_config_pool.instance.status.machineCount > 0
-    ]
 
 
 @pytest.fixture()
