@@ -27,7 +27,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -64,6 +63,13 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
+    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     PVC,
@@ -85,7 +91,14 @@ from utilities.constants import (
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
-from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
+from utilities.infra import (
+    create_ns,
+    get_http_image_url,
+    get_node_selector_dict,
+    get_pod_by_name_prefix,
+    is_jira_open,
+    unique_name,
+)
 from utilities.monitoring import get_metrics_value
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
@@ -109,6 +122,14 @@ IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
+METRICS_WITH_WINDOWS_VM_BUGS = [
+    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
+]
 
 
 def wait_for_component_value_to_be_expected(prometheus, component_name, expected_count):
@@ -452,7 +473,7 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
@@ -1078,7 +1099,7 @@ def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheu
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
@@ -1110,7 +1131,7 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
@@ -1120,3 +1141,15 @@ def windows_vm_for_test(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm
+
+
+@pytest.fixture()
+def xfail_if_metric_has_bug(cnv_vmi_monitoring_metrics_matrix__function__):
+    if (
+        is_jira_open(jira_id="CNV-59679")
+        and cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS
+    ):
+        pytest.xfail(
+            f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
+            f"any value for windows vm"
+        )

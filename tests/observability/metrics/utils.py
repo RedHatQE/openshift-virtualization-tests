@@ -318,7 +318,7 @@ def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
         vm (VirtualMachineForTests): A VirtualMachineForTests
 
     """
-    pod = vm.vmi.virt_handler_pod
+    pod = vm.privileged_vmi.virt_handler_pod
     output = parse_vm_metric_results(raw_output=pod.execute(command=["bash", "-c", f"{CURL_QUERY}"]))
     assert output, f'No query output found from {VIRT_HANDLER} pod "{pod.name}" for query: "{CURL_QUERY}"'
     metrics_list = []
@@ -683,7 +683,6 @@ def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, v
 def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
     # Find string from list in the dommemstat and convert to bytes from KiB.
     vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
-
     assert vmi_domain_memory_match, (
         f"No match '{domain_memory_string}' found for VM's domain memory in VMI's dommemstat {vmi_dommemstat}"
     )
