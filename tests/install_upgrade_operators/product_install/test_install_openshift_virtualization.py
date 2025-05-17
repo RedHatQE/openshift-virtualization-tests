@@ -38,7 +38,7 @@ pytestmark = [pytest.mark.install]
 @pytest.mark.order(before=CNV_INSTALLATION_TEST)
 def test_cnv_installation_without_hco_cr_alert(
     prometheus,
-    cnv_version_to_install,
+    cnv_version_to_install_info,
     before_installation_all_resources,
     installed_openshift_virtualization,
     alert_dictionary_hco_not_installed,
@@ -65,11 +65,12 @@ def test_cnv_installation_without_hco_cr_metrics(
 
 @pytest.mark.polarion("CNV-9311")
 @pytest.mark.dependency(name=CNV_INSTALLATION_TEST)
-def test_cnv_installation(admin_client, cnv_version_to_install, created_cnv_namespace, created_hco_cr):
+def test_cnv_installation(admin_client, cnv_version_to_install_info, created_cnv_namespace, created_hco_cr):
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=created_cnv_namespace)
     current_hco_version = created_hco_cr.instance.status.versions[0]["version"]
-    assert cnv_version_to_install == current_hco_version, (
-        f"Expected hco version: {cnv_version_to_install}. Actual version: {current_hco_version}"
+    version_to_install = cnv_version_to_install_info["version"]
+    assert version_to_install == current_hco_version, (
+        f"Expected hco version: {version_to_install}. Actual version: {current_hco_version}"
     )
     wait_for_pods_running(admin_client=admin_client, namespace=created_cnv_namespace)
 
