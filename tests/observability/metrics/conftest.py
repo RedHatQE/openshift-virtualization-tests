@@ -40,6 +40,7 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -646,13 +647,21 @@ def generated_network_traffic(vm_for_test):
     run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
 
 
+@pytest.fixture()
+def generated_network_traffic_windows_vm(windows_vm_for_test):
+    windows_vm_for_test.ssh_exec.run_command(
+        command=shlex.split(f"ping {windows_vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}")
+    )
+
+
 @pytest.fixture(scope="class")
 def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
-    )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+    return get_interface_name_from_vm(vm=vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test_interface_name(windows_vm_for_test):
+    return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")

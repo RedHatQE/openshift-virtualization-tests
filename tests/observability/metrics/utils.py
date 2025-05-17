@@ -1265,6 +1265,14 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
+def get_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
+    interface_name = vm.privileged_vmi.virt_launcher_pod.execute(
+        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
+    )
+    assert interface_name, f"Interface not found for vm {vm.name}"
+    return interface_name
+
+
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
