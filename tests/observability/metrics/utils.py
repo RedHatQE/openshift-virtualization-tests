@@ -1300,6 +1300,10 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
 
 
 def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
+    """
+    This function returns the virt-api pod with the highest memory usage,
+    tuple with the name and the value of the memory.
+    """
     virt_api_with_highest_memory_usage = (
         run_command(
             command=shlex.split(
@@ -1332,21 +1336,31 @@ def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, po
 def expected_kubevirt_memory_delta_from_requested_bytes(
     hco_namespace: str, admin_client: DynamicClient, rss: bool
 ) -> float:
-    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
-    virt_api_pod_name = highest_memory_usage_virt_api_pod[0]
+    """
+    Calculate the expected memory delta between actual and requested memory.
+
+    Args:
+        hco_namespace: The namespace where virt-api pods are running
+        admin_client: The Kubernetes admin client
+        rss: If True, use RSS memory, otherwise use total memory usage
+
+    Returns:
+        float: The memory delta in bytes
+    """
+    pod_name, pod_memory = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
     virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
         admin_client=admin_client,
-        pod_prefix=virt_api_pod_name,
+        pod_prefix=pod_name,
     )
     if rss:
         virt_api_rss_memory = get_pod_memory_stats(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
-            pod_prefix=virt_api_pod_name,
+            pod_prefix=pod_name,
         )
         return float(virt_api_rss_memory - virt_api_requested_memory)
-    return float(highest_memory_usage_virt_api_pod[1] - virt_api_requested_memory)
+    return float(pod_memory - virt_api_requested_memory)
 
 
 def validate_memory_delta_metrics_value_within_range(
