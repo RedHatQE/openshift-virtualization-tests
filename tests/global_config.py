@@ -30,6 +30,10 @@ from utilities.constants import (
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
+    KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
     LATEST_RELEASE_STR,
     LINUX_BRIDGE,
     OS_STR,
@@ -133,6 +137,13 @@ cnv_vm_resource_requests_units_matrix = [
     "threads",
 ]
 
+
+cnv_cpu_usage_metrics_matrix = [
+    KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR,
+    KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR,
+]
 
 bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
@@ -249,14 +260,13 @@ rhel_os_matrix = [
         }
     },
     {
-        "rhel-9-5": {
-            OS_VERSION_STR: "9.5",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_5_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_5_IMG),
+        "rhel-9-4": {
+            OS_VERSION_STR: "9.4",
+            IMAGE_NAME_STR: Images.Rhel.RHEL9_4_IMG,
+            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_4_IMG),
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.5",
+                OS_STR: "rhel9.4",
                 WORKLOAD_STR: Template.Workload.SERVER,
                 FLAVOR_STR: Template.Flavor.TINY,
             },
@@ -268,6 +278,7 @@ rhel_os_matrix = [
             IMAGE_NAME_STR: Images.Rhel.RHEL9_6_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_6_IMG),
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
+            LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "rhel9.6",
                 WORKLOAD_STR: Template.Workload.SERVER,

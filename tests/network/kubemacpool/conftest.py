@@ -6,7 +6,7 @@ from utilities.constants import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns, get_node_selector_dict, name_prefix
 from utilities.network import network_device, network_nad
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 from . import utils as kmp_utils
 
@@ -221,24 +221,32 @@ def vm_b(
 
 @pytest.fixture(scope="class")
 def running_vm_a(vm_a):
-    return running_vm(vm=vm_a, wait_for_cloud_init=True)
+    vm_a.start(wait=True)
+    vm_a.wait_for_agent_connected()
+    return vm_a
 
 
 @pytest.fixture(scope="class")
 def running_vm_b(vm_b):
-    return running_vm(vm=vm_b, wait_for_cloud_init=True)
+    vm_b.start(wait=True)
+    vm_b.wait_for_agent_connected()
+    return vm_b
 
 
 @pytest.fixture(scope="function")
 def restarted_vmi_a(vm_a):
     vm_a.stop(wait=True)
-    return running_vm(vm=vm_a, wait_for_cloud_init=True)
+    vm_a.start(wait=True)
+    vm_a.wait_for_agent_connected()
+    return vm_a
 
 
 @pytest.fixture(scope="function")
 def restarted_vmi_b(vm_b):
     vm_b.stop(wait=True)
-    return running_vm(vm=vm_b, wait_for_cloud_init=True)
+    vm_b.start(wait=True)
+    vm_b.wait_for_agent_connected()
+    return vm_b
 
 
 @pytest.fixture(scope="class")

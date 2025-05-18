@@ -4,33 +4,19 @@ import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.datavolume import DataVolume
 
-from tests.storage.constants import REGISTRY_STR
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE, REGISTRY_STR
 from tests.storage.utils import (
-    clean_up_multiprocess,
     create_vm_from_dv,
     get_importer_pod,
     wait_for_importer_container_message,
-    wait_for_processes_exit_successfully,
 )
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
-    TIMEOUT_5MIN,
-    TIMEOUT_10MIN,
-    Images,
-)
-from utilities.exceptions import ProcessWithException
+from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import running_vm
 
 pytestmark = pytest.mark.post_upgrade
-
-
 LOGGER = logging.getLogger(__name__)
-
-QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
-FEDORA_DV_SIZE = Images.Fedora.DEFAULT_DV_SIZE
-FEDORA_VM_MEMORY_SIZE = Images.Fedora.DEFAULT_MEMORY_SIZE
 
 
 @pytest.mark.sno
@@ -75,53 +61,12 @@ def test_disk_image_not_conform_to_registy_disk(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2028")
-def test_public_registry_multiple_data_volume(namespace, storage_class_name_scope_function):
-    dvs = []
-    vms = []
-    dvs_processes = {}
-    vms_processes = {}
-    try:
-        for dv in ("dv1", "dv2", "dv3"):
-            rdv = DataVolume(
-                source=REGISTRY_STR,
-                name=f"import-public-registry-quay-{dv}",
-                namespace=namespace.name,
-                url=QUAY_FEDORA_CONTAINER_IMAGE,
-                size=FEDORA_DV_SIZE,
-                storage_class=storage_class_name_scope_function,
-                api_name="storage",
-            )
-
-            dv_process = ProcessWithException(target=rdv.create)
-            dv_process.start()
-            dvs_processes[dv] = dv_process
-            dvs.append(rdv)
-
-        wait_for_processes_exit_successfully(processes=dvs_processes, timeout=TIMEOUT_10MIN)
-
-        for vm in [vm for vm in dvs]:
-            rvm = VirtualMachineForTests(
-                name=vm.name,
-                namespace=namespace.name,
-                os_flavor=OS_FLAVOR_FEDORA,
-                data_volume=vm,
-                memory_guest=FEDORA_VM_MEMORY_SIZE,
-            )
-            rvm.deploy()
-            vms.append(rvm)
-
-        for vm in vms:
-            vm_process = ProcessWithException(target=vm.start)
-            vm_process.start()
-            vms_processes[vm.name] = vm_process
-
-        wait_for_processes_exit_successfully(processes=vms_processes, timeout=TIMEOUT_5MIN)
-        for vm in vms:
-            running_vm(vm=vm, wait_for_cloud_init=True)
-            check_disk_count_in_vm(vm=vm)
-    finally:
-        clean_up_multiprocess(processes=vms_processes, object_list=vms)
-        clean_up_multiprocess(processes=dvs_processes, object_list=dvs)
+def test_public_registry_multiple_data_volume(
+    namespace, storage_class_name_scope_function, dvs_and_vms_from_public_registry
+):
+    for vm in dvs_and_vms_from_public_registry:
+        running_vm(vm=vm)
+        check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.sno
@@ -162,7 +107,7 @@ def test_public_registry_data_volume(
         namespace=namespace.name,
         url=QUAY_FEDORA_CONTAINER_IMAGE,
         content_type=content_type,
-        size=FEDORA_DV_SIZE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_function,
     ) as dv:
         dv.wait_for_dv_success()
@@ -170,7 +115,7 @@ def test_public_registry_data_volume(
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_guest=FEDORA_VM_MEMORY_SIZE,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
@@ -216,7 +161,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_guest=FEDORA_VM_MEMORY_SIZE,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
