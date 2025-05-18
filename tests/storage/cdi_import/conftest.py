@@ -8,7 +8,12 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
-from tests.storage.constants import HPP_STORAGE_CLASSES, HTTP
+from tests.storage.constants import (
+    HPP_STORAGE_CLASSES,
+    HTTP,
+    QUAY_FEDORA_CONTAINER_IMAGE,
+    REGISTRY_STR,
+)
 from tests.storage.utils import (
     clean_up_multiprocess,
     create_cirros_dv,
@@ -84,7 +89,7 @@ def dv_non_exist_url(namespace, storage_class_name_scope_module):
         dv_name=f"cnv-876-{storage_class_name_scope_module}",
         namespace=namespace.name,
         url=NON_EXIST_URL,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size=DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
     ) as dv:
         yield dv
@@ -137,7 +142,7 @@ def cirros_dv_unprivileged(
         name=f"cirros-dv-{storage_class_name_scope_module}",
         storage_class=storage_class_name_scope_module,
         client=unprivileged_client,
-        dv_size=Images.Cirros.DEFAULT_DV_SIZE,
+        dv_size=DEFAULT_DV_SIZE,
     )
 
 
@@ -190,3 +195,41 @@ def vm_list_created_by_multiprocess(dv_list_created_by_multiprocess, storage_cla
     wait_for_processes_exit_successfully(processes=processes, timeout=TIMEOUT_4MIN)
     yield vms_list
     clean_up_multiprocess(processes=processes, object_list=vms_list)
+
+
+@pytest.fixture()
+def dvs_and_vms_from_public_registry(namespace, storage_class_name_scope_function):
+    dvs = []
+    vms = []
+    try:
+        for name in ("dv1", "dv2", "dv3"):
+            dv = DataVolume(
+                source=REGISTRY_STR,
+                name=f"import-public-registry-quay-{name}",
+                namespace=namespace.name,
+                url=QUAY_FEDORA_CONTAINER_IMAGE,
+                size=Images.Fedora.DEFAULT_DV_SIZE,
+                storage_class=storage_class_name_scope_function,
+                api_name="storage",
+            )
+            dv.create()
+            dvs.append(dv)
+
+        for dv in dvs:
+            vm = VirtualMachineForTests(
+                name=dv.name,
+                namespace=namespace.name,
+                os_flavor=OS_FLAVOR_FEDORA,
+                data_volume=dv,
+                memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            )
+            vm.deploy(wait=True)
+            vm.start()
+            vms.append(vm)
+
+        yield vms
+    finally:
+        for vm in vms:
+            vm.clean_up()
+        for dv in dvs:
+            dv.clean_up()
