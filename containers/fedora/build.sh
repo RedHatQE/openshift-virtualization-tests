@@ -45,7 +45,7 @@ case "$CPU_ARCH" in
 	;;
 esac
 
-if [ $FULL_EMULATION = "true" ]; then
+if [ "$FULL_EMULATION" = "true" ]; then
     VIRT_TYPE="qemu"
 fi
 
@@ -59,7 +59,7 @@ echo "Create cloud-init user data ISO"
 cloud-localds $CLOUD_INIT_ISO user-data
 
 # When running on CI, the latest Fedora may not be yet supported by virt-install
-# therefor use a lower one. It should have no influence on the result.
+# therefore use a lower one. It should have no influence on the result.
 OS_VARIANT=$NAME
 if [ $FEDORA_VERSION -gt 40 ]; then
    OS_VARIANT="fedora40"
