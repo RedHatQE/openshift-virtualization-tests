@@ -7,6 +7,8 @@ def foo_matrix(matrix):
 
 from ocp_resources.storage_class import StorageClass
 
+from utilities.infra import cache_admin_client
+
 
 def snapshot_matrix(matrix):
     matrix_to_return = []
@@ -44,8 +46,12 @@ def hpp_matrix(matrix):
     ]
 
     for storage_class in matrix:
-        if StorageClass(name=[*storage_class][0]).instance.provisioner in hpp_sc_provisioners:
+        if (
+            StorageClass(client=cache_admin_client(), name=[*storage_class][0]).instance.provisioner
+            in hpp_sc_provisioners
+        ):
             matrix_to_return.append(storage_class)
+
     return matrix_to_return
 
 
