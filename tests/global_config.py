@@ -260,14 +260,13 @@ rhel_os_matrix = [
         }
     },
     {
-        "rhel-9-5": {
-            OS_VERSION_STR: "9.5",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_5_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_5_IMG),
+        "rhel-9-4": {
+            OS_VERSION_STR: "9.4",
+            IMAGE_NAME_STR: Images.Rhel.RHEL9_4_IMG,
+            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_4_IMG),
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.5",
+                OS_STR: "rhel9.4",
                 WORKLOAD_STR: Template.Workload.SERVER,
                 FLAVOR_STR: Template.Flavor.TINY,
             },
@@ -279,6 +278,7 @@ rhel_os_matrix = [
             IMAGE_NAME_STR: Images.Rhel.RHEL9_6_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_6_IMG),
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
+            LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "rhel9.6",
                 WORKLOAD_STR: Template.Workload.SERVER,

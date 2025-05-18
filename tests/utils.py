@@ -169,14 +169,18 @@ def get_image_name_from_csv(image_string, csv_related_images):
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 
 
-def hotplug_resource_and_verify_hotplug(vm, client, sockets=None, memory_guest=None):
+def hotplug_spec_vm_and_verify_hotplug(vm, client, sockets=None, memory_guest=None):
     assert sockets or memory_guest, "No resource for update provided!!!"
-
-    if vm.instance.spec.get("instancetype"):
-        hotplug_instance_type_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
-    else:
-        hotplug_spec_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
+    hotplug_spec_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
     verify_hotplug(vm=vm, client=client, sockets=sockets, memory_guest=memory_guest)
+
+
+def hotplug_instance_type_vm_and_verify(vm, client, instance_type):
+    instance_type_spec = instance_type.instance.spec
+    update_vm_instancetype_name(vm=vm, instance_type_name=instance_type.name)
+    verify_hotplug(
+        vm=vm, client=client, sockets=instance_type_spec.cpu.guest, memory_guest=instance_type_spec.memory.guest
+    )
 
 
 def verify_hotplug(vm, client, sockets=None, memory_guest=None):
@@ -209,12 +213,9 @@ def hotplug_spec_vm(vm, sockets=None, memory_guest=None):
     ResourceEditor(patches=patch).update()
 
 
-def hotplug_instance_type_vm(vm, sockets=None, memory_guest=None):
-    patch = {
-        vm.vm_instance_type: {"spec": {"cpu": {"guest": sockets} if sockets else {"memory": {"guest": memory_guest}}}}
-    }
+def update_vm_instancetype_name(vm, instance_type_name):
+    patch = {vm: {"spec": {"instancetype": {"name": instance_type_name}}}}
     ResourceEditor(patches=patch).update()
-    ResourceEditor(patches={vm: {"spec": {"instancetype": {"revisionName": ""}}}}).update()
 
 
 def clean_up_migration_jobs(client, vm):
@@ -255,14 +256,14 @@ def assert_guest_os_memory_amount(vm, spec_memory_amount):
     )
 
 
-def assert_restart_required_codition(vm, expected_message):
-    def _get_restart_required_codition(vm):
+def assert_restart_required_condition(vm, expected_message):
+    def _get_restart_required_condition(vm):
         return [condition for condition in vm.instance.status.conditions if condition.type == "RestartRequired"][0]
 
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_10SEC,
         sleep=TIMEOUT_1SEC,
-        func=_get_restart_required_codition,
+        func=_get_restart_required_condition,
         vm=vm,
     )
     try:

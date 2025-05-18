@@ -1299,7 +1299,7 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
     )
 
 
-def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str) -> tuple[str, int]:
+def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
     virt_api_with_highest_memory_usage = (
         run_command(
             command=shlex.split(
@@ -1332,7 +1332,7 @@ def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, po
 def expected_kubevirt_memory_delta_from_requested_bytes(
     hco_namespace: str, admin_client: DynamicClient, rss: bool
 ) -> float:
-    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)
+    highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
     virt_api_pod_name = highest_memory_usage_virt_api_pod[0]
     virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
