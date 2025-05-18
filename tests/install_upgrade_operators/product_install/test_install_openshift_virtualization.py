@@ -113,7 +113,7 @@ def test_cnv_resources_installed_cluster_scoped(
             )
             diff_values = [value for value in diff_values if not value.startswith(tuple(white_listed_values))]
             if diff_values:
-                LOGGER.warning(f"After removing whitelisted resouces, the diff is: {diff_values}")
+                LOGGER.warning(f"After removing whitelisted resources, the diff is: {diff_values}")
                 mismatch_cluster_scoped.append({kind: diff_values})
     if mismatch_cluster_scoped:
         LOGGER.error(f"Mismatched cluster resources: {mismatch_cluster_scoped}")
