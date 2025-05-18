@@ -20,6 +20,7 @@ from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_utilities.infra import get_client
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -1355,14 +1356,13 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
 
 
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
-    assert vm.instance.spec.dataVolumeTemplates or len(vm.instance.spec.dataVolumeTemplates) > 0, (
-        "VM has no DataVolume templates"
-    )
+    vm_dv_templates = vm.instance.spec.dataVolumeTemplates
+    assert vm_dv_templates or len(vm_dv_templates) > 0, "VM has no DataVolume templates"
     return str(
         int(
             bitmath.parse_string_unsafe(
                 PersistentVolumeClaim(
-                    name=vm.instance.spec.dataVolumeTemplates[0].metadata.name,
+                    name=vm_dv_templates[0].metadata.name,
                     namespace=vm.namespace,
                 ).instance.spec.resources.requests.storage
             ).Byte.bytes
@@ -1376,12 +1376,12 @@ def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int
     return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
 
 
-def virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
+def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
     vl_name = vm_for_test.vmi.virt_launcher_pod.name
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_15SEC,
-        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace, client=get_client()).exists,
     )
     try:
         for sample in samples:
@@ -1394,7 +1394,7 @@ def virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTest
 
 
 def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
-    virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
+    wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
     match = re.search(
         r"\b(\d+)([KMG]i)\b",
         run_command(
