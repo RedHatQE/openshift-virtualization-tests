@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource
@@ -16,7 +18,6 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     get_metric_sum_value,
-    time_passed_from_timestamp_until_now_minutes,
     timestamp_to_seconds,
     wait_for_non_empty_metrics_value,
 )
@@ -60,16 +61,16 @@ def assert_metrics_values(
     migration_metrics_dict: dict[str, str],
     initial_values: dict[str, int],
     metric_to_check: str,
-):
+) -> None:
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
 
     Args:
+        prometheus: Prometheus object
+        migration_metrics_dict: Dictionary with metrics by the status it checks
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
-        migration_metrics_dict: Dictionary with metrics by the status it checks
-        prometheus: Prometheus object
     Raises:
         AssertionError: If any metric's value does not match with expected value.
     """
@@ -285,9 +286,7 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
-        time_passed_from_starting_migration = time_passed_from_timestamp_until_now_minutes(
-            timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
-        )
+        time_passed_from_starting_migration = (int(datetime.now(timezone.utc).timestamp()) - timestamp_to_seconds(timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp)) // 60
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"

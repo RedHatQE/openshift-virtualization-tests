@@ -207,9 +207,9 @@ def test_major_release_machine_type(machine_type_from_kubevirt_config):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8561")
-def test_machine_type_as_rhel_9_4(machine_type_from_kubevirt_config):
-    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.4.0"""
-    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_4, (
+def test_machine_type_as_rhel_9_6(machine_type_from_kubevirt_config):
+    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.6.0"""
+    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_6, (
         f"Machine type value is {machine_type_from_kubevirt_config}"
-        f"does not match with {MachineTypesNames.pc_q35_rhel9_4}"
+        f"does not match with {MachineTypesNames.pc_q35_rhel9_6}"
     )

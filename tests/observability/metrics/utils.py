@@ -1144,10 +1144,6 @@ def timestamp_to_seconds(timestamp: str) -> int:
     return int(dt.timestamp())
 
 
-def time_passed_from_timestamp_until_now_minutes(timestamp: str) -> int:
-    return (int(datetime.now(timezone.utc).timestamp()) - timestamp_to_seconds(timestamp=timestamp)) // 60
-
-
 def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
