@@ -305,22 +305,20 @@ class TestVmiMemoryCachedBytes:
 @pytest.mark.parametrize("vm_for_test", [pytest.param("file-system-metrics")], indirect=True)
 class TestVmiFileSystemMetricsLinux:
     @pytest.mark.parametrize(
-        "file_system_metric_mountpoints_existence_linux, capacity_or_used",
+        "capacity_or_used",
         [
             pytest.param(
-                CAPACITY,
                 CAPACITY,
                 marks=pytest.mark.polarion("CNV-11406"),
                 id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
             ),
             pytest.param(
                 USED,
-                USED,
                 marks=pytest.mark.polarion("CNV-11407"),
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
-        indirect=["file_system_metric_mountpoints_existence_linux"],
+        indirect=False,
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
         self,
@@ -367,7 +365,6 @@ class TestVmiFileSystemMetricsWindows:
             vm_for_test=windows_vm_for_test,
             mount_point=list(disk_file_system_info_windows.keys())[0],
             capacity_or_used=capacity_or_used,
-            windows=True,
         )
 
 

@@ -1355,6 +1355,9 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
 
 
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+    assert vm.instance.spec.dataVolumeTemplates or len(vm.instance.spec.dataVolumeTemplates) > 0, (
+        "VM has no DataVolume templates"
+    )
     return str(
         int(
             bitmath.parse_string_unsafe(
@@ -1368,11 +1371,9 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int:
-    return int(
-        bitmath.parse_string_unsafe(
-            vm.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
-        ).bytes
-    )
+    containers = vm.vmi.virt_launcher_pod.instance.spec.containers
+    assert containers, f"No containers found in virt-launcher pod of {vm.vmi.virt_launcher_pod.name}"
+    return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
 
 
 def virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
@@ -1395,14 +1396,14 @@ def virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTest
 def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
     virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
     match = re.search(
-        r"\b(\d+Mi)\b",
+        r"\b(\d+)([KMG]i)\b",
         run_command(
             command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace}"),
             check=False,
         )[1],
     )
     assert match, "vm memory working set not found"
-    return int(bitmath.parse_string_unsafe(match.group(1)).bytes)
+    return int(bitmath.parse_string_unsafe(f"{match.group(1)}{match.group(2)}").bytes)
 
 
 def get_vm_memory_rss_bytes(vm: VirtualMachineForTests) -> int:
@@ -1433,8 +1434,5 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
-        LOGGER.error(
-            f"Metric value of: {metric_name} is: {sample}, expected value:{expected_value},\n "
-            f"The value should be between: {sample * 0.95}-{sample * 1.05}"
-        )
+        LOGGER.error(f"{abs(sample)} should be within 5% of {expected_value}")
         raise
