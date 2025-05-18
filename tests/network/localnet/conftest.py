@@ -12,6 +12,7 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
+    client_server_active_connection,
     create_traffic_client,
     create_traffic_server,
     localnet_cudn,
@@ -22,6 +23,7 @@ from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
 )
 from utilities.infra import create_ns
+from utilities.virt import migrate_vm_and_verify
 
 NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 
@@ -256,3 +258,21 @@ def localnet_ovs_bridge_client(
     ) as client:
         assert client.is_running()
         yield client
+
+
+@pytest.fixture()
+def localnet_vms_have_connectivity(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> None:
+    with client_server_active_connection(
+        client_vm=localnet_running_vms[0],
+        server_vm=localnet_running_vms[1],
+        spec_logical_network=LOCALNET_BR_EX_NETWORK,
+    ):
+        pass
+
+
+@pytest.fixture()
+@pytest.mark.usefixtures("localnet_vms_have_connectivity")
+def migrated_localnet_vm(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> BaseVirtualMachine:
+    vm, _ = localnet_running_vms
+    migrate_vm_and_verify(vm=vm)
+    return vm
