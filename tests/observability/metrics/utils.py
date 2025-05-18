@@ -1295,22 +1295,24 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
                     namespace=hco_namespace,
                 ).execute(command=RSS_MEMORY_COMMAND)
             )
-        ).MiB
+        )
     )
 
 
-def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str) -> dict[str, Any]:
+def get_highest_memory_usage_virt_api_pod_dict(hco_namespace: str) -> tuple[str, int]:
     virt_api_with_highest_memory_usage = (
-        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace} --sort-by memory -l kubevirt.io=virt-api"))[
-            1
-        ]
+        run_command(
+            command=shlex.split(
+                f"oc adm top pod -n {hco_namespace} --sort-by memory --no-headers -l kubevirt.io=virt-api"
+            )
+        )[1]
         .strip()
         .split("\n")[1:]
     )[0].split()
-    return {
-        "virt_api_pod_name": virt_api_with_highest_memory_usage[0],
-        "memory_usage": int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2])),
-    }
+    return (
+        virt_api_with_highest_memory_usage[0],
+        int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2]).Byte),
+    )
 
 
 def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
@@ -1323,7 +1325,7 @@ def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, po
             )
             .instance.spec.containers[0]
             .resources.requests.memory
-        )
+        ).Byte
     )
 
 
@@ -1331,7 +1333,7 @@ def expected_kubevirt_memory_delta_from_requested_bytes(
     hco_namespace: str, admin_client: DynamicClient, rss: bool
 ) -> float:
     highest_memory_usage_virt_api_pod = get_highest_memory_usage_virt_api_pod_dict(hco_namespace=hco_namespace)
-    virt_api_pod_name = highest_memory_usage_virt_api_pod["virt_api_pod_name"]
+    virt_api_pod_name = highest_memory_usage_virt_api_pod[0]
     virt_api_requested_memory = get_pod_requested_memory(
         hco_namespace=hco_namespace,
         admin_client=admin_client,
@@ -1343,8 +1345,8 @@ def expected_kubevirt_memory_delta_from_requested_bytes(
             hco_namespace=hco_namespace,
             pod_prefix=virt_api_pod_name,
         )
-        return float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte)
-    return float(bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte)
+        return float(virt_api_rss_memory - virt_api_requested_memory)
+    return float(highest_memory_usage_virt_api_pod[1] - virt_api_requested_memory)
 
 
 def validate_memory_delta_metrics_value_within_range(
@@ -1368,10 +1370,12 @@ def validate_memory_delta_metrics_value_within_range(
         for sample in samples:
             if sample:
                 sample = abs(float(sample))
-                expected_value = expected_kubevirt_memory_delta_from_requested_bytes(
-                    admin_client=admin_client, hco_namespace=hco_namespace, rss=rss
+                expected_value = abs(
+                    expected_kubevirt_memory_delta_from_requested_bytes(
+                        admin_client=admin_client, hco_namespace=hco_namespace, rss=rss
+                    )
                 )
-                if math.isclose(sample, abs(expected_value), rel_tol=0.05):
+                if math.isclose(sample, expected_value, rel_tol=0.05):
                     return
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be within 5% of {expected_value}")
