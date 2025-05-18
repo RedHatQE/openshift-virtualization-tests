@@ -286,7 +286,12 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
-        time_passed_from_starting_migration = (int(datetime.now(timezone.utc).timestamp()) - timestamp_to_seconds(timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp)) // 60
+        time_passed_from_starting_migration = (
+            int(datetime.now(timezone.utc).timestamp())
+            - timestamp_to_seconds(
+                timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
+            )
+        ) // 60
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
