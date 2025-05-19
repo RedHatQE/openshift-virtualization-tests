@@ -3,9 +3,11 @@ set -xe
 
 # Function to restore the password placeholder
 cleanup() {
+    set +x
     if [ -f user-data ] && [ -n "$FEDORA_PASSWORD" ]; then
         sed -i "s/password: $FEDORA_PASSWORD/password: $PASSWORD_PLACEHOLDER/" user-data
     fi
+    set -x
 }
 trap cleanup EXIT
 
@@ -43,12 +45,25 @@ case "$CPU_ARCH" in
 	;;
 esac
 
+if [ "$FULL_EMULATION" = "true" ]; then
+    VIRT_TYPE="qemu"
+fi
+
+set +x
 FEDORA_PASSWORD=$(uv run get_fedora_password.py)
 PASSWORD_PLACEHOLDER="CHANGE_ME"
 sed -i "s/password: $PASSWORD_PLACEHOLDER/password: $FEDORA_PASSWORD/" user-data
+set -x
 
 echo "Create cloud-init user data ISO"
 cloud-localds $CLOUD_INIT_ISO user-data
+
+# When running on CI, the latest Fedora may not be yet supported by virt-install
+# therefore use a lower one. It should have no influence on the result.
+OS_VARIANT=$NAME
+if [ $FEDORA_VERSION -gt 40 ]; then
+   OS_VARIANT="fedora40"
+fi
 
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
@@ -58,14 +73,13 @@ virt-install \
   --name $NAME \
   --disk $FEDORA_IMAGE,device=disk \
   --disk $CLOUD_INIT_ISO,device=cdrom \
-  --os-variant $NAME \
+  --os-variant $OS_VARIANT \
   --virt-type $VIRT_TYPE \
   --graphics none \
   --network default \
+  --noautoconsole \
+  --wait 30 \
   --import
-
-echo "Stop Fedora VM"
-virsh destroy "${NAME}" || true
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr

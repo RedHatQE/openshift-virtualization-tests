@@ -21,15 +21,15 @@ write_files:
         [Install]
         WantedBy=cloud-init.service
 runcmd:
-  - sudo systemctl daemon-reload
+  - systemctl daemon-reload
   - dnf install -y tcpdump qemu-guest-agent iperf3 dmidecode nginx lldpad kernel-modules nmap dhcp-server dhcp-relay sshpass podman ethtool libibverbs dpdk stress-ng iotop fio
-  - sudo dnf autoremove
-  - sudo dnf clean all
-  - rpm -q kernel-core | sort | head -1 | xargs sudo rpm -e
-  - sudo systemctl enable wait-for-cloud-init
-  - sudo systemctl enable qemu-guest-agent
-  - sudo sed -i 's/listen       80;/listen       80;\n\tlisten       81;/g' /etc/nginx/nginx.conf
-  - sudo systemctl enable nginx
-  - sudo systemctl enable sshd
+  - dnf autoremove
+  - dnf clean all
+  - rpm -q kernel-core | sort | head -1 | xargs rpm -e
+  - systemctl enable wait-for-cloud-init
+  - systemctl enable qemu-guest-agent
+  - sed -i 's/listen       80;/listen       80;\n\tlisten       81;/g' /etc/nginx/nginx.conf
+  - systemctl enable nginx
+  - systemctl enable sshd
   - grubby --args="net.ifnames=0" --update-kernel=ALL
-  - sudo shutdown
+  - shutdown
