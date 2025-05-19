@@ -1285,10 +1285,10 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
     return {}
 
 
-def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_prefix: str) -> int:
-    return int(
+def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_prefix: str) -> float:
+    return float(
         bitmath.Byte(
-            int(
+            float(
                 get_pod_by_name_prefix(
                     dyn_client=admin_client,
                     pod_prefix=pod_prefix,

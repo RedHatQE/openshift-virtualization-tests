@@ -261,7 +261,6 @@ class TestMemoryDeltaFromRequestedBytes:
                 id="test_metric_cnv_abnormal_rss",
             ),
         ],
-        indirect=False,
     )
     def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
         validate_memory_delta_metrics_value_within_range(
