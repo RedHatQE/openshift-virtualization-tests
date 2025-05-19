@@ -12,6 +12,7 @@ from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from ocp_resources.template import Template
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -21,6 +22,8 @@ import utilities.storage
 import utilities.virt
 from utilities.constants import (
     DEFAULT_RESOURCE_CONDITIONS,
+    EIGHT_CPU_SOCKETS,
+    FOUR_GI_MEMORY,
     SSP_KUBEVIRT_HYPERCONVERGED,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
@@ -299,3 +302,15 @@ def verify_ssp_pod_is_running(
         else:
             LOGGER.error(f"SSP pod was not running for last {TIMEOUT_6MIN} seconds")
             raise
+
+
+def cluster_instance_type_for_hot_plug(guest_sockets: int, cpu_model: str | None) -> VirtualMachineClusterInstancetype:
+    return VirtualMachineClusterInstancetype(
+        name=f"hot-plug-{guest_sockets}-cpu-instance-type",
+        memory={"guest": FOUR_GI_MEMORY},
+        cpu={
+            "guest": guest_sockets,
+            "model": cpu_model,
+            "maxSockets": EIGHT_CPU_SOCKETS,
+        },
+    )

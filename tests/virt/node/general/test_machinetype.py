@@ -109,12 +109,7 @@ def test_pc_q35_vm_machine_type(vm, expected):
     indirect=True,
 )
 @pytest.mark.gating
-def test_migrate_vm(
-    skip_if_no_common_cpu,
-    skip_access_mode_rwo_scope_function,
-    machine_type_from_kubevirt_config,
-    vm,
-):
+def test_migrate_vm(skip_access_mode_rwo_scope_function, machine_type_from_kubevirt_config, vm):
     migrate_vm_and_verify(vm=vm)
 
     validate_machine_type(vm=vm, expected_machine_type=machine_type_from_kubevirt_config)
@@ -156,7 +151,6 @@ def test_machine_type_after_vm_restart(
 )
 @pytest.mark.gating
 def test_machine_type_after_vm_migrate(
-    skip_if_no_common_cpu,
     skip_access_mode_rwo_scope_function,
     machine_type_from_kubevirt_config,
     vm,
@@ -213,9 +207,9 @@ def test_major_release_machine_type(machine_type_from_kubevirt_config):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8561")
-def test_machine_type_as_rhel_9_4(machine_type_from_kubevirt_config):
-    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.4.0"""
-    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_4, (
+def test_machine_type_as_rhel_9_6(machine_type_from_kubevirt_config):
+    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.6.0"""
+    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_6, (
         f"Machine type value is {machine_type_from_kubevirt_config}"
-        f"does not match with {MachineTypesNames.pc_q35_rhel9_4}"
+        f"does not match with {MachineTypesNames.pc_q35_rhel9_6}"
     )

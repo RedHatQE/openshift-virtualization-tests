@@ -50,18 +50,17 @@ class ArchImages:
             RHEL7_9_IMG = "rhel-79.qcow2"
             RHEL8_0_IMG = "rhel-8.qcow2"
             RHEL8_2_IMG = "rhel-82.qcow2"
-            RHEL8_2_EFI_IMG = "rhel-82-efi.qcow2"
             RHEL8_8_IMG = "rhel-88.qcow2"
             RHEL8_9_IMG = "rhel-89.qcow2"
             RHEL8_10_IMG = "rhel-810.qcow2"
             RHEL9_3_IMG = "rhel-93.qcow2"
             RHEL9_4_IMG = "rhel-94.qcow2"
-            RHEL9_5_IMG = "rhel-95.qcow2"
             RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
             RHEL9_6_IMG = "rhel-96.qcow2"
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-            RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
+            # TODO: change back to registry.redhat.io when rhel10 is available
+            RHEL10_REGISTRY_GUEST_IMG = "registry.stage.redhat.io/rhel10/rhel-guest-image"
             DIR = f"{BASE_IMAGES_DIR}/rhel-images"
             DEFAULT_DV_SIZE = "20Gi"
             DEFAULT_MEMORY_SIZE = "1.5Gi"
@@ -82,7 +81,6 @@ class ArchImages:
             WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
             WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
             DIR = f"{BASE_IMAGES_DIR}/windows-images"
-            RAW_DIR = f"{DIR}/raw_images"
             UEFI_WIN_DIR = f"{DIR}/uefi"
             HA_DIR = f"{DIR}/HA-images"
             ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
@@ -251,20 +249,6 @@ CDI_CONFIGMAPS = [
 ]
 # Miscellaneous constants
 UTILITY = "utility"
-OPERATOR_NAME_SUFFIX = "operator"
-PODS_TO_COLLECT_INFO = [
-    HCO_OPERATOR,
-    VIRT_OPERATOR,
-    SSP_OPERATOR,
-    VIRT_LAUNCHER,
-    VIRT_API,
-    VIRT_CONTROLLER,
-    VIRT_HANDLER,
-    VIRT_TEMPLATE_VALIDATOR,
-    "cdi-importer",
-    UTILITY,
-    NMSTATE_HANDLER,
-]
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 
@@ -347,7 +331,6 @@ KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
 KUBEVIRT_KUBEVIRT_HYPERCONVERGED = "kubevirt-kubevirt-hyperconverged"
 CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
 CLUSTER = "cluster"
-TTO_KUBEVIRT_HYPERCONVERGED = "tto-kubevirt-hyperconverged"
 VIRTCTL_CLIDOWNLOADS_KUBEVIRT_HYPERCONVERGED = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 KUBEVIRT_CONSOLE_PLUGIN_SERVICE = "kubevirt-console-plugin-service"
 CREATING_VIRTUAL_MACHINE = "creating-virtual-machine"
@@ -356,7 +339,7 @@ UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
-RHEL10_BETA_GUEST = "rhel10-beta-guest"
+RHEL10_GUEST = "rhel10-guest"
 VIRTIO = "virtio"
 VIRTIO_WIN = "virtio-win"
 NGINX_CONF = "nginx-conf"
@@ -378,7 +361,6 @@ SERVICEMONITOR_STR = "ServiceMonitor"
 PRIORITYCLASS_STR = "PriorityClass"
 KUBEVIRT_STR = "KubeVirt"
 NETWORKADDONSCONFIG_STR = "NetworkAddonsConfig"
-TEKTONTASKS_STR = "TektonTasks"
 CONSOLECLIDOWNLOAD_STR = "ConsoleCLIDownload"
 ROUTE_STR = "Route"
 CONSOLEQUICKSTART_STR = "ConsoleQuickStart"
@@ -417,7 +399,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS: CONFIGMAP_STR},
     {RHEL8_GUEST: IMAGESTREAM_STR},
     {RHEL9_GUEST: IMAGESTREAM_STR},
-    {RHEL10_BETA_GUEST: IMAGESTREAM_STR},
+    {RHEL10_GUEST: IMAGESTREAM_STR},
     {VIRTIO_WIN: CONFIGMAP_STR},
     {VIRTIO_WIN: ROLE_STR},
     {VIRTIO_WIN: ROLEBINDING_STR},
@@ -498,6 +480,7 @@ CNV_OPERATORS = [
     HYPERCONVERGED_CLUSTER_OPERATOR,
     "kubevirt-operator",
     SSP_OPERATOR,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
 ]
 # Node labels
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
@@ -535,11 +518,6 @@ EXPECTED_STATUS_CONDITIONS = {
     NetworkAddonsConfig: DEFAULT_RESOURCE_CONDITIONS,
     AAQ: DEFAULT_RESOURCE_CONDITIONS,
 }
-MACHINE_CONFIG_PODS_TO_COLLECT = [
-    "machine-config-operator",
-    "machine-config-daemon",
-    "machine-config-controller",
-]
 BREW_REGISTERY_SOURCE = "brew.registry.redhat.io"
 ICSP_FILE = "imageContentSourcePolicy.yaml"
 IDMS_FILE = "imageDigestMirrorSet.yaml"
@@ -687,7 +665,6 @@ CNV_TEST_RUN_IN_PROGRESS = "cnv-tests-run-in-progress"
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 FEATURE_GATES = "featureGates"
 COUNT_FIVE = 5
-COUNT_TWELVE = 12
 DATA_IMPORT_CRON_ENABLE = (
     f"metadata->annotations->{DataImportCron.ApiGroup.DATA_IMPORT_CRON_TEMPLATE_KUBEVIRT_IO}/enable"
 )
@@ -820,6 +797,13 @@ HPP_CAPABILITIES = {
     "online_resize": False,
     "wffc": True,
 }
+
+KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
+    "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"
+)
+KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
+KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
+KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
 
 # Common templates matrix constants
 IMAGE_NAME_STR = "image_name"

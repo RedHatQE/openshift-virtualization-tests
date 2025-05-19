@@ -103,8 +103,10 @@ def expected_num_families_in_service(request, dual_stack_cluster):
     return 1
 
 
+@pytest.mark.gating
 class TestServiceConfigurationViaManifest:
     @pytest.mark.polarion("CNV-5789")
+    @pytest.mark.single_nic
     def test_service_with_configured_ip_families(
         self,
         running_vm_for_exposure,
@@ -116,6 +118,7 @@ class TestServiceConfigurationViaManifest:
         ), "Wrong ipFamilies set in service"
 
     @pytest.mark.polarion("CNV-5831")
+    @pytest.mark.single_nic
     def test_service_with_default_ip_family_policy(
         self,
         running_vm_for_exposure,
@@ -151,6 +154,7 @@ class TestServiceConfigurationViaVirtctl:
         ],
         indirect=["virtctl_expose_service", "expected_num_families_in_service"],
     )
+    @pytest.mark.single_nic
     def test_vitrctl_expose_services(
         self,
         expected_num_families_in_service,

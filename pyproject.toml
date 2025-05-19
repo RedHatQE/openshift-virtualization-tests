@@ -18,7 +18,8 @@ warn_redundant_casts = true
 [[tool.mypy.overrides]]
 module = [
   "libs.*",
-  "tests.network.libs.*"
+  "tests.network.libs.*",
+  "tests.network.localnet.*"
 ]
 disallow_untyped_calls = true
 disallow_untyped_defs = true
@@ -75,6 +76,8 @@ dependencies = [
   "urllib3>=2.2.3",
   "xmltodict>=0.14.2",
   "openshift-python-wrapper~=11.0.10",
+  "marshmallow~=3.26.1",
+  "python-simple-logger>=2.0.13",
 ]
 
 [tool.hatch.build.targets.wheel]

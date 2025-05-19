@@ -108,6 +108,7 @@ class PodAntiAffinity:
 class PodAffinityTerm:
     labelSelector: LabelSelector  # noqa: N815
     topologyKey: str  # noqa: N815
+    namespaceSelector: dict[str, Any] | None = None  # noqa: N815
 
 
 @dataclass
@@ -137,3 +138,4 @@ class ContainerDisk:
 @dataclass
 class CloudInitNoCloud:
     networkData: str  # noqa: N815
+    userData: str | None = None  # noqa: N815

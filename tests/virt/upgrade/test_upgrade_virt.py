@@ -101,7 +101,7 @@ class TestUpgradeVirt:
         depends=[VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_before_upgrade(self, skip_if_no_common_cpu, vms_for_upgrade):
+    def test_migration_before_upgrade(self, vms_for_upgrade):
         for vm in vms_for_upgrade:
             if vm_is_migrateable(vm=vm):
                 migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)

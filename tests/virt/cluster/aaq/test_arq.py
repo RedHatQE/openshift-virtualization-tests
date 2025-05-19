@@ -42,6 +42,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.arm64
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "first_pod_for_aaq_test",
@@ -90,6 +91,7 @@ class TestARQCanManagePods:
         second_pod_for_aaq_test_in_gated_state.wait_for_status(status=Pod.Status.RUNNING)
 
 
+@pytest.mark.arm64
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "vm_for_aaq_test",
@@ -109,11 +111,7 @@ class TestARQCanManageVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11282")
-    def test_arq_vm_migration_allowed_when_quota_reached(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_test,
-    ):
+    def test_arq_vm_migration_allowed_when_quota_reached(self, vm_for_aaq_test):
         migrate_vm_and_verify(vm=vm_for_aaq_test)
 
     @pytest.mark.parametrize(
@@ -151,11 +149,7 @@ class TestARQCanManageVMs:
     )
     @pytest.mark.polarion("CNV-11236")
     def test_arq_vm_active_and_migratable_when_lower_quota_applied(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_test,
-        updated_arq_quota,
-        migrated_arq_vm,
+        self, vm_for_aaq_test, updated_arq_quota, migrated_arq_vm
     ):
         restart_vm_wait_for_gated_state(vm=vm_for_aaq_test)
 
@@ -205,6 +199,7 @@ class TestARQSupportCPUHotplug:
         wait_when_pod_in_gated_state(pod=hotplugged_target_pod)
 
 
+@pytest.mark.arm64
 class TestARQSupportMemoryHotplug:
     @pytest.mark.parametrize(
         "hotplugged_resource",

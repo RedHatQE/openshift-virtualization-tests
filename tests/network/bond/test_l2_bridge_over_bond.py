@@ -5,7 +5,6 @@ Connectivity over bond bridge on secondary interface
 from collections import OrderedDict
 
 import pytest
-from ocp_resources.resource import Resource
 
 import utilities.network
 from tests.network.libs import cloudinit as netcloud
@@ -140,10 +139,7 @@ def ovs_linux_bond_bridge_attached_vma(
         cloud_init_data=netcloud.cloudinit(netdata=netdata),
         client=unprivileged_client,
     ) as vm:
-        vm.start(wait=True)
-        vm.vmi.wait_for_condition(
-            condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-        )
+        vm.start()
         yield vm
 
 
@@ -171,16 +167,21 @@ def ovs_linux_bond_bridge_attached_vmb(
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,
     ) as vm:
-        vm.start(wait=True)
-        vm.vmi.wait_for_condition(
-            condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-        )
+        vm.start()
         yield vm
+
+
+@pytest.fixture(scope="class")
+def ovs_linux_bond_bridge_attached_vms(ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb):
+    vms = (ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb)
+    for vm in vms:
+        vm.wait_for_ready_status(status=True)
+        vm.wait_for_agent_connected()
+    yield vms
 
 
 class TestBondConnectivity:
     @pytest.mark.ipv4
-    @pytest.mark.gating
     @pytest.mark.polarion("CNV-3366")
     def test_bond(
         self,
@@ -188,13 +189,13 @@ class TestBondConnectivity:
         ovs_linux_br1bond_nad,
         ovs_linux_bridge_on_bond_worker_1,
         ovs_linux_bridge_on_bond_worker_2,
-        ovs_linux_bond_bridge_attached_vma,
-        ovs_linux_bond_bridge_attached_vmb,
+        ovs_linux_bond_bridge_attached_vms,
     ):
+        src_vm, dst_vm = ovs_linux_bond_bridge_attached_vms
         assert_ping_successful(
-            src_vm=ovs_linux_bond_bridge_attached_vma,
+            src_vm=src_vm,
             dst_ip=get_vmi_ip_v4_by_name(
-                vm=ovs_linux_bond_bridge_attached_vmb,
+                vm=dst_vm,
                 name=ovs_linux_br1bond_nad.name,
             ),
         )

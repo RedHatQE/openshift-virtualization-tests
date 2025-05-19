@@ -262,6 +262,7 @@ class TestKubevirtVmiMigrationMetrics:
             ),
         ],
     )
+    @pytest.mark.jira("CNV-57777", run=False)
     def test_kubevirt_vmi_migration_metrics(
         self,
         prometheus,

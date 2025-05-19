@@ -8,10 +8,13 @@ from utilities.virt import migrate_vm_and_verify
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestAAQDifferentAllocationMethods"
 
-pytestmark = pytest.mark.usefixtures(
-    "enabled_aaq_in_hco_scope_package",
-    "updated_namespace_with_aaq_label",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enabled_aaq_in_hco_scope_package",
+        "updated_namespace_with_aaq_label",
+    ),
+    pytest.mark.arm64,
+]
 
 
 @pytest.mark.usefixtures(
@@ -34,11 +37,7 @@ class TestAAQDifferentAllocationMethods:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
     @pytest.mark.polarion("CNV-11387")
-    def test_aaq_vm_migration_with_different_allocation(
-        self,
-        skip_if_no_common_cpu,
-        vm_for_aaq_allocation_methods_test,
-    ):
+    def test_aaq_vm_migration_with_different_allocation(self, vm_for_aaq_allocation_methods_test):
         migrate_vm_and_verify(vm=vm_for_aaq_allocation_methods_test)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
