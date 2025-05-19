@@ -365,7 +365,7 @@ class TestVmiFileSystemMetricsWindows:
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=windows_vm_for_test,
-            mount_point=list(disk_file_system_info_windows.keys())[0],
+            mount_point=[*disk_file_system_info_windows][0],
             capacity_or_used=capacity_or_used,
         )
 

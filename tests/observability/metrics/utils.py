@@ -20,7 +20,6 @@ from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from ocp_utilities.infra import get_client
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -1208,7 +1207,7 @@ def compare_metric_file_system_values_with_vm_file_system_values(
                         metrics_name=KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT.format(
                             capacity_or_used=capacity_or_used,
                             vm_name=vm_for_test.name,
-                            mountpoint=mount_point,
+                            mountpoint=f"{mount_point}\\" if mount_point.endswith("\\") else mount_point,
                         ),
                     )
                 )
@@ -1381,7 +1380,7 @@ def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachi
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_15SEC,
-        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace, client=get_client()).exists,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace, client=vm_for_test.client).exists,
     )
     try:
         for sample in samples:
