@@ -35,10 +35,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
     "WithHostModelCPU",
     "HypervStrictCheck",
 ]
-EXPECTED_CDI_HARDCODED_FEATUREGATES = [
-    "DataVolumeClaimAdoption",
-    "HonorWaitForFirstConsumer",
-]
+EXPECTED_CDI_HARDCODED_FEATUREGATES = ["DataVolumeClaimAdoption", "HonorWaitForFirstConsumer", "WebhookPvcRendering"]
 HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
