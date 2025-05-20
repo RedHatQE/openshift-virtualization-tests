@@ -1143,14 +1143,11 @@ def windows_vm_for_test(namespace, unprivileged_client):
         yield vm
 
 
-@pytest.fixture(scope="session")
-def memory_metrics_has_bug():
-    return is_jira_open(jira_id="CNV-59679")
-
-
 @pytest.fixture()
-def xfail_if_memory_metric_has_bug(memory_metrics_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
-    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metrics_has_bug:
+def xfail_if_memory_metric_has_bug(cnv_vmi_monitoring_metrics_matrix__function__):
+    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and is_jira_open(
+        jira_id="CNV-59679"
+    ):
         pytest.xfail(
             f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
             "any value for windows vm"
