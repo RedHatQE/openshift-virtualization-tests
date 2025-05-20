@@ -9,7 +9,7 @@ from utilities.constants import (
 )
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.network import cloud_init, network_nad
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 NAD_MAC_SPOOF_NAME = "brspoofupgrade"
 
@@ -72,12 +72,16 @@ def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
 
 @pytest.fixture(scope="session")
 def running_vma_upgrade_mac_spoof(vma_upgrade_mac_spoof):
-    return running_vm(vm=vma_upgrade_mac_spoof)
+    vma_upgrade_mac_spoof.wait_for_ready_status(status=True)
+    vma_upgrade_mac_spoof.wait_for_agent_connected()
+    return vma_upgrade_mac_spoof
 
 
 @pytest.fixture(scope="session")
 def running_vmb_upgrade_mac_spoof(vmb_upgrade_mac_spoof):
-    return running_vm(vm=vmb_upgrade_mac_spoof)
+    vmb_upgrade_mac_spoof.wait_for_ready_status(status=True)
+    vmb_upgrade_mac_spoof.wait_for_agent_connected()
+    return vmb_upgrade_mac_spoof
 
 
 @pytest.fixture(scope="session")
@@ -104,5 +108,6 @@ def running_vm_with_bridge(
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
