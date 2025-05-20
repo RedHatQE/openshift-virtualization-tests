@@ -23,7 +23,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file
-from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm, vm_instance_from_template
 
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
@@ -100,7 +100,11 @@ def target_storage_class(request):
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_with_instance_type(
-    unprivileged_client, namespace, golden_images_fedora_data_source, source_storage_class, cpu_for_migration
+    unprivileged_client,
+    namespace,
+    golden_images_fedora_data_source,
+    source_storage_class,
+    cpu_for_migration,
 ):
     with VirtualMachineForTests(
         name="vm-with-instance-type",
@@ -175,6 +179,23 @@ def vm_for_storage_class_migration_from_template_with_dv(
 
 
 @pytest.fixture(scope="class")
+def vm_for_storage_class_migration_from_template_with_existing_dv(
+    unprivileged_client,
+    namespace,
+    data_volume_scope_class,
+    request,
+):
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        existing_data_volume=data_volume_scope_class,
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def vms_for_storage_class_migration(request):
     # Only fixtures from the "vms_fixtures" test param will be called
     # Only VMs that are listed in "vms_fixtures" param will be created
@@ -184,39 +205,60 @@ def vms_for_storage_class_migration(request):
 
 
 @pytest.fixture(scope="class")
-def running_vms_for_storage_class_migration(vms_for_storage_class_migration):
+def booted_vms_for_storage_class_migration(vms_for_storage_class_migration):
     for vm in vms_for_storage_class_migration:
         running_vm(vm=vm)
     yield vms_for_storage_class_migration
 
 
 @pytest.fixture(scope="class")
-def linux_vms_boot_time_before_storage_migration(running_vms_for_storage_class_migration):
-    yield {vm.name: get_vm_boot_time(vm=vm) for vm in running_vms_for_storage_class_migration}
-
-
-@pytest.fixture(scope="class")
-def written_file_to_vms_before_migration(running_vms_for_storage_class_migration):
-    for vm in running_vms_for_storage_class_migration:
+def written_file_to_vms_before_migration(booted_vms_for_storage_class_migration):
+    for vm in booted_vms_for_storage_class_migration:
         write_file(
             vm=vm,
             filename=FILE_BEFORE_STORAGE_MIGRATION,
             content=CONTENT,
             stop_vm=False,
         )
+    yield booted_vms_for_storage_class_migration
 
 
 @pytest.fixture(scope="class")
-def deleted_completed_virt_launcher_source_pod(running_vms_for_storage_class_migration):
-    for vm in running_vms_for_storage_class_migration:
+def online_vms_for_storage_class_migration(booted_vms_for_storage_class_migration, request):
+    # Stop the VMs that should not be Running, and only yield the VMs that should be Running
+    running_vms = []
+    for vm, is_online in zip(booted_vms_for_storage_class_migration, request.param["online_vm"]):
+        if is_online is True:
+            running_vms.append(vm)
+        else:
+            vm.stop(wait=True)
+    yield running_vms
+
+
+@pytest.fixture(scope="class")
+def linux_vms_boot_time_before_storage_migration(online_vms_for_storage_class_migration):
+    yield {vm.name: get_vm_boot_time(vm=vm) for vm in online_vms_for_storage_class_migration}
+
+
+@pytest.fixture(scope="class")
+def deleted_completed_virt_launcher_source_pod(online_vms_for_storage_class_migration):
+    for vm in online_vms_for_storage_class_migration:
         source_pod = get_source_virt_launcher_pod(vm=vm)
         source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
         source_pod.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
-def deleted_old_dv(running_vms_for_storage_class_migration):
-    for vm in running_vms_for_storage_class_migration:
+def deleted_old_dvs_of_online_vms(online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod):
+    for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
         dv = DataVolume(name=dv_name, namespace=vm.namespace, ensure_exists=True)
-        dv.delete(wait=True)
+        assert dv.delete(wait=True)
+
+
+@pytest.fixture(scope="class")
+def deleted_old_dvs_of_stopped_vms(namespace):
+    for dv in DataVolume.get(namespace=namespace.name):
+        # target DV after migration name is: <source-dv-name>-mig-<generated_suffix>
+        if "-mig-" not in dv.name:
+            assert dv.delete(wait=True)
