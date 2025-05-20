@@ -9,37 +9,27 @@ from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
 
-from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.product_upgrade.utils import (
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
     get_all_cnv_alerts,
-    get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
-    get_shortest_upgrade_path,
-    perform_cnv_upgrade,
     run_ocp_upgrade_command,
-    set_workload_update_methods_hco,
-    update_mcp_paused_spec,
-    verify_upgrade_ocp,
     wait_for_hco_csv_creation,
     wait_for_hco_upgrade,
-    wait_for_odf_update,
     wait_for_pods_replacement_by_type,
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
+from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
 from utilities.infra import (
     generate_openshift_pull_secret_file,
-    get_csv_by_name,
     get_prometheus_k8s_token,
     get_related_images_name_and_version,
-    get_subscription,
 )
 from utilities.operator import (
     apply_icsp_idms,
@@ -48,7 +38,6 @@ from utilities.operator import (
     get_machine_config_pools_conditions,
     update_image_in_catalog_source,
     update_subscription_source,
-    wait_for_mcp_update_completion,
 )
 from utilities.virt import get_oc_image_info
 

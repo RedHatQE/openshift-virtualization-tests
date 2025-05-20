@@ -65,7 +65,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
-from packaging.version import Version, parse
+from packaging.version import parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
@@ -1906,9 +1906,11 @@ def rhel_latest_os_params():
 def hco_target_csv_name(cnv_target_version):
     return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
+
 @pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
+
 
 @pytest.fixture()
 def ssp_resource_scope_function(admin_client, hco_namespace):
