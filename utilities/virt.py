@@ -1702,12 +1702,12 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 
 def migrate_vm_and_verify(
-    vm,
-    timeout=TIMEOUT_12MIN,
-    wait_for_interfaces=True,
-    check_ssh_connectivity=False,
-    wait_for_migration_success=True,
-):
+    vm: VirtualMachine,
+    timeout: int = TIMEOUT_12MIN,
+    wait_for_interfaces: bool = True,
+    check_ssh_connectivity: bool = False,
+    wait_for_migration_success: bool = True,
+) -> VirtualMachineInstanceMigration | None:
     """
     create a migration instance. You may choose to wait for migration
     success or not.
@@ -1746,6 +1746,7 @@ def migrate_vm_and_verify(
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
     )
+    return None
 
 
 def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
