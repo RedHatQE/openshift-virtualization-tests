@@ -45,7 +45,7 @@ class TestMetricsWindows:
         self,
         prometheus,
         windows_vm_for_test,
-        xfail_if_metric_has_bug,
+        xfail_if_memory_metric_has_bug,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
         get_vm_metrics(

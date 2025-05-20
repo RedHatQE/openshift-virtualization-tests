@@ -1149,7 +1149,7 @@ def memory_metrics_has_bug():
 
 
 @pytest.fixture()
-def xfail_if_metric_has_bug(memory_metrics_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
+def xfail_if_memory_metric_has_bug(memory_metrics_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
     if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metrics_has_bug:
         pytest.xfail(
             f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
