@@ -33,7 +33,6 @@ pytestmark = [
     pytest.mark.upgrade,
     pytest.mark.ocp_upgrade,
     pytest.mark.cnv_upgrade,
-    pytest.mark.eus_upgrade,
 ]
 
 

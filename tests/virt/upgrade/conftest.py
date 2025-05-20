@@ -161,7 +161,7 @@ def migratable_vms(admin_client, hco_namespace, upgrade_namespaces):
 
 @pytest.fixture()
 def unupdated_vmi_pods_names(
-    admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, upgrade_namespaces, migratable_vms
+    admin_client, hco_namespace, hco_target_csv_name, upgrade_namespaces, migratable_vms
 ):
     wait_for_automatic_vm_migrations(vm_list=migratable_vms)
 
@@ -174,7 +174,7 @@ def unupdated_vmi_pods_names(
     return validate_vms_pod_updated(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
-        hco_target_csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+        hco_target_csv_name=hco_target_csv_name,
         vm_list=migratable_vms,
     )
 

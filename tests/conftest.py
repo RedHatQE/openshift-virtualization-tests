@@ -223,7 +223,6 @@ ACCESS_TOKEN = {
     "accessTokenInactivityTimeout": None,
 }
 CNV_NOT_INSTALLED = "CNV not yet installed."
-EUS_ERROR_CODE = 98
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
     StorageClassNames.TRIDENT_CSI_FSX,
@@ -1907,29 +1906,9 @@ def rhel_latest_os_params():
 def hco_target_csv_name(cnv_target_version):
     return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
-
-@pytest.fixture(scope="session")
-def eus_hco_target_csv_name(eus_target_cnv_version):
-    return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
-
-
 @pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
-
-
-@pytest.fixture(scope="session")
-def eus_target_cnv_version(pytestconfig, cnv_current_version):
-    cnv_current_version = Version(version=cnv_current_version)
-    minor = cnv_current_version.minor
-    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, exit if non-eus version
-    if minor % 2:
-        exit_pytest_execution(
-            message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
-            return_code=EUS_ERROR_CODE,
-        )
-    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
-
 
 @pytest.fixture()
 def ssp_resource_scope_function(admin_client, hco_namespace):
