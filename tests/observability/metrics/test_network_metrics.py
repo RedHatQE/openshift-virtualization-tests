@@ -59,6 +59,7 @@ class TestVmiNetworkMetricsLinux:
         )
 
 
+@pytest.mark.tier3
 class TestVmiNetworkMetricsWindows:
     @pytest.mark.parametrize(
         "metric_dict",
