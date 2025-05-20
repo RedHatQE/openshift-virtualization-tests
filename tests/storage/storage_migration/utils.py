@@ -16,6 +16,8 @@ def get_source_virt_launcher_pod(vm: VirtualMachine) -> Pod:
 
 
 def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> None:
+    if not vm.ready:
+        vm.start(wait=True)
     with console.Console(vm=vm) as vm_console:
         vm_console.sendline(LS_COMMAND)
         vm_console.expect(file_name, timeout=TIMEOUT_20SEC)
