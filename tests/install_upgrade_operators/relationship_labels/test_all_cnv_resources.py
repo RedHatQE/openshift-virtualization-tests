@@ -28,6 +28,7 @@ WHITELIST_STRING_LIST = [
     "console-proxy-serving-cert",
     "hyperconverged-cluster-operator-lock",
     "kubevirt-ipam-controller-webhook-service",
+    "istio-ca-root-cert",
 ]
 PRINT_COMMAND = '{printf "%s%s",sep,$0;sep=","}'
 AWK_COMMAND = f"awk '{PRINT_COMMAND}'"
