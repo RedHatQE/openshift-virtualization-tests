@@ -1320,6 +1320,17 @@ def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str
 
 
 def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
+    """
+    Get the requested memory for a pod.
+
+    Args:
+        hco_namespace: Hco namespace
+        admin_client: The Kubernetes admin client
+        pod_prefix: Prefix of the pod name to get requested memory from
+
+    Returns:
+        float: Requested memory in bytes
+    """
     return float(
         bitmath.parse_string_unsafe(
             get_pod_by_name_prefix(
