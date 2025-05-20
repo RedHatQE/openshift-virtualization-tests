@@ -2,7 +2,10 @@ import logging
 
 import pytest
 from bitmath import parse_string_unsafe
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.performance_profile import PerformanceProfile
+from ocp_resources.storage_profile import StorageProfile
+from pytest_testconfig import py_config
 
 from utilities.constants import AMD, INTEL
 from utilities.infra import exit_pytest_execution
@@ -78,6 +81,15 @@ def virt_special_infra_sanity(
         ]):
             failed_verifications_list.append("Cluster does not have hugepages-1Gi")
 
+    def _verify_migration_support():
+        storage_class = py_config["default_storage_class"]
+        LOGGER.info(f"Verify default storage class {storage_class} supports RWX mode for migration")
+        access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+        if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
+            failed_verifications_list.append(
+                f"default storage class {storage_class} doesn't support RWX mode for migration"
+            )
+
     skip_virt_sanity_check = "--skip-virt-sanity-check"
     failed_verifications_list = []
 
@@ -97,6 +109,8 @@ def virt_special_infra_sanity(
             _verify_sriov(_sriov_workers=sriov_workers)
         if any(item.get_closest_marker("hugepages") for item in request.session.items):
             _verify_hugepages_1gi(_workers=workers)
+        if any(item.get_closest_marker("migration") for item in request.session.items):
+            _verify_migration_support()
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
 
