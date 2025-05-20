@@ -338,6 +338,7 @@ class TestVmiFileSystemMetricsLinux:
         )
 
 
+@pytest.mark.tier3
 class TestVmiFileSystemMetricsWindows:
     @pytest.mark.parametrize(
         "capacity_or_used",
@@ -551,6 +552,7 @@ class TestVmDiskAllocatedSizeLinux:
         )
 
 
+@pytest.mark.tier3
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
