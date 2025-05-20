@@ -43,3 +43,20 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           NO_SECRETS: "true"
         run: ./build.sh
+      - name: Save container image as tarball
+        env:
+          local_repository: "localhost/fedora"
+          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+        run: |
+          mkdir -p artifacts
+          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
+          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image.tar"
+      - name: Upload container image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-container-image
+          path: artifacts/fedora-image.tar
+          retention-days: 5
+          compression-level: 0
