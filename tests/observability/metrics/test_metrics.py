@@ -39,6 +39,7 @@ class TestMetricsLinux:
         assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm)
 
 
+@pytest.mark.tier3
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(

@@ -1,4 +1,5 @@
-from libs.net.vmspec import add_network_interface, add_volume_disk
+from libs.net.traffic_generator import Client, Server
+from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Metadata, Multus, Network
@@ -9,9 +10,33 @@ from tests.network.libs.label_selector import LabelSelector
 
 NETWORK_NAME = "localnet-network"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
+_IPERF_SERVER_PORT = 5201
 
 
-def localnet_vm(namespace: str, name: str, network: str, cidr: str) -> BaseVirtualMachine:
+def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
+    for vm in vms:
+        vm.start()
+    for vm in vms:
+        vm.wait_for_ready_status(status=True)
+        vm.wait_for_agent_connected()
+    return vms
+
+
+def create_traffic_server(vm: BaseVirtualMachine) -> Server:
+    return Server(vm=vm, port=_IPERF_SERVER_PORT)
+
+
+def create_traffic_client(server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, network_name: str) -> Client:
+    return Client(
+        vm=client_vm,
+        server_ip=lookup_iface_status(vm=server_vm, iface_name=network_name)[IP_ADDRESS],
+        server_port=_IPERF_SERVER_PORT,
+    )
+
+
+def localnet_vm(
+    namespace: str, name: str, physical_network_name: str, spec_logical_network: str, cidr: str
+) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
 
@@ -24,8 +49,9 @@ def localnet_vm(namespace: str, name: str, network: str, cidr: str) -> BaseVirtu
     Args:
         namespace (str): The namespace where the VM should be created.
         name (str): The name of the VM.
-        network (str): The name of the Multus network to attach.
+        physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
+        spec_logical_network (str): The name of the localnet network to attach.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -38,8 +64,8 @@ def localnet_vm(namespace: str, name: str, network: str, cidr: str) -> BaseVirtu
 
     vmi_spec = add_network_interface(
         vmi_spec=vmi_spec,
-        network=Network(name=NETWORK_NAME, multus=Multus(networkName=network)),
-        interface=Interface(name=NETWORK_NAME, bridge={}),
+        network=Network(name=spec_logical_network, multus=Multus(networkName=physical_network_name)),
+        interface=Interface(name=spec_logical_network, bridge={}),
     )
 
     netdata = cloudinit.NetworkData(ethernets={"eth0": cloudinit.EthernetDevice(addresses=[cidr])})
