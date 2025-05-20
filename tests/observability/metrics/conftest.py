@@ -73,6 +73,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -851,19 +852,29 @@ def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_a
 
 @pytest.fixture()
 def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    return int(
-        bitmath.parse_string_unsafe(
-            re.search(
-                r"\b(\d+Mi)\b",
-                run_command(
-                    command=shlex.split(
-                        f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
-                    ),
-                    check=False,
-                )[1],
-            ).group(1)
-        ).bytes
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(
+            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
+        ),
+        check=False,
     )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                return int(
+                    bitmath.parse_string_unsafe(
+                        re.search(
+                            r"\b(\d+Mi)\b",
+                            out,
+                        ).group(1)
+                    ).bytes
+                )
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
+        raise
 
 
 @pytest.fixture()
