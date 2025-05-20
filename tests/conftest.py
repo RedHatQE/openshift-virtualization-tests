@@ -2824,9 +2824,9 @@ def cluster_modern_cpu_model_scope_class(
 
 
 @pytest.fixture(scope="module")
-def machine_type_from_kubevirt_config(kubevirt_config_scope_module):
+def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"]["amd64"]["machineType"]
+    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
 
 
 @pytest.fixture(scope="module")
