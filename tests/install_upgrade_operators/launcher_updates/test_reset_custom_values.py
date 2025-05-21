@@ -11,7 +11,7 @@ from tests.install_upgrade_operators.utils import wait_for_spec_change
 from utilities.hco import get_hco_spec
 from utilities.virt import get_hyperconverged_kubevirt
 
-pytestmark = pytest.mark.sno
+pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 
 
 class TestLauncherUpdateResetFields:

@@ -39,7 +39,7 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
 )
 from utilities.hco import wait_for_hco_conditions
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 LOGGER = logging.getLogger(__name__)
 

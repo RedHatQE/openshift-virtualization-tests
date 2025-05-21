@@ -2,7 +2,7 @@ from base64 import b64decode
 
 import pytest
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 # Check CSV properties like keywords, title, provided by, links etc.
 

@@ -4,7 +4,7 @@ from ocp_resources.pod import Pod
 
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 @pytest.fixture()
