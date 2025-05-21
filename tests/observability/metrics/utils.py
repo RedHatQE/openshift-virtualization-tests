@@ -1301,8 +1301,7 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
 
 def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
     """
-    This function returns the virt-api pod with the highest memory usage,
-    tuple with the name and the value of the memory.
+    This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
     """
     virt_api_with_highest_memory_usage = (
         run_command(
@@ -1370,8 +1369,8 @@ def expected_kubevirt_memory_delta_from_requested_bytes(
             hco_namespace=hco_namespace,
             pod_prefix=pod_name,
         )
-        return float(virt_api_rss_memory - virt_api_requested_memory)
-    return float(pod_memory - virt_api_requested_memory)
+        return int(virt_api_rss_memory - virt_api_requested_memory)
+    return int(pod_memory - virt_api_requested_memory)
 
 
 def validate_memory_delta_metrics_value_within_range(
