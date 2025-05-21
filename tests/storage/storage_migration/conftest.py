@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -54,8 +56,7 @@ def storage_mig_plan(namespace, mig_cluster, target_storage_class):
             condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
         )
         # Edit the target PVCs' storageClass, accessModes, volumeMode
-        mig_plan_dict = mig_plan.instance.to_dict()
-        mig_plan_persistent_volumes_dict = mig_plan_dict["spec"]["persistentVolumes"].copy()
+        mig_plan_persistent_volumes_dict = deepcopy(mig_plan.instance.to_dict()["spec"]["persistentVolumes"])
         for pvc_dict in mig_plan_persistent_volumes_dict:
             pvc_dict["selection"]["storageClass"] = target_storage_class
             pvc_dict["pvc"]["accessModes"][0] = "auto"
