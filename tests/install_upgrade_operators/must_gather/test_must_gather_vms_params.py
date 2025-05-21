@@ -8,7 +8,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     validate_must_gather_vm_file_collection,
 )
 
-pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection]
+pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64]
 
 
 @pytest.mark.usefixtures("must_gather_vms_from_alternate_namespace", "nftables_ruleset_from_utility_pods")

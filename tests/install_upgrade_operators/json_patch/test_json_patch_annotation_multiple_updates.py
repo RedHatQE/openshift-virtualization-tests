@@ -29,6 +29,8 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
+pytestmark = [pytest.mark.arm64]
+
 COMPONENT_DICT = {
     COMPONENT_CDI: {"op": "remove", "value": None, "path": PATH_CDI},
     COMPONENT_KUBEVIRT: {

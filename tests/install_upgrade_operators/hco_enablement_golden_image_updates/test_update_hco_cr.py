@@ -15,7 +15,7 @@ from utilities.hco import (
     wait_for_auto_boot_config_stabilization,
 )
 
-pytestmark = pytest.mark.gating
+pytestmark = [pytest.mark.gating, pytest.mark.arm64]
 
 
 def validate_custom_template_added(hyperconverged_status_templates_scope_function, ssp_spec_templates_scope_function):

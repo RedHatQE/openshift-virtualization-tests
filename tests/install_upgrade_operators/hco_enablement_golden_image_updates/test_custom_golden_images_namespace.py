@@ -31,6 +31,8 @@ from utilities.storage import get_data_sources_managed_by_data_import_cron
 LOGGER = logging.getLogger(__name__)
 COMMON_BOOT_IMAGE_NAMESPACE_STR = "commonBootImageNamespace"
 
+pytestmark = [pytest.mark.arm64]
+
 
 def get_templates_resources_names_dict(templates):
     resource_dict = {}
