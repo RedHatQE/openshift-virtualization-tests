@@ -156,7 +156,7 @@ class TestCommonTemplatesWindows:
             cm_values=smbios_from_kubevirt_config,
         )
 
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
         depends=[f"{TESTS_CLASS_NAME}::start_vm"],

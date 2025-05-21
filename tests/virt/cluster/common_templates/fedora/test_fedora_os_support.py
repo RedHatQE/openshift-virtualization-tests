@@ -225,7 +225,7 @@ class TestCommonTemplatesFedora:
             vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class,
         )
 
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.polarion("CNV-5842")

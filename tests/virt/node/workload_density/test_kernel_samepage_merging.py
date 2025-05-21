@@ -191,7 +191,7 @@ class TestKernelSamepageMerging:
             initial_value=pages_to_scan_initial_value,
         )
 
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-10523")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
     def test_migrate_vm_when_ksm_active(self, ksm_label_added_to_worker2, vms_for_ksm_test):

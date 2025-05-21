@@ -311,6 +311,6 @@ class TestRunStrategyAdvancedActions:
         ],
         indirect=True,
     )
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     def test_run_strategy_migrate_vm(self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running):
         migrate_validate_run_strategy_vm(vm=lifecycle_vm, run_strategy=request_updated_vm_run_strategy)

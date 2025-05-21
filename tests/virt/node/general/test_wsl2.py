@@ -119,7 +119,7 @@ class TestWSL2:
         verify_wsl2_guest_works(vm=windows_wsl2_vm)
         assert_windows_host_resource_usage(vm=windows_wsl2_vm)
 
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::wsl2_guest"])
     @pytest.mark.polarion("CNV-5462")
     def test_migration_with_wsl2_guest(self, migrated_wsl2_vm):

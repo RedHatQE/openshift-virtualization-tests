@@ -17,7 +17,7 @@ from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.migration
+pytestmark = pytest.mark.rwx_default_storage
 
 
 @pytest.fixture()

@@ -273,7 +273,7 @@ class TestSysprep:
     def test_admin_user_locale_computer_name_after_boot(self, sysprep_vm, sysprep_vm_hostname):
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)
 
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-6761")
     def test_migrate_vm_with_sysprep_cm(self, sysprep_vm, migrated_sysprep_vm, sysprep_vm_hostname):
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)

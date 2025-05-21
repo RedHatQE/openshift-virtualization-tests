@@ -23,7 +23,7 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.arm64, pytest.mark.migration]
+pytestmark = [pytest.mark.arm64, pytest.mark.rwx_default_storage]
 
 
 def wait_for_vm_uid_mismatch(vmi, vmi_old_uid):

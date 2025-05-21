@@ -88,7 +88,7 @@ def get_disk_usage(ssh_exec):
     ],
     indirect=True,
 )
-@pytest.mark.migration
+@pytest.mark.rwx_default_storage
 def test_fedora_vm_load_migration(vm_with_fio, running_fio_in_vm):
     LOGGER.info("Test migrate VM with disk load")
     migrate_vm_and_verify(vm=vm_with_fio, check_ssh_connectivity=True)

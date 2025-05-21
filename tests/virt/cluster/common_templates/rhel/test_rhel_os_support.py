@@ -225,7 +225,7 @@ class TestCommonTemplatesRhel:
 
     @pytest.mark.arm64
     @pytest.mark.smoke
-    @pytest.mark.migration
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-3038")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",

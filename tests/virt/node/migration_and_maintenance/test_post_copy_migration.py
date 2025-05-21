@@ -27,7 +27,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.migration, pytest.mark.usefixtures("created_post_copy_migration_policy")]
+pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.usefixtures("created_post_copy_migration_policy")]
 
 
 LOGGER = logging.getLogger(__name__)

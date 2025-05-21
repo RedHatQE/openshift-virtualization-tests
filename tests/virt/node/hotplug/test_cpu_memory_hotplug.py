@@ -27,7 +27,7 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
 )
 
-pytestmark = pytest.mark.migration
+pytestmark = pytest.mark.rwx_default_storage
 
 
 LOGGER = logging.getLogger(__name__)

@@ -133,7 +133,7 @@ class TestRHELTabletDevice:
                     "vm_dict": set_vm_tablet_device_dict({"name": "my_tablet", "type": "tablet", "bus": "usb"}),
                     "set_vm_common_cpu": True,
                 },
-                marks=[pytest.mark.polarion("CNV-5833"), pytest.mark.migration],
+                marks=[pytest.mark.polarion("CNV-5833"), pytest.mark.rwx_default_storage],
             ),
         ],
         indirect=True,
