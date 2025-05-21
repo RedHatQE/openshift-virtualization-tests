@@ -73,7 +73,6 @@ class TestVmiNetworkMetricsWindows:
                 marks=(pytest.mark.polarion("CNV-11844")),
             ),
         ],
-        indirect=False,
     )
     def test_kubevirt_vmi_network_receive_and_transmit_packets_total_windows_vm(
         self,
