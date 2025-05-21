@@ -65,6 +65,7 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    IPV4_STR,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     PVC,
@@ -88,6 +89,7 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
+from utilities.network import get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     create_dv,
@@ -649,8 +651,10 @@ def generated_network_traffic(vm_for_test):
 
 @pytest.fixture()
 def generated_network_traffic_windows_vm(windows_vm_for_test):
-    windows_vm_for_test.ssh_exec.run_command(
-        command=shlex.split(f"ping {windows_vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}")
+    ping(
+        src_vm=windows_vm_for_test,
+        dst_ip=get_ip_from_vm_or_virt_handler_pod(family=IPV4_STR, vm=windows_vm_for_test),
+        windows=True,
     )
 
 
