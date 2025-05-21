@@ -7,7 +7,7 @@ Tests to check, the default Security Context Constraint
 import pytest
 from ocp_resources.security_context_constraints import SecurityContextConstraints
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm64]
 
 
 @pytest.fixture(scope="module")

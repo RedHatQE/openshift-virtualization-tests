@@ -22,7 +22,7 @@ from tests.install_upgrade_operators.node_component.utils import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm64]
 
 
 LOGGER = logging.getLogger(__name__)

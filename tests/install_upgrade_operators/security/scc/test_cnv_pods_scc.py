@@ -16,7 +16,7 @@ from utilities.constants import (
     LINUX_BRIDGE,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 
 
 LOGGER = logging.getLogger(__name__)

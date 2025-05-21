@@ -42,7 +42,7 @@ class TestDisconnectedVirtctlDownload:
             ),
             pytest.param(
                 {"os": "win", "machine_type": ARM_64},
-                marks=(pytest.mark.polarion("CNV-10098"),),
+                marks=(pytest.mark.polarion("CNV-10098"), pytest.mark.arm64),
                 id="test_download_virtcli_binary_win_arm64",
             ),
             pytest.param(
@@ -52,7 +52,7 @@ class TestDisconnectedVirtctlDownload:
             ),
             pytest.param(
                 {"os": "mac", "machine_type": ARM_64},
-                marks=(pytest.mark.polarion("CNV-10099"),),
+                marks=(pytest.mark.polarion("CNV-10099"), pytest.mark.arm64),
                 id="test_download_virtcli_binary_mac_arm64",
             ),
         ],
@@ -78,7 +78,7 @@ class TestDisconnectedVirtctlDownloadAndExecute:
             pytest.param(
                 {"os": "linux", "machine_type": ARM_64},
                 ARM_64,
-                marks=(pytest.mark.polarion("CNV-10097"),),
+                marks=(pytest.mark.polarion("CNV-10097"), pytest.mark.arm64),
                 id="test_download_virtcli_binary_linux_arm64",
             ),
         ],
@@ -91,6 +91,7 @@ class TestDisconnectedVirtctlDownloadAndExecute:
             validate_virtctl_versions(virtctl_bin=downloaded_and_extracted_virtctl_binary_for_os)
 
 
+@pytest.mark.arm64
 class TestDisconnectedVirtctlAllLinksInternal:
     @pytest.mark.polarion("CNV-6915")
     def test_all_links_internal(self, all_virtctl_urls, non_internal_fqdns):
