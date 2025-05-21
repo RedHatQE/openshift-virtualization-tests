@@ -55,7 +55,7 @@ from utilities.hco import get_hco_spec
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
-pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade]
+pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.arm64]
 LOGGER = logging.getLogger(__name__)
 
 

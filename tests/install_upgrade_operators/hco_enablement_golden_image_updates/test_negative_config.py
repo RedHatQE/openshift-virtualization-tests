@@ -21,6 +21,8 @@ from utilities.constants import (
 )
 from utilities.hco import update_hco_templates_spec, wait_for_hco_conditions
 
+pytestmark = [pytest.mark.arm64]
+
 INVALID_ANNOTATION = (
     r"admission webhook.* denied the request: the dataimportcrontemplate.kubevirt.io/enable "
     r"annotation of a dataImportCronTemplate must be either.*true.*false.*"
