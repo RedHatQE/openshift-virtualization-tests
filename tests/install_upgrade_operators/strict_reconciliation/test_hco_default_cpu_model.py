@@ -10,7 +10,7 @@ KUBEVIRT_CPU_MODEL_KEY = "cpuModel"
 HOST_PASSTHROUGH = "host-passthrough"
 
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 def assert_updated_hco_default_cpu_model(hco_resource, expected_cpu_model):
