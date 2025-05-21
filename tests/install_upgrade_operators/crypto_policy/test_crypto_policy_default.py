@@ -108,7 +108,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
     expected_result = CRYPTO_POLICY_EXPECTED_DICT[TLS_INTERMEDIATE_POLICY].get(resource_type)
     assert resource_crypto_policy_settings == expected_result, (
-        f"For {resource_type}, actual crypto setting found is={resource_crypto_policy_settings},"
+        f"For {resource_type.kind}, actual crypto setting found is={resource_crypto_policy_settings},"
         f"expected crypto policy settings={expected_result},"
     )
 
