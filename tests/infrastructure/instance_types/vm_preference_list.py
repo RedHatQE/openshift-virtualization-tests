@@ -22,6 +22,7 @@ VM_PREFERENCES_LIST = {
         "rhel.9.arm64",
         "rhel.9.s390x",
         "rhel.10.arm64",
+        "rhel.10.s390x",
         "rhel.7.desktop",
         "rhel.8.desktop",
         "rhel.9.desktop",
