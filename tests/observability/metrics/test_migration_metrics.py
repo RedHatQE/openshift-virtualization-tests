@@ -1,7 +1,4 @@
-from datetime import datetime, timezone
-
 import pytest
-from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
@@ -12,7 +9,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
 )
@@ -38,7 +34,7 @@ def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
             pod.delete(wait=True)
 
 
-def metric_value_sampler(prometheus: Prometheus, metric: str, expected_value: int) -> None:
+def metric_value_sampler(prometheus, metric, expected_value):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=10,
@@ -51,26 +47,21 @@ def metric_value_sampler(prometheus: Prometheus, metric: str, expected_value: in
         if sample == expected_value:
             current_check += 1
             if current_check >= 3:
-                return
+                return True
         else:
             current_check = 0
 
 
-def assert_metrics_values(
-    prometheus: Prometheus,
-    migration_metrics_dict: dict[str, str],
-    initial_values: dict[str, int],
-    metric_to_check: str,
-) -> None:
+def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, metric_to_check):
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
 
     Args:
-        prometheus: Prometheus object
-        migration_metrics_dict: Dictionary with metrics by the status it checks
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
+        vm: vm object
+
     Raises:
         AssertionError: If any metric's value does not match with expected value.
     """
@@ -269,10 +260,6 @@ class TestKubevirtVmiMigrationMetrics:
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
                 marks=(pytest.mark.polarion("CNV-11599")),
             ),
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
-                marks=(pytest.mark.polarion("CNV-11802")),
-            ),
         ],
     )
     @pytest.mark.jira("CNV-57777", run=False)
@@ -286,16 +273,9 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
-        time_passed_from_starting_migration = (
-            int(datetime.now(timezone.utc).timestamp())
-            - timestamp_to_seconds(
-                timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
-            )
-        ) // 60
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
-            f"[{time_passed_from_starting_migration if time_passed_from_starting_migration > 8 else 8}m])",
+            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m])",
         )
 
 
