@@ -8,7 +8,7 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
     LIVE_MIGRATION_CONFIG_KEY,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 EXPECTED_VALUE = True
 SPEC_STR = "spec"
 PATCH_STR = "patch"
