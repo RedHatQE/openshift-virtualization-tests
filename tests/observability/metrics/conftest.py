@@ -103,6 +103,7 @@ from utilities.virt import (
     fedora_vm_body,
     running_vm,
     target_vm_from_cloning_job,
+    verify_wsl2_guest_works,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -659,7 +660,7 @@ def generated_network_traffic_windows_vm(windows_vm_for_test):
 
 
 @pytest.fixture(scope="class")
-def vm_for_test_interface_name(vm_for_test):
+def linux_vm_for_test_interface_name(vm_for_test):
     return get_interface_name_from_vm(vm=vm_for_test)
 
 
@@ -1132,4 +1133,5 @@ def windows_vm_for_test(namespace, unprivileged_client):
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
+        verify_wsl2_guest_works(vm=vm)
         yield vm

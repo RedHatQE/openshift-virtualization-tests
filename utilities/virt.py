@@ -2543,7 +2543,15 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
     return False
 
 
-def verify_wsl2_guest_works(vm):
+def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
+    """
+    Verifies that WSL2 is functioning on windows vm.
+    Args:
+        vm: An instance of `VirtualMachineForTests`
+    Raises:
+        TimeoutExpiredError: If WSL2 fails to return the expected output within
+            the specified timeout period.
+    """
     echo_string = "TEST"
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
