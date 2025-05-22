@@ -107,7 +107,7 @@ def virt_special_infra_sanity(
             _verify_sriov(_sriov_workers=sriov_workers)
         if any(item.get_closest_marker("hugepages") for item in request.session.items):
             _verify_hugepages_1gi(_workers=workers)
-        if any(item.get_closest_marker("migration") for item in request.session.items):
+        if any(item.get_closest_marker("rwx_default_storage") for item in request.session.items):
             _verify_rwx_default_storage()
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
