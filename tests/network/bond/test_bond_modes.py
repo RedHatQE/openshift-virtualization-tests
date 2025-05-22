@@ -7,7 +7,6 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 import pytest
-from ocp_resources.resource import Resource
 
 from utilities.constants import TIMEOUT_9MIN
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict, get_node_selector_name
@@ -203,9 +202,7 @@ def test_bond_created(workers_utility_pods, matrix_bond_modes_bond):
 @pytest.mark.polarion("CNV-4383")
 def test_vm_started(bond_modes_vm):
     bond_modes_vm.start(wait=True)
-    bond_modes_vm.vmi.wait_for_condition(
-        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-    )
+    bond_modes_vm.wait_for_agent_connected()
 
 
 @pytest.mark.polarion("CNV-6583")
@@ -231,9 +228,7 @@ def test_vm_bond_with_fail_over_mac_started(
     vm_with_fail_over_mac_bond,
 ):
     vm_with_fail_over_mac_bond.start(wait=True)
-    vm_with_fail_over_mac_bond.vmi.wait_for_condition(
-        condition=Resource.Condition.Type.AGENT_CONNECTED, status=Resource.Condition.Status.TRUE
-    )
+    vm_with_fail_over_mac_bond.wait_for_agent_connected()
 
 
 @pytest.mark.polarion("CNV-7263")
