@@ -33,16 +33,17 @@ def golden_images_rhel9_data_source(golden_images_namespace):
 
 
 @pytest.fixture(scope="module")
-def mig_cluster():
-    return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, ensure_exists=True)
+def mig_cluster(admin_client):
+    return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=admin_client, ensure_exists=True)
 
 
 @pytest.fixture(scope="class")
-def storage_mig_plan(namespace, mig_cluster, target_storage_class):
+def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class):
     mig_cluster_ref_dict = {"name": mig_cluster.name, "namespace": mig_cluster.namespace}
     with MigPlan(
         name="storage-mig-plan",
         namespace=mig_cluster.namespace,
+        client=admin_client,
         src_mig_cluster_ref=mig_cluster_ref_dict,
         dest_mig_cluster_ref=mig_cluster_ref_dict,
         live_migrate=True,
@@ -63,10 +64,11 @@ def storage_mig_plan(namespace, mig_cluster, target_storage_class):
 
 
 @pytest.fixture(scope="class")
-def storage_mig_migration(storage_mig_plan):
+def storage_mig_migration(admin_client, storage_mig_plan):
     with MigMigration(
         name="mig-migration-abc",
         namespace=storage_mig_plan.namespace,
+        client=admin_client,
         mig_plan_ref={"name": storage_mig_plan.name, "namespace": storage_mig_plan.namespace},
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
