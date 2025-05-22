@@ -29,7 +29,9 @@ OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 
 @pytest.fixture(scope="module")
 def golden_images_rhel9_data_source(golden_images_namespace):
-    return DataSource(namespace=golden_images_namespace.name, name="rhel9", ensure_exists=True)
+    return DataSource(
+        namespace=golden_images_namespace.name, name="rhel9", client=golden_images_namespace.client, ensure_exists=True
+    )
 
 
 @pytest.fixture(scope="module")
