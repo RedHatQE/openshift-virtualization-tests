@@ -1,3 +1,4 @@
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 
@@ -5,14 +6,11 @@ from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
 from utilities.virt import get_vm_boot_time
 
-FILE_BEFORE_STORAGE_MIGRATION = "file-before-storage-migration"
-CONTENT = "some-content"
 
-
-def get_source_virt_launcher_pod(vm: VirtualMachine) -> Pod:
+def get_source_virt_launcher_pod(client: DynamicClient, vm: VirtualMachine) -> Pod:
     source_pod_name = vm.vmi.instance.to_dict().get("status", {}).get("migrationState", {}).get("sourcePod")
-    assert source_pod_name, "Source pod name is not found in VMI status.migrationState.sourcePod"
-    return Pod(name=source_pod_name, namespace=vm.namespace, ensure_exists=True)
+    assert source_pod_name, f"Source pod name is not found in VMI status.migrationState.sourcePod for VM '{vm.name}'"
+    return Pod(client=client, name=source_pod_name, namespace=vm.namespace, ensure_exists=True)
 
 
 def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> None:
