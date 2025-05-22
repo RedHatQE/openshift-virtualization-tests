@@ -47,7 +47,6 @@ from utilities.constants import (
     WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.virt import verify_wsl2_guest_works
 
 LOGGER = logging.getLogger(__name__)
 IFACE_UP_STATE = NodeNetworkConfigurationPolicy.Interface.State.UP
@@ -735,16 +734,14 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
         count: Amount of packets.
         quiet_output: Quiet output, Nothing is displayed except the summary lines at startup time and when finished.
         interface: interface (ping -I option)
+        windows: indicate if the ping is sent via Windows vm - wsl2 is required.
 
     Returns:
         float or None: The packet loss amount in a number (Range - 0 to 100).
     """
-    if windows:
-        verify_wsl2_guest_works(vm=src_vm)
     ping_ipv6 = "-6" if get_valid_ip_address(dst_ip=dst_ip, family=IPV6_STR) else ""
     ping_cmd = (
-        f"{'wsl' if windows else ''} ping {'-q' if quiet_output else ''} "
-        f"{ping_ipv6} -c {count if count else '3'} {dst_ip}"
+        f"ping {'-q' if quiet_output else ''} {ping_ipv6} {'-n' if windows else '-c'} {count if count else '3'} {dst_ip}"
     )
     if packet_size:
         ping_cmd += f" -s {packet_size} -M do"
