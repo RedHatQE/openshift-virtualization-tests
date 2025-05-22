@@ -2,12 +2,8 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from tests.storage.storage_migration.utils import (
-    CONTENT,
-    FILE_BEFORE_STORAGE_MIGRATION,
-    check_file_in_vm,
-    verify_linux_vms_boot_time_after_storage_migration,
-)
+from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
+from tests.storage.storage_migration.utils import check_file_in_vm, verify_linux_vms_boot_time_after_storage_migration
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
