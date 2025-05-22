@@ -1,12 +1,10 @@
 import pytest
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
 from tests.infrastructure.golden_images.constants import PVC_NOT_FOUND_ERROR
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import HOSTPATH_CSI_BASIC, StorageClassNames
 from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
 
 pytestmark = pytest.mark.post_upgrade
@@ -141,38 +139,6 @@ def test_vm_from_golden_image_cluster_default_storage_class(
 )
 def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_existing_dv):
     vm_from_template_with_existing_dv.ssh_exec.executor().is_connective()
-
-
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, vm_from_golden_image",
-    [
-        pytest.param(
-            {
-                "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
-                "storage_class": HOSTPATH_CSI_BASIC,
-                "dv_size": FEDORA_LATEST["dv_size"],
-            },
-            {
-                "updated_storage_class_params": {
-                    "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
-                    "access_mode": DataVolume.AccessMode.RWX,
-                    "volume_mode": DataVolume.VolumeMode.BLOCK,
-                },
-            },
-            marks=pytest.mark.polarion("CNV-5529"),
-        ),
-    ],
-    indirect=True,
-)
-def test_vm_dv_with_different_sc(
-    fail_if_no_hostpath_csi_basic_sc,
-    fail_if_no_ceph_rbd_virtualization_sc,
-    golden_image_data_volume_scope_function,
-    vm_from_golden_image,
-):
-    # VM cloned PVC storage class is different from the original golden image storage class
-    vm_from_golden_image.ssh_exec.executor().is_connective()
 
 
 @pytest.mark.parametrize(

@@ -5,19 +5,16 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
-from pytest_testconfig import py_config
 
 from tests.infrastructure.instance_types.constants import ALL_OPTIONS_VM_PREFERENCE_SPEC
 from utilities.constants import OS_FLAVOR_FEDORA, Images
 from utilities.storage import data_volume_template_with_source_ref_dict
-from utilities.virt import VirtualMachineForTests
-
-PREFERENCE_STORAGE_CLASS = py_config["default_storage_class"]
+from utilities.virt import VirtualMachineForTests, running_vm
 
 
 # in PVC api accessModes are needed and the resources request should be in the pvc field
-def pvc_api_adjustments(dv_template):
-    storage_profile_info = StorageProfile(name=PREFERENCE_STORAGE_CLASS).instance.status["claimPropertySets"][0]
+def pvc_api_adjustments(dv_template, storage_class_name):
+    storage_profile_info = StorageProfile(name=storage_class_name).instance.status["claimPropertySets"][0]
     dv_template["spec"]["pvc"] = {
         "volumeMode": storage_profile_info["volumeMode"],
         "accessModes": storage_profile_info["accessModes"],
@@ -27,11 +24,20 @@ def pvc_api_adjustments(dv_template):
     return dv_template
 
 
+@pytest.fixture(scope="session")
+def fail_if_no_ceph_rbd_virtualization_sc(ocs_storage_class):
+    """
+    Fail the test if no NFS storage class is available
+    """
+    if not ocs_storage_class:
+        pytest.fail(f"Test failed: {ocs_storage_class.name} storage class is not deployed.")
+
+
 @pytest.fixture(scope="class")
-def vm_storage_class_preference():
+def vm_storage_class_preference(ocs_storage_class):
     with VirtualMachineClusterPreference(
         name="storage-class-vm-preference",
-        volumes={"preferredStorageClassName": PREFERENCE_STORAGE_CLASS},
+        volumes={"preferredStorageClassName": ocs_storage_class.name},
     ) as vm_cluster_preference:
         yield vm_cluster_preference
 
@@ -63,11 +69,11 @@ def rhel_vm_with_storage_preference(
 
 
 @pytest.fixture()
-def fedora_data_volume_template(dv_template_api, golden_images_fedora_data_source):
+def fedora_data_volume_template(ocs_storage_class, dv_template_api, golden_images_fedora_data_source):
     # When using data volume template different fields are required depending on pvc/storage API used
     fedora_dv_template = data_volume_template_with_source_ref_dict(data_source=golden_images_fedora_data_source)
     if dv_template_api == "pvc":
-        return pvc_api_adjustments(dv_template=fedora_dv_template)
+        return pvc_api_adjustments(dv_template=fedora_dv_template, storage_class_name=ocs_storage_class.name)
     else:
         del fedora_dv_template["spec"]["storage"]["storageClassName"]
         return fedora_dv_template
@@ -145,10 +151,12 @@ class TestPrefStorageClass:
     )
     def test_vm_pref_storage_class(
         self,
+        ocs_storage_class,
         dv_template_api,
         rhel_vm_with_storage_preference,
     ):
         vm_sc = rhel_vm_with_storage_preference.instance.spec.dataVolumeTemplates[0].spec[dv_template_api][
             "storageClassName"
         ]
-        assert vm_sc == PREFERENCE_STORAGE_CLASS, f"VM storage class is: {vm_sc}, expected: {PREFERENCE_STORAGE_CLASS}"
+        assert vm_sc == ocs_storage_class.name, f"VM storage class is: {vm_sc}, expected: {ocs_storage_class.name}"
+        running_vm(vm=rhel_vm_with_storage_preference)
