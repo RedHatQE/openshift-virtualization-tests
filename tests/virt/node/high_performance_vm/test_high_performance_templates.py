@@ -78,6 +78,7 @@ def increased_high_performance_vm_core_count_by_one(high_performance_vm):
         yield
 
 
+@pytest.mark.arm64
 @pytest.mark.gating()
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_class, high_performance_vm",

@@ -69,6 +69,7 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
     migrate_vm_and_verify(vm=vm)
 
 
+@pytest.mark.arm64
 @pytest.mark.parametrize(
     "vm",
     [
@@ -108,6 +109,7 @@ def test_pc_q35_vm_machine_type(vm, expected):
     ],
     indirect=True,
 )
+@pytest.mark.arm64
 @pytest.mark.gating
 def test_migrate_vm(skip_access_mode_rwo_scope_function, machine_type_from_kubevirt_config, vm):
     migrate_vm_and_verify(vm=vm)
@@ -196,6 +198,7 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
             pytest.fail("VM created with invalid machine type.")
 
 
+@pytest.mark.arm64
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5658")
 def test_major_release_machine_type(machine_type_from_kubevirt_config):
