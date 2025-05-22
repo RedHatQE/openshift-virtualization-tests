@@ -10,11 +10,8 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 
-from tests.storage.storage_migration.utils import (
-    CONTENT,
-    FILE_BEFORE_STORAGE_MIGRATION,
-    get_source_virt_launcher_pod,
-)
+from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
+from tests.storage.storage_migration.utils import get_source_virt_launcher_pod
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
@@ -61,8 +58,7 @@ def storage_mig_plan(namespace, mig_cluster, target_storage_class):
             pvc_dict["selection"]["storageClass"] = target_storage_class
             pvc_dict["pvc"]["accessModes"][0] = "auto"
             pvc_dict["pvc"]["volumeMode"] = "auto"
-        patch = {mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}
-        ResourceEditor(patches=patch).update()
+        ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
 
 
@@ -181,10 +177,10 @@ def vm_for_storage_class_migration_from_template_with_dv(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_existing_dv(
+    request,
     unprivileged_client,
     namespace,
     data_volume_scope_class,
-    request,
 ):
     with vm_instance_from_template(
         request=request,
@@ -198,9 +194,11 @@ def vm_for_storage_class_migration_from_template_with_existing_dv(
 
 @pytest.fixture(scope="class")
 def vms_for_storage_class_migration(request):
-    # Only fixtures from the "vms_fixtures" test param will be called
-    # Only VMs that are listed in "vms_fixtures" param will be created
-    # VM fixtures that are not listed in the param will not be called, and those VMs will not be created
+    """
+    Only fixtures from the "vms_fixtures" test param will be called
+    Only VMs that are listed in "vms_fixtures" param will be created
+    VM fixtures that are not listed in the param will not be called, and those VMs will not be created
+    """
     vms = [request.getfixturevalue(argname=vm_fixture) for vm_fixture in request.param["vms_fixtures"]]
     yield vms
 
@@ -242,24 +240,26 @@ def linux_vms_boot_time_before_storage_migration(online_vms_for_storage_class_mi
 
 
 @pytest.fixture(scope="class")
-def deleted_completed_virt_launcher_source_pod(online_vms_for_storage_class_migration):
+def deleted_completed_virt_launcher_source_pod(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
-        source_pod = get_source_virt_launcher_pod(vm=vm)
+        source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
         source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
         source_pod.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
-def deleted_old_dvs_of_online_vms(online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod):
+def deleted_old_dvs_of_online_vms(
+    unprivileged_client, online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod
+):
     for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
-        dv = DataVolume(name=dv_name, namespace=vm.namespace, ensure_exists=True)
+        dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)
         assert dv.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
-def deleted_old_dvs_of_stopped_vms(namespace):
-    for dv in DataVolume.get(namespace=namespace.name):
+def deleted_old_dvs_of_stopped_vms(unprivileged_client, namespace):
+    for dv in DataVolume.get(dyn_client=unprivileged_client, namespace=namespace.name):
         # target DV after migration name is: <source-dv-name>-mig-<generated_suffix>
         if "-mig-" not in dv.name:
             assert dv.delete(wait=True)
