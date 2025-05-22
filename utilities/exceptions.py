@@ -91,3 +91,7 @@ class MissingResourceException(Exception):
 
     def __str__(self):
         return f"No resources of type {self.resource} were found. Please check the test environment setup."
+
+
+class UnsupportedGPUDeviceError(Exception):
+    """Exception raised when a GPU device ID is not supported."""
