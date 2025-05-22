@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import pytest
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.network.constants import BRCNV
 from tests.network.utils import vm_for_brcnv_tests
@@ -124,10 +123,7 @@ def vma_with_ovs_based_l2(
 
 @pytest.fixture()
 def running_vma_with_ovs_based_l2(vma_with_ovs_based_l2):
-    vma_with_ovs_based_l2.vmi.wait_for_condition(
-        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
-        status=VirtualMachineInstance.Condition.Status.TRUE,
-    )
+    vma_with_ovs_based_l2.wait_for_agent_connected()
     return vma_with_ovs_based_l2
 
 
@@ -165,10 +161,7 @@ def vmb_with_ovs_based_l2(
 
 @pytest.fixture()
 def running_vmb_with_ovs_based_l2(vmb_with_ovs_based_l2):
-    vmb_with_ovs_based_l2.vmi.wait_for_condition(
-        condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
-        status=VirtualMachineInstance.Condition.Status.TRUE,
-    )
+    vmb_with_ovs_based_l2.wait_for_agent_connected()
     return vmb_with_ovs_based_l2
 
 
