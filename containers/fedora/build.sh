@@ -49,11 +49,17 @@ if [ "$FULL_EMULATION" = "true" ]; then
     VIRT_TYPE="qemu"
 fi
 
-set +x
-FEDORA_PASSWORD=$(uv run get_fedora_password.py)
-PASSWORD_PLACEHOLDER="CHANGE_ME"
-sed -i "s/password: $PASSWORD_PLACEHOLDER/password: $FEDORA_PASSWORD/" user-data
-set -x
+# When no secrets are available, the password cannot be computed.
+# Running such an option can be useful on CI when the build is validated.
+if [ "${NO_SECRETS}" != "true" ]; then
+    set +x
+    FEDORA_PASSWORD=$(uv run get_fedora_password.py)
+    PASSWORD_PLACEHOLDER="CHANGE_ME"
+    sed -i "s/password: $PASSWORD_PLACEHOLDER/password: $FEDORA_PASSWORD/" user-data
+    set -x
+else
+    echo "NO_SECRETS set: skipping Fedora password injection"
+fi
 
 echo "Create cloud-init user data ISO"
 cloud-localds $CLOUD_INIT_ISO user-data
