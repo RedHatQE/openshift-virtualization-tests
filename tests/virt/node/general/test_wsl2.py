@@ -13,13 +13,13 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
-from tests.virt.utils import verify_wsl2_guest_works
 from utilities.constants import TCP_TIMEOUT_30SEC, Images
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_windows_os_dict,
     migrate_vm_and_verify,
     running_vm,
+    verify_wsl2_guest_works,
 )
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]

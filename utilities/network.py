@@ -723,7 +723,7 @@ def cloud_init_network_data(data):
     return network_data
 
 
-def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interface=None):
+def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interface=None, windows=False):
     """
     Ping from source VM to destination IP.
 
@@ -739,8 +739,10 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
         float or None: The packet loss amount in a number (Range - 0 to 100).
     """
     ping_ipv6 = "-6" if get_valid_ip_address(dst_ip=dst_ip, family=IPV6_STR) else ""
-
-    ping_cmd = f"ping {'-q' if quiet_output else ''} {ping_ipv6} -c {count if count else '3'} {dst_ip}"
+    ping_cmd = (
+        f"{'wsl' if windows else ''} ping {'-q' if quiet_output else ''} "
+        f"{ping_ipv6} -c {count if count else '3'} {dst_ip}"
+    )
     if packet_size:
         ping_cmd += f" -s {packet_size} -M do"
     if interface:
