@@ -599,6 +599,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-hpp-rules",
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
+    f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
 ]
 
 
