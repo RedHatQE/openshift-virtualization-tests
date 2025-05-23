@@ -42,6 +42,7 @@ class TestCpuUsageMetrics:
             prometheus=prometheus, metric_name=query.format(vm_name=running_metric_vm.name)
         )
 
+    @pytest.mark.tier3
     @pytest.mark.polarion("CNV-11876")
     def test_vmi_non_empty_cpu_metrics_with_windows_vm(
         self, prometheus, cnv_cpu_usage_metrics_matrix__function__, windows_vm_for_test
