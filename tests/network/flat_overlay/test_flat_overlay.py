@@ -17,6 +17,7 @@ pytestmark = [
 
 class TestFlatOverlayConnectivity:
     @pytest.mark.gating
+    @pytest.mark.core_setup
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10158")
     @pytest.mark.dependency(name="test_flat_overlay_basic_ping")

@@ -19,6 +19,7 @@ pytestmark = [pytest.mark.special_infra, pytest.mark.sriov]
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4
+    @pytest.mark.core_setup
     @pytest.mark.polarion("CNV-3963")
     def test_sriov_basic_connectivity(
         self,

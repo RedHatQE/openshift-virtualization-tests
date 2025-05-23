@@ -44,6 +44,7 @@ def test_report_masquerade_ip(report_masquerade_ip_vmi):
 
 
 @pytest.mark.gating
+@pytest.mark.core_setup
 @pytest.mark.polarion("CNV-4153")
 @pytest.mark.single_nic
 def test_report_masquerade_ip_after_migration(report_masquerade_ip_vmi):

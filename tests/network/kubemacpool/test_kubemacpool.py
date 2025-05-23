@@ -34,6 +34,7 @@ class TestKMPConnectivity:
         )
 
     @pytest.mark.gating
+    @pytest.mark.core_setup
     @pytest.mark.polarion("CNV-2241")
     def test_automatic_mac_from_pool_pod_network(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to POD's masquerade network
@@ -48,6 +49,7 @@ class TestKMPConnectivity:
         )
 
     @pytest.mark.gating
+    @pytest.mark.core_setup
     @pytest.mark.polarion("CNV-2155")
     def test_automatic_mac_from_pool(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to interface
@@ -72,6 +74,7 @@ class TestKMPConnectivity:
         )
 
     @pytest.mark.gating
+    @pytest.mark.core_setup
     @pytest.mark.polarion("CNV-2157")
     def test_mac_preserved_after_shutdown(self, restarted_vmi_a, restarted_vmi_b, running_vm_a, running_vm_b):
         """Test that all macs are preserved even after VM restart"""

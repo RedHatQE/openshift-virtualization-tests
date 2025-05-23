@@ -161,6 +161,7 @@ def blank_disk_dv_multi_storage_scope_class(namespace, param_substring_scope_cla
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.core_setup
 class TestHotPlugWithSerial:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6013")
@@ -194,6 +195,7 @@ class TestHotPlugWithSerial:
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.core_setup
 class TestHotPlugWithPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6014")
@@ -227,6 +229,7 @@ class TestHotPlugWithPersist:
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.core_setup
 class TestHotPlugWithSerialPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6425")
