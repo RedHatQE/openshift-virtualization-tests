@@ -206,7 +206,7 @@ pytest tests/install_upgrade_operators/product_install/test_install_openshift_vi
 
 ## Upgrade tests
 
-Current upgrade test automation allows us to run just the ocp/cnv/eus upgrade. <br />
+Current upgrade test automation allows us to run just the ocp/cnv upgrade. <br />
 As default, the upgrade will run with pre and post upgrade validation of various components.
 
 Note:
@@ -222,8 +222,6 @@ Please note, in Y-1 -> Y upgrade, OCP must be upgraded first, followed by CNV up
 
 Here, no ocp upgrade is needed (e.g. 4.Y.z-1 -> 4.Y.z).
 
-##### EUS Upgrade:
-EUS-to-EUS updates are only viable between even-numbered minor versions of OpenShift Container Platform. (e.g 4.Y.z -> 4.Y+2.z)
 
 
 #### OCP upgrade
@@ -277,14 +275,6 @@ To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following co
 --upgrade cnv --cnv-version 4.Y.z --cnv-image <cnv_image_to_upgrade_to>
 ```
 
-#### EUS upgrade
-You must provide --eus-ocp-images via cli, which is two comma separated ocp images for EUS upgrade.
-The default target cnv version will be 4.Y+2.0. Optionally, --eus-csv-target-version can be provided for 4.Y+2.z version.
-Command to run entire upgrade test suite for EUS upgrade, including pre and post upgrade validation:
-
-```bash
---upgrade eus --eus-ocp-images <ocp_image_version_4.y+1.z>,<ocp_image_version_4.y+2.z> --eus-cnv-target-version <4.Y+2.z|None>
-```
 #### Custom upgrade lanes
 
 The argument `--upgrade_custom` can be used instead of `--upgrade` to run custom upgrade lanes with non-default configurations (e.g., with customized HCO feature gates).

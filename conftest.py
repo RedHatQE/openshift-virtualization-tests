@@ -106,8 +106,8 @@ def pytest_addoption(parser):
     # Upgrade addoption
     install_upgrade_group.addoption(
         "--upgrade",
-        choices=["cnv", "ocp", "eus"],
-        help="Run OCP or CNV or EUS upgrade tests",
+        choices=["cnv", "ocp"],
+        help="Run OCP or CNV upgrade tests",
     )
     install_upgrade_group.addoption(
         "--upgrade_custom", choices=["cnv", "ocp"], help="Run OCP or CNV upgrade tests with custom lanes"
@@ -135,12 +135,7 @@ def pytest_addoption(parser):
         help="OCP image to upgrade to. Images can be found under "
         "https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com/",
     )
-    # EUS Upgrade options
-    install_upgrade_group.addoption(
-        "--eus-ocp-images",
-        help="Comma-separated OCP images to use for EUS-to-EUS upgrade.",
-    )
-    install_upgrade_group.addoption("--eus-cnv-target-version", help="target CNV version for eus upgrade")
+
     install_upgrade_group.addoption(
         "--upgrade-skip-default-sc-setup",
         help="Skip the fixture that changes the default sc in upgrade lane",
@@ -281,14 +276,6 @@ def pytest_cmdline_main(config):
             if config.getoption("cnv_source") != "production":
                 raise ValueError("Missing --cnv-image")
 
-    if upgrade_option == "eus":
-        eus_ocp_images = config.getoption("eus_ocp_images")
-        if not (eus_ocp_images and len(eus_ocp_images.split(",")) == 2):
-            raise ValueError(
-                f"Two OCP images are needed to perform EUS-to-EUS upgrade with --eus-ocp-images."
-                f" Provided images: {eus_ocp_images}"
-            )
-
     # Default value is set as this value is used to set test name in
     # tests.upgrade_params.UPGRADE_TEST_DEPENDENCY_NODE_ID which is needed for pytest dependency marker
     py_config["upgraded_product"] = upgrade_option or config.getoption("--upgrade_custom") or "cnv"
@@ -373,7 +360,6 @@ def remove_upgrade_tests_based_on_config(
     """
     Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
     If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
-    If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
     If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
     In addition, determine if we are running the cnv upgrade test for production source or for stage/osbs.
 

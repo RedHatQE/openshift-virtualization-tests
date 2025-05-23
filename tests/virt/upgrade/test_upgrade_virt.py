@@ -48,7 +48,6 @@ AFTER_UPGRADE_STORAGE_ORDERING = [
 pytestmark = [
     pytest.mark.upgrade,
     pytest.mark.cnv_upgrade,
-    pytest.mark.eus_upgrade,
 ]
 
 
