@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from ocp_resources.resource import ResourceEditor
@@ -78,7 +77,6 @@ def increased_high_performance_vm_core_count_by_one(high_performance_vm):
         yield
 
 
-@pytest.mark.arm64
 @pytest.mark.gating()
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_class, high_performance_vm",
@@ -143,7 +141,7 @@ class TestHighPerformanceTemplatesRHEL:
         [
             {
                 "dv_name": "win-hp-vm-dv",
-                "image": os.path.join(Images.Windows.HA_DIR, Images.Windows.WIN2k19_HA_IMG),
+                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
                 "storage_class": py_config["default_storage_class"],
             },

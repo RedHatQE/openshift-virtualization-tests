@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
@@ -104,12 +103,12 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "template_labels": py_config.get("latest_windows_os_dict", {}).get("template_labels"),
                 "vm_name": "windows-latest-post-copy-migration-vm",
                 "additional_labels": VM_LABEL,
             },
