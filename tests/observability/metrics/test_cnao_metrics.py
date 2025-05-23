@@ -6,6 +6,8 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.utils import validate_metrics_value
 
+pytestmark = pytest.mark.arm64
+
 
 class TestSSPMetrics:
     @pytest.mark.parametrize(

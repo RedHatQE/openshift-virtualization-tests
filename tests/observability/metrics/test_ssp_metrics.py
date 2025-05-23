@@ -15,6 +15,8 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests
 
+pytestmark = pytest.mark.arm64
+
 KUBEVIRT_SSP_OPERATOR_UP = "kubevirt_ssp_operator_up"
 KUBEVIRT_SSP_TEMPLATE_VALIDATOR_UP = "kubevirt_ssp_template_validator_up"
 KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE = "kubevirt_ssp_common_templates_restored_increase"
