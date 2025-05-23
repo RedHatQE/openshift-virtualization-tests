@@ -185,6 +185,7 @@ class TestVMIMetricsLinuxVms:
         )
 
 
+@pytest.mark.tier3
 class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
