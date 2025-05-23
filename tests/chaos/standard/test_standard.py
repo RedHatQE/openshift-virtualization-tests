@@ -16,6 +16,7 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = [
     pytest.mark.chaos,
+    pytest.mark.gpfs,
     pytest.mark.usefixtures("chaos_namespace", "cluster_monitoring_process", "skip_on_aws_cluster"),
 ]
 
