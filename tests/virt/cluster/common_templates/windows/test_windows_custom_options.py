@@ -209,9 +209,10 @@ class TestCustomWindowsOptions:
     def test_windows_custom_options_initialize_disk(self, custom_windows_vm):
         initialize_and_format_windows_drive(vm=custom_windows_vm, disk_number=1, partition_number=2, drive_letter="D")
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-7886")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migration", depends=[f"{TESTS_CLASS_NAME}::boot"])
-    def test_windows_custom_options_migration(self, skip_access_mode_rwo_scope_class, custom_windows_vm):
+    def test_windows_custom_options_migration(self, custom_windows_vm):
         with VirtualMachineInstanceMigration(
             name="custom-windows-vm-migration",
             namespace=custom_windows_vm.namespace,

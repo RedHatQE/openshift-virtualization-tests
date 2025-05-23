@@ -108,10 +108,10 @@ class TestProgressOfMigrationInVirtLauncher:
             container="compute"
         ), f"Not found correct log verbosity level: {VIRT_LOG_VERBOSITY_LEVEL_6} in logs"
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-9058")
     def test_progress_of_vm_migration_in_virt_launcher_pod(
         self,
-        skip_access_mode_rwo_scope_function,
         updated_log_verbosity_config,
         vm_for_migration_progress_test,
         source_pod_log_verbosity_test,

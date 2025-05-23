@@ -23,15 +23,11 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.arm64
+pytestmark = [pytest.mark.arm64, pytest.mark.rwx_default_storage]
 
 
 def wait_for_vm_uid_mismatch(vmi, vmi_old_uid):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=5,
-        func=lambda: vmi.instance.metadata.uid != vmi_old_uid,
-    )
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_5MIN, sleep=5, func=lambda: vmi.instance.metadata.uid != vmi_old_uid)
     for sample in samples:
         if sample:
             return
@@ -129,62 +125,38 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("skip_access_mode_rwo_scope_class", "cluster_cpu_model_scope_class")
+@pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
-        self,
-        unprivileged_client,
-        vm_from_template_scope_class,
-        drained_node,
+        self, unprivileged_client, vm_from_template_scope_class, drained_node
     ):
         check_migration_process_after_node_drain(dyn_client=unprivileged_client, vm=vm_from_template_scope_class)
 
     @pytest.mark.polarion("CNV-10088")
     def test_hco_evictionstrategy_none_vm_no_evictionstrategy(
-        self,
-        vm_from_template_scope_class,
-        hco_cr_with_evictionstrategy_none,
-        vm_restarted,
-        vmi_old_uid,
-        drained_node,
+        self, vm_from_template_scope_class, hco_cr_with_evictionstrategy_none, vm_restarted, vmi_old_uid, drained_node
     ):
         assert_vm_restarts_after_node_drain(
-            source_node=drained_node,
-            vmi=vm_from_template_scope_class.vmi,
-            vmi_old_uid=vmi_old_uid,
+            source_node=drained_node, vmi=vm_from_template_scope_class.vmi, vmi_old_uid=vmi_old_uid
         )
 
     @pytest.mark.parametrize(
         "added_vm_evictionstrategy",
-        [
-            pytest.param(
-                {"evictionstrategy": "None"},
-            ),
-        ],
+        [pytest.param({"evictionstrategy": "None"})],
         indirect=True,
     )
     @pytest.mark.polarion("CNV-10073")
     def test_hco_evictionstrategy_livemigrate_vm_evictionstrategy_none(
-        self,
-        vm_from_template_scope_class,
-        added_vm_evictionstrategy,
-        vmi_old_uid,
-        drained_node,
+        self, vm_from_template_scope_class, added_vm_evictionstrategy, vmi_old_uid, drained_node
     ):
         assert_vm_restarts_after_node_drain(
-            source_node=drained_node,
-            vmi=vm_from_template_scope_class.vmi,
-            vmi_old_uid=vmi_old_uid,
+            source_node=drained_node, vmi=vm_from_template_scope_class.vmi, vmi_old_uid=vmi_old_uid
         )
 
     @pytest.mark.parametrize(
         "added_vm_evictionstrategy",
-        [
-            pytest.param(
-                {"evictionstrategy": "LiveMigrate"},
-            ),
-        ],
+        [pytest.param({"evictionstrategy": "LiveMigrate"})],
         indirect=True,
     )
     @pytest.mark.polarion("CNV-10357")

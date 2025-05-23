@@ -32,6 +32,7 @@ def unscheduled_node_vm(
 
 
 @pytest.mark.gating
+@pytest.mark.rwx_default_storage
 @pytest.mark.parametrize(
     "data_volume_scope_function, unscheduled_node_vm",
     [
@@ -52,12 +53,7 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
-def test_schedule_vm_on_cordoned_node(
-    skip_access_mode_rwo_scope_function,
-    nodes,
-    data_volume_scope_function,
-    unscheduled_node_vm,
-):
+def test_schedule_vm_on_cordoned_node(nodes, data_volume_scope_function, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
     1. Cordon the Node
     2. Once node status is 'Ready,SchedulingDisabled', start a VM (on the

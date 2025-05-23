@@ -27,7 +27,7 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
 )
 
-pytestmark = pytest.mark.usefixtures("skip_access_mode_rwo_scope_module")
+pytestmark = pytest.mark.rwx_default_storage
 
 
 LOGGER = logging.getLogger(__name__)

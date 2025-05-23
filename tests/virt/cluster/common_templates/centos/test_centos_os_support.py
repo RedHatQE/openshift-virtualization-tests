@@ -146,16 +146,13 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
         )
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-5841")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
         depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"],
     )
-    def test_migrate_vm(
-        self,
-        skip_access_mode_rwo_scope_class,
-        golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
-    ):
+    def test_migrate_vm(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
         """Test SSH connectivity after migration"""
         migrate_vm_and_verify(
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class,
