@@ -8,7 +8,8 @@ from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
 
-NETWORK_NAME = "localnet-network"
+LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
+LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 _IPERF_SERVER_PORT = 5201
 
@@ -26,10 +27,12 @@ def create_traffic_server(vm: BaseVirtualMachine) -> Server:
     return Server(vm=vm, port=_IPERF_SERVER_PORT)
 
 
-def create_traffic_client(server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, network_name: str) -> Client:
+def create_traffic_client(
+    server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, spec_logical_network: str
+) -> Client:
     return Client(
         vm=client_vm,
-        server_ip=lookup_iface_status(vm=server_vm, iface_name=network_name)[IP_ADDRESS],
+        server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
         server_port=_IPERF_SERVER_PORT,
     )
 
