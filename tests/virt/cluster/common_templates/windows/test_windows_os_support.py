@@ -156,16 +156,13 @@ class TestCommonTemplatesWindows:
             cm_values=smbios_from_kubevirt_config,
         )
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
         depends=[f"{TESTS_CLASS_NAME}::start_vm"],
     )
     @pytest.mark.polarion("CNV-3335")
-    def test_migrate_vm(
-        self,
-        skip_access_mode_rwo_scope_class,
-        golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
-    ):
+    def test_migrate_vm(self, golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class):
         """Test SSH connectivity after migration"""
         vm = golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class
         migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
