@@ -1168,7 +1168,7 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
 
 def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
     lines = re.findall(
-        r"fs.(\d).(mountpoint|total-bytes|used-bytes)\s+:\s+(.*)\s+",
+        r"fs\.(\d+)\.(mountpoint|total-bytes|used-bytes)\s*:\s*(.*)\s*",
         vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
         re.MULTILINE,
     )
@@ -1211,7 +1211,9 @@ def compare_metric_file_system_values_with_vm_file_system_values(
                         ),
                     )
                 )
-                if math.isclose(metric_value, float(sample[mount_point].get(capacity_or_used)), rel_tol=0.05):
+                virsh_raw = sample[mount_point].get(capacity_or_used)
+                virsh_bytes = float(virsh_raw if virsh_raw.isdigit() else bitmath.parse_string_unsafe(virsh_raw).bytes)
+                if math.isclose(metric_value, virsh_bytes, rel_tol=0.05):
                     return
     except TimeoutExpiredError:
         LOGGER.info(
