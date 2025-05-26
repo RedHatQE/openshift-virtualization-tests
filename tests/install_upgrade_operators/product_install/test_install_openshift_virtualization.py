@@ -3,12 +3,12 @@ import logging
 import pytest
 
 from tests.install_upgrade_operators.product_install.constants import (
-    CLUSTER_RESOURCE_WHITE_LIST,
+    CLUSTER_RESOURCE_ALLOWLIST,
     HCO_NOT_INSTALLED_ALERT,
     IGNORE_KIND,
     IGNORE_NAMESPACE,
     NAMESPACED_IGNORE_KINDS,
-    NAMESPACED_RESOURCE_WHITE_LIST,
+    NAMESPACED_RESOURCE_ALLOWLIST,
 )
 from tests.install_upgrade_operators.product_install.utils import (
     validate_hpp_installation,
@@ -105,15 +105,15 @@ def test_cnv_resources_installed_cluster_scoped(
             )
             if "kubevirt.io" not in value
         ]
-        white_listed_values = CLUSTER_RESOURCE_WHITE_LIST.get(kind, [])
-        if white_listed_values and diff_values:
-            LOGGER.info(f"Expected white listed values for kind: {kind}: {white_listed_values}")
+        allowlisted_values = CLUSTER_RESOURCE_ALLOWLIST.get(kind, [])
+        if allowlisted_values and diff_values:
+            LOGGER.info(f"Expected allowlisted values for kind: {kind}: {allowlisted_values}")
             LOGGER.warning(
                 f"Current difference in resources between before and after installation of cnv: {diff_values}"
             )
-            diff_values = [value for value in diff_values if not value.startswith(tuple(white_listed_values))]
+            diff_values = [value for value in diff_values if not value.startswith(tuple(allowlisted_values))]
             if diff_values:
-                LOGGER.warning(f"After removing whitelisted resources, the diff is: {diff_values}")
+                LOGGER.warning(f"After removing allowlisted resources, the diff is: {diff_values}")
                 mismatch_cluster_scoped.append({kind: diff_values})
     if mismatch_cluster_scoped:
         LOGGER.error(f"Mismatched cluster resources: {mismatch_cluster_scoped}")
@@ -137,15 +137,15 @@ def test_cnv_resources_installed_namespace_scoped(
             continue
         LOGGER.info(f"Checking resources in {namespace}")
         mismatch_namespaced[namespace] = {}
-        white_listed_kinds = NAMESPACED_RESOURCE_WHITE_LIST.get(namespace, [])
+        allowlisted_kinds = NAMESPACED_RESOURCE_ALLOWLIST.get(namespace, [])
 
         for kind in after_installation_all_resources["namespaced"][namespace]:
             if kind in NAMESPACED_IGNORE_KINDS:
                 continue
-            white_listed_values = []
-            if white_listed_kinds:
-                LOGGER.info(f"Currently white listed resources: {white_listed_kinds}")
-                white_listed_values = white_listed_kinds.get(kind, [])
+            allowlisted_values = []
+            if allowlisted_kinds:
+                LOGGER.info(f"Currently allowlisted resources: {allowlisted_kinds}")
+                allowlisted_values = allowlisted_kinds.get(kind, [])
             diff_value_ns = [
                 value
                 for value in list(
@@ -155,14 +155,14 @@ def test_cnv_resources_installed_namespace_scoped(
                 if "kubevirt.io" not in value
             ]
 
-            if white_listed_values and diff_value_ns:
+            if allowlisted_values and diff_value_ns:
                 LOGGER.warning(
                     f"For namespace: {namespace}, kind: {kind} difference in before and after installation "
                     f"resource(s): {diff_value_ns}"
                 )
-                diff_value_ns = [value for value in diff_value_ns if not value.startswith(tuple(white_listed_values))]
+                diff_value_ns = [value for value in diff_value_ns if not value.startswith(tuple(allowlisted_values))]
             if diff_value_ns:
-                LOGGER.warning(f"After removing whitelisted elements from the difference, mismatch is: {diff_value_ns}")
+                LOGGER.warning(f"After removing allowlisted elements from the difference, mismatch is: {diff_value_ns}")
                 mismatch_namespaced[namespace][kind] = diff_value_ns
     mismatch_namespaced = {key: value for key, value in mismatch_namespaced.items() if value}
     if mismatch_namespaced:
