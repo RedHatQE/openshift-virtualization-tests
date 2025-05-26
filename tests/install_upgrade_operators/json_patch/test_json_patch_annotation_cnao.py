@@ -18,6 +18,8 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
+pytestmark = [pytest.mark.arm64]
+
 PATH = "selfSignConfiguration"
 COMPONENT = "cnao"
 

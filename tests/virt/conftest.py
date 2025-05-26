@@ -2,7 +2,10 @@ import logging
 
 import pytest
 from bitmath import parse_string_unsafe
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.performance_profile import PerformanceProfile
+from ocp_resources.storage_profile import StorageProfile
+from pytest_testconfig import py_config
 
 from utilities.constants import AMD, INTEL
 from utilities.infra import exit_pytest_execution
@@ -23,20 +26,20 @@ def virt_special_infra_sanity(
     workers,
     nodes_cpu_virt_extension,
 ):
-    """Performs verification that cluster has all required capabilities for virt special_infra marked tests."""
+    """Performs verification that cluster has all required capabilities based on collected tests."""
 
     def _verify_not_psi_cluster(_is_psi_cluster):
-        LOGGER.info("Verify running on BM cluster")
+        LOGGER.info("Verifying tests run on BM cluster")
         if _is_psi_cluster:
             failed_verifications_list.append("Cluster should be BM and not PSI")
 
     def _verify_cpumanager_workers(_schedulable_nodes):
-        LOGGER.info("Verify cluster nodes have CPU Manager labels")
+        LOGGER.info("Verifing cluster nodes have CPU Manager labels")
         if not any([node.labels.cpumanager == "true" for node in _schedulable_nodes]):
             failed_verifications_list.append("Cluster does't have CPU Manager")
 
     def _verify_gpu(_gpu_nodes, _nodes_with_supported_gpus):
-        LOGGER.info("Verify cluster nodes have enough supported GPU cards")
+        LOGGER.info("Verifing cluster nodes have enough supported GPU cards")
         if not _gpu_nodes:
             failed_verifications_list.append("Cluster doesn't have any GPU nodes")
         if not _nodes_with_supported_gpus:
@@ -45,18 +48,18 @@ def virt_special_infra_sanity(
             failed_verifications_list.append(f"Cluster has only {len(_nodes_with_supported_gpus)} node with GPU")
 
     def _verfify_no_dpdk():
-        LOGGER.info("Verify cluster doesn't have DPDK enabled")
+        LOGGER.info("Verifing cluster doesn't have DPDK enabled")
         if PerformanceProfile(name="dpdk").exists:
             failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
 
     def _verify_sriov(_sriov_workers):
-        LOGGER.info("Verify cluster has worker node with SR-IOV card")
+        LOGGER.info("Verifing cluster has worker node with SR-IOV card")
         if not _sriov_workers:
             failed_verifications_list.append("Cluster does not have any SR-IOV workers")
 
-    def _verify_evmcs_support(_schedulable_nodes, _nodes_cpu_virt_extension):
+    def _verify_hw_virtualization(_schedulable_nodes, _nodes_cpu_virt_extension):
         if _nodes_cpu_virt_extension:
-            LOGGER.info(f"Verify cluster nodes support {_nodes_cpu_virt_extension.upper()} cpu fixture")
+            LOGGER.info(f"Verifing cluster nodes support {_nodes_cpu_virt_extension.upper()} cpu fixture")
             for node in _schedulable_nodes:
                 if not any([
                     label == f"cpu-feature.node.kubevirt.io/{_nodes_cpu_virt_extension}" and value == "true"
@@ -71,12 +74,19 @@ def virt_special_infra_sanity(
             )
 
     def _verify_hugepages_1gi(_workers):
-        LOGGER.info("Verify cluster has 1Gi hugepages enabled")
+        LOGGER.info("Verifing cluster has 1Gi hugepages enabled")
         if not any([
             parse_string_unsafe(worker.instance.status.allocatable["hugepages-1Gi"]) >= parse_string_unsafe("1Gi")
             for worker in _workers
         ]):
             failed_verifications_list.append("Cluster does not have hugepages-1Gi")
+
+    def _verify_rwx_default_storage():
+        storage_class = py_config["default_storage_class"]
+        LOGGER.info(f"Verifing default storage class {storage_class} supports RWX mode")
+        access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+        if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
+            failed_verifications_list.append(f"Default storage class {storage_class} doesn't support RWX mode")
 
     skip_virt_sanity_check = "--skip-virt-sanity-check"
     failed_verifications_list = []
@@ -85,7 +95,7 @@ def virt_special_infra_sanity(
         LOGGER.info("Verifying that cluster has all required capabilities for special_infra marked tests")
         if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
             _verify_not_psi_cluster(_is_psi_cluster=is_psi_cluster)
-            _verify_evmcs_support(
+            _verify_hw_virtualization(
                 _schedulable_nodes=schedulable_nodes, _nodes_cpu_virt_extension=nodes_cpu_virt_extension
             )
         if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
@@ -97,6 +107,8 @@ def virt_special_infra_sanity(
             _verify_sriov(_sriov_workers=sriov_workers)
         if any(item.get_closest_marker("hugepages") for item in request.session.items):
             _verify_hugepages_1gi(_workers=workers)
+        if any(item.get_closest_marker("rwx_default_storage") for item in request.session.items):
+            _verify_rwx_default_storage()
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
 

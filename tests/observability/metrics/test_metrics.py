@@ -33,9 +33,10 @@ class TestMetricsLinux:
         This test also validates ability to pull metric information from a given vm's virt-handler pod and validates
         appropriate information exists for that metrics.
         """
-        get_vm_metrics(
-            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=single_metric_vm.name
-        )
+        vm_name = single_metric_vm.name
+        assert get_vm_metrics(
+            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=vm_name
+        ), f"query: {cnv_vmi_monitoring_metrics_matrix__function__} has no result for vm: {vm_name}"
         assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm)
 
 
@@ -45,15 +46,16 @@ class TestMetricsWindows:
     def test_cnv_vmi_monitoring_metrics_windows_vm(
         self,
         prometheus,
-        windows_vm_for_test,
         xfail_if_memory_metric_has_bug,
+        windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
-        get_vm_metrics(
+        vm_name = windows_vm_for_test.name
+        assert get_vm_metrics(
             prometheus=prometheus,
             query=cnv_vmi_monitoring_metrics_matrix__function__,
             vm_name=windows_vm_for_test.name,
-        )
+        ), f"query: {cnv_vmi_monitoring_metrics_matrix__function__} has no result for vm: {vm_name}"
         assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test)
 
 
@@ -109,6 +111,7 @@ class TestVMIMetricsLinuxVms:
         )
 
 
+@pytest.mark.tier3
 class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
