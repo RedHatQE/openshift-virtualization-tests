@@ -1,4 +1,5 @@
 import pytest
+from ocp_resources.prometheus import Prometheus
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
@@ -52,15 +53,23 @@ def metric_value_sampler(prometheus, metric, expected_value):
             current_check = 0
 
 
-def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, metric_to_check):
+def assert_metrics_values(
+    prometheus: Prometheus,
+    migration_metrics_dict: dict[str, str],
+    initial_values: dict[str, int],
+    metric_to_check: str,
+    vmim: VirtualMachineInstanceMigration = None,
+) -> None:
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
 
     Args:
+        prometheus: Prometheus object.
+        migration_metrics_dict: migration metrics with their status.
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
-        vm: vm object
+        vmim: Optional VirtualMachineInstanceMigration object to check if migration succeeded
 
     Raises:
         AssertionError: If any metric's value does not match with expected value.
@@ -71,7 +80,16 @@ def assert_metrics_values(prometheus, migration_metrics_dict, initial_values, me
         migration_metrics.append(metric) if metric != metric_to_check else migration_metrics.insert(0, metric)
     for metric in migration_metrics:
         initial_value = initial_values[metric]
-        expected_value = initial_value + 1 if metric == metric_to_check else initial_value
+        expected_value = (
+            initial_value + 1
+            if metric == metric_to_check
+            or (
+                vmim
+                and metric == migration_metrics_dict[vmim.Status.SUCCEEDED]
+                and vmim.status == vmim.Status.SUCCEEDED
+            )
+            else initial_value
+        )
         try:
             metric_value_sampler(
                 prometheus=prometheus,
@@ -240,6 +258,7 @@ class TestMigrationMetrics:
             migration_metrics_dict=migration_metrics_dict,
             initial_values=initial_migration_metrics_values,
             metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
+            vmim=vm_migration_metrics_vmim,
         )
 
 
