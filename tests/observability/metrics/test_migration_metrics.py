@@ -278,7 +278,7 @@ class TestKubevirtVmiMigrationMetrics:
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
-            f"[{minutes_passed_since_migration_start if minutes_passed_since_migration_start > 8 else 8}m])",
+            f"[{minutes_passed_since_migration_start if minutes_passed_since_migration_start > 10 else 10}m])",
         )
 
 
