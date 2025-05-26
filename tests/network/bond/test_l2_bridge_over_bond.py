@@ -16,7 +16,7 @@ from utilities.network import (
     get_vmi_ip_v4_by_name,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = pytest.mark.usefixtures(
     "hyperconverged_ovs_annotations_enabled_scope_session",
@@ -139,7 +139,7 @@ def ovs_linux_bond_bridge_attached_vma(
         cloud_init_data=netcloud.cloudinit(netdata=netdata),
         client=unprivileged_client,
     ) as vm:
-        vm.start(wait=True)
+        vm.start()
         yield vm
 
 
@@ -167,18 +167,17 @@ def ovs_linux_bond_bridge_attached_vmb(
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,
     ) as vm:
-        vm.start(wait=True)
+        vm.start()
         yield vm
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond_bridge_attached_running_vma(ovs_linux_bond_bridge_attached_vma):
-    return running_vm(vm=ovs_linux_bond_bridge_attached_vma, wait_for_cloud_init=True)
-
-
-@pytest.fixture(scope="class")
-def ovs_linux_bond_bridge_attached_running_vmb(ovs_linux_bond_bridge_attached_vmb):
-    return running_vm(vm=ovs_linux_bond_bridge_attached_vmb, wait_for_cloud_init=True)
+def ovs_linux_bond_bridge_attached_vms(ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb):
+    vms = (ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb)
+    for vm in vms:
+        vm.wait_for_ready_status(status=True)
+        vm.wait_for_agent_connected()
+    yield vms
 
 
 class TestBondConnectivity:
@@ -191,15 +190,13 @@ class TestBondConnectivity:
         ovs_linux_br1bond_nad,
         ovs_linux_bridge_on_bond_worker_1,
         ovs_linux_bridge_on_bond_worker_2,
-        ovs_linux_bond_bridge_attached_vma,
-        ovs_linux_bond_bridge_attached_vmb,
-        ovs_linux_bond_bridge_attached_running_vma,
-        ovs_linux_bond_bridge_attached_running_vmb,
+        ovs_linux_bond_bridge_attached_vms,
     ):
+        src_vm, dst_vm = ovs_linux_bond_bridge_attached_vms
         assert_ping_successful(
-            src_vm=ovs_linux_bond_bridge_attached_running_vma,
+            src_vm=src_vm,
             dst_ip=get_vmi_ip_v4_by_name(
-                vm=ovs_linux_bond_bridge_attached_running_vmb,
+                vm=dst_vm,
                 name=ovs_linux_br1bond_nad.name,
             ),
         )
