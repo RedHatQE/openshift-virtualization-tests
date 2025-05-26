@@ -31,7 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -142,11 +142,7 @@ def test_node_drain_using_console_fedora(
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures(
-    "cluster_cpu_model_scope_class",
-    "skip_access_mode_rwo_scope_class",
-    "golden_image_data_volume_multi_storage_scope_class",
-)
+@pytest.mark.usefixtures("cluster_cpu_model_scope_class", "golden_image_data_volume_multi_storage_scope_class")
 @pytest.mark.ibm_bare_metal
 class TestNodeMaintenanceRHEL:
     @pytest.mark.polarion("CNV-2292")
@@ -208,11 +204,7 @@ class TestNodeMaintenanceRHEL:
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures(
-    "skip_access_mode_rwo_scope_class",
-    "cluster_modern_cpu_model_scope_class",
-    "golden_image_data_volume_multi_storage_scope_class",
-)
+@pytest.mark.usefixtures("cluster_modern_cpu_model_scope_class", "golden_image_data_volume_multi_storage_scope_class")
 @pytest.mark.ibm_bare_metal
 class TestNodeCordonAndDrain:
     @pytest.mark.polarion("CNV-2048")
