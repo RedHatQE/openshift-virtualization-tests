@@ -1293,7 +1293,9 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
                     dyn_client=admin_client,
                     pod_prefix=pod_prefix,
                     namespace=hco_namespace,
-                ).execute(command=RSS_MEMORY_COMMAND)
+                )
+                .execute(command=RSS_MEMORY_COMMAND)
+                .strip()
             )
         )
     )
@@ -1302,16 +1304,21 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
 def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
     """
     This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
+        Args:
+        hco_namespace: Hco namespacem
+    Returns:
+        tuple: containing the name of the virt-api pod with the highest memory usage and value of the memory.
     """
     virt_api_with_highest_memory_usage = (
         run_command(
             command=shlex.split(
-                f"oc adm top pod -n {hco_namespace} --sort-by memory --no-headers -l kubevirt.io=virt-api"
-            )
+                f"bash -c 'oc adm top pod -n {hco_namespace} --sort-by memory "
+                f"--no-headers -l kubevirt.io=virt-api | head -n 1'"
+            ),
         )[1]
         .strip()
-        .split("\n")[1:]
-    )[0].split()
+        .split()
+    )
     return (
         virt_api_with_highest_memory_usage[0],
         int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2]).Byte),
@@ -1345,7 +1352,7 @@ def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, po
 
 def expected_kubevirt_memory_delta_from_requested_bytes(
     hco_namespace: str, admin_client: DynamicClient, rss: bool
-) -> float:
+) -> int:
     """
     Calculate the expected memory delta between actual and requested memory.
 
@@ -1355,7 +1362,7 @@ def expected_kubevirt_memory_delta_from_requested_bytes(
         rss: If True, use RSS memory, otherwise use total memory usage
 
     Returns:
-        float: The memory delta in bytes
+        int: The memory delta in bytes
     """
     pod_name, pod_memory = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
     virt_api_requested_memory = get_pod_requested_memory(
