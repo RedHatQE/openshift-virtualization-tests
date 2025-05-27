@@ -354,7 +354,6 @@ class TestVmiFileSystemMetricsWindows:
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
-        indirect=False,
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
         self,
