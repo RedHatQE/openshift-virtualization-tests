@@ -9,6 +9,8 @@ from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.localnet.liblocalnet import (
+    LOCALNET_BR_EX_NETWORK,
+    LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
     create_traffic_client,
     create_traffic_server,
@@ -21,8 +23,6 @@ from utilities.constants import (
 )
 from utilities.infra import create_ns
 
-LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
-LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 
 
@@ -116,26 +116,26 @@ def vm_localnet_2(
 
 
 @pytest.fixture(scope="module")
-def server_client_localnet_vms(
+def localnet_running_vms(
     vm_localnet_1: BaseVirtualMachine, vm_localnet_2: BaseVirtualMachine
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
-    server_vm, client_vm = run_vms(vms=(vm_localnet_1, vm_localnet_2))
-    return (server_vm, client_vm)
+    vm1, vm2 = run_vms(vms=(vm_localnet_1, vm_localnet_2))
+    return vm1, vm2
 
 
 @pytest.fixture()
-def localnet_server(server_client_localnet_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Server]:
-    with create_traffic_server(vm=server_client_localnet_vms[0]) as server:
+def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Server]:
+    with create_traffic_server(vm=localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture()
-def localnet_client(server_client_localnet_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Client]:
+def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Client]:
     with create_traffic_client(
-        server_vm=server_client_localnet_vms[0],
-        client_vm=server_client_localnet_vms[1],
-        network_name=LOCALNET_BR_EX_NETWORK,
+        server_vm=localnet_running_vms[0],
+        client_vm=localnet_running_vms[1],
+        spec_logical_network=LOCALNET_BR_EX_NETWORK,
     ) as client:
         assert client.is_running()
         yield client
@@ -229,30 +229,30 @@ def vm_ovs_bridge_localnet_2(
 
 
 @pytest.fixture(scope="module")
-def ovs_bridge_server_client_localnet_vms(
+def ovs_bridge_localnet_running_vms(
     vm_ovs_bridge_localnet_1: BaseVirtualMachine, vm_ovs_bridge_localnet_2: BaseVirtualMachine
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
-    server_vm, client_vm = run_vms(vms=(vm_ovs_bridge_localnet_1, vm_ovs_bridge_localnet_2))
-    yield (server_vm, client_vm)
+    vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_1, vm_ovs_bridge_localnet_2))
+    yield vm1, vm2
 
 
 @pytest.fixture()
 def localnet_ovs_bridge_server(
-    ovs_bridge_server_client_localnet_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+    ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
 ) -> Generator[Server]:
-    with create_traffic_server(vm=ovs_bridge_server_client_localnet_vms[0]) as server:
+    with create_traffic_server(vm=ovs_bridge_localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture()
 def localnet_ovs_bridge_client(
-    ovs_bridge_server_client_localnet_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+    ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
 ) -> Generator[Client]:
     with create_traffic_client(
-        server_vm=ovs_bridge_server_client_localnet_vms[0],
-        client_vm=ovs_bridge_server_client_localnet_vms[1],
-        network_name=LOCALNET_OVS_BRIDGE_NETWORK,
+        server_vm=ovs_bridge_localnet_running_vms[0],
+        client_vm=ovs_bridge_localnet_running_vms[1],
+        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
     ) as client:
         assert client.is_running()
         yield client
