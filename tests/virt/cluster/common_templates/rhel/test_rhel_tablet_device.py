@@ -48,6 +48,7 @@ def check_vm_system_tablet_device(vm, expected_device):
     ],
     indirect=True,
 )
+@pytest.mark.skip_s390x()
 class TestRHELTabletDevice:
     @pytest.mark.parametrize(
         "golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function",
@@ -162,6 +163,7 @@ class TestRHELTabletDevice:
     ],
     indirect=True,
 )
+@pytest.mark.skip_s390x()
 class TestRHELTabletDeviceNegative:
     @pytest.mark.parametrize(
         "golden_image_vm_object_from_template_multi_storage_dv_scope_class_vm_scope_function",
