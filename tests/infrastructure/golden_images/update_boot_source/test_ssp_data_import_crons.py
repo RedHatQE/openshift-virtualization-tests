@@ -341,6 +341,7 @@ class TestDataImportCronDefaultStorageClass:
         )
 
 
+@pytest.mark.jira("CNV-62615", run=False)
 @pytest.mark.polarion("CNV-7532")
 def test_data_import_cron_deletion_on_opt_out(
     golden_images_data_import_crons_scope_function,
