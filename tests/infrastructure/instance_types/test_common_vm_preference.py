@@ -4,84 +4,41 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
+from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
 from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
-UNIQUE_PREFERENCE_LIST = [
-    "alpine",
-    "ubuntu",
-    "cirros",
-    "fedora",
-    "fedora.arm64",
-    "fedora.s390x",
-    "opensuse.leap",
-    "opensuse.tumbleweed",
-    "sles",
-]
-CENTOS_PREFERENCE_LIST = [
-    "centos.stream9",
-    "centos.stream10",
-    "centos.stream9.desktop",
-    "centos.stream10.desktop",
-]
-RHEL_PREFERENCE_LIST = [
-    "rhel.7",
-    "rhel.8",
-    "rhel.9",
-    "rhel.10",
-    "rhel.9.realtime",
-    "rhel.9.arm64",
-    "rhel.9.s390x",
-    "rhel.10.arm64",
-    "rhel.7.desktop",
-    "rhel.8.desktop",
-    "rhel.9.desktop",
-]
-WINDOWS_PREFERENCE_LIST = [
-    "windows.10",
-    "windows.11",
-    "windows.2k16",
-    "windows.2k19",
-    "windows.2k22",
-    "windows.2k25",
-    "windows.10.virtio",
-    "windows.11.virtio",
-    "windows.2k16.virtio",
-    "windows.2k19.virtio",
-    "windows.2k22.virtio",
-    "windows.2k25.virtio",
-]
-NETWORK_PREFERENCE_LIST = [
-    "centos.stream9.dpdk",
-    "rhel.8.dpdk",
-    "rhel.9.dpdk",
-]
-
-
 def start_vm_with_cluster_preference(client, preference_name, namespace_name):
     cluster_preference = VirtualMachineClusterPreference(name=preference_name)
+    cluster_spec = cluster_preference.instance.spec
+    cpu_guest = cluster_spec.requirements.cpu.guest
+    spread_options = getattr(cluster_spec.cpu, "spreadOptions", None)
 
-    vm_args = {
-        "client": client,
-        "name": f"rhel-vm-with-{preference_name}",
-        "namespace": namespace_name,
-        # TODO add corresponding images to the VM based on preference
-        "image": Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        "memory_guest": cluster_preference.instance.spec.requirements.memory.guest,
-        "cpu_sockets": cluster_preference.instance.spec.requirements.cpu.guest,
-        "vm_preference": cluster_preference,
-    }
+    sockets = cpu_guest
+    cores = None
+    threads = None
 
-    if preference_name == "rhel.9.realtime":
-        vm_args.update({
-            "cpu_cores": cluster_preference.instance.spec.requirements.cpu.guest,
-            "cpu_threads": cluster_preference.instance.spec.requirements.cpu.guest,
-        })
+    # Default ratio is 2 if not specified
+    if spread_options:
+        cores = spread_options.get("ratio", 2)
+        sockets = max(1, cpu_guest // cores)
+        threads = 1
 
-    with VirtualMachineForTests(**vm_args) as vm:
+    with VirtualMachineForTests(
+        client=client,
+        name=f"rhel-vm-with-{preference_name}",
+        namespace=namespace_name,
+        # TODO: Add corresponding images to the VM based on preference
+        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        memory_guest=cluster_spec.requirements.memory.guest,
+        cpu_sockets=sockets,
+        cpu_cores=cores,
+        cpu_threads=threads,
+        vm_preference=cluster_preference,
+    ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
@@ -98,13 +55,7 @@ def run_general_vm_preferences(client, namespace, preferences):
 
 @pytest.fixture()
 def vm_cluster_preferences_expected_list():
-    return (
-        UNIQUE_PREFERENCE_LIST
-        + CENTOS_PREFERENCE_LIST
-        + RHEL_PREFERENCE_LIST
-        + WINDOWS_PREFERENCE_LIST
-        + NETWORK_PREFERENCE_LIST
-    )
+    return [os for os_list in VM_PREFERENCES_LIST.values() for os in os_list]
 
 
 @pytest.mark.polarion("CNV-9981")
@@ -125,32 +76,38 @@ def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
 class TestCommonVmPreference:
     @pytest.mark.polarion("CNV-9894")
     def test_common_vm_preference_windows(self, unprivileged_client, namespace):
-        run_general_vm_preferences(client=unprivileged_client, namespace=namespace, preferences=WINDOWS_PREFERENCE_LIST)
+        run_general_vm_preferences(
+            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["windows"]
+        )
 
     @pytest.mark.parametrize(
         "cluster_preferences",
         [
             pytest.param(
-                RHEL_PREFERENCE_LIST,
+                "rhel",
                 marks=pytest.mark.polarion("CNV-9895"),
             ),
             pytest.param(
-                CENTOS_PREFERENCE_LIST,
+                "centos",
                 marks=pytest.mark.polarion("CNV-9896"),
             ),
             pytest.param(
-                UNIQUE_PREFERENCE_LIST,
+                "unique",
                 marks=pytest.mark.polarion("CNV-9897"),
             ),
         ],
     )
     def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
-        run_general_vm_preferences(client=unprivileged_client, namespace=namespace, preferences=cluster_preferences)
+        run_general_vm_preferences(
+            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]
+        )
 
     @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10806")
     def test_common_vm_preference_dpdk(self, unprivileged_client, namespace):
-        run_general_vm_preferences(client=unprivileged_client, namespace=namespace, preferences=NETWORK_PREFERENCE_LIST)
+        run_general_vm_preferences(
+            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["network"]
+        )
 
 
 @pytest.mark.post_upgrade

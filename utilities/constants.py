@@ -350,6 +350,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -371,9 +372,11 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
+PASST_BINDING_CNI = "passt-binding-cni"
 # All hco relate objects with kind
 ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE: PROMETHEUSRULE_STR},
@@ -410,6 +413,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -436,6 +440,7 @@ CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     VIRT_EXPORTPROXY,
     KUBEVIRT_APISERVER_PROXY,
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
+    PASST_BINDING_CNI,
 ]
 ALL_CNV_PODS = CNV_PODS_NO_HPP_CSI_HPP_POOL + [HOSTPATH_PROVISIONER_CSI]
 ALL_CNV_DEPLOYMENTS_NO_HPP_POOL = [
@@ -466,6 +471,7 @@ ALL_CNV_DAEMONSETS_NO_HPP_CSI = [
     BRIDGE_MARKER,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     VIRT_HANDLER,
+    PASST_BINDING_CNI,
 ]
 ALL_CNV_DAEMONSETS = [HOSTPATH_PROVISIONER_CSI] + ALL_CNV_DAEMONSETS_NO_HPP_CSI
 
@@ -614,7 +620,8 @@ class StorageClassNames:
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     IO2_CSI = "io2-csi"
-    IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    GPFS = "ibm-spectrum-scale-sample"
+    OCI = "oci-bv"
 
 
 # Namespace constants
@@ -629,6 +636,8 @@ class NamespacesNames:
     DEFAULT = "default"
     NVIDIA_GPU_OPERATOR = "nvidia-gpu-operator"
     MACHINE_API_NAMESPACE = "machine-api-namespace"
+    OPENSHIFT_VIRTUALIZATION_OS_IMAGES = "openshift-virtualization-os-images"
+    WASP = "wasp"
 
 
 # CNV supplemental-templates
@@ -787,9 +796,11 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }
