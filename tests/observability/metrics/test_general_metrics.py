@@ -74,6 +74,7 @@ class TestVmiNodeCpuAffinityLinux:
         )
 
 
+@pytest.mark.tier3
 class TestVmiNodeCpuAffinityWindows:
     @pytest.mark.polarion("CNV-11883")
     def test_kubevirt_vmi_node_cpu_affinity_windows_vm(self, prometheus, windows_vm_for_test):

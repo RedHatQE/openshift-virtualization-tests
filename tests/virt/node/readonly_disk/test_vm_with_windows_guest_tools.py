@@ -140,13 +140,9 @@ class TestWindowsGuestTools:
         LOGGER.info("Test VM with Windows guest tools")
         verify_cdrom_in_xml(vm=vm_with_guest_tools)
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-6518")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_with_guest_tools"])
-    def test_migrate_vm_with_windows_guest_tools(
-        self,
-        skip_access_mode_rwo_scope_class,
-        vm_with_guest_tools,
-        migrated_vm_with_guest_tools,
-    ):
+    def test_migrate_vm_with_windows_guest_tools(self, vm_with_guest_tools, migrated_vm_with_guest_tools):
         LOGGER.info("Test migration of a VM with Windows guest tools")
         verify_cdrom_in_xml(vm=vm_with_guest_tools)
