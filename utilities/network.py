@@ -741,7 +741,8 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
     """
     ping_ipv6 = "-6" if get_valid_ip_address(dst_ip=dst_ip, family=IPV6_STR) else ""
     ping_cmd = (
-        f"ping {'-q' if quiet_output else ''} {ping_ipv6} {'-n' if windows else '-c'} {count if count else '3'} {dst_ip}"
+        f"ping {'-q' if quiet_output else ''} {ping_ipv6} {'-n' if windows else '-c'} "
+        f"{count if count else '3'} {dst_ip}"
     )
     if packet_size:
         ping_cmd += f" -s {packet_size} -M do"
