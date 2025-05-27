@@ -67,6 +67,7 @@ def client_for_test(request, admin_client, unprivileged_client):
         )
 
 
+@pytest.mark.jira("CNV-62312", run=False)
 @pytest.mark.parametrize(
     (
         "client_for_test",
