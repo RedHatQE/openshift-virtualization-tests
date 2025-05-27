@@ -11,7 +11,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.constants import PORT_80
 from utilities.infra import create_ns, get_node_selector_dict
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 PORT_81 = 81
 CURL_TIMEOUT = 5
@@ -104,12 +104,14 @@ def network_policy_vmb(namespace_2, worker_node1, unprivileged_client):
 
 @pytest.fixture(scope="module")
 def running_network_policy_vma(network_policy_vma):
-    return running_vm(vm=network_policy_vma)
+    network_policy_vma.wait_for_agent_connected()
+    return network_policy_vma
 
 
 @pytest.fixture(scope="module")
 def running_network_policy_vmb(network_policy_vmb):
-    return running_vm(vm=network_policy_vmb)
+    network_policy_vmb.wait_for_agent_connected()
+    return network_policy_vmb
 
 
 @pytest.mark.order(before="test_network_policy_allow_http80")

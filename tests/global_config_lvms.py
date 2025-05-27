@@ -28,6 +28,9 @@ storage_class_matrix = [
         StorageClassNames.TOPOLVM: {
             VOLUME_MODE: DataVolume.VolumeMode.BLOCK,
             ACCESS_MODE: RWO,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": True,
             "default": True,
         }
     },

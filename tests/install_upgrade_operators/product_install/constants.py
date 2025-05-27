@@ -35,6 +35,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "template:view",
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
+        "kubevirt-ipam-controller-manager-role",
     ],
     "ClusterRoleBinding": [
         "hostpath-provisioner-operator-service-system:auth-delegator",
@@ -56,6 +57,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "template-validator",
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
+        "kubevirt-ipam-controller-manager-rolebinding",
     ],
     "Namespace": ["openshift-cnv", "openshift-virtualization-os-images"],
     "Project": ["openshift-cnv", "openshift-virtualization-os-images"],
@@ -76,6 +78,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "virt-api-mutator",
         "kubemacpool-mutator",
         "cdi-api-datavolume-mutate",
+        "kubevirt-ipam-controller-mutating-webhook-configuration",
     ],
     "SecurityContextConstraints": [
         "linux-bridge",
@@ -83,6 +86,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "kubevirt-controller",
         "bridge-marker",
         "kubevirt-handler",
+        "passt-binding-cni",
     ],
     "NetworkAddonsConfig": ["cluster"],
     "ConsoleCLIDownload": ["virtctl-clidownloads-kubevirt-hyperconverged"],
@@ -167,6 +171,7 @@ NAMESPACED_RESOURCE_WHITE_LIST = {
             "centos-stream10",
         ],
     },
+    "default": {"NetworkAttachmentDefinition": ["primary-udn-kubevirt-binding"]},
 }
 OPENSHIFT_VIRTUALIZATION = "openshift-virtualization"
 HCO_NOT_INSTALLED_ALERT = "HCOInstallationIncomplete"

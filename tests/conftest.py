@@ -187,10 +187,10 @@ from utilities.storage import (
     get_storage_class_with_specified_volume_mode,
     get_test_artifact_server_url,
     is_snapshot_supported_by_sc,
-    re_import_boot_sources,
     remove_default_storage_classes,
     sc_is_hpp_with_immediate_volume_binding,
     update_default_sc,
+    verify_boot_sources_reimported,
 )
 from utilities.virt import (
     VirtualMachineForCloning,
@@ -2125,12 +2125,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
 
 
 @pytest.fixture(scope="session")
-def skip_on_ocp_upgrade(pytestconfig):
-    if pytestconfig.option.upgrade == "ocp":
-        pytest.skip("This test is not supported for OCP upgrade")
-
-
-@pytest.fixture(scope="session")
 def rhel9_http_image_url():
     return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 
@@ -2665,22 +2659,22 @@ def updated_default_storage_class_ocs_virt(
         )
         == "false"
     ):
-        failed_update_boot_sources = False
+        boot_source_imported_successfully = False
         with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
             with update_default_sc(default=True, storage_class=ocs_storage_class):
-                failed_update_boot_sources = re_import_boot_sources(
+                boot_source_imported_successfully = verify_boot_sources_reimported(
                     admin_client=admin_client,
                     namespace=golden_images_namespace.name,
                 )
-                if not failed_update_boot_sources:
+                if boot_source_imported_successfully:
                     yield
 
-        # on teardown, delete the boot sources and wait for the original sources to re-create
-        re_import_boot_sources(
+        # on teardown, wait for the original sources to re-create
+        verify_boot_sources_reimported(
             admin_client=admin_client,
             namespace=golden_images_namespace.name,
         )
-        if failed_update_boot_sources:
+        if not boot_source_imported_successfully:
             exit_pytest_execution(message=f"Failed to set {ocs_storage_class.name} as default storage class")
     else:
         yield
