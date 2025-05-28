@@ -2,8 +2,9 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
-from tests.storage.storage_migration.utils import check_file_in_vm, verify_linux_vms_boot_time_after_storage_migration
+from tests.storage.storage_migration.utils import (
+    verify_storage_migration_succeeded,
+)
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -46,6 +47,7 @@ class TestStorageClassMigrationAtoB:
     def test_vm_storage_class_migration_a_to_b_running_vms(
         self,
         source_storage_class,
+        target_storage_class,
         written_file_to_vms_before_migration,
         online_vms_for_storage_class_migration,
         linux_vms_boot_time_before_storage_migration,
@@ -53,16 +55,12 @@ class TestStorageClassMigrationAtoB:
         storage_mig_migration,
         deleted_old_dvs_of_online_vms,
     ):
-        verify_linux_vms_boot_time_after_storage_migration(
-            vm_list=online_vms_for_storage_class_migration,
-            initial_boot_time=linux_vms_boot_time_before_storage_migration,
+        verify_storage_migration_succeeded(
+            linux_vms_boot_time_before_storage_migration=linux_vms_boot_time_before_storage_migration,
+            online_vms_for_storage_class_migration=online_vms_for_storage_class_migration,
+            vms_with_written_file_before_migration=written_file_to_vms_before_migration,
+            target_storage_class=target_storage_class,
         )
-        for vm in written_file_to_vms_before_migration:
-            check_file_in_vm(
-                vm=vm,
-                file_name=FILE_BEFORE_STORAGE_MIGRATION,
-                file_content=CONTENT,
-            )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b_running_vms"])
     @pytest.mark.polarion("CNV-11504")
@@ -107,6 +105,7 @@ class TestStorageClassMigrationBtoA:
     def test_vm_storage_class_migration_b_to_a_with_running_and_stopped_vms(
         self,
         source_storage_class,
+        target_storage_class,
         data_volume_scope_class,
         vm_for_storage_class_migration_from_template_with_existing_dv,
         written_file_to_vms_before_migration,
@@ -117,13 +116,9 @@ class TestStorageClassMigrationBtoA:
         deleted_old_dvs_of_online_vms,
         deleted_old_dvs_of_stopped_vms,
     ):
-        verify_linux_vms_boot_time_after_storage_migration(
-            vm_list=online_vms_for_storage_class_migration,
-            initial_boot_time=linux_vms_boot_time_before_storage_migration,
+        verify_storage_migration_succeeded(
+            linux_vms_boot_time_before_storage_migration=linux_vms_boot_time_before_storage_migration,
+            online_vms_for_storage_class_migration=online_vms_for_storage_class_migration,
+            vms_with_written_file_before_migration=written_file_to_vms_before_migration,
+            target_storage_class=target_storage_class,
         )
-        for vm in written_file_to_vms_before_migration:
-            check_file_in_vm(
-                vm=vm,
-                file_name=FILE_BEFORE_STORAGE_MIGRATION,
-                file_content=CONTENT,
-            )
