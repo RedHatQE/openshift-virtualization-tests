@@ -1,7 +1,9 @@
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 
+from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
 from utilities.virt import get_vm_boot_time
@@ -32,3 +34,35 @@ def verify_linux_vms_boot_time_after_storage_migration(
         if initial_boot_time[vm.name] != current_boot_time:
             rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+def vefiry_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: str) -> None:
+    vm_pvcs_names = [
+        volume["dataVolume"]["name"]
+        for volume in vm.instance.spec.template.spec.volumes
+        if "dataVolume" in dict(volume)
+    ]
+    for pvc_name in vm_pvcs_names:
+        assert (
+            PersistentVolumeClaim(namespace=vm.namespace, name=pvc_name).instance.spec.storageClassName
+            == target_storage_class
+        )
+
+
+def verify_storage_migration_succeeded(
+    linux_vms_boot_time_before_storage_migration: dict[VirtualMachine, str],
+    online_vms_for_storage_class_migration: list[VirtualMachine],
+    vms_with_written_file_before_migration: list[VirtualMachine],
+    target_storage_class: str,
+) -> None:
+    verify_linux_vms_boot_time_after_storage_migration(
+        vm_list=online_vms_for_storage_class_migration,
+        initial_boot_time=linux_vms_boot_time_before_storage_migration,
+    )
+    for vm in vms_with_written_file_before_migration:
+        check_file_in_vm(
+            vm=vm,
+            file_name=FILE_BEFORE_STORAGE_MIGRATION,
+            file_content=CONTENT,
+        )
+        vefiry_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
