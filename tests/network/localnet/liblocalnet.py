@@ -1,3 +1,6 @@
+import contextlib
+from typing import Generator
+
 from libs.net.traffic_generator import Client, Server
 from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
@@ -118,3 +121,19 @@ def localnet_cudn(
     return libcudn.ClusterUserDefinedNetwork(
         name=name, namespace_selector=LabelSelector(matchLabels=match_labels), network=network
     )
+
+
+@contextlib.contextmanager
+def client_server_active_connection(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    spec_logical_network: str,
+    port: int = _IPERF_SERVER_PORT,
+) -> Generator[tuple[Client, Server], None, None]:
+    with Server(vm=server_vm, port=port) as server:
+        with Client(
+            vm=client_vm,
+            server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+            server_port=port,
+        ) as client:
+            yield client, server
