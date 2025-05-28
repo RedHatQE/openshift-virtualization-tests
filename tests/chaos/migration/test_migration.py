@@ -30,6 +30,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.gpfs
 @pytest.mark.parametrize(
     "pod_deleting_process",
     [
@@ -82,6 +83,7 @@ def test_pod_delete_migration(
     )
 
 
+@pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_worker_background_process",
     [
@@ -193,6 +195,7 @@ def test_pod_delete_storage_migration(
     ), "The VMI has not been migrated to a different node."
 
 
+@pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_worker_background_process",
     [
@@ -241,6 +244,7 @@ def test_stress_migration_source_node(
     )
 
 
+@pytest.mark.gpfs
 @pytest.mark.polarion("CNV-6120")
 def test_migration_reboot_source_node(
     chaos_migration_policy,
@@ -261,6 +265,7 @@ def test_migration_reboot_source_node(
     ), "The VMI has not been migrated to a different node."
 
 
+@pytest.mark.gpfs
 @pytest.mark.polarion("CNV-5456")
 def test_migration_reboot_target_node(
     chaos_migration_policy,
