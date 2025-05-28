@@ -33,7 +33,7 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 LOGGER = logging.getLogger(__name__)
 TLS_POLICIES_WITHOUT_CUSTOM_POLICY = {

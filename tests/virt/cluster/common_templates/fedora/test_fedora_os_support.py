@@ -225,6 +225,7 @@ class TestCommonTemplatesFedora:
             vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class,
         )
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.polarion("CNV-5842")
@@ -232,11 +233,7 @@ class TestCommonTemplatesFedora:
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify",
         depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"],
     )
-    def test_migrate_vm(
-        self,
-        skip_access_mode_rwo_scope_class,
-        golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class,
-    ):
+    def test_migrate_vm(self, golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class):
         """Test SSH connectivity after migration"""
         vm = golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class
         migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
@@ -246,7 +243,6 @@ class TestCommonTemplatesFedora:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(
         self,
-        skip_access_mode_rwo_scope_class,
         golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class,
         ping_process_in_fedora_os,
     ):
