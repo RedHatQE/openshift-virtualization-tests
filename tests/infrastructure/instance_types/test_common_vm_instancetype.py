@@ -22,6 +22,7 @@ def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 
 
+@pytest.mark.jira("CNV-61589", run=False)
 @pytest.mark.hugepages
 @pytest.mark.special_infra
 @pytest.mark.tier3
