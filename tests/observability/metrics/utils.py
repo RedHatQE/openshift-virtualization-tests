@@ -49,6 +49,7 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -1397,15 +1398,22 @@ def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachi
 
 def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
     wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
-    match = re.search(
-        r"\b(\d+)([KMG]i)\b",
-        run_command(
-            command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace}"),
-            check=False,
-        )[1],
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace} --no-headers"),
+        check=False,
     )
-    assert match, "vm memory working set not found"
-    return int(bitmath.parse_string_unsafe(f"{match.group(1)}{match.group(2)}").bytes)
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                if match := re.search(r"\b(\d+)([KMG]i)\b", out):
+                    return int(bitmath.parse_string_unsafe(f"{match.group(1)}{match.group(2)}").bytes)
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm.name} after {TIMEOUT_2MIN} seconds")
+        raise
+    return 0
 
 
 def get_vm_memory_rss_bytes(vm: VirtualMachineForTests) -> int:
