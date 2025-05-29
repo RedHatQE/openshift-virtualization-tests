@@ -10,6 +10,7 @@ import utilities.network
 
 
 @pytest.mark.polarion("CNV-3296")
+@pytest.mark.ovs_brcnv
 def test_connectivity_over_pod_network(
     disconnected_bond_port,
     running_ovs_bond_vma,
