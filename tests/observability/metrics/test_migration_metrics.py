@@ -39,24 +39,6 @@ def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
             pod.delete(wait=True)
 
 
-def metric_value_sampler(prometheus, metric, expected_value):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=10,
-        func=get_metric_sum_value,
-        prometheus=prometheus,
-        metric=metric,
-    )
-    current_check = 0
-    for sample in samples:
-        if sample == expected_value:
-            current_check += 1
-            if current_check >= 3:
-                return True
-        else:
-            current_check = 0
-
-
 def assert_metrics_values(
     prometheus: Prometheus,
     migration_metrics_dict: dict[str, str],
