@@ -7,9 +7,9 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_INFO,
 )
 from tests.observability.metrics.utils import (
+    assert_vm_metric,
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
-    get_vm_metrics,
     validate_metric_value_within_range,
     wait_vmi_dommemstat_match_with_metric_value,
 )
@@ -33,10 +33,9 @@ class TestMetricsLinux:
         This test also validates ability to pull metric information from a given vm's virt-handler pod and validates
         appropriate information exists for that metrics.
         """
-        vm_name = single_metric_vm.name
-        assert get_vm_metrics(
-            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=vm_name
-        ), f"query: {cnv_vmi_monitoring_metrics_matrix__function__} has no result for vm: {vm_name}"
+        assert_vm_metric(
+            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=single_metric_vm.name
+        )
         assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm)
 
 
@@ -50,12 +49,11 @@ class TestMetricsWindows:
         windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
-        vm_name = windows_vm_for_test.name
-        assert get_vm_metrics(
+        assert_vm_metric(
             prometheus=prometheus,
             query=cnv_vmi_monitoring_metrics_matrix__function__,
             vm_name=windows_vm_for_test.name,
-        ), f"query: {cnv_vmi_monitoring_metrics_matrix__function__} has no result for vm: {vm_name}"
+        )
         assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test)
 
 

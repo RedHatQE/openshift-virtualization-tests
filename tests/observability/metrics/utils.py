@@ -189,6 +189,12 @@ def get_vm_metrics(prometheus: Prometheus, query: str, vm_name: str, timeout: in
     return None
 
 
+def assert_vm_metric(prometheus: Prometheus, query: str, vm_name: str):
+    assert get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm_name), (
+        f"query: {query} has no result for vm: {vm_name}"
+    )
+
+
 def get_hco_cr_modification_alert_summary_with_count(prometheus: Prometheus, component_name: str) -> str | None:
     """This function will check the 'KubeVirtCRModified'
     an alert summary generated after the 'kubevirt_hco_out_of_band_modifications_total' metrics triggered.
@@ -1036,7 +1042,7 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
 
 
 def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus, metric_name: str, expected_value: int, timeout: int = TIMEOUT_4MIN
 ) -> None:
     sampler = TimeoutSampler(
         wait_timeout=timeout,
