@@ -24,7 +24,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
@@ -162,7 +162,9 @@ def dhcp_server_vm(namespace, worker_node1, dhcp_br_nad, unprivileged_client):
 
 @pytest.fixture(scope="module")
 def running_dhcp_server_vm(dhcp_server_vm):
-    return running_vm(vm=dhcp_server_vm, wait_for_cloud_init=True)
+    dhcp_server_vm.start(wait=True)
+    dhcp_server_vm.wait_for_agent_connected()
+    return dhcp_server_vm
 
 
 @pytest.fixture(scope="module")
