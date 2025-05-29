@@ -11,6 +11,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
+from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
@@ -70,6 +71,7 @@ from utilities.constants import (
     SOURCE_POD,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5SEC,

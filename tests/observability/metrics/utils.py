@@ -21,6 +21,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
+from podman.errors import ContainerNotFound
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -1372,9 +1373,9 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int:
-    containers = vm.vmi.virt_launcher_pod.instance.spec.containers
-    assert containers, f"No containers found in virt-launcher pod of {vm.vmi.virt_launcher_pod.name}"
-    return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
+    if containers := vm.vmi.virt_launcher_pod.instance.spec.containers:
+        return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
+    raise ContainerNotFound(f"No containers found in virt-launcher pod of {vm.vmi.virt_launcher_pod.name}")
 
 
 def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
