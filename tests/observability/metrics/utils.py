@@ -1037,7 +1037,7 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
 
 
 def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus, metric_name: str, expected_value: int, timeout: int = TIMEOUT_4MIN
 ) -> None:
     sampler = TimeoutSampler(
         wait_timeout=timeout,
