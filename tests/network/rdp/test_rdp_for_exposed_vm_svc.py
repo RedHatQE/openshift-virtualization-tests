@@ -75,6 +75,7 @@ def rdp_pod(workers_utility_pods, rdp_vm):
     ],
     indirect=True,
 )
+@pytest.mark.skip(reason="CNV-43997")
 def test_rdp_for_exposed_win_vm_as_node_port_svc(
     rdp_vm,
     rdp_pod,
