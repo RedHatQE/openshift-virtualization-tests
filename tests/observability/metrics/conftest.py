@@ -72,6 +72,7 @@ from utilities.constants import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -849,6 +850,65 @@ def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_a
                 ).execute(command=RSS_MEMORY_COMMAND)
             )
         ).MiB
+    )
+
+
+@pytest.fixture()
+def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(
+            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
+        ),
+        check=False,
+    )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                return int(
+                    bitmath.parse_string_unsafe(
+                        re.search(
+                            r"\b(\d+Mi)\b",
+                            out,
+                        ).group(1)
+                    ).bytes
+                )
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
+        raise
+
+
+@pytest.fixture()
+def virt_launcher_pod_metrics_resource_exists(vm_for_test):
+    vl_name = vm_for_test.vmi.virt_launcher_pod.name
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
+        raise
+
+
+@pytest.fixture()
+def vm_memory_rss_bytes(vm_for_test):
+    return int(vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
+
+
+@pytest.fixture(scope="class")
+def vm_virt_launcher_pod_requested_memory(vm_for_test):
+    return int(
+        bitmath.parse_string_unsafe(
+            vm_for_test.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
+        ).bytes
     )
 
 

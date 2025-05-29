@@ -8,6 +8,7 @@ from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
 
 pytestmark = [
     pytest.mark.chaos,
+    pytest.mark.gpfs,
     pytest.mark.usefixtures(
         "skip_if_no_storage_class_for_snapshot",
         "chaos_namespace",
