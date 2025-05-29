@@ -8,7 +8,7 @@ from timeout_sampler import TimeoutExpiredError
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_2MIN, TIMEOUT_30SEC
 from utilities.infra import get_node_selector_dict
 from utilities.network import network_device, network_nad
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 # todo: revisit the hardcoded value and consolidate it with default timeout
 # (perhaps by exposing it via test configuration parameter)
@@ -79,7 +79,8 @@ def bridge_attached_vmi_for_bridge_marker_device_exists(namespace, bridge_marker
     with create_bridge_attached_vm_for_bridge_marker(
         namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm.vmi
 
 
