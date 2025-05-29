@@ -13,7 +13,7 @@ from utilities.infra import is_jira_open
 
 pytestmark = pytest.mark.arm64
 
-WHITELIST_STRING_LIST = [
+ALLOWLIST_STRING_LIST = [
     "dockercfg",
     "token",
     "openshift-service-ca.crt",
@@ -28,6 +28,7 @@ WHITELIST_STRING_LIST = [
     "console-proxy-serving-cert",
     "hyperconverged-cluster-operator-lock",
     "kubevirt-ipam-controller-webhook-service",
+    "istio-ca-root-cert",
 ]
 PRINT_COMMAND = '{printf "%s%s",sep,$0;sep=","}'
 AWK_COMMAND = f"awk '{PRINT_COMMAND}'"
@@ -60,10 +61,10 @@ OPEN_JIRA = {
 }
 
 
-def is_jira_white_listed(kind, resource_name):
+def is_jira_allowlisted(kind, resource_name):
     jira_key = list(OPEN_JIRA[kind].keys())[0] if OPEN_JIRA.get(kind) else None
-    jira_white_listed_names = OPEN_JIRA[kind][jira_key] if jira_key and is_jira_open(jira_id=jira_key) else []
-    return bool(resource_name.startswith(tuple(jira_white_listed_names))) if jira_white_listed_names else False
+    jira_allowlisted_names = OPEN_JIRA[kind][jira_key] if jira_key and is_jira_open(jira_id=jira_key) else []
+    return bool(resource_name.startswith(tuple(jira_allowlisted_names))) if jira_allowlisted_names else False
 
 
 def get_all_api_resources(
@@ -97,8 +98,8 @@ def test_relationship_labels_all_cnv_resources(
             LOGGER.warning(f"Skip checking for kind: {kind}")
             continue
         for name in cnv_resources[kind]:
-            if any(substring in name for substring in WHITELIST_STRING_LIST):
-                LOGGER.debug(f"{kind}, {name} is whitelisted")
+            if any(substring in name for substring in ALLOWLIST_STRING_LIST):
+                LOGGER.debug(f"{kind}, {name} is allowlisted")
                 continue
             LOGGER.debug(f"Looking at element: {name}, kind: {kind}")
             resource_obj = get_resource(
@@ -116,21 +117,21 @@ def test_relationship_labels_all_cnv_resources(
             if resource_obj.exists:
                 labels = resource_obj.instance.metadata.labels
                 if not labels:
-                    if not is_jira_white_listed(kind=kind, resource_name=name):
+                    if not is_jira_allowlisted(kind=kind, resource_name=name):
                         errors.setdefault(kind, []).append(f"{name} has no labels")
                 else:
                     if set(ALL_LABEL_KEYS).issubset(set(labels.keys())):
                         continue
                     else:
                         # Some labels are missing, we need to check if the resources are olm managed or
-                        # white listed.
+                        # allowlisted.
                         LOGGER.debug(
-                            f"Checking for kind: {kind} resource: {name} for whitelisting: {set(labels.keys())}"
+                            f"Checking for kind: {kind} resource: {name} for allowlisting: {set(labels.keys())}"
                         )
-                        if (labels.get("olm.managed") and labels["olm.managed"] == "true") or is_jira_white_listed(
+                        if (labels.get("olm.managed") and labels["olm.managed"] == "true") or is_jira_allowlisted(
                             kind=kind, resource_name=name
                         ):
-                            LOGGER.warning(f"kind: {kind} resource: {name} is olm managed or whitelisted by jira")
+                            LOGGER.warning(f"kind: {kind} resource: {name} is olm managed or allowlisted by jira")
                             continue
 
                         else:
