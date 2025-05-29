@@ -4,7 +4,7 @@ import pytest
 
 from utilities.constants import OS_FLAVOR_CIRROS, Images
 from utilities.infra import get_node_selector_dict
-from utilities.virt import CIRROS_IMAGE, VirtualMachineForTests, running_vm
+from utilities.virt import CIRROS_IMAGE, VirtualMachineForTests
 
 DHCPV6_PORT = 547
 VM_CIRROS = "vm-cirros"
@@ -26,7 +26,7 @@ def vm_cirros(
         image=CIRROS_IMAGE,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        vm.start(wait=True)
         yield vm
 
 
