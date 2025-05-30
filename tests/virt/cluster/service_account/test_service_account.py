@@ -48,7 +48,7 @@ def test_vm_with_specified_service_account(service_account_vm):
     assert pod_sa == vm_namespace, "ServiceAccount should be attached to the POD"
 
     # Verifies that ServiceAccount is attached to VMI
-    # Change mount device based on clushter cpu architecture
+    # Change mount device based on cluster cpu architecture
     node_cpu_arch = infra.get_nodes_cpu_architecture()
     mount_device = "/dev/vdb" if node_cpu_arch == S390X else "/dev/sda"
     output = run_ssh_commands(
