@@ -16,6 +16,7 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 NAME = "static-access-creds-injection"
 
+pytestmark = pytest.mark.s390x
 
 @pytest.fixture(scope="class")
 def ssh_secret(namespace):

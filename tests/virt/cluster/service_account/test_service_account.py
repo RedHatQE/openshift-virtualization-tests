@@ -9,7 +9,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture(scope="module")

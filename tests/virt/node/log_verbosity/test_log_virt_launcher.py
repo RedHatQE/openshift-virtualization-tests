@@ -97,6 +97,7 @@ def migrated_vm_with_policy(migration_policy_with_bandwidth, vm_for_migration_pr
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestProgressOfMigrationInVirtLauncher:
     @pytest.mark.polarion("CNV-9057")
     def test_virt_launcher_log_verbosity(

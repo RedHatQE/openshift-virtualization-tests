@@ -80,6 +80,7 @@ def disk_options_vm(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestRHELIOOptions:
     @pytest.mark.parametrize(
         "disk_options_vm, expected_disk_io_option",

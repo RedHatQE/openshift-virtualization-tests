@@ -209,6 +209,7 @@ def shutdown_vm_guest_os(vm):
     indirect=True,
 )
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.gating
 class TestRunStrategyBaseActions:
     @pytest.mark.parametrize(
@@ -245,6 +246,7 @@ class TestRunStrategyBaseActions:
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestRunStrategyAdvancedActions:
     @pytest.mark.polarion("CNV-5054")
     def test_run_strategy_shutdown(

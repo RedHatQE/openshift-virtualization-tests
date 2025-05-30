@@ -12,7 +12,7 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.constants import Images
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 LOGGER = logging.getLogger(__name__)

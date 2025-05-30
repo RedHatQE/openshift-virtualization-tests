@@ -42,6 +42,7 @@ def vm_with_common_cpu_model_scope_function(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_odf_cephfs_storage_class_migrates(
     skip_test_if_no_odf_cephfs_sc,
     golden_image_data_volume_scope_function,

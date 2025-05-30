@@ -43,6 +43,7 @@ pytestmark = [
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "first_pod_for_aaq_test",
@@ -92,6 +93,7 @@ class TestARQCanManagePods:
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.usefixtures(
     "application_aware_resource_quota",
     "vm_for_aaq_test",

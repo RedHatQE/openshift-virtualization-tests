@@ -22,6 +22,7 @@ TESTS_CLASS_NAME = "TestCustomNamespace"
 
 
 @pytest.mark.usefixtures("base_templates", "opt_in_custom_template_namespace")
+@pytest.mark.s390x
 class TestCustomNamespace:
     @pytest.mark.polarion("CNV-8144")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_base_templates_exist_in_custom_namespace")

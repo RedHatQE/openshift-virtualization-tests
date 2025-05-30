@@ -217,6 +217,7 @@ def verify_reconciled_secret_resource(resource, resource_dict):
         ),
     ],
 )
+@pytest.mark.s390x
 def test_strict_reconcile_resources(admin_client, hco_namespace, resource_type, managed_resource_name):
     """Test that virt-operator strictly reconciles managed KubeVirt resources successfully"""
     for resource in resource_type.get(

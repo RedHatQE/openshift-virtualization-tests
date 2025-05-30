@@ -90,6 +90,7 @@ def custom_template_from_base_template(request, namespace):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestBaseCustomTemplates:
     @pytest.mark.parametrize(
         "custom_template_from_base_template, vm_name",

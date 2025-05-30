@@ -167,6 +167,7 @@ def fedora_target_vm_instance(fedora_target_vm):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_clone_vm_two_pvc_disks(
     vm_with_dv_for_cloning,
     files_created_on_pvc_disks,
@@ -188,6 +189,7 @@ def test_clone_vm_two_pvc_disks(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-10766")
+@pytest.mark.s390x
 def test_clone_vm_with_instance_type_and_preference(
     rhel_vm_with_instancetype_and_preference_for_cloning,
     cloning_job_scope_function,
@@ -254,6 +256,7 @@ def test_clone_windows_vm(
     indirect=True,
 )
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",

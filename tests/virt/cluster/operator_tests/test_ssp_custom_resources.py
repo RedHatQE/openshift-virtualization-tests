@@ -32,6 +32,7 @@ def pods_list_with_given_prefix(request, admin_client, hco_namespace):
 
 
 @pytest.mark.polarion("CNV-3737")
+@pytest.mark.s390x
 def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
     LOGGER.info("Check SSP CR conditions.")
     resource_conditions = {
@@ -55,6 +56,7 @@ def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_priority_class_value(pods_list_with_given_prefix):
     verify_pods_priority_class_value(pods=pods_list_with_given_prefix, expected_value="system-cluster-critical")
 
@@ -95,6 +97,7 @@ def virt_template_validator_without_podantiaffinity(
 
 
 @pytest.mark.polarion("CNV-8660")
+@pytest.mark.s390x
 def test_podantiaffinity(
     virt_template_validator_pods,
     pods_with_same_node,

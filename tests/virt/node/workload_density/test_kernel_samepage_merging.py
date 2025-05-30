@@ -174,6 +174,7 @@ def pages_to_scan_initial_value(worker_node1, workers_utility_pods):
     "vms_for_ksm_test",
     "ksm_override_annotation_added_to_worker1",
 )
+@pytest.mark.s390x
 class TestKernelSamepageMerging:
     @pytest.mark.polarion("CNV-10522")
     @pytest.mark.dependency(name="test_ksm_activated_when_node_under_pressure")

@@ -23,6 +23,7 @@ def rng_vm(unprivileged_client, namespace):
 
 
 @pytest.mark.polarion("CNV-791")
+@pytest.mark.s390x
 def test_vm_with_rng(rng_vm):
     """
     Test VM with RNG

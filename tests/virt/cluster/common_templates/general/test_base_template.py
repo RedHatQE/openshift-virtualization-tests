@@ -188,6 +188,7 @@ def verify_annotations_match(obj_annotations, expected):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-1069")
+@pytest.mark.s390x
 def test_base_templates_annotations(base_templates, common_templates_expected_list):
     """
     Check all CNV templates exists, by label: template.kubevirt.io/type=base
@@ -216,14 +217,14 @@ def test_base_templates_annotations(base_templates, common_templates_expected_li
             "rhel8",
             "rhel-8.1",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3620"),
+            marks=[pytest.mark.polarion("CNV-3620"), pytest.mark.s390x],
             id="test_rhel8_minimum_memory",
         ),
         pytest.param(
             "rhel9",
             "rhel-9.0",
             "minimum",
-            marks=pytest.mark.polarion("CNV-6989"),
+            marks=[pytest.mark.polarion("CNV-6989"), pytest.mark.s390x],
             id="test_rhel9_minimum_memory",
         ),
         pytest.param(
@@ -237,14 +238,14 @@ def test_base_templates_annotations(base_templates, common_templates_expected_li
             "rhel8",
             "rhel-8.1",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3623"),
+            marks=[pytest.mark.polarion("CNV-3623"), pytest.mark.s390x],
             id="test_rhel8_maximum_memory",
         ),
         pytest.param(
             "rhel9",
             "rhel-9.0",
             "maximum",
-            marks=pytest.mark.polarion("CNV-6988"),
+            marks=[pytest.mark.polarion("CNV-6988"), pytest.mark.s390x],
             id="test_rhel9_maximum_memory",
         ),
     ],
@@ -354,6 +355,7 @@ def test_validate_windows_min_max_memory(
 
 
 @pytest.mark.polarion("CNV-5002")
+@pytest.mark.s390x
 def test_common_templates_golden_images_params(base_templates):
     unmatched_templates = {}
     for template in base_templates:
@@ -387,6 +389,7 @@ def test_common_templates_golden_images_params(base_templates):
 
 
 @pytest.mark.polarion("CNV-5599")
+@pytest.mark.s390x
 def test_provide_support_annotations(base_templates, templates_provider_support_dict):
     """Verify provider, provider-support-level and provider-url annotations"""
 
@@ -404,6 +407,7 @@ def test_provide_support_annotations(base_templates, templates_provider_support_
 
 
 @pytest.mark.polarion("CNV-6874")
+@pytest.mark.s390x
 def test_vm_annotations_in_template(base_templates):
     """Verify template VM object has os, workload and flavor annotations which match corresponding template labels"""
 
@@ -473,6 +477,7 @@ def test_vm_annotations_in_template(base_templates):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vmi_annotations(data_volume_scope_function, vm_from_template_with_existing_dv):
     """Verify that VM annotations are copied to the VMI object.
     For this test the underlying OS is not important; using Cirros to reduce runtime.
@@ -543,6 +548,7 @@ def test_hyperv_features_exist_in_windows_templates(os_base_templates):
     ],
     indirect=["os_base_templates"],
 )
+@pytest.mark.s390x
 def test_suggested_image_annotation_exists(os_base_templates, annotation_list):
     failed_templates_dict = {}
     for template in os_base_templates:
