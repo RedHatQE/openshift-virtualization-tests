@@ -9,7 +9,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import TIMEOUT_12MIN
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 def assert_ip_mismatch(vm):
@@ -32,7 +32,8 @@ def report_masquerade_ip_vmi(unprivileged_client, namespace):
         client=unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm.vmi
 
 

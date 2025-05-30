@@ -10,7 +10,7 @@ from tests.network.utils import basic_expose_command, get_service
 from utilities.constants import SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
 from utilities.network import compose_cloud_init_data_dict
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 SINGLE_STACK_SERVICE_IP_FAMILY = "IPv4"
 
@@ -48,7 +48,8 @@ def running_vm_for_exposure(
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
