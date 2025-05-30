@@ -7,9 +7,10 @@ from kubernetes.client.rest import ApiException
 from ocp_resources.service_account import ServiceAccount
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 from utilities import infra
 from utilities.constants import S390X
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
