@@ -8,7 +8,8 @@ from ocp_resources.service_account import ServiceAccount
 from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
-
+from utilities import infra
+from utilities.constants import S390X
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
@@ -46,10 +47,13 @@ def test_vm_with_specified_service_account(service_account_vm):
     assert pod_sa == vm_namespace, "ServiceAccount should be attached to the POD"
 
     # Verifies that ServiceAccount is attached to VMI
+    # Change mount device based on clushter cpu architecture
+    node_cpu_arch = infra.get_nodes_cpu_architecture()
+    mount_device = "/dev/vdb" if node_cpu_arch == S390X else "/dev/sda"
     output = run_ssh_commands(
         host=service_account_vm.ssh_exec,
         commands=[
-            ["sudo", "mount", "/dev/sda", "/mnt"],
+            ["sudo", "mount", mount_device, "/mnt"],
             ["sudo", "cat", "/mnt/namespace"],
         ],
     )
