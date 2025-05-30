@@ -105,6 +105,7 @@ from utilities.constants import (
     RHEL9_PREFERENCE,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
+    S390X,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -1197,6 +1198,10 @@ def modern_cpu_for_migration(cluster_common_modern_node_cpu, host_cpu_model, nod
             cluster_cpu=cluster_common_modern_node_cpu, host_cpu_model=host_cpu_model
         )
     )
+
+@pytest.fixture(scope="session")
+def is_s390x_cluster(nodes_cpu_architecture):
+    return nodes_cpu_architecture == S390X
 
 
 @pytest.fixture(scope="module")
