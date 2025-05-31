@@ -35,6 +35,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "template:view",
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
+        "kubevirt-ipam-controller-manager-role",
     ],
     "ClusterRoleBinding": [
         "hostpath-provisioner-operator-service-system:auth-delegator",
@@ -55,7 +56,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "kubevirt-apiserver",
         "template-validator",
         "kubevirt-hyperconverged-",
-        "olm.og.openshift-cnv-",
+        "olm.og.openshift-cnv-kubevirt-ipam-controller-manager-rolebinding",
     ],
     "Namespace": ["openshift-cnv", "openshift-virtualization-os-images"],
     "Project": ["openshift-cnv", "openshift-virtualization-os-images"],
@@ -76,6 +77,8 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "virt-api-mutator",
         "kubemacpool-mutator",
         "cdi-api-datavolume-mutate",
+        "cdi-api-pvc-mutate",
+        "kubevirt-ipam-controller-mutating-webhook-configuration",
     ],
     "SecurityContextConstraints": [
         "linux-bridge",
@@ -102,10 +105,11 @@ NAMESPACED_RESOURCE_WHITE_LIST = {
     },
     "openshift-config-managed": {"ConfigMap": ["grafana-dashboard-kubevirt-top-consumers"]},
     "openshift-storage": {
-        "Pod": ["csi-addons"],
+        "Pod": ["csi-addons", "storageclient"],
         "EndpointSlice": ["csi-addons"],
         "PodMetrics": ["csi-addons"],
         "ReplicaSet": ["csi-addons"],
+        "Job": ["storageclient"],
     },
     "openshift-console": {
         "ReplicaSet": ["console"],
