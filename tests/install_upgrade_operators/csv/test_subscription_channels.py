@@ -4,8 +4,8 @@ pytestmark = pytest.mark.sno
 
 
 @pytest.mark.polarion("CNV-7169")
-def test_channels_in_manifest(kubevirt_package_manifest_channels):
-    expected_channels = {"stable", "candidate", "dev-preview"}
+def test_channels_in_manifest(kubevirt_package_manifest_channels, kubevirt_package_manifest_current_channel):
+    expected_channels = {"stable", "dev-preview", kubevirt_package_manifest_current_channel.name}
     missing_channels = expected_channels - {channel.name for channel in kubevirt_package_manifest_channels}
     assert not missing_channels, f"Missing channels: {missing_channels}"
 

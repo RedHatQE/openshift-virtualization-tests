@@ -253,12 +253,12 @@ Currently, automation supports ocp upgrades using stable, ci, nightly and rc ima
 #### CNV upgrade
 Parameters:
 
-| Parameter Name  |      Requirement      |  Default Value  |    Possible Value     |
-|:----------------|:---------------------:|:---------------:|:---------------------:|
-| `--cnv-version` |     **Required**      |        -        |         4.Y.z         |
-| `--cnv-image`   |     **Required**      |        -        |     -image path-      |
-| `--cnv-source`  |     **Optional**      |      osbs       | osbs, fbc, production |
-| `--cnv-channel` |     **Optional**      |     stable      |   stable, candidate   |
+| Parameter Name  |      Requirement      |  Default Value  |       Possible Value       |
+|:----------------|:---------------------:|:---------------:|:--------------------------:|
+| `--cnv-version` |     **Required**      |        -        |           4.Y.z            |
+| `--cnv-image`   |     **Required**      |        -        |        -image path-        |
+| `--cnv-source`  |     **Optional**      |      osbs       |   osbs, fbc, production    |
+| `--cnv-channel` |     **Optional**      |     stable      | stable, candidate, nightly |
 
 Command to run entire upgrade test suite for cnv upgrade, including pre and post upgrade validation:
 
