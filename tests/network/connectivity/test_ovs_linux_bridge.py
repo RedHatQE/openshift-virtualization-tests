@@ -11,6 +11,7 @@ from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
 
 class TestConnectivityLinuxBridge:
     @pytest.mark.gating
+    @pytest.mark.conformance
     @pytest.mark.post_upgrade
     @pytest.mark.parametrize(
         "use_default_bridge",

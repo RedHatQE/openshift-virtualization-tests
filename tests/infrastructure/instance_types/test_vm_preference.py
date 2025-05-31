@@ -70,6 +70,7 @@ def fedora_data_volume_template(golden_images_fedora_data_source):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 class TestVmPreference:
     @pytest.mark.parametrize(
         "common_vm_preference_param_dict",
@@ -95,6 +96,7 @@ class TestVmPreference:
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 class TestVmClusterPreference:
     @pytest.mark.parametrize(
         "common_vm_preference_param_dict",

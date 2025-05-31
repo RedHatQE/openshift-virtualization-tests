@@ -114,6 +114,7 @@ def vm_re_migrated_after_updating_migration_policy(vm_for_migration_policy_test,
 @pytest.mark.arm64
 class TestMigrationPolicies:
     @pytest.mark.gating
+    @pytest.mark.conformance
     @pytest.mark.parametrize(
         "migration_policy_a, vm_for_migration_policy_test, labeled_namespace",
         [
