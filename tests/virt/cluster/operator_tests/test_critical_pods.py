@@ -42,6 +42,7 @@ def virt_pods(request, admin_client, hco_namespace):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_kubevirt_pods_are_critical(virt_pods):
     """
     Positive: ensure infra pods are critical

@@ -95,6 +95,7 @@ def limit_range_for_cpu_allocation_test(namespace):
 
 
 @pytest.mark.polarion("CNV-10521")
+@pytest.mark.s390x
 def test_inspect_cpu_allocation_ratio_pod(
     hco_cr_with_vmi_cpu_allocation_ratio,
     vm_for_test_cpu_allocation_ratio,
@@ -116,6 +117,7 @@ def test_inspect_cpu_allocation_ratio_pod(
 
 
 @pytest.mark.polarion("CNV-11294")
+@pytest.mark.s390x
 def test_limitrange_default_cpu_not_override_vm_cpu(
     limit_range_for_cpu_allocation_test,
     vmi_cpu_allocation_from_kubevirt,

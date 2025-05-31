@@ -80,6 +80,7 @@ HYPERV_DICT = {
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestCommonTemplatesFedora:
     @pytest.mark.sno
     @pytest.mark.ibm_bare_metal

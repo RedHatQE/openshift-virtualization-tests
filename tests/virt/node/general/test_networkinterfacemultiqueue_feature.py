@@ -106,6 +106,7 @@ def network_interface_multiqueue_vm(
     indirect=True,
 )
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.sno
 @pytest.mark.usefixtures("golden_image_data_volume_scope_class")
 class TestLatestRHEL:

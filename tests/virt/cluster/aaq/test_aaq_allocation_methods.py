@@ -14,6 +14,7 @@ pytestmark = [
         "updated_namespace_with_aaq_label",
     ),
     pytest.mark.arm64,
+    pytest.mark.s390x,
 ]
 
 

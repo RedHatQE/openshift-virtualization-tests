@@ -37,6 +37,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesRhel"
 
 
+@pytest.mark.s390x
 class TestCommonTemplatesRhel:
     @pytest.mark.arm64
     @pytest.mark.sno

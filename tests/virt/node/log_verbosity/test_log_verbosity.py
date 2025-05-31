@@ -15,6 +15,8 @@ from utilities.infra import get_pods
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.s390x
+
 
 def assert_log_verbosity_level_in_virt_pods(virt_pods_list):
     failed_log_verbosity_level_pods = [

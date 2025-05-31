@@ -8,7 +8,7 @@ from timeout_sampler import TimeoutExpiredError
 from utilities.constants import TIMEOUT_1MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture()

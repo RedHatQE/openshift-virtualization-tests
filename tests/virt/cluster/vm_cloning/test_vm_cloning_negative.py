@@ -30,6 +30,7 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
 )
+@pytest.mark.s390x
 def test_cloning_job_if_source_not_exist_negative(namespace, cloning_job_bad_params):
     with VirtualMachineClone(
         name="clone-job-negative-test",

@@ -10,6 +10,8 @@ from utilities.virt import (
     running_vm,
 )
 
+pytestmark = pytest.mark.s390x
+
 
 def assert_vmi_free_page_reporting(vm, expected_free_page_reporting):
     actual_free_page_reporting = vm.privileged_vmi.xml_dict["domain"]["devices"]["memballoon"]["@freePageReporting"]

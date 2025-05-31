@@ -119,6 +119,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestPostCopyMigration:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-11421")

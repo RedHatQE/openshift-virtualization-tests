@@ -70,6 +70,7 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "vm",
     [
@@ -110,6 +111,7 @@ def test_pc_q35_vm_machine_type(vm, expected):
     indirect=True,
 )
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.rwx_default_storage
 @pytest.mark.gating
 def test_migrate_vm(machine_type_from_kubevirt_config, vm):
@@ -130,6 +132,7 @@ def test_migrate_vm(machine_type_from_kubevirt_config, vm):
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.s390x
 def test_machine_type_after_vm_restart(
     machine_type_from_kubevirt_config,
     vm,
@@ -154,6 +157,7 @@ def test_machine_type_after_vm_restart(
 )
 @pytest.mark.rwx_default_storage
 @pytest.mark.gating
+@pytest.mark.s390x
 def test_machine_type_after_vm_migrate(
     machine_type_from_kubevirt_config, vm, updated_kubevirt_config_machine_type, migrated_vm
 ):
@@ -175,6 +179,7 @@ def test_machine_type_after_vm_migrate(
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.s390x
 def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_type, vm):
     """Test machine type change in kubevirt_config; new VM gets new value"""
 
@@ -182,6 +187,7 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
 
 
 @pytest.mark.polarion("CNV-3688")
+@pytest.mark.s390x
 def test_unsupported_machine_type(namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"
 
@@ -197,6 +203,7 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5658")
 def test_major_release_machine_type(machine_type_from_kubevirt_config):

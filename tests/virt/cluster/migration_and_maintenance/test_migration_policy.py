@@ -112,6 +112,7 @@ def vm_re_migrated_after_updating_migration_policy(vm_for_migration_policy_test,
 
 @pytest.mark.rwx_default_storage
 @pytest.mark.arm64
+@pytest.mark.s390x
 class TestMigrationPolicies:
     @pytest.mark.gating
     @pytest.mark.parametrize(

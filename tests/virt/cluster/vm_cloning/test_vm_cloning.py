@@ -40,6 +40,8 @@ RHEL_VM_WITH_TWO_PVC = "rhel-vm-with-two-pvc"
 WINDOWS_VM_FOR_CLONING = "win-vm-for-cloning"
 FEDORA_VM_FOR_CLONING = "fedora-vm-with-labels-annotations-mac-smbios"
 
+pytestmark = [pytest.mark.s390x]
+
 
 def dv_dict_for_vm_cloning(namespace, storage_class, dv_template):
     dv = DataVolume(

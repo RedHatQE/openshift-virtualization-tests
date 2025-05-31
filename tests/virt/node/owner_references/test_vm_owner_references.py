@@ -27,6 +27,7 @@ def fedora_vm(unprivileged_client, namespace):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-1275")
+@pytest.mark.s390x
 def test_owner_references_on_vm(fedora_vm):
     """
     Check the Owner References is fill with right data

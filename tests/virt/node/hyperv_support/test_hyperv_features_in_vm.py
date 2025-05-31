@@ -172,6 +172,7 @@ class TestWindowsHyperVFlags:
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestFedoraHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",

@@ -11,7 +11,7 @@ from utilities.virt import wait_for_kv_stabilize, wait_for_updated_kv_value
 OBSOLETE_CPU = "obsoleteCPUModels"
 
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture()

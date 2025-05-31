@@ -79,6 +79,7 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
     ],
     indirect=["resource_quota_for_auto_resource_limits_test", "vm_auto_resource_limits"],
 )
+@pytest.mark.s390x
 def test_auto_limits_set_one_resource(
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
@@ -110,6 +111,7 @@ def test_auto_limits_set_one_resource(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_limits_overrides_global_vlaues(
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,

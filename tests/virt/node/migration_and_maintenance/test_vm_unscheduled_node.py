@@ -53,6 +53,7 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
+@pytest.mark.s390x
 def test_schedule_vm_on_cordoned_node(nodes, data_volume_scope_function, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
     1. Cordon the Node

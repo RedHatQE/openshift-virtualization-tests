@@ -37,11 +37,13 @@ def smbios_defaults(cnv_current_version):
 
 
 @pytest.mark.polarion("CNV-4346")
+@pytest.mark.s390x
 def test_cm_smbios_defaults(smbios_from_kubevirt_config, smbios_defaults):
     check_smbios_defaults(smbios_defaults=smbios_defaults, cm_values=smbios_from_kubevirt_config)
 
 
 @pytest.mark.polarion("CNV-4325")
+@pytest.mark.s390x
 def test_vm_smbios_default_values(smbios_from_kubevirt_config, configmap_smbios_vm):
     check_vm_xml_smbios(
         vm=configmap_smbios_vm,

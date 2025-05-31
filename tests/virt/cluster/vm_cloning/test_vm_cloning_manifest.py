@@ -65,6 +65,7 @@ def vmsnapshot_created(fedora_vm_for_cloning):
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",
 )
+@pytest.mark.s390x
 class TestVMCloneVirtctlManifest:
     @pytest.mark.parametrize(
         "virtctl_cloning_manifest",

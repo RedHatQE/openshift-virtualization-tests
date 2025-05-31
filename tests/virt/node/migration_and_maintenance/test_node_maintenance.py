@@ -31,7 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage, pytest.mark.s390x]
 
 
 LOGGER = logging.getLogger(__name__)
