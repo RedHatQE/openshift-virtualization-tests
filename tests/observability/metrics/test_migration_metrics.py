@@ -44,16 +44,18 @@ def assert_metrics_values(
     migration_metrics_dict: dict[str, str],
     initial_values: dict[str, int],
     metric_to_check: str,
+    vmim: VirtualMachineInstanceMigration = None,
 ) -> None:
     """
     Check all migration metrics do not change from initial values,
     except for specified metric which must increase by 1.
 
     Args:
-        prometheus: Prometheus object
-        migration_metrics_dict: Dictionary with metrics by the status it checks
+        prometheus: Prometheus object.
+        migration_metrics_dict: migration metrics with their status.
         initial_values: Dictionary representing initial values of metrics
         metric_to_check: metric expected to be increased by 1
+        vmim: Optional VirtualMachineInstanceMigration object to check if migration succeeded
     Raises:
         AssertionError: If any metric's value does not match with expected value.
     """
@@ -63,7 +65,16 @@ def assert_metrics_values(
         migration_metrics.append(metric) if metric != metric_to_check else migration_metrics.insert(0, metric)
     for metric in migration_metrics:
         initial_value = initial_values[metric]
-        expected_value = initial_value + 1 if metric == metric_to_check else initial_value
+        expected_value = (
+            initial_value + 1
+            if metric == metric_to_check
+            or (
+                vmim
+                and metric == migration_metrics_dict[vmim.Status.SUCCEEDED]
+                and vmim.status == vmim.Status.SUCCEEDED
+            )
+            else initial_value
+        )
         try:
             wait_for_expected_metric_value_sum(
                 prometheus=prometheus,
@@ -232,6 +243,7 @@ class TestMigrationMetrics:
             migration_metrics_dict=migration_metrics_dict,
             initial_values=initial_migration_metrics_values,
             metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
+            vmim=vm_migration_metrics_vmim,
         )
 
 
