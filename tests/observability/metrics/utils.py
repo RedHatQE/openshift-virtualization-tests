@@ -1,11 +1,12 @@
 import logging
+import math
 import re
 import shlex
 import urllib
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator, Optional, Union
+from typing import Any, Generator, Optional
 
 import bitmath
 import pytest
@@ -31,6 +32,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
     METRIC_SUM_QUERY,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
@@ -915,7 +917,7 @@ def validate_metric_value_within_range(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             if sample:
@@ -1235,7 +1237,7 @@ def validate_metric_value_with_round_down(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
-    sample: Union[int, float] = 0
+    sample: int | float = 0
     try:
         for sample in samples:
             sample = round(float(sample))
@@ -1281,6 +1283,134 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
         LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non empty value.")
         raise
     return {}
+
+
+def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_prefix: str) -> float:
+    return float(
+        bitmath.Byte(
+            float(
+                get_pod_by_name_prefix(
+                    dyn_client=admin_client,
+                    pod_prefix=pod_prefix,
+                    namespace=hco_namespace,
+                )
+                .execute(command=RSS_MEMORY_COMMAND)
+                .strip()
+            )
+        )
+    )
+
+
+def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
+    """
+    This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
+        Args:
+        hco_namespace: Hco namespacem
+    Returns:
+        tuple: containing the name of the virt-api pod with the highest memory usage and value of the memory.
+    """
+    virt_api_with_highest_memory_usage = (
+        run_command(
+            command=shlex.split(
+                f"bash -c 'oc adm top pod -n {hco_namespace} --sort-by memory "
+                f"--no-headers -l kubevirt.io=virt-api | head -n 1'"
+            ),
+        )[1]
+        .strip()
+        .split()
+    )
+    return (
+        virt_api_with_highest_memory_usage[0],
+        int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2]).Byte),
+    )
+
+
+def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
+    """
+    Get the requested memory for a pod.
+
+    Args:
+        hco_namespace: Hco namespace
+        admin_client: The Kubernetes admin client
+        pod_prefix: Prefix of the pod name to get requested memory from
+
+    Returns:
+        float: Requested memory in bytes
+    """
+    return float(
+        bitmath.parse_string_unsafe(
+            get_pod_by_name_prefix(
+                dyn_client=admin_client,
+                pod_prefix=pod_prefix,
+                namespace=hco_namespace,
+            )
+            .instance.spec.containers[0]
+            .resources.requests.memory
+        ).Byte
+    )
+
+
+def expected_kubevirt_memory_delta_from_requested_bytes(
+    hco_namespace: str, admin_client: DynamicClient, rss: bool
+) -> int:
+    """
+    Calculate the expected memory delta between actual and requested memory.
+
+    Args:
+        hco_namespace: The namespace where virt-api pods are running
+        admin_client: The Kubernetes admin client
+        rss: If True, use RSS memory, otherwise use total memory usage
+
+    Returns:
+        int: The memory delta in bytes
+    """
+    pod_name, pod_memory = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
+    virt_api_requested_memory = get_pod_requested_memory(
+        hco_namespace=hco_namespace,
+        admin_client=admin_client,
+        pod_prefix=pod_name,
+    )
+    if rss:
+        virt_api_rss_memory = get_pod_memory_stats(
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            pod_prefix=pod_name,
+        )
+        return int(virt_api_rss_memory - virt_api_requested_memory)
+    return int(pod_memory - virt_api_requested_memory)
+
+
+def validate_memory_delta_metrics_value_within_range(
+    prometheus: Prometheus,
+    metric_name: str,
+    rss: bool,
+    admin_client: DynamicClient,
+    hco_namespace: str,
+    timeout: int = TIMEOUT_4MIN,
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample: int | float = 0
+    expected_value = None
+    try:
+        for sample in samples:
+            if sample:
+                sample = abs(float(sample))
+                expected_value = abs(
+                    expected_kubevirt_memory_delta_from_requested_bytes(
+                        admin_client=admin_client, hco_namespace=hco_namespace, rss=rss
+                    )
+                )
+                if math.isclose(sample, expected_value, rel_tol=0.05):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
+        raise
 
 
 @contextmanager
