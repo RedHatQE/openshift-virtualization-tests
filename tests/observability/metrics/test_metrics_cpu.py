@@ -6,7 +6,7 @@ from tests.observability.metrics.utils import (
     wait_for_metric_vmi_request_cpu_cores_output,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.mark.usefixtures("initial_metric_cpu_value_zero")
