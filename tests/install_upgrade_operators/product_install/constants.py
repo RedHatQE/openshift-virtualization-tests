@@ -14,7 +14,7 @@ IGNORE_NAMESPACE = [
     "openshift-operator-lifecycle-manager",
     "openshift-virtualization-os-images",
 ]
-CLUSTER_RESOURCE_WHITE_LIST = {
+CLUSTER_RESOURCE_ALLOWLIST = {
     "ClusterRole": [
         "openshift-cnv-group-view",
         "prometheus-k8s-ssp",
@@ -95,7 +95,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
     "CDIConfig": ["config"],
 }
 NAMESPACED_IGNORE_KINDS = ["Event", "Template"]
-NAMESPACED_RESOURCE_WHITE_LIST = {
+NAMESPACED_RESOURCE_ALLOWLIST = {
     "kube-system": {
         "RoleBinding": [
             "hostpath-provisioner-operator-service-auth-reader",
