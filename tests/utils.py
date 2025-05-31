@@ -15,6 +15,7 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
@@ -608,3 +609,8 @@ def create_cirros_vm(
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) -> None:
+    for mcp in mcp:
+        ResourceEditor(patches={mcp: {"spec": {"paused": paused}}}).update()

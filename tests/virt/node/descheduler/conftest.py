@@ -5,10 +5,12 @@ import bitmath
 import pytest
 from ocp_resources.deployment import Deployment
 from ocp_resources.kube_descheduler import KubeDescheduler
+from ocp_resources.machine_config import MachineConfig
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_utilities.infra import get_pods_by_name_prefix
 
+from tests.utils import update_mcp_paused_spec
 from tests.virt.node.descheduler.constants import (
     DESCHEDULING_INTERVAL_120SEC,
     NODE_SELECTOR_LABEL,
@@ -122,27 +124,25 @@ def generated_descheduler_icsp_idms(
 def updated_icsp_descheduler(
     nodes,
     openshift_current_version,
-    machine_config_pools,
+    active_machine_config_pools,
     generated_descheduler_icsp_idms,
     is_idms_cluster,
 ):
     LOGGER.info(f"Creating descheduler ICSP/IDMS from {generated_descheduler_icsp_idms} path...")
     create_icsp_idms_from_file(file_path=generated_descheduler_icsp_idms)
 
+    LOGGER.info("Un-pause MCP after applying machine config and descheduler")
+    update_mcp_paused_spec(mcp=active_machine_config_pools, paused=False)
     wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=machine_config_pools,
+        machine_config_pools_list=active_machine_config_pools,
         timeout=TIMEOUT_30MIN,
         sleep=TIMEOUT_30SEC,
     )
 
     yield
+    LOGGER.info("Pause MCP before removing machine config and descheduler")
+    update_mcp_paused_spec(mcp=active_machine_config_pools)
     delete_existing_icsp_idms(name="aosqe-index", is_idms_file=is_idms_cluster)
-
-    wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=machine_config_pools,
-        timeout=TIMEOUT_30MIN,
-        sleep=TIMEOUT_30SEC,
-    )
 
 
 @pytest.fixture(scope="module")
@@ -200,6 +200,34 @@ def installed_descheduler_operator(
 
 
 @pytest.fixture(scope="module")
+def created_machine_config_with_psi_args(active_machine_config_pools):
+    LOGGER.info("Pause MCP before applying machine config and installing descheduler")
+    update_mcp_paused_spec(mcp=active_machine_config_pools)
+    mc_with_psi_list = []
+
+    for mcp in active_machine_config_pools:
+        mc = MachineConfig(
+            name=f"99-{mcp.name}-psi-schedstats-karg",
+            label={"machineconfiguration.openshift.io/role": mcp.name},
+            kernel_arguments=["psi=1"],
+        )
+        mc.create()
+        mc_with_psi_list.append(mc)
+
+    yield
+    for mc in mc_with_psi_list:
+        mc.clean_up()
+
+    LOGGER.info("Un-pause MCP after removing machine config and descheduler")
+    update_mcp_paused_spec(mcp=active_machine_config_pools, paused=False)
+    wait_for_mcp_updated_condition_true(
+        machine_config_pools_list=active_machine_config_pools,
+        timeout=TIMEOUT_30MIN,
+        sleep=TIMEOUT_30SEC,
+    )
+
+
+@pytest.fixture(scope="module")
 def descheduler_deployment(created_descheduler_namespace):
     return Deployment(
         name=DESCHEDULER_DEPLOYMENT_NAME,
@@ -209,6 +237,7 @@ def descheduler_deployment(created_descheduler_namespace):
 
 @pytest.fixture(scope="module")
 def installed_descheduler(
+    created_machine_config_with_psi_args,
     created_descheduler_namespace,
     installed_descheduler_operator,
     descheduler_deployment,
@@ -223,6 +252,7 @@ def installed_descheduler(
         profile_customizations={
             "devLowNodeUtilizationThresholds": "High",  # underutilized <40%, overutilized >70%
             "devEnableEvictionsInBackground": True,
+            "devActualUtilizationProfile": "PrometheusCPUPSIPressure",
         },
     ) as kd:
         descheduler_deployment.wait()
