@@ -30,6 +30,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
@@ -98,6 +99,7 @@ from utilities.constants import (
     NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
@@ -2938,3 +2940,13 @@ def ping_process_in_rhel_os():
 def smbios_from_kubevirt_config(kubevirt_config_scope_module):
     """Extract SMBIOS default from kubevirt CR."""
     return kubevirt_config_scope_module["smbios"]
+
+
+@pytest.fixture(scope="module")
+def golden_images_fedora_data_source(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
