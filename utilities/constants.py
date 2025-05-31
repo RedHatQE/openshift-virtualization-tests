@@ -127,6 +127,7 @@ VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
+S390X = "s390x"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
