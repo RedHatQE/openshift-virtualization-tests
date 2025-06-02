@@ -15,6 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.tier3,
+    pytest.mark.descheduler,
     pytest.mark.post_upgrade,
     pytest.mark.usefixtures(
         "skip_if_1tb_memory_or_more_node",
