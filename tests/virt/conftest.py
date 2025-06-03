@@ -1,6 +1,7 @@
 import logging
 from multiprocessing import Manager, cpu_count
 from multiprocessing.dummy import Pool
+import shlex
 
 import pytest
 from bitmath import parse_string_unsafe
@@ -36,6 +37,7 @@ def virt_special_infra_sanity(
     sriov_workers,
     workers,
     nodes_cpu_virt_extension,
+    workers_utility_pods,
 ):
     """Performs verification that cluster has all required capabilities based on collected tests."""
 
@@ -99,6 +101,12 @@ def virt_special_infra_sanity(
         if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
             failed_verifications_list.append(f"Default storage class {storage_class} doesn't support RWX mode")
 
+    def _verify_psi_kernel_argument(_workers_utility_pods):
+        for pod in _workers_utility_pods:
+            assert "psi=1" in pod.execute(command=shlex.split("cat /proc/cmdline")), (
+                "Node does not have psi=1 kernel argument"
+            )
+
     skip_virt_sanity_check = "--skip-virt-sanity-check"
     failed_verifications_list = []
 
@@ -120,6 +128,8 @@ def virt_special_infra_sanity(
             _verify_hugepages_1gi(_workers=workers)
         if any(item.get_closest_marker("rwx_default_storage") for item in request.session.items):
             _verify_rwx_default_storage()
+        if any(item.get_closest_marker("descheduler") for item in request.session.items):
+            _verify_psi_kernel_argument(_workers_utility_pods=workers_utility_pods)
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
 
