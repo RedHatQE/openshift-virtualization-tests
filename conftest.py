@@ -59,6 +59,7 @@ BASIC_LOGGER = logging.getLogger("basic")
 EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "destructive",
     "chaos",
+    "gpfs",
     "tier3",
     "install",
     "benchmark",
@@ -126,7 +127,7 @@ def pytest_addoption(parser):
         "--cnv-channel",
         help="Subscription channel for CNV index image",
         default="stable",
-        choices=["stable", "candidate"],
+        choices=["stable", "candidate", "nightly"],
     )
 
     # OCP upgrade options
