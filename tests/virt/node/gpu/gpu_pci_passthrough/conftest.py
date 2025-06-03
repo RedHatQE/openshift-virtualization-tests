@@ -5,10 +5,11 @@ GPU PCI Passthrough VM
 import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.gpu.constants import DEVICE_ID_STR, GPU_DEVICE_NAME_STR, NVIDIA_VFIO_MANAGER_DS
 from tests.virt.node.gpu.utils import wait_for_manager_pods_deployed
-from utilities.constants import KERNEL_DRIVER
+from utilities.constants import KERNEL_DRIVER, TIMEOUT_1MIN, TIMEOUT_5SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import label_nodes
 from utilities.virt import get_nodes_gpu_info
@@ -32,13 +33,23 @@ def fail_if_device_unbound_to_vfiopci_driver(workers_utility_pods, gpu_passthrou
     """
     device_unbound_nodes = []
     for node in gpu_passthrough_ready_nodes:
-        if KERNEL_DRIVER not in get_nodes_gpu_info(util_pods=workers_utility_pods, node=node):
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_1MIN,
+                sleep=TIMEOUT_5SEC,
+                func=get_nodes_gpu_info,
+                util_pods=workers_utility_pods,
+                node=node,
+            ):
+                if sample and KERNEL_DRIVER in sample:
+                    break
+        except TimeoutExpiredError:
             device_unbound_nodes.append(node.name)
     if device_unbound_nodes:
         pytest.fail(
             reason=(
                 f"On these nodes: {device_unbound_nodes} GPU Devices are not bound to the {KERNEL_DRIVER} Driver."
-                f"Ensure IOMMU and  {KERNEL_DRIVER} Machine Config is applied."
+                f"Ensure that in 'nvidia-gpu-operator' namespace nvidia-vfio-manager Pod is Running."
             )
         )
 
