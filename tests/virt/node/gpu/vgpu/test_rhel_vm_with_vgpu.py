@@ -16,13 +16,15 @@ from tests.virt.node.gpu.constants import (
     VGPU_GRID_NAME_STR,
 )
 from tests.virt.node.gpu.utils import (
-    get_num_gpu_devices_in_rhel_vm,
     restart_and_check_gpu_exists,
-    verify_gpu_device_exists_in_vm,
-    verify_gpu_device_exists_on_node,
     verify_gpu_expected_count_updated_on_node,
 )
-from tests.virt.utils import running_sleep_in_linux
+from tests.virt.utils import (
+    get_num_gpu_devices_in_rhel_vm,
+    running_sleep_in_linux,
+    verify_gpu_device_exists_in_vm,
+    verify_gpu_device_exists_on_node,
+)
 from utilities.infra import get_node_selector_dict
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
