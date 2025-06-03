@@ -26,8 +26,18 @@ def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> N
 
 
 def verify_vms_boot_time_after_storage_migration(
-    vm_list: list[VirtualMachine], initial_boot_time: dict[VirtualMachine, str]
+    vm_list: list[VirtualMachine], initial_boot_time: dict[str, str]
 ) -> None:
+    """
+    Verify that VMs have not rebooted after storage migration.
+
+    Args:
+        vm_list: List of VMs to check
+        initial_boot_time: Dictionary mapping VM names to their initial boot times
+
+    Raises:
+        AssertionError: If any VM has rebooted (boot time changed)
+    """
     rebooted_vms = {}
     for vm in vm_list:
         current_boot_time = get_vm_boot_time(vm=vm)
@@ -44,7 +54,9 @@ def verify_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: st
     ]
     failed_pvc_storage_check = {}
     for pvc_name in vm_pvcs_names:
-        pvc_storage_class = PersistentVolumeClaim(namespace=vm.namespace, name=pvc_name).instance.spec.storageClassName
+        pvc_storage_class = PersistentVolumeClaim(
+            client=vm.client, namespace=vm.namespace, name=pvc_name
+        ).instance.spec.storageClassName
         if pvc_storage_class != target_storage_class:
             failed_pvc_storage_check[pvc_name] = pvc_storage_class
     assert not failed_pvc_storage_check, (
@@ -54,7 +66,7 @@ def verify_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: st
 
 
 def verify_storage_migration_succeeded(
-    vms_boot_time_before_storage_migration: dict[VirtualMachine, str],
+    vms_boot_time_before_storage_migration: dict[str, str],
     online_vms_for_storage_class_migration: list[VirtualMachine],
     vms_with_written_file_before_migration: list[VirtualMachine],
     target_storage_class: str,
