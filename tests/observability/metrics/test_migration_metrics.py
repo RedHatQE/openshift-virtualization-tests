@@ -49,9 +49,8 @@ class TestMigrationMetrics:
     ):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
-            expected_value=f"max_over_time"
-            f"({initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE] + 1}[5m])",
+            metric_name=f"max_over_time({KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE}[5m])",
+            expected_value=f"{initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE] + 1}",
         )
 
 
