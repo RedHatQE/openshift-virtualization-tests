@@ -617,6 +617,7 @@ class StorageClassNames:
     IO2_CSI = "io2-csi"
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
+    OCI_UHP = "oci-bv-uhp"
 
 
 # Namespace constants
