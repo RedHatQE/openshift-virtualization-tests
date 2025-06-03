@@ -167,9 +167,9 @@ def get_all_firing_alerts(prometheus):
 
 
 def get_metrics_value(prometheus, metrics_name):
-    metric_results = prometheus.query(query=metrics_name)["data"]["result"]
-    if metric_results:
-        metric_values_list = [value for metric_val in metric_results for value in metric_val.get("value")]
+    metric_results = prometheus.query(query=metrics_name).get("data", {})
+    if metric_results and (metric_res := metric_results["result"]):
+        metric_values_list = [value for metric_val in metric_res for value in metric_val.get("value")]
         return metric_values_list[1]
     LOGGER.warning(f"For Query {metrics_name}, empty results found.")
     return 0

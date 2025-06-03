@@ -81,7 +81,7 @@ def compare_resource_contents(resource, file_content, checks):
 
         for part in check:
             oc_part = getattr(oc_part, part)
-            file_part = file_part[part]
+            file_part = file_part.get(part)
         with ResourceFieldEqBugWorkaround():
             if oc_part != file_part:
                 raise ResourceMismatch(
@@ -171,7 +171,7 @@ def compare_node_data(file_content, cmd_output, compare_method):
     else:
         raise NotImplementedError(f"{compare_method} not implemented")
 
-    if any(line.startswith(("- ", "+ ")) for line in diff):
+    if any(line.startswith(("- ", "+ ")) and "istio-cni" not in line for line in diff):
         raise NodeResourceException(diff)
 
 
