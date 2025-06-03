@@ -1,3 +1,5 @@
+import shlex
+
 from ocp_resources.resource import Resource
 
 from utilities.constants import (
@@ -76,3 +78,4 @@ KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS = (
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
+RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")

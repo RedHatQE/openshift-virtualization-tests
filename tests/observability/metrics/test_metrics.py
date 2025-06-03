@@ -1,4 +1,3 @@
-import bitmath
 import pytest
 
 from tests.observability.metrics.constants import (
@@ -14,7 +13,7 @@ from tests.observability.metrics.utils import (
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
-    validate_metric_value_within_range,
+    validate_memory_delta_metrics_value_within_range,
     wait_vmi_dommemstat_match_with_metric_value,
 )
 from tests.observability.utils import validate_metrics_value
@@ -233,48 +232,44 @@ class TestVMIMetricsWindowsVms:
 
 
 class TestMemoryDeltaFromRequestedBytes:
-    @pytest.mark.polarion("CNV-11632")
-    def test_metric_kubevirt_memory_delta_from_requested_bytes_working_set(
-        self, prometheus, highest_memory_usage_virt_api_pod, virt_api_requested_memory
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-            f"reason='memory_working_set_delta_from_request'}}",
-            expected_value=float(
-                bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte
+    @pytest.mark.parametrize(
+        "metric, rss",
+        [
+            pytest.param(
+                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
+                f"reason='memory_working_set_delta_from_request'}}",
+                False,
+                marks=pytest.mark.polarion("CNV-11632"),
+                id="test_metric_kubevirt_memory_delta_from_requested_bytes_working_set",
             ),
-        )
-
-    @pytest.mark.polarion("CNV-11633")
-    def test_metric_kubevirt_memory_delta_from_requested_bytes_rss(
-        self, prometheus, virt_api_rss_memory, virt_api_requested_memory
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-            f"reason='memory_rss_delta_from_request'}}",
-            expected_value=float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte),
-        )
-
-    @pytest.mark.polarion("CNV-11690")
-    def test_metric_cnv_abnormal_working_set(
-        self, prometheus, highest_memory_usage_virt_api_pod, virt_api_requested_memory
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"cnv_abnormal{{container='{VIRT_API}', reason='memory_working_set_delta_from_request'}}",
-            expected_value=float(
-                bitmath.MiB(highest_memory_usage_virt_api_pod["memory_usage"] - virt_api_requested_memory).Byte
+            pytest.param(
+                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
+                f"reason='memory_rss_delta_from_request'}}",
+                True,
+                marks=pytest.mark.polarion("CNV-11633"),
+                id="test_metric_kubevirt_memory_delta_from_requested_bytes_rss",
             ),
-        )
-
-    @pytest.mark.polarion("CNV-11691")
-    def test_metric_cnv_abnormal_rss(self, prometheus, virt_api_rss_memory, virt_api_requested_memory):
-        validate_metric_value_within_range(
+            pytest.param(
+                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_working_set_delta_from_request'}}",
+                False,
+                marks=pytest.mark.polarion("CNV-11690"),
+                id="test_metric_cnv_abnormal_working_set",
+            ),
+            pytest.param(
+                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
+                True,
+                marks=pytest.mark.polarion("CNV-11691"),
+                id="test_metric_cnv_abnormal_rss",
+            ),
+        ],
+    )
+    def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
+        validate_memory_delta_metrics_value_within_range(
             prometheus=prometheus,
-            metric_name=f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
-            expected_value=float(bitmath.MiB(virt_api_rss_memory - virt_api_requested_memory).Byte),
+            metric_name=metric,
+            rss=rss,
+            admin_client=admin_client,
+            hco_namespace=hco_namespace.name,
         )
 
 
