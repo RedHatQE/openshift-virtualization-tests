@@ -127,7 +127,7 @@ def pytest_addoption(parser):
         "--cnv-channel",
         help="Subscription channel for CNV index image",
         default="stable",
-        choices=["stable", "candidate"],
+        choices=["stable", "candidate", "nightly"],
     )
 
     # OCP upgrade options
