@@ -81,7 +81,7 @@ def compare_resource_contents(resource, file_content, checks):
 
         for part in check:
             oc_part = getattr(oc_part, part)
-            file_part = file_part[part]
+            file_part = file_part.get(part)
         with ResourceFieldEqBugWorkaround():
             if oc_part != file_part:
                 raise ResourceMismatch(
