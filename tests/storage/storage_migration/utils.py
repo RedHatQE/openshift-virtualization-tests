@@ -36,7 +36,7 @@ def verify_vms_boot_time_after_storage_migration(
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
 
 
-def vefiry_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: str) -> None:
+def verify_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: str) -> None:
     vm_pvcs_names = [
         volume["dataVolume"]["name"]
         for volume in vm.instance.spec.template.spec.volumes
@@ -69,4 +69,4 @@ def verify_storage_migration_succeeded(
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
         )
-        vefiry_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+        verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
