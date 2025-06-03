@@ -9,8 +9,6 @@ from tests.observability.metrics.utils import (
     assert_vm_metric,
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
-    validate_metric_value_within_range,
-    get_vm_metrics,
     validate_memory_delta_metrics_value_within_range,
     wait_vmi_dommemstat_match_with_metric_value,
 )
