@@ -733,7 +733,8 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
         packet_size: Number of data bytes to send.
         count: Amount of packets.
         quiet_output: Quiet output, Nothing is displayed except the summary lines at startup time and when finished.
-        interface: interface (ping -I option)
+        interface: interface (ping -I option),
+        windows: bool that indicate if it is windows then the command of ping will be slight different
 
     Returns:
         float or None: The packet loss amount in a number (Range - 0 to 100).
