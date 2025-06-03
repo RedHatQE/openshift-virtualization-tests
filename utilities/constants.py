@@ -57,6 +57,7 @@ class ArchImages:
             RHEL9_4_IMG = "rhel-94.qcow2"
             RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
             RHEL9_6_IMG = "rhel-96.qcow2"
+            RHEL9_6_ARM64_IMG = "rhel-96-aarch64.qcow2"
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
             # TODO: change back to registry.redhat.io when rhel10 is available
