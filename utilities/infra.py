@@ -16,9 +16,9 @@ import zipfile
 from contextlib import contextmanager
 from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
+from typing import Any
 
 import netaddr
-import packaging.version
 import paramiko
 import pytest
 import requests
@@ -52,6 +52,7 @@ from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
     assert_nodes_schedulable,
 )
+from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
@@ -1288,7 +1289,7 @@ def get_cluster_platform():
     return get_infrastructure().instance.status.platform
 
 
-def query_version_explorer(api_end_point, query_string):
+def query_version_explorer(api_end_point: str, query_string: str) -> Any:
     try:
         response = requests.get(
             url=f"{py_config['version_explorer_url']}/{api_end_point}?{query_string}",
@@ -1298,11 +1299,11 @@ def query_version_explorer(api_end_point, query_string):
         response.raise_for_status()
     except (HTTPError, ConnectionError, Timeout, TooManyRedirects) as ex:
         LOGGER.warning(f"Error occurred: {ex}")
-        return
+        return None
     return response.json()
 
 
-def wait_for_version_explorer_response(api_end_point, query_string):
+def wait_for_version_explorer_response(api_end_point: str, query_string: str) -> Any:
     version_explorer_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
@@ -1315,34 +1316,44 @@ def wait_for_version_explorer_response(api_end_point, query_string):
             return sample
 
 
-def get_latest_z_stream(minor_version):
+def stable_channel_released_to_prod(channels: list[dict[str, str | bool]]) -> bool:
+    return any(item.get("channel") == "stable" and item.get("released_to_prod") for item in channels)
+
+
+def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, str] | None:
     builds = wait_for_version_explorer_response(
         api_end_point="GetBuildsWithErrata",
         query_string=f"minor_version={minor_version}",
     )["builds"]
+
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE":
+        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
+            build_version = Version(version=build["csv_version"])
             if latest_z_stream:
-                current_build_version = packaging.version.parse(version=build["csv_version"])
-                if current_build_version > latest_z_stream:
-                    latest_z_stream = current_build_version
+                if build_version > latest_z_stream:
+                    latest_z_stream = build_version
             else:
-                latest_z_stream = packaging.version.parse(version=build["csv_version"])
-    return str(latest_z_stream) if latest_z_stream else None
+                latest_z_stream = build_version
+    return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 
 
-def get_cnv_version_by_iib(iib):
-    return str(
-        packaging.version.parse(
-            version=wait_for_version_explorer_response(
-                api_end_point="GetBuildByIIB",
-                query_string=f"iib_number={iib}",
-            )["cnv_version"]
-            .replace(".rhel9", "")
-            .split("-")[0]
-        )
+def get_cnv_info_by_iib(iib: str) -> dict[str, str]:
+    build_info = wait_for_version_explorer_response(
+        api_end_point="GetBuildByIIB",
+        query_string=f"iib_number={iib}",
     )
+    return get_build_info_dict(
+        version=str(Version(build_info["cnv_version"].split(".rhel9")[0])),
+        channel=build_info["channel"],
+    )
+
+
+def get_build_info_dict(version: str, channel: str = "stable") -> dict[str, str]:
+    return {
+        "version": version,
+        "channel": channel,
+    }
 
 
 def get_deployment_by_name(namespace_name, deployment_name):
