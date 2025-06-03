@@ -54,7 +54,7 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
                 command=f"ls /sys/class | grep {desired_bus} || true",
             ):
                 if sample:
-                    return
+                    break
         except TimeoutExpiredError:
             non_existent_mdev_bus_nodes.append(node.name)
     if non_existent_mdev_bus_nodes:
