@@ -50,13 +50,13 @@ class TestStorageClassMigrationAtoB:
         target_storage_class,
         written_file_to_vms_before_migration,
         online_vms_for_storage_class_migration,
-        linux_vms_boot_time_before_storage_migration,
+        vms_boot_time_before_storage_migration,
         storage_mig_plan,
         storage_mig_migration,
         deleted_old_dvs_of_online_vms,
     ):
         verify_storage_migration_succeeded(
-            linux_vms_boot_time_before_storage_migration=linux_vms_boot_time_before_storage_migration,
+            vms_boot_time_before_storage_migration=vms_boot_time_before_storage_migration,
             online_vms_for_storage_class_migration=online_vms_for_storage_class_migration,
             vms_with_written_file_before_migration=written_file_to_vms_before_migration,
             target_storage_class=target_storage_class,
@@ -65,8 +65,13 @@ class TestStorageClassMigrationAtoB:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b_running_vms"])
     @pytest.mark.polarion("CNV-11504")
     def test_migrate_vms_after_storage_migration(self, booted_vms_for_storage_class_migration):
+        vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
-            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+            try:
+                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+            except Exception as migration_exception:
+                vms_failed_migration[vm.name] = migration_exception
+        assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
 
 
 @pytest.mark.parametrize(
@@ -110,14 +115,14 @@ class TestStorageClassMigrationBtoA:
         vm_for_storage_class_migration_from_template_with_existing_dv,
         written_file_to_vms_before_migration,
         online_vms_for_storage_class_migration,
-        linux_vms_boot_time_before_storage_migration,
+        vms_boot_time_before_storage_migration,
         storage_mig_plan,
         storage_mig_migration,
         deleted_old_dvs_of_online_vms,
         deleted_old_dvs_of_stopped_vms,
     ):
         verify_storage_migration_succeeded(
-            linux_vms_boot_time_before_storage_migration=linux_vms_boot_time_before_storage_migration,
+            vms_boot_time_before_storage_migration=vms_boot_time_before_storage_migration,
             online_vms_for_storage_class_migration=online_vms_for_storage_class_migration,
             vms_with_written_file_before_migration=written_file_to_vms_before_migration,
             target_storage_class=target_storage_class,

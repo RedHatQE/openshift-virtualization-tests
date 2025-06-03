@@ -25,7 +25,7 @@ def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> N
         vm_console.expect(file_content, timeout=TIMEOUT_20SEC)
 
 
-def verify_linux_vms_boot_time_after_storage_migration(
+def verify_vms_boot_time_after_storage_migration(
     vm_list: list[VirtualMachine], initial_boot_time: dict[VirtualMachine, str]
 ) -> None:
     rebooted_vms = {}
@@ -42,22 +42,26 @@ def vefiry_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: st
         for volume in vm.instance.spec.template.spec.volumes
         if "dataVolume" in dict(volume)
     ]
+    failed_pvc_storage_check = {}
     for pvc_name in vm_pvcs_names:
-        assert (
-            PersistentVolumeClaim(namespace=vm.namespace, name=pvc_name).instance.spec.storageClassName
-            == target_storage_class
-        )
+        pvc_storage_class = PersistentVolumeClaim(namespace=vm.namespace, name=pvc_name).instance.spec.storageClassName
+        if pvc_storage_class != target_storage_class:
+            failed_pvc_storage_check[pvc_name] = pvc_storage_class
+    assert not failed_pvc_storage_check, (
+        f"Failed PVC storage class check. PVC storage class: {failed_pvc_storage_check}"
+        f"Doesn't match expected target storage class: {target_storage_class}"
+    )
 
 
 def verify_storage_migration_succeeded(
-    linux_vms_boot_time_before_storage_migration: dict[VirtualMachine, str],
+    vms_boot_time_before_storage_migration: dict[VirtualMachine, str],
     online_vms_for_storage_class_migration: list[VirtualMachine],
     vms_with_written_file_before_migration: list[VirtualMachine],
     target_storage_class: str,
 ) -> None:
-    verify_linux_vms_boot_time_after_storage_migration(
+    verify_vms_boot_time_after_storage_migration(
         vm_list=online_vms_for_storage_class_migration,
-        initial_boot_time=linux_vms_boot_time_before_storage_migration,
+        initial_boot_time=vms_boot_time_before_storage_migration,
     )
     for vm in vms_with_written_file_before_migration:
         check_file_in_vm(

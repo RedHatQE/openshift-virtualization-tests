@@ -68,7 +68,7 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
 @pytest.fixture(scope="class")
 def storage_mig_migration(admin_client, storage_mig_plan):
     with MigMigration(
-        name="mig-migration-abc",
+        name="mig-migration-storage",
         namespace=storage_mig_plan.namespace,
         client=admin_client,
         mig_plan_ref={"name": storage_mig_plan.name, "namespace": storage_mig_plan.namespace},
@@ -239,7 +239,7 @@ def online_vms_for_storage_class_migration(booted_vms_for_storage_class_migratio
 
 
 @pytest.fixture(scope="class")
-def linux_vms_boot_time_before_storage_migration(online_vms_for_storage_class_migration):
+def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migration):
     yield {vm.name: get_vm_boot_time(vm=vm) for vm in online_vms_for_storage_class_migration}
 
 
