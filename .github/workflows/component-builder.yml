@@ -1,0 +1,62 @@
+name: "Component Builder Check"
+on:
+  pull_request:
+    paths:
+      - 'containers/fedora/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  guest-fedora-amd64:
+    runs-on: ubuntu-latest
+    env:
+      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
+      FEDORA_VERSION: 41
+      CPU_ARCH: amd64
+      FULL_EMULATION: "true"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies for VM build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-system-x86 \
+            libvirt-daemon-system \
+            virtinst cloud-image-utils \
+            libguestfs-tools
+      - name: Tweak hosted runner to enable 'virt-sysprep'
+        # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
+        run: sudo chmod 0644 /boot/vmlinuz*
+      - name: Fetch base Fedora image
+        working-directory: ./containers/fedora
+        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.11"
+      - name: Create VM
+        working-directory: ./containers/fedora
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          NO_SECRETS: "true"
+        run: ./build.sh
+      - name: Save container image as tarball
+        env:
+          local_repository: "localhost/fedora"
+          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+        run: |
+          mkdir -p artifacts
+          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
+          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image.tar"
+      - name: Upload container image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-container-image
+          path: artifacts/fedora-image.tar
+          retention-days: 5
+          compression-level: 0

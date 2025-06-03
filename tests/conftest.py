@@ -261,21 +261,40 @@ def kubeconfig_export_path():
 def exported_kubeconfig(unprivileged_secret, kubeconfig_export_path):
     if not unprivileged_secret:
         yield
+
     else:
-        kubeconfig_path = tempfile.mkdtemp(suffix="-cnv-tests-kubeconfig")
-        LOGGER.info(f"Kubeconfig for this run is: {kubeconfig_path}")
-        if not os.path.isdir(kubeconfig_path):
-            os.mkdir(kubeconfig_path)
+        kube_config_path = os.path.join(os.path.expanduser("~"), ".kube/config")
 
-        dest_path = os.path.join(kubeconfig_path, KUBECONFIG.lower())
+        if os.path.isfile(kube_config_path) and kubeconfig_export_path:
+            LOGGER.warning(
+                f"Both {KUBECONFIG} {kubeconfig_export_path} and {kube_config_path} exist. "
+                f"{kubeconfig_export_path} is used as kubeconfig source for this run."
+            )
 
-        LOGGER.info(f"Copy {KUBECONFIG} to {dest_path}")
-        shutil.copyfile(src=kubeconfig_export_path, dst=dest_path)
-        LOGGER.info(f"Set: {KUBECONFIG}={dest_path.lower()}")
-        os.environ[KUBECONFIG] = dest_path
-        yield dest_path
-        LOGGER.info(f"Set: {KUBECONFIG}={kubeconfig_export_path.lower()}")
-        os.environ[KUBECONFIG] = kubeconfig_export_path
+        orig_kubeconfig_file_path = kubeconfig_export_path or kube_config_path
+
+        tests_kubeconfig_dir_path = tempfile.mkdtemp(suffix="-cnv-tests-kubeconfig")
+        LOGGER.info(f"Setting {KUBECONFIG} dir for this run to point to: {tests_kubeconfig_dir_path}")
+
+        kubeconfig_file_dest_path = os.path.join(tests_kubeconfig_dir_path, KUBECONFIG.lower())
+
+        LOGGER.info(f"Copy {KUBECONFIG} to {kubeconfig_file_dest_path}")
+        shutil.copyfile(src=orig_kubeconfig_file_path, dst=kubeconfig_file_dest_path)
+
+        LOGGER.info(f"Set: {KUBECONFIG}={kubeconfig_file_dest_path}")
+        os.environ[KUBECONFIG] = kubeconfig_file_dest_path
+
+        yield kubeconfig_file_dest_path
+
+        LOGGER.info(f"Remove: {kubeconfig_file_dest_path}")
+        shutil.rmtree(tests_kubeconfig_dir_path, ignore_errors=True)
+
+        if kubeconfig_export_path:
+            LOGGER.info(f"Set: {KUBECONFIG}={kubeconfig_export_path}")
+            os.environ[KUBECONFIG] = kubeconfig_export_path
+
+        else:
+            del os.environ[KUBECONFIG]
 
 
 @pytest.fixture(scope="session")
@@ -381,28 +400,23 @@ def unprivileged_client(
         yield
 
     else:
-        kube_config_path = os.path.join(os.path.expanduser("~"), ".kube/config")
-        kube_config_exists = os.path.isfile(kube_config_path)
-        if kube_config_exists:  # TODO: Check if this restriction still valid.
-            raise ValueError(
-                f"Both {KUBECONFIG} {exported_kubeconfig} and {kube_config_path} exists. "
-                f"Only one should be used, Remove {kube_config_path}"
-            )
-
-        current_user = check_output("oc whoami", shell=True).decode().strip()  # Get current admin account
+        current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
         if login_with_user_password(
             api_address=admin_client.configuration.host,
             user=UNPRIVILEGED_USER,
             password=UNPRIVILEGED_PASSWORD,
-        ):  # Login to unprivileged account
-            with open(exported_kubeconfig, "r") as fd:
+        ):  # Login to an unprivileged account
+            with open(exported_kubeconfig) as fd:
                 kubeconfig_content = yaml.safe_load(fd)
             unprivileged_context = kubeconfig_content["current-context"]
+
+            # Get back to an admin account
             login_with_user_password(
                 api_address=admin_client.configuration.host,
                 user=current_user.strip(),
-            )  # Get back to admin account
+            )
             yield get_client(config_file=exported_kubeconfig, context=unprivileged_context)
+
         else:
             yield admin_client
 
@@ -1359,6 +1373,15 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
     """
     if not ocs_storage_class:
         pytest.skip("Skipping test, OCS storage class is not deployed")
+
+
+@pytest.fixture(scope="session")
+def fail_test_if_no_ocs_sc(ocs_storage_class):
+    """
+    Fail test if no OCS storage class available
+    """
+    if not ocs_storage_class:
+        pytest.fail("Failing test, OCS storage class is not deployed")
 
 
 @pytest.fixture(scope="session")
@@ -2810,9 +2833,9 @@ def cluster_modern_cpu_model_scope_class(
 
 
 @pytest.fixture(scope="module")
-def machine_type_from_kubevirt_config(kubevirt_config_scope_module):
+def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"]["amd64"]["machineType"]
+    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
 
 
 @pytest.fixture(scope="module")

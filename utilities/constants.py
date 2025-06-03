@@ -600,6 +600,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-hpp-rules",
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
+    f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
 ]
 
 
@@ -617,6 +618,7 @@ class StorageClassNames:
     IO2_CSI = "io2-csi"
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
+    OCI_UHP = "oci-bv-uhp"
 
 
 # Namespace constants

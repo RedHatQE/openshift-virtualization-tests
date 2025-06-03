@@ -1573,16 +1573,23 @@ def get_rhel_os_dict(rhel_version):
     raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
 
 
-def assert_vm_not_error_status(vm: VirtualMachineForTests) -> None:
-    status = vm.instance.get("status")
-    printable_status = status.get("printableStatus")
-    error_list = VM_ERROR_STATUSES.copy()
-    vm_devices = vm.instance.spec.template.spec.domain.devices
-    if vm_devices.gpus:
-        error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-    assert printable_status not in error_list, (
-        f"VM {vm.name} error printable status: {printable_status}\nVM status:\n{status}"
-    )
+def assert_vm_not_error_status(vm: VirtualMachineForTests, timeout: int = TIMEOUT_5SEC) -> None:
+    try:
+        for status in TimeoutSampler(
+            wait_timeout=timeout, sleep=TIMEOUT_1SEC, func=lambda: vm.instance.get("status", {})
+        ):
+            if status:
+                printable_status = status.get("printableStatus")
+                error_list = VM_ERROR_STATUSES.copy()
+                if vm.instance.spec.template.spec.domain.devices.gpus:
+                    error_list.remove(VirtualMachine.Status.ERROR_UNSCHEDULABLE)
+                assert printable_status not in error_list, (
+                    f"VM {vm.name} error printable status: {printable_status}\nVM status:\n{status}"
+                )
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} status did not populate within {timeout}")
+        raise
 
 
 def wait_for_running_vm(
@@ -1702,12 +1709,12 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 
 def migrate_vm_and_verify(
-    vm,
-    timeout=TIMEOUT_12MIN,
-    wait_for_interfaces=True,
-    check_ssh_connectivity=False,
-    wait_for_migration_success=True,
-):
+    vm: VirtualMachine,
+    timeout: int = TIMEOUT_12MIN,
+    wait_for_interfaces: bool = True,
+    check_ssh_connectivity: bool = False,
+    wait_for_migration_success: bool = True,
+) -> VirtualMachineInstanceMigration | None:
     """
     create a migration instance. You may choose to wait for migration
     success or not.
@@ -1746,6 +1753,7 @@ def migrate_vm_and_verify(
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
     )
+    return None
 
 
 def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
