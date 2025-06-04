@@ -143,3 +143,15 @@ b. then new tag for uploaded multi-arch image manifest '41.rev-250318' is create
 
 This way there will be very minimal impact for test runs that
 tried to pull the latest fedora container image with tag '41'
+
+# Test build via GitHub
+When pushing a new commit which affects a file under this directory, a GitHub action will be triggered to build a new Fedora container image.
+To test this image locally:
+- Access the action workflow on github: https://github.com/RedHatQE/openshift-virtualization-tests/actions/workflows/component-builder.yml
+- Click on the relevant run
+- On the bottom of the page, click on the artifact to download.
+- Once on the local storage, extract the tar file from the zip.
+- Load the image into the local image storage using podman:
+```
+podman load -i fedora-image.tar
+```
