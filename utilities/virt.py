@@ -2568,7 +2568,7 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
 
-        
+
 def get_vm_boot_time(vm: VirtualMachine) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
