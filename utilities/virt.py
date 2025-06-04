@@ -2540,3 +2540,8 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
     except TimeoutExpiredError:
         return True
     return False
+
+
+def get_vm_boot_time(vm: VirtualMachine) -> str:
+    boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
