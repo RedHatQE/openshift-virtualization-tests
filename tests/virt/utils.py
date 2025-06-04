@@ -13,16 +13,26 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import VIRT_PROCESS_MEMORY_LIMITS
+from tests.virt.node.gpu.constants import (
+    GPU_PRETTY_NAME_STR,
+    MDEV_NAME_STR,
+    MDEV_TYPE_STR,
+    VGPU_DEVICE_NAME_STR,
+    VGPU_PRETTY_NAME_STR,
+)
 from utilities.constants import (
     DEFAULT_HCO_CONDITIONS,
+    OS_FLAVOR_WINDOWS,
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15SEC,
+    TIMEOUT_30SEC,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -30,7 +40,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix
+from utilities.infra import ExecCommandOnPod, get_pod_by_name_prefix
 from utilities.virt import (
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
@@ -357,3 +367,131 @@ def get_match_expressions_dict(nodes_list):
             }
         ]
     }
+
+
+def wait_for_virt_launcher_pod(vmi):
+    samples = TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_1SEC, func=lambda: vmi.virt_launcher_pod)
+    try:
+        for sample in samples:
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Virt-laucher pod for VMI {vmi.name} was not found!")
+        raise
+
+
+def validate_machine_type(vm, expected_machine_type):
+    vm_machine_type = vm.instance.spec.template.spec.domain.machine.type
+    vmi_machine_type = vm.vmi.instance.spec.domain.machine.type
+
+    assert vm_machine_type == vmi_machine_type == expected_machine_type, (
+        "Created VM's machine type does not match the request. "
+        f"Expected: {expected_machine_type} VM: {vm_machine_type}, VMI: {vmi_machine_type}"
+    )
+    vmi_xml_machine_type = vm.privileged_vmi.xml_dict["domain"]["os"]["type"]["@machine"]
+    assert vmi_xml_machine_type == expected_machine_type, (
+        f"libvirt machine type {vmi_xml_machine_type} does not match expected type {expected_machine_type}"
+    )
+
+
+def patch_hco_cr_with_mdev_permitted_hostdevices(hyperconverged_resource, supported_gpu_device):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource: {
+                "spec": {
+                    "mediatedDevicesConfiguration": {"mediatedDeviceTypes": [supported_gpu_device[MDEV_TYPE_STR]]},
+                    "permittedHostDevices": {
+                        "mediatedDevices": [
+                            {
+                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                            }
+                        ]
+                    },
+                }
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+def fetch_gpu_device_name_from_vm_instance(vm):
+    devices = vm.vmi.instance.spec.domain.devices
+    if devices.get("gpus"):
+        return devices.gpus[0].deviceName
+    elif devices.get("hostDevices"):
+        return devices.hostDevices[0].deviceName
+    else:
+        raise ValueError(f"No GPU devices found in VM {vm.name}")
+
+
+def get_num_gpu_devices_in_rhel_vm(vm):
+    return int(
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=[
+                "bash",
+                "-c",
+                '/sbin/lspci -nnk | grep -E "controller.+NVIDIA" | wc -l',
+            ],
+        )[0].strip()
+    )
+
+
+def get_gpu_device_name_from_windows_vm(vm):
+    return run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[shlex.split("wmic path win32_VideoController get name")],
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+    )[0]
+
+
+def verify_gpu_device_exists_on_node(gpu_nodes, device_name):
+    device_exists_failed_checks = []
+    for gpu_node in gpu_nodes:
+        for status_type in ["allocatable", "capacity"]:
+            resources = getattr(gpu_node.instance.status, status_type).keys()
+            if device_name not in resources:
+                device_exists_failed_checks.append({
+                    gpu_node.name: {
+                        f"device_{status_type}": {
+                            "expected": device_name,
+                            "actual": resources,
+                        }
+                    }
+                })
+    assert not device_exists_failed_checks, f"Failed checks: {device_exists_failed_checks}"
+
+
+def verify_gpu_device_exists_in_vm(vm, supported_gpu_device):
+    if vm.os_flavor.startswith(OS_FLAVOR_WINDOWS):
+        expected_gpu_name = (
+            supported_gpu_device[VGPU_PRETTY_NAME_STR]
+            if "vgpu" in vm.name
+            else supported_gpu_device[GPU_PRETTY_NAME_STR]
+        )
+        assert expected_gpu_name in get_gpu_device_name_from_windows_vm(vm=vm), (
+            f"GPU device {expected_gpu_name} does not exist in windows vm {vm.name}"
+        )
+    else:
+        assert get_num_gpu_devices_in_rhel_vm(vm=vm) == 1, (
+            f"GPU device {fetch_gpu_device_name_from_vm_instance(vm=vm)} does not exist in rhel vm {vm.name}"
+        )
+
+
+def check_node_for_missing_mdev_bus(node_and_shared_list):
+    node, shared_list, workers_utility_pods = node_and_shared_list
+    pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN,
+            sleep=TIMEOUT_5SEC,
+            func=pod_exec.exec,
+            command="ls /sys/class | grep mdev_bus || true",
+        ):
+            if sample:
+                return
+    except TimeoutExpiredError:
+        shared_list.append(node.name)

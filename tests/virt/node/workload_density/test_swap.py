@@ -8,18 +8,20 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import REMOVE_NEWLINE
 from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures(
-    "skip_if_compact_cluster",
-    "skip_if_wasp_agent_disabled",
-    "wasp_agent_active_and_ready",
-    "swap_is_available_on_nodes",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "fail_if_wasp_agent_disabled",
+        "wasp_agent_active_and_ready",
+        "swap_is_available_on_nodes",
+    ),
+    pytest.mark.swap,
+]
 
 MEMORY_SWAP_MAX_PATH = "/sys/fs/cgroup/memory.swap.max"
 MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
@@ -27,7 +29,7 @@ MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
 
 def wait_virt_launcher_pod_using_swap(vm):
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=vm.privileged_vmi.virt_launcher_pod.execute,
         command=shlex.split(f"bash -c 'cat {MEMORY_SWAP_CURRENT_PATH} | {REMOVE_NEWLINE}'"),
@@ -68,9 +70,9 @@ def wasp_agent_daemonset():
 
 
 @pytest.fixture(scope="package")
-def skip_if_wasp_agent_disabled(wasp_agent_daemonset):
+def fail_if_wasp_agent_disabled(wasp_agent_daemonset):
     if not wasp_agent_daemonset.exists:
-        pytest.skip("Wasp agent not deployed to cluster, skipping test")
+        pytest.fail(reason="Wasp agent not deployed to cluster")
 
 
 @pytest.fixture(scope="package")
@@ -116,7 +118,6 @@ def vm_for_swap_usage_test(
         namespace=namespace.name,
         cpu_model=cpu_for_migration,
         memory_guest=next(iter(node_with_less_available_memory.values())),
-        memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
         vm_affinity=node_affinity_rule_for_two_nodes,
     ) as vm:
@@ -128,7 +129,7 @@ def vm_for_swap_usage_test(
 def swap_vm_stress_started(vm_for_swap_usage_test):
     start_stress_on_vm(
         vm=vm_for_swap_usage_test,
-        stress_command="nohup stress-ng --vm 1 --vm-bytes 70% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
+        stress_command="nohup stress-ng --vm 1 --vm-bytes 85% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
     )
 
 
@@ -170,7 +171,6 @@ def test_swap_status_on_pod(vm_with_different_qos):
     )
 
 
-@pytest.mark.usefixtures("skip_if_workers_bms")
 class TestVMCanUseSwap:
     @pytest.mark.dependency(name="test_virt_launcher_pod_use_swap")
     @pytest.mark.polarion("CNV-11258")

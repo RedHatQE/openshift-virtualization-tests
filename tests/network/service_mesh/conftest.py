@@ -32,11 +32,10 @@ from tests.network.utils import (
     FedoraVirtualMachineForServiceMesh,
     ServiceMeshDeployments,
     ServiceMeshDeploymentService,
-    ServiceMeshMemberRollForTests,
     authentication_request,
 )
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
-from utilities.infra import add_scc_to_service_account, create_ns, unique_name
+from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
 from utilities.virt import running_vm, vm_console_run_commands, wait_for_console
 
 LOGGER = logging.getLogger(__name__)
@@ -175,11 +174,18 @@ def ns_outside_of_service_mesh(admin_client):
     yield from create_ns(admin_client=admin_client, name="outside-mesh")
 
 
+@pytest.fixture(scope="module")
+def service_mesh_tests_namespace(namespace, admin_client):
+    # The namespace used for the ServiceMesh tests must be added the `istio-injection` label.
+    label_project(name=namespace.name, label={"istio-injection": "enabled"}, admin_client=admin_client)
+    return namespace
+
+
 @pytest.fixture(scope="class")
-def httpbin_deployment_service_mesh(namespace):
+def httpbin_deployment_service_mesh(service_mesh_tests_namespace):
     with ServiceMeshDeployments(
         name="httpbin",
-        namespace=namespace.name,
+        namespace=service_mesh_tests_namespace.name,
         version=ServiceMeshDeployments.ApiVersion.V1,
         image=HTTPBIN_IMAGE,
         command=shlex.split(HTTPBIN_COMMAND),
@@ -215,22 +221,15 @@ def httpbin_service_service_mesh(httpbin_deployment_service_mesh, httpbin_servic
 
 
 @pytest.fixture(scope="module")
-def service_mesh_member_roll(namespace):
-    with ServiceMeshMemberRollForTests(members=[namespace.name]) as smmr:
-        yield smmr
-
-
-@pytest.fixture(scope="module")
 def vm_fedora_with_service_mesh_annotation(
     unprivileged_client,
-    namespace,
-    service_mesh_member_roll,
+    service_mesh_tests_namespace,
 ):
     vm_name = "service-mesh-vm"
     with FedoraVirtualMachineForServiceMesh(
         client=unprivileged_client,
         name=vm_name,
-        namespace=namespace.name,
+        namespace=service_mesh_tests_namespace.name,
     ) as vm:
         vm.custom_service_enable(
             service_name=vm_name,
@@ -276,10 +275,10 @@ def outside_mesh_console_ready_vm(
 
 
 @pytest.fixture(scope="class")
-def server_deployment_v1(namespace):
+def server_deployment_v1(service_mesh_tests_namespace):
     with ServiceMeshDeployments(
         name=SERVER_DEMO_NAME,
-        namespace=namespace.name,
+        namespace=service_mesh_tests_namespace.name,
         version=ServiceMeshDeployments.ApiVersion.V1,
         image=SERVER_V1_IMAGE,
         strategy=SERVER_DEPLOYMENT_STRATEGY,
@@ -412,20 +411,21 @@ def change_routing_to_v2(
 
 
 @pytest.fixture(scope="class")
-def peer_authentication_strict_service_mesh(service_mesh_member_roll, namespace):
-    with PeerAuthenticationForTests(name=service_mesh_member_roll.name, namespace=namespace.name) as pa:
+def peer_authentication_strict_service_mesh(service_mesh_tests_namespace):
+    with PeerAuthenticationForTests(
+        name="default",
+        namespace=service_mesh_tests_namespace.name,
+    ) as pa:
         yield pa
 
 
 @pytest.fixture(scope="class")
 def peer_authentication_service_mesh_deployment(
     istio_system_namespace,
-    namespace,
-    service_mesh_member_roll,
+    peer_authentication_strict_service_mesh,
     vm_fedora_with_service_mesh_annotation,
     ns_outside_of_service_mesh,
     httpbin_service_service_mesh,
-    peer_authentication_strict_service_mesh,
     service_mesh_vm_console_connection_ready,
 ):
     wait_service_mesh_components_convergence(

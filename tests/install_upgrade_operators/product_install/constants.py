@@ -14,7 +14,7 @@ IGNORE_NAMESPACE = [
     "openshift-operator-lifecycle-manager",
     "openshift-virtualization-os-images",
 ]
-CLUSTER_RESOURCE_WHITE_LIST = {
+CLUSTER_RESOURCE_ALLOWLIST = {
     "ClusterRole": [
         "openshift-cnv-group-view",
         "prometheus-k8s-ssp",
@@ -35,6 +35,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "template:view",
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
+        "kubevirt-ipam-controller-manager-role",
     ],
     "ClusterRoleBinding": [
         "hostpath-provisioner-operator-service-system:auth-delegator",
@@ -56,6 +57,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "template-validator",
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
+        "kubevirt-ipam-controller-manager-rolebinding",
     ],
     "Namespace": ["openshift-cnv", "openshift-virtualization-os-images"],
     "Project": ["openshift-cnv", "openshift-virtualization-os-images"],
@@ -76,6 +78,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "virt-api-mutator",
         "kubemacpool-mutator",
         "cdi-api-datavolume-mutate",
+        "kubevirt-ipam-controller-mutating-webhook-configuration",
     ],
     "SecurityContextConstraints": [
         "linux-bridge",
@@ -83,6 +86,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
         "kubevirt-controller",
         "bridge-marker",
         "kubevirt-handler",
+        "passt-binding-cni",
     ],
     "NetworkAddonsConfig": ["cluster"],
     "ConsoleCLIDownload": ["virtctl-clidownloads-kubevirt-hyperconverged"],
@@ -92,7 +96,7 @@ CLUSTER_RESOURCE_WHITE_LIST = {
     "CDIConfig": ["config"],
 }
 NAMESPACED_IGNORE_KINDS = ["Event", "Template"]
-NAMESPACED_RESOURCE_WHITE_LIST = {
+NAMESPACED_RESOURCE_ALLOWLIST = {
     "kube-system": {
         "RoleBinding": [
             "hostpath-provisioner-operator-service-auth-reader",
@@ -125,7 +129,7 @@ NAMESPACED_RESOURCE_WHITE_LIST = {
             "centos-stream10-image-cron",
             "centos-stream9-image-cron",
             "rhel9-image-cron",
-            "rhel10-beta-image-cron",
+            "rhel10-image-cron",
             "rhel8-image-cron",
             "fedora-image-cron",
         ],
@@ -137,7 +141,7 @@ NAMESPACED_RESOURCE_WHITE_LIST = {
             "centos-stream9",
             "centos7",
             "fedora",
-            "rhel10-beta",
+            "rhel10",
             "rhel9",
             "rhel8",
             "rhel7",
@@ -161,12 +165,13 @@ NAMESPACED_RESOURCE_WHITE_LIST = {
         "DataVolume": [
             "rhel8",
             "rhel9",
-            "rhel10-beta",
+            "rhel10",
             "fedora",
             "centos-stream9",
             "centos-stream10",
         ],
     },
+    "default": {"NetworkAttachmentDefinition": ["primary-udn-kubevirt-binding"]},
 }
 OPENSHIFT_VIRTUALIZATION = "openshift-virtualization"
 HCO_NOT_INSTALLED_ALERT = "HCOInstallationIncomplete"

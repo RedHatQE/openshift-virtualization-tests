@@ -15,9 +15,9 @@ import time
 import zipfile
 from contextlib import contextmanager
 from subprocess import PIPE, CalledProcessError, Popen
+from typing import Any
 
 import netaddr
-import packaging.version
 import paramiko
 import pytest
 import requests
@@ -50,6 +50,7 @@ from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
     assert_nodes_schedulable,
 )
+from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
@@ -256,7 +257,7 @@ def get_jira_status(jira):
     return jira_connection.issue(id=jira).fields.status.name.lower()
 
 
-def get_pods(dyn_client, namespace, label=None):
+def get_pods(dyn_client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
     return list(
         Pod.get(
             dyn_client=dyn_client,
@@ -271,27 +272,27 @@ def wait_for_pods_deletion(pods):
         pod.wait_deleted()
 
 
-def get_pod_container_error_status(pod):
-    pod_instance_status = pod.instance.status
-    # Check the containerStatuses and if any containers is in waiting state, return that information:
+def get_pod_container_error_status(pod: Pod) -> str | None:
+    try:
+        pod_instance_status = pod.instance.status
+        # Check the containerStatuses and if any container is in waiting state, return that information:
+        for container_status in pod_instance_status.get("containerStatuses", []):
+            if waiting_container := container_status.get("state", {}).get("waiting"):
+                return waiting_container["reason"] if waiting_container.get("reason") else waiting_container
+        return None
+    except NotFoundError:
+        LOGGER.error(f"Pod {pod.name} was not found")
+        raise
 
-    for container_status in pod_instance_status.get("containerStatuses", []):
-        waiting_container = container_status.get("state", {}).get("waiting")
-        if waiting_container:
-            return waiting_container["reason"] if waiting_container.get("reason") else waiting_container
 
-
-def get_not_running_pods(pods, filter_pods_by_name=None):
+def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list[dict[str, str]]:
     pods_not_running = []
     for pod in pods:
-        pod_instance = pod.instance
         if filter_pods_by_name and filter_pods_by_name in pod.name:
             LOGGER.warning(f"Ignoring pod: {pod.name} for pod state validations.")
             continue
-        container_status_error = get_pod_container_error_status(pod=pod)
-        if container_status_error:
-            pods_not_running.append({pod.name: container_status_error})
         try:
+            pod_instance = pod.instance
             # Waits for all pods in a given namespace to be in final healthy state(running/completed).
             # We also need to keep track of pods marked for deletion as not running. This would ensure any
             # pod that was spinned up in place of pod marked for deletion, reaches healthy state before end
@@ -301,6 +302,8 @@ def get_not_running_pods(pods, filter_pods_by_name=None):
                 pod.Status.SUCCEEDED,
             ):
                 pods_not_running.append({pod.name: pod.status})
+            elif container_status_error := get_pod_container_error_status(pod=pod):
+                pods_not_running.append({pod.name: container_status_error})
         except (ResourceNotFoundError, NotFoundError):
             LOGGER.warning(f"Ignoring pod {pod.name} that disappeared during cluster sanity check")
             pods_not_running.append({pod.name: "Deleted"})
@@ -308,11 +311,11 @@ def get_not_running_pods(pods, filter_pods_by_name=None):
 
 
 def wait_for_pods_running(
-    admin_client,
-    namespace,
-    number_of_consecutive_checks=1,
-    filter_pods_by_name=None,
-):
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    number_of_consecutive_checks: int = 1,
+    filter_pods_by_name: str = "",
+) -> None:
     """
     Waits for all pods in a given namespace to reach Running/Completed state. To avoid catching all pods in running
     state too soon, use number_of_consecutive_checks with appropriate values.
@@ -328,26 +331,30 @@ def wait_for_pods_running(
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
-        func=get_not_running_pods,
-        pods=list(Pod.get(dyn_client=admin_client, namespace=namespace.name)),
-        filter_pods_by_name=filter_pods_by_name,
+        func=get_pods,
+        dyn_client=admin_client,
+        namespace=namespace,
         exceptions_dict={NotFoundError: []},
     )
+
     sample = None
+    not_running_pods = []
     try:
         current_check = 0
         for sample in samples:
-            if not sample:
-                current_check += 1
-                if current_check >= number_of_consecutive_checks:
-                    return True
-            else:
-                current_check = 0
+            if sample:
+                if not_running_pods := get_not_running_pods(pods=sample, filter_pods_by_name=filter_pods_by_name):
+                    LOGGER.warning(f"Not running pods: {not_running_pods}")
+                    current_check = 0
+                else:
+                    current_check += 1
+                    if current_check >= number_of_consecutive_checks:
+                        return
     except TimeoutExpiredError:
-        if sample:
+        if not_running_pods:
             LOGGER.error(
                 f"timeout waiting for all pods in namespace {namespace.name} to reach "
-                f"running state, following pods are in not running state: {sample}"
+                f"running state, following pods are in not running state: {not_running_pods}"
             )
             raise
 
@@ -1279,7 +1286,7 @@ def get_cluster_platform():
     return get_infrastructure().instance.status.platform
 
 
-def query_version_explorer(api_end_point, query_string):
+def query_version_explorer(api_end_point: str, query_string: str) -> Any:
     try:
         response = requests.get(
             url=f"{py_config['version_explorer_url']}/{api_end_point}?{query_string}",
@@ -1289,11 +1296,11 @@ def query_version_explorer(api_end_point, query_string):
         response.raise_for_status()
     except (HTTPError, ConnectionError, Timeout, TooManyRedirects) as ex:
         LOGGER.warning(f"Error occurred: {ex}")
-        return
+        return None
     return response.json()
 
 
-def wait_for_version_explorer_response(api_end_point, query_string):
+def wait_for_version_explorer_response(api_end_point: str, query_string: str) -> Any:
     version_explorer_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
@@ -1306,34 +1313,44 @@ def wait_for_version_explorer_response(api_end_point, query_string):
             return sample
 
 
-def get_latest_z_stream(minor_version):
+def stable_channel_released_to_prod(channels: list[dict[str, str | bool]]) -> bool:
+    return any(item.get("channel") == "stable" and item.get("released_to_prod") for item in channels)
+
+
+def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, str] | None:
     builds = wait_for_version_explorer_response(
         api_end_point="GetBuildsWithErrata",
         query_string=f"minor_version={minor_version}",
     )["builds"]
+
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE":
+        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
+            build_version = Version(version=build["csv_version"])
             if latest_z_stream:
-                current_build_version = packaging.version.parse(version=build["csv_version"])
-                if current_build_version > latest_z_stream:
-                    latest_z_stream = current_build_version
+                if build_version > latest_z_stream:
+                    latest_z_stream = build_version
             else:
-                latest_z_stream = packaging.version.parse(version=build["csv_version"])
-    return str(latest_z_stream) if latest_z_stream else None
+                latest_z_stream = build_version
+    return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 
 
-def get_cnv_version_by_iib(iib):
-    return str(
-        packaging.version.parse(
-            version=wait_for_version_explorer_response(
-                api_end_point="GetBuildByIIB",
-                query_string=f"iib_number={iib}",
-            )["cnv_version"]
-            .replace(".rhel9", "")
-            .split("-")[0]
-        )
+def get_cnv_info_by_iib(iib: str) -> dict[str, str]:
+    build_info = wait_for_version_explorer_response(
+        api_end_point="GetBuildByIIB",
+        query_string=f"iib_number={iib}",
     )
+    return get_build_info_dict(
+        version=str(Version(build_info["cnv_version"].split(".rhel9")[0])),
+        channel=build_info["channel"],
+    )
+
+
+def get_build_info_dict(version: str, channel: str = "stable") -> dict[str, str]:
+    return {
+        "version": version,
+        "channel": channel,
+    }
 
 
 def get_deployment_by_name(namespace_name, deployment_name):
