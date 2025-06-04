@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -546,7 +547,7 @@ class TestVmDiskAllocatedSizeLinux:
     ):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
+            metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=vm_for_vm_disk_allocation_size_test.name),
             expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test),
         )
 
@@ -557,7 +558,7 @@ class TestVmDiskAllocatedSizeWindows:
     def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{windows_vm_for_test.name}'}}",
+            metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),
             expected_value=get_pvc_size_bytes(vm=windows_vm_for_test),
         )
 

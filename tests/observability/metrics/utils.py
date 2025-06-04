@@ -1488,7 +1488,7 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
 
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
-    assert vm_dv_templates or len(vm_dv_templates) > 0, "VM has no DataVolume templates"
+    assert vm_dv_templates, "VM has no DataVolume templates"
     return str(
         int(
             bitmath.parse_string_unsafe(
@@ -1572,5 +1572,5 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
     except TimeoutExpiredError:
-        LOGGER.error(f"{abs(sample)} should be within 5% of {expected_value}")
+        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
