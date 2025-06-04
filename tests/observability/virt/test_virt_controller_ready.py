@@ -3,6 +3,8 @@ import pytest
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import VIRT_CONTROLLER
 
+pytestmark = pytest.mark.arm64
+
 
 @pytest.mark.usefixtures("disabled_virt_operator")
 class TestVirtControllerReady:
