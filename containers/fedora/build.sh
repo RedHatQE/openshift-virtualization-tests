@@ -99,7 +99,7 @@ fi
 
 rm -f "${CLOUD_INIT_ISO}"
 
-mkdir $BUILD_DIR
+mkdir -p $BUILD_DIR
 echo "Snapshot image"
 qemu-img convert -c -O qcow2 "${FEDORA_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
 
