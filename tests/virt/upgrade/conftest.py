@@ -1,5 +1,4 @@
 import logging
-from contextlib import contextmanager
 from copy import deepcopy
 
 import pytest
@@ -13,7 +12,9 @@ from pytest_testconfig import py_config
 
 from tests.virt.upgrade.utils import (
     get_all_migratable_vms,
+    get_vm_boot_time,
     validate_vms_pod_updated,
+    vm_from_template,
     wait_for_automatic_vm_migrations,
 )
 from utilities.constants import (
@@ -183,33 +184,6 @@ def run_strategy_golden_image_dv(dvs_for_upgrade):
     return rwx_dv[0] if rwx_dv else dvs_for_upgrade[0]
 
 
-@contextmanager
-def vm_from_template(
-    client,
-    namespace,
-    vm_name,
-    data_source,
-    cpu_model,
-    template_labels,
-    networks=None,
-    run_strategy=None,
-    eviction_strategy=None,
-):
-    with VirtualMachineForTestsFromTemplate(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        labels=Template.generate_template_labels(**template_labels),
-        data_source=data_source,
-        cpu_model=cpu_model,
-        run_strategy=run_strategy,
-        networks=networks,
-        interfaces=sorted(networks.keys()) if networks else None,
-        eviction_strategy=eviction_strategy,
-    ) as vm:
-        yield vm
-
-
 @pytest.fixture(scope="session")
 def manual_run_strategy_vm(
     unprivileged_client,
@@ -315,3 +289,16 @@ def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_imag
         source=generate_data_source_dict(dv=run_strategy_golden_image_dv),
     ) as ds:
         yield ds
+
+
+@pytest.fixture(scope="session")
+def linux_boot_time_before_upgrade(vms_for_upgrade):
+    boot_time_dict = {}
+    for vm in vms_for_upgrade:
+        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
+    yield boot_time_dict
+
+
+@pytest.fixture(scope="session")
+def windows_boot_time_before_upgrade(windows_vm):
+    yield get_vm_boot_time(vm=windows_vm)

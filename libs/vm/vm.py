@@ -6,18 +6,12 @@ from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
-from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import (
-    ContainerDisk,
-    Disk,
-    SpecDisk,
-    VMSpec,
-    Volume,
-)
+from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
-from utilities.virt import get_oc_image_info, vm_console_run_commands
+from utilities.virt import CLOUD_INIT_DISK_NAME, get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -73,6 +67,12 @@ class BaseVirtualMachine(VirtualMachine):
             command_output=True,
         )
 
+    def wait_for_agent_connected(self) -> None:
+        self.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+        )
+
 
 def container_image(base_image: str) -> str:
     pull_secret = infra.generate_openshift_pull_secret_file()
@@ -87,3 +87,9 @@ def container_image(base_image: str) -> str:
 def containerdisk_storage(image: str) -> tuple[SpecDisk, Volume]:
     name = "containerdisk"
     return SpecDisk(name=name, disk=Disk(bus="virtio")), Volume(name=name, containerDisk=ContainerDisk(image=image))
+
+
+def cloudinitdisk_storage(data: CloudInitNoCloud) -> tuple[SpecDisk, Volume]:
+    return SpecDisk(name=CLOUD_INIT_DISK_NAME, disk=Disk(bus="virtio")), Volume(
+        name=CLOUD_INIT_DISK_NAME, cloudInitNoCloud=data
+    )

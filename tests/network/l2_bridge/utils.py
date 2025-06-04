@@ -4,6 +4,7 @@ import re
 import time
 
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.network.utils import update_cloud_init_extra_user_data
@@ -27,7 +28,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
-    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -104,7 +104,11 @@ def create_vm_with_secondary_interface_on_setup(
         cloud_init_data=cloud_init_data,
         client=client,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+        )
         yield vm
 
 
@@ -243,7 +247,11 @@ def create_vm_for_hot_plug(
         client=client,
         cloud_init_data=cloud_init_data,
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        vm.start(wait=True)
+        vm.vmi.wait_for_condition(
+            condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+            status=VirtualMachineInstance.Condition.Status.TRUE,
+        )
         yield vm
 
 
