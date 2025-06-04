@@ -1,6 +1,4 @@
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.data_source import DataSource
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
@@ -8,7 +6,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from pytest_testconfig import py_config
 
 from tests.infrastructure.instance_types.constants import ALL_OPTIONS_VM_PREFERENCE_SPEC
-from utilities.constants import OS_FLAVOR_FEDORA, Images
+from utilities.constants import Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests
 
@@ -34,14 +32,6 @@ def vm_storage_class_preference():
         volumes={"preferredStorageClassName": PREFERENCE_STORAGE_CLASS},
     ) as vm_cluster_preference:
         yield vm_cluster_preference
-
-
-@pytest.fixture(scope="module")
-def golden_images_fedora_data_source(golden_images_namespace):
-    fedora_data_source = DataSource(namespace=golden_images_namespace.name, name=OS_FLAVOR_FEDORA)
-    if fedora_data_source.exists:
-        return fedora_data_source
-    raise ResourceNotFoundError("fedora data source was not found")
 
 
 @pytest.fixture()
