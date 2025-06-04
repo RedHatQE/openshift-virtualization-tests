@@ -138,7 +138,7 @@ class TestCPUHotPlug:
                 "vm_name": "rhel-latest-memory-hotplug-vm",
             },
             id="RHEL-VM",
-            marks=[pytest.mark.s390x]
+            marks=[pytest.mark.s390x],
         ),
         pytest.param(
             {
