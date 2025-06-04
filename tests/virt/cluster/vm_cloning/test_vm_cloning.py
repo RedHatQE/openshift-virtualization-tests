@@ -255,6 +255,7 @@ def test_clone_windows_vm(
 )
 @pytest.mark.arm64
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",
     "cloning_job_fedora_vm",
