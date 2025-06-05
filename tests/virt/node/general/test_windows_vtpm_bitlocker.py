@@ -92,7 +92,7 @@ def file_system_persistent_storage_hco_config(
 def windows_vtpm_vm(
     request,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     file_system_persistent_storage_hco_config,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
@@ -105,7 +105,7 @@ def windows_vtpm_vm(
             **get_windows_os_dict(windows_version=windows_version)["template_labels"]
         ),
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         tpm_params=presistent_enabled,
         efi_params=presistent_enabled,

@@ -46,11 +46,11 @@ def updated_fs_overhead_20_with_hco(storage_class_with_filesystem_volume_mode, h
 
 
 @pytest.fixture()
-def vm_for_fs_overhead_test(namespace, unprivileged_client, storage_class_with_filesystem_volume_mode):
+def vm_for_fs_overhead_test(namespace, local_unprivileged_client, storage_class_with_filesystem_volume_mode):
     with create_cirros_vm(
         storage_class=storage_class_with_filesystem_volume_mode,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         dv_name="fs-overhead-dv",
         vm_name="fs-overhead-vm",
         volume_mode=DataVolume.VolumeMode.FILE,

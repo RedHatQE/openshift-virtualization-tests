@@ -38,7 +38,7 @@ LOGGER = logging.getLogger(__name__)
     ],
 )
 def test_disk_image_not_conform_to_registy_disk(
-    admin_client, dv_name, url, namespace, storage_class_matrix__function__
+    local_admin_client, dv_name, url, namespace, storage_class_matrix__function__
 ):
     with create_dv(
         source=REGISTRY_STR,
@@ -52,7 +52,7 @@ def test_disk_image_not_conform_to_registy_disk(
             timeout=TIMEOUT_5MIN,
             stop_status=DataVolume.Status.SUCCEEDED,
         )
-        importer_pod = get_importer_pod(dyn_client=admin_client, namespace=dv.namespace)
+        importer_pod = get_importer_pod(dyn_client=local_admin_client, namespace=dv.namespace)
         wait_for_importer_container_message(
             importer_pod=importer_pod,
             msg=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND,

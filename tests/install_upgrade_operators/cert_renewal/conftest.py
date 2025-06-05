@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="class")
 def hyperconverged_resource_certconfig_change(
-    request, admin_client, hco_namespace, hyperconverged_resource_scope_class
+    request, local_admin_client, hco_namespace, hyperconverged_resource_scope_class
 ):
     """
     Update HCO CR with certconfig
@@ -47,7 +47,7 @@ def hyperconverged_resource_certconfig_change(
 
 
 @pytest.fixture()
-def initial_certificates_dates(admin_client, hco_namespace, tmpdir, secrets_with_non_closed_bugs):
+def initial_certificates_dates(local_admin_client, hco_namespace, tmpdir, secrets_with_non_closed_bugs):
     LOGGER.info("Delete secrets so that the cert-manager will create new ones with the updated certConfig")
     for secret in SECRETS:
         Secret(name=secret, namespace=hco_namespace.name).delete(wait=True)
@@ -56,7 +56,7 @@ def initial_certificates_dates(admin_client, hco_namespace, tmpdir, secrets_with
         Secret(name=secret, namespace=hco_namespace.name).wait(timeout=TIMEOUT_1MIN)
 
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         list_dependent_crs_to_check=[SSP],
     )

@@ -320,7 +320,7 @@ class TestOperatorsModify:
     def test_modify_hco_cr(
         self,
         hco_cr_custom_values,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         updated_hco_cr,
         expected,
@@ -333,14 +333,14 @@ class TestOperatorsModify:
         if expected["hco_spec"]:
             wait_for_spec_change(
                 expected=expected["hco_spec"]["expected"],
-                get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
+                get_spec_func=lambda: get_hco_spec(admin_client=local_admin_client, hco_namespace=hco_namespace),
                 base_path=expected["hco_spec"]["base_path"],
             )
         if expected["kubevirt_spec"]:
             wait_for_spec_change(
                 expected=expected["kubevirt_spec"]["expected"],
                 get_spec_func=lambda: get_hyperconverged_kubevirt(
-                    admin_client=admin_client, hco_namespace=hco_namespace
+                    admin_client=local_admin_client, hco_namespace=hco_namespace
                 )
                 .instance.to_dict()
                 .get("spec"),
@@ -349,13 +349,15 @@ class TestOperatorsModify:
         if expected["cdi_spec"]:
             wait_for_spec_change(
                 expected=expected["cdi_spec"],
-                get_spec_func=lambda: get_hyperconverged_cdi(admin_client=admin_client).instance.to_dict().get("spec"),
+                get_spec_func=lambda: get_hyperconverged_cdi(admin_client=local_admin_client)
+                .instance.to_dict()
+                .get("spec"),
                 base_path=[CDI_CR_CERT_CONFIG_KEY],
             )
         if expected["cnao_spec"]:
             wait_for_spec_change(
                 expected=expected["cnao_spec"],
-                get_spec_func=lambda: get_network_addon_config(admin_client=admin_client)
+                get_spec_func=lambda: get_network_addon_config(admin_client=local_admin_client)
                 .instance.to_dict()
                 .get("spec"),
                 base_path=[CNAO_CR_CERT_CONFIG_KEY],

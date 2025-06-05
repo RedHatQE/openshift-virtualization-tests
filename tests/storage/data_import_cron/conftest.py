@@ -13,8 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def data_import_cron_pvc_target_namespace(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="import-namespace")
+def data_import_cron_pvc_target_namespace(local_unprivileged_client):
+    yield from create_ns(unprivileged_client=local_unprivileged_client, name="import-namespace")
 
 
 @pytest.fixture(scope="class")
@@ -31,12 +31,15 @@ def dv_source_for_data_import_cron(namespace, storage_class_name_scope_module, r
 
 @pytest.fixture()
 def vm_for_data_source_import(
-    data_import_cron_pvc_target_namespace, imported_data_source, storage_class_name_scope_module, unprivileged_client
+    data_import_cron_pvc_target_namespace,
+    imported_data_source,
+    storage_class_name_scope_module,
+    local_unprivileged_client,
 ):
     with VirtualMachineForTests(
         name="vm-with-imported-data-source",
         namespace=data_import_cron_pvc_target_namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(

@@ -122,7 +122,7 @@ class TestBaseCustomTemplates:
     )
     def test_vm_from_base_custom_template(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         namespace,
         golden_image_data_source_scope_class,
         custom_template_from_base_template,
@@ -131,7 +131,7 @@ class TestBaseCustomTemplates:
         with VirtualMachineForTestsFromTemplate(
             name=vm_name,
             namespace=namespace.name,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             template_object=custom_template_from_base_template,
             data_source=golden_image_data_source_scope_class,
         ) as custom_vm:
@@ -159,7 +159,7 @@ class TestBaseCustomTemplates:
     @pytest.mark.polarion("CNV-7958")
     def test_custom_template_vm_validation(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         namespace,
         golden_image_data_source_scope_class,
         custom_template_from_base_template,
@@ -168,7 +168,7 @@ class TestBaseCustomTemplates:
             with VirtualMachineForTestsFromTemplate(
                 name="vm-from-custom-template-core-validation",
                 namespace=custom_template_from_base_template.namespace,
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 template_object=custom_template_from_base_template,
                 data_source=golden_image_data_source_scope_class,
                 cpu_cores=3,

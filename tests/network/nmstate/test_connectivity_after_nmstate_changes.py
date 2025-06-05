@@ -86,7 +86,7 @@ def nmstate_linux_nad(
 def nmstate_linux_bridge_attached_vma(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nmstate_linux_nad,
 ):
     name = "vma"
@@ -110,7 +110,7 @@ def nmstate_linux_bridge_attached_vma(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
@@ -120,7 +120,7 @@ def nmstate_linux_bridge_attached_vma(
 def nmstate_linux_bridge_attached_vmb(
     worker_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nmstate_linux_nad,
 ):
     name = "vmb"
@@ -144,7 +144,7 @@ def nmstate_linux_bridge_attached_vmb(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
@@ -199,9 +199,9 @@ def ssh_in_vm_background(
 
 
 @pytest.fixture(scope="class")
-def restarted_nmstate_handler(admin_client, nmstate_ds, nmstate_namespace):
+def restarted_nmstate_handler(local_admin_client, nmstate_ds, nmstate_namespace):
     restart_nmstate_handler(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         nmstate_ds=nmstate_ds,
         nmstate_namespace=nmstate_namespace,
     )
@@ -248,7 +248,7 @@ class TestConnectivityAfterNmstateChanged:
     def test_nmstate_restart_and_check_connectivity(
         self,
         nncp_ready,
-        admin_client,
+        local_admin_client,
         nmstate_ds,
         nmstate_linux_bridge_attached_vma,
         nmstate_linux_bridge_attached_vmb,
@@ -261,7 +261,7 @@ class TestConnectivityAfterNmstateChanged:
         # Running 5 nmstate restarts since we saw some failures after few restarts.
         for idx in range(5):
             restart_nmstate_handler(
-                admin_client=admin_client,
+                admin_client=local_admin_client,
                 nmstate_namespace=nmstate_namespace,
                 nmstate_ds=nmstate_ds,
             )

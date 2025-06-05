@@ -182,7 +182,7 @@ def vm_a(
     worker_node1,
     kubemacpool_bridge_device_worker_1,
     mac_pool,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     requested_network_config = kmp_utils.vm_network_config(
         mac_pool=mac_pool, all_nads=all_nads, end_ip_octet=1, mac_uid="1"
@@ -192,7 +192,7 @@ def vm_a(
         iface_config=requested_network_config,
         namespace=namespace,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         mac_pool=mac_pool,
     )
 
@@ -204,7 +204,7 @@ def vm_b(
     worker_node2,
     kubemacpool_bridge_device_worker_2,
     mac_pool,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     requested_network_config = kmp_utils.vm_network_config(
         mac_pool=mac_pool, all_nads=all_nads, end_ip_octet=2, mac_uid="2"
@@ -214,7 +214,7 @@ def vm_b(
         iface_config=requested_network_config,
         namespace=namespace,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         mac_pool=mac_pool,
     )
 

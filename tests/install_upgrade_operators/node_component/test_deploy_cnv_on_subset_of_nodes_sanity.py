@@ -47,7 +47,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_change_subscription_on_selected_node_before_workload(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_cnv_subscription_configuration,
         subscription_pods_per_nodes_after_altering_placement,
@@ -59,13 +59,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op2"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_names=[nodes_labeled["op1"][0], nodes_labeled["op3"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -80,7 +80,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(name="test_change_infrastructure_components_on_selected_node_before_workload")
     def test_change_infrastructure_components_on_selected_node_before_workload(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_np_configuration,
         hco_pods_per_nodes_after_altering_placement,
@@ -92,13 +92,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_name=nodes_labeled["infra2"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_names=[nodes_labeled["infra1"][0], nodes_labeled["infra3"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -116,7 +116,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_change_workload_components_on_selected_node_before_workload(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_np_configuration,
         hco_pods_per_nodes_after_altering_placement,
@@ -128,13 +128,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_WORKLOADS_PODS_COMPONENTS,
             node_name=nodes_labeled["work3"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_WORKLOADS_PODS_COMPONENTS,
             node_names=[nodes_labeled["work1"][0], nodes_labeled["work2"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -184,7 +184,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_infrastructure_components_selection_change_allowed_with_workloads(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_np_configuration,
         vm_placement_vm_work3,
@@ -197,13 +197,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_name=nodes_labeled["infra1"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_names=[nodes_labeled["infra2"][0], nodes_labeled["infra3"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -223,7 +223,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_operator_components_selection_change_allowed_with_workloads(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         vm_placement_vm_work3,
         alter_cnv_subscription_configuration,
@@ -236,13 +236,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op3"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_names=[nodes_labeled["op1"][0], nodes_labeled["op2"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -260,7 +260,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_infrastructure_components_selection_change_allowed_after_workloads(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_np_configuration,
         delete_vm_after_placement,
@@ -273,13 +273,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_name=nodes_labeled["infra3"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_INFRA_PODS_COMPONENTS,
             node_names=[nodes_labeled["infra2"][0], nodes_labeled["infra1"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -299,7 +299,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_operator_components_selection_change_allowed_after_workloads(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_cnv_subscription_configuration,
         subscription_pods_per_nodes_after_altering_placement,
@@ -311,13 +311,13 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_name=nodes_labeled["op1"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_OPERATOR_PODS_COMPONENTS,
             node_names=[nodes_labeled["op3"][0], nodes_labeled["op2"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -334,7 +334,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_workload_components_selection_change_allowed_after_workloads(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         alter_np_configuration,
         hco_pods_per_nodes_after_altering_placement,
@@ -346,12 +346,12 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         verify_all_components_on_node(
             component_list=CNV_WORKLOADS_PODS_COMPONENTS,
             node_name=nodes_labeled["work2"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         verify_no_components_on_nodes(
             component_list=CNV_WORKLOADS_PODS_COMPONENTS,
             node_names=[nodes_labeled["work1"][0], nodes_labeled["work3"][0]],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )

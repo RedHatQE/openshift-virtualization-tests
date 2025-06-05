@@ -36,13 +36,13 @@ def data_source_from_data_import_cron(
 
 @pytest.fixture()
 def auto_update_boot_source_instance_type_vm(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_source_from_data_import_cron,
 ):
     LOGGER.info(f"Create a VM using {data_source_from_data_import_cron.name} dataSource")
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=f"{data_source_from_data_import_cron.name}-data-source-vm",
         namespace=namespace.name,
         vm_instance_type_infer=True,

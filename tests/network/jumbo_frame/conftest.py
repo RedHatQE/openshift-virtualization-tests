@@ -17,13 +17,13 @@ def running_vma_jumbo_primary_interface_worker_1(
     worker_node1,
     namespace,
     index_number,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -35,13 +35,13 @@ def running_vmb_jumbo_primary_interface_worker_2(
     worker_node2,
     namespace,
     index_number,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -53,13 +53,13 @@ def running_vmc_jumbo_primary_interface_worker_1(
     worker_node1,
     namespace,
     index_number,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -70,7 +70,7 @@ def running_vmc_jumbo_primary_interface_worker_1(
 def running_vmd_jumbo_primary_interface_and_secondary_interface(
     index_number,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     secondary_linux_bridge_nad,
 ):
     index = next(index_number)
@@ -78,7 +78,7 @@ def running_vmd_jumbo_primary_interface_and_secondary_interface(
     with create_vm_for_jumbo_test(
         index=index,
         namespace_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init_data,
         networks={secondary_linux_bridge_nad.name: secondary_linux_bridge_nad.name},
     ) as vm:
@@ -91,7 +91,7 @@ def running_vmd_jumbo_primary_interface_and_secondary_interface(
 def running_vme_jumbo_primary_interface_and_secondary_interface(
     index_number,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     secondary_linux_bridge_nad,
 ):
     index = next(index_number)
@@ -99,7 +99,7 @@ def running_vme_jumbo_primary_interface_and_secondary_interface(
     with create_vm_for_jumbo_test(
         index=index,
         namespace_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init_data,
         networks={secondary_linux_bridge_nad.name: secondary_linux_bridge_nad.name},
     ) as vm:

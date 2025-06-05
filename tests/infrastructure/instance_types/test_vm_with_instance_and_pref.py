@@ -92,7 +92,7 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
 class TestNegativeVmWithInstanceTypeAndPref:
     @pytest.mark.polarion("CNV-11525")
     def test_vm_start_fails_with_insufficient_cpu_for_spread_option(
-        self, unprivileged_client, namespace, instance_type_for_test_scope_class, vm_preference_for_test
+        self, local_unprivileged_client, namespace, instance_type_for_test_scope_class, vm_preference_for_test
     ):
         with pytest.raises(
             UnprocessibleEntityError,
@@ -101,7 +101,7 @@ class TestNegativeVmWithInstanceTypeAndPref:
         ):
             with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
                 with VirtualMachineForTests(
-                    client=unprivileged_client,
+                    client=local_unprivileged_client,
                     name="rhel-vm-with-instance-type",
                     namespace=namespace.name,
                     image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,

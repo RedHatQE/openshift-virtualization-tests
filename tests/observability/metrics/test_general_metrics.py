@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="class")
 def fedora_vm_without_name_in_label(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     vm_name = "test-vm-label-fedora-vm"
     vm_body = fedora_vm_body(name=vm_name)
@@ -38,7 +38,7 @@ def fedora_vm_without_name_in_label(
         name=vm_name,
         namespace=namespace.name,
         body=vm_body,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)

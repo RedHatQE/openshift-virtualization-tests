@@ -66,7 +66,7 @@ def test_pod_delete_openshift_apiserver(
     indirect=True,
 )
 def test_control_plane_node_restart(
-    admin_client,
+    local_admin_client,
     chaos_namespace,
     rebooting_control_plane_node,
 ):
@@ -76,7 +76,7 @@ def test_control_plane_node_restart(
     kubemacpool-mac-controller-manager pod or from the nodes that don't have it) is rebooted.
     """
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name="vm-chaos",
         namespace=chaos_namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,

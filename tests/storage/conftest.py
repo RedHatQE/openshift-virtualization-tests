@@ -105,10 +105,10 @@ INTERNAL_HTTP_TEMPLATE = {
 
 
 @pytest.fixture()
-def hpp_resources(request, admin_client):
+def hpp_resources(request, local_admin_client):
     rcs_object = request.param
     LOGGER.info(f"Get all resources with kind: {rcs_object.kind}")
-    resource_list = list(rcs_object.get(dyn_client=admin_client))
+    resource_list = list(rcs_object.get(dyn_client=local_admin_client))
     return [rcs for rcs in resource_list if rcs.name.startswith("hostpath-")]
 
 
@@ -173,8 +173,8 @@ def images_internal_http_server(internal_http_deployment, internal_http_service)
 
 
 @pytest.fixture()
-def upload_proxy_route(admin_client):
-    routes = Route.get(dyn_client=admin_client)
+def upload_proxy_route(local_admin_client):
+    routes = Route.get(dyn_client=local_admin_client)
     upload_route = None
     for route in routes:
         if route.exposed_service == CDI_UPLOADPROXY:
@@ -316,12 +316,12 @@ def unset_predefined_scratch_sc(hyperconverged_resource_scope_module, cdi_config
 
 
 @pytest.fixture()
-def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client, cdi_config, default_sc):
+def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, local_admin_client, cdi_config, default_sc):
     # Based on py_config["default_storage_class"], update default SC, if needed
     if default_sc:
         yield default_sc
     else:
-        for sc in StorageClass.get(dyn_client=admin_client, name=py_config["default_storage_class"]):
+        for sc in StorageClass.get(dyn_client=local_admin_client, name=py_config["default_storage_class"]):
             assert sc, f"The cluster does not include {py_config['default_storage_class']} storage class"
             with ResourceEditor(
                 patches={
@@ -337,10 +337,10 @@ def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client
 
 
 @pytest.fixture()
-def router_cert_secret(admin_client):
+def router_cert_secret(local_admin_client):
     router_secret = "router-certs-default"
     for secret in Secret.get(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         name=router_secret,
         namespace="openshift-ingress",
     ):
@@ -476,7 +476,7 @@ def cirros_dv_for_snapshot_dict(
 
 @pytest.fixture()
 def cirros_vm_for_snapshot(
-    admin_client,
+    local_admin_client,
     namespace,
     cirros_vm_name,
     cirros_dv_for_snapshot_dict,
@@ -486,7 +486,7 @@ def cirros_vm_for_snapshot(
     """
     dv_metadata = cirros_dv_for_snapshot_dict["metadata"]
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name=cirros_vm_name,
         namespace=dv_metadata["namespace"],
         os_flavor=OS_FLAVOR_CIRROS,
@@ -503,7 +503,7 @@ def cirros_vm_for_snapshot(
 def snapshots_with_content(
     request,
     namespace,
-    admin_client,
+    local_admin_client,
     cirros_vm_for_snapshot,
 ):
     """
@@ -529,7 +529,7 @@ def snapshots_with_content(
             name=f"snapshot-{cirros_vm_for_snapshot.name}-number-{index}",
             namespace=cirros_vm_for_snapshot.namespace,
             vm_name=cirros_vm_for_snapshot.name,
-            client=admin_client,
+            client=local_admin_client,
             teardown=False,
         ) as vm_snapshot:
             vm_snapshots.append(vm_snapshot)
@@ -561,11 +561,11 @@ def downloaded_cirros_image_scope_class(downloaded_cirros_image_full_path):
 
 
 @pytest.fixture()
-def multi_storage_cirros_vm(request, namespace, unprivileged_client, storage_class_name_scope_function):
+def multi_storage_cirros_vm(request, namespace, local_unprivileged_client, storage_class_name_scope_function):
     with create_cirros_vm(
         storage_class=storage_class_name_scope_function,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         vm_name=request.param["vm_name"],
         annotations=request.param.get("annotations"),

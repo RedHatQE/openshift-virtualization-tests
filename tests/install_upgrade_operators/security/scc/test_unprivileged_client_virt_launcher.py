@@ -9,12 +9,12 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 @pytest.fixture()
 def developer_vm(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
 ):
     name = "unprivileged-client-test-vm"
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name="unprivileged-client-test-vm",
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
@@ -25,10 +25,10 @@ def developer_vm(
 
 
 @pytest.fixture()
-def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client):
+def vm_virt_launcher_pod(developer_vm, namespace, local_unprivileged_client):
     return next(
         Pod.get(
-            dyn_client=unprivileged_client,
+            dyn_client=local_unprivileged_client,
             namespace=namespace.name,
             name=developer_vm.vmi.virt_launcher_pod.instance.metadata.name,
         )
@@ -36,7 +36,7 @@ def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-4897")
-def test_unprivileged_client_virt_launcher(unprivileged_client, developer_vm, vm_virt_launcher_pod):
+def test_unprivileged_client_virt_launcher(local_unprivileged_client, developer_vm, vm_virt_launcher_pod):
     with pytest.raises(
         ApiException,
         match="Reason: Handshake status 403 Forbidden",

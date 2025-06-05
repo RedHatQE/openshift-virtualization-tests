@@ -85,7 +85,7 @@ def nodes_labels_before_upgrade(nodes, cnv_upgrade):
 
 @pytest.fixture()
 def updated_image_content_source_policy(
-    admin_client,
+    local_admin_client,
     nodes,
     tmpdir_factory,
     active_machine_config_pools,
@@ -129,7 +129,7 @@ def updated_image_content_source_policy(
 
 @pytest.fixture()
 def updated_custom_hco_catalog_source_image(
-    admin_client,
+    local_admin_client,
     cnv_image_url,
     is_disconnected_cluster,
 ):
@@ -140,7 +140,7 @@ def updated_custom_hco_catalog_source_image(
         image_url = f"{cnv_image_url.split('iib:')[0]}iib@{image_info['digest']}"
     LOGGER.info(f"Deployment is not from production; updating HCO catalog source image to {image_url}.")
     update_image_in_catalog_source(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         image=image_url,
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=py_config["hco_cr_name"],
@@ -158,9 +158,9 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 
 
 @pytest.fixture()
-def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
+def approved_cnv_upgrade_install_plan(local_admin_client, hco_namespace, hco_target_csv_name, is_production_source):
     approve_cnv_upgrade_install_plan(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
@@ -168,9 +168,9 @@ def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_cs
 
 
 @pytest.fixture()
-def created_target_hco_csv(admin_client, hco_namespace, hco_target_csv_name):
+def created_target_hco_csv(local_admin_client, hco_namespace, hco_target_csv_name):
     return wait_for_hco_csv_creation(
-        admin_client=admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name
+        admin_client=local_admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name
     )
 
 
@@ -197,9 +197,9 @@ def target_images_for_pods_not_managed_by_hco(related_images_from_target_csv):
 
 
 @pytest.fixture()
-def started_cnv_upgrade(admin_client, hco_namespace, hco_target_csv_name):
+def started_cnv_upgrade(local_admin_client, hco_namespace, hco_target_csv_name):
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=False,
@@ -208,7 +208,7 @@ def started_cnv_upgrade(admin_client, hco_namespace, hco_target_csv_name):
 
 @pytest.fixture()
 def upgraded_cnv(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_target_version,
     hco_target_csv_name,
@@ -224,7 +224,7 @@ def upgraded_cnv(
     )
     LOGGER.info(f"Wait for operator condition {hco_target_csv_name} to reach upgradable: True")
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=True,
@@ -232,20 +232,20 @@ def upgraded_cnv(
 
     LOGGER.info("Wait for all openshift-virtualization operator pod replacement:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=target_operator_pods_images.keys(),
         related_images=target_operator_pods_images.values(),
     )
     LOGGER.info("Wait for non-hco managed pods to be replaced:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=[POD_STR_NOT_MANAGED_BY_HCO],
         related_images=target_images_for_pods_not_managed_by_hco,
     )
     wait_for_hco_upgrade(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace,
         cnv_target_version=cnv_target_version,
     )
@@ -257,7 +257,7 @@ def ocp_image_url(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def cluster_version(admin_client):
+def cluster_version(local_admin_client):
     cluster_version = ClusterVersion(name="version")
     if cluster_version.exists:
         return cluster_version
@@ -487,14 +487,14 @@ def triggered_non_eus_to_target_eus_ocp_upgrade(eus_ocp_image_urls):
 
 @pytest.fixture()
 def source_eus_to_non_eus_ocp_upgraded(
-    admin_client,
+    local_admin_client,
     masters,
     master_machine_config_pools,
     ocp_version_eus_to_non_eus_from_image_url,
     triggered_source_eus_to_non_eus_ocp_upgrade,
 ):
     verify_upgrade_ocp(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_eus_to_non_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
@@ -504,14 +504,14 @@ def source_eus_to_non_eus_ocp_upgraded(
 
 @pytest.fixture()
 def non_eus_to_target_eus_ocp_upgraded(
-    admin_client,
+    local_admin_client,
     masters,
     master_machine_config_pools,
     ocp_version_non_eus_to_eus_from_image_url,
     triggered_non_eus_to_target_eus_ocp_upgrade,
 ):
     verify_upgrade_ocp(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_non_eus_to_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
@@ -521,7 +521,7 @@ def non_eus_to_target_eus_ocp_upgraded(
 
 @pytest.fixture()
 def source_eus_to_non_eus_cnv_upgraded(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
@@ -530,7 +530,7 @@ def source_eus_to_non_eus_cnv_upgraded(
     for version, cnv_image in sorted(eus_cnv_upgrade_path["non-eus"].items()):
         LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
         perform_cnv_upgrade(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             cnv_image_url=cnv_image,
             cr_name=hyperconverged_resource_scope_function.name,
             hco_namespace=hco_namespace,
@@ -541,7 +541,7 @@ def source_eus_to_non_eus_cnv_upgraded(
 
 @pytest.fixture()
 def non_eus_to_target_eus_cnv_upgraded(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
@@ -550,7 +550,7 @@ def non_eus_to_target_eus_cnv_upgraded(
     version, cnv_image = next(iter(eus_cnv_upgrade_path[EUS].items()))
     LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
     perform_cnv_upgrade(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         cnv_image_url=cnv_image,
         cr_name=hyperconverged_resource_scope_function.name,
         hco_namespace=hco_namespace,
@@ -559,10 +559,10 @@ def non_eus_to_target_eus_cnv_upgraded(
 
 
 @pytest.fixture()
-def eus_created_target_hco_csv(admin_client, hco_namespace, eus_hco_target_csv_name):
+def eus_created_target_hco_csv(local_admin_client, hco_namespace, eus_hco_target_csv_name):
     return get_csv_by_name(
         csv_name=eus_hco_target_csv_name,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=hco_namespace.name,
     )
 
@@ -574,9 +574,9 @@ def odf_version(openshift_current_version):
 
 
 @pytest.fixture()
-def odf_subscription(admin_client):
+def odf_subscription(local_admin_client):
     return get_subscription(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=NamespacesNames.OPENSHIFT_STORAGE,
         subscription_name="ocs-subscription",
     )

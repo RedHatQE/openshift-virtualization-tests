@@ -63,8 +63,8 @@ def remove_spec_param_from_migration_policy(migration_policy, param):
 
 
 @pytest.fixture()
-def labeled_namespace(request, admin_client, namespace):
-    label_project(name=namespace.name, label=request.param, admin_client=admin_client)
+def labeled_namespace(request, local_admin_client, namespace):
+    label_project(name=namespace.name, label=request.param, admin_client=local_admin_client)
 
 
 @pytest.fixture()

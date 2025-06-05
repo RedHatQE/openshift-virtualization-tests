@@ -39,13 +39,13 @@ def verify_memory_overuse(pod):
 
 
 @pytest.fixture()
-def fedora_oom_vm(namespace, unprivileged_client):
+def fedora_oom_vm(namespace, local_unprivileged_client):
     name = "oom-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_cores=2,
         cpu_requests="2",

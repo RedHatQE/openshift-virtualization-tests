@@ -36,11 +36,11 @@ ISOLATE_EMULATOR_THREAD = "TestIsolateEmulatorThread::isolate_emulator_thread"
 
 @pytest.fixture(scope="class")
 def isolated_emulatorthread_vm(
-    request, unprivileged_client, namespace, golden_image_data_source_scope_class, cpu_for_migration
+    request, local_unprivileged_client, namespace, golden_image_data_source_scope_class, cpu_for_migration
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
         vm_cpu_model=cpu_for_migration,

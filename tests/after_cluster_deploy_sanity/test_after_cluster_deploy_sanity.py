@@ -55,24 +55,24 @@ def data_import_cron_managed_datasources(golden_images_namespace):
 
 
 @pytest.mark.cluster_health_check
-def test_node_sanity(admin_client, nodes):
+def test_node_sanity(local_admin_client, nodes):
     assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
     assert_nodes_schedulable(nodes=nodes)
 
 
 @pytest.mark.cluster_health_check
-def test_pod_sanity(admin_client, hco_namespace, nmstate_namespace):
+def test_pod_sanity(local_admin_client, hco_namespace, nmstate_namespace):
     for namespace_obj in [hco_namespace, nmstate_namespace]:
         wait_for_pods_running(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             namespace=namespace_obj,
         )
 
 
 @pytest.mark.cluster_health_check
-def test_hyperconverged_sanity(admin_client, hco_namespace):
+def test_hyperconverged_sanity(local_admin_client, hco_namespace):
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         list_dependent_crs_to_check=[CDI, NetworkAddonsConfig, KubeVirt],
     )
@@ -99,10 +99,10 @@ def test_boot_volume_health(
 
 
 @pytest.mark.cluster_health_check
-def test_pvc_health(admin_client):
+def test_pvc_health(local_admin_client):
     not_bound = []
     is_terminating_pvcs = False
-    for pvc in PersistentVolumeClaim.get(dyn_client=admin_client):
+    for pvc in PersistentVolumeClaim.get(dyn_client=local_admin_client):
         pvc_instance = pvc.instance
         pvc_status = pvc_instance.status.phase
         LOGGER.info(f"PVC {pvc.name} is in {pvc_status} state")
@@ -118,29 +118,29 @@ def test_pvc_health(admin_client):
             not_bound.append(pvc.name)
     assert not not_bound, f"Following pvcs are not in bound state {not_bound}"
     if is_terminating_pvcs:
-        wait_for_terminating_pvc(admin_client=admin_client)
+        wait_for_terminating_pvc(admin_client=local_admin_client)
 
 
 @pytest.mark.cluster_health_check
-def test_namespace_health(admin_client):
+def test_namespace_health(local_admin_client):
     if errored_namespaces := [
         f"{ns.name} found in status {ns.status}"
-        for ns in Namespace.get(dyn_client=admin_client)
+        for ns in Namespace.get(dyn_client=local_admin_client)
         if ns.exists and ns.status != Namespace.Status.ACTIVE
     ]:
         pytest.fail(f"{errored_namespaces} found in not active state")
 
 
 @pytest.mark.cluster_health_check
-def test_cluster_operator_health(admin_client):
-    failed_operators = wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_10MIN)
+def test_cluster_operator_health(local_admin_client):
+    failed_operators = wait_for_cluster_operator_stabilize(admin_client=local_admin_client, wait_timeout=TIMEOUT_10MIN)
     assert not failed_operators, f"Following cluster operators are in unhealthy conditions: {failed_operators}"
 
 
 @pytest.mark.cluster_health_check
-def test_machine_config_pool_health(admin_client):
+def test_machine_config_pool_health(local_admin_client):
     failed_mcps = []
-    for mcp in MachineConfigPool.get(dyn_client=admin_client):
+    for mcp in MachineConfigPool.get(dyn_client=local_admin_client):
         mcp_instance = mcp.instance
         ready_count = mcp_instance.status.readyMachineCount
         machine_count = mcp_instance.status.machineCount
@@ -157,8 +157,8 @@ def test_machine_config_pool_health(admin_client):
 
 
 @pytest.mark.cluster_health_check
-def test_csv_health(admin_client, hco_namespace):
-    csv = get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
+def test_csv_health(local_admin_client, hco_namespace):
+    csv = get_installed_hco_csv(admin_client=local_admin_client, hco_namespace=hco_namespace)
     csv.wait_for_status(
         status=csv.Status.SUCCEEDED,
         timeout=TIMEOUT_5MIN,

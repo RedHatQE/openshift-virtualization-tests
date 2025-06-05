@@ -80,14 +80,14 @@ class TestMustGatherCluster:
     )
     def test_resource_type(
         self,
-        admin_client,
+        local_admin_client,
         must_gather_for_test,
         resource_type,
         resource_path,
         checks,
     ):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=resource_type,
             temp_dir=must_gather_for_test,
             resource_path=resource_path,
@@ -181,13 +181,13 @@ class TestMustGatherCluster:
     )
     def test_pods(
         self,
-        admin_client,
+        local_admin_client,
         must_gather_for_test,
         label_selector,
         resource_namespace,
     ):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=Pod,
             temp_dir=must_gather_for_test,
             resource_path="namespaces/{namespace}/pods/{name}/{name}.yaml",
@@ -197,9 +197,9 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2727")
-    def test_template_in_openshift_ns_data(self, admin_client, must_gather_for_test):
+    def test_template_in_openshift_ns_data(self, local_admin_client, must_gather_for_test):
         template_resources = list(
-            Template.get(dyn_client=admin_client, singular_name="template", namespace="openshift")
+            Template.get(dyn_client=local_admin_client, singular_name="template", namespace="openshift")
         )
         template_log = os.path.join(
             must_gather_for_test,
@@ -273,9 +273,9 @@ class TestMustGatherCluster:
             )
 
     @pytest.mark.polarion("CNV-2801")
-    def test_nmstate_config_data(self, admin_client, must_gather_for_test):
+    def test_nmstate_config_data(self, local_admin_client, must_gather_for_test):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=NodeNetworkState,
             temp_dir=must_gather_for_test,
             resource_path=f"cluster-scoped-resources/{NodeNetworkState.ApiGroup.NMSTATE_IO}/"
@@ -326,9 +326,9 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2723")
-    def test_apiservice_resources(self, admin_client, must_gather_for_test):
+    def test_apiservice_resources(self, local_admin_client, must_gather_for_test):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=APIService,
             temp_dir=must_gather_for_test,
             resource_path="apiservices/{name}.yaml",
@@ -337,16 +337,16 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2726")
-    def test_webhookconfig_resources(self, admin_client, must_gather_for_test):
+    def test_webhookconfig_resources(self, local_admin_client, must_gather_for_test):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=ValidatingWebhookConfiguration,
             temp_dir=must_gather_for_test,
             resource_path="webhooks/validating/{name}/validatingwebhookconfiguration.yaml",
             checks=VALIDATE_UID_NAME,
         )
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=MutatingWebhookConfiguration,
             temp_dir=must_gather_for_test,
             resource_path="webhooks/mutating/{name}/mutatingwebhookconfiguration.yaml",
@@ -354,13 +354,13 @@ class TestMustGatherCluster:
         )
 
         for webhook_resources in [
-            list(ValidatingWebhookConfiguration.get(dyn_client=admin_client)),
-            list(MutatingWebhookConfiguration.get(dyn_client=admin_client)),
+            list(ValidatingWebhookConfiguration.get(dyn_client=local_admin_client)),
+            list(MutatingWebhookConfiguration.get(dyn_client=local_admin_client)),
         ]:
             compare_webhook_svc_contents(
                 webhook_resources=webhook_resources,
                 cnv_must_gather=must_gather_for_test,
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 checks=VALIDATE_UID_NAME,
             )
 
@@ -370,13 +370,13 @@ class TestMustGatherCluster:
         assert not new_crds, f"Following crds are new: {new_crds}."
 
     @pytest.mark.polarion("CNV-2724")
-    def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
+    def test_crd_resources(self, local_admin_client, must_gather_for_test, kubevirt_crd_by_type):
         crd_name = kubevirt_crd_by_type.name
         for version in kubevirt_crd_by_type.instance.spec.versions:
             if not version.served:
                 LOGGER.warning(f"Skipping {version.name} for {crd_name} because it is not served")
                 continue
-            resource_objs = admin_client.resources.get(
+            resource_objs = local_admin_client.resources.get(
                 api_version=version.name,
                 kind=kubevirt_crd_by_type.instance.spec.names.kind,
             )
@@ -420,7 +420,7 @@ class TestMustGatherCluster:
                 )
 
     @pytest.mark.polarion("CNV-2939")
-    def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
+    def test_image_stream_tag_resources(self, local_admin_client, must_gather_for_test):
         resource_path = (
             f"namespaces/{NamespacesNames.OPENSHIFT}/{ImageStreamTag.ApiGroup.IMAGE_OPENSHIFT_IO}/imagestreamtags"
         )
@@ -429,10 +429,10 @@ class TestMustGatherCluster:
             resource_path,
         )
         assert len(os.listdir(istag_dir)) == len(
-            list(ImageStreamTag.get(dyn_client=admin_client, namespace=NamespacesNames.OPENSHIFT))
+            list(ImageStreamTag.get(dyn_client=local_admin_client, namespace=NamespacesNames.OPENSHIFT))
         )
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=ImageStreamTag,
             temp_dir=must_gather_for_test,
             resource_path=f"{resource_path}/{{name}}.yaml",

@@ -183,11 +183,11 @@ def scale_test_param(pytestconfig):
 
 
 @pytest.fixture(scope="class")
-def scale_namespace(unprivileged_client, scale_test_param, keep_resources):
+def scale_namespace(local_unprivileged_client, scale_test_param, keep_resources):
     yield from create_ns(
         name=scale_test_param["test_namespace"],
         teardown=not keep_resources,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )
 
 
@@ -245,7 +245,7 @@ def vms_info(scale_test_param):
 
 
 @pytest.fixture(scope="class")
-def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images_namespace, dvs_info):
+def golden_images_scale_dvs(request, keep_resources, local_admin_client, golden_images_namespace, dvs_info):
     dvs_list = []
 
     def _delete_resources():
@@ -267,7 +267,7 @@ def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images
                 api_name="storage",
                 url=f"{get_test_artifact_server_url()}{dv_info['url']}",
                 size=dv_info["size"],
-                client=admin_client,
+                client=local_admin_client,
                 source="http",
                 secret=artifactory_secret,
                 cert_configmap=artifactory_config_map.name,
@@ -284,7 +284,7 @@ def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images
 
 
 @pytest.fixture(scope="class")
-def data_sources(request, keep_resources, admin_client, golden_images_scale_dvs):
+def data_sources(request, keep_resources, local_admin_client, golden_images_scale_dvs):
     data_sources = {}
 
     def _delete_resources():
@@ -298,7 +298,7 @@ def data_sources(request, keep_resources, admin_client, golden_images_scale_dvs)
         data_source = DataSource(
             name=data_source_name,
             namespace=dv.namespace,
-            client=admin_client,
+            client=local_admin_client,
             source=generate_data_source_dict(dv=dv),
         )
         data_source.deploy()
@@ -313,7 +313,7 @@ def data_sources(request, keep_resources, admin_client, golden_images_scale_dvs)
 
 @pytest.fixture(scope="class")
 def scale_vms(
-    unprivileged_client,
+    local_unprivileged_client,
     data_sources,
     scale_namespace,
     vms_info,
@@ -339,7 +339,7 @@ def scale_vms(
                         VirtualMachineForTestsFromTemplate(
                             name=f"vm-{vm_base_name}-b{batch_number}-{vm_index}",
                             namespace=scale_namespace.name,
-                            client=unprivileged_client,
+                            client=local_unprivileged_client,
                             cpu_cores=vm_info["cores"],
                             memory_requests=vm_info["memory"],
                             data_source=data_sources[f"{vm_base_name}-datasource"],

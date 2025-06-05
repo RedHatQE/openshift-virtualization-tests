@@ -29,11 +29,11 @@ def data_import_schedule_minute_and_hour_values(data_import_schedule):
 
 
 @pytest.fixture()
-def deleted_hco_operator_pod(admin_client, hco_namespace, hyperconverged_resource_scope_function):
-    get_pods_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[0].delete(
+def deleted_hco_operator_pod(local_admin_client, hco_namespace, hyperconverged_resource_scope_function):
+    get_pods_by_name_prefix(client=local_admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[0].delete(
         wait=True
     )
-    get_pods_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[
+    get_pods_by_name_prefix(client=local_admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[
         0
     ].wait_for_status(status=Pod.Status.RUNNING)
     return get_random_minutes_hours_fields_from_data_import_schedule(
@@ -42,10 +42,10 @@ def deleted_hco_operator_pod(admin_client, hco_namespace, hyperconverged_resourc
 
 
 @pytest.fixture()
-def image_stream_names(admin_client, golden_images_namespace):
+def image_stream_names(local_admin_client, golden_images_namespace):
     return [
         image_stream.name
-        for image_stream in ImageStream.get(dyn_client=admin_client, namespace=golden_images_namespace.name)
+        for image_stream in ImageStream.get(dyn_client=local_admin_client, namespace=golden_images_namespace.name)
     ]
 
 
@@ -55,8 +55,8 @@ def common_templates_from_ssp_cr(ssp_cr_spec_scope_session):
 
 
 @pytest.fixture(scope="session")
-def ssp_cr_spec_scope_session(admin_client, hco_namespace):
-    return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace).instance.to_dict()["spec"]
+def ssp_cr_spec_scope_session(local_admin_client, hco_namespace):
+    return get_ssp_resource(admin_client=local_admin_client, namespace=hco_namespace).instance.to_dict()["spec"]
 
 
 @pytest.fixture()

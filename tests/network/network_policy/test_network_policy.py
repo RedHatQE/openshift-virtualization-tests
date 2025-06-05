@@ -37,17 +37,17 @@ class ApplyNetworkPolicy(NetworkPolicy):
 
 
 @pytest.fixture(scope="module")
-def namespace_1(unprivileged_client):
+def namespace_1(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="network-policy-test-1",
     )
 
 
 @pytest.fixture(scope="module")
-def namespace_2(unprivileged_client):
+def namespace_2(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="network-policy-test-2",
     )
 
@@ -75,27 +75,27 @@ def allow_http80_port(namespace_1):
 
 
 @pytest.fixture(scope="module")
-def network_policy_vma(namespace_1, worker_node1, unprivileged_client):
+def network_policy_vma(namespace_1, worker_node1, local_unprivileged_client):
     name = "vma"
     with VirtualMachineForTests(
         namespace=namespace_1.name,
         name=name,
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
 
 
 @pytest.fixture(scope="module")
-def network_policy_vmb(namespace_2, worker_node1, unprivileged_client):
+def network_policy_vmb(namespace_2, worker_node1, local_unprivileged_client):
     name = "vmb"
     with VirtualMachineForTests(
         namespace=namespace_2.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)

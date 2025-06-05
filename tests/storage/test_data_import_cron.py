@@ -71,7 +71,7 @@ def storage_with_import_cron_source_snapshot(
 
 
 @pytest.fixture()
-def rhel8_image_stream(admin_client, namespace):
+def rhel8_image_stream(local_admin_client, namespace):
     tags = [
         {
             "from": {

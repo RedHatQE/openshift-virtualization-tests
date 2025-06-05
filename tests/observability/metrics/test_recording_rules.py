@@ -52,7 +52,7 @@ KUBEVIRT_VIRT_CONTROLLER_UP = "kubevirt_virt_controller_up"
 )
 def test_virt_recording_rules(
     prometheus,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     virt_pod_info_from_prometheus,
     virt_pod_names_by_label,
@@ -99,7 +99,7 @@ def test_virt_recording_rules(
 )
 def test_virt_up_recording_rules(
     prometheus,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     virt_up_metrics_values,
     virt_pod_names_by_label,

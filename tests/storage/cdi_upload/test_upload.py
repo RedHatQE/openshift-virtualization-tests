@@ -163,7 +163,7 @@ def test_successful_upload_with_supported_formats(
     dv_name,
     remote_name,
     local_name,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     local_name = f"{tmpdir}/{local_name}"
     get_downloaded_artifact(remote_name=remote_name, local_name=local_name)
@@ -171,7 +171,7 @@ def test_successful_upload_with_supported_formats(
         dv_name=dv_name,
         storage_class=py_config["default_storage_class"],
         storage_ns_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as dv:
         storage_utils.upload_token_request(storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name)
         dv.wait_for_dv_success()

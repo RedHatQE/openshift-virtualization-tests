@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 # CentOS
 @pytest.fixture(scope="class")
 def golden_image_data_volume_multi_centos_multi_storage_scope_class(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     storage_class_matrix__class__,
     schedulable_nodes,
@@ -31,29 +31,29 @@ def golden_image_data_volume_multi_centos_multi_storage_scope_class(
         schedulable_nodes=schedulable_nodes,
         os_matrix=centos_os_matrix__class__,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_data_source_multi_centos_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_centos_multi_storage_scope_class
+    local_admin_client, golden_image_data_volume_multi_centos_multi_storage_scope_class
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         dv=golden_image_data_volume_multi_centos_multi_storage_scope_class,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     centos_os_matrix__class__,
     golden_image_data_source_multi_centos_multi_storage_scope_class,
 ):
     return vm_object_from_template(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         os_matrix=centos_os_matrix__class__,
         data_source_object=golden_image_data_source_multi_centos_multi_storage_scope_class,
@@ -63,7 +63,7 @@ def golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class(
 # Fedora
 @pytest.fixture(scope="class")
 def golden_image_data_volume_multi_fedora_os_multi_storage_scope_class(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     storage_class_matrix__class__,
     schedulable_nodes,
@@ -75,16 +75,16 @@ def golden_image_data_volume_multi_fedora_os_multi_storage_scope_class(
         schedulable_nodes=schedulable_nodes,
         os_matrix=fedora_os_matrix__class__,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_data_source_multi_fedora_os_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_fedora_os_multi_storage_scope_class
+    local_admin_client, golden_image_data_volume_multi_fedora_os_multi_storage_scope_class
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         dv=golden_image_data_volume_multi_fedora_os_multi_storage_scope_class,
     )
 
@@ -92,14 +92,14 @@ def golden_image_data_source_multi_fedora_os_multi_storage_scope_class(
 @pytest.fixture(scope="class")
 def golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     fedora_os_matrix__class__,
     golden_image_data_source_multi_fedora_os_multi_storage_scope_class,
 ):
     return vm_object_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         os_matrix=fedora_os_matrix__class__,
         data_source_object=golden_image_data_source_multi_fedora_os_multi_storage_scope_class,
@@ -109,7 +109,7 @@ def golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_cla
 # RHEL
 @pytest.fixture(scope="class")
 def golden_image_data_volume_multi_rhel_os_multi_storage_scope_class(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     storage_class_matrix__class__,
     schedulable_nodes,
@@ -121,29 +121,29 @@ def golden_image_data_volume_multi_rhel_os_multi_storage_scope_class(
         schedulable_nodes=schedulable_nodes,
         os_matrix=rhel_os_matrix__class__,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_data_source_multi_rhel_os_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_rhel_os_multi_storage_scope_class
+    local_admin_client, golden_image_data_volume_multi_rhel_os_multi_storage_scope_class
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         dv=golden_image_data_volume_multi_rhel_os_multi_storage_scope_class,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     rhel_os_matrix__class__,
     golden_image_data_source_multi_rhel_os_multi_storage_scope_class,
 ):
     return vm_object_from_template(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         os_matrix=rhel_os_matrix__class__,
         data_source_object=golden_image_data_source_multi_rhel_os_multi_storage_scope_class,
@@ -153,7 +153,7 @@ def golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class
 # Windows
 @pytest.fixture(scope="class")
 def golden_image_data_volume_multi_windows_os_multi_storage_scope_class(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     storage_class_matrix__class__,
     schedulable_nodes,
@@ -165,29 +165,29 @@ def golden_image_data_volume_multi_windows_os_multi_storage_scope_class(
         schedulable_nodes=schedulable_nodes,
         os_matrix=windows_os_matrix__class__,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_data_source_multi_windows_os_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_windows_os_multi_storage_scope_class
+    local_admin_client, golden_image_data_volume_multi_windows_os_multi_storage_scope_class
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         dv=golden_image_data_volume_multi_windows_os_multi_storage_scope_class,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     windows_os_matrix__class__,
     golden_image_data_source_multi_windows_os_multi_storage_scope_class,
 ):
     return vm_object_from_template(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         os_matrix=windows_os_matrix__class__,
         data_source_object=golden_image_data_source_multi_windows_os_multi_storage_scope_class,
@@ -198,7 +198,7 @@ def golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_cl
 @pytest.fixture()
 def golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_class,
     cpu_for_migration,
@@ -212,7 +212,7 @@ def golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_class,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
@@ -223,7 +223,7 @@ def golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope
 @pytest.fixture()
 def golden_image_vm_object_from_template_multi_storage_dv_scope_class_vm_scope_function(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_class,
 ):
@@ -232,7 +232,7 @@ def golden_image_vm_object_from_template_multi_storage_dv_scope_class_vm_scope_f
     """
     return vm_object_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source_object=golden_image_data_source_multi_storage_scope_class,
     )
@@ -241,13 +241,13 @@ def golden_image_vm_object_from_template_multi_storage_dv_scope_class_vm_scope_f
 @pytest.fixture()
 def golden_image_vm_object_from_template_multi_storage_scope_function(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_function,
 ):
     return vm_object_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source_object=golden_image_data_source_multi_storage_scope_function,
     )
@@ -256,13 +256,13 @@ def golden_image_vm_object_from_template_multi_storage_scope_function(
 @pytest.fixture(scope="class")
 def golden_image_vm_object_from_template_multi_storage_scope_class(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_class,
 ):
     return vm_object_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source_object=golden_image_data_source_multi_storage_scope_class,
     )

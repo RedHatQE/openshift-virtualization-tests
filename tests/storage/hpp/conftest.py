@@ -43,14 +43,14 @@ def utility_daemonset_for_hpp_test(
 
 @pytest.fixture
 def utility_pods_for_hpp_test(
-    admin_client,
+    local_admin_client,
     workers,
     utility_daemonset_for_hpp_test,
 ):
     utility_pod_label = utility_daemonset_for_hpp_test.instance.metadata.labels["cnv-test"]
     return get_utility_pods_from_nodes(
         nodes=workers,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         label_selector=f"cnv-test={utility_pod_label}",
     )
 
@@ -61,12 +61,12 @@ def cirros_vm_for_node_placement_tests(
     namespace,
     worker_node2,
     storage_class_matrix_hpp_matrix__module__,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     with create_cirros_vm(
         storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         dv_name=request.param.get(DV_NAME),
         vm_name=request.param.get(VM_NAME),
         node=get_node_selector_dict(node_selector=request.param.get("node", worker_node2.hostname)),
