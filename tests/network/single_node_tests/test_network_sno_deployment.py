@@ -10,11 +10,11 @@ pytestmark = pytest.mark.sno
 
 
 @pytest.fixture()
-def network_daemonset_deployment_resources(admin_client, hco_namespace):
+def network_daemonset_deployment_resources(local_admin_client, hco_namespace):
     return [
         resource
         for _type in [DaemonSet, Deployment]
-        for resource in _type.get(dyn_client=admin_client, namespace=hco_namespace.name)
+        for resource in _type.get(dyn_client=local_admin_client, namespace=hco_namespace.name)
         if any(component in resource.name for component in EXPECTED_CNAO_COMP_NAMES)
     ]
 

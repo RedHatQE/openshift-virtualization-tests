@@ -156,11 +156,11 @@ def reconciled_custom_data_source(custom_data_source_scope_function):
 
 
 @pytest.fixture()
-def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace, unprivileged_client):
+def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace, local_unprivileged_client):
     with VirtualMachineForTestsFromTemplate(
         name=f"{custom_data_source_scope_function.name}-vm",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=template_labels(os="fedora40"),
         data_source=custom_data_source_scope_function,
     ) as vm:
@@ -169,19 +169,19 @@ def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace
 
 
 @pytest.fixture()
-def data_import_cron_namespace(unprivileged_client):
+def data_import_cron_namespace(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="data-import-cron-using-default-sc",
     )
 
 
 @pytest.fixture()
-def created_persistent_volume_claim(unprivileged_client, data_import_cron_namespace):
+def created_persistent_volume_claim(local_unprivileged_client, data_import_cron_namespace):
     def _get_pvc():
         return list(
             PersistentVolumeClaim.get(
-                dyn_client=unprivileged_client,
+                dyn_client=local_unprivileged_client,
                 namespace=data_import_cron_namespace.name,
             )
         )[0]
@@ -216,7 +216,7 @@ def golden_images_data_import_cron_spec(
 
 @pytest.fixture()
 def created_data_import_cron(
-    unprivileged_client,
+    local_unprivileged_client,
     data_import_cron_namespace,
     golden_images_data_import_cron_spec,
 ):
@@ -260,11 +260,11 @@ def existing_golden_images_volumes_scope_function(
 
 @pytest.mark.polarion("CNV-7531")
 def test_opt_in_data_import_cron_creation(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
 ):
     LOGGER.info("Verify all DataImportCrons are created when opted in")
-    wait_for_existing_auto_update_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
+    wait_for_existing_auto_update_data_import_crons(admin_client=local_admin_client, namespace=golden_images_namespace)
 
 
 @pytest.mark.parametrize(
@@ -308,14 +308,14 @@ def test_custom_data_import_cron_via_hco(
     indirect=True,
 )
 def test_opt_out_custom_data_import_cron_via_hco_not_deleted(
-    admin_client,
+    local_admin_client,
     updated_hco_with_custom_data_import_cron_scope_function,
     disabled_common_boot_image_import_hco_spec_scope_function,
     golden_images_namespace,
 ):
     LOGGER.info("Test Custom DataImportCron is not deleted after opt-out")
     assert DataImportCron(
-        client=admin_client,
+        client=local_admin_client,
         name=CUSTOM_DATA_IMPORT_CRON_NAME,
         namespace=golden_images_namespace.name,
     ).exists, f"Custom DataImportCron {CUSTOM_DATA_IMPORT_CRON_NAME} not found after opt out"
@@ -409,7 +409,7 @@ def test_data_import_cron_blocked_update(
     indirect=True,
 )
 def test_custom_data_import_cron_image_updated_via_hco(
-    admin_client,
+    local_admin_client,
     updated_hco_with_custom_data_import_cron_scope_function,
     custom_data_source_scope_function,
     failed_volume_creation,
@@ -421,13 +421,13 @@ def test_custom_data_import_cron_image_updated_via_hco(
 
 @pytest.mark.polarion("CNV-7669")
 def test_data_import_cron_recreated_after_opt_out_opt_in(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     disabled_common_boot_image_import_hco_spec_scope_function,
     enabled_common_boot_image_import_feature_gate_scope_function,
 ):
     LOGGER.info("Verify dataImportCron is re-created after opt-out -> opt-in")
-    wait_for_existing_auto_update_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
+    wait_for_existing_auto_update_data_import_crons(admin_client=local_admin_client, namespace=golden_images_namespace)
 
 
 @pytest.mark.parametrize(
@@ -477,7 +477,7 @@ def test_data_import_cron_invalid_source_url_failed_creation(
 
 @pytest.mark.polarion("CNV-9917")
 def test_data_source_instancetype_preference_label(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_images_namespace,
     golden_images_data_import_crons_scope_function,
@@ -487,7 +487,7 @@ def test_data_source_instancetype_preference_label(
         data_source_name = data_source.instance.spec.managedDataSource
         try:
             with create_vm_with_infer_from_volume(
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 namespace=namespace,
                 data_source_for_test=DataSource(name=data_source_name, namespace=golden_images_namespace.name),
             ):

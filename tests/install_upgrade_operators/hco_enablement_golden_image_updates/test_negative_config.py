@@ -52,7 +52,7 @@ def editor_hyperconverged_custom_template(common_templates_scope_session, hyperc
 
 @pytest.fixture()
 def updated_hco_cr_custom_template_disable(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
@@ -61,7 +61,7 @@ def updated_hco_cr_custom_template_disable(
         template=CUSTOM_CRON_TEMPLATE, updated_value="false"
     )
     yield from update_hco_templates_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_class,
         updated_template=custom_template_dict,
@@ -89,7 +89,7 @@ def test_custom_template_no_disable(
 
 
 @pytest.mark.polarion("CNV-8709")
-def test_disable_template_annotation_value(admin_client, hco_namespace, editor_hyperconverged_custom_template):
+def test_disable_template_annotation_value(local_admin_client, hco_namespace, editor_hyperconverged_custom_template):
     try:
         with pytest.raises(
             ForbiddenError,
@@ -98,5 +98,5 @@ def test_disable_template_annotation_value(admin_client, hco_namespace, editor_h
             editor_hyperconverged_custom_template.update(backup_resources=True)
     except Failed:
         editor_hyperconverged_custom_template.restore()
-        wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_hco_conditions(admin_client=local_admin_client, hco_namespace=hco_namespace)
         raise

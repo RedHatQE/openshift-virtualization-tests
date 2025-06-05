@@ -5,10 +5,10 @@ from utilities.constants import VIRT_OPERATOR
 
 
 @pytest.fixture()
-def kubevirt_prometheus_service_monitor_list(admin_client):
+def kubevirt_prometheus_service_monitor_list(local_admin_client):
     return list(
         ServiceMonitor.get(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             label_selector=f"{ServiceMonitor.ApiGroup.APP_KUBERNETES_IO}/managed-by={VIRT_OPERATOR}",
         )
     )

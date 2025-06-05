@@ -29,7 +29,7 @@ class TestCreateHCOWithNodePlacement:
     @pytest.mark.dependency(name="test_hco_cr_with_node_placement")
     def test_hco_cr_with_node_placement(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_pods_per_nodes,
         nodes_labeled,
@@ -47,7 +47,7 @@ class TestCreateHCOWithNodePlacement:
             hco_pods_per_nodes=hco_pods_per_nodes,
             component_list=CNV_INFRA_PODS_COMPONENTS,
             selected_node=nodes_labeled["infra1"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 
@@ -57,7 +57,7 @@ class TestCreateHCOWithNodePlacement:
             hco_pods_per_nodes=hco_pods_per_nodes,
             component_list=CNV_WORKLOADS_PODS_COMPONENTS,
             selected_node=nodes_labeled["work2"][0],
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
 

@@ -85,9 +85,9 @@ def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
 @pytest.mark.tier3
 class TestCommonVmPreference:
     @pytest.mark.polarion("CNV-9894")
-    def test_common_vm_preference_windows(self, unprivileged_client, namespace):
+    def test_common_vm_preference_windows(self, local_unprivileged_client, namespace):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["windows"]
+            client=local_unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["windows"]
         )
 
     @pytest.mark.parametrize(
@@ -107,16 +107,16 @@ class TestCommonVmPreference:
             ),
         ],
     )
-    def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
+    def test_common_vm_preference_linux(self, cluster_preferences, local_unprivileged_client, namespace):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]
+            client=local_unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]
         )
 
     @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10806")
-    def test_common_vm_preference_dpdk(self, unprivileged_client, namespace):
+    def test_common_vm_preference_dpdk(self, local_unprivileged_client, namespace):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["network"]
+            client=local_unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["network"]
         )
 
 

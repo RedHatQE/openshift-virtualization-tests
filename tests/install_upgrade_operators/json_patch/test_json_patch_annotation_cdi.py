@@ -25,7 +25,7 @@ pytestmark = [pytest.mark.arm64]
 
 
 @pytest.fixture(scope="class")
-def json_patched_cdi(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
+def json_patched_cdi(local_admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
     with update_hco_annotations(
         resource=hyperconverged_resource_scope_class,
         path=PATH_CDI,
@@ -34,7 +34,7 @@ def json_patched_cdi(admin_client, hco_namespace, prometheus, hyperconverged_res
         resource_list=[CDI],
     ):
         yield
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=ALERT_NAME)
 
 
@@ -48,13 +48,13 @@ class TestKubevirtJsonPatch:
     @pytest.mark.polarion("CNV-8717")
     def test_cdi_json_patch(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         cdi_feature_gates_scope_class,
         cdi_resource_scope_function,
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
                 **{"TaintedConfiguration": Resource.Condition.Status.TRUE},

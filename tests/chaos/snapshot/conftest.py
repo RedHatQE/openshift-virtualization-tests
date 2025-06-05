@@ -8,7 +8,7 @@ from utilities.virt import VirtualMachineForTests
 
 @pytest.fixture()
 def chaos_dv_rhel9_for_snapshot(
-    admin_client,
+    local_admin_client,
     chaos_namespace,
     storage_class_matrix_snapshot_matrix__function__,
     rhel9_http_image_url,
@@ -23,17 +23,17 @@ def chaos_dv_rhel9_for_snapshot(
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=[*storage_class_matrix_snapshot_matrix__function__][0],
-        client=admin_client,
+        client=local_admin_client,
         secret=artifactory_secret_chaos_namespace_scope_module,
         cert_configmap=artifactory_config_map_chaos_namespace_scope_module.name,
     )
 
 
 @pytest.fixture()
-def chaos_vm_rhel9_for_snapshot(admin_client, chaos_namespace, chaos_dv_rhel9_for_snapshot):
+def chaos_vm_rhel9_for_snapshot(local_admin_client, chaos_namespace, chaos_dv_rhel9_for_snapshot):
     chaos_dv_rhel9_for_snapshot.to_dict()
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name="vm-chaos-snapshot",
         namespace=chaos_namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
@@ -50,7 +50,7 @@ def chaos_vm_rhel9_for_snapshot(admin_client, chaos_namespace, chaos_dv_rhel9_fo
 @pytest.fixture()
 def chaos_online_snapshots(
     request,
-    admin_client,
+    local_admin_client,
     chaos_vm_rhel9_for_snapshot,
 ):
     vm_snapshots = []
@@ -59,7 +59,7 @@ def chaos_online_snapshots(
             name=f"snapshot-{chaos_vm_rhel9_for_snapshot.name}-{idx}",
             namespace=chaos_vm_rhel9_for_snapshot.namespace,
             vm_name=chaos_vm_rhel9_for_snapshot.name,
-            client=admin_client,
+            client=local_admin_client,
             teardown=False,
             failure_deadline=TIMEOUT_8MIN,
         ) as vm_snapshot:

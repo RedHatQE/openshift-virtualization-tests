@@ -21,8 +21,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def cnv_jobs(admin_client, hco_namespace):
-    return [job.name for job in Job.get(dyn_client=admin_client, namespace=hco_namespace.name)]
+def cnv_jobs(local_admin_client, hco_namespace):
+    return [job.name for job in Job.get(dyn_client=local_admin_client, namespace=hco_namespace.name)]
 
 
 @pytest.fixture()

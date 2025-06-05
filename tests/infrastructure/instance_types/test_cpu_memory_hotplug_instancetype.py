@@ -33,14 +33,14 @@ TESTS_CLASS_NAME = "TestCPUHotPlugInstancetype"
 @pytest.fixture(scope="class")
 def instance_type_hotplug_vm(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
     four_sockets_instance_type,
 ):
     with VirtualMachineForTests(
         name="rhel-hotplug-instance-type-vm",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_scope_class
         ),
@@ -75,12 +75,12 @@ def ten_sockets_instance_type(cpu_for_migration):
 
 
 @pytest.fixture()
-def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm, six_sockets_instance_type):
+def hotplugged_six_sockets_instance_type(local_admin_client, instance_type_hotplug_vm, six_sockets_instance_type):
     hotplug_instance_type_vm_and_verify(
-        vm=instance_type_hotplug_vm, client=admin_client, instance_type=six_sockets_instance_type
+        vm=instance_type_hotplug_vm, client=local_admin_client, instance_type=six_sockets_instance_type
     )
     yield
-    clean_up_migration_jobs(client=admin_client, vm=instance_type_hotplug_vm)
+    clean_up_migration_jobs(client=local_admin_client, vm=instance_type_hotplug_vm)
 
 
 @pytest.fixture(scope="class")

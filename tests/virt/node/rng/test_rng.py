@@ -11,7 +11,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture()
-def rng_vm(unprivileged_client, namespace):
+def rng_vm(local_unprivileged_client, namespace):
     name = "vmi-with-rng"
     with VirtualMachineForTests(
         name=name,

@@ -70,8 +70,8 @@ COMMON_RESOURCE_RULES = [
 
 
 @pytest.fixture(scope="module")
-def checkup_ns(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="test-checkup-framework")
+def checkup_ns(local_unprivileged_client):
+    yield from create_ns(unprivileged_client=local_unprivileged_client, name="test-checkup-framework")
 
 
 @pytest.fixture(scope="module")
@@ -245,14 +245,14 @@ def default_latency_configmap(
 
 
 @pytest.fixture()
-def first_latency_job_checkup_ready(unprivileged_client, checkup_ns, default_latency_configmap):
+def first_latency_job_checkup_ready(local_unprivileged_client, checkup_ns, default_latency_configmap):
     first_latency_job = get_job(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=default_latency_configmap.name.replace("configmap", "job"),
         namespace_name=checkup_ns.name,
     )
     wait_for_job_finish(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         job=first_latency_job,
         checkup_ns=checkup_ns,
     )
@@ -605,9 +605,9 @@ def disconnected_checkup_nad(
 
 
 @pytest.fixture()
-def default_latency_job_success(unprivileged_client, checkup_ns, default_latency_configmap, default_latency_job):
+def default_latency_job_success(local_unprivileged_client, checkup_ns, default_latency_configmap, default_latency_job):
     wait_for_job_finish(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         job=default_latency_job,
         checkup_ns=checkup_ns,
     )
@@ -617,9 +617,11 @@ def default_latency_job_success(unprivileged_client, checkup_ns, default_latency
 
 
 @pytest.fixture()
-def latency_same_node_job_success(unprivileged_client, checkup_ns, latency_same_node_configmap, latency_same_node_job):
+def latency_same_node_job_success(
+    local_unprivileged_client, checkup_ns, latency_same_node_configmap, latency_same_node_job
+):
     wait_for_job_finish(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         job=latency_same_node_job,
         checkup_ns=checkup_ns,
     )
@@ -722,8 +724,8 @@ def dpdk_checkup_image_url(csv_related_images_scope_session):
 
 
 @pytest.fixture(scope="module")
-def dpdk_checkup_namespace(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="dpdk-checkup")
+def dpdk_checkup_namespace(local_unprivileged_client):
+    yield from create_ns(unprivileged_client=local_unprivileged_client, name="dpdk-checkup")
 
 
 @pytest.fixture(scope="module")
@@ -881,7 +883,7 @@ def dpdk_high_traffic_configmap_different_node(
 def dpdk_job(
     dpdk_checkup_image_url,
     dpdk_checkup_service_account,
-    unprivileged_client,
+    local_unprivileged_client,
     dpdk_checkup_namespace,
 ):
     configmap_name = DEFAULT_DPDK_CONFIGMAP_NAME
@@ -893,10 +895,10 @@ def dpdk_job(
         security_context=True,
         env_variables=True,
         include_uid=True,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as job:
         wait_for_job_finish(
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             job=job,
             checkup_ns=dpdk_checkup_namespace,
             timeout=int(DPDK_15_TIMEOUT) * TIMEOUT_1MIN,

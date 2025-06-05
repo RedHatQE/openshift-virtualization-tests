@@ -119,7 +119,7 @@ def test_cdiconfig_scratchspace_fs_upload_to_block(
     hyperconverged_resource_scope_module,
     cdi_config,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     https_server_certificate,
 ):
     cdiconfig_update(
@@ -132,7 +132,7 @@ def test_cdiconfig_scratchspace_fs_upload_to_block(
         storage_ns_name=namespace.name,
         run_vm=True,
         tmpdir=tmpdir,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         https_server_certificate=https_server_certificate,
     )
 
@@ -144,7 +144,7 @@ def test_cdiconfig_scratchspace_fs_import_to_block(
     hyperconverged_resource_scope_module,
     cdi_config,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     https_server_certificate,
 ):
     cdiconfig_update(
@@ -156,7 +156,7 @@ def test_cdiconfig_scratchspace_fs_import_to_block(
         storage_ns_name=namespace.name,
         images_https_server_name=get_test_artifact_server_url(schema="https"),
         run_vm=True,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         https_server_certificate=https_server_certificate,
     )
 
@@ -168,7 +168,7 @@ def test_cdiconfig_status_scratchspace_update_with_spec(
     hyperconverged_resource_scope_module,
     cdi_config,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     https_server_certificate,
 ):
     cdiconfig_update(
@@ -178,7 +178,7 @@ def test_cdiconfig_status_scratchspace_update_with_spec(
         dv_name="cnv-2214",
         storage_class_type=available_hpp_storage_class.name,
         storage_ns_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         https_server_certificate=https_server_certificate,
     )
 
@@ -190,7 +190,7 @@ def test_cdiconfig_scratch_space_not_default(
     hyperconverged_resource_scope_module,
     cdi_config,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     https_server_certificate,
 ):
     cdiconfig_update(
@@ -202,7 +202,7 @@ def test_cdiconfig_scratch_space_not_default(
         images_https_server_name=get_test_artifact_server_url(schema="https"),
         storage_ns_name=namespace.name,
         run_vm=True,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         https_server_certificate=https_server_certificate,
     )
 

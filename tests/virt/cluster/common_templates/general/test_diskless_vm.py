@@ -52,7 +52,7 @@ SMALL_VM_IMAGE = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
     indirect=True,
 )
 def test_diskless_vm_creation(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_volume_scope_function,
     vm_from_template_scope_function,

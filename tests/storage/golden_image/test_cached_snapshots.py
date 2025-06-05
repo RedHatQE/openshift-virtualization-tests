@@ -55,7 +55,7 @@ def skip_if_no_storage_profile_with_snapshot_import_cron_format(
 
 @pytest.fixture(scope="module")
 def updated_templates_rhel9_data_import_cron(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     original_rhel9_boot_source_pvc,
     snapshot_storage_class_name_scope_module,
@@ -74,7 +74,7 @@ def updated_templates_rhel9_data_import_cron(
         "storageClassName": snapshot_storage_class_name_scope_module
     })
     yield from update_hco_templates_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_module,
         updated_template=updated_template,
@@ -86,15 +86,15 @@ def updated_templates_rhel9_data_import_cron(
             namespace=golden_images_namespace.name,
         ).clean_up()
         wait_for_succeeded_dv(namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name)
-        wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_auto_boot_config_stabilization(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
-def rhel9_data_import_cron(admin_client, golden_images_namespace, updated_templates_rhel9_data_import_cron):
+def rhel9_data_import_cron(local_admin_client, golden_images_namespace, updated_templates_rhel9_data_import_cron):
     data_import_cron = DataImportCron(
         name=updated_templates_rhel9_data_import_cron["metadata"]["name"],
         namespace=golden_images_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
     )
     if data_import_cron.exists:
         return data_import_cron
@@ -153,13 +153,13 @@ def rhel9_cached_snapshot(
 
 @pytest.fixture()
 def disabled_common_boot_image_import_hco_spec_rhel9_scope_function(
-    admin_client,
+    local_admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
     rhel9_data_import_cron,
 ):
     yield from disable_common_boot_image_import_hco_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         golden_images_namespace=golden_images_namespace,
         golden_images_data_import_crons=[rhel9_data_import_cron],
@@ -168,7 +168,7 @@ def disabled_common_boot_image_import_hco_spec_rhel9_scope_function(
 
 @pytest.fixture()
 def disabled_data_import_cron_annotation_rhel9(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     rhel9_cached_snapshot,
     rhel9_data_source_scope_module,
@@ -180,7 +180,7 @@ def disabled_data_import_cron_annotation_rhel9(
     )
     updated_template[DATA_IMPORT_CRON_ENABLE] = "false"
     yield from update_hco_templates_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_function,
         updated_template=updated_template,
@@ -198,7 +198,7 @@ def rhel9_golden_image_vm(
     snapshot_storage_class_name_scope_module,
     rhel9_cached_snapshot,
     rhel9_data_source_scope_module,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
 ):
     dv = DataVolume(
@@ -210,7 +210,7 @@ def rhel9_golden_image_vm(
     )
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_volume_template=data_volume_dict_modify_to_source_ref(
             dv=dv,

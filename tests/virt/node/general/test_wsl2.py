@@ -56,7 +56,7 @@ def assert_windows_host_resource_usage(vm):
 def windows_wsl2_vm(
     request,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
     vm_cpu_flags,
@@ -67,7 +67,7 @@ def windows_wsl2_vm(
         name=f"{win_ver}-wsl2",
         labels=Template.generate_template_labels(**get_windows_os_dict(windows_version=win_ver)["template_labels"]),
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,

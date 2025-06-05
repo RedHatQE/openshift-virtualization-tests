@@ -71,9 +71,9 @@ def skip_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
 
 
 @pytest.fixture(scope="module")
-def created_descheduler_namespace(admin_client):
+def created_descheduler_namespace(local_admin_client):
     yield from create_ns(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         name="openshift-kube-descheduler-operator",
     )
 
@@ -146,14 +146,14 @@ def updated_icsp_descheduler(
 
 
 @pytest.fixture(scope="module")
-def descheduler_catalog_source(admin_client, ocp_qe_art_image_url):
+def descheduler_catalog_source(local_admin_client, ocp_qe_art_image_url):
     catalog_source = create_catalog_source(
         catalog_name=DESCHEDULER_CATALOG_SOURCE,
         image=ocp_qe_art_image_url,
         display_name="Descheduler Index Image",
     )
     wait_for_catalogsource_ready(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         catalog_name=DESCHEDULER_CATALOG_SOURCE,
     )
     yield catalog_source
@@ -167,13 +167,13 @@ def subscription_with_descheduler_install_plan(created_descheduler_subscription)
 
 @pytest.fixture(scope="module")
 def descheduler_install_plan_installed(
-    admin_client,
+    local_admin_client,
     created_descheduler_namespace,
     created_descheduler_subscription,
     subscription_with_descheduler_install_plan,
 ):
     wait_for_operator_install(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         install_plan_name=subscription_with_descheduler_install_plan,
         namespace_name=created_descheduler_namespace.name,
         subscription_name=created_descheduler_subscription.name,
@@ -265,14 +265,14 @@ def calculated_vm_deployment_for_node_drain_test(
 @pytest.fixture(scope="class")
 def deployed_vms_for_node_drain(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     vm_deployment_size,
     calculated_vm_deployment_for_node_drain_test,
 ):
     yield from deploy_vms(
         vm_prefix="node-drain-test",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
         vm_count=sum(calculated_vm_deployment_for_node_drain_test.values()),
@@ -325,13 +325,13 @@ def drain_uncordon_node(
 
 
 @pytest.fixture()
-def completed_migrations(admin_client, namespace):
-    check_pod_disruption_budget_for_completed_migrations(admin_client=admin_client, namespace=namespace.name)
+def completed_migrations(local_admin_client, namespace):
+    check_pod_disruption_budget_for_completed_migrations(admin_client=local_admin_client, namespace=namespace.name)
 
 
 @pytest.fixture(scope="class")
-def non_terminated_pods_per_node(admin_client, schedulable_nodes):
-    return {node: get_non_terminated_pods(client=admin_client, node=node) for node in schedulable_nodes}
+def non_terminated_pods_per_node(local_admin_client, schedulable_nodes):
+    return {node: get_non_terminated_pods(client=local_admin_client, node=node) for node in schedulable_nodes}
 
 
 @pytest.fixture(scope="class")
@@ -407,7 +407,7 @@ def calculated_vm_deployment_for_node_with_least_available_memory(
 def deployed_vms_for_utilization_imbalance(
     request,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     vm_deployment_size,
     calculated_vm_deployment_for_node_with_least_available_memory,
@@ -415,7 +415,7 @@ def deployed_vms_for_utilization_imbalance(
 ):
     yield from deploy_vms(
         vm_prefix=request.param["vm_prefix"],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
         vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
@@ -428,14 +428,14 @@ def deployed_vms_for_utilization_imbalance(
 @pytest.fixture(scope="class")
 def deployed_vms_on_labeled_node(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     vm_deployment_size,
     calculated_vm_deployment_for_node_with_least_available_memory,
 ):
     yield from deploy_vms(
         vm_prefix="node-labels-test",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
         vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
@@ -458,16 +458,18 @@ def vms_started_process_for_utilization_imbalance(
 
 @pytest.fixture(scope="class")
 def unallocated_pod_count(
-    admin_client,
+    local_admin_client,
     node_with_least_available_memory,
 ):
-    non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
+    non_terminated_pod_count = len(
+        get_non_terminated_pods(client=local_admin_client, node=node_with_least_available_memory)
+    )
     return int(node_with_least_available_memory.instance.status.capacity.pods) - non_terminated_pod_count
 
 
 @pytest.fixture(scope="class")
 def utilization_imbalance(
-    admin_client,
+    local_admin_client,
     namespace,
     node_with_least_available_memory,
     unallocated_pod_count,
@@ -485,7 +487,7 @@ def utilization_imbalance(
         with Deployment(
             name=utilization_imbalance_deployment_name,
             namespace=namespace.name,
-            client=admin_client,
+            client=local_admin_client,
             replicas=unallocated_pod_count,
             selector=evict_protected_pod_selector,
             template={
@@ -514,7 +516,7 @@ def utilization_imbalance(
     LOGGER.info(f"Wait while all {utilization_imbalance_deployment_name} pods removed")
     wait_for_pods_deletion(
         pods=get_pods_by_name_prefix(
-            client=admin_client,
+            client=local_admin_client,
             namespace=namespace.name,
             pod_prefix=utilization_imbalance_deployment_name,
         )

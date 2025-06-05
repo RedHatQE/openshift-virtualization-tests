@@ -36,7 +36,9 @@ pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_requested")
 
 
 @pytest.fixture(scope="module")
-def deteled_hostpath_provisioner_cr(admin_client, hco_namespace, schedulable_nodes, hostpath_provisioner_scope_module):
+def deteled_hostpath_provisioner_cr(
+    local_admin_client, hco_namespace, schedulable_nodes, hostpath_provisioner_scope_module
+):
     if hostpath_provisioner_scope_module.exists:
         yaml_object = io.StringIO(yaml.dump(hostpath_provisioner_scope_module.instance.to_dict()))
         LOGGER.warning(f"Custom Resource {HostPathProvisioner.Name.HOSTPATH_PROVISIONER} already exists, deleting it")
@@ -45,7 +47,7 @@ def deteled_hostpath_provisioner_cr(admin_client, hco_namespace, schedulable_nod
         verify_hpp_cr_deleted_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            client=local_admin_client,
             is_hpp_cr_with_pvc_template=is_cr_with_pvc_template,
         )
         yield
@@ -56,7 +58,7 @@ def deteled_hostpath_provisioner_cr(admin_client, hco_namespace, schedulable_nod
         verify_hpp_cr_installed_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            client=local_admin_client,
             hpp_custom_resource=recreated_hpp_cr,
         )
     else:
@@ -66,7 +68,7 @@ def deteled_hostpath_provisioner_cr(admin_client, hco_namespace, schedulable_nod
 @pytest.fixture()
 def hpp_csi_custom_resource(
     request,
-    admin_client,
+    local_admin_client,
     schedulable_nodes,
     hco_namespace,
     deteled_hostpath_provisioner_cr,
@@ -83,7 +85,7 @@ def hpp_csi_custom_resource(
         verify_hpp_cr_installed_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            client=local_admin_client,
             hpp_custom_resource=hpp_csi_cr,
         )
         yield hpp_csi_cr
@@ -91,7 +93,7 @@ def hpp_csi_custom_resource(
     verify_hpp_cr_deleted_successfully(
         hco_namespace=hco_namespace,
         schedulable_nodes=schedulable_nodes,
-        client=admin_client,
+        client=local_admin_client,
         is_hpp_cr_with_pvc_template=is_cr_with_pvc_template,
     )
 
@@ -186,7 +188,7 @@ def vm_from_template_with_existing_dv_on_hpp_pvc(
     indirect=True,
 )
 def test_install_and_delete_hpp_csi_cr_basic(
-    admin_client,
+    local_admin_client,
     hpp_csi_custom_resource,
     deleted_hpp_storage_classes,
     hpp_csi_storage_classes,
@@ -198,7 +200,7 @@ def test_install_and_delete_hpp_csi_cr_basic(
         vm=vm_from_template_with_existing_dv_on_hpp_basic,
         dv=cirros_data_volume_on_hpp_basic,
         hpp_csi_storage_class=hpp_csi_storage_classes["basic"],
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
@@ -241,7 +243,7 @@ def test_install_and_delete_hpp_csi_cr_basic(
     indirect=True,
 )
 def test_install_and_delete_hpp_csi_cr_with_pvc_template(
-    admin_client,
+    local_admin_client,
     hpp_csi_custom_resource,
     deleted_hpp_storage_classes,
     hpp_csi_storage_classes,
@@ -254,7 +256,7 @@ def test_install_and_delete_hpp_csi_cr_with_pvc_template(
         vm=vm_from_template_with_existing_dv_on_hpp_pvc,
         dv=cirros_data_volume_on_hpp_pvc,
         hpp_csi_storage_class=storage_class,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
@@ -286,7 +288,7 @@ def test_install_and_delete_hpp_csi_cr_with_pvc_template(
     indirect=True,
 )
 def test_install_and_delete_hpp_csi_cr_basic_and_with_pvc_template(
-    admin_client,
+    local_admin_client,
     hpp_csi_custom_resource,
     deleted_hpp_storage_classes,
     hpp_csi_storage_classes,
@@ -300,11 +302,11 @@ def test_install_and_delete_hpp_csi_cr_basic_and_with_pvc_template(
         vm=vm_from_template_with_existing_dv_on_hpp_basic,
         dv=cirros_data_volume_on_hpp_basic,
         hpp_csi_storage_class=hpp_csi_storage_classes["basic"],
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
     check_disk_count_in_vm_and_image_location(
         vm=vm_from_template_with_existing_dv_on_hpp_pvc,
         dv=cirros_data_volume_on_hpp_pvc,
         hpp_csi_storage_class=hpp_csi_storage_classes["pvc-ocs-fs"],
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )

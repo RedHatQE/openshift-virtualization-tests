@@ -26,21 +26,21 @@ def fail_if_compact_cluster_and_jira_47277_open(compact_cluster):
 
 
 @pytest.fixture(scope="module")
-def checkup_nodehealthcheck_operator_deployment(admin_client):
+def checkup_nodehealthcheck_operator_deployment(local_admin_client):
     wait_for_csv_successful_state(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace_name=REMEDIATION_OPERATOR_NAMESPACE,
         subscription_name=NODE_HEALTH_DETECTION_OPERATOR,
     )
 
 
 @pytest.fixture()
-def nhc_vm_with_run_strategy_always(namespace, unprivileged_client):
+def nhc_vm_with_run_strategy_always(namespace, local_unprivileged_client):
     name = "nhc-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
@@ -59,10 +59,10 @@ def node_operation(request):
 
 
 @pytest.fixture()
-def refreshed_worker_utility_pods(admin_client, workers):
+def refreshed_worker_utility_pods(local_admin_client, workers):
     return get_utility_pods_from_nodes(
         nodes=workers,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         label_selector="cnv-test=utility",
     )
 

@@ -71,8 +71,8 @@ def resource_crypto_policy_settings(request):
 
 
 @pytest.fixture(scope="module")
-def api_server(admin_client):
-    api_server = APIServer(client=admin_client, name=CLUSTER)
+def api_server(local_admin_client):
+    api_server = APIServer(client=local_admin_client, name=CLUSTER)
     if api_server.exists:
         return api_server
     raise ResourceNotFoundError(f"{api_server.kind}: {CLUSTER} not found.")
@@ -80,7 +80,7 @@ def api_server(admin_client):
 
 @pytest.fixture()
 def updated_api_server_crypto_policy(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_crypto_policy_matrix__function__,
     api_server,
@@ -88,7 +88,7 @@ def updated_api_server_crypto_policy(
     tls_security_spec = CRYPTO_POLICY_SPEC_DICT.get(cnv_crypto_policy_matrix__function__)
     assert tls_security_spec, f"{cnv_crypto_policy_matrix__function__} needs to be added to {CRYPTO_POLICY_SPEC_DICT}"
     with update_apiserver_crypto_policy(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         apiserver=api_server,
         tls_spec=tls_security_spec,

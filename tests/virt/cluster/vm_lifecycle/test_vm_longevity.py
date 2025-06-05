@@ -24,10 +24,10 @@ TOTAL_DAYS = 21
 
 
 @pytest.fixture()
-def vm_longevity(unprivileged_client, namespace):
+def vm_longevity(local_unprivileged_client, namespace):
     name = "vm-longevity"
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),

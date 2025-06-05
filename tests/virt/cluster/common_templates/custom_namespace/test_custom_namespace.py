@@ -27,12 +27,12 @@ class TestCustomNamespace:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_base_templates_exist_in_custom_namespace")
     def test_base_templates_exist_in_custom_namespace(
         self,
-        admin_client,
+        local_admin_client,
         base_templates,
         custom_vm_template_namespace,
     ):
         verify_base_templates_exist_in_namespace(
-            client=admin_client,
+            client=local_admin_client,
             original_base_templates=base_templates,
             namespace=custom_vm_template_namespace,
         )
@@ -44,7 +44,7 @@ class TestCustomNamespace:
     )
     def test_unprivileged_user_cannot_access_custom_namespace(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         custom_vm_template_namespace,
     ):
         template_name = "rhel8-server-tiny"
@@ -54,7 +54,7 @@ class TestCustomNamespace:
             rf'User [\\]+"{UNPRIVILEGED_USER}[\\]+" cannot get resource [\\]+"templates[\\]+".*',
         ):
             Template(
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 name=template_name,
                 namespace=custom_vm_template_namespace.name,
             ).instance
@@ -66,13 +66,13 @@ class TestCustomNamespace:
     )
     def test_deleted_template_in_custom_namespace_reconciled(
         self,
-        admin_client,
+        local_admin_client,
         custom_vm_template_namespace,
         deleted_custom_namespace_template,
     ):
         try:
             wait_for_template_by_name(
-                client=admin_client,
+                client=local_admin_client,
                 namespace_name=custom_vm_template_namespace.name,
                 name=deleted_custom_namespace_template.name,
             )
@@ -90,7 +90,7 @@ class TestCustomNamespace:
     )
     def test_edited_template_in_custom_namespace_reconciled(
         self,
-        admin_client,
+        local_admin_client,
         custom_vm_template_namespace,
         edited_custom_namespace_template,
     ):
@@ -130,14 +130,14 @@ class TestCustomNamespace:
     )
     def test_base_templates_exist_in_default_namespace_after_revert(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         base_templates,
         deleted_base_templates,
         opted_out_custom_template_namespace,
     ):
         verify_base_templates_exist_in_namespace(
-            client=admin_client,
+            client=local_admin_client,
             original_base_templates=base_templates,
             namespace=Namespace(name=NamespacesNames.OPENSHIFT),
         )
@@ -150,11 +150,11 @@ class TestCustomNamespace:
         ],
     )
     def test_deleted_template_default_namespace_reconciled_after_revert(
-        self, admin_client, deleted_default_namespace_template
+        self, local_admin_client, deleted_default_namespace_template
     ):
         try:
             wait_for_template_by_name(
-                client=admin_client,
+                client=local_admin_client,
                 namespace_name=NamespacesNames.OPENSHIFT,
                 name=deleted_default_namespace_template.name,
             )
@@ -173,7 +173,7 @@ class TestCustomNamespace:
         ],
     )
     def test_edited_template_default_namespace_reconciled_after_revert(
-        self, admin_client, edited_default_namespace_template
+        self, local_admin_client, edited_default_namespace_template
     ):
         try:
             wait_for_edited_label_reconciliation(template=edited_default_namespace_template)
@@ -193,7 +193,7 @@ class TestCustomNamespace:
     )
     def test_edited_template_custom_namespace_not_reconciled_after_revert(
         self,
-        admin_client,
+        local_admin_client,
         custom_vm_template_namespace,
         edited_custom_namespace_template,
     ):

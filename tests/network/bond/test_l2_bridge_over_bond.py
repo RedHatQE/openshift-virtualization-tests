@@ -120,7 +120,7 @@ def ovs_linux_bridge_on_bond_worker_2(
 def ovs_linux_bond_bridge_attached_vma(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     ovs_linux_br1bond_nad,
     ovs_linux_bridge_on_bond_worker_1,
 ):
@@ -137,7 +137,7 @@ def ovs_linux_bond_bridge_attached_vma(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=netcloud.cloudinit(netdata=netdata),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start()
         yield vm
@@ -147,7 +147,7 @@ def ovs_linux_bond_bridge_attached_vma(
 def ovs_linux_bond_bridge_attached_vmb(
     worker_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     ovs_linux_br1bond_nad,
     ovs_linux_bridge_on_bond_worker_2,
 ):
@@ -165,7 +165,7 @@ def ovs_linux_bond_bridge_attached_vmb(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start()
         yield vm

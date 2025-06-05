@@ -54,12 +54,12 @@ def linux_bridge_network_nad(namespace, bridge_on_all_nodes):
 
 
 @pytest.fixture()
-def dry_run_vma(unprivileged_client, namespace, linux_bridge_network_nad):
+def dry_run_vma(local_unprivileged_client, namespace, linux_bridge_network_nad):
     with create_dry_run_vm(
         name="dry-run-vma",
         namespace=namespace,
         networks={linux_bridge_network_nad.name: linux_bridge_network_nad.name},
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     ) as vm:
         yield vm.create()
 
@@ -74,7 +74,7 @@ def dry_run_vma_mac_address(dry_run_vma):
 
 @pytest.fixture()
 def vm_with_mac_address(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     linux_bridge_network_nad,
     dry_run_vma_mac_address,
@@ -87,7 +87,7 @@ def vm_with_mac_address(
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
         macs={linux_bridge_network_nad.name: dry_run_vma_mac_address},
     ) as vm:
@@ -96,7 +96,7 @@ def vm_with_mac_address(
 
 @pytest.fixture()
 def dry_run_vm_with_mac_address(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     linux_bridge_network_nad,
     vm_with_mac_address,
@@ -108,7 +108,7 @@ def dry_run_vm_with_mac_address(
         name="dry-run-vm-with-mac",
         namespace=namespace,
         networks={linux_bridge_network_nad.name: linux_bridge_network_nad.name},
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         macs={linux_bridge_network_nad.name: allocated_mac_address},
     )
 

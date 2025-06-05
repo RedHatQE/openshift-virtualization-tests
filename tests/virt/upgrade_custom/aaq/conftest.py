@@ -18,9 +18,9 @@ from utilities.virt import (
 
 # AAQ Upgrade
 @pytest.fixture(scope="session")
-def enabled_aaq_in_hco_scope_session(admin_client, hco_namespace, hyperconverged_resource_scope_session):
+def enabled_aaq_in_hco_scope_session(local_admin_client, hco_namespace, hyperconverged_resource_scope_session):
     with enable_aaq_in_hco(
-        client=admin_client,
+        client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_session,
         enable_acrq_support=True,

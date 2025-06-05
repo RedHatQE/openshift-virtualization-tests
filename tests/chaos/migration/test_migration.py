@@ -65,7 +65,7 @@ def test_pod_delete_migration(
     chaos_vm_rhel9,
     pod_deleting_process,
     tainted_node_for_vm_chaos_rhel9_migration,
-    admin_client,
+    local_admin_client,
 ):
     """
     This experiment tests the robustness of the cluster
@@ -76,7 +76,7 @@ def test_pod_delete_migration(
 
     wait_for_vmi_relocation_and_running(vm=chaos_vm_rhel9, initial_node=tainted_node_for_vm_chaos_rhel9_migration)
     wait_for_pods_running(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=Namespace(name=pod_deleting_process["namespace_name"]),
         number_of_consecutive_checks=10,
         filter_pods_by_name=pod_deleting_process["pod_prefix"],

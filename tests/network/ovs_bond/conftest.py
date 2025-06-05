@@ -10,13 +10,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def ovs_bond_vma(schedulable_nodes, namespace, unprivileged_client, node_with_bond):
+def ovs_bond_vma(schedulable_nodes, namespace, local_unprivileged_client, node_with_bond):
     name = "vma"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=node_with_bond),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)
@@ -24,7 +24,7 @@ def ovs_bond_vma(schedulable_nodes, namespace, unprivileged_client, node_with_bo
 
 
 @pytest.fixture(scope="module")
-def ovs_bond_vmb(schedulable_nodes, namespace, unprivileged_client, node_with_bond):
+def ovs_bond_vmb(schedulable_nodes, namespace, local_unprivileged_client, node_with_bond):
     name = "vmb"
     with VirtualMachineForTests(
         namespace=namespace.name,
@@ -32,7 +32,7 @@ def ovs_bond_vmb(schedulable_nodes, namespace, unprivileged_client, node_with_bo
         node_selector=get_node_selector_dict(
             node_selector=next(filter(lambda node: node.name != node_with_bond, schedulable_nodes)).hostname
         ),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)

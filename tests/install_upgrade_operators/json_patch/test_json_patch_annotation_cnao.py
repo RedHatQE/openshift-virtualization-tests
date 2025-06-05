@@ -26,7 +26,7 @@ COMPONENT = "cnao"
 
 @pytest.fixture(scope="class")
 def json_patched_cnao(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     prometheus,
     hyperconverged_resource_scope_class,
@@ -40,7 +40,7 @@ def json_patched_cnao(
         resource_list=[NetworkAddonsConfig],
     ):
         yield
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=ALERT_NAME)
 
 
@@ -53,12 +53,12 @@ class TestCNAOJsonPatch:
     @pytest.mark.polarion("CNV-8715")
     def test_cnao_json_patch(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         cnao_resource,
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
                 **{"TaintedConfiguration": Resource.Condition.Status.TRUE},

@@ -13,7 +13,7 @@ def invalid_network_names():
 
 @pytest.mark.polarion("CNV-8304")
 @pytest.mark.single_nic
-def test_vm_with_illegal_network_name(namespace, unprivileged_client, invalid_network_names):
+def test_vm_with_illegal_network_name(namespace, local_unprivileged_client, invalid_network_names):
     vm_name = "unsupported-network-name-vm"
 
     with pytest.raises(
@@ -24,7 +24,7 @@ def test_vm_with_illegal_network_name(namespace, unprivileged_client, invalid_ne
             namespace=namespace.name,
             name=vm_name,
             body=fedora_vm_body(name=vm_name),
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             **invalid_network_names,
         ):
             return

@@ -120,13 +120,13 @@ def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
 
 
 @pytest.fixture(scope="class")
-def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
+def vm_metric_1(namespace, local_unprivileged_client, cluster_common_node_cpu):
     vm_name = "vm-metrics-1"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
         cpu_model=cluster_common_node_cpu,
     ) as vm:
@@ -146,21 +146,21 @@ def vm_metric_1_vmim(vm_metric_1):
 
 
 @pytest.fixture(scope="class")
-def vm_metric_2(namespace, unprivileged_client):
+def vm_metric_2(namespace, local_unprivileged_client):
     vm_name = "vm-metrics-2"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def number_of_running_vmis(admin_client):
-    return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
+def number_of_running_vmis(local_admin_client):
+    return len(list(VirtualMachineInstance.get(dyn_client=local_admin_client)))
 
 
 def check_vmi_metric(prometheus):

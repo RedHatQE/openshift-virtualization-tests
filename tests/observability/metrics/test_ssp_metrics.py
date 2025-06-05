@@ -22,7 +22,7 @@ KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED = "kubevirt_ssp_operator_re
 
 
 @pytest.fixture()
-def template_modified(admin_client, base_templates):
+def template_modified(local_admin_client, base_templates):
     with ResourceEditorValidateHCOReconcile(
         patches={base_templates[0]: {"metadata": {"annotations": {"description": "New Description"}}}}
     ):
@@ -32,7 +32,7 @@ def template_modified(admin_client, base_templates):
 @pytest.fixture(scope="class")
 def created_multiple_failed_vms(
     instance_type_for_test_scope_class,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     request,
 ):
@@ -45,7 +45,7 @@ def created_multiple_failed_vms(
                 with VirtualMachineForTests(
                     name="non-creatable-vm",
                     namespace=namespace.name,
-                    client=unprivileged_client,
+                    client=local_unprivileged_client,
                     vm_instance_type=vm_instance_type,
                     diskless_vm=True,
                     vm_validation_rule={

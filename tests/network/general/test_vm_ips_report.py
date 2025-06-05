@@ -24,12 +24,12 @@ def assert_ip_mismatch(vm):
 
 
 @pytest.fixture(scope="module")
-def report_masquerade_ip_vmi(unprivileged_client, namespace):
+def report_masquerade_ip_vmi(local_unprivileged_client, namespace):
     name = "report-masquerade-ip-vm"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)

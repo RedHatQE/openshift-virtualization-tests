@@ -32,14 +32,14 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="class")
 def updated_cnao_kubemacpool_with_bad_image_csv(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     csv_scope_class,
     updated_csv_dict_bad_kubemacpool_image,
 ):
     with ResourceEditorValidateHCOReconcile(patches={csv_scope_class: updated_csv_dict_bad_kubemacpool_image}):
         yield
-    wait_for_pods_running(admin_client=admin_client, namespace=hco_namespace)
+    wait_for_pods_running(admin_client=local_admin_client, namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")
@@ -70,15 +70,15 @@ def kmp_disabled_namespace(kmp_vm_label):
 
 
 @pytest.fixture(scope="class")
-def updated_namespace_with_kmp(admin_client, kmp_vm_label, kmp_disabled_namespace):
+def updated_namespace_with_kmp(local_admin_client, kmp_vm_label, kmp_disabled_namespace):
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = None
-    label_project(name=kmp_disabled_namespace.name, label=kmp_vm_label, admin_client=admin_client)
+    label_project(name=kmp_disabled_namespace.name, label=kmp_vm_label, admin_client=local_admin_client)
 
 
 @pytest.fixture(scope="class")
-def restarted_kmp_controller(admin_client, kmp_deployment):
+def restarted_kmp_controller(local_admin_client, kmp_deployment):
     get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
         namespace=py_config["hco_namespace"],
     ).delete(wait=True)
@@ -119,11 +119,11 @@ def duplicate_mac_nad_vm2(kmp_disabled_namespace, bridge_device_duplicate_mac):
 
 
 @pytest.fixture(scope="class")
-def duplicate_mac_vm1(namespace, worker_node1, admin_client, vms_mac, duplicate_mac_nad_vm1):
+def duplicate_mac_vm1(namespace, worker_node1, local_admin_client, vms_mac, duplicate_mac_nad_vm1):
     networks = {duplicate_mac_nad_vm1.name: duplicate_mac_nad_vm1.name}
     name = f"{DUPLICATE_MAC_STR}-vm1"
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         namespace=namespace.name,
         name=name,
         body=fedora_vm_body(name=name),
@@ -137,11 +137,11 @@ def duplicate_mac_vm1(namespace, worker_node1, admin_client, vms_mac, duplicate_
 
 
 @pytest.fixture(scope="class")
-def duplicate_mac_vm2(kmp_disabled_namespace, worker_node1, admin_client, vms_mac, duplicate_mac_nad_vm2):
+def duplicate_mac_vm2(kmp_disabled_namespace, worker_node1, local_admin_client, vms_mac, duplicate_mac_nad_vm2):
     networks = {duplicate_mac_nad_vm2.name: duplicate_mac_nad_vm2.name}
     name = f"{DUPLICATE_MAC_STR}-vm2"
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         namespace=kmp_disabled_namespace.name,
         name=name,
         body=fedora_vm_body(name=name),
@@ -172,7 +172,7 @@ def bad_cnao_operator(csv_scope_class):
 
 
 @pytest.fixture(scope="class")
-def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
+def invalid_cnao_operator(prometheus, local_admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
     with ResourceEditorValidateHCOReconcile(
         patches={csv_scope_class: bad_cnao_operator},
         list_resource_reconcile=[NetworkAddonsConfig],
@@ -180,7 +180,7 @@ def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_cla
         yield
 
     linux_bridge_pods = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=KUBE_CNI_LINUX_BRIDGE_PLUGIN,
         namespace=hco_namespace.name,
         get_all=True,

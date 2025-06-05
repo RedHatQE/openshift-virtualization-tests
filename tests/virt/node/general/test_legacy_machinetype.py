@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def updated_hco_emulated_machine_i440fx(
     hyperconverged_resource_scope_function,
-    admin_client,
+    local_admin_client,
     hco_namespace,
 ):
     annotations_path = "architectureConfiguration"
@@ -36,40 +36,40 @@ def updated_hco_emulated_machine_i440fx(
         resource_list=[KubeVirt],
     ):
         wait_for_updated_kv_value(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             path=[annotations_path, "amd64", "emulatedMachines"],
             value=amd64_machine_type_list,
         )
         yield
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
 
 
 @pytest.fixture()
-def rhel_8_10_dv(admin_client, golden_images_namespace):
+def rhel_8_10_dv(local_admin_client, golden_images_namespace):
     with create_dv(
         dv_name="rhel-8-10-dv",
         namespace=golden_images_namespace.name,
         storage_class=py_config["default_storage_class"],
         url=f"{get_test_artifact_server_url()}{Images.Rhel.DIR}/{Images.Rhel.RHEL8_10_IMG}",
         size=Images.Rhel.DEFAULT_DV_SIZE,
-        client=admin_client,
+        client=local_admin_client,
     ) as dv:
         yield dv
 
 
 @pytest.fixture()
-def rhel_8_10_ds(admin_client, rhel_8_10_dv):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=rhel_8_10_dv)
+def rhel_8_10_ds(local_admin_client, rhel_8_10_dv):
+    yield from create_or_update_data_source(admin_client=local_admin_client, dv=rhel_8_10_dv)
 
 
 @pytest.fixture()
-def rhel_8_10_vm(unprivileged_client, namespace, rhel_8_10_ds):
+def rhel_8_10_vm(local_unprivileged_client, namespace, rhel_8_10_ds):
     rhel_8_10 = get_rhel_os_dict(rhel_version="rhel-8-10")
     with VirtualMachineForTestsFromTemplate(
         name="rhel-8-10",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=Template.generate_template_labels(**rhel_8_10["template_labels"]),
         data_source=rhel_8_10_ds,
         machine_type=MachineTypesNames.pc_i440fx_rhel7_6,

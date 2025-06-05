@@ -40,7 +40,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def cnv_deployment_by_name_no_hpp(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_deployment_no_hpp_matrix__function__,
 ):
@@ -52,14 +52,14 @@ def cnv_deployment_by_name_no_hpp(
 
 @pytest.fixture()
 def cnv_deployment_by_name(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_deployment_matrix__function__,
 ):
     if cnv_deployment_matrix__function__ == HPP_POOL:
         hpp_pool_deployments = list(
             Deployment.get(
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 namespace=hco_namespace.name,
                 label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
             )
@@ -76,12 +76,12 @@ def cnv_deployment_by_name(
 
 @pytest.fixture()
 def cnv_daemonset_by_name(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_daemonset_matrix__function__,
 ):
     return get_daemonset_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace_name=hco_namespace.name,
         daemonset_name=cnv_daemonset_matrix__function__,
     )
@@ -89,12 +89,12 @@ def cnv_daemonset_by_name(
 
 @pytest.fixture()
 def cnv_pod_by_name(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_pod_matrix__function__,
 ):
     return get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         namespace=hco_namespace.name,
         pod_prefix=cnv_pod_matrix__function__,
     )
@@ -115,18 +115,18 @@ def cnv_registry_source(cnv_source):
 
 
 @pytest.fixture()
-def kubevirt_resource(admin_client, hco_namespace):
-    return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+def kubevirt_resource(local_admin_client, hco_namespace):
+    return get_hyperconverged_kubevirt(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture()
-def cdi_resource_scope_function(admin_client):
-    return get_hyperconverged_cdi(admin_client=admin_client)
+def cdi_resource_scope_function(local_admin_client):
+    return get_hyperconverged_cdi(admin_client=local_admin_client)
 
 
 @pytest.fixture()
-def cnao_resource(admin_client):
-    return get_network_addon_config(admin_client=admin_client)
+def cnao_resource(local_admin_client):
+    return get_network_addon_config(admin_client=local_admin_client)
 
 
 @pytest.fixture()
@@ -135,7 +135,7 @@ def cnao_spec(cnao_resource):
 
 
 @pytest.fixture()
-def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client, hco_namespace):
+def updated_hco_cr(request, hyperconverged_resource_scope_function, local_admin_client, hco_namespace):
     """
     This fixture updates HCO CR with values specified via request.param
     """
@@ -148,7 +148,7 @@ def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client
 
 
 @pytest.fixture()
-def updated_kubevirt_cr(request, kubevirt_resource, admin_client, hco_namespace):
+def updated_kubevirt_cr(request, kubevirt_resource, local_admin_client, hco_namespace):
     """
     Attempts to update kubevirt CR
     """
@@ -171,16 +171,16 @@ def hco_spec_scope_module(hyperconverged_resource_scope_module):
 
 
 @pytest.fixture(scope="class")
-def hco_version_scope_class(admin_client, hco_namespace):
-    return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
+def hco_version_scope_class(local_admin_client, hco_namespace):
+    return get_hco_version(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture()
-def disabled_default_sources_in_operatorhub(admin_client, installing_cnv):
+def disabled_default_sources_in_operatorhub(local_admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
-        with disable_default_sources_in_operatorhub(admin_client=admin_client):
+        with disable_default_sources_in_operatorhub(admin_client=local_admin_client):
             yield
 
 
@@ -195,11 +195,11 @@ def machine_config_pools_conditions_scope_module(machine_config_pools):
 
 
 @pytest.fixture()
-def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_object_from_hco_status):
+def ocp_resource_by_name(local_admin_client, ocp_resources_submodule_list, related_object_from_hco_status):
     return get_resource_from_module_name(
         related_obj=related_object_from_hco_status,
         ocp_resources_submodule_list=ocp_resources_submodule_list,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 

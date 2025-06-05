@@ -128,7 +128,7 @@ def assert_hco_exists_after_delete(
 
 @pytest.fixture()
 def hco_uninstall_strategy_remove_workloads(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
@@ -136,7 +136,7 @@ def hco_uninstall_strategy_remove_workloads(
         patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": REMOVE_STRATEGY}}}
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             consecutive_checks_count=10,
         )
@@ -144,13 +144,13 @@ def hco_uninstall_strategy_remove_workloads(
 
 
 @pytest.fixture(scope="class")
-def hco_fedora_vm(unprivileged_client, namespace):
+def hco_fedora_vm(local_unprivileged_client, namespace):
     name = "cascade-delete-fedora-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)
@@ -165,7 +165,7 @@ def stopped_fedora_vm(hco_fedora_vm):
 
 
 @pytest.fixture(scope="function")
-def removed_hco(admin_client, hco_namespace, hyperconverged_resource_scope_function):
+def removed_hco(local_admin_client, hco_namespace, hyperconverged_resource_scope_function):
     hyperconverged_resource_scope_function.delete(wait=True, timeout=TIMEOUT_10MIN)
     delete_cdi_configmap_and_secret(hco_namespace_name=hco_namespace.name)
     yield
@@ -173,7 +173,7 @@ def removed_hco(admin_client, hco_namespace, hyperconverged_resource_scope_funct
     # Recreate HCO, if it doesn't exist
     if not hyperconverged_resource_scope_function.exists:
         recreate_hco(
-            client=admin_client,
+            client=local_admin_client,
             namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
         )
@@ -181,14 +181,14 @@ def removed_hco(admin_client, hco_namespace, hyperconverged_resource_scope_funct
 
 @pytest.fixture(scope="function")
 def recreated_hco(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
     removed_hco,
 ):
     # Recreate HCO
     recreate_hco(
-        client=admin_client,
+        client=local_admin_client,
         namespace=hco_namespace,
         hco_resource=hyperconverged_resource_scope_function,
     )
@@ -200,7 +200,7 @@ class TestAttemptRemoveHCO:
     @pytest.mark.polarion("CNV-8615")
     def test_remove_hco_with_dv_no_vms(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hyperconverged_resource_scope_function,
         data_volume_scope_class,
@@ -210,7 +210,7 @@ class TestAttemptRemoveHCO:
         when there is only DV exists with no VM
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
@@ -242,7 +242,7 @@ class TestAttemptRemoveHCO:
     @pytest.mark.polarion("CNV-8614")
     def test_hco_removal_with_block_strategy_with_vm_and_dv(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_fedora_vm,
         data_volume_scope_class,
@@ -252,7 +252,7 @@ class TestAttemptRemoveHCO:
         This test validates failure of HCO removal when both VM and DV exists
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
@@ -261,7 +261,7 @@ class TestAttemptRemoveHCO:
     @pytest.mark.polarion("CNV-8725")
     def test_hco_removal_with_block_strategy_with_stopped_vm(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         stopped_fedora_vm,
         hyperconverged_resource_scope_function,
@@ -272,7 +272,7 @@ class TestAttemptRemoveHCO:
         exists in stopped state
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
@@ -329,7 +329,7 @@ class TestRemoveHCO:
     @pytest.mark.polarion("CNV-8751")
     def test_recreate_hco(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_version_scope_class,
         hco_status_related_objects,
@@ -364,7 +364,7 @@ class TestRemoveHCO:
 
         # validate hco version after HCO creation
         hco_version_updated = get_hco_version(
-            client=admin_client,
+            client=local_admin_client,
             hco_ns_name=hco_namespace.name,
         )
         assert hco_version_scope_class == hco_version_updated, (

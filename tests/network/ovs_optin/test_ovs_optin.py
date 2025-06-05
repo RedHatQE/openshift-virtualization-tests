@@ -54,13 +54,13 @@ class TestOVSOptIn:
     @pytest.mark.single_nic
     def test_ovs_installed(
         self,
-        admin_client,
+        local_admin_client,
         network_addons_config_scope_session,
         hyperconverged_ovs_annotations_enabled_scope_session,
         hyperconverged_ovs_annotations_fetched,
     ):
         verify_ovs_installed_with_annotations(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             ovs_daemonset=hyperconverged_ovs_annotations_enabled_scope_session,
             hyperconverged_ovs_annotations_fetched=hyperconverged_ovs_annotations_fetched,
             network_addons_config=network_addons_config_scope_session,
@@ -70,13 +70,13 @@ class TestOVSOptIn:
     @pytest.mark.single_nic
     def test_ovs_not_installed_annotations_removed(
         self,
-        admin_client,
+        local_admin_client,
         network_addons_config_scope_session,
         hyperconverged_ovs_annotations_enabled_scope_session,
         hyperconverged_ovs_annotations_removed,
     ):
         wait_for_ovs_removed(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             ovs_daemonset=hyperconverged_ovs_annotations_enabled_scope_session,
             network_addons_config=network_addons_config_scope_session,
         )
@@ -85,13 +85,13 @@ class TestOVSOptIn:
     @pytest.mark.single_nic
     def test_ovs_not_installed_annotations_disabled(
         self,
-        admin_client,
+        local_admin_client,
         network_addons_config_scope_session,
         hyperconverged_ovs_annotations_enabled_scope_session,
         hyperconverged_ovs_annotations_disabled,
     ):
         wait_for_ovs_removed(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             ovs_daemonset=hyperconverged_ovs_annotations_enabled_scope_session,
             network_addons_config=network_addons_config_scope_session,
         )

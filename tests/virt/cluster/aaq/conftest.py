@@ -47,9 +47,9 @@ LOGGER = logging.getLogger(__name__)
 
 # AAQ - ApplicationAwareQuota, operator for managing resource quotas per component
 @pytest.fixture(scope="package")
-def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
+def enabled_aaq_in_hco_scope_package(local_admin_client, hco_namespace, hyperconverged_resource_scope_package):
     with enable_aaq_in_hco(
-        client=admin_client,
+        client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_package,
     ):
@@ -57,8 +57,8 @@ def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged
 
 
 @pytest.fixture(scope="module")
-def updated_namespace_with_aaq_label(admin_client, namespace):
-    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
+def updated_namespace_with_aaq_label(local_admin_client, namespace):
+    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=local_admin_client)
 
 
 @pytest.fixture(scope="class")
@@ -118,7 +118,7 @@ def second_pod_for_aaq_test_in_gated_state(namespace):
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
+def vm_for_aaq_test(namespace, local_unprivileged_client, cpu_for_migration):
     vm_name = "first-vm-for-aaq-test"
     with VirtualMachineForTests(
         name=vm_name,
@@ -126,7 +126,7 @@ def vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
         body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
@@ -134,7 +134,7 @@ def vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
+def vm_for_aaq_test_in_gated_state(namespace, local_unprivileged_client):
     vm_name = "second-vm-for-aaq-test"
     with VirtualMachineForTests(
         name=vm_name,
@@ -142,7 +142,7 @@ def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
         body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
@@ -180,7 +180,7 @@ def migrated_arq_vm(vm_for_aaq_test):
 
 # ACRQ - ApplicationAwareClusterResourceQuota, cluster level object containing quotas for multiple resources
 @pytest.fixture(scope="module")
-def enabled_acrq_support(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+def enabled_acrq_support(local_admin_client, hco_namespace, hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_module: {
@@ -206,8 +206,8 @@ def application_aware_cluster_resource_quota():
 
 
 @pytest.fixture(scope="class")
-def acrq_label_on_first_namespace(admin_client, namespace, application_aware_cluster_resource_quota):
-    label_project(name=namespace.name, label=ACRQ_NAMESPACE_LABEL, admin_client=admin_client)
+def acrq_label_on_first_namespace(local_admin_client, namespace, application_aware_cluster_resource_quota):
+    label_project(name=namespace.name, label=ACRQ_NAMESPACE_LABEL, admin_client=local_admin_client)
     wait_for_aacrq_object_created(namespace=namespace, acrq_name=application_aware_cluster_resource_quota.name)
 
 
@@ -240,7 +240,7 @@ def vm_in_second_namespace_for_acrq_test(second_namespace_for_acrq_test):
 
 
 @pytest.fixture(scope="class")
-def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
+def hotplug_vm_for_aaq_test(namespace, local_unprivileged_client, cpu_for_migration):
     with VirtualMachineForTests(
         name="hotplug-vm-for-aaq-test",
         namespace=namespace.name,
@@ -249,7 +249,7 @@ def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
         cpu_sockets=1,
         memory_guest="1Gi",
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
@@ -257,15 +257,15 @@ def hotplug_vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 
 @pytest.fixture()
-def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test, admin_client):
+def hotplugged_resource(request, local_unprivileged_client, hotplug_vm_for_aaq_test, local_admin_client):
     hotplug_spec_vm_and_verify_hotplug(
         vm=hotplug_vm_for_aaq_test,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         sockets=request.param.get("sockets"),
         memory_guest=request.param.get("memory_guest"),
     )
     yield
-    clean_up_migration_jobs(client=admin_client, vm=hotplug_vm_for_aaq_test)
+    clean_up_migration_jobs(client=local_admin_client, vm=hotplug_vm_for_aaq_test)
 
 
 @pytest.fixture()
@@ -277,7 +277,7 @@ def hotplugged_resource_exceeding_quota(request, hotplug_vm_for_aaq_test):
 
 
 @pytest.fixture()
-def hotplugged_target_pod(namespace, unprivileged_client, hotplug_vm_for_aaq_test):
+def hotplugged_target_pod(namespace, local_unprivileged_client, hotplug_vm_for_aaq_test):
     # VMIM/VMI do not have target pod in the spec when it is in gated state. Filter out running pods.
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
@@ -286,7 +286,7 @@ def hotplugged_target_pod(namespace, unprivileged_client, hotplug_vm_for_aaq_tes
         pod_prefix=f"virt-launcher-{hotplug_vm_for_aaq_test.name}",
         namespace=namespace.name,
         get_all=True,
-        dyn_client=unprivileged_client,
+        dyn_client=local_unprivileged_client,
     )
     sample = []
     try:

@@ -4,18 +4,18 @@ from ocp_resources.custom_resource_definition import CustomResourceDefinition
 
 
 @pytest.fixture(scope="module")
-def crd_operator_resources(request, admin_client):
+def crd_operator_resources(request, local_admin_client):
     """
     Returns list of CustomResourceDefinitions Resources.
 
     Args:
         request (fixture): Info from request.param
-        admin_client:  DynamicClient
+        local_admin_client:  DynamicClient
 
     Returns:
         list: A list of CRD resources based on the info from request param.
     """
-    return list(CustomResourceDefinition.get(dyn_client=admin_client, group=request.param))
+    return list(CustomResourceDefinition.get(dyn_client=local_admin_client, group=request.param))
 
 
 @pytest.mark.parametrize(

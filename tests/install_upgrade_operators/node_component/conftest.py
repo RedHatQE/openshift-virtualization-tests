@@ -43,7 +43,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="class")
 def node_placement_labels(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     control_plane_nodes,
     workers,
@@ -82,7 +82,7 @@ def node_placement_labels(
     for resource in all_resources:
         resource.restore()
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         consecutive_checks_count=6,
     )
@@ -102,8 +102,8 @@ def expected_node_by_label(node_placement_labels):
 
 
 @pytest.fixture(scope="class")
-def np_nodes_labels_dict(admin_client):
-    return {node.name: node.instance.metadata.labels for node in Node.get(dyn_client=admin_client)}
+def np_nodes_labels_dict(local_admin_client):
+    return {node.name: node.instance.metadata.labels for node in Node.get(dyn_client=local_admin_client)}
 
 
 @pytest.fixture(scope="class")
@@ -112,7 +112,7 @@ def nodes_labeled(np_nodes_labels_dict):
 
 
 @pytest.fixture()
-def virt_template_validator_spec_nodeselector(admin_client, hco_namespace):
+def virt_template_validator_spec_nodeselector(local_admin_client, hco_namespace):
     virt_template_validator_spec = get_deployment_by_name(
         namespace_name=hco_namespace.name, deployment_name=VIRT_TEMPLATE_VALIDATOR
     ).instance.to_dict()["spec"]["template"]["spec"]
@@ -120,12 +120,14 @@ def virt_template_validator_spec_nodeselector(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def network_addon_config_spec_placement(admin_client):
-    return get_network_addon_config(admin_client=admin_client).instance.to_dict()["spec"]["placementConfiguration"]
+def network_addon_config_spec_placement(local_admin_client):
+    return get_network_addon_config(admin_client=local_admin_client).instance.to_dict()["spec"][
+        "placementConfiguration"
+    ]
 
 
 @pytest.fixture()
-def network_deployment_placement(admin_client, hco_namespace):
+def network_deployment_placement(local_admin_client, hco_namespace):
     node_selector_deployments = {}
     nw_deployment = get_deployment_by_name(
         namespace_name=hco_namespace.name,
@@ -136,14 +138,14 @@ def network_deployment_placement(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def network_daemonsets_placement(admin_client, hco_namespace):
+def network_daemonsets_placement(local_admin_client, hco_namespace):
     node_selector_daemonset = {}
     for daemonset in [
         BRIDGE_MARKER,
         KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     ]:
         nw_daemonset = get_daemonset_by_name(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             daemonset_name=daemonset,
             namespace_name=hco_namespace.name,
         ).instance.to_dict()["spec"]["template"]["spec"]
@@ -152,9 +154,9 @@ def network_daemonsets_placement(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def virt_daemonset_nodeselector_comp(admin_client, hco_namespace):
+def virt_daemonset_nodeselector_comp(local_admin_client, hco_namespace):
     virt_daemonset = get_daemonset_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         daemonset_name=VIRT_HANDLER,
         namespace_name=hco_namespace.name,
     ).instance.to_dict()["spec"]["template"]["spec"]
@@ -162,7 +164,7 @@ def virt_daemonset_nodeselector_comp(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def virt_deployment_nodeselector_comp_list(admin_client, hco_namespace):
+def virt_deployment_nodeselector_comp_list(local_admin_client, hco_namespace):
     nodeselector_lists = []
     virt_deployments = [VIRT_API, VIRT_CONTROLLER]
     for deployment in virt_deployments:
@@ -174,7 +176,7 @@ def virt_deployment_nodeselector_comp_list(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def cdi_deployment_nodeselector_list(admin_client, hco_namespace):
+def cdi_deployment_nodeselector_list(local_admin_client, hco_namespace):
     nodeselector_lists = []
     cdi_deployments = [CDI_APISERVER, CDI_DEPLOYMENT, CDI_UPLOADPROXY]
     for deployment in cdi_deployments:
@@ -186,25 +188,25 @@ def cdi_deployment_nodeselector_list(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def hco_pods_per_nodes(admin_client, hco_namespace):
+def hco_pods_per_nodes(local_admin_client, hco_namespace):
     return get_pod_per_nodes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         filter_pods_by_name=IMAGE_CRON_STR,
     )
 
 
 @pytest.fixture()
-def hco_pods_per_nodes_after_altering_placement(admin_client, hco_namespace, alter_np_configuration):
+def hco_pods_per_nodes_after_altering_placement(local_admin_client, hco_namespace, alter_np_configuration):
     return get_pod_per_nodes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         filter_pods_by_name=IMAGE_CRON_STR,
     )
 
 
 @pytest.fixture(scope="class")
-def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverged_resource_scope_class):
+def hyperconverged_resource_before_np(local_admin_client, hco_namespace, hyperconverged_resource_scope_class):
     """
     Update HCO CR with infrastructure and workloads spec.
     """
@@ -214,7 +216,7 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
     yield hyperconverged_resource_scope_class
     LOGGER.info("Revert to initial HCO node placement configuration ")
     apply_np_changes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=initial_infra,
@@ -225,7 +227,7 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
 @pytest.fixture()
 def alter_np_configuration(
     request,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
@@ -239,7 +241,7 @@ def alter_np_configuration(
     infra_placement = request.param.get("infra")
     workloads_placement = request.param.get("workloads")
     apply_np_changes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco=hyperconverged_resource_scope_function,
         hco_namespace=hco_namespace,
         infra_placement=infra_placement,
@@ -251,7 +253,7 @@ def alter_np_configuration(
 @pytest.fixture(scope="class")
 def vm_placement_vm_work3(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nodes_labeled,
 ):
     name = "vm-placement-sanity-tests-vm"
@@ -260,7 +262,7 @@ def vm_placement_vm_work3(
         name=name,
         node_selector=get_node_selector_dict(node_selector=nodes_labeled["work3"][0]),
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         teardown=False,
     ) as vm:
         vm.start(wait=True, timeout=TIMEOUT_5MIN)
@@ -281,28 +283,28 @@ def delete_vm_after_placement(
 
 
 @pytest.fixture(scope="class")
-def cnv_subscription_scope_class(admin_client, hco_namespace):
+def cnv_subscription_scope_class(local_admin_client, hco_namespace):
     return get_subscription(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=hco_namespace.name,
         subscription_name=HCO_SUBSCRIPTION,
     )
 
 
 @pytest.fixture()
-def cnv_subscription_scope_function(admin_client, hco_namespace):
+def cnv_subscription_scope_function(local_admin_client, hco_namespace):
     """
     Retrieves the CNV subscription
     """
     return get_subscription(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=hco_namespace.name,
         subscription_name=HCO_SUBSCRIPTION,
     )
 
 
 @pytest.fixture(scope="class")
-def cnv_subscription_resource_before_np(admin_client, hco_namespace, cnv_subscription_scope_class):
+def cnv_subscription_resource_before_np(local_admin_client, hco_namespace, cnv_subscription_scope_class):
     """
     Update HCO CR with infrastructure and workloads spec.
     """
@@ -311,7 +313,7 @@ def cnv_subscription_resource_before_np(admin_client, hco_namespace, cnv_subscri
     yield cnv_subscription_scope_class
     LOGGER.info("Revert to initial HCO node placement configuration ")
     update_subscription_config(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         subscription=cnv_subscription_scope_class,
         hco_namespace=hco_namespace,
         config=initial_config,
@@ -321,7 +323,7 @@ def cnv_subscription_resource_before_np(admin_client, hco_namespace, cnv_subscri
 @pytest.fixture()
 def alter_cnv_subscription_configuration(
     request,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     cnv_subscription_scope_function,
 ):
@@ -344,7 +346,7 @@ def alter_cnv_subscription_configuration(
         config["tolerations"] = tolerations
 
     update_subscription_config(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         subscription=cnv_subscription_scope_function,
         hco_namespace=hco_namespace,
         config=config or None,
@@ -353,11 +355,11 @@ def alter_cnv_subscription_configuration(
 
 @pytest.fixture()
 def subscription_pods_per_nodes_after_altering_placement(
-    admin_client,
+    local_admin_client,
     hco_namespace,
 ):
     return get_pod_per_nodes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         filter_pods_by_name=IMAGE_CRON_STR,
     )

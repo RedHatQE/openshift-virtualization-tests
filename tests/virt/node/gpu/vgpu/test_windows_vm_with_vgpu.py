@@ -42,7 +42,7 @@ TESTS_CLASS_NAME = "TestVGPUWindowsGPUSSpec"
 
 @pytest.fixture(scope="class")
 def gpu_vmc(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_dv_scope_module_data_source_scope_class,
     supported_gpu_device,
@@ -54,7 +54,7 @@ def gpu_vmc(
     with VirtualMachineForTestsFromTemplate(
         name="win10-vgpu-gpus-spec-vm2",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=Template.generate_template_labels(**WIN10_LABELS),
         data_source=golden_image_dv_scope_module_data_source_scope_class,
         node_selector=gpu_vma.node_selector,

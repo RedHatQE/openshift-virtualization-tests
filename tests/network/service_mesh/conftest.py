@@ -170,14 +170,14 @@ def wait_service_mesh_components_convergence(func, vm, **kwargs):
 
 
 @pytest.fixture(scope="module")
-def ns_outside_of_service_mesh(admin_client):
-    yield from create_ns(admin_client=admin_client, name="outside-mesh")
+def ns_outside_of_service_mesh(local_admin_client):
+    yield from create_ns(admin_client=local_admin_client, name="outside-mesh")
 
 
 @pytest.fixture(scope="module")
-def service_mesh_tests_namespace(namespace, admin_client):
+def service_mesh_tests_namespace(namespace, local_admin_client):
     # The namespace used for the ServiceMesh tests must be added the `istio-injection` label.
-    label_project(name=namespace.name, label={"istio-injection": "enabled"}, admin_client=admin_client)
+    label_project(name=namespace.name, label={"istio-injection": "enabled"}, admin_client=local_admin_client)
     return namespace
 
 
@@ -222,12 +222,12 @@ def httpbin_service_service_mesh(httpbin_deployment_service_mesh, httpbin_servic
 
 @pytest.fixture(scope="module")
 def vm_fedora_with_service_mesh_annotation(
-    unprivileged_client,
+    local_unprivileged_client,
     service_mesh_tests_namespace,
 ):
     vm_name = "service-mesh-vm"
     with FedoraVirtualMachineForServiceMesh(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=vm_name,
         namespace=service_mesh_tests_namespace.name,
     ) as vm:
@@ -241,12 +241,12 @@ def vm_fedora_with_service_mesh_annotation(
 
 @pytest.fixture(scope="module")
 def outside_mesh_vm_fedora_with_service_mesh_annotation(
-    admin_client,
+    local_admin_client,
     ns_outside_of_service_mesh,
 ):
     vm_name = "out-service-mesh-vm"
     with FedoraVirtualMachineForServiceMesh(
-        client=admin_client,
+        client=local_admin_client,
         name=vm_name,
         namespace=ns_outside_of_service_mesh.name,
     ) as vm:
@@ -367,9 +367,9 @@ def traffic_management_service_mesh_convergence(
 
 
 @pytest.fixture(scope="class")
-def service_mesh_ingress_service_addr(admin_client, istio_system_namespace):
+def service_mesh_ingress_service_addr(local_admin_client, istio_system_namespace):
     for svc in Service.get(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         name=INGRESS_SERVICE,
         namespace=istio_system_namespace.metadata.name,
     ):

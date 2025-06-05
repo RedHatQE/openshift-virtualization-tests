@@ -25,7 +25,7 @@ class TestUpgrade:
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_ocp_upgrade_process(
         self,
-        admin_client,
+        local_admin_client,
         nodes,
         active_machine_config_pools,
         machine_config_pools_conditions,
@@ -35,7 +35,7 @@ class TestUpgrade:
         triggered_ocp_upgrade,
     ):
         verify_upgrade_ocp(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             target_ocp_version=extracted_ocp_version_from_image_url,
             machine_config_pools_list=active_machine_config_pools,
             initial_mcp_conditions=machine_config_pools_conditions,
@@ -48,7 +48,7 @@ class TestUpgrade:
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_cnv_upgrade_process(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         cnv_target_version,
         cnv_upgrade_stream,
@@ -78,7 +78,7 @@ class TestUpgrade:
             6.4. Wait until HCO is stable and its version is updated.
         """
         verify_upgrade_cnv(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
         )
@@ -89,7 +89,7 @@ class TestUpgrade:
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_production_source_cnv_upgrade_process(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         cnv_target_version,
         cnv_upgrade_stream,
@@ -107,7 +107,7 @@ class TestUpgrade:
         but it is not needed to disable the default sources, create a new ICSP or update the HCO CatalogSource.
         """
         verify_upgrade_cnv(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
         )

@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def running_vm_static(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
 ):
     name = "vm-static"
@@ -30,7 +30,7 @@ def running_vm_static(
         namespace=namespace.name,
         name=name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -39,7 +39,7 @@ def running_vm_static(
 
 @pytest.fixture(scope="module")
 def running_vm_for_migration(
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     namespace,
 ):
@@ -48,7 +48,7 @@ def running_vm_for_migration(
         namespace=namespace.name,
         name=name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cpu_model=cpu_for_migration,
     ) as vm:
         vm.start(wait=True)

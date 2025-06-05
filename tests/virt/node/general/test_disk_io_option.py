@@ -52,13 +52,13 @@ def check_disk_io_option_on_domain_xml(vm, expected_disk_io_option):
 @pytest.fixture()
 def disk_options_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as vm:

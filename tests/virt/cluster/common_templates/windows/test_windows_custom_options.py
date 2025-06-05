@@ -135,13 +135,13 @@ def windows_custom_bridge_nad(windows_custom_bridge, namespace):
 
 
 @pytest.fixture(scope="class")
-def windows_custom_drive_d(unprivileged_client, namespace):
+def windows_custom_drive_d(local_unprivileged_client, namespace):
     storage_class = py_config["default_storage_class"]
     storage_class_dict = get_storage_class_dict_from_matrix(storage_class=storage_class)[storage_class]
     with PersistentVolumeClaim(
         name="windows-custom-d",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         storage_class=storage_class,
         accessmodes=storage_class_dict["access_mode"],
         volume_mode=storage_class_dict["volume_mode"],
@@ -156,13 +156,13 @@ def custom_windows_vm(
     windows_custom_bridge_nad,
     windows_custom_drive_d,
     golden_image_data_source_scope_class,
-    unprivileged_client,
+    local_unprivileged_client,
     modern_cpu_for_migration,
 ):
     with CustomWindowsVM(
         name="custom-windows-vm",
         namespace=windows_custom_bridge_nad.namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         os_dict=request.param,
         nad=windows_custom_bridge_nad,

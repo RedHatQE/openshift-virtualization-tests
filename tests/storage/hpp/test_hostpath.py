@@ -178,9 +178,9 @@ def hpp_clusterrolebinding(hpp_clusterrole_version_suffix):
 
 
 @pytest.fixture(scope="module")
-def hpp_operator_pod(admin_client, hco_namespace):
+def hpp_operator_pod(local_admin_client, hco_namespace):
     yield get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=HOSTPATH_PROVISIONER_OPERATOR,
         namespace=hco_namespace.name,
     )
@@ -202,10 +202,10 @@ def dv_kwargs(request, namespace, worker_node1, storage_class_matrix_hpp_matrix_
 
 
 @pytest.fixture(scope="module")
-def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
+def hpp_pool_deployments_scope_module(local_admin_client, hco_namespace):
     return [
         dp
-        for dp in Deployment.get(dyn_client=admin_client, namespace=hco_namespace.name)
+        for dp in Deployment.get(dyn_client=local_admin_client, namespace=hco_namespace.name)
         if dp.name.startswith(HPP_POOL)
     ]
 
@@ -484,7 +484,7 @@ def test_hpp_pvc_specify_node_immediate(
 def test_hpp_upload_virtctl(
     skip_when_hpp_no_waitforfirstconsumer,
     skip_when_cdiconfig_scratch_no_hpp,
-    admin_client,
+    local_admin_client,
     namespace,
     tmpdir,
     storage_class_matrix_hpp_matrix__module__,
@@ -502,7 +502,7 @@ def test_hpp_upload_virtctl(
     thread_pool = ThreadPool(processes=1)
     async_result = thread_pool.apply_async(
         func=get_pod_and_scratch_pvc_nodes,
-        kwds={"dyn_client": admin_client, "namespace": namespace.name},
+        kwds={"dyn_client": local_admin_client, "namespace": namespace.name},
     )
     # Start virtctl upload process, meanwhile, resources are sampled
     with virtctl_upload_dv(
@@ -556,7 +556,7 @@ def test_hostpath_upload_dv_with_token(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3326")
 def test_hostpath_registry_import_dv(
-    admin_client,
+    local_admin_client,
     skip_when_hpp_no_waitforfirstconsumer,
     skip_when_cdiconfig_scratch_no_hpp,
     namespace,
@@ -577,7 +577,7 @@ def test_hostpath_registry_import_dv(
         storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
     ) as dv:
         dv.scratch_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
-        importer_pod = storage_utils.get_importer_pod(dyn_client=admin_client, namespace=dv.namespace)
+        importer_pod = storage_utils.get_importer_pod(dyn_client=local_admin_client, namespace=dv.namespace)
         importer_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_5MIN)
         assert_selected_node_annotation(
             pvc_node_name=dv.scratch_pvc.selected_node,
@@ -605,7 +605,7 @@ def test_hostpath_registry_import_dv(
 )
 def test_hostpath_clone_dv_without_annotation_wffc(
     skip_when_hpp_no_waitforfirstconsumer,
-    admin_client,
+    local_admin_client,
     namespace,
     data_volume_multi_hpp_storage,
 ):
@@ -629,7 +629,7 @@ def test_hostpath_clone_dv_without_annotation_wffc(
             wait_timeout=TIMEOUT_20SEC,
             sleep=1,
             func=get_pod_by_name_prefix,
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace=namespace.name,
             pod_prefix=CDI_UPLOAD_TMP_PVC,
         ):
@@ -647,7 +647,7 @@ def test_hostpath_clone_dv_without_annotation_wffc(
         with VirtualMachineForTestsFromTemplate(
             name="fedora-vm",
             namespace=namespace.name,
-            client=admin_client,
+            client=local_admin_client,
             labels=Template.generate_template_labels(**py_config["latest_fedora_os_dict"]["template_labels"]),
             existing_data_volume=target_dv,
         ) as vm:

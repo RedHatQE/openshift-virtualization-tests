@@ -56,7 +56,7 @@ def hotplug_volume_windows_scope_class(
 @pytest.fixture(scope="class")
 def vm_instance_from_template_multi_storage_scope_class(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_class,
     cpu_for_migration,
@@ -67,7 +67,7 @@ def vm_instance_from_template_multi_storage_scope_class(
     """
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_multi_storage_scope_class,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
@@ -301,7 +301,7 @@ class TestHotPlugWindows:
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         blank_disk_dv_multi_storage_scope_class,
         data_volume_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,

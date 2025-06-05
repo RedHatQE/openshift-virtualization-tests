@@ -431,14 +431,14 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 def test_successful_vm_from_uploaded_dv_windows(
     skip_if_sc_volume_binding_mode_is_wffc,
     uploaded_dv,
-    unprivileged_client,
+    local_unprivileged_client,
     vm_params,
     namespace,
 ):
     storage_utils.create_windows_vm_validate_guest_agent_info(
         dv=uploaded_dv,
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         vm_params=vm_params,
     )
 
@@ -446,7 +446,7 @@ def test_successful_vm_from_uploaded_dv_windows(
 @pytest.mark.polarion("CNV-4033")
 def test_disk_image_after_upload_virtctl(
     skip_block_volumemode_scope_module,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     download_image,
     storage_class_name_scope_module,

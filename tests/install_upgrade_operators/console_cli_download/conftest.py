@@ -17,14 +17,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def virtctl_console_cli_downloads_spec_links(admin_client):
+def virtctl_console_cli_downloads_spec_links(local_admin_client):
     """
     Get console cli downloads spec links
 
     Returns:
         ConsoleCLIDownload instance.spec.links
     """
-    return get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
+    return get_console_spec_links(admin_client=local_admin_client, name=VIRTCTL_CLI_DOWNLOADS)
 
 
 @pytest.fixture()
@@ -34,7 +34,7 @@ def all_virtctl_urls(virtctl_console_cli_downloads_spec_links):
 
 
 @pytest.fixture()
-def internal_fqdn(admin_client, hco_namespace):
+def internal_fqdn(local_admin_client, hco_namespace):
     """
     This fixture returns the prefix url for the cluster, which is used to identify if certain links are routed or
     served from within the cluster

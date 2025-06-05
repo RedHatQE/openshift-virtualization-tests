@@ -98,7 +98,7 @@ def linux_macspoof_nad(
 @pytest.fixture(scope="class")
 def linux_bridge_attached_vma(
     worker_node1,
-    unprivileged_client,
+    local_unprivileged_client,
     linux_macspoof_nad,
 ):
     name = "vma"
@@ -115,7 +115,7 @@ def linux_bridge_attached_vma(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
@@ -124,7 +124,7 @@ def linux_bridge_attached_vma(
 @pytest.fixture(scope="class")
 def linux_bridge_attached_vmb(
     worker_node2,
-    unprivileged_client,
+    local_unprivileged_client,
     linux_macspoof_nad,
 ):
     name = "vmb"
@@ -141,7 +141,7 @@ def linux_bridge_attached_vmb(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm

@@ -20,14 +20,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def vm(request, cluster_cpu_model_scope_function, unprivileged_client, namespace):
+def vm(request, cluster_cpu_model_scope_function, local_unprivileged_client, namespace):
     name = f"vm-{request.param['vm_name']}-machine-type"
 
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         machine_type=request.param.get("machine_type"),
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)
@@ -39,7 +39,7 @@ def updated_kubevirt_config_machine_type(
     request,
     hyperconverged_resource_scope_function,
     kubevirt_config,
-    admin_client,
+    local_admin_client,
     hco_namespace,
 ):
     machine_type = request.param["machine_type"]
@@ -49,7 +49,7 @@ def updated_kubevirt_config_machine_type(
         value=machine_type,
     ):
         wait_for_updated_kv_value(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             path=["machineType"],
             value=machine_type,
@@ -182,7 +182,7 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
 
 
 @pytest.mark.polarion("CNV-3688")
-def test_unsupported_machine_type(namespace, unprivileged_client):
+def test_unsupported_machine_type(namespace, local_unprivileged_client):
     vm_name = "vm-invalid-machine-type"
 
     with pytest.raises(UnprocessibleEntityError):
@@ -190,7 +190,7 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
             name=vm_name,
             namespace=namespace.name,
             body=fedora_vm_body(name=vm_name),
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             machine_type=MachineTypesNames.pc_i440fx_rhel7_6,
         ):
             pytest.fail("VM created with invalid machine type.")

@@ -25,26 +25,26 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def enabled_common_boot_image_import_feature_gate_scope_function(
-    admin_client,
+    local_admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
 ):
     enable_common_boot_image_import_spec_wait_for_data_import_cron(
         hco_resource=hyperconverged_resource_scope_function,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=golden_images_namespace,
     )
 
 
 @pytest.fixture(scope="class")
 def enabled_common_boot_image_import_feature_gate_scope_class(
-    admin_client,
+    local_admin_client,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
 ):
     enable_common_boot_image_import_spec_wait_for_data_import_cron(
         hco_resource=hyperconverged_resource_scope_class,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=golden_images_namespace,
     )
 
@@ -87,7 +87,7 @@ def updated_hco_with_custom_data_import_cron_scope_function(request, hyperconver
 
 @pytest.fixture()
 def custom_data_import_cron_scope_function(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     updated_hco_with_custom_data_import_cron_scope_function,
 ):
@@ -97,7 +97,7 @@ def custom_data_import_cron_scope_function(
         sleep=5,
         func=lambda: list(
             DataImportCron.get(
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 name=expected_data_import_cron_name,
                 namespace=golden_images_namespace.name,
             )
@@ -109,12 +109,12 @@ def custom_data_import_cron_scope_function(
 
 
 @pytest.fixture()
-def custom_data_source_scope_function(admin_client, custom_data_import_cron_scope_function):
+def custom_data_source_scope_function(local_admin_client, custom_data_import_cron_scope_function):
     custom_data_source_name = custom_data_import_cron_scope_function.instance.spec.managedDataSource
     try:
         return list(
             DataSource.get(
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 name=custom_data_source_name,
                 namespace=custom_data_import_cron_scope_function.namespace,
             )

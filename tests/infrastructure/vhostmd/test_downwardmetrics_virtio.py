@@ -135,7 +135,7 @@ def preferred_preference_for_rhel_version(rhel_version):
 @pytest.fixture()
 def vm_parameters_for_virtio_downward_metrics(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     rhel_version,
     preferred_preference_for_rhel_version,
     preferred_cluster_instance_type,
@@ -144,7 +144,7 @@ def vm_parameters_for_virtio_downward_metrics(
     return {
         "name": f"{rhel_version}-vm-downwardmetrics",
         "namespace": namespace.name,
-        "client": unprivileged_client,
+        "client": local_unprivileged_client,
         "vm_preference": preferred_preference_for_rhel_version,
         "vm_instance_type": preferred_cluster_instance_type,
         "image": rhel_container_disk_image,

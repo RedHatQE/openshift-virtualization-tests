@@ -29,13 +29,13 @@ def worker_nodes_management_iface_stats(nodes_active_nics, worker_node1, worker_
 
 
 @pytest.fixture(scope="module")
-def nmstate_vma(schedulable_nodes, worker_node1, namespace, unprivileged_client):
+def nmstate_vma(schedulable_nodes, worker_node1, namespace, local_unprivileged_client):
     name = "vma"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)
@@ -43,13 +43,13 @@ def nmstate_vma(schedulable_nodes, worker_node1, namespace, unprivileged_client)
 
 
 @pytest.fixture(scope="module")
-def nmstate_vmb(schedulable_nodes, worker_node2, namespace, unprivileged_client):
+def nmstate_vmb(schedulable_nodes, worker_node2, namespace, local_unprivileged_client):
     name = "vmb"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         vm.start(wait=True)
@@ -121,9 +121,9 @@ def bridge_on_management_ifaces_node2(
 
 
 @pytest.fixture(scope="module")
-def nmstate_ds(admin_client, nmstate_namespace):
+def nmstate_ds(local_admin_client, nmstate_namespace):
     return get_daemonset_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         daemonset_name=NMSTATE_HANDLER,
         namespace_name=nmstate_namespace.name,
     )

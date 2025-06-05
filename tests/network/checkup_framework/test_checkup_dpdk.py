@@ -39,7 +39,7 @@ def patched_runtime_class(hyperconverged_resource_scope_module):
 
 @pytest.mark.polarion("CNV-9776")
 def test_dpdk_checkup_when_destination_and_source_on_same_node(
-    unprivileged_client,
+    local_unprivileged_client,
     dpdk_checkup_namespace,
     dpdk_configmap_same_node,
     dpdk_job,
@@ -49,7 +49,7 @@ def test_dpdk_checkup_when_destination_and_source_on_same_node(
 
 @pytest.mark.polarion("CNV-9779")
 def test_dpdk_checkup_with_high_transfer_rate_same_node(
-    unprivileged_client,
+    local_unprivileged_client,
     dpdk_checkup_namespace,
     dpdk_high_traffic_configmap_same_node,
     dpdk_job,
@@ -61,7 +61,7 @@ def test_dpdk_checkup_with_high_transfer_rate_same_node(
 
 @pytest.mark.polarion("CNV-9786")
 def test_dpdk_checkup_with_high_transfer_rate_different_nodes(
-    unprivileged_client,
+    local_unprivileged_client,
     dpdk_checkup_namespace,
     dpdk_high_traffic_configmap_different_node,
     dpdk_job,

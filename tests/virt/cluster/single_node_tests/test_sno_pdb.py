@@ -5,8 +5,8 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
 @pytest.fixture()
-def cnv_pdb_resources(admin_client, hco_namespace):
-    return list(PodDisruptionBudget.get(dyn_client=admin_client, namespace=hco_namespace.name))
+def cnv_pdb_resources(local_admin_client, hco_namespace):
+    return list(PodDisruptionBudget.get(dyn_client=local_admin_client, namespace=hco_namespace.name))
 
 
 @pytest.mark.polarion("CNV-8514")

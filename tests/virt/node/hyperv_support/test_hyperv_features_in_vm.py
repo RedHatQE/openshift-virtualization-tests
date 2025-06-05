@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def hyperv_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
 ):
@@ -29,7 +29,7 @@ def hyperv_vm(
         request.param["vm_dict"] = {"spec": {"template": {"spec": {"domain": {"features": {"hyperv": hyperv_dict}}}}}}
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as vm:

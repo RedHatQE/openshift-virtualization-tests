@@ -34,7 +34,7 @@ def assert_svc_ip_params(
 def running_vm_for_exposure(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     dual_stack_network_data,
 ):
     vm_name = "exposed-vm"
@@ -46,7 +46,7 @@ def running_vm_for_exposure(
         body=fedora_vm_body(name=vm_name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -73,7 +73,7 @@ def default_ip_family_policy_service(running_vm_for_exposure):
 @pytest.fixture()
 def virtctl_expose_service(
     request,
-    admin_client,
+    local_admin_client,
     running_vm_for_exposure,
     dual_stack_cluster,
 ):

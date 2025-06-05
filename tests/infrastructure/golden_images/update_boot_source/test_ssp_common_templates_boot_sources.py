@@ -67,7 +67,7 @@ def existing_data_source_volume(
 
 @pytest.fixture()
 def auto_update_boot_source_vm(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     existing_data_source_volume,
     boot_source_os_from_data_source_dict,
@@ -76,7 +76,7 @@ def auto_update_boot_source_vm(
     with VirtualMachineForTestsFromTemplate(
         name=f"{existing_data_source_volume.name}-vm",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=template_labels(os=boot_source_os_from_data_source_dict),
         data_source=existing_data_source_volume,
     ) as vm:
@@ -85,11 +85,11 @@ def auto_update_boot_source_vm(
 
 
 @pytest.fixture()
-def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source):
+def vm_without_boot_source(local_unprivileged_client, namespace, rhel9_data_source):
     with VirtualMachineForTestsFromTemplate(
         name=f"{rhel9_data_source.name}-vm",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=template_labels(os="rhel9.0"),
         data_source=rhel9_data_source,
         non_existing_pvc=True,
@@ -116,11 +116,11 @@ def opted_out_rhel9_data_source(rhel9_data_source):
 
 
 @pytest.fixture()
-def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source, rhel9_http_image_url):
+def rhel9_dv(local_admin_client, golden_images_namespace, rhel9_data_source, rhel9_http_image_url):
     artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace.name)
     artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace.name)
     with DataVolume(
-        client=admin_client,
+        client=local_admin_client,
         name=rhel9_data_source.source.name,
         namespace=golden_images_namespace.name,
         url=rhel9_http_image_url,
@@ -169,7 +169,7 @@ def test_common_templates_boot_source_reference(base_templates):
 
 @pytest.mark.polarion("CNV-7535")
 def test_vm_with_uploaded_golden_image_opt_out(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     disabled_common_boot_image_import_hco_spec_scope_function,
     opted_out_rhel9_data_source,

@@ -49,10 +49,10 @@ def vm_generated_new_password():
 
 
 @pytest.fixture(scope="class")
-def persistence_vm(request, golden_image_data_source_scope_class, unprivileged_client, namespace):
+def persistence_vm(request, golden_image_data_source_scope_class, local_unprivileged_client, namespace):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as vm:

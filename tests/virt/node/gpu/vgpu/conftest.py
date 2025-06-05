@@ -27,8 +27,8 @@ def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
 
 
 @pytest.fixture(scope="session")
-def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
-    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+def vgpu_ready_nodes(local_admin_client, gpu_nodes_labeled_with_vm_vgpu):
+    wait_for_manager_pods_deployed(admin_client=local_admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
     yield gpu_nodes_labeled_with_vm_vgpu
 
 

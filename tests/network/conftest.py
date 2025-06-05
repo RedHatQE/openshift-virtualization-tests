@@ -44,9 +44,9 @@ def index_number():
 
 
 @pytest.fixture(scope="session")
-def virt_handler_pod(admin_client):
+def virt_handler_pod(local_admin_client):
     for pod in Pod.get(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         label_selector=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
     ):
         return pod
@@ -97,8 +97,8 @@ def dual_stack_network_data(ipv6_supported_cluster):
 
 
 @pytest.fixture(scope="session")
-def istio_system_namespace(admin_client):
-    return Namespace(name=ISTIO_SYSTEM_DEFAULT_NS, client=admin_client).exists
+def istio_system_namespace(local_admin_client):
+    return Namespace(name=ISTIO_SYSTEM_DEFAULT_NS, client=local_admin_client).exists
 
 
 @pytest.fixture(scope="module")
@@ -149,7 +149,7 @@ def brcnv_ovs_nad_vlan_1(
 
 @pytest.fixture(scope="module")
 def brcnv_vma_with_vlan_1(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     worker_node1,
     brcnv_ovs_nad_vlan_1,
@@ -157,7 +157,7 @@ def brcnv_vma_with_vlan_1(
     yield from vm_for_brcnv_tests(
         vm_name="vma",
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         nads=[brcnv_ovs_nad_vlan_1],
         address_suffix=1,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -195,8 +195,8 @@ def cnao_deployment(hco_namespace):
 
 
 @pytest.fixture(scope="session")
-def ovn_kubernetes_cluster(admin_client):
-    return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
+def ovn_kubernetes_cluster(local_admin_client):
+    return get_cluster_cni_type(admin_client=local_admin_client) == "OVNKubernetes"
 
 
 @pytest.fixture(scope="session", autouse=True)

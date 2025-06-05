@@ -109,7 +109,7 @@ def wait_dv_and_get_importer(dv, admin_client):
 
 
 @pytest.fixture()
-def dv_with_annotation(admin_client, namespace, linux_nad):
+def dv_with_annotation(local_admin_client, namespace, linux_nad):
     with create_dv(
         dv_name="dv-annotation",
         namespace=namespace.name,
@@ -117,7 +117,7 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
         storage_class=py_config["default_storage_class"],
         multus_annotation=linux_nad.name,
     ) as dv:
-        return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
+        return wait_dv_and_get_importer(dv=dv, admin_client=local_admin_client).instance.metadata.annotations
 
 
 @pytest.mark.sno
@@ -358,13 +358,13 @@ def test_successful_import_basic_auth(
     indirect=True,
 )
 def test_wrong_content_type(
-    admin_client,
+    local_admin_client,
     dv_from_http_import,
 ):
     wait_for_importer_container_message(
         importer_pod=wait_dv_and_get_importer(
             dv=dv_from_http_import,
-            admin_client=admin_client,
+            admin_client=local_admin_client,
         ),
         msg=ErrorMsg.EXIT_STATUS_2,
     )
@@ -398,13 +398,13 @@ def test_wrong_content_type(
     indirect=True,
 )
 def test_unpack_compressed(
-    admin_client,
+    local_admin_client,
     dv_from_http_import,
 ):
     wait_for_importer_container_message(
         importer_pod=wait_dv_and_get_importer(
             dv=dv_from_http_import,
-            admin_client=admin_client,
+            admin_client=local_admin_client,
         ),
         msg=ErrorMsg.EXIT_STATUS_2,
     )
@@ -453,12 +453,12 @@ def test_certconfigmap(internal_http_configmap, running_pod_with_dv_pvc):
     indirect=True,
 )
 def test_certconfigmap_incorrect_cert(
-    admin_client,
+    local_admin_client,
     https_config_map,
     dv_from_http_import,
 ):
     wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(dv=dv_from_http_import, admin_client=admin_client),
+        importer_pod=wait_dv_and_get_importer(dv=dv_from_http_import, admin_client=local_admin_client),
         msg=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY,
     )
 
@@ -647,7 +647,7 @@ def test_disk_falloc(internal_http_configmap, dv_from_http_import):
     indirect=True,
 )
 def test_vm_from_dv_on_different_node(
-    admin_client,
+    local_admin_client,
     skip_access_mode_rwo_scope_function,
     skip_non_shared_storage,
     schedulable_nodes,
@@ -658,7 +658,7 @@ def test_vm_from_dv_on_different_node(
     It applies to shared storage like Ceph or NFS. It cannot be tested on local storage like HPP.
     """
     importer_pod = get_importer_pod(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         namespace=data_volume_multi_storage_scope_function.namespace,
     )
     importer_node_name = get_importer_pod_node(importer_pod=importer_pod)
@@ -699,7 +699,7 @@ def test_vm_from_dv_on_different_node(
     indirect=True,
 )
 def test_successful_vm_from_imported_dv_windows(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
     vm_instance_from_template_multi_storage_scope_function,

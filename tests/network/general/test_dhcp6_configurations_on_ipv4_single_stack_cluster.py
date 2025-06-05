@@ -14,13 +14,13 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def vm_cirros(
     worker_node1,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
 ):
     with VirtualMachineForTests(
         name=VM_CIRROS,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         os_flavor=OS_FLAVOR_CIRROS,
         memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
         image=CIRROS_IMAGE,

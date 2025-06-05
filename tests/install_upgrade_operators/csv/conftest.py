@@ -13,8 +13,8 @@ class KubevirtManifestChannelNotFoundError(Exception):
 
 
 @pytest.fixture(scope="package")
-def kubevirt_package_manifest_channels(admin_client):
-    kubevirt_package_manifest = get_kubevirt_package_manifest(admin_client=admin_client)
+def kubevirt_package_manifest_channels(local_admin_client):
+    kubevirt_package_manifest = get_kubevirt_package_manifest(admin_client=local_admin_client)
     assert kubevirt_package_manifest, f"Package manifest {py_config['hco_cr_name']} not found"
     return kubevirt_package_manifest.status.channels
 

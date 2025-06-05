@@ -70,13 +70,13 @@ def update_validate_cpu_in_vm(vm, network_multiqueue=True, cores=1, sockets=1, t
 @pytest.fixture(scope="class")
 def network_interface_multiqueue_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as multiqueue_vm:

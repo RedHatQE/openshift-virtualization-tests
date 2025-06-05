@@ -134,7 +134,7 @@ def br1bond_nad(
 def bond_bridge_attached_vma(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     br1bond_nad,
     jumbo_frame_bridge_on_bond_worker_1,
 ):
@@ -152,7 +152,7 @@ def bond_bridge_attached_vma(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
@@ -162,7 +162,7 @@ def bond_bridge_attached_vma(
 def bond_bridge_attached_vmb(
     worker_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     br1bond_nad,
     jumbo_frame_bridge_on_bond_worker_2,
 ):
@@ -180,7 +180,7 @@ def bond_bridge_attached_vmb(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm

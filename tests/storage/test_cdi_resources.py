@@ -84,10 +84,10 @@ def verify_cdi_app_label(cdi_resources, cnv_version):
 
 
 @pytest.fixture(scope="module")
-def cdi_resources_scope_module(request, admin_client):
+def cdi_resources_scope_module(request, local_admin_client):
     rcs_object = request.param
     LOGGER.info(f"Get all resources with kind: {rcs_object.kind}")
-    resource_list = list(rcs_object.get(dyn_client=admin_client))
+    resource_list = list(rcs_object.get(dyn_client=local_admin_client))
     return [rcs for rcs in resource_list if rcs.name.startswith("cdi-")]
 
 
@@ -185,7 +185,7 @@ def test_importer_pod_cdi_label(namespace, https_server_certificate):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3474")
-def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_name_scope_module):
+def test_uploader_pod_cdi_label(local_unprivileged_client, namespace, storage_class_name_scope_module):
     """
     Verify "cdi.kubevirt.io" label is included in uploader pod
     """
@@ -193,7 +193,7 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
         dv_name="cnv-3474",
         storage_class=storage_class_name_scope_module,
         storage_ns_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ):
         wait_for_cdi_worker_pod(
             pod_name=CDI_UPLOAD,

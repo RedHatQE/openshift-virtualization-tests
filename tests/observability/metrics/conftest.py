@@ -171,11 +171,11 @@ def wait_for_component_value_to_be_expected(prometheus, component_name, expected
 
 
 @pytest.fixture()
-def updated_resource_with_invalid_label(request, admin_client, hco_namespace, hco_status_related_objects):
+def updated_resource_with_invalid_label(request, local_admin_client, hco_namespace, hco_status_related_objects):
     resource_name = request.param["name"]
     resource = get_resource_object(
         related_objects=hco_status_related_objects,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         resource_kind=request.param["resource"],
         resource_name=request.param["name"],
     )
@@ -197,7 +197,7 @@ def updated_resource_with_invalid_label(request, admin_client, hco_namespace, hc
 
 @pytest.fixture()
 def updated_resource_multiple_times_with_invalid_label(
-    request, prometheus, admin_client, hco_namespace, hco_status_related_objects
+    request, prometheus, local_admin_client, hco_namespace, hco_status_related_objects
 ):
     """
     This fixture will repeatedly modify the given resource with invalid metadata labels.
@@ -215,7 +215,7 @@ def updated_resource_multiple_times_with_invalid_label(
     resource_version = None
     resource = get_resource_object(
         related_objects=hco_status_related_objects,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         resource_kind=request.param["resource"],
         resource_name=resource_name,
     )
@@ -245,7 +245,7 @@ def updated_resource_multiple_times_with_invalid_label(
             expected_count=increasing_value,
         )
     yield updated_value
-    wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_hco_conditions(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture()
@@ -259,7 +259,7 @@ def mutation_count_before_change(request, prometheus):
 
 
 @pytest.fixture(scope="module")
-def unique_namespace(unprivileged_client):
+def unique_namespace(local_unprivileged_client):
     """
     Creates a namespace to be used by key metrics test cases.
 
@@ -267,7 +267,7 @@ def unique_namespace(unprivileged_client):
         Namespace object to be used by the tests
     """
     namespace_name = unique_name(name="key-metrics")
-    yield from create_ns(unprivileged_client=unprivileged_client, name=namespace_name)
+    yield from create_ns(unprivileged_client=local_unprivileged_client, name=namespace_name)
 
 
 @pytest.fixture()
@@ -294,13 +294,13 @@ def initial_metric_cpu_value_zero(prometheus):
 
 
 @pytest.fixture(scope="class")
-def error_state_vm(unique_namespace, unprivileged_client):
+def error_state_vm(unique_namespace, local_unprivileged_client):
     vm_name = "vm-in-error-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=unique_namespace.name,
         body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         node_selector=get_node_selector_dict(node_selector="non-existent-node"),
     ) as vm:
         vm.start()
@@ -393,7 +393,7 @@ def vmi_phase_count_before(request, prometheus):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def metrics_sanity(admin_client):
+def metrics_sanity(local_admin_client):
     """
     Perform verification in order to ensure that the cluster is ready for metrics-related tests
     """
@@ -402,7 +402,7 @@ def metrics_sanity(admin_client):
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
         func=get_not_running_prometheus_pods,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
     sample = None
     try:
@@ -436,12 +436,12 @@ def virt_pod_info_from_prometheus(request, prometheus):
 
 
 @pytest.fixture()
-def virt_pod_names_by_label(request, admin_client, hco_namespace):
+def virt_pod_names_by_label(request, local_admin_client, hco_namespace):
     """Get pod names by a given label (request.param) in the list."""
     return [
         pod.name
         for pod in Pod.get(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace=hco_namespace.name,
             label_selector=request.param,
         )
@@ -449,9 +449,9 @@ def virt_pod_names_by_label(request, admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="module")
-def single_metrics_namespace(unprivileged_client):
+def single_metrics_namespace(local_unprivileged_client):
     namespace_name = unique_name(name="test-metrics")
-    yield from create_ns(unprivileged_client=unprivileged_client, name=namespace_name)
+    yield from create_ns(unprivileged_client=local_unprivileged_client, name=namespace_name)
 
 
 @pytest.fixture(scope="module")
@@ -510,7 +510,7 @@ def cluster_network_addons_operator_scaled_down_and_up(request, prometheus, hco_
 @pytest.fixture()
 def windows_dv_with_block_volume_mode(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     storage_class_with_block_volume_mode,
 ):
     with create_dv(
@@ -519,7 +519,7 @@ def windows_dv_with_block_volume_mode(
         url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
         storage_class=storage_class_with_block_volume_mode,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         volume_mode=DataVolume.VolumeMode.BLOCK,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
@@ -528,7 +528,7 @@ def windows_dv_with_block_volume_mode(
 
 @pytest.fixture()
 def cloned_dv_from_block_to_fs(
-    unprivileged_client,
+    local_unprivileged_client,
     windows_dv_with_block_volume_mode,
     storage_class_with_filesystem_volume_mode,
 ):
@@ -540,7 +540,7 @@ def cloned_dv_from_block_to_fs(
         source_namespace=windows_dv_with_block_volume_mode.namespace,
         size=windows_dv_with_block_volume_mode.size,
         storage_class=storage_class_with_filesystem_volume_mode,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
     ) as cdv:
         cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_2MIN)
@@ -558,34 +558,34 @@ def running_cdi_worker_pod(cloned_dv_from_block_to_fs):
 
 @pytest.fixture()
 def restarted_cdi_dv_clone(
-    unprivileged_client,
+    local_unprivileged_client,
     cloned_dv_from_block_to_fs,
     running_cdi_worker_pod,
 ):
     restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         dv=cloned_dv_from_block_to_fs,
         pod_prefix=CDI_UPLOAD_TMP_PVC,
     )
 
 
 @pytest.fixture()
-def ready_uploaded_dv(unprivileged_client, namespace):
+def ready_uploaded_dv(local_unprivileged_client, namespace):
     with create_dv(
         source=UPLOAD_STR,
         dv_name=f"{UPLOAD_STR}-dv",
         namespace=namespace.name,
         storage_class=py_config["default_storage_class"],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as dv:
         dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
         yield dv
 
 
 @pytest.fixture()
-def restarted_cdi_dv_upload(unprivileged_client, ready_uploaded_dv):
+def restarted_cdi_dv_upload(local_unprivileged_client, ready_uploaded_dv):
     restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         dv=ready_uploaded_dv,
         pod_prefix=CDI_UPLOAD_PRIME,
     )
@@ -703,7 +703,7 @@ def vmi_memory_available_memory(vm_for_test):
 
 
 @pytest.fixture(scope="class")
-def vm_with_cpu_spec(namespace, unprivileged_client):
+def vm_with_cpu_spec(namespace, local_unprivileged_client):
     name = "vm-resource-test"
     with VirtualMachineForTests(
         name=name,
@@ -712,7 +712,7 @@ def vm_with_cpu_spec(namespace, unprivileged_client):
         cpu_sockets=TWO_CPU_SOCKETS,
         cpu_threads=TWO_CPU_THREADS,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -761,14 +761,14 @@ def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_t
 
 @pytest.fixture()
 def vm_virt_controller_ip_address(
-    prometheus, admin_client, hco_namespace, metric_validate_metric_labels_values_ip_labels
+    prometheus, local_admin_client, hco_namespace, metric_validate_metric_labels_values_ip_labels
 ):
     virt_controller_pod_name = metric_validate_metric_labels_values_ip_labels.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
     virt_controller_pod_ip = re.search(
         IP_RE_PATTERN_FROM_INTERFACE,
         get_pod_by_name_prefix(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             pod_prefix=virt_controller_pod_name,
             namespace=hco_namespace.name,
         ).execute(command=IP_ADDR_SHOW_COMMAND),
@@ -923,13 +923,15 @@ def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_ap
 
 
 @pytest.fixture()
-def storage_class_labels_for_testing(admin_client):
+def storage_class_labels_for_testing(local_admin_client):
     chosen_sc_name = py_config["default_storage_class"]
     return {
         "storageclass": chosen_sc_name,
-        "smartclone": "true" if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=admin_client) else "false",
+        "smartclone": "true"
+        if is_snapshot_supported_by_sc(sc_name=chosen_sc_name, client=local_admin_client)
+        else "false",
         "virtdefault": "true"
-        if StorageClass(client=admin_client, name=chosen_sc_name).instance.metadata.annotations[
+        if StorageClass(client=local_admin_client, name=chosen_sc_name).instance.metadata.annotations[
             StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         ]
         == "true"
@@ -938,11 +940,11 @@ def storage_class_labels_for_testing(admin_client):
 
 
 @pytest.fixture()
-def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
+def vm_for_snapshot_for_metrics_test(local_admin_client, storage_class_for_snapshot, namespace):
     with create_cirros_vm(
         storage_class=storage_class_for_snapshot,
         namespace=namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         dv_name="dv-for-snapshot",
         vm_name="vm-for-snapshot",
     ) as vm:
@@ -973,9 +975,9 @@ def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for
 
 
 @pytest.fixture()
-def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
+def restored_pvc_name(local_admin_client, vm_for_snapshot_for_metrics_test):
     for pvc in PersistentVolumeClaim.get(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         namespace=vm_for_snapshot_for_metrics_test.namespace,
         label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
     ):
@@ -1001,14 +1003,14 @@ def template_validator_finalizer(hco_namespace):
 
 
 @pytest.fixture(scope="class")
-def deleted_ssp_operator_pod(admin_client, hco_namespace):
+def deleted_ssp_operator_pod(local_admin_client, hco_namespace):
     get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=SSP_OPERATOR,
         namespace=hco_namespace.name,
     ).delete(wait=True)
     yield
-    verify_ssp_pod_is_running(dyn_client=admin_client, hco_namespace=hco_namespace)
+    verify_ssp_pod_is_running(dyn_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")
@@ -1017,9 +1019,9 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(namespace, local_unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
@@ -1102,11 +1104,11 @@ def windows_vm_info_to_compare(windows_vm_for_test):
 
 
 @pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, unprivileged_client):
+def windows_vm_for_test(namespace, local_unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:

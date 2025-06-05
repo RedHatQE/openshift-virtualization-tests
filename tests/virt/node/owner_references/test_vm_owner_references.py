@@ -11,13 +11,13 @@ pytestmark = pytest.mark.post_upgrade
 
 
 @pytest.fixture()
-def fedora_vm(unprivileged_client, namespace):
+def fedora_vm(local_unprivileged_client, namespace):
     name = "owner-references-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()

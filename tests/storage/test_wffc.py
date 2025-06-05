@@ -251,7 +251,7 @@ def test_wffc_import_registry_dv(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4741")
 def test_wffc_upload_dv_via_token(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     tmpdir,
     storage_class_matrix_wffc_matrix__module__,
@@ -266,7 +266,7 @@ def test_wffc_upload_dv_via_token(
         dv_name=dv_name,
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
         storage_ns_name=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         consume_wffc=True,
     ) as dv:
         upload_token_request(storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name)

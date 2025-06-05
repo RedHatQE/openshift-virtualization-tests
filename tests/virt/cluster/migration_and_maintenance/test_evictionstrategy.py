@@ -129,9 +129,9 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
 class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
-        self, unprivileged_client, vm_from_template_scope_class, drained_node
+        self, local_unprivileged_client, vm_from_template_scope_class, drained_node
     ):
-        check_migration_process_after_node_drain(dyn_client=unprivileged_client, vm=vm_from_template_scope_class)
+        check_migration_process_after_node_drain(dyn_client=local_unprivileged_client, vm=vm_from_template_scope_class)
 
     @pytest.mark.polarion("CNV-10088")
     def test_hco_evictionstrategy_none_vm_no_evictionstrategy(
@@ -162,10 +162,10 @@ class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10357")
     def test_hco_evictionstrategy_none_vm_evictionstrategy_livemigrate(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         vm_from_template_scope_class,
         hco_cr_with_evictionstrategy_none,
         added_vm_evictionstrategy,
         drained_node,
     ):
-        check_migration_process_after_node_drain(dyn_client=unprivileged_client, vm=vm_from_template_scope_class)
+        check_migration_process_after_node_drain(dyn_client=local_unprivileged_client, vm=vm_from_template_scope_class)

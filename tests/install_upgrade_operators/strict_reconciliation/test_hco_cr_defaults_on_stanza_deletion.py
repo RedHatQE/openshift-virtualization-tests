@@ -272,7 +272,7 @@ class TestCRDefaultsOnStanzaDeletion:
     )
     def test_featuregates_defaults_on_stanza_delete(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_spec_scope_module,
         deleted_stanza_on_hco_cr,
@@ -280,7 +280,7 @@ class TestCRDefaultsOnStanzaDeletion:
         expected,
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             consecutive_checks_count=6,
         )

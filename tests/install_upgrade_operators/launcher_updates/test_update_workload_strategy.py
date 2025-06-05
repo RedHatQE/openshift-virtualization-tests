@@ -44,7 +44,7 @@ class TestLauncherUpdateAll:
     )
     def test_modify_custom_workload_update_strategy_all(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         updated_workload_strategy_custom_values,
         resource_name,
@@ -54,14 +54,14 @@ class TestLauncherUpdateAll:
         if resource_name == "hyperconverged":
             wait_for_spec_change(
                 expected=expected,
-                get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
+                get_spec_func=lambda: get_hco_spec(admin_client=local_admin_client, hco_namespace=hco_namespace),
                 base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
             )
         elif resource_name == "kubevirt":
             wait_for_spec_change(
                 expected=expected,
                 get_spec_func=lambda: get_hyperconverged_kubevirt(
-                    admin_client=admin_client, hco_namespace=hco_namespace
+                    admin_client=local_admin_client, hco_namespace=hco_namespace
                 )
                 .instance.to_dict()
                 .get("spec"),
@@ -163,19 +163,21 @@ class TestCustomWorkLoadStrategy:
         indirect=["updated_hco_cr"],
     )
     def test_hyperconverged_modify_custom_workload_update_strategy(
-        self, admin_client, hco_namespace, updated_hco_cr, expected
+        self, local_admin_client, hco_namespace, updated_hco_cr, expected
     ):
         """Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values"""
         wait_for_spec_change(
             expected=expected,
-            get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
+            get_spec_func=lambda: get_hco_spec(admin_client=local_admin_client, hco_namespace=hco_namespace),
             base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
         if expected == MOD_DEFAULT_WORKLOAD_UPDATE_METHOD_EMPTY:
             del expected[WORKLOADUPDATEMETHODS]
         wait_for_spec_change(
             expected=expected,
-            get_spec_func=lambda: get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+            get_spec_func=lambda: get_hyperconverged_kubevirt(
+                admin_client=local_admin_client, hco_namespace=hco_namespace
+            )
             .instance.to_dict()
             .get("spec"),
             base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],

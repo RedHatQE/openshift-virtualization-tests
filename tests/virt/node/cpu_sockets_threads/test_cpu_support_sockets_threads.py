@@ -21,7 +21,7 @@ def check_vm_dumpxml(vm, cores=None, sockets=None, threads=None):
 
 
 @pytest.fixture()
-def vm_with_cpu_support(request, namespace, unprivileged_client):
+def vm_with_cpu_support(request, namespace, local_unprivileged_client):
     """
     VM with CPU support (cores,sockets,threads)
     """
@@ -34,7 +34,7 @@ def vm_with_cpu_support(request, namespace, unprivileged_client):
         cpu_threads=request.param["threads"],
         cpu_max_sockets=request.param["sockets"] or 1,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -79,7 +79,7 @@ def test_vm_with_cpu_support(vm_with_cpu_support):
 
 
 @pytest.fixture()
-def no_cpu_settings_vm(namespace, unprivileged_client):
+def no_cpu_settings_vm(namespace, local_unprivileged_client):
     """
     Create VM without specific CPU settings
     """
@@ -88,7 +88,7 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()
@@ -108,7 +108,7 @@ def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2818")
-def test_vm_with_cpu_limitation(namespace, unprivileged_client):
+def test_vm_with_cpu_limitation(namespace, local_unprivileged_client):
     """
     Test VM with cpu limitation, CPU requests and limits are equals
     """
@@ -121,7 +121,7 @@ def test_vm_with_cpu_limitation(namespace, unprivileged_client):
         cpu_requests=2,
         cpu_max_sockets=1,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()
@@ -129,7 +129,7 @@ def test_vm_with_cpu_limitation(namespace, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-2819")
-def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
+def test_vm_with_cpu_limitation_negative(namespace, local_unprivileged_client):
     """
     Test VM with cpu limitation
     negative case: CPU requests is larger then limits
@@ -142,6 +142,6 @@ def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
             cpu_limits=2,
             cpu_requests=4,
             body=fedora_vm_body(name=name),
-            client=unprivileged_client,
+            client=local_unprivileged_client,
         ):
             return

@@ -81,7 +81,7 @@ def updated_common_template(
     request,
     common_templates_enabled,
     hyperconverged_resource_scope_function,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     golden_images_namespace,
 ):

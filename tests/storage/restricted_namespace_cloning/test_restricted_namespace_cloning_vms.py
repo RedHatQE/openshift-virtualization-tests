@@ -84,7 +84,7 @@ def create_vm_negative(
     indirect=True,
 )
 def test_create_vm_with_cloned_data_volume_positive(
-    unprivileged_client,
+    local_unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
     data_volume_clone_settings,
     perm_src_service_account,
@@ -94,7 +94,7 @@ def test_create_vm_with_cloned_data_volume_positive(
 ):
     verify_snapshot_used_namespace_transfer(
         cdv=data_volume_clone_settings,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )
 
 
@@ -116,7 +116,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     namespace,
     destination_namespace,
     restricted_namespace_service_account,
-    unprivileged_client,
+    local_unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
     data_volume_clone_settings,
     permissions_datavolume_source,
@@ -125,7 +125,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     create_vm_negative(
         namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
     )
 
@@ -147,7 +147,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     namespace,
     destination_namespace,
     restricted_namespace_service_account,
-    unprivileged_client,
+    local_unprivileged_client,
     data_volume_clone_settings,
     perm_src_service_account,
     perm_destination_service_account,
@@ -155,7 +155,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     create_vm_negative(
         namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         data_volume_clone_settings=data_volume_clone_settings,
     )
 
@@ -173,7 +173,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     indirect=True,
 )
 def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
-    unprivileged_client,
+    local_unprivileged_client,
     data_volume_clone_settings,
     permission_src_service_account_for_creating_pods,
     permission_destination_service_account_for_creating_pods,
@@ -182,5 +182,5 @@ def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
 ):
     verify_snapshot_used_namespace_transfer(
         cdv=data_volume_clone_settings,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )

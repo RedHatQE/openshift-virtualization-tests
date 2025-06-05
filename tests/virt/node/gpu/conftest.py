@@ -24,14 +24,14 @@ def supported_gpu_device(workers_utility_pods, nodes_with_supported_gpus):
 
 
 @pytest.fixture(scope="class")
-def golden_image_dv_scope_module_data_source_scope_class(admin_client, golden_image_data_volume_scope_module):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_module)
+def golden_image_dv_scope_module_data_source_scope_class(local_admin_client, golden_image_data_volume_scope_module):
+    yield from create_or_update_data_source(admin_client=local_admin_client, dv=golden_image_data_volume_scope_module)
 
 
 @pytest.fixture(scope="class")
 def gpu_vma(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_dv_scope_module_data_source_scope_class,
     supported_gpu_device,
@@ -43,7 +43,7 @@ def gpu_vma(
     params = request.param
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
         node_selector=get_node_selector_dict(node_selector=nodes_with_supported_gpus[0].name),

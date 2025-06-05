@@ -45,7 +45,7 @@ def base_vm_cluster_instancetypes():
 
 @pytest.fixture(scope="module")
 def golden_image_vm_with_instance_type(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_images_namespace,
     modern_cpu_for_migration,
@@ -54,7 +54,7 @@ def golden_image_vm_with_instance_type(
 ):
     os_name = [*instance_type_rhel_os_matrix__module__][0]
     return VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=f"{os_name}-vm-with-instance-type",
         namespace=namespace.name,
         vm_instance_type_infer=True,

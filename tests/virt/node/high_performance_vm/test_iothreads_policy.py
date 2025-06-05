@@ -23,13 +23,13 @@ pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager]
 @pytest.fixture()
 def iothreads_policy_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as iothreads_policy_vm:

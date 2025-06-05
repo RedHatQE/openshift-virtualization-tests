@@ -19,7 +19,7 @@ def test_data_import_schedule_default_in_hco_cr(
 
 @pytest.mark.polarion("CNV-8168")
 def test_default_hco_cr_image_streams(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     image_stream_names,
     image_streams_from_common_templates_in_ssp_cr,

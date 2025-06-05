@@ -43,7 +43,7 @@ def nodes_labels_dict(nodes):
 def updated_kubevirt_cpus(
     hyperconverged_resource_scope_function,
     cluster_common_node_cpu,
-    admin_client,
+    local_admin_client,
     hco_namespace,
 ):
     with update_hco_annotations(
@@ -52,14 +52,14 @@ def updated_kubevirt_cpus(
         value={cluster_common_node_cpu: True},
     ):
         wait_for_updated_kv_value(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             path=[OBSOLETE_CPU, cluster_common_node_cpu],
             value=True,
         )
-        wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
         yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 def node_label_checker(node_label_dict, label_list, dict_key):

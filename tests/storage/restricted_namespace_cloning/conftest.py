@@ -37,8 +37,8 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture(scope="module")
-def destination_namespace(admin_client):
-    yield from create_ns(name="restricted-namespace-test-destination-namespace", admin_client=admin_client)
+def destination_namespace(local_admin_client):
+    yield from create_ns(name="restricted-namespace-test-destination-namespace", admin_client=local_admin_client)
 
 
 @pytest.fixture(scope="module")
@@ -122,8 +122,8 @@ def perm_destination_service_account(request, destination_namespace, restricted_
 
 
 @pytest.fixture(scope="module")
-def fail_when_no_unprivileged_client_available(unprivileged_client):
-    if not unprivileged_client:
+def fail_when_no_unprivileged_client_available(local_unprivileged_client):
+    if not local_unprivileged_client:
         pytest.fail("No unprivileged_client available, failing the test")
 
 
@@ -227,7 +227,7 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
     request,
     storage_class_name_scope_module,
     data_volume_multi_storage_scope_module,
-    unprivileged_client,
+    local_unprivileged_client,
     permissions_datavolume_source,
 ):
     namespace = data_volume_multi_storage_scope_module.namespace
@@ -238,7 +238,7 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
         yield cdv
@@ -250,7 +250,7 @@ def dv_destination_cloned_from_pvc(
     storage_class_name_scope_module,
     data_volume_multi_storage_scope_module,
     destination_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     permissions_datavolume_source,
     permissions_datavolume_destination,
 ):
@@ -261,7 +261,7 @@ def dv_destination_cloned_from_pvc(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=data_volume_multi_storage_scope_module.namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
         cdv.wait_for_dv_success()
@@ -272,7 +272,7 @@ def dv_destination_cloned_from_pvc(
 def vm_for_restricted_namespace_cloning_test(
     destination_namespace,
     restricted_namespace_service_account,
-    unprivileged_client,
+    local_unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
     data_volume_clone_settings,
 ):
@@ -281,7 +281,7 @@ def vm_for_restricted_namespace_cloning_test(
         namespace=destination_namespace.name,
         os_flavor=OS_FLAVOR_CIRROS,
         service_accounts=[restricted_namespace_service_account.name],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
     ) as vm:
@@ -291,10 +291,10 @@ def vm_for_restricted_namespace_cloning_test(
 
 @pytest.fixture()
 def user_has_get_permissions_in_source_namespace(
-    namespace, unprivileged_client, data_volume_multi_storage_scope_module
+    namespace, local_unprivileged_client, data_volume_multi_storage_scope_module
 ):
     _ = DataVolume(
-        namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
+        namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=local_unprivileged_client
     ).instance
 
 

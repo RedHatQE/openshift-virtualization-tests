@@ -43,13 +43,13 @@ def validate_template_dict(template_dict, resource_string):
 
 @pytest.fixture(scope="class")
 def updated_hco_cr_custom_template_scope_class(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
 ):
     yield from update_hco_templates_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_class,
         updated_template=CUSTOM_CRON_TEMPLATE,
@@ -91,14 +91,14 @@ class TestCustomTemplates:
     @pytest.mark.polarion("CNV-7914")
     def test_add_custom_data_import_cron_template_disable_spec(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         disabled_common_boot_image_import_hco_spec_scope_function,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
     ):
-        wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_auto_boot_config_stabilization(admin_client=local_admin_client, hco_namespace=hco_namespace)
         error_message_base = "With enableCommonBootImageImport spec disabled,"
         validate_custom_template_added(
             hyperconverged_status_templates_scope_function=hyperconverged_status_templates_scope_function,

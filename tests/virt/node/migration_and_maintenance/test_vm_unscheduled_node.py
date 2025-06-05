@@ -17,13 +17,13 @@ def unscheduled_node_vm(
     request,
     cluster_cpu_model_scope_function,
     worker_node1,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_scope_function,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_function,
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),

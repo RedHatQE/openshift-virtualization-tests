@@ -145,7 +145,7 @@ def updated_common_template_custom_ns(
 
 @pytest.fixture()
 def updated_common_templates_non_existent_ns(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
@@ -154,7 +154,7 @@ def updated_common_templates_non_existent_ns(
     ):
         yield
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         wait_timeout=TIMEOUT_3MIN,
         list_dependent_crs_to_check=[SSP, CDI],
@@ -192,7 +192,7 @@ class TestDefaultCommonTemplates:
     )
     def test_resources_in_custom_ns(
         self,
-        admin_client,
+        local_admin_client,
         custom_golden_images_namespace,
         golden_images_namespace,
         default_common_templates_related_resources,
@@ -202,7 +202,7 @@ class TestDefaultCommonTemplates:
         verify_resource_in_ns(
             expected_resource_names=default_common_templates_related_resources[resource_type.kind],
             namespace=custom_golden_images_namespace.name,
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=resource_type,
             ready_condition=ready_condition,
         )
@@ -210,21 +210,21 @@ class TestDefaultCommonTemplates:
             verify_resource_not_in_ns(
                 resource_type=resource_type,
                 namespace=golden_images_namespace.name,
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
             )
 
     @pytest.mark.polarion("CNV-11477")
-    def test_boot_sources_not_reconciled_in_default_namespace(self, admin_client, golden_images_namespace):
+    def test_boot_sources_not_reconciled_in_default_namespace(self, local_admin_client, golden_images_namespace):
         verify_resources_not_reconciled(
             resources_to_verify=[DataVolume, VolumeSnapshot],
             namespace=golden_images_namespace.name,
-            client=admin_client,
+            client=local_admin_client,
         )
 
 
 @pytest.mark.polarion("CNV-11631")
 def test_non_existent_namespace(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     updated_common_templates_non_existent_ns,
 ):
@@ -232,7 +232,7 @@ def test_non_existent_namespace(
     Verify that HCO is degraded if we set non-existent namespace
     """
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         expected_conditions={
             Resource.Condition.AVAILABLE: Resource.Condition.Status.FALSE,

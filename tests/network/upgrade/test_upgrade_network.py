@@ -126,7 +126,7 @@ class TestUpgradeNetwork:
     @pytest.mark.dependency(name=f"{DEPENDENCIES_NODE_ID_PREFIX}::test_install_ovs_with_annotations_before_upgrade")
     def test_install_ovs_with_annotations_before_upgrade(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hyperconverged_resource_scope_session,
         network_addons_config_scope_session,
@@ -282,14 +282,14 @@ class TestUpgradeNetwork:
     )
     def test_ovs_installed_with_annotations_after_upgrade(
         self,
-        admin_client,
+        local_admin_client,
         ovs_daemonset,
         hyperconverged_ovs_annotations_fetched,
         network_addons_config_scope_session,
     ):
         # Verify ovs opt-in still applies after upgrade
         verify_ovs_installed_with_annotations(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             ovs_daemonset=ovs_daemonset,
             hyperconverged_ovs_annotations_fetched=hyperconverged_ovs_annotations_fetched,
             network_addons_config=network_addons_config_scope_session,

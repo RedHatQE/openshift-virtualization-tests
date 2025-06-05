@@ -15,9 +15,9 @@ pytestmark = pytest.mark.post_upgrade
 @pytest.fixture()
 def virtctl_libguestfs_by_user(
     dv_created_by_specific_user,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
-    fs_group_flag = "" if dv_created_by_specific_user.client == unprivileged_client else "--fsGroup 2000"
+    fs_group_flag = "" if dv_created_by_specific_user.client == local_unprivileged_client else "--fsGroup 2000"
     guestfs_proc = pexpect.spawn(
         f"virtctl guestfs {dv_created_by_specific_user.name} -n {dv_created_by_specific_user.namespace} \
         {fs_group_flag}"
@@ -50,19 +50,19 @@ def dv_created_by_specific_user(
 
 
 @pytest.fixture()
-def client_for_test(request, admin_client, unprivileged_client):
+def client_for_test(request, local_admin_client, local_unprivileged_client):
     current_user = check_output("oc whoami", shell=True).decode().strip()
     if request.param.get("admin_client"):
-        yield admin_client
+        yield local_admin_client
     else:
         login_with_user_password(
-            api_address=admin_client.configuration.host,
+            api_address=local_admin_client.configuration.host,
             user=UNPRIVILEGED_USER,
             password=UNPRIVILEGED_PASSWORD,
         )
-        yield unprivileged_client
+        yield local_unprivileged_client
         login_with_user_password(
-            api_address=admin_client.configuration.host,
+            api_address=local_admin_client.configuration.host,
             user=current_user.strip(),
         )
 

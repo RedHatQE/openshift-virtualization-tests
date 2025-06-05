@@ -33,14 +33,14 @@ def ssh_secret(namespace):
 def vm_with_ssh_secret(
     namespace,
     ssh_secret,
-    unprivileged_client,
+    local_unprivileged_client,
     data_volume_scope_class,
 ):
     """VM with Static Access Credentials Injection"""
     with VirtualMachineForTests(
         name=NAME,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_volume=data_volume_scope_class,
         memory_requests="1Gi",
         os_flavor=OS_FLAVOR_RHEL,

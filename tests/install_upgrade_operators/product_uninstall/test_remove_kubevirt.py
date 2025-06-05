@@ -21,13 +21,13 @@ def set_uninstall_strategy_remove_workloads(hyperconverged_resource_scope_functi
 
 
 @pytest.fixture()
-def remove_kubevirt_vm(unprivileged_client, namespace):
+def remove_kubevirt_vm(local_unprivileged_client, namespace):
     name = "remove-kubevirt-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start()
         vm.vmi.wait_until_running()
@@ -61,7 +61,7 @@ def test_remove_workloads(
     set_uninstall_strategy_remove_workloads,
     kubevirt_resource,
     remove_kubevirt_vm,
-    admin_client,
+    local_admin_client,
 ):
     """WARNING: DESTRUCTIVE; DELETES ALL RUNNING CNV WORKLOADS"""
 
@@ -77,7 +77,8 @@ def test_remove_workloads(
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_3MIN,
         sleep=5,
-        func=lambda: list(VirtualMachine.get(dyn_client=admin_client)) or kubevirt_resource.instance.uid == old_uid,
+        func=lambda: list(VirtualMachine.get(dyn_client=local_admin_client))
+        or kubevirt_resource.instance.uid == old_uid,
     ):
         if not sample:
             break

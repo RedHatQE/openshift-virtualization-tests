@@ -23,14 +23,14 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
 )
-def test_hco_status_conditions(admin_client, hco_namespace, expected_condition_fields):
+def test_hco_status_conditions(local_admin_client, hco_namespace, expected_condition_fields):
     """Validates hco status conditions contains expected field"""
     LOGGER.info("Check for hco to be in stable condition:")
     wait_for_hco_conditions(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
     )
-    hyperconverged_resource = get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+    hyperconverged_resource = get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
     LOGGER.info(f"Validate presence and absense of right fields in status.conditions: {expected_condition_fields}")
     assert_status_condition(
         conditions=hyperconverged_resource.instance.status.conditions,

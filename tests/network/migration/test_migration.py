@@ -106,7 +106,7 @@ def br1test_nad(namespace, bridge_worker_1, bridge_worker_2):
 @pytest.fixture(scope="module")
 def vma(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     dual_stack_network_data,
     br1test_nad,
@@ -124,7 +124,7 @@ def vma(
         body=fedora_vm_body(name=name),
         networks=networks,
         interfaces=sorted(networks.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init_data,
         cpu_model=cpu_for_migration,
     ) as vm:
@@ -135,7 +135,7 @@ def vma(
 @pytest.fixture(scope="module")
 def vmb(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
     dual_stack_network_data,
     br1test_nad,
@@ -154,7 +154,7 @@ def vmb(
         body=fedora_vm_body(name=name),
         networks=networks,
         interfaces=sorted(networks.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init_data,
         cpu_model=cpu_for_migration,
     ) as vm:
@@ -164,14 +164,14 @@ def vmb(
 
 @pytest.fixture()
 def brcnv_vm_for_migration(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     brcnv_ovs_nad_vlan_1,
 ):
     yield from vm_for_brcnv_tests(
         vm_name="migration-vm",
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         nads=[brcnv_ovs_nad_vlan_1],
         address_suffix=4,
     )
@@ -388,7 +388,7 @@ def test_connectivity_after_migration_and_restart(
 @pytest.mark.polarion("CNV-2061")
 def test_migration_with_masquerade(
     ip_stack_version_matrix__module__,
-    admin_client,
+    local_admin_client,
     fail_if_not_ipv4_supported_cluster_from_mtx,
     fail_if_not_ipv6_supported_cluster_from_mtx,
     vma,

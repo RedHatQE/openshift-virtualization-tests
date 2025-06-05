@@ -57,14 +57,14 @@ class DataVolumeTemplatesVirtualMachine(VirtualMachineForTestsFromTemplate):
 @pytest.fixture()
 def vm_from_golden_image_multi_storage(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_function,
 ):
     with DataVolumeTemplatesVirtualMachine(
         name="vm-from-golden-image",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=Template.generate_template_labels(**FEDORA_LATEST_LABELS),
         data_source=golden_image_data_source_multi_storage_scope_function,
         use_full_storage_api=request.param.get("use_full_storage_api"),
@@ -76,7 +76,7 @@ def vm_from_golden_image_multi_storage(
 @pytest.fixture()
 def vm_from_golden_image(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     ocs_storage_class,
     golden_image_data_source_scope_function,
@@ -86,7 +86,7 @@ def vm_from_golden_image(
     with VirtualMachineForTests(
         name="vm-from-golden-image",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_scope_function, storage_class=storage_class

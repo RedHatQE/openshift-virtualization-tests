@@ -19,10 +19,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def vm_to_restart(unprivileged_client, namespace):
+def vm_to_restart(local_unprivileged_client, namespace):
     name = "vm-to-restart"
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),

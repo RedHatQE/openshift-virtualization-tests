@@ -55,11 +55,11 @@ def chaos_namespace():
 
 
 @pytest.fixture()
-def chaos_vms_list_rhel9(request, admin_client, chaos_namespace):
+def chaos_vms_list_rhel9(request, local_admin_client, chaos_namespace):
     vms_list = []
     for idx in range(request.param["number_of_vms"]):
         vm = VirtualMachineForTests(
-            client=admin_client,
+            client=local_admin_client,
             name=f"vm-chaos-{idx}",
             namespace=chaos_namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
@@ -72,9 +72,9 @@ def chaos_vms_list_rhel9(request, admin_client, chaos_namespace):
 
 
 @pytest.fixture()
-def chaos_vm_rhel9(admin_client, chaos_namespace):
+def chaos_vm_rhel9(local_admin_client, chaos_namespace):
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name="vm-chaos",
         namespace=chaos_namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
@@ -87,7 +87,7 @@ def chaos_vm_rhel9(admin_client, chaos_namespace):
 @pytest.fixture()
 def chaos_dv_rhel9(
     request,
-    admin_client,
+    local_admin_client,
     chaos_namespace,
     rhel9_http_image_url,
     artifactory_secret_chaos_namespace_scope_module,
@@ -101,17 +101,17 @@ def chaos_dv_rhel9(
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=request.param["storage_class"],
-        client=admin_client,
+        client=local_admin_client,
         secret=artifactory_secret_chaos_namespace_scope_module,
         cert_configmap=artifactory_config_map_chaos_namespace_scope_module.name,
     )
 
 
 @pytest.fixture()
-def chaos_vm_rhel9_with_dv(admin_client, chaos_namespace, chaos_dv_rhel9):
+def chaos_vm_rhel9_with_dv(local_admin_client, chaos_namespace, chaos_dv_rhel9):
     chaos_dv_rhel9.to_dict()
     yield VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name="vm-chaos",
         namespace=chaos_namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
@@ -146,11 +146,11 @@ def downscaled_storage_provisioner_deployment(request):
 
 
 @pytest.fixture()
-def kmp_manager_nodes(admin_client):
+def kmp_manager_nodes(local_admin_client):
     yield [
         pod.node
         for pod in get_pod_by_name_prefix(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             pod_prefix=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
             namespace=py_config["hco_namespace"],
             get_all=True,
@@ -159,7 +159,7 @@ def kmp_manager_nodes(admin_client):
 
 
 @pytest.fixture()
-def rebooted_control_plane_node(request, admin_client, control_plane_nodes, kmp_manager_nodes):
+def rebooted_control_plane_node(request, local_admin_client, control_plane_nodes, kmp_manager_nodes):
     control_plane_node_to_reboot = request.param["control_plane_node_to_reboot"]
 
     if control_plane_node_to_reboot == "node_with_kmp_manager":
@@ -185,11 +185,11 @@ def rebooting_control_plane_node(
 
 
 @pytest.fixture()
-def pod_deleting_process(request, admin_client):
+def pod_deleting_process(request, local_admin_client):
     pod_prefix = request.param["pod_prefix"]
     namespace_name = request.param["namespace_name"]
     process = create_pod_deleting_process(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=pod_prefix,
         namespace_name=namespace_name,
         ratio=request.param["ratio"],
@@ -205,11 +205,11 @@ def pod_deleting_process(request, admin_client):
 
 
 @pytest.fixture()
-def cluster_monitoring_process(admin_client, hco_namespace, chaos_namespace):
+def cluster_monitoring_process(local_admin_client, hco_namespace, chaos_namespace):
     LOGGER.info(f"Monitoring pods in namespaces: {hco_namespace.name}, {chaos_namespace.name}")
 
     cluster_monitoring_process = create_cluster_monitoring_process(
-        client=admin_client,
+        client=local_admin_client,
         hco_namespace=hco_namespace,
         additional_namespaces=[chaos_namespace],
     )
@@ -276,20 +276,20 @@ def nginx_monitoring_process(
 
 
 @pytest.fixture()
-def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, workers):
+def vm_with_nginx_service(chaos_namespace, local_admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
         chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
     )
 
 
 @pytest.fixture()
-def vm_with_nginx_service_and_node_selector(chaos_namespace, admin_client, workers_utility_pods, workers):
+def vm_with_nginx_service_and_node_selector(chaos_namespace, local_admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
         chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
         node_selector_label=HOST_LABEL,
@@ -332,13 +332,13 @@ def utility_daemonset_for_chaos_tests(
 
 @pytest.fixture
 def utility_pods_for_chaos_tests(
-    admin_client,
+    local_admin_client,
     workers,
     utility_daemonset_for_chaos_tests,
 ):
     return get_utility_pods_from_nodes(
         nodes=get_nodes_with_label(nodes=workers, label=CHAOS_LABEL_KEY),
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         label_selector=f"cnv-test={utility_daemonset_for_chaos_tests.instance.metadata.labels['cnv-test']}",
     )
 
@@ -365,13 +365,13 @@ def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
 
 
 @pytest.fixture(scope="class")
-def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
+def chaos_vms_instancetype_list(request, local_admin_client, chaos_namespace):
     required_instancetype = get_instance_type(name=U1_SMALL)
 
     vms_list = []
     for idx in range(request.param["number_of_vms"]):
         vm = VirtualMachineForTests(
-            client=admin_client,
+            client=local_admin_client,
             name=f"vm-chaos-{idx}",
             namespace=chaos_namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
@@ -385,12 +385,12 @@ def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
 
 
 @pytest.fixture(scope="class")
-def deleted_pod_by_name_prefix(admin_client, cnv_pod_deletion_test_matrix__class__):
+def deleted_pod_by_name_prefix(local_admin_client, cnv_pod_deletion_test_matrix__class__):
     pod_matrix_key = [*cnv_pod_deletion_test_matrix__class__][0]
     pod_deletion_config = cnv_pod_deletion_test_matrix__class__[pod_matrix_key]
 
     deleted_pod_by_name_prefix = create_pod_deleting_process(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=pod_deletion_config["pod_prefix"],
         namespace_name=pod_deletion_config["namespace_name"],
         ratio=pod_deletion_config["ratio"],

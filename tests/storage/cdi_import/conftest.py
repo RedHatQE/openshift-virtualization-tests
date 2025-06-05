@@ -135,13 +135,13 @@ def running_pod_with_dv_pvc(
 def cirros_dv_unprivileged(
     namespace,
     storage_class_name_scope_module,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     yield from create_cirros_dv(
         namespace=namespace.name,
         name=f"cirros-dv-{storage_class_name_scope_module}",
         storage_class=storage_class_name_scope_module,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         dv_size=DEFAULT_DV_SIZE,
     )
 

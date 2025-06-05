@@ -197,14 +197,14 @@ class TestRestoreSnapshots:
         self,
         cirros_vm_for_snapshot,
         snapshots_with_content,
-        unprivileged_client,
+        local_unprivileged_client,
     ):
         with pytest.raises(
             ApiException,
             match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
         ):
             with VirtualMachineRestore(
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 name="restore-snapshot-cnv-5049-unprivileged",
                 namespace=cirros_vm_for_snapshot.namespace,
                 vm_name=cirros_vm_for_snapshot.name,
@@ -323,12 +323,12 @@ def test_remove_snapshots_while_vm_is_running(
     ],
     indirect=["namespace"],
 )
-def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_client, resource, error_msg):
+def test_unprivileged_client_fails_to_list_resources(namespace, local_unprivileged_client, resource, error_msg):
     with pytest.raises(
         ApiException,
         match=error_msg,
     ):
-        list(resource.get(dyn_client=unprivileged_client, namespace=namespace.name))
+        list(resource.get(dyn_client=local_unprivileged_client, namespace=namespace.name))
         return
 
 
@@ -345,13 +345,13 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
 )
 def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     cirros_vm_for_snapshot,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     fail_to_create_snapshot_no_permissions(
         snapshot_name="snapshot-cnv-4867-unprivileged",
         namespace=cirros_vm_for_snapshot.namespace,
         vm_name=cirros_vm_for_snapshot.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     )
 
 
@@ -369,13 +369,13 @@ def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
 def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     cirros_vm_for_snapshot,
     permissions_for_dv,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     fail_to_create_snapshot_no_permissions(
         snapshot_name="snapshot-cnv-4868-unprivileged",
         namespace=cirros_vm_for_snapshot.namespace,
         vm_name=cirros_vm_for_snapshot.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     )
 
 

@@ -322,12 +322,12 @@ def sap_hana_data_volume_templates(sap_hana_template):
 
 
 @pytest.fixture(scope="class")
-def sriov_network_node_policy(admin_client, sriov_namespace):
+def sriov_network_node_policy(local_admin_client, sriov_namespace):
     """SriovNetworkNodePolicy (named "sriov-network-policy") is deployed as part of SAP HANA jenkins job"""
     sriov_available_node_policies = [
         policy
         for policy in SriovNetworkNodePolicy.get(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace=sriov_namespace.name,
         )
         if "sriov-network-policy" in policy.name
@@ -360,7 +360,7 @@ def sriov_nads(namespace, sriov_network_node_policy, sriov_namespace):
 @pytest.fixture(scope="class")
 def sap_hana_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     sriov_nads,
     sap_hana_template_labels,
@@ -372,7 +372,7 @@ def sap_hana_vm(
     vm_kwargs = {
         "name": SAP_HANA_VM_NAME,
         "namespace": namespace.name,
-        "client": unprivileged_client,
+        "client": local_unprivileged_client,
         "labels": sap_hana_template_labels,
         "data_volume_template": sap_hana_data_volume_templates,
         "template_params": template_params,

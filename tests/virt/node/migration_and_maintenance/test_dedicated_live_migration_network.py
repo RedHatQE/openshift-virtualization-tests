@@ -35,9 +35,9 @@ TESTS_CLASS_NAME = "TestDedicatedLiveMigrationNetwork"
 
 
 @pytest.fixture(scope="module")
-def virt_handler_daemonset_scope_module(hco_namespace, admin_client):
+def virt_handler_daemonset_scope_module(hco_namespace, local_admin_client):
     return get_daemonset_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         daemonset_name=VIRT_HANDLER,
         namespace_name=hco_namespace.name,
     )
@@ -60,7 +60,7 @@ def dedicated_network_nad(migration_interface, hco_namespace):
 
 @pytest.fixture(scope="module")
 def dedicated_migration_network_hco_config(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     virt_handler_daemonset_scope_module,
     hyperconverged_resource_scope_module,
@@ -68,31 +68,31 @@ def dedicated_migration_network_hco_config(
 ):
     path = "migrations/network"
     with update_hco_migration_config(
-        client=admin_client,
+        client=local_admin_client,
         hco_ns_name=hco_namespace.name,
         param="network",
         value=dedicated_network_nad.name,
     ):
         wait_for_updated_kv_value(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             path=path.split("/"),
             value=dedicated_network_nad.name,
         )
         wait_for_virt_handler_pods_network_updated(
-            client=admin_client,
+            client=local_admin_client,
             namespace=hco_namespace,
             network_name=dedicated_network_nad.name,
             virt_handler_daemonset=virt_handler_daemonset_scope_module,
         )
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
         yield
 
     wait_for_virt_handler_pods_network_updated(
-        client=admin_client,
+        client=local_admin_client,
         namespace=hco_namespace,
         network_name=dedicated_network_nad.name,
         virt_handler_daemonset=virt_handler_daemonset_scope_module,
@@ -103,14 +103,14 @@ def dedicated_migration_network_hco_config(
 @pytest.fixture(scope="class")
 def migration_vm_1(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
 ):
     with VirtualMachineForTestsFromTemplate(
         name="migration-vm-1",
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
     ) as vm:
         running_vm(vm=vm)
@@ -136,7 +136,7 @@ def tainted_all_nodes_but_one(schedulable_nodes, migration_vm_1):
 @pytest.fixture()
 def migration_vm_2(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
     tainted_all_nodes_but_one,
 ):
@@ -144,7 +144,7 @@ def migration_vm_2(
         name="migration-vm-2",
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
     ) as vm:
         running_vm(vm=vm)
@@ -154,8 +154,8 @@ def migration_vm_2(
 
 
 @pytest.fixture(scope="module")
-def virt_handler_pods_with_migration_network(admin_client, hco_namespace, dedicated_migration_network_hco_config):
-    return get_virt_handler_pods(client=admin_client, namespace=hco_namespace)
+def virt_handler_pods_with_migration_network(local_admin_client, hco_namespace, dedicated_migration_network_hco_config):
+    return get_virt_handler_pods(client=local_admin_client, namespace=hco_namespace)
 
 
 @pytest.fixture()
@@ -243,7 +243,7 @@ class TestDedicatedLiveMigrationNetwork:
     @pytest.mark.polarion("CNV-7880")
     def test_drain_node_with_secondary_network(
         self,
-        admin_client,
+        local_admin_client,
         virt_handler_pods_with_migration_network,
         restarted_migration_vm_1,
     ):
@@ -251,7 +251,7 @@ class TestDedicatedLiveMigrationNetwork:
         # TCPDUMP check not used due to possibility that utility-pod
         # might be killed before vm migration
         assert_node_drain_and_vm_migration(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             vm=restarted_migration_vm_1,
             virt_handler_pods=virt_handler_pods_with_migration_network,
         )
