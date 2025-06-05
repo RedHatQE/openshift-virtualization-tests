@@ -45,7 +45,7 @@ def unprivileged_client_vm(unprivileged_client, namespace):
 def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileged_client_vm):
     """Test that namespace admin can't migrate a VM."""
     with pytest.raises(ForbiddenError):
-        migrate_vm_and_verify(vm=unprivileged_client_vm, client=unprivileged_client)
+        migrate_vm_and_verify(vm=unprivileged_client_vm, client=unprivileged_client, wait_for_migration_success=False)
         pytest.fail("Namespace admin shouldn't be able to migrate VM without kubevirt.io:migrate RoleBinding!")
 
 
