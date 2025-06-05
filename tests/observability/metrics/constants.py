@@ -43,10 +43,6 @@ KUBEVIRT_VMI_PHASE_COUNT = (
     f"{KUBEVIRT_VMI_PHASE_COUNT_STR}"
     "{{node='{node_name}', instance_type= '{instance_type}', preference='{preference}'}}"
 )
-KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_out_traffic_bytes"
-KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE = "kubevirt_vmi_memory_domain_bytes"
-KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL = "kubevirt_vmi_vcpu_wait_seconds_total"
-KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_in_traffic_bytes"
 CNV_VMI_STATUS_RUNNING_COUNT = "cnv:vmi_status_running:count"
 METRIC_SUM_QUERY = "sum({metric_name}{{instance_type='{instance_type_name}', preference='{preference}'}})"
 KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI = "kubevirt_console_active_connections{{vmi='{vm_name}'}}"
