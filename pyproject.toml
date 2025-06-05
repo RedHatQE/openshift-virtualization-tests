@@ -78,6 +78,7 @@ dependencies = [
   "openshift-python-wrapper~=11.0.10",
   "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
+  "pytest-html>=4.1.1",
 ]
 
 [tool.hatch.build.targets.wheel]
