@@ -84,7 +84,7 @@ virt-install \
   --graphics none \
   --network default \
   --noautoconsole \
-  --wait 30 \
+  --wait 60 \
   --import
 
 # Prepare VM image
