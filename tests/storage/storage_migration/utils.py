@@ -10,8 +10,8 @@ from pyhelper_utils.shell import run_ssh_commands
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    MOUNT_HOTPLUGGED_DEVICE_PATH,
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
+    MOUNT_HOTPLUGGED_DEVICE_PATH,
 )
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC

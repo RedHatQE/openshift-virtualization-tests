@@ -12,13 +12,14 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
 
+from tests.storage.storage_migration.utils import get_storage_class_for_storage_migration
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
     HOTPLUGGED_DEVICE,
     MOUNT_HOTPLUGGED_DEVICE_PATH,
 )
-from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
+from tests.storage.storage_migration.utils import get_source_virt_launcher_pod
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
