@@ -620,6 +620,7 @@ class StorageClassNames:
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
     OCI_UHP = "oci-bv-uhp"
+    GCP = "sp-balanced-storage"
 
 
 # Namespace constants
