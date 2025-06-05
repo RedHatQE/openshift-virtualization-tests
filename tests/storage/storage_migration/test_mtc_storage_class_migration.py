@@ -2,13 +2,19 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
+from tests.storage.storage_migration.constants import (
+    CONTENT,
+    FILE_BEFORE_STORAGE_MIGRATION,
+)
 from tests.storage.storage_migration.utils import (
+    check_file_in_hotplugged_disk,
     verify_storage_migration_succeeded,
 )
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
+TESTS_CLASS_NAME_VOLUME_HOTPLUG = "TestStorageClassMigrationWithVolumeHotplug"
 STORAGE_CLASS_A = "storage_class_for_storage_migration_a"
 STORAGE_CLASS_B = "storage_class_for_storage_migration_b"
 
@@ -127,3 +133,72 @@ class TestStorageClassMigrationBtoA:
             vms_with_written_file_before_migration=written_file_to_vms_before_migration,
             target_storage_class=target_storage_class,
         )
+
+
+@pytest.mark.parametrize(
+    "vms_for_storage_class_migration",
+    [
+        pytest.param(
+            {
+                "vms_fixtures": [
+                    "vm_for_storage_class_migration_with_hotplugged_volume",
+                ]
+            },
+            id="mig_volume_hotplug_source_a_target_b",
+        )
+    ],
+    indirect=True,
+)
+class TestStorageClassMigrationWithVolumeHotplug:
+    @pytest.mark.dependency(
+        name=f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"
+    )
+    @pytest.mark.parametrize(
+        "source_storage_class, target_storage_class, online_vms_for_storage_class_migration",
+        [
+            pytest.param(
+                {"source_storage_class": py_config[STORAGE_CLASS_A]},
+                {"target_storage_class": py_config[STORAGE_CLASS_B]},
+                {"online_vm": [True]},  # Desired VM Running status for VMs in "vms_fixtures" list
+                marks=pytest.mark.polarion("CNV-11496"),
+                id="storage_migration_a_to_b_volume_hotplug_vms",
+            )
+        ],
+        indirect=True,
+    )
+    def test_vm_storage_class_migration_with_hotplugged_volume(
+        self,
+        source_storage_class,
+        target_storage_class,
+        written_file_to_the_mounted_hotplugged_disk,
+        written_file_to_vms_before_migration,
+        online_vms_for_storage_class_migration,
+        vms_boot_time_before_storage_migration,
+        storage_mig_plan,
+        storage_mig_migration,
+        deleted_old_dvs_of_online_vms,
+    ):
+        verify_storage_migration_succeeded(
+            vms_boot_time_before_storage_migration=vms_boot_time_before_storage_migration,
+            online_vms_for_storage_class_migration=online_vms_for_storage_class_migration,
+            vms_with_written_file_before_migration=written_file_to_vms_before_migration,
+            target_storage_class=target_storage_class,
+        )
+        check_file_in_hotplugged_disk(
+            vm=written_file_to_the_mounted_hotplugged_disk,
+            file_name=FILE_BEFORE_STORAGE_MIGRATION,
+            file_content=CONTENT,
+        )
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
+    )
+    @pytest.mark.polarion("CNV-11966")
+    def test_migrate_vm_with_hotplugged_volume_after_storage_migration(self, booted_vms_for_storage_class_migration):
+        vms_failed_migration = {}
+        for vm in booted_vms_for_storage_class_migration:
+            try:
+                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+            except Exception as migration_exception:
+                vms_failed_migration[vm.name] = migration_exception
+        assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
