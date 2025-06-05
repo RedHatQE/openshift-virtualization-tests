@@ -28,7 +28,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
@@ -1112,8 +1111,8 @@ def windows_vm_for_test(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm
-        
-        
+
+
 @pytest.fixture(scope="session")
 def memory_metric_has_bug():
     return is_jira_open(jira_id="CNV-59679")
@@ -1127,7 +1126,7 @@ def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_met
             "any value for windows vm"
         )
 
-        
+
 @pytest.fixture()
 def initial_migration_metrics_values(prometheus):
     yield {
