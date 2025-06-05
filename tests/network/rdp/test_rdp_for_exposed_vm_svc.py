@@ -8,7 +8,12 @@ import pytest
 from ocp_resources.service import Service
 from pytest_testconfig import config as py_config
 
-from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_5MIN, TIMEOUT_35MIN
+from utilities.constants import (
+    OS_FLAVOR_WINDOWS,
+    QUARANTINED,
+    TIMEOUT_5MIN,
+    TIMEOUT_35MIN,
+)
 from utilities.virt import get_windows_os_dict, vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)
@@ -76,7 +81,8 @@ def rdp_pod(workers_utility_pods, rdp_vm):
     indirect=True,
 )
 @pytest.mark.xfail(
-    reason="RDP test case must be fixed and implement a reliable client; tracked in CNV-43997", run=False
+    reason=f"{QUARANTINED}: RDP test case must be fixed and implement a reliable client; tracked in CNV-43997",
+    run=False,
 )
 def test_rdp_for_exposed_win_vm_as_node_port_svc(
     rdp_vm,
