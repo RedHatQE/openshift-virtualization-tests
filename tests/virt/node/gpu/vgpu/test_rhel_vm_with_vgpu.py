@@ -45,7 +45,7 @@ TESTS_CLASS_NAME = "TestVGPURHELGPUSSpec"
 
 @pytest.fixture(scope="class")
 def gpu_vmb(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_dv_scope_module_data_source_scope_class,
     supported_gpu_device,
@@ -57,7 +57,7 @@ def gpu_vmb(
     with VirtualMachineForTestsFromTemplate(
         name="rhel-vgpu-gpus-spec-vm2",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         data_source=golden_image_dv_scope_module_data_source_scope_class,
         node_selector=gpu_vma.node_selector,
@@ -70,7 +70,7 @@ def gpu_vmb(
 @pytest.fixture(scope="class")
 def node_mdevtype_gpu_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_dv_scope_module_data_source_scope_class,
     nodes_with_supported_gpus,
@@ -86,7 +86,7 @@ def node_mdevtype_gpu_vm(
     with vm_instance_from_template(
         request=request,
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
         node_selector=get_node_selector_dict(node_selector=[*nodes_with_supported_gpus][1].name),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],

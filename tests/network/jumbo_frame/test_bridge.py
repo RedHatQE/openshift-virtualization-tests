@@ -89,7 +89,7 @@ def br1test_bridge_nad(
 
 
 @pytest.fixture(scope="class")
-def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_bridge_nad):
+def bridge_attached_vma(worker_node1, namespace, local_unprivileged_client, br1test_bridge_nad):
     name = "vma"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
@@ -104,7 +104,7 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -112,7 +112,7 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
 
 
 @pytest.fixture(scope="class")
-def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_bridge_nad):
+def bridge_attached_vmb(worker_node2, namespace, local_unprivileged_client, br1test_bridge_nad):
     name = "vmb"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
@@ -127,7 +127,7 @@ def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_br
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()

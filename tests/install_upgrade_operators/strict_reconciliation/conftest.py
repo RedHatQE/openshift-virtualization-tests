@@ -25,7 +25,7 @@ DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
 
 
 @pytest.fixture()
-def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function, admin_client, hco_namespace):
+def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function, local_admin_client, hco_namespace):
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_function: request.param["rpatch"]},
         action="replace",
@@ -36,7 +36,7 @@ def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function, ad
 
 
 @pytest.fixture()
-def hco_cr_custom_values(hyperconverged_resource_scope_function, admin_client, hco_namespace):
+def hco_cr_custom_values(hyperconverged_resource_scope_function, local_admin_client, hco_namespace):
     """
     This fixture updates HCO CR with custom values for spec.CertConfig, spec.liveMigrationConfig and
     spec.featureGates and cleans those up at the end.
@@ -55,7 +55,7 @@ def hco_cr_custom_values(hyperconverged_resource_scope_function, admin_client, h
 
 
 @pytest.fixture()
-def updated_cdi_cr(request, cdi_resource_scope_function, admin_client, hco_namespace):
+def updated_cdi_cr(request, cdi_resource_scope_function, local_admin_client, hco_namespace):
     """
     Attempts to update cdi, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
@@ -71,7 +71,7 @@ def updated_cdi_cr(request, cdi_resource_scope_function, admin_client, hco_names
 
 
 @pytest.fixture()
-def updated_cnao_cr(request, cnao_resource, admin_client, hco_namespace):
+def updated_cnao_cr(request, cnao_resource, local_admin_client, hco_namespace):
     """
     Attempts to update cnao, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
@@ -85,7 +85,7 @@ def updated_cnao_cr(request, cnao_resource, admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def updated_kv_with_feature_gates(request, admin_client, hco_namespace, kubevirt_resource):
+def updated_kv_with_feature_gates(request, local_admin_client, hco_namespace, kubevirt_resource):
     kv_dict = kubevirt_resource.instance.to_dict()
     fgs = kv_dict["spec"]["configuration"]["developerConfiguration"]["featureGates"].copy()
     fgs.extend(request.param)
@@ -99,7 +99,7 @@ def updated_kv_with_feature_gates(request, admin_client, hco_namespace, kubevirt
 
 
 @pytest.fixture()
-def updated_cdi_with_feature_gates(request, cdi_resource_scope_function, admin_client, hco_namespace):
+def updated_cdi_with_feature_gates(request, cdi_resource_scope_function, local_admin_client, hco_namespace):
     cdi_dict = cdi_resource_scope_function.instance.to_dict()
     fgs = cdi_dict["spec"]["config"]["featureGates"].copy()
     fgs.extend(request.param)
@@ -114,7 +114,7 @@ def updated_cdi_with_feature_gates(request, cdi_resource_scope_function, admin_c
 @pytest.fixture()
 def hco_with_non_default_feature_gates(
     request,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
@@ -157,7 +157,7 @@ def hco_status_related_objects_scope_function(hyperconverged_resource_scope_func
 @pytest.fixture()
 def reconciled_cr_post_hco_update(
     request,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hco_status_related_objects_scope_function,
 ):
@@ -178,7 +178,7 @@ def reconciled_cr_post_hco_update(
     )
     wait_for_resource_version_update(resource=resource, pre_update_resource_version=start_resource_version)
     wait_for_hco_related_object_version_change(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         resource=resource,
         resource_kind=resource.kind,

@@ -41,12 +41,12 @@ SECONDARY_SETUP_INTERFACE_NAME = "eth1"
 
 
 @pytest.fixture(scope="class")
-def running_vm_for_nic_hot_plug(namespace, unprivileged_client):
+def running_vm_for_nic_hot_plug(namespace, local_unprivileged_client):
     vm_name = f"{HOT_PLUG_STR}-test-vm"
     with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=vm_name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         yield vm
 
@@ -107,7 +107,7 @@ def multiple_hot_plugged_interfaces(running_vm_for_nic_hot_plug, network_attachm
 @pytest.fixture(scope="module")
 def running_utility_vm_for_connectivity_check(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     network_attachment_definition_for_hot_plug,
     index_number,
 ):
@@ -115,7 +115,7 @@ def running_utility_vm_for_connectivity_check(
     # interface) which is used by the VM with hot-plugged interface.
     yield from create_vm_with_secondary_interface_on_setup(
         namespace=namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         bridge_nad=network_attachment_definition_for_hot_plug,
         vm_name=f"utility-{HOT_PLUG_STR}-vm",
         ipv4_address_subnet_prefix=IPV4_ADDRESS_SUBNET_PREFIX,
@@ -135,13 +135,13 @@ def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number
 @pytest.fixture(scope="class")
 def running_vm_with_secondary_and_hot_plugged_interfaces(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     network_attachment_definition_for_hot_plug,
     index_number,
 ):
     yield from create_vm_with_secondary_interface_on_setup(
         namespace=namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         bridge_nad=network_attachment_definition_for_hot_plug,
         vm_name=f"vm-with-sec-and-{HOT_PLUG_STR}-interfaces",
         ipv4_address_subnet_prefix=IPV4_ADDRESS_SUBNET_PREFIX,
@@ -189,12 +189,12 @@ def migrated_vm_with_hot_plugged_interface_attached(running_vm_for_nic_hot_plug)
 
 
 @pytest.fixture()
-def running_vm_for_jumbo_nic_hot_plug(namespace, unprivileged_client):
+def running_vm_for_jumbo_nic_hot_plug(namespace, local_unprivileged_client):
     vm_name = f"jumbo-{HOT_PLUG_STR}-test-vm"
     with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=vm_name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         yield vm
 
@@ -302,11 +302,11 @@ def flat_overlay_network_attachment_definition_for_hot_plug(
 
 
 @pytest.fixture()
-def vm_for_hot_plug_and_kmp(namespace, unprivileged_client):
+def vm_for_hot_plug_and_kmp(namespace, local_unprivileged_client):
     with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=f"{HOT_PLUG_STR}-kmp-release-vm",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         yield vm
 
@@ -345,9 +345,9 @@ def hot_plug_and_kmp_vm_delete_time(vm_for_hot_plug_and_kmp):
 
 
 @pytest.fixture()
-def kubemacpool_controller_log_for_vm_deletion(admin_client, hco_namespace, hot_plug_and_kmp_vm_delete_time):
+def kubemacpool_controller_log_for_vm_deletion(local_admin_client, hco_namespace, hot_plug_and_kmp_vm_delete_time):
     return get_kubemacpool_controller_log(
-        client=admin_client,
+        client=local_admin_client,
         namespace_name=hco_namespace.name,
         log_start_time=hot_plug_and_kmp_vm_delete_time,
     )
@@ -379,9 +379,9 @@ def hot_unplugged_interface_mac_address(
 
 
 @pytest.fixture()
-def kubemacpool_controller_log_for_hot_unplug(admin_client, hco_namespace, secondary_interfaces_tests_start_time):
+def kubemacpool_controller_log_for_hot_unplug(local_admin_client, hco_namespace, secondary_interfaces_tests_start_time):
     return get_kubemacpool_controller_log(
-        client=admin_client,
+        client=local_admin_client,
         namespace_name=hco_namespace.name,
         log_start_time=secondary_interfaces_tests_start_time,
     )
@@ -427,7 +427,7 @@ def hot_unplug_secondary_interface_from_setup(
 @pytest.fixture()
 def vm1_with_hot_plugged_sriov_interface(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     sriov_network_for_hot_plug,
     index_number,
 ):
@@ -436,14 +436,14 @@ def vm1_with_hot_plugged_sriov_interface(
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm1",
         sriov_network_for_hot_plug=sriov_network_for_hot_plug,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     )
 
 
 @pytest.fixture()
 def vm2_with_hot_plugged_sriov_interface(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     sriov_network_for_hot_plug,
     index_number,
 ):
@@ -452,7 +452,7 @@ def vm2_with_hot_plugged_sriov_interface(
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm2",
         sriov_network_for_hot_plug=sriov_network_for_hot_plug,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     )
 
 

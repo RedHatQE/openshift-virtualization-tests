@@ -65,9 +65,9 @@ def wait_for_failed_boot_without_permitted_hostdevices(vm, supported_gpu_device)
 
 
 @pytest.fixture()
-def non_permitted_hostdevices_vm(nodes_with_supported_gpus, unprivileged_client, namespace, supported_gpu_device):
+def non_permitted_hostdevices_vm(nodes_with_supported_gpus, local_unprivileged_client, namespace, supported_gpu_device):
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name="passthrough-non-permitted-hostdevices-vm",
         namespace=namespace.name,
         image=CIRROS_IMAGE,

@@ -27,7 +27,7 @@ class TestRelatedObjects:
     @pytest.mark.polarion("CNV-7267")
     def test_hco_related_objects(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         skip_if_hco_bearer_token_bug_open,
         ocp_resource_by_name,
@@ -35,7 +35,7 @@ class TestRelatedObjects:
         updated_resource_labels,
     ):
         validate_related_objects(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             resource=ocp_resource_by_name,
             pre_update_resource_version=pre_update_resource_version,

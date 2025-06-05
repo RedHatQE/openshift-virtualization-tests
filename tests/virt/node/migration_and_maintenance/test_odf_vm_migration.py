@@ -8,11 +8,11 @@ from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
 
 @pytest.fixture()
 def vm_with_common_cpu_model_scope_function(
-    request, unprivileged_client, namespace, golden_image_data_source_scope_function, cpu_for_migration
+    request, local_unprivileged_client, namespace, golden_image_data_source_scope_function, cpu_for_migration
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
         vm_cpu_model=cpu_for_migration,

@@ -7,8 +7,10 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.fixture(scope="module")
-def cnv_daemonset_names(admin_client, hco_namespace):
-    return [daemonset.name for daemonset in get_daemonsets(admin_client=admin_client, namespace=hco_namespace.name)]
+def cnv_daemonset_names(local_admin_client, hco_namespace):
+    return [
+        daemonset.name for daemonset in get_daemonsets(admin_client=local_admin_client, namespace=hco_namespace.name)
+    ]
 
 
 @pytest.mark.gating

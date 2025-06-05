@@ -27,11 +27,11 @@ def vm_deploys():
 
 
 @pytest.fixture()
-def container_disk_vms(vm_deploys, namespace, unprivileged_client):
+def container_disk_vms(vm_deploys, namespace, local_unprivileged_client):
     LOGGER.info("Deploying VM with container disk")
     yield from create_containerdisk_vms(
         vm_deploys=vm_deploys,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
         name="linux-multi-mig-containerdisk-vm",
     )
@@ -42,7 +42,7 @@ def multi_vms(
     request,
     vm_deploys,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     multi_datasources,
     rhsm_created_secret,
     modern_cpu_for_migration,
@@ -50,7 +50,7 @@ def multi_vms(
 ):
     yield from create_dv_vms(
         vm_deploys=vm_deploys,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
         datasources=multi_datasources,
         vm_params=request.param["vm_params"],
@@ -75,14 +75,14 @@ def wsl2_vms_with_pids(multi_vms):
 
 
 @pytest.fixture()
-def multi_dv(request, admin_client, golden_images_namespace):
+def multi_dv(request, local_admin_client, golden_images_namespace):
     yield from create_multi_dvs(
         namespace=golden_images_namespace,
-        client=admin_client,
+        client=local_admin_client,
         dv_params=request.param["dv_params"],
     )
 
 
 @pytest.fixture()
-def multi_datasources(admin_client, multi_dv):
-    yield from create_multi_datasources(client=admin_client, dvs=multi_dv)
+def multi_datasources(local_admin_client, multi_dv):
+    yield from create_multi_datasources(client=local_admin_client, dvs=multi_dv)

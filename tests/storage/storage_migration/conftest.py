@@ -35,17 +35,19 @@ def golden_images_rhel9_data_source(golden_images_namespace):
 
 
 @pytest.fixture(scope="module")
-def mig_cluster(admin_client):
-    return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=admin_client, ensure_exists=True)
+def mig_cluster(local_admin_client):
+    return MigCluster(
+        name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=local_admin_client, ensure_exists=True
+    )
 
 
 @pytest.fixture(scope="class")
-def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class):
+def storage_mig_plan(local_admin_client, namespace, mig_cluster, target_storage_class):
     mig_cluster_ref_dict = {"name": mig_cluster.name, "namespace": mig_cluster.namespace}
     with MigPlan(
         name="storage-mig-plan",
         namespace=mig_cluster.namespace,
-        client=admin_client,
+        client=local_admin_client,
         src_mig_cluster_ref=mig_cluster_ref_dict,
         dest_mig_cluster_ref=mig_cluster_ref_dict,
         live_migrate=True,
@@ -66,11 +68,11 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
 
 
 @pytest.fixture(scope="class")
-def storage_mig_migration(admin_client, storage_mig_plan):
+def storage_mig_migration(local_admin_client, storage_mig_plan):
     with MigMigration(
         name="mig-migration-storage",
         namespace=storage_mig_plan.namespace,
-        client=admin_client,
+        client=local_admin_client,
         mig_plan_ref={"name": storage_mig_plan.name, "namespace": storage_mig_plan.namespace},
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
@@ -101,7 +103,7 @@ def target_storage_class(request):
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_with_instance_type(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_images_fedora_data_source,
     source_storage_class,
@@ -110,7 +112,7 @@ def vm_for_storage_class_migration_with_instance_type(
     with VirtualMachineForTests(
         name="vm-with-instance-type",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
@@ -126,12 +128,12 @@ def vm_for_storage_class_migration_with_instance_type(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_data_source(
-    unprivileged_client, namespace, golden_images_rhel9_data_source, source_storage_class, cpu_for_migration
+    local_unprivileged_client, namespace, golden_images_rhel9_data_source, source_storage_class, cpu_for_migration
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_images_rhel9_data_source,
@@ -146,7 +148,7 @@ def vm_for_storage_class_migration_from_template_with_data_source(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_dv(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     source_storage_class,
     cpu_for_migration,
@@ -169,7 +171,7 @@ def vm_for_storage_class_migration_from_template_with_dv(
     with VirtualMachineForTests(
         name="vm-from-template-and-imported-dv",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
@@ -182,13 +184,13 @@ def vm_for_storage_class_migration_from_template_with_dv(
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_existing_dv(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_class,
     ) as vm:
@@ -244,26 +246,26 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 
 
 @pytest.fixture(scope="class")
-def deleted_completed_virt_launcher_source_pod(unprivileged_client, online_vms_for_storage_class_migration):
+def deleted_completed_virt_launcher_source_pod(local_unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
-        source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
+        source_pod = get_source_virt_launcher_pod(client=local_unprivileged_client, vm=vm)
         source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
         source_pod.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
 def deleted_old_dvs_of_online_vms(
-    unprivileged_client, online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod
+    local_unprivileged_client, online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod
 ):
     for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
-        dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)
+        dv = DataVolume(client=local_unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)
         assert dv.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
-def deleted_old_dvs_of_stopped_vms(unprivileged_client, namespace):
-    for dv in DataVolume.get(dyn_client=unprivileged_client, namespace=namespace.name):
+def deleted_old_dvs_of_stopped_vms(local_unprivileged_client, namespace):
+    for dv in DataVolume.get(dyn_client=local_unprivileged_client, namespace=namespace.name):
         # target DV after migration name is: <source-dv-name>-mig-<generated_suffix>
         if "-mig-" not in dv.name:
             assert dv.delete(wait=True)

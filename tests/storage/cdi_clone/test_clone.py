@@ -83,7 +83,7 @@ def create_vm_from_clone_dv_template(
     indirect=True,
 )
 def test_successful_clone_of_large_image(
-    admin_client,
+    local_admin_client,
     namespace,
     data_volume_multi_storage_scope_function,
 ):
@@ -168,7 +168,7 @@ def test_successful_vm_restart_with_cloned_dv(
     indirect=["data_volume_multi_storage_scope_function"],
 )
 def test_successful_vm_from_cloned_dv_windows(
-    unprivileged_client,
+    local_unprivileged_client,
     data_volume_multi_storage_scope_function,
     vm_params,
     namespace,
@@ -185,7 +185,7 @@ def test_successful_vm_from_cloned_dv_windows(
         create_windows_vm_validate_guest_agent_info(
             dv=cdv,
             namespace=namespace,
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             vm_params=vm_params,
         )
 
@@ -207,7 +207,7 @@ def test_successful_vm_from_cloned_dv_windows(
 )
 def test_disk_image_after_clone(
     skip_block_volumemode_scope_function,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
     cluster_csi_drivers_names,
@@ -219,7 +219,7 @@ def test_disk_image_after_clone(
         namespace=namespace.name,
         size=data_volume_multi_storage_scope_function.size,
         source_pvc=data_volume_multi_storage_scope_function.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()
@@ -285,7 +285,7 @@ def test_successful_snapshot_clone(
 def test_clone_from_fs_to_block_using_dv_template(
     skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     cirros_dv_with_filesystem_volume_mode,
     storage_class_with_block_volume_mode,
@@ -295,7 +295,7 @@ def test_clone_from_fs_to_block_using_dv_template(
         dv_name="dv-5607",
         namespace_name=namespace.name,
         source_dv=cirros_dv_with_filesystem_volume_mode,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         volume_mode=DataVolume.VolumeMode.BLOCK,
         storage_class=storage_class_with_block_volume_mode,
     )
@@ -306,7 +306,7 @@ def test_clone_from_fs_to_block_using_dv_template(
 def test_clone_from_block_to_fs_using_dv_template(
     skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     cirros_dv_with_block_volume_mode,
     storage_class_with_filesystem_volume_mode,
@@ -317,7 +317,7 @@ def test_clone_from_block_to_fs_using_dv_template(
         dv_name="dv-5608",
         namespace_name=namespace.name,
         source_dv=cirros_dv_with_block_volume_mode,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
         # add fs overhead and round up the result
         size=overhead_size_for_dv(

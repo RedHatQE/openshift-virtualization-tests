@@ -89,7 +89,7 @@ def cnv_resources(hco_namespace):
 
 @pytest.mark.polarion("CNV-10307")
 def test_relationship_labels_all_cnv_resources(
-    ocp_resources_submodule_list, admin_client, cnv_resources, hco_namespace
+    ocp_resources_submodule_list, local_admin_client, cnv_resources, hco_namespace
 ):
     errors = {}
     for kind in cnv_resources:
@@ -112,7 +112,7 @@ def test_relationship_labels_all_cnv_resources(
                     related_object_kind=kind,
                     list_submodules=ocp_resources_submodule_list,
                 ),
-                admin_client=admin_client,
+                admin_client=local_admin_client,
             )
             if resource_obj.exists:
                 labels = resource_obj.instance.metadata.labels

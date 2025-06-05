@@ -68,7 +68,7 @@ def wait_for_resource_crypto_policy_update(resource, expected_crypto_policy, res
 @pytest.fixture()
 def updated_cr_with_custom_crypto_policy(
     request,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
@@ -83,7 +83,7 @@ def updated_cr_with_custom_crypto_policy(
         resource_list=[resource],
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
                 **DEFAULT_HCO_CONDITIONS,
@@ -91,7 +91,7 @@ def updated_cr_with_custom_crypto_policy(
             },
         )
         yield {"resource": resource, "tls_policy": value}
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
 
 
 @pytest.mark.parametrize(

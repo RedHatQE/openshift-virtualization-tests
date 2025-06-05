@@ -288,7 +288,7 @@ def bridge_attached_vm(
 
 
 @pytest.fixture(scope="class")
-def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, unprivileged_client):
+def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, local_unprivileged_client):
     dhcpd_data = DHCP_SERVER_CONF_FILE.format(
         DHCP_IP_SUBNET="10.200.3",
         DHCP_IP_RANGE_START=DHCP_IP_RANGE_START,
@@ -318,7 +318,7 @@ def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, unprivil
         mpls_dest_ip=VMB_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMB_MPLS_ROUTE_TAG,
         mpls_route_next_hop="10.200.4.2",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as vm:
         vm.start(wait=True)
@@ -327,7 +327,7 @@ def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, unprivil
 
 
 @pytest.fixture(scope="class")
-def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivileged_client):
+def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, local_unprivileged_client):
     interface_ip_addresses = [
         "10.200.0.2",
         "10.200.2.2",
@@ -344,7 +344,7 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
         mpls_dest_ip=VMA_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMA_MPLS_ROUTE_TAG,
         mpls_route_next_hop="10.200.4.1",
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
     ) as vm:
         vm.start(wait=True)

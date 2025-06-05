@@ -22,14 +22,14 @@ from utilities.virt import VirtualMachineForTests
 
 @pytest.fixture()
 def vmexport_from_vmsnapshot(
-    unprivileged_client,
+    local_unprivileged_client,
     snapshots_with_content,
 ):
     snapshot = snapshots_with_content[0]
     with VirtualMachineExport(
         name="vmexport-from-snapshot",
         namespace=snapshot.namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         source={
             "apiGroup": VirtualMachineSnapshot.api_group,
             "kind": VirtualMachineSnapshot.kind,
@@ -143,7 +143,7 @@ def vm_from_vmexport(
 
 
 @pytest.fixture()
-def blank_dv_created_by_specific_user(namespace, unprivileged_client):
+def blank_dv_created_by_specific_user(namespace, local_unprivileged_client):
     with create_dv(
         source="blank",
         dv_name="blank-dv-by-unprivileged-user",
@@ -152,23 +152,23 @@ def blank_dv_created_by_specific_user(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
         consume_wffc=False,
         bind_immediate=True,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         yield dv
 
 
 @pytest.fixture()
-def virtctl_unprivileged_client(admin_client):
+def virtctl_unprivileged_client(local_admin_client):
     current_user = check_output("oc whoami", shell=True).decode().strip()
     login_with_user_password(
-        api_address=admin_client.configuration.host,
+        api_address=local_admin_client.configuration.host,
         user=UNPRIVILEGED_USER,
         password=UNPRIVILEGED_PASSWORD,
     )
     yield
     login_with_user_password(
-        api_address=admin_client.configuration.host,
+        api_address=local_admin_client.configuration.host,
         user=current_user,
     )
 

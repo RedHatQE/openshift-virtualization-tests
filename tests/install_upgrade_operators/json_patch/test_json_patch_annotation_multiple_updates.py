@@ -58,7 +58,7 @@ def get_metadata():
 
 
 @pytest.fixture(scope="class")
-def multiple_json_patched(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
+def multiple_json_patched(local_admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: get_metadata(),
@@ -67,7 +67,7 @@ def multiple_json_patched(admin_client, hco_namespace, prometheus, hyperconverge
     ):
         yield
 
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=ALERT_NAME)
 
 
@@ -81,14 +81,14 @@ class TestMultipleJsonPatch:
     @pytest.mark.polarion("CNV-8718")
     def test_multiple_json_patch(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         cdi_feature_gates_scope_class,
         kubevirt_resource,
         cdi_resource_scope_function,
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
                 **{"TaintedConfiguration": Resource.Condition.Status.TRUE},

@@ -141,10 +141,10 @@ def sriov_network_vlan(sriov_with_vlan_node_policy, namespace, sriov_namespace, 
 
 
 @pytest.fixture(scope="class")
-def sriov_vm1(index_number, sriov_workers_node1, namespace, unprivileged_client, sriov_network):
+def sriov_vm1(index_number, sriov_workers_node1, namespace, local_unprivileged_client, sriov_network):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="sriov-vm1",
         namespace=namespace,
         worker=sriov_workers_node1,
@@ -154,10 +154,10 @@ def sriov_vm1(index_number, sriov_workers_node1, namespace, unprivileged_client,
 
 
 @pytest.fixture(scope="class")
-def sriov_vm2(index_number, unprivileged_client, sriov_workers_node2, namespace, sriov_network):
+def sriov_vm2(index_number, local_unprivileged_client, sriov_workers_node2, namespace, sriov_network):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="sriov-vm2",
         namespace=namespace,
         worker=sriov_workers_node2,
@@ -171,12 +171,12 @@ def sriov_vm3(
     index_number,
     sriov_workers_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     sriov_network_vlan,
 ):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="sriov-vm3",
         namespace=namespace,
         worker=sriov_workers_node1,
@@ -190,12 +190,12 @@ def sriov_vm4(
     index_number,
     sriov_workers_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     sriov_network_vlan,
 ):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="sriov-vm4",
         namespace=namespace,
         worker=sriov_workers_node2,
@@ -258,10 +258,10 @@ def sriov_network_mtu_9000(sriov_vm1, sriov_vm2):
 
 
 @pytest.fixture(scope="class")
-def sriov_vm_migrate(index_number, unprivileged_client, namespace, sriov_network):
+def sriov_vm_migrate(index_number, local_unprivileged_client, namespace, sriov_network):
     yield from sriov_vm(
         mac_suffix_index=next(index_number),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="sriov-vm-migrate",
         namespace=namespace,
         ip_config="10.200.1.3/24",
@@ -286,7 +286,7 @@ def sriov_dpdk_vm1(
     dpdk_template,
     index_number,
     sriov_worker_with_allocatable_1gi_huge_pages,
-    unprivileged_client,
+    local_unprivileged_client,
     sriov_network,
 ):
     # No need to pass cloud_init_data, networks, interfaces and interfaces_types.
@@ -294,7 +294,7 @@ def sriov_dpdk_vm1(
     with VirtualMachineForTestsFromTemplate(
         name="sriov-dpdk-vm1",
         namespace=dpdk_template.namespace,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=sriov_worker_with_allocatable_1gi_huge_pages.hostname),
         template_object=dpdk_template,
         labels=Template.generate_template_labels(

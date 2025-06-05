@@ -230,8 +230,8 @@ def resource_editor_efi_pipelines(
 
 
 @pytest.fixture(scope="module")
-def custom_pipeline_namespace(admin_client):
-    yield from create_ns(name="test-custom-pipeline-ns", admin_client=admin_client)
+def custom_pipeline_namespace(local_admin_client):
+    yield from create_ns(name="test-custom-pipeline-ns", admin_client=local_admin_client)
 
 
 @pytest.fixture(scope="module")
@@ -276,7 +276,7 @@ def configured_windows_efi_pipelinerun_parameters(
 
 @pytest.fixture()
 def pipelinerun_from_pipeline_template(
-    admin_client,
+    local_admin_client,
     pipeline_dv_name,
     custom_pipeline_namespace,
     configured_windows_efi_pipelinerun_parameters,
@@ -284,7 +284,7 @@ def pipelinerun_from_pipeline_template(
     with PipelineRun(
         name=f"{WINDOWS_EFI_INSTALLER_STR}-{pipeline_dv_name.split('win')[1]}-test",
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         params=configured_windows_efi_pipelinerun_parameters,
         pipelineref=WINDOWS_EFI_INSTALLER_STR,
     ) as pipelinerun:
@@ -322,11 +322,11 @@ def quay_disk_uploader_secret(custom_pipeline_namespace):
 
 
 @pytest.fixture(scope="module")
-def vm_for_disk_uploader(admin_client, custom_pipeline_namespace, golden_images_namespace):
+def vm_for_disk_uploader(local_admin_client, custom_pipeline_namespace, golden_images_namespace):
     with VirtualMachineForTests(
         name="fedora-vm-diskuploader",
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
             storage_class=py_config["default_storage_class"],
@@ -339,13 +339,13 @@ def vm_for_disk_uploader(admin_client, custom_pipeline_namespace, golden_images_
 
 @pytest.fixture(scope="module")
 def pipeline_disk_uploader(
-    admin_client,
+    local_admin_client,
     custom_pipeline_namespace,
 ):
     with Pipeline(
         name="pipeline-disk-uploader",
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         tasks=DISK_UPLOADER_PIPELINE_TASK,
         params=DISK_UPLOADER_PIPELINE_PARAMS,
     ) as pipeline:
@@ -354,7 +354,7 @@ def pipeline_disk_uploader(
 
 @pytest.fixture()
 def pipelinerun_for_disk_uploader(
-    admin_client,
+    local_admin_client,
     custom_pipeline_namespace,
     quay_disk_uploader_secret,
     pipeline_disk_uploader,
@@ -372,7 +372,7 @@ def pipelinerun_for_disk_uploader(
     with PipelineRun(
         name=f"pipelinerun-disk-uploader-{request.param}",
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         params=pipeline_run_params,
         pipelineref=pipeline_disk_uploader.name,
     ) as pipelinerun:

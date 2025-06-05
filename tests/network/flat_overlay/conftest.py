@@ -83,9 +83,9 @@ def flat_l2_port(
 
 
 @pytest.fixture(scope="module")
-def flat_overlay_second_namespace(unprivileged_client):
+def flat_overlay_second_namespace(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="test-flat-overlay-second-namespace",
     )
 
@@ -142,7 +142,7 @@ def flat_overlay_jumbo_frame_nad(namespace, cluster_hardware_mtu):
 
 @pytest.fixture(scope="class")
 def vma_flat_overlay(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vma_vmb_nad,
@@ -151,7 +151,7 @@ def vma_flat_overlay(
         vm_name=f"vma-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vma_vmb_nad.namespace,
         nad_name=flat_overlay_vma_vmb_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node1.hostname,
     )
@@ -159,7 +159,7 @@ def vma_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vmb_flat_overlay(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vma_vmb_nad,
@@ -168,7 +168,7 @@ def vmb_flat_overlay(
         vm_name=f"vmb-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vma_vmb_nad.namespace,
         nad_name=flat_overlay_vma_vmb_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node1.hostname,
     )
@@ -176,7 +176,7 @@ def vmb_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vmc_flat_overlay(
-    unprivileged_client,
+    local_unprivileged_client,
     index_number,
     flat_overlay_vmc_vmd_nad,
 ):
@@ -185,14 +185,14 @@ def vmc_flat_overlay(
         vm_name=f"vmc-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vmc_vmd_nad.namespace,
         nad_name=flat_overlay_vmc_vmd_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
     )
 
 
 @pytest.fixture(scope="class")
 def vmd_flat_overlay(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vmc_vmd_nad,
@@ -201,7 +201,7 @@ def vmd_flat_overlay(
         vm_name=f"vmd-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vmc_vmd_nad.namespace,
         nad_name=flat_overlay_vmc_vmd_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node1.hostname,
     )
@@ -209,7 +209,7 @@ def vmd_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vme_flat_overlay(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node3,
     index_number,
     flat_overlay_vme_nad,
@@ -218,7 +218,7 @@ def vme_flat_overlay(
         vm_name=f"vme-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vme_nad.namespace,
         nad_name=flat_overlay_vme_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node3.hostname,
     )
@@ -226,7 +226,7 @@ def vme_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vma_jumbo_flat_l2(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_jumbo_frame_nad,
@@ -235,7 +235,7 @@ def vma_jumbo_flat_l2(
         vm_name=f"vma-jumbo-{FLAT_L2_STR}",
         namespace_name=flat_overlay_jumbo_frame_nad.namespace,
         nad_name=flat_overlay_jumbo_frame_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node1.hostname,
     )
@@ -243,7 +243,7 @@ def vma_jumbo_flat_l2(
 
 @pytest.fixture(scope="class")
 def vmb_jumbo_flat_l2(
-    unprivileged_client,
+    local_unprivileged_client,
     worker_node2,
     index_number,
     flat_overlay_jumbo_frame_nad,
@@ -252,7 +252,7 @@ def vmb_jumbo_flat_l2(
         vm_name=f"vmb-jumbo-{FLAT_L2_STR}",
         namespace_name=flat_overlay_jumbo_frame_nad.namespace,
         nad_name=flat_overlay_jumbo_frame_nad.name,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         host_ip_suffix=next(index_number),
         worker_node_hostname=worker_node2.hostname,
     )

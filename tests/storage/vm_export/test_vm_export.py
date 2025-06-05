@@ -40,7 +40,7 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
     indirect=True,
 )
 def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
-    unprivileged_client,
+    local_unprivileged_client,
     data_volume_scope_function,
 ):
     with pytest.raises(
@@ -50,7 +50,7 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
         with VirtualMachineExport(
             name="vmexport-unprivileged",
             namespace=data_volume_scope_function.namespace,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             source={
                 "apiGroup": "",
                 "kind": PersistentVolumeClaim.kind,

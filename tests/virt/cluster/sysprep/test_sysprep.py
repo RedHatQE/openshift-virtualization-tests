@@ -99,11 +99,11 @@ def sysprep_xml_string(tmpdir_factory):
 
 
 @pytest.fixture(scope="class")
-def sysprep_resource(sysprep_source_matrix__class__, unprivileged_client, namespace, sysprep_xml_string):
+def sysprep_resource(sysprep_source_matrix__class__, local_unprivileged_client, namespace, sysprep_xml_string):
     LOGGER.info(f"Creating sysprep {sysprep_source_matrix__class__} resource")
     if sysprep_source_matrix__class__ == "ConfigMap":
         with ConfigMap(
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             name="sysprep-config",
             namespace=namespace.name,
             data=generate_sysprep_data(xml_string=sysprep_xml_string, resource_kind="ConfigMap"),
@@ -111,7 +111,7 @@ def sysprep_resource(sysprep_source_matrix__class__, unprivileged_client, namesp
             yield sysprep
     elif sysprep_source_matrix__class__ == "Secret":
         with Secret(
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             name="sysprep-secret",
             namespace=namespace.name,
             data_dict=generate_sysprep_data(xml_string=sysprep_xml_string, resource_kind="Secret"),
@@ -124,7 +124,7 @@ def sysprep_vm(
     sysprep_source_matrix__class__,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     instance_type_for_test_scope_class,
 ):
@@ -132,7 +132,7 @@ def sysprep_vm(
         with VirtualMachineForTests(
             name=f"sysprep-{sysprep_source_matrix__class__.lower()}-vm",
             namespace=namespace.name,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             vm_instance_type=vm_instance_type,
             vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
             data_volume_template=data_volume_template_with_source_ref_dict(

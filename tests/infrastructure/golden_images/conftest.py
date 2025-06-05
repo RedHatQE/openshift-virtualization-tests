@@ -11,7 +11,7 @@ from utilities.constants import HOSTPATH_CSI_BASIC
 
 @pytest.fixture()
 def updated_default_storage_class_scope_function(
-    admin_client,
+    local_admin_client,
     storage_class_matrix__function__,
     removed_default_storage_classes,
 ):

@@ -79,9 +79,9 @@ def migrated_hotplugged_vm(hotplugged_vm):
 
 
 @pytest.fixture()
-def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
+def drained_node_with_hotplugged_vm(local_admin_client, hotplugged_vm):
     with node_mgmt_console(node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
-        check_migration_process_after_node_drain(dyn_client=admin_client, vm=hotplugged_vm)
+        check_migration_process_after_node_drain(dyn_client=local_admin_client, vm=hotplugged_vm)
 
 
 @pytest.mark.parametrize(
@@ -128,7 +128,9 @@ class TestPostCopyMigration:
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::node_drain", depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-11422")
-    def test_node_drain(self, admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
+    def test_node_drain(
+        self, local_admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm
+    ):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 

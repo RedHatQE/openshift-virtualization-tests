@@ -88,12 +88,12 @@ def vm_console_proxy_namespace_resource(
 
 
 @pytest.fixture(scope="class")
-def vm_for_console_proxy(namespace, unprivileged_client):
+def vm_for_console_proxy(namespace, local_unprivileged_client):
     with VirtualMachineForTests(
         name=f"rhel-{VM_CONSOLE_PROXY}",
         image=Images.Rhel.RHEL10_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.small"),
         vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
         os_flavor=OS_FLAVOR_RHEL,
@@ -158,10 +158,10 @@ def generated_service_account_token(vm_console_proxy_service_account):
 
 
 @pytest.fixture(scope="class")
-def generated_vnc_access_token(admin_client, vm_for_console_proxy, generated_service_account_token):
+def generated_vnc_access_token(local_admin_client, vm_for_console_proxy, generated_service_account_token):
     # Token creation time can't be less than 10m. This is kubernetes limitation
     return create_vnc_console_token(
-        url=admin_client.configuration.host,
+        url=local_admin_client.configuration.host,
         endpoint=TOKEN_ENDPOINT,
         api_version=TOKEN_API_VERSION,
         namespace=vm_for_console_proxy.namespace,
@@ -172,11 +172,11 @@ def generated_vnc_access_token(admin_client, vm_for_console_proxy, generated_ser
 
 
 @pytest.fixture(scope="class")
-def logged_with_token(admin_client, generated_vnc_access_token):
+def logged_with_token(local_admin_client, generated_vnc_access_token):
     current_user = check_output("oc whoami", shell=True).decode().strip()
-    login_with_token(api_address=admin_client.configuration.host, token=generated_vnc_access_token)
+    login_with_token(api_address=local_admin_client.configuration.host, token=generated_vnc_access_token)
     yield
     login_with_user_password(
-        api_address=admin_client.configuration.host,
+        api_address=local_admin_client.configuration.host,
         user=current_user.strip(),
     )

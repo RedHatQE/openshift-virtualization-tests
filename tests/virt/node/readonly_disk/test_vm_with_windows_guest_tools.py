@@ -79,7 +79,7 @@ def hco_csv_win_virtio_image(csv_scope_session):
 def vm_with_guest_tools(
     cluster_modern_cpu_model_scope_class,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
     virtio_win_image,
 ):
@@ -87,7 +87,7 @@ def vm_with_guest_tools(
     with WindowsVMWithGuestTools(
         name="windows-vm-wth-guest-tools",
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(name="windows.10"),
         data_volume_template=data_volume_template_with_source_ref_dict(

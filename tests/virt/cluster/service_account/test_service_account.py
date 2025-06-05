@@ -19,14 +19,14 @@ def service_account(namespace):
 
 
 @pytest.fixture()
-def service_account_vm(namespace, service_account, unprivileged_client):
+def service_account_vm(namespace, service_account, local_unprivileged_client):
     name = "service-account-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         service_accounts=[service_account.name],
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm

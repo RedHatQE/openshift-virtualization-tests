@@ -27,13 +27,13 @@ def rdp_vm(
     request,
     namespace,
     golden_image_data_source_scope_function,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     with vm_instance_from_template(
         request=request,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     ) as rdp_vm:
         rdp_vm.custom_service_enable(service_name="rdp-svc-test", port=3389, service_type=Service.Type.NODE_PORT)
         LOGGER.info(

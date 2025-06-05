@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def vm_with_memory_load(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
     modern_cpu_for_migration,
@@ -39,7 +39,7 @@ def vm_with_memory_load(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
         vm_cpu_model=modern_cpu_for_migration,
@@ -52,7 +52,7 @@ def vm_with_memory_load(
 def hotplugged_vm(
     request,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
 ):
@@ -61,7 +61,7 @@ def hotplugged_vm(
         additional_labels=request.param.get("additional_labels"),
         labels=Template.generate_template_labels(**request.param["template_labels"]),
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
         memory_max_guest=TEN_GI_MEMORY,
@@ -76,19 +76,19 @@ def hotplugged_vm(
 
 
 @pytest.fixture()
-def hotplugged_sockets_memory_guest(request, admin_client, hotplugged_vm, unprivileged_client):
+def hotplugged_sockets_memory_guest(request, local_admin_client, hotplugged_vm, local_unprivileged_client):
     param = request.param
     if param.get("skip_migration"):
         hotplug_spec_vm(vm=hotplugged_vm, sockets=param.get("sockets"), memory_guest=param.get("memory_guest"))
     else:
         hotplug_spec_vm_and_verify_hotplug(
             vm=hotplugged_vm,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             sockets=param.get("sockets"),
             memory_guest=param.get("memory_guest"),
         )
     yield
-    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=local_admin_client, vm=hotplugged_vm)
 
 
 @pytest.fixture()
@@ -96,7 +96,7 @@ def enabled_featuregate_scope_function(
     request,
     hyperconverged_resource_scope_function,
     kubevirt_feature_gates,
-    admin_client,
+    local_admin_client,
     hco_namespace,
 ):
     feature_gate = request.param
@@ -104,7 +104,7 @@ def enabled_featuregate_scope_function(
     with append_feature_gate_to_hco(
         feature_gate=kubevirt_feature_gates,
         resource=hyperconverged_resource_scope_function,
-        client=admin_client,
+        client=local_admin_client,
         namespace=hco_namespace,
     ):
         yield

@@ -85,14 +85,14 @@ class TestMustGatherClusterWithVMs:
     )
     def test_resource_type(
         self,
-        admin_client,
+        local_admin_client,
         collected_cluster_must_gather_with_vms,
         resource_type,
         resource_path,
         checks,
     ):
         check_list_of_resources(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             resource_type=resource_type,
             temp_dir=collected_cluster_must_gather_with_vms,
             resource_path=resource_path,

@@ -300,15 +300,44 @@ def exported_kubeconfig(unprivileged_secret, kubeconfig_export_path):
 
 
 @pytest.fixture(scope="session")
-def admin_client():
+def local_admin_client(kubeconfig_export_path):  # ---> local_admin_client   vs    remove_admin_client
     """
     Get DynamicClient
     """
-    return get_client()
+    return get_client(config_file=kubeconfig_export_path)
+
+
+# TODO destination cluster client
+#
+#  client1 = get_client(config_file="/tmp/rhos-psi.cnv-qe.rhood.us/stg-jp419/auth/kubeconfig")
+# 2025-06-05T04:47:46.586200 ocp_resources.resource INFO Trying to get client via new_client_from_config
+#
+# In [5]: client2 = get_client(config_file="/tmp/rhos-psi.cnv-qe.rhood.us/stg-jp419-2/auth/kubeconfig")
+#
+# In [6]: from ocp_resources.node import Node
+#    ...:
+#
+# In [7]: list(Node.get(dyn_client=client1))
+# Out[7]:
+# [<ocp_resources.node.Node at 0x7f0189f2f740>,
+#  <ocp_resources.node.Node at 0x7f0189f2f890>,
+#  <ocp_resources.node.Node at 0x7f0189f2f8c0>,
+#  <ocp_resources.node.Node at 0x7f0189f2f8f0>,
+#  <ocp_resources.node.Node at 0x7f0189f2f920>,
+#  <ocp_resources.node.Node at 0x7f0189f2f950>]
+#
+# In [8]: list(Node.get(dyn_client=client1))[0].name
+# Out[8]: 'stg-jp419-l6fkz-master-0'
+#
+# In [9]: list(Node.get(dyn_client=client2))[0].name
+# Out[9]: 'stg-jp419-2-vrfgj-master-0'
+#
+# In [10]: list(Node.get(dyn_client=client1))[0].name
+# Out[10]: 'stg-jp419-l6fkz-master-0'
 
 
 @pytest.fixture(scope="session")
-def unprivileged_secret(admin_client, skip_unprivileged_client):
+def unprivileged_secret(local_admin_client, skip_unprivileged_client):
     if skip_unprivileged_client:
         yield
 
@@ -358,15 +387,15 @@ def skip_unprivileged_client():
 
 
 @pytest.fixture(scope="session")
-def identity_provider_config(skip_unprivileged_client, admin_client):
+def identity_provider_config(skip_unprivileged_client, local_admin_client):
     if skip_unprivileged_client:
         return
 
-    return OAuth(client=admin_client, name=CLUSTER)
+    return OAuth(client=local_admin_client, name=CLUSTER)
 
 
 @pytest.fixture(scope="session")
-def identity_provider_with_htpasswd(skip_unprivileged_client, admin_client, identity_provider_config):
+def identity_provider_with_htpasswd(skip_unprivileged_client, local_admin_client, identity_provider_config):
     if skip_unprivileged_client:
         yield
     else:
@@ -388,9 +417,9 @@ def identity_provider_with_htpasswd(skip_unprivileged_client, admin_client, iden
 
 
 @pytest.fixture(scope="session")
-def unprivileged_client(
+def local_unprivileged_client(
     skip_unprivileged_client,
-    admin_client,
+    local_admin_client,
     unprivileged_secret,
     identity_provider_with_htpasswd,
     exported_kubeconfig,
@@ -404,7 +433,7 @@ def unprivileged_client(
     else:
         current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
         if login_with_user_password(
-            api_address=admin_client.configuration.host,
+            api_address=local_admin_client.configuration.host,
             user=UNPRIVILEGED_USER,
             password=UNPRIVILEGED_PASSWORD,
         ):  # Login to an unprivileged account
@@ -414,18 +443,18 @@ def unprivileged_client(
 
             # Get back to an admin account
             login_with_user_password(
-                api_address=admin_client.configuration.host,
+                api_address=local_admin_client.configuration.host,
                 user=current_user.strip(),
             )
             yield get_client(config_file=exported_kubeconfig, context=unprivileged_context)
 
         else:
-            yield admin_client
+            yield local_admin_client
 
 
 @pytest.fixture(scope="session")
-def nodes(admin_client):
-    yield list(Node.get(dyn_client=admin_client))
+def nodes(local_admin_client):
+    yield list(Node.get(dyn_client=local_admin_client))
 
 
 @pytest.fixture(scope="session")
@@ -454,12 +483,12 @@ def control_plane_nodes(nodes):
 
 
 @pytest.fixture(scope="session")
-def cnv_tests_utilities_namespace(admin_client, installing_cnv):
+def cnv_tests_utilities_namespace(local_admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
         yield from create_ns(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             labels=POD_SECURITY_NAMESPACE_LABELS,
             name="cnv-tests-utilities",
         )
@@ -484,7 +513,7 @@ def cnv_tests_utilities_service_account(cnv_tests_utilities_namespace, installin
 
 @pytest.fixture(scope="session")
 def utility_daemonset(
-    admin_client,
+    local_admin_client,
     installing_cnv,
     generated_pulled_secret,
     cnv_tests_utilities_namespace,
@@ -517,7 +546,7 @@ def pull_secret_directory(tmpdir_factory):
 def generated_pulled_secret(
     is_production_source,
     installing_cnv,
-    admin_client,
+    local_admin_client,
 ):
     if is_production_source and installing_cnv:
         return
@@ -525,7 +554,7 @@ def generated_pulled_secret(
 
 
 @pytest.fixture(scope="session")
-def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cnv):
+def workers_utility_pods(local_admin_client, workers, utility_daemonset, installing_cnv):
     """
     Get utility pods from worker nodes.
     When the tests start we deploy a pod on every worker node in the cluster using a daemonset.
@@ -535,13 +564,13 @@ def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cn
         return
     return get_utility_pods_from_nodes(
         nodes=workers,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         label_selector="cnv-test=utility",
     )
 
 
 @pytest.fixture(scope="session")
-def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
+def control_plane_utility_pods(local_admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
     """
     Get utility pods from control plane nodes.
     When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
@@ -551,7 +580,7 @@ def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes
         return
     return get_utility_pods_from_nodes(
         nodes=control_plane_nodes,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         label_selector="cnv-test=utility",
     )
 
@@ -647,17 +676,17 @@ def nodes_available_nics(nodes_active_nics):
 
 
 @pytest.fixture(scope="module")
-def namespace(request, admin_client, unprivileged_client):
+def namespace(request, local_admin_client, local_unprivileged_client):
     """
     To create namespace using admin client, pass {"use_unprivileged_client": False} to request.param
     (default for "use_unprivileged_client" is True)
     """
     use_unprivileged_client = getattr(request, "param", {}).get("use_unprivileged_client", True)
     teardown = getattr(request, "param", {}).get("teardown", True)
-    unprivileged_client = unprivileged_client if use_unprivileged_client else None
+    local_unprivileged_client = local_unprivileged_client if use_unprivileged_client else None
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
+        unprivileged_client=local_unprivileged_client,
+        admin_client=local_admin_client,
         name=generate_namespace_name(file_path=request.fspath.strpath.split(f"{os.path.dirname(__file__)}/")[1]),
         teardown=teardown,
         delete_timeout=TIMEOUT_6MIN,
@@ -665,17 +694,17 @@ def namespace(request, admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="session")
-def leftovers_cleanup(admin_client, cnv_tests_utilities_namespace, identity_provider_config):
+def leftovers_cleanup(local_admin_client, cnv_tests_utilities_namespace, identity_provider_config):
     LOGGER.info("Checking for leftover resources")
     secret = Secret(
-        client=admin_client,
+        client=local_admin_client,
         name=HTTP_SECRET_NAME,
         namespace=NamespacesNames.OPENSHIFT_CONFIG,
     )
     ds = None
     if cnv_tests_utilities_namespace:
         ds = DaemonSet(
-            client=admin_client,
+            client=local_admin_client,
             name=UTILITY,
             namespace=cnv_tests_utilities_namespace.name,
         )
@@ -768,7 +797,7 @@ def data_volume_multi_storage_scope_module(
 
 @pytest.fixture(scope="class")
 def golden_image_data_volume_multi_storage_scope_class(
-    admin_client,
+    local_admin_client,
     request,
     golden_images_namespace,
     storage_class_matrix__class__,
@@ -780,22 +809,22 @@ def golden_image_data_volume_multi_storage_scope_class(
         storage_class_matrix=storage_class_matrix__class__,
         schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
 def golden_image_data_source_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_storage_scope_class
+    local_admin_client, golden_image_data_volume_multi_storage_scope_class
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client, dv=golden_image_data_volume_multi_storage_scope_class
+        admin_client=local_admin_client, dv=golden_image_data_volume_multi_storage_scope_class
     )
 
 
 @pytest.fixture()
 def golden_image_data_volume_multi_storage_scope_function(
-    admin_client,
+    local_admin_client,
     request,
     golden_images_namespace,
     storage_class_matrix__function__,
@@ -807,16 +836,16 @@ def golden_image_data_volume_multi_storage_scope_function(
         storage_class_matrix=storage_class_matrix__function__,
         schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture()
 def golden_image_data_source_multi_storage_scope_function(
-    admin_client, golden_image_data_volume_multi_storage_scope_function
+    local_admin_client, golden_image_data_volume_multi_storage_scope_function
 ):
     yield from create_or_update_data_source(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         dv=golden_image_data_volume_multi_storage_scope_function,
     )
 
@@ -842,41 +871,41 @@ def data_volume_scope_class(request, namespace, schedulable_nodes):
 
 
 @pytest.fixture(scope="class")
-def golden_image_data_volume_scope_class(request, admin_client, golden_images_namespace, schedulable_nodes):
+def golden_image_data_volume_scope_class(request, local_admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
         storage_class=request.param["storage_class"],
         schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="class")
-def golden_image_data_source_scope_class(admin_client, golden_image_data_volume_scope_class):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_class)
+def golden_image_data_source_scope_class(local_admin_client, golden_image_data_volume_scope_class):
+    yield from create_or_update_data_source(admin_client=local_admin_client, dv=golden_image_data_volume_scope_class)
 
 
 @pytest.fixture(scope="module")
-def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace, schedulable_nodes):
+def golden_image_data_volume_scope_module(request, local_admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
         storage_class=request.param["storage_class"],
         schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture(scope="module")
-def golden_image_data_source_scope_module(admin_client, golden_image_data_volume_scope_module):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_module)
+def golden_image_data_source_scope_module(local_admin_client, golden_image_data_volume_scope_module):
+    yield from create_or_update_data_source(admin_client=local_admin_client, dv=golden_image_data_volume_scope_module)
 
 
 @pytest.fixture()
-def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace, schedulable_nodes):
+def golden_image_data_volume_scope_function(request, local_admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
@@ -884,13 +913,13 @@ def golden_image_data_volume_scope_function(request, admin_client, golden_images
         storage_class_matrix=request.param.get("storage_class_matrix"),
         schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     )
 
 
 @pytest.fixture()
-def golden_image_data_source_scope_function(admin_client, golden_image_data_volume_scope_function):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
+def golden_image_data_source_scope_function(local_admin_client, golden_image_data_volume_scope_function):
+    yield from create_or_update_data_source(admin_client=local_admin_client, dv=golden_image_data_volume_scope_function)
 
 
 """
@@ -901,7 +930,7 @@ VM creation from template
 @pytest.fixture()
 def vm_instance_from_template_multi_storage_scope_function(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
     cpu_for_migration,
@@ -913,7 +942,7 @@ def vm_instance_from_template_multi_storage_scope_function(
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_multi_storage_scope_function,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
@@ -924,7 +953,7 @@ def vm_instance_from_template_multi_storage_scope_function(
 @pytest.fixture()
 def golden_image_vm_instance_from_template_multi_storage_scope_function(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_function,
     cpu_for_migration,
@@ -936,7 +965,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_function,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
@@ -947,7 +976,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
 @pytest.fixture(scope="class")
 def golden_image_vm_instance_from_template_multi_storage_scope_class(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_multi_storage_scope_class,
     cpu_for_migration,
@@ -959,7 +988,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_class(
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_class,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
@@ -968,10 +997,12 @@ def golden_image_vm_instance_from_template_multi_storage_scope_class(
 
 
 @pytest.fixture()
-def vm_from_template_scope_function(request, unprivileged_client, namespace, golden_image_data_source_scope_function):
+def vm_from_template_scope_function(
+    request, local_unprivileged_client, namespace, golden_image_data_source_scope_function
+):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
     ) as vm_from_template:
@@ -1012,9 +1043,9 @@ def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nod
 
 
 @pytest.fixture(scope="session")
-def csv_scope_session(admin_client, hco_namespace, installing_cnv):
+def csv_scope_session(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return utilities.hco.get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
+        return utilities.hco.get_installed_hco_csv(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -1026,9 +1057,9 @@ def cnv_current_version(installing_cnv, csv_scope_session):
 
 
 @pytest.fixture(scope="session")
-def hco_namespace(admin_client, installing_cnv):
+def hco_namespace(local_admin_client, installing_cnv):
     if not installing_cnv:
-        return utilities.hco.get_hco_namespace(admin_client=admin_client, namespace=py_config["hco_namespace"])
+        return utilities.hco.get_hco_namespace(admin_client=local_admin_client, namespace=py_config["hco_namespace"])
 
 
 @pytest.fixture(scope="session")
@@ -1055,9 +1086,9 @@ def sriov_namespace():
 
 
 @pytest.fixture(scope="session")
-def sriov_nodes_states(admin_client, sriov_namespace, sriov_workers):
+def sriov_nodes_states(local_admin_client, sriov_namespace, sriov_workers):
     sriov_nns_list = [
-        SriovNetworkNodeState(client=admin_client, namespace=sriov_namespace.name, name=worker.name)
+        SriovNetworkNodeState(client=local_admin_client, namespace=sriov_namespace.name, name=worker.name)
         for worker in sriov_workers
     ]
     return sriov_nns_list
@@ -1216,22 +1247,22 @@ def skip_if_no_common_modern_cpu(cluster_common_modern_node_cpu):
 
 @pytest.fixture(scope="session")
 def golden_images_namespace(
-    admin_client,
+    local_admin_client,
 ):
     for ns in Namespace.get(
         name=py_config["golden_images_namespace"],
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
     ):
         return ns
 
 
 @pytest.fixture(scope="session")
 def golden_images_cluster_role_edit(
-    admin_client,
+    local_admin_client,
 ):
     for cluster_role in ClusterRole.get(
         name="os-images.kubevirt.io:edit",
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
     ):
         return cluster_role
 
@@ -1272,7 +1303,7 @@ def hosts_common_available_ports(nodes_available_nics):
 
 
 @pytest.fixture(scope="session")
-def default_sc(admin_client):
+def default_sc(local_admin_client):
     """
     Get default Storage Class defined
     """
@@ -1283,42 +1314,42 @@ def default_sc(admin_client):
 
 
 @pytest.fixture()
-def hyperconverged_resource_scope_function(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+def hyperconverged_resource_scope_function(local_admin_client, hco_namespace):
+    return get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture(scope="class")
-def hyperconverged_resource_scope_class(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+def hyperconverged_resource_scope_class(local_admin_client, hco_namespace):
+    return get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture(scope="module")
-def hyperconverged_resource_scope_module(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_module(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        return get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture(scope="package")
-def hyperconverged_resource_scope_package(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_package(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        return get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture(scope="session")
-def hyperconverged_resource_scope_session(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_session(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        return get_hyperconverged_resource(client=local_admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture()
-def kubevirt_hyperconverged_spec_scope_function(admin_client, hco_namespace, installing_cnv):
+def kubevirt_hyperconverged_spec_scope_function(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)
+        return get_kubevirt_hyperconverged_spec(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
-def kubevirt_hyperconverged_spec_scope_module(admin_client, hco_namespace):
-    return get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)
+def kubevirt_hyperconverged_spec_scope_module(local_admin_client, hco_namespace):
+    return get_kubevirt_hyperconverged_spec(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture()
@@ -1342,8 +1373,8 @@ def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
 
 
 @pytest.fixture(scope="class")
-def ovs_daemonset(admin_client, hco_namespace):
-    return wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
+def ovs_daemonset(local_admin_client, hco_namespace):
+    return wait_for_ovs_daemonset_resource(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture()
@@ -1352,8 +1383,8 @@ def hyperconverged_ovs_annotations_fetched(hyperconverged_resource_scope_functio
 
 
 @pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(dyn_client=admin_client))
+def network_addons_config_scope_session(local_admin_client):
+    nac = list(NetworkAddonsConfig.get(dyn_client=local_admin_client))
     assert nac, "There should be one NetworkAddonsConfig CR."
     return nac[0]
 
@@ -1388,13 +1419,13 @@ def fail_test_if_no_ocs_sc(ocs_storage_class):
 
 @pytest.fixture(scope="session")
 def hyperconverged_ovs_annotations_enabled_scope_session(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_session,
     network_addons_config_scope_session,
 ):
     yield from enable_hyperconverged_ovs_annotations(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hyperconverged_resource=hyperconverged_resource_scope_session,
         network_addons_config=network_addons_config_scope_session,
@@ -1404,7 +1435,7 @@ def hyperconverged_ovs_annotations_enabled_scope_session(
     wait_for_ovs_status(network_addons_config=network_addons_config_scope_session, status=False)
     wait_for_pods_deletion(
         pods=get_pods(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace=hco_namespace,
             label="app=ovs-cni",
         )
@@ -1412,8 +1443,8 @@ def hyperconverged_ovs_annotations_enabled_scope_session(
 
 
 @pytest.fixture(scope="session")
-def cluster_storage_classes(admin_client):
-    return list(StorageClass.get(dyn_client=admin_client))
+def cluster_storage_classes(local_admin_client):
+    return list(StorageClass.get(dyn_client=local_admin_client))
 
 
 @pytest.fixture(scope="session")
@@ -1422,7 +1453,7 @@ def cluster_storage_classes_names(cluster_storage_classes):
 
 
 @pytest.fixture(scope="class")
-def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyperconverged_resource_scope_class):
+def hyperconverged_with_node_placement(request, local_admin_client, hco_namespace, hyperconverged_resource_scope_class):
     """
     Update HCO CR with infrastructure and workloads spec.
     """
@@ -1433,7 +1464,7 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
     initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
     initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
     yield utilities.hco.apply_np_changes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=infra_placement,
@@ -1441,7 +1472,7 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
     )
     LOGGER.info("Revert to initial HCO node placement configuration ")
     utilities.hco.apply_np_changes(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=initial_infra,
@@ -1460,8 +1491,8 @@ def hostpath_provisioner_scope_session():
 
 
 @pytest.fixture(scope="module")
-def cnv_pods(admin_client, hco_namespace):
-    yield list(Pod.get(dyn_client=admin_client, namespace=hco_namespace.name))
+def cnv_pods(local_admin_client, hco_namespace):
+    yield list(Pod.get(dyn_client=local_admin_client, namespace=hco_namespace.name))
 
 
 @pytest.fixture(scope="session")
@@ -1469,7 +1500,7 @@ def cluster_sanity_scope_session(
     request,
     nodes,
     cluster_storage_classes_names,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     junitxml_plugin,
     hyperconverged_resource_scope_session,
@@ -1482,7 +1513,7 @@ def cluster_sanity_scope_session(
     if not installing_cnv:
         cluster_sanity(
             request=request,
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             cluster_storage_classes_names=cluster_storage_classes_names,
             nodes=nodes,
             hco_namespace=hco_namespace,
@@ -1497,7 +1528,7 @@ def cluster_sanity_scope_module(
     request,
     nodes,
     cluster_storage_classes_names,
-    admin_client,
+    local_admin_client,
     hco_namespace,
     junitxml_plugin,
     hyperconverged_resource_scope_session,
@@ -1510,7 +1541,7 @@ def cluster_sanity_scope_module(
     if not installing_cnv:
         cluster_sanity(
             request=request,
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             cluster_storage_classes_names=cluster_storage_classes_names,
             nodes=nodes,
             hco_namespace=hco_namespace,
@@ -1521,8 +1552,8 @@ def cluster_sanity_scope_module(
 
 
 @pytest.fixture(scope="session")
-def kmp_vm_label(admin_client):
-    kmp_webhook_config = MutatingWebhookConfiguration(client=admin_client, name="kubemacpool-mutator")
+def kmp_vm_label(local_admin_client):
+    kmp_webhook_config = MutatingWebhookConfiguration(client=local_admin_client, name="kubemacpool-mutator")
 
     for webhook in kmp_webhook_config.instance.to_dict()["webhooks"]:
         if webhook["name"] == KMP_VM_ASSIGNMENT_LABEL:
@@ -1575,12 +1606,12 @@ def hco_spec(hyperconverged_resource_scope_function):
 
 
 @pytest.fixture(scope="module")
-def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
+def is_post_cnv_upgrade_cluster(local_admin_client, hco_namespace):
     return (
         len(
             list(
                 InstallPlan.get(
-                    dyn_client=admin_client,
+                    dyn_client=local_admin_client,
                     namespace=hco_namespace.name,
                 )
             )
@@ -1591,7 +1622,7 @@ def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
 
 @pytest.fixture(scope="session")
 def cluster_info(
-    admin_client,
+    local_admin_client,
     installing_cnv,
     openshift_current_version,
     cnv_current_version,
@@ -1616,7 +1647,7 @@ def cluster_info(
         f"\tCNV version: {cnv_current_version}\n"
         f"\tHCO image: {hco_image}\n"
         f"\tOCS version: {ocs_current_version}\n"
-        f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
+        f"\tCNI type: {get_cluster_cni_type(admin_client=local_admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
         f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster}\n"
@@ -1626,10 +1657,10 @@ def cluster_info(
 
 
 @pytest.fixture(scope="session")
-def ocs_current_version(ocs_storage_class, admin_client):
+def ocs_current_version(ocs_storage_class, local_admin_client):
     if ocs_storage_class:
         for csv in ClusterServiceVersion.get(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace="openshift-storage",
             label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
         ):
@@ -1637,8 +1668,8 @@ def ocs_current_version(ocs_storage_class, admin_client):
 
 
 @pytest.fixture(scope="session")
-def openshift_current_version(admin_client):
-    return get_clusterversion(dyn_client=admin_client).instance.status.history[0].version
+def openshift_current_version(local_admin_client):
+    return get_clusterversion(dyn_client=local_admin_client).instance.status.history[0].version
 
 
 @pytest.fixture(scope="session")
@@ -1648,7 +1679,7 @@ def ocp_current_version(openshift_current_version):
 
 @pytest.fixture(scope="session")
 def hco_image(
-    admin_client,
+    local_admin_client,
     installing_cnv,
     cnv_subscription_scope_session,
 ):
@@ -1656,7 +1687,7 @@ def hco_image(
         return CNV_NOT_INSTALLED
     source_name = cnv_subscription_scope_session.instance.spec.source
     for cs in CatalogSource.get(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         name=source_name,
         namespace=py_config["marketplace_namespace"],
     ):
@@ -1665,22 +1696,22 @@ def hco_image(
 
 @pytest.fixture(scope="session")
 def cnv_subscription_scope_session(
-    admin_client,
+    local_admin_client,
     installing_cnv,
     hco_namespace,
 ):
     if not installing_cnv:
         return get_subscription(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             namespace=hco_namespace.name,
             subscription_name=py_config["hco_subscription"] or HCO_SUBSCRIPTION,
         )
 
 
 @pytest.fixture(scope="session")
-def kubevirt_resource_scope_session(admin_client, installing_cnv, hco_namespace):
+def kubevirt_resource_scope_session(local_admin_client, installing_cnv, hco_namespace):
     if not installing_cnv:
-        return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+        return get_hyperconverged_kubevirt(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -1689,8 +1720,8 @@ def junitxml_plugin(request, record_testsuite_property):
 
 
 @pytest.fixture(scope="module")
-def base_templates(admin_client):
-    return get_base_templates_list(client=admin_client)
+def base_templates(local_admin_client):
+    return get_base_templates_list(client=local_admin_client)
 
 
 @pytest.fixture(scope="package")
@@ -1776,7 +1807,7 @@ def upgrade_bridge_marker_nad(bridge_on_one_node, kmp_enabled_namespace, worker_
 
 @pytest.fixture(scope="session")
 def running_vm_upgrade_a(
-    unprivileged_client,
+    local_unprivileged_client,
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
@@ -1787,7 +1818,7 @@ def running_vm_upgrade_a(
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.100.1"),
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
@@ -1798,7 +1829,7 @@ def running_vm_upgrade_a(
 
 @pytest.fixture(scope="session")
 def running_vm_upgrade_b(
-    unprivileged_client,
+    local_unprivileged_client,
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
@@ -1809,7 +1840,7 @@ def running_vm_upgrade_b(
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.100.2"),
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
@@ -1830,12 +1861,12 @@ def upgrade_br1test_nad(upgrade_namespace_scope_session, upgrade_bridge_on_all_n
 
 
 @pytest.fixture(scope="session")
-def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_target_version):
+def cnv_upgrade_stream(local_admin_client, pytestconfig, cnv_current_version, cnv_target_version):
     """
     Verify if the upgrade can be performed by comparing the current and target versions.
 
     Args:
-        admin_client: The admin client instance.
+        local_admin_client: The admin client instance.
         pytestconfig: The pytest configuration object.
         cnv_current_version: The current CNV version.
         cnv_target_version: The target CNV version.
@@ -1881,23 +1912,23 @@ def determine_upgrade_stream(current_version, target_version):
 
 
 @pytest.fixture(scope="session")
-def upgrade_namespace_scope_session(admin_client, unprivileged_client):
+def upgrade_namespace_scope_session(local_admin_client, local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
+        unprivileged_client=local_unprivileged_client,
+        admin_client=local_admin_client,
         name="test-upgrade-namespace",
     )
 
 
 @pytest.fixture(scope="session")
-def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
+def kmp_enabled_namespace(kmp_vm_label, local_unprivileged_client, local_admin_client):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
     yield from create_ns(
         name="kmp-enabled-for-upgrade",
         labels=kmp_vm_label,
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
+        unprivileged_client=local_unprivileged_client,
+        admin_client=local_admin_client,
     )
 
 
@@ -1943,13 +1974,13 @@ def eus_target_cnv_version(pytestconfig, cnv_current_version):
 
 
 @pytest.fixture()
-def ssp_resource_scope_function(admin_client, hco_namespace):
-    return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
+def ssp_resource_scope_function(local_admin_client, hco_namespace):
+    return get_ssp_resource(admin_client=local_admin_client, namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
-def cluster_service_network(admin_client):
-    return Network(client=admin_client, name="cluster").instance.status.serviceNetwork
+def cluster_service_network(local_admin_client):
+    return Network(client=local_admin_client, name="cluster").instance.status.serviceNetwork
 
 
 @pytest.fixture(scope="session")
@@ -1966,13 +1997,13 @@ def ipv6_supported_cluster(cluster_service_network):
 
 @pytest.fixture()
 def disabled_common_boot_image_import_hco_spec_scope_function(
-    admin_client,
+    local_admin_client,
     hyperconverged_resource_scope_function,
     golden_images_namespace,
     golden_images_data_import_crons_scope_function,
 ):
     yield from utilities.hco.disable_common_boot_image_import_hco_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         golden_images_namespace=golden_images_namespace,
         golden_images_data_import_crons=golden_images_data_import_crons_scope_function,
@@ -1980,12 +2011,12 @@ def disabled_common_boot_image_import_hco_spec_scope_function(
 
 
 @pytest.fixture()
-def golden_images_data_import_crons_scope_function(admin_client, golden_images_namespace):
-    return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
+def golden_images_data_import_crons_scope_function(local_admin_client, golden_images_namespace):
+    return get_data_import_crons(admin_client=local_admin_client, namespace=golden_images_namespace)
 
 
 @pytest.fixture(scope="session")
-def sno_cluster(admin_client):
+def sno_cluster(local_admin_client):
     return get_infrastructure().instance.status.infrastructureTopology == "SingleReplica"
 
 
@@ -1996,13 +2027,13 @@ def label_schedulable_nodes(schedulable_nodes):
 
 @pytest.fixture(scope="class")
 def disabled_common_boot_image_import_hco_spec_scope_class(
-    admin_client,
+    local_admin_client,
     hyperconverged_resource_scope_class,
     golden_images_namespace,
     golden_images_data_import_crons_scope_class,
 ):
     yield from utilities.hco.disable_common_boot_image_import_hco_spec(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_resource=hyperconverged_resource_scope_class,
         golden_images_namespace=golden_images_namespace,
         golden_images_data_import_crons=golden_images_data_import_crons_scope_class,
@@ -2010,8 +2041,8 @@ def disabled_common_boot_image_import_hco_spec_scope_class(
 
 
 @pytest.fixture(scope="class")
-def golden_images_data_import_crons_scope_class(admin_client, golden_images_namespace):
-    return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
+def golden_images_data_import_crons_scope_class(local_admin_client, golden_images_namespace):
+    return get_data_import_crons(admin_client=local_admin_client, namespace=golden_images_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -2020,8 +2051,8 @@ def compact_cluster(nodes, workers, control_plane_nodes):
 
 
 @pytest.fixture()
-def virt_pods_with_running_status(admin_client, hco_namespace):
-    return get_all_virt_pods_with_running_status(dyn_client=admin_client, hco_namespace=hco_namespace)
+def virt_pods_with_running_status(local_admin_client, hco_namespace):
+    return get_all_virt_pods_with_running_status(dyn_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -2082,7 +2113,7 @@ def autouse_fixtures(
     term_handler_scope_module,
     term_handler_scope_session,
     junitxml_polarion,
-    admin_client,
+    local_admin_client,
     cluster_sanity_scope_session,
     cluster_sanity_scope_module,
     generated_ssh_key_for_vm_access,
@@ -2113,13 +2144,13 @@ def rhel9_http_image_url():
 
 
 @pytest.fixture(scope="session")
-def storage_class_for_snapshot(admin_client):
+def storage_class_for_snapshot(local_admin_client):
     available_storage_classes = py_config["storage_class_matrix"]
     sc_for_snapshot = None
     sc_names = []
     for sc in available_storage_classes:
         sc_name = [*sc][0]
-        if is_snapshot_supported_by_sc(sc_name=sc_name, client=admin_client):
+        if is_snapshot_supported_by_sc(sc_name=sc_name, client=local_admin_client):
             sc_for_snapshot = sc_name
             LOGGER.info(f"Storage class for snapshot: {sc_for_snapshot}")
             break
@@ -2285,11 +2316,11 @@ def ocp_qe_art_image_url(ocp_current_version, nodes_cpu_architecture, generated_
 
 
 @pytest.fixture(scope="module")
-def disabled_default_sources_in_operatorhub_scope_module(admin_client, installing_cnv):
+def disabled_default_sources_in_operatorhub_scope_module(local_admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
-        with disable_default_sources_in_operatorhub(admin_client=admin_client):
+        with disable_default_sources_in_operatorhub(admin_client=local_admin_client):
             yield
 
 
@@ -2299,13 +2330,13 @@ def kmp_deployment(hco_namespace):
 
 
 @pytest.fixture(scope="class")
-def running_metric_vm(namespace, unprivileged_client):
+def running_metric_vm(namespace, local_unprivileged_client):
     name = "running-metrics-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
         yield vm
@@ -2314,14 +2345,14 @@ def running_metric_vm(namespace, unprivileged_client):
 @pytest.fixture()
 def vm_from_template_with_existing_dv(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     data_volume_scope_function,
 ):
     """create VM from template using an existing DV (and not a golden image)"""
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_function,
     ) as vm:
@@ -2349,13 +2380,13 @@ def hco_status_related_objects(hyperconverged_resource_scope_module):
 @pytest.fixture(scope="class")
 def rhel_vm_with_instance_type_and_preference(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     instance_type_for_test_scope_class,
     vm_preference_for_test,
 ):
     with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
         with VirtualMachineForTests(
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             name="rhel-vm-with-instance-type",
             namespace=namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
@@ -2368,13 +2399,13 @@ def rhel_vm_with_instance_type_and_preference(
 @pytest.fixture(scope="class")
 def vm_from_template_scope_class(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as vm:
@@ -2480,10 +2511,10 @@ def storage_class_with_block_volume_mode(available_storage_classes_names):
 
 
 @pytest.fixture(scope="class")
-def vm_for_test(request, namespace, unprivileged_client):
+def vm_for_test(request, namespace, local_unprivileged_client):
     vm_name = request.param
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=vm_name,
         body=fedora_vm_body(name=vm_name),
         namespace=namespace.name,
@@ -2493,12 +2524,12 @@ def vm_for_test(request, namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client):
+def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, local_unprivileged_client):
     with VirtualMachineForCloning(
         name=RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=RHEL9_PREFERENCE),
         os_flavor=OS_FLAVOR_RHEL,
@@ -2597,12 +2628,12 @@ def snapshot_storage_class_name_scope_module(
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
+def rhel_vm_with_cluster_instance_type_and_preference(namespace, local_unprivileged_client):
     with VirtualMachineForTests(
         name="rhel-vm-with-clustertype-resources",
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(
             name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
         ),
@@ -2625,7 +2656,7 @@ def upgrade_skip_default_sc_setup(pytestconfig):
 
 @pytest.fixture(scope="session")
 def updated_default_storage_class_ocs_virt(
-    admin_client,
+    local_admin_client,
     upgrade_skip_default_sc_setup,
     cluster_storage_classes,
     available_storage_classes_names,
@@ -2646,7 +2677,7 @@ def updated_default_storage_class_ocs_virt(
         with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
             with update_default_sc(default=True, storage_class=ocs_storage_class):
                 boot_source_imported_successfully = verify_boot_sources_reimported(
-                    admin_client=admin_client,
+                    admin_client=local_admin_client,
                     namespace=golden_images_namespace.name,
                 )
                 if boot_source_imported_successfully:
@@ -2654,7 +2685,7 @@ def updated_default_storage_class_ocs_virt(
 
         # on teardown, wait for the original sources to re-create
         verify_boot_sources_reimported(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             namespace=golden_images_namespace.name,
         )
         if not boot_source_imported_successfully:
@@ -2665,7 +2696,7 @@ def updated_default_storage_class_ocs_virt(
 
 @pytest.fixture(scope="session")
 def dvs_for_upgrade(
-    admin_client,
+    local_admin_client,
     worker_node1,
     rhel_latest_os_params,
     updated_default_storage_class_ocs_virt,
@@ -2678,7 +2709,7 @@ def dvs_for_upgrade(
     for sc in py_config["storage_class_matrix"]:
         storage_class = [*sc][0]
         dv = DataVolume(
-            client=admin_client,
+            client=local_admin_client,
             name=f"dv-for-product-upgrade-{storage_class}",
             namespace=golden_images_namespace_name,
             source="http",
@@ -2706,10 +2737,10 @@ def dvs_for_upgrade(
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migration):
+def vm_for_migration_test(request, namespace, local_unprivileged_client, cpu_for_migration):
     vm_name = request.param
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=vm_name,
         body=fedora_vm_body(name=vm_name),
         cpu_model=cpu_for_migration,
@@ -2720,8 +2751,8 @@ def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migra
 
 
 @pytest.fixture(scope="class")
-def ssp_resource_scope_class(admin_client, hco_namespace):
-    return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
+def ssp_resource_scope_class(local_admin_client, hco_namespace):
+    return get_ssp_resource(admin_client=local_admin_client, namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -2768,70 +2799,70 @@ def skip_on_aws_cluster(is_aws_cluster):
 
 @pytest.fixture()
 def cluster_cpu_model_scope_function(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
     cluster_common_node_cpu,
 ):
     with update_cluster_cpu_model(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hco_resource=hyperconverged_resource_scope_function,
         cpu_model=cluster_common_node_cpu,
     ):
         yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
 def cluster_cpu_model_scope_module(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_module,
     cluster_common_node_cpu,
 ):
     with update_cluster_cpu_model(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hco_resource=hyperconverged_resource_scope_module,
         cpu_model=cluster_common_node_cpu,
     ):
         yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")
 def cluster_cpu_model_scope_class(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_class,
     cluster_common_node_cpu,
 ):
     with update_cluster_cpu_model(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hco_resource=hyperconverged_resource_scope_class,
         cpu_model=cluster_common_node_cpu,
     ):
         yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")
 def cluster_modern_cpu_model_scope_class(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     hyperconverged_resource_scope_class,
     cluster_common_modern_node_cpu,
 ):
     with update_cluster_cpu_model(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         hco_resource=hyperconverged_resource_scope_class,
         cpu_model=cluster_common_modern_node_cpu,
     ):
         yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+    wait_for_kv_stabilize(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
@@ -2913,7 +2944,7 @@ def machine_config_pools():
 
 
 @pytest.fixture(scope="session")
-def nmstate_namespace(admin_client):
+def nmstate_namespace(local_admin_client):
     nmstate_ns = Namespace(name="openshift-nmstate")
     assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
     return nmstate_ns

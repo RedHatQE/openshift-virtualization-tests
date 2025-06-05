@@ -65,7 +65,7 @@ def wait_for_all_progress_keys_in_pod_log(pod):
 @pytest.fixture(scope="class")
 def vm_for_migration_progress_test(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     cpu_for_migration,
 ):
     name = "vm-for-migration-progress-test"

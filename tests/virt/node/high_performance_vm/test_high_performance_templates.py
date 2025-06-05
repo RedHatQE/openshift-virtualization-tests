@@ -46,10 +46,10 @@ def vm_has_io_thread_policy(vm, policy):
 
 
 @pytest.fixture(scope="class")
-def high_performance_vm(request, golden_image_data_source_scope_class, unprivileged_client, namespace):
+def high_performance_vm(request, golden_image_data_source_scope_class, local_unprivileged_client, namespace):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_class,
     ) as vm:

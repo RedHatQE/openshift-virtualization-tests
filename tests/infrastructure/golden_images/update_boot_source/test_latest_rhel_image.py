@@ -21,10 +21,10 @@ def sorted_keys_for_minor_version(s):
 
 
 @pytest.fixture()
-def rhel_vm(request, unprivileged_client, namespace):
+def rhel_vm(request, local_unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=request.param["vm_name"],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace.name,
         image=request.param["image"],
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,

@@ -223,8 +223,8 @@ def update_data_source(data_source):
 
 
 @pytest.fixture()
-def golden_images_data_sources_scope_function(admin_client, golden_images_namespace):
-    return list(DataSource.get(dyn_client=admin_client, namespace=golden_images_namespace.name))
+def golden_images_data_sources_scope_function(local_admin_client, golden_images_namespace):
+    return list(DataSource.get(dyn_client=local_admin_client, namespace=golden_images_namespace.name))
 
 
 @pytest.fixture()
@@ -255,19 +255,19 @@ def data_sources_from_templates_scope_function(data_sources_names_from_templates
 
 
 @pytest.fixture()
-def data_source_by_name_scope_function(request, admin_client, golden_images_namespace):
+def data_source_by_name_scope_function(request, local_admin_client, golden_images_namespace):
     return DataSource(name=request.param, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")
-def data_source_by_name_scope_class(request, admin_client, golden_images_namespace):
+def data_source_by_name_scope_class(request, local_admin_client, golden_images_namespace):
     return DataSource(name=request.param, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")
-def data_source_by_name_managing_data_import_cron_scope_class(admin_client, data_source_by_name_scope_class):
+def data_source_by_name_managing_data_import_cron_scope_class(local_admin_client, data_source_by_name_scope_class):
     return DataImportCron(
-        client=admin_client,
+        client=local_admin_client,
         name=data_source_by_name_scope_class.labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL],
         namespace=data_source_by_name_scope_class.namespace,
     )
@@ -307,37 +307,37 @@ def opted_out_data_source_scope_class(
 
 
 @pytest.fixture()
-def uploaded_dv_for_dangling_data_source_scope_function(admin_client, data_source_by_name_scope_function):
+def uploaded_dv_for_dangling_data_source_scope_function(local_admin_client, data_source_by_name_scope_function):
     expected_pvc_name = data_source_by_name_scope_function.instance.spec.source.pvc.name
     LOGGER.info(f"Create DV {expected_pvc_name} for DataSource {data_source_by_name_scope_function.name}")
     with dv_for_data_source(
         name=expected_pvc_name,
         data_source=data_source_by_name_scope_function,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     ) as dv:
         yield dv
 
 
 @pytest.fixture()
 def created_dv_for_data_import_cron_managed_data_source_scope_function(
-    admin_client, golden_images_namespace, data_source_by_name_scope_function
+    local_admin_client, golden_images_namespace, data_source_by_name_scope_function
 ):
     with dv_for_data_source(
         name=data_source_by_name_scope_function.instance.spec.source.pvc.name,
         data_source=data_source_by_name_scope_function,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     ) as dv:
         yield dv
 
 
 @pytest.fixture(scope="class")
 def created_dv_for_data_import_cron_managed_data_source_scope_class(
-    admin_client, golden_images_namespace, data_source_by_name_scope_class
+    local_admin_client, golden_images_namespace, data_source_by_name_scope_class
 ):
     with dv_for_data_source(
         name=data_source_by_name_scope_class.instance.spec.source.pvc.name,
         data_source=data_source_by_name_scope_class,
-        admin_client=admin_client,
+        admin_client=local_admin_client,
     ) as dv:
         yield dv
 
@@ -490,7 +490,7 @@ def test_opt_out_data_source_update(
     indirect=True,
 )
 def test_opt_out_custom_data_sources_not_deleted(
-    admin_client,
+    local_admin_client,
     golden_images_namespace,
     updated_hco_with_custom_data_import_cron_scope_function,
     disabled_common_boot_image_import_hco_spec_scope_function,
@@ -498,7 +498,7 @@ def test_opt_out_custom_data_sources_not_deleted(
     custom_data_source_name = updated_hco_with_custom_data_import_cron_scope_function["spec"]["managedDataSource"]
     LOGGER.info(f"Verify custom DataSource {custom_data_source_name} is not deleted after opt-out")
     if not DataSource(
-        client=admin_client,
+        client=local_admin_client,
         name=custom_data_source_name,
         namespace=golden_images_namespace.name,
     ).exists:

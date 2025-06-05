@@ -18,5 +18,5 @@ def kubevirt_all_unsafe_modification_metrics_before_test(prometheus):
 
 
 @pytest.fixture(scope="class")
-def cdi_feature_gates_scope_class(admin_client):
-    return get_hyperconverged_cdi(admin_client=admin_client).instance.spec.config.get("featureGates")
+def cdi_feature_gates_scope_class(local_admin_client):
+    return get_hyperconverged_cdi(admin_client=local_admin_client).instance.spec.config.get("featureGates")
