@@ -10,15 +10,16 @@ pytestmark = pytest.mark.rwx_default_storage
 
 
 @pytest.fixture(scope="session")
-def kubevirt_migrate_cluster_role():
-    return ClusterRole(name="kubevirt.io:migrate")
+def kubevirt_migrate_cluster_role(admin_client):
+    return ClusterRole(name="kubevirt.io:migrate", client=admin_client)
 
 
 @pytest.fixture()
-def unprivileged_client_migrate_rolebinding(namespace, kubevirt_migrate_cluster_role):
+def unprivileged_client_migrate_rolebinding(admin_client, namespace, kubevirt_migrate_cluster_role):
     with RoleBinding(
         name="role-bind-kubevirt-migrate",
         namespace=namespace.name,
+        client=admin_client,
         subjects_kind="User",
         subjects_name=UNPRIVILEGED_USER,
         subjects_namespace=namespace.name,
