@@ -5,6 +5,7 @@ from tests.network.localnet.liblocalnet import LOCALNET_BR_EX_NETWORK, client_se
 from utilities.virt import migrate_vm_and_verify
 
 
+@pytest.mark.gating
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.usefixtures("nncp_localnet")
