@@ -307,35 +307,6 @@ def local_admin_client(kubeconfig_export_path):  # ---> local_admin_client   vs 
     return get_client(config_file=kubeconfig_export_path)
 
 
-# TODO destination cluster client
-#
-#  client1 = get_client(config_file="/tmp/rhos-psi.cnv-qe.rhood.us/stg-jp419/auth/kubeconfig")
-# 2025-06-05T04:47:46.586200 ocp_resources.resource INFO Trying to get client via new_client_from_config
-#
-# In [5]: client2 = get_client(config_file="/tmp/rhos-psi.cnv-qe.rhood.us/stg-jp419-2/auth/kubeconfig")
-#
-# In [6]: from ocp_resources.node import Node
-#    ...:
-#
-# In [7]: list(Node.get(dyn_client=client1))
-# Out[7]:
-# [<ocp_resources.node.Node at 0x7f0189f2f740>,
-#  <ocp_resources.node.Node at 0x7f0189f2f890>,
-#  <ocp_resources.node.Node at 0x7f0189f2f8c0>,
-#  <ocp_resources.node.Node at 0x7f0189f2f8f0>,
-#  <ocp_resources.node.Node at 0x7f0189f2f920>,
-#  <ocp_resources.node.Node at 0x7f0189f2f950>]
-#
-# In [8]: list(Node.get(dyn_client=client1))[0].name
-# Out[8]: 'stg-jp419-l6fkz-master-0'
-#
-# In [9]: list(Node.get(dyn_client=client2))[0].name
-# Out[9]: 'stg-jp419-2-vrfgj-master-0'
-#
-# In [10]: list(Node.get(dyn_client=client1))[0].name
-# Out[10]: 'stg-jp419-l6fkz-master-0'
-
-
 @pytest.fixture(scope="session")
 def unprivileged_secret(local_admin_client, skip_unprivileged_client):
     if skip_unprivileged_client:
