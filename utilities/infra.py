@@ -1445,17 +1445,6 @@ def get_nodes_cpu_model(nodes):
 
     :return: Dict of nodes and associated cpu models
     """
-    if is_jira_open(jira_id="CNV-57387"):
-        obsolete_cpu = [
-            "core",
-            "kvm",
-            "n270",
-            "pentium",
-            "qemu",
-            "486",
-        ]
-        EXCLUDED_CPU_MODELS.extend(obsolete_cpu)
-        EXCLUDED_OLD_CPU_MODELS.extend(obsolete_cpu)
 
     nodes_cpu_model = {"common": {}, "modern": {}}
     for node in nodes:
