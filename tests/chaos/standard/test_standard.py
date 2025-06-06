@@ -91,7 +91,7 @@ def test_control_plane_node_restart(
         "Reason: There is no deployment `csi-rbdplugin-provisioner` since CNV v4.19.0, "
         "so we need to get the new one that plays the same role."
     ),
-    run=False
+    run=False,
 )
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
