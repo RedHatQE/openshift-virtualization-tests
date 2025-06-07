@@ -19,36 +19,33 @@ pytestmark = [
 
 
 @pytest.mark.parametrize(
-    "calculated_vm_deployment_for_node_with_least_available_memory",
-    [pytest.param(0.80)],
+    "calculated_vm_deployment_for_descheduler_test",
+    [pytest.param(0.50)],
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "node_labeled_for_test",
-    "deployed_vms_on_labeled_node",
-    "stress_started_on_vms_for_psi_metrics",
+    "deployed_vms_for_descheduler_test",
 )
 class TestDeschedulerLoadAwareRebalancing:
     @pytest.mark.polarion("CNV-11960")
     def test_soft_taint_added_when_node_overloaded(
         self,
-        node_labeled_for_test,
+        node_to_run_stress,
+        stressed_vms_on_one_node,
     ):
-        wait_for_overutilized_soft_taint(node=node_labeled_for_test, taint_expected=True)
+        wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=True)
 
     @pytest.mark.polarion("CNV-11961")
     def test_rebalancing_when_node_overloaded(
         self,
-        node_labeled_for_test,
-        migration_policy_with_allow_auto_converge,
-        deployed_vms_on_labeled_node,
-        second_node_labeled_labeled_for_migration,
+        node_to_run_stress,
+        stressed_vms_on_one_node,
     ):
-        verify_at_least_one_vm_migrated(vms=deployed_vms_on_labeled_node, node_before=node_labeled_for_test)
+        verify_at_least_one_vm_migrated(vms=stressed_vms_on_one_node, node_before=node_to_run_stress)
 
     @pytest.mark.polarion("CNV-11962")
     def test_soft_taint_removed_when_node_not_overloaded(
         self,
-        node_labeled_for_test,
+        node_to_run_stress,
     ):
-        wait_for_overutilized_soft_taint(node=node_labeled_for_test, taint_expected=False)
+        wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False)
