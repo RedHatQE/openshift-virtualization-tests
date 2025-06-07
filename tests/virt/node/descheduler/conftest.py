@@ -4,7 +4,6 @@ import logging
 import bitmath
 import pytest
 from ocp_resources.deployment import Deployment
-from ocp_resources.machine_config import MachineConfig
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_utilities.infra import get_pods_by_name_prefix
@@ -27,7 +26,7 @@ from tests.virt.node.descheduler.utils import (
     wait_vmi_failover,
 )
 from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
-from utilities.constants import BREW_REGISTERY_SOURCE, TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
+from utilities.constants import BREW_REGISTERY_SOURCE, TIMEOUT_5SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
     create_ns,
@@ -39,7 +38,6 @@ from utilities.operator import (
     create_subscription,
     get_install_plan_from_subscription,
     wait_for_catalogsource_ready,
-    wait_for_mcp_updated_condition_true,
     wait_for_operator_install,
 )
 from utilities.virt import (
@@ -180,48 +178,14 @@ def descheduler_long_lifecycle_profile():
 def descheduler_kubevirt_releave_and_migrate_profile(
     schedulable_nodes,
     nodes_taints_before_descheduler_test_run,
-    # created_machine_config_with_psi_args,
 ):
     with create_kube_descheduler(
         profiles=["DevKubeVirtRelieveAndMigrate"],
         profile_customizations={
-            "devLowNodeUtilizationThresholds": "Medium",  # underutilized <20%, overutilized >50%
             "devActualUtilizationProfile": "PrometheusCPUCombined",
         },
     ) as kd:
         yield kd
-
-
-@pytest.fixture(scope="module")
-def created_machine_config_with_psi_args(active_machine_config_pools):
-    # TODO: remove this fixture, all nodes should have psi=1 before running descheduler tests
-
-    mc_with_psi_list = []
-    for mcp in active_machine_config_pools:
-        mc = MachineConfig(
-            name=f"99-{mcp.name}-psi-karg",
-            label={"machineconfiguration.openshift.io/role": mcp.name},
-            kernel_arguments=["psi=1"],
-        )
-        mc.create()
-        mc_with_psi_list.append(mc)
-
-    wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=active_machine_config_pools,
-        timeout=TIMEOUT_30MIN,
-        sleep=TIMEOUT_30SEC,
-    )
-
-    yield
-
-    for mc in mc_with_psi_list:
-        mc.clean_up()
-
-    wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=active_machine_config_pools,
-        timeout=TIMEOUT_30MIN,
-        sleep=TIMEOUT_30SEC,
-    )
 
 
 @pytest.fixture(scope="module")
@@ -247,14 +211,14 @@ def cpu_capacity_per_node(schedulable_nodes):
 def vm_deployment_size(allocatable_memory_per_node_scope_module, cpu_capacity_per_node):
     vm_memory_size = next(iter(allocatable_memory_per_node_scope_module.values())) / 10
     LOGGER.info(f"VM memory is 10% from allocatable: {vm_memory_size.to_GiB()}")
-    vm_cpu_size = next(iter(cpu_capacity_per_node.values())) // 10
-    LOGGER.info(f"VM CPU is 10% from capacity: {vm_cpu_size}")
+    vm_cpu_size = next(iter(cpu_capacity_per_node.values())) // 20
+    LOGGER.info(f"VM CPU is 5% from capacity: {vm_cpu_size}")
 
     return {"cpu": vm_cpu_size, "memory": vm_memory_size}
 
 
 @pytest.fixture(scope="class")
-def calculated_vm_deployment_for_node_drain_test(
+def calculated_vm_deployment_for_descheduler_test(
     request,
     schedulable_nodes,
     vm_deployment_size,
@@ -269,35 +233,35 @@ def calculated_vm_deployment_for_node_drain_test(
 
 
 @pytest.fixture(scope="class")
-def deployed_vms_for_node_drain(
+def deployed_vms_for_descheduler_test(
     namespace,
     unprivileged_client,
     cpu_for_migration,
     vm_deployment_size,
-    calculated_vm_deployment_for_node_drain_test,
+    calculated_vm_deployment_for_descheduler_test,
 ):
     yield from deploy_vms(
-        vm_prefix="node-drain-test",
+        vm_prefix="vm-descheduler-test",
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
-        vm_count=sum(calculated_vm_deployment_for_node_drain_test.values()),
+        vm_count=sum(calculated_vm_deployment_for_descheduler_test.values()),
         deployment_size=vm_deployment_size,
         descheduler_eviction=True,
     )
 
 
 @pytest.fixture(scope="class")
-def vms_orig_nodes_before_node_drain(deployed_vms_for_node_drain):
-    return vm_nodes(vms=deployed_vms_for_node_drain)
+def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
+    return vm_nodes(vms=deployed_vms_for_descheduler_test)
 
 
 @pytest.fixture(scope="class")
 def vms_started_process_for_node_drain(
-    deployed_vms_for_node_drain,
+    deployed_vms_for_descheduler_test,
 ):
     return start_vms_with_process(
-        vms=deployed_vms_for_node_drain,
+        vms=deployed_vms_for_descheduler_test,
         process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
         args=LOCALHOST,
     )
@@ -318,14 +282,14 @@ def node_to_drain(
 
 @pytest.fixture()
 def drain_uncordon_node(
-    deployed_vms_for_node_drain,
+    deployed_vms_for_descheduler_test,
     vms_orig_nodes_before_node_drain,
     node_to_drain,
 ):
     """Return when node is schedulable again after uncordon"""
     with node_mgmt_console(node=node_to_drain, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=node_to_drain, status=False)
-        for vm in deployed_vms_for_node_drain:
+        for vm in deployed_vms_for_descheduler_test:
             if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
                 wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
 
@@ -528,18 +492,24 @@ def utilization_imbalance(
 
 
 @pytest.fixture(scope="class")
-def stress_started_on_vms_for_psi_metrics(vm_deployment_size, deployed_vms_on_labeled_node):
-    for vm in deployed_vms_on_labeled_node:
-        start_stress_on_vm(
-            vm=vm,
-            stress_command="nohup stress-ng --cpu 0 &> /dev/null &",
-        )
+def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
+    vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
+    for node in schedulable_nodes:
+        if vm_per_node_counters[node.name] > 0:
+            return node
 
 
 @pytest.fixture(scope="class")
-def second_node_labeled_labeled_for_migration(node_with_most_available_memory):
-    with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": NODE_SELECTOR_LABEL}}}):
-        yield
+def stressed_vms_on_one_node(node_to_run_stress, deployed_vms_for_descheduler_test):
+    stressed_vms_list = []
+    for vm in deployed_vms_for_descheduler_test:
+        if vm.vmi.node.name == node_to_run_stress.name:
+            stressed_vms_list.append(vm)
+            start_stress_on_vm(
+                vm=vm,
+                stress_command="nohup stress-ng --cpu 0 &> /dev/null &",
+            )
+    yield stressed_vms_list
 
 
 @pytest.fixture(scope="module")
