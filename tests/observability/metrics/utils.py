@@ -70,6 +70,7 @@ from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
 from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.vnc_utils import VNCConnection
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1477,3 +1478,9 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
     }
+
+
+def connect_to_vnc_console(vm: VirtualMachineForTests) -> Generator:
+    with VNCConnection(vm=vm):
+        LOGGER.info(f"Checking vnc on {vm.name}")
+        yield

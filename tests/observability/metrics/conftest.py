@@ -39,6 +39,7 @@ from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
     binding_name_and_type_from_vm_or_vmi,
+    connect_to_vnc_console,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -122,7 +123,6 @@ from utilities.virt import (
     running_vm,
     target_vm_from_cloning_job,
 )
-from utilities.vnc_utils import VNCConnection
 
 UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
@@ -630,7 +630,7 @@ def validated_preference_instance_type_of_target_vm(
 
 
 @pytest.fixture()
-def connected_vm_console_successfully(vm_for_test, prometheus):
+def connected_vm_console_successfully_linux(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
         vmc.sendline("ls")
         yield
@@ -642,13 +642,35 @@ def connected_vm_console_successfully(vm_for_test, prometheus):
 
 
 @pytest.fixture()
-def connected_vnc_console(prometheus, vm_for_test):
-    with VNCConnection(vm=vm_for_test):
-        LOGGER.info(f"Checking vnc on {vm_for_test.name}")
+def connected_vm_console_successfully_windows(windows_vm_for_test, prometheus):
+    with console.Console(vm=windows_vm_for_test) as vmc:
+        vmc.sendline("dir")
         yield
     validate_metrics_value(
         prometheus=prometheus,
+        metric_name=KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=windows_vm_for_test.name),
+        expected_value="0",
+    )
+
+
+@pytest.fixture()
+def connected_vnc_console_linux(prometheus, vm_for_test):
+    connect_to_vnc_console(vm=vm_for_test)
+    yield
+    validate_metrics_value(
+        prometheus=prometheus,
         metric_name=KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=vm_for_test.name),
+        expected_value="0",
+    )
+
+
+@pytest.fixture()
+def connected_vnc_console_windows(prometheus, windows_vm_for_test):
+    connect_to_vnc_console(vm=windows_vm_for_test)
+    yield
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name=KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=windows_vm_for_test.name),
         expected_value="0",
     )
 
