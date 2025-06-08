@@ -15,7 +15,7 @@ def kubevirt_migrate_cluster_role(admin_client):
 
 
 @pytest.fixture()
-def unprivileged_client_migrate_rolebinding(admin_client, namespace, kubevirt_migrate_cluster_role):
+def unprivileged_user_migrate_rolebinding(admin_client, namespace, kubevirt_migrate_cluster_role):
     with RoleBinding(
         name="role-bind-kubevirt-migrate",
         namespace=namespace.name,
@@ -30,7 +30,7 @@ def unprivileged_client_migrate_rolebinding(admin_client, namespace, kubevirt_mi
 
 
 @pytest.fixture(scope="module")
-def unprivileged_client_vm(unprivileged_client, namespace):
+def unprivileged_user_vm(unprivileged_client, namespace):
     name = "namespace-admin-vm"
     with VirtualMachineForTests(
         name=name,
@@ -43,15 +43,15 @@ def unprivileged_client_vm(unprivileged_client, namespace):
 
 
 @pytest.mark.polarion("CNV-11968")
-def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileged_client_vm):
+def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileged_user_vm):
     """Test that namespace admin can't migrate a VM."""
     with pytest.raises(ForbiddenError):
-        migrate_vm_and_verify(vm=unprivileged_client_vm, client=unprivileged_client, wait_for_migration_success=False)
+        migrate_vm_and_verify(vm=unprivileged_user_vm, client=unprivileged_client, wait_for_migration_success=False)
         pytest.fail("Namespace admin shouldn't be able to migrate VM without kubevirt.io:migrate RoleBinding!")
 
 
 @pytest.mark.polarion("CNV-11967")
-@pytest.mark.usefixtures("unprivileged_client_migrate_rolebinding")
-def test_unprivileged_client_migrate_vm(unprivileged_client, unprivileged_client_vm):
+@pytest.mark.usefixtures("unprivileged_user_migrate_rolebinding")
+def test_unprivileged_client_migrate_vm(unprivileged_client, unprivileged_user_vm):
     """Test that namespace admin can migrate a VM when has kubevirt.io:migrate RoleBinding."""
-    migrate_vm_and_verify(vm=unprivileged_client_vm, client=unprivileged_client)
+    migrate_vm_and_verify(vm=unprivileged_user_vm, client=unprivileged_client)
