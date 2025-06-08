@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from tests.observability.metrics import utils
-from tests.observability.metrics.constants import (
+from utilities.constants import (
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL,

@@ -36,6 +36,7 @@ from utilities.constants import (
     KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
     LATEST_RELEASE_STR,
     LINUX_BRIDGE,
+    MONITORING_METRICS,
     OS_STR,
     OS_VERSION_STR,
     OVS_BRIDGE,
@@ -137,6 +138,8 @@ cnv_vm_resource_requests_units_matrix = [
     "threads",
 ]
 
+
+cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
 
 cnv_cpu_usage_metrics_matrix = [
     KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
