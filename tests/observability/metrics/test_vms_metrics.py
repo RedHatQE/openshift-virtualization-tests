@@ -1,25 +1,24 @@
 import logging
-from datetime import datetime, timezone
 
 import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
-from ocp_resources.virtual_machine_instance_migration import (
-    VirtualMachineInstanceMigration,
-)
 from pytest_testconfig import py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+    KUBEVIRT_VM_MIGRATING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+    KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+    KUBEVIRT_VM_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+    KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
+    check_vm_last_transition_metric_value,
+    check_vmi_count_metric,
     compare_metric_file_system_values_with_vm_file_system_values,
     expected_metric_labels_and_values,
     get_metric_labels_non_empty_value,
@@ -32,154 +31,10 @@ from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
-    MIGRATION_POLICY_VM_LABEL,
-    TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_30SEC,
     USED,
 )
-from utilities.infra import get_node_selector_dict
-from utilities.monitoring import get_metrics_value
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_last_transition_time(vm):
-    for condition in vm.instance.get("status", {}).get("conditions"):
-        if condition.get("type") == vm.Condition.READY:
-            last_transition_time = condition.get("lastTransitionTime")
-            return int(
-                (datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)).timestamp()
-            )
-
-
-def check_vm_last_transition_metric_value(prometheus, metric, vm):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_30SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=f"{metric}{{name='{vm.name}'}}",
-    )
-    sample, last_transition_time = None, None
-    try:
-        for sample in samples:
-            if sample:
-                last_transition_time = get_last_transition_time(vm=vm)
-                if int(sample) == last_transition_time:
-                    break
-    except TimeoutExpiredError:
-        LOGGER.error(f"Metric value: {sample} does not match vm's last transition timestamp: {last_transition_time}")
-        raise
-
-
-@pytest.fixture()
-def stopped_vm_metric_1(vm_metric_1):
-    vm_metric_1.stop(wait=True)
-
-
-@pytest.fixture()
-def vm_in_error_state(namespace):
-    vm_name = "vm-in-error-state"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        node_selector=get_node_selector_dict(node_selector="non-existent-node"),
-    ) as vm:
-        vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-        yield vm
-
-
-@pytest.fixture()
-def pvc_for_vm_in_starting_state(namespace):
-    with PersistentVolumeClaim(
-        name="vm-in-starting-state-pvc",
-        namespace=namespace.name,
-        accessmodes=PersistentVolumeClaim.AccessMode.RWX,
-        size="1Gi",
-        pvlabel="non-existent-pv",
-    ) as pvc:
-        yield pvc
-
-
-@pytest.fixture()
-def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
-    vm_name = "vm-in-starting-state"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        pvc=pvc_for_vm_in_starting_state,
-    ) as vm:
-        vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
-    vm_name = "vm-metrics-1"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
-        additional_labels=MIGRATION_POLICY_VM_LABEL,
-        cpu_model=cluster_common_node_cpu,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        yield vm
-
-
-@pytest.fixture()
-def vm_metric_1_vmim(vm_metric_1):
-    with VirtualMachineInstanceMigration(
-        name="vm-metric-1-vmim",
-        namespace=vm_metric_1.namespace,
-        vmi_name=vm_metric_1.vmi.name,
-    ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
-        yield
-
-
-@pytest.fixture(scope="class")
-def vm_metric_2(namespace, unprivileged_client):
-    vm_name = "vm-metrics-2"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def number_of_running_vmis(admin_client):
-    return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
-
-
-def check_vmi_metric(prometheus):
-    response = prometheus.query(query="cnv:vmi_status_running:count")
-    assert response["status"] == "success"
-    return sum(int(node["value"][1]) for node in response["data"]["result"])
-
-
-def check_vmi_count_metric(expected_vmi_count, prometheus):
-    LOGGER.info(f"Check VMI metric expected: {expected_vmi_count}")
-    samples = TimeoutSampler(
-        wait_timeout=100,
-        sleep=5,
-        func=check_vmi_metric,
-        prometheus=prometheus,
-    )
-    for sample in samples:
-        if sample == expected_vmi_count:
-            return True
 
 
 class TestVMICountMetric:
@@ -191,7 +46,7 @@ class TestVMICountMetric:
         vm_metric_1,
         vm_metric_2,
     ):
-        assert check_vmi_count_metric(number_of_running_vmis + 2, prometheus)
+        check_vmi_count_metric(expected_vmi_count=number_of_running_vmis + 2, prometheus=prometheus)
 
     @pytest.mark.polarion("CNV-3589")
     def test_vmi_count_metric_decrease(
@@ -202,15 +57,15 @@ class TestVMICountMetric:
         vm_metric_2,
     ):
         vm_metric_2.stop(wait=True)
-        assert check_vmi_count_metric(number_of_running_vmis + 1, prometheus)
+        check_vmi_count_metric(expected_vmi_count=number_of_running_vmis + 1, prometheus=prometheus)
 
 
-class TestVMStatusLastTransitionMetrics:
+class TestVMStatusLastTransitionMetricsLinux:
     @pytest.mark.polarion("CNV-9661")
     def test_vm_running_status_metrics(self, prometheus, vm_metric_1):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
-            metric="kubevirt_vm_running_status_last_transition_timestamp_seconds",
+            metric=KUBEVIRT_VM_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
             vm=vm_metric_1,
         )
 
@@ -218,7 +73,7 @@ class TestVMStatusLastTransitionMetrics:
     def test_vm_error_status_metrics(self, prometheus, vm_in_error_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
-            metric="kubevirt_vm_error_status_last_transition_timestamp_seconds",
+            metric=KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
             vm=vm_in_error_state,
         )
 
@@ -228,7 +83,7 @@ class TestVMStatusLastTransitionMetrics:
     ):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
-            metric="kubevirt_vm_migrating_status_last_transition_timestamp_seconds",
+            metric=KUBEVIRT_VM_MIGRATING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
             vm=vm_metric_1,
         )
 
@@ -236,7 +91,7 @@ class TestVMStatusLastTransitionMetrics:
     def test_vm_non_running_status_metrics(self, prometheus, vm_metric_1, stopped_vm_metric_1):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
-            metric="kubevirt_vm_non_running_status_last_transition_timestamp_seconds",
+            metric=KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
             vm=vm_metric_1,
         )
 
@@ -244,8 +99,53 @@ class TestVMStatusLastTransitionMetrics:
     def test_vm_starting_status_metrics(self, prometheus, vm_in_starting_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
-            metric="kubevirt_vm_starting_status_last_transition_timestamp_seconds",
+            metric=KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
             vm=vm_in_starting_state,
+        )
+
+
+@pytest.mark.tier3
+class TestVMStatusLastTransitionMetricsWindows:
+    @pytest.mark.polarion("CNV-11978")
+    def test_vm_running_status_metrics_windows(self, prometheus, windows_vm_for_test):
+        check_vm_last_transition_metric_value(
+            prometheus=prometheus,
+            metric=KUBEVIRT_VM_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+            vm=windows_vm_for_test,
+        )
+
+    @pytest.mark.polarion("CNV-11979")
+    def test_vm_error_status_metrics_windows(self, prometheus, windows_vm_for_test_in_error_state):
+        check_vm_last_transition_metric_value(
+            prometheus=prometheus,
+            metric=KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+            vm=windows_vm_for_test_in_error_state,
+        )
+
+    @pytest.mark.polarion("CNV-11980")
+    def test_vm_migrating_status_metrics_windows(
+        self, skip_if_no_common_cpu, prometheus, windows_vm_for_test, windows_vm_vmim
+    ):
+        check_vm_last_transition_metric_value(
+            prometheus=prometheus,
+            metric=KUBEVIRT_VM_MIGRATING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+            vm=windows_vm_for_test,
+        )
+
+    @pytest.mark.polarion("CNV-11981")
+    def test_vm_non_running_status_metrics_windows(self, prometheus, windows_vm_for_test):
+        check_vm_last_transition_metric_value(
+            prometheus=prometheus,
+            metric=KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
+            vm=windows_vm_for_test,
+        )
+
+    @pytest.mark.polarion("CNV-11982")
+    def test_vm_starting_status_metrics_windows(self, prometheus, windows_vm_for_test):
+        check_vm_last_transition_metric_value(
+            prometheus=prometheus,
+            metric=f"max_over_time({KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS}[10m])",
+            vm=windows_vm_for_test,
         )
 
 

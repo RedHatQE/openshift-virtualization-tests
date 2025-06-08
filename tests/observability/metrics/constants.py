@@ -74,6 +74,21 @@ KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS = (
 KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_scheduling_phase"
 KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE = "kubevirt_vmi_migrations_in_running_phase"
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
+KUBEVIRT_VM_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
+    "kubevirt_vm_running_status_last_transition_timestamp_seconds"
+)
+KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
+    "kubevirt_vm_error_status_last_transition_timestamp_seconds"
+)
+KUBEVIRT_VM_MIGRATING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
+    "kubevirt_vm_migrating_status_last_transition_timestamp_seconds"
+)
+KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
+    "kubevirt_vm_non_running_status_last_transition_timestamp_seconds"
+)
+KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
+    "kubevirt_vm_starting_status_last_transition_timestamp_seconds"
+)
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
