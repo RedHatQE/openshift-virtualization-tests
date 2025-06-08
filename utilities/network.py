@@ -740,15 +740,12 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
         float or None: The packet loss amount in a number (Range - 0 to 100).
     """
     ping_ipv6 = "-6" if get_valid_ip_address(dst_ip=dst_ip, family=IPV6_STR) else ""
+    packet_size = f"-s {packet_size} -M do" if packet_size else ""
+    interface = f"-I {interface}" if interface else ""
     ping_cmd = (
         f"ping {'-q' if quiet_output else ''} {ping_ipv6} {'-n' if windows else '-c'} "
-        f"{count if count else '3'} {dst_ip}"
+        f"{count if count else '3'} {dst_ip} {packet_size} {interface}"
     )
-    if packet_size:
-        ping_cmd += f" -s {packet_size} -M do"
-    if interface:
-        ping_cmd += f" -I {interface}"
-
     _, out, err = src_vm.ssh_exec.run_command(command=shlex.split(ping_cmd))
     out_to_process = err or out
     match = re.search(r"(\d*\.?\d+)%", out_to_process)

@@ -73,7 +73,6 @@ from utilities.constants import (
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_12MIN,
-    TIMEOUT_15SEC,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
     VIRT_LAUNCHER,
@@ -2541,32 +2540,6 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
     except TimeoutExpiredError:
         return True
     return False
-
-
-def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
-    """
-    Verifies that WSL2 is functioning on windows vm.
-    Args:
-        vm: An instance of `VirtualMachineForTests`
-    Raises:
-        TimeoutExpiredError: If WSL2 fails to return the expected output within
-            the specified timeout period.
-    """
-    echo_string = "TEST"
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_15SEC,
-        func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=shlex.split(f"wsl echo {echo_string}"),
-    )
-    try:
-        for sample in samples:
-            if sample and echo_string in sample[0]:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} failed to start WSL2")
-        raise
 
 
 def get_vm_boot_time(vm: VirtualMachine) -> str:

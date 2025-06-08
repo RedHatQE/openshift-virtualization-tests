@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 import shlex
@@ -16,11 +18,13 @@ from utilities.constants import (
     DEFAULT_HCO_CONDITIONS,
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_15SEC,
     TIMEOUT_30SEC,
 )
 from utilities.hco import (
@@ -31,6 +35,7 @@ from utilities.hco import (
 )
 from utilities.infra import get_pod_by_name_prefix
 from utilities.virt import (
+    VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
     kill_processes_by_name_linux,
@@ -39,7 +44,6 @@ from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
     verify_vm_migrated,
-    verify_wsl2_guest_works,
     wait_for_migration_finished,
     wait_for_updated_kv_value,
 )
@@ -145,6 +149,32 @@ def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
                 return True
     except TimeoutExpiredError:
         LOGGER.error("WSL2 guest is not running in the VM!")
+        raise
+
+
+def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
+    """
+    Verifies that WSL2 is functioning on windows vm.
+    Args:
+        vm: An instance of `VirtualMachineForTests`
+    Raises:
+        TimeoutExpiredError: If WSL2 fails to return the expected output within
+            the specified timeout period.
+    """
+    echo_string = "TEST"
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=run_ssh_commands,
+        host=vm.ssh_exec,
+        commands=shlex.split(f"wsl echo {echo_string}"),
+    )
+    try:
+        for sample in samples:
+            if sample and echo_string in sample[0]:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
 
 
