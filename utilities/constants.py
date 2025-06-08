@@ -250,6 +250,7 @@ PODS_TO_COLLECT_INFO = [
 ]
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
+QUARANTINED = "quarantined"
 
 # Kernel Device Driver
 # Compute: GPU Devices are bound to this Kernel Driver for GPU Passthrough.
