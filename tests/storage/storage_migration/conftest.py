@@ -12,23 +12,27 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.storage.storage_migration.utils import get_storage_class_for_storage_migration
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
     HOTPLUGGED_DEVICE,
     MOUNT_HOTPLUGGED_DEVICE_PATH,
+    WINDOWS_FILE_WITH_PATH,
+    WINDOWS_TEST_DIRECTORY_PATH,
 )
-from tests.storage.storage_migration.utils import get_source_virt_launcher_pod
+from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
+from tests.storage.utils import create_windows_directory
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     U1_SMALL,
     Images,
 )
+from utilities.infra import get_http_image_url
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
@@ -82,6 +86,9 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
             pvc_dict["selection"]["storageClass"] = target_storage_class
             pvc_dict["pvc"]["accessModes"][0] = "auto"
             pvc_dict["pvc"]["volumeMode"] = "auto"
+            # Windows vTPM PVC should be skipped
+            if pvc_dict["pvc"]["name"].startswith("persistent-state"):
+                pvc_dict["selection"]["action"] = "skip"
         ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
 
@@ -365,3 +372,55 @@ def written_file_to_the_mounted_hotplugged_disk(vm_with_mounted_hotplugged_disk)
         ),
     )
     yield vm_with_mounted_hotplugged_disk
+
+
+@pytest.fixture(scope="class")
+def windows_vm_with_vtpm_for_storage_migration(
+    unprivileged_client,
+    namespace,
+    modern_cpu_for_migration,
+    source_storage_class,
+    artifactory_secret_scope_module,
+    artifactory_config_map_scope_module,
+):
+    dv = DataVolume(
+        name="windows-11-dv",
+        namespace=namespace.name,
+        storage_class=source_storage_class,
+        source="http",
+        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=unprivileged_client,
+        api_name="storage",
+        secret=artifactory_secret_scope_module,
+        cert_configmap=artifactory_config_map_scope_module.name,
+    )
+    dv.to_dict()
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
+        name="windows-11-vm",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def created_windows_directory(booted_vms_for_storage_class_migration):
+    for vm in booted_vms_for_storage_class_migration:
+        create_windows_directory(windows_vm=vm, directory_path=WINDOWS_TEST_DIRECTORY_PATH)
+
+
+@pytest.fixture(scope="class")
+def written_file_to_windows_vms_before_migration(booted_vms_for_storage_class_migration, created_windows_directory):
+    for vm in booted_vms_for_storage_class_migration:
+        cmd = shlex.split(
+            f'powershell -command "\\"{CONTENT}\\" | Out-File -FilePath {WINDOWS_FILE_WITH_PATH} -Append"'
+        )
+        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+        # yield windows_vm_with_vtpm_for_storage_migration
+    yield booted_vms_for_storage_class_migration
