@@ -133,7 +133,7 @@ class TestVMStatusLastTransitionMetricsWindows:
         )
 
     @pytest.mark.polarion("CNV-11981")
-    def test_vm_non_running_status_metrics_windows(self, prometheus, windows_vm_for_test):
+    def test_vm_non_running_status_metrics_windows(self, prometheus, windows_vm_for_test, stopped_windows_vm):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric=KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,

@@ -1120,7 +1120,7 @@ def windows_vm_for_test_in_error_state(namespace, unprivileged_client):
         dv_name="dv-for-windows-error-state",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_name="win-vm-for-test",
+        vm_name="win-vm-for-test-error-state",
         storage_class=py_config["default_storage_class"],
         node_selector=get_node_selector_dict(node_selector="non-existent-node"),
     ) as vm:
