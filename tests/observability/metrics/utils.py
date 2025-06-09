@@ -69,7 +69,7 @@ from utilities.infra import (
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
-from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1420,7 +1420,11 @@ def validate_memory_delta_metrics_value_within_range(
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str, node_selector=None
+    dv_name: str,
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    storage_class: str,
 ) -> Generator:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -1445,9 +1449,7 @@ def create_windows11_wsl2_vm(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-        node_selector=node_selector,
     ) as vm:
-        running_vm(vm=vm)
         yield vm
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map

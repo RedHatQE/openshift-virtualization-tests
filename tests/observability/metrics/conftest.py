@@ -1111,19 +1111,38 @@ def windows_vm_for_test(namespace, unprivileged_client):
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
+        running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def windows_vm_for_test_in_error_state(namespace, unprivileged_client):
+def windows_vm_for_test_in_error_state(windows_vm_for_test):
+    with ResourceEditor(
+        patches={
+            windows_vm_for_test: {
+                "spec": {
+                    "template": {"spec": {"nodeSelector": get_node_selector_dict(node_selector="non-existent-node")}}
+                }
+            }
+        }
+    ):
+        windows_vm_for_test.restart()
+        windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
+        yield
+
+
+@pytest.fixture(scope="module")
+def windows_vm_for_test_in_starting_state(namespace, unprivileged_client, pvc_for_vm_in_starting_state):
     with create_windows11_wsl2_vm(
-        dv_name="dv-for-windows-error-state",
+        dv_name="dv-for-windows",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_name="win-vm-for-test-error-state",
+        vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
-        node_selector=get_node_selector_dict(node_selector="non-existent-node"),
+        pvc=pvc_for_vm_in_starting_state,
     ) as vm:
+        vm.start()
+        vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
         yield vm
 
 
