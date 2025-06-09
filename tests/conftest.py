@@ -300,11 +300,11 @@ def exported_kubeconfig(unprivileged_secret, kubeconfig_export_path):
 
 
 @pytest.fixture(scope="session")
-def local_admin_client(kubeconfig_export_path):  # ---> local_admin_client   vs    remove_admin_client
+def local_admin_client():
     """
     Get DynamicClient
     """
-    return get_client(config_file=kubeconfig_export_path)
+    return get_client()
 
 
 @pytest.fixture(scope="session")
