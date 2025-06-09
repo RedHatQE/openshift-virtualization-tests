@@ -26,8 +26,8 @@ def validate_metrics_value(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
+    sample = None
     try:
-        sample = None
         for sample in samples:
             if sample:
                 LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
@@ -35,7 +35,30 @@ def validate_metrics_value(
                     LOGGER.info("Metrics value matches the expected value!")
                     return
     except TimeoutExpiredError:
-        LOGGER.info(f"Metrics value: {sample}, expected: {expected_value}")
+        LOGGER.error(f"Metrics value: {sample}, expected: {expected_value}")
+        raise
+
+
+def validate_metrics_value_greater_than_zero(
+    prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"metric: {metric_name} value is: {sample}")
+                if int(sample) > 0:
+                    LOGGER.info(f"Metric value: {sample} and greater than 0")
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metrics value: {sample}")
         raise
 
 

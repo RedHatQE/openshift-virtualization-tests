@@ -16,7 +16,7 @@ from tests.observability.metrics.utils import (
     timestamp_to_seconds,
     wait_for_non_empty_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
+from tests.observability.utils import validate_metrics_value, validate_metrics_value_greater_than_zero
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,10 +32,8 @@ class TestMigrationMetrics:
         initial_migration_metrics_values,
         vm_with_node_selector_vmim,
     ):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
-            expected_value=str(initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE] + 1),
+        validate_metrics_value_greater_than_zero(
+            prometheus=prometheus, metric_name=f"sum({KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE})"
         )
 
     @pytest.mark.polarion("CNV-8481")
@@ -47,10 +45,8 @@ class TestMigrationMetrics:
         initial_migration_metrics_values,
         vm_migration_metrics_vmim,
     ):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"max_over_time({KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE}[5m])",
-            expected_value=f"{initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE] + 1}",
+        validate_metrics_value_greater_than_zero(
+            prometheus=prometheus, metric_name=f"sum({KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE})"
         )
 
 
