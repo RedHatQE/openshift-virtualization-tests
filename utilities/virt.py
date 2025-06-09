@@ -19,6 +19,7 @@ import pexpect
 import yaml
 from benedict import benedict
 from kubernetes.client import ApiException
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.node import Node
@@ -1710,6 +1711,7 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 def migrate_vm_and_verify(
     vm: VirtualMachine,
+    client: DynamicClient | None = None,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
@@ -1721,6 +1723,7 @@ def migrate_vm_and_verify(
 
     Args:
         vm (VirtualMachine): vm to be migrated
+        client (DynamicClient): client to use for migration
         wait_for_migration_success (boolean):
             True = full teardown will be applied.
             False = no teardown (responsibility on the programmer), and no
@@ -1739,6 +1742,7 @@ def migrate_vm_and_verify(
     LOGGER.info(f"VMI {vm.vmi.name} is running on {node_before.name} before migration.")
     with VirtualMachineInstanceMigration(
         name=vm.name,
+        client=client,
         namespace=vm.namespace,
         vmi_name=vm.vmi.name,
         teardown=wait_for_migration_success,
