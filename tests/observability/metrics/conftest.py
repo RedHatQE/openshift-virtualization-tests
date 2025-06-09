@@ -1137,7 +1137,7 @@ def windows_vm_for_test_in_starting_state(namespace, unprivileged_client, pvc_fo
         dv_name="dv-for-windows",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_name="win-vm-for-test",
+        vm_name="win-vm-for-test-starting-state",
         storage_class=py_config["default_storage_class"],
         pvc=pvc_for_vm_in_starting_state,
     ) as vm:
@@ -1259,7 +1259,7 @@ def vm_in_error_state(namespace):
         yield vm
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def pvc_for_vm_in_starting_state(namespace):
     with PersistentVolumeClaim(
         name="vm-in-starting-state-pvc",
