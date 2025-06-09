@@ -13,12 +13,12 @@ REQUIRED_SCC_VALUE = "restricted-v2"
 
 
 @pytest.fixture(scope="module")
-def required_scc_deployment_check(admin_client, hco_namespace):
+def required_scc_deployment_check(local_admin_client, hco_namespace):
     missing_required_scc_annotation = []
     incorrect_required_scc_annotation_value = {}
 
     for dp in (
-        Deployment(client=admin_client, name=name, namespace=hco_namespace.name)
+        Deployment(client=local_admin_client, name=name, namespace=hco_namespace.name)
         for name in ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
     ):
         scc = dp.instance.spec.template.metadata.annotations.get(REQUIRED_SCC_ANNOTATION)
