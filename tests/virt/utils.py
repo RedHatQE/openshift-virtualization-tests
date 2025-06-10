@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 import shlex
@@ -33,6 +35,7 @@ from utilities.hco import (
 )
 from utilities.infra import get_pod_by_name_prefix
 from utilities.virt import (
+    VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
     kill_processes_by_name_linux,
@@ -149,7 +152,15 @@ def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
         raise
 
 
-def verify_wsl2_guest_works(vm):
+def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
+    """
+    Verifies that WSL2 is functioning on windows vm.
+    Args:
+        vm: An instance of `VirtualMachineForTests`
+    Raises:
+        TimeoutExpiredError: If WSL2 fails to return the expected output within
+            the specified timeout period.
+    """
     echo_string = "TEST"
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
