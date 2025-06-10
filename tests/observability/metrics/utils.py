@@ -1041,6 +1041,7 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
     metrics_result = metrics["data"].get("result", [])
     if metrics_result:
         return sum(int(metric_metrics_result["value"][1]) for metric_metrics_result in metrics_result)
+    LOGGER.warning(f"For Query {metric}, empty results found.")
     return 0
 
 
@@ -1060,10 +1061,13 @@ def wait_for_expected_metric_value_sum(
     )
     sample = None
     current_check = 0
+    comparison_values_log = {}
     try:
         for sample in sampler:
             if sample:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
+                comparison_values_log[datetime.now()] = (
+                    f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
+                )
             if sample == expected_value:
                 current_check += 1
                 if current_check >= check_times:
@@ -1072,7 +1076,10 @@ def wait_for_expected_metric_value_sum(
                 current_check = 0
 
     except TimeoutExpiredError:
-        LOGGER.error(f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}")
+        LOGGER.error(
+            f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}, "
+            f"comparison log: {comparison_values_log}"
+        )
         raise
 
 

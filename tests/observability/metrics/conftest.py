@@ -15,7 +15,6 @@ from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_command, run_ssh_commands
@@ -1205,7 +1204,6 @@ def vm_with_node_selector_vmim(vm_with_node_selector):
         namespace=vm_with_node_selector.namespace,
         vmi_name=vm_with_node_selector.vmi.name,
     ) as vmim:
-        vmim.wait_for_status(status=VirtualMachineInstance.Status.SCHEDULING)
         yield vmim
 
 
