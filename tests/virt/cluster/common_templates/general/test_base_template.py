@@ -202,6 +202,7 @@ def test_base_templates_annotations(base_templates, common_templates_expected_li
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     ("os_type", "osinfo_filename", "memory_test"),
     [
@@ -278,7 +279,7 @@ def test_validate_rhel_min_max_memory(
         osinfo_filename=osinfo_filename,
     )
 
-
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     ("osinfo_filename", "os_template", "memory_test"),
     [
@@ -353,6 +354,7 @@ def test_validate_windows_min_max_memory(
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-5002")
 def test_common_templates_golden_images_params(base_templates):
     unmatched_templates = {}
@@ -386,6 +388,7 @@ def test_common_templates_golden_images_params(base_templates):
     assert not unmatched_templates, f"The following templates fail on golden images verification: {unmatched_templates}"
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-5599")
 def test_provide_support_annotations(base_templates, templates_provider_support_dict):
     """Verify provider, provider-support-level and provider-url annotations"""
@@ -403,6 +406,7 @@ def test_provide_support_annotations(base_templates, templates_provider_support_
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-6874")
 def test_vm_annotations_in_template(base_templates):
     """Verify template VM object has os, workload and flavor annotations which match corresponding template labels"""
@@ -517,6 +521,7 @@ def test_hyperv_features_exist_in_windows_templates(os_base_templates):
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "annotation_list, os_base_templates",
     [

@@ -77,6 +77,7 @@ class TestVMWithStaticKeyInjection:
     def test_static_ssh_key_injection(self, vm_with_ssh_secret):
         running_vm(vm=vm_with_ssh_secret)
 
+    @pytest.mark.s390x
     @pytest.mark.polarion("CNV-6061")
     def test_ssh_access_is_successful_with_updated_secret(self, ssh_secret, vm_with_ssh_secret):
         with ResourceEditor(

@@ -260,6 +260,7 @@ class TestCommonTemplatesFedora:
             vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class
         ), "Guest agent stopped responding"
 
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
