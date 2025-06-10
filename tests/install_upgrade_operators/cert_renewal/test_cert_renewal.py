@@ -10,12 +10,17 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_DURATION_KEY,
     HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY,
 )
+from utilities.constants import QUARANTINED
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.xfail(
+    reason=(f"{QUARANTINED}: certificate order is messed up sometimes, causing flakiness. tracked in CNV-49628"),
+    run=False,
+)
 class TestCertRotation:
     @pytest.mark.polarion("CNV-6203")
     @pytest.mark.parametrize(
