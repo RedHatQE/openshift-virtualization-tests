@@ -12,6 +12,7 @@ from tests.chaos.migration.utils import (
 from tests.chaos.utils import verify_vm_service_reachable
 from utilities.constants import (
     PORT_80,
+    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -244,6 +245,10 @@ def test_stress_migration_source_node(
     )
 
 
+@pytest.mark.xfail(
+    reason=(f"{QUARANTINED}: Failed on teardown with kubernetes.client.exceptions.ApiException. Tracked in CNV-62939"),
+    run=False,
+)
 @pytest.mark.gpfs
 @pytest.mark.polarion("CNV-6120")
 def test_migration_reboot_source_node(
@@ -265,6 +270,10 @@ def test_migration_reboot_source_node(
     ), "The VMI has not been migrated to a different node."
 
 
+@pytest.mark.xfail(
+    reason=(f"{QUARANTINED}: Failed on teardown with kubernetes.client.exceptions.ApiException. Tracked in CNV-62949"),
+    run=False,
+)
 @pytest.mark.gpfs
 @pytest.mark.polarion("CNV-5456")
 def test_migration_reboot_target_node(
