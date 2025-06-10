@@ -29,6 +29,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 LOGGER = logging.getLogger(__name__)
 
+
 @pytest.fixture()
 def resource_object_value_by_key(request):
     resource_obj = get_resource_by_name(
