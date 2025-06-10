@@ -18,9 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.xfail(
-    reason=(
-        f"{QUARANTINED}: certificate order is messed up sometimes, causing flakiness. tracked in CNV-49628"
-    ),
+    reason=(f"{QUARANTINED}: certificate order is messed up sometimes, causing flakiness. tracked in CNV-49628"),
     run=False,
 )
 class TestCertRotation:
