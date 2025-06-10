@@ -41,6 +41,9 @@ storage_class_matrix = [
     },
 ]
 
+storage_class_for_storage_migration_a = StorageClassNames.IO2_CSI
+storage_class_for_storage_migration_b = StorageClassNames.IO2_CSI
+
 for _dir in dir():
     if not config:  # noqa: F821
         config: dict[str, Any] = {}

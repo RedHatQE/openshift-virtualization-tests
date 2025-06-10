@@ -1,9 +1,14 @@
+import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 
-from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
+from tests.storage.storage_migration.constants import (
+    CONTENT,
+    FILE_BEFORE_STORAGE_MIGRATION,
+    NO_STORAGE_CLASS_FAILURE_MESSAGE,
+)
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
 from utilities.virt import get_vm_boot_time
@@ -82,3 +87,14 @@ def verify_storage_migration_succeeded(
             file_content=CONTENT,
         )
         verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+
+
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    if storage_class in cluster_storage_classes_names:
+        return storage_class
+    else:
+        pytest.fail(
+            NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+                storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
+            )
+        )
