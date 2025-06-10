@@ -30,6 +30,8 @@ from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [
     pytest.mark.special_infra,
+    pytest.mark.sriov,
+    pytest.mark.jumbo_frame,
     pytest.mark.usefixtures(
         "label_schedulable_nodes",
     ),
@@ -574,6 +576,7 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         assert mac_addresses_after_restart == mac_addresses_before_restart
 
     @pytest.mark.ipv4
+    @pytest.mark.jumbo_frame
     @pytest.mark.polarion("CNV-10135")
     def test_connectivity_of_hot_plugged_jumbo_interface(
         self,
