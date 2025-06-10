@@ -11,7 +11,7 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 
 from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
-from tests.storage.storage_migration.utils import get_source_virt_launcher_pod
+from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
@@ -89,14 +89,18 @@ def storage_mig_migration(admin_client, storage_mig_plan):
 
 
 @pytest.fixture(scope="class")
-def source_storage_class(request):
+def source_storage_class(request, cluster_storage_classes_names):
     # Storage class for the original VMs creation
-    return request.param["source_storage_class"]
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["source_storage_class"], cluster_storage_classes_names=cluster_storage_classes_names
+    )
 
 
 @pytest.fixture(scope="class")
-def target_storage_class(request):
-    return request.param["target_storage_class"]
+def target_storage_class(request, cluster_storage_classes_names):
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["target_storage_class"], cluster_storage_classes_names=cluster_storage_classes_names
+    )
 
 
 @pytest.fixture(scope="class")

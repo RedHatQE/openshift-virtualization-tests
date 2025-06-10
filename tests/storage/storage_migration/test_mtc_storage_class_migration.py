@@ -2,6 +2,7 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
+from tests.storage.storage_migration.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from tests.storage.storage_migration.utils import (
     verify_storage_migration_succeeded,
 )
@@ -9,8 +10,6 @@ from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
-STORAGE_CLASS_A = "storage_class_for_storage_migration_a"
-STORAGE_CLASS_B = "storage_class_for_storage_migration_b"
 
 
 @pytest.mark.parametrize(

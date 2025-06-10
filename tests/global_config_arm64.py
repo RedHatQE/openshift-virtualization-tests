@@ -47,6 +47,9 @@ storage_class_matrix = [
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
 ]
 
+storage_class_for_storage_migration_a = StorageClassNames.TRIDENT_CSI_NFS
+storage_class_for_storage_migration_b = StorageClassNames.TRIDENT_CSI_NFS
+
 rhel_os_matrix = [
     {
         "rhel-9-5": {
