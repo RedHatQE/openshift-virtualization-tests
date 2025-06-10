@@ -16,10 +16,14 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_SOURCE_NAME,
     DEFAULT_FEDORA_REGISTRY_URL,
 )
-from tests.infrastructure.golden_images.update_boot_source.utils import (
-    template_labels,
+from utilities.constants import (
+    BIND_IMMEDIATE_ANNOTATION,
+    TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+    Images,
 )
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
 from utilities.ssp import (
@@ -32,7 +36,7 @@ from utilities.storage import (
     DATA_IMPORT_CRON_SUFFIX,
     data_volume_template_with_source_ref_dict,
 )
-from utilities.virt import DV_DISK, VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.virt import DV_DISK, VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -157,12 +161,12 @@ def reconciled_custom_data_source(custom_data_source_scope_function):
 
 @pytest.fixture()
 def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace, unprivileged_client):
-    with VirtualMachineForTestsFromTemplate(
+    with VirtualMachineForTests(
         name=f"{custom_data_source_scope_function.name}-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        labels=template_labels(os="fedora40"),
-        data_source=custom_data_source_scope_function,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        data_volume_template=data_volume_template_with_source_ref_dict(data_source=custom_data_source_scope_function),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -341,6 +345,7 @@ class TestDataImportCronDefaultStorageClass:
         )
 
 
+@pytest.mark.jira("CNV-62615", run=False)
 @pytest.mark.polarion("CNV-7532")
 def test_data_import_cron_deletion_on_opt_out(
     golden_images_data_import_crons_scope_function,

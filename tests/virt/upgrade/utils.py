@@ -1,5 +1,4 @@
 import logging
-import shlex
 from datetime import datetime
 
 import pytest
@@ -8,7 +7,6 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
@@ -23,7 +21,7 @@ from utilities.infra import (
     get_pod_disruption_budget,
     get_related_images_name_and_version,
 )
-from utilities.virt import wait_for_ssh_connectivity
+from utilities.virt import get_vm_boot_time, wait_for_ssh_connectivity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -197,11 +195,6 @@ def vm_is_migrateable(vm):
         LOGGER.info(f"Cannot migrate a VM {vm.name} with RWO PVC.")
         return False
     return True
-
-
-def get_vm_boot_time(vm):
-    boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
 
 
 def verify_linux_boot_time(vm_list, initial_boot_time):

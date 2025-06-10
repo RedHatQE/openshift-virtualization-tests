@@ -32,8 +32,19 @@ storage_class_matrix = [
             "default": True,
         }
     },
+    {
+        StorageClassNames.OCI_UHP: {
+            VOLUME_MODE: DataVolume.VolumeMode.BLOCK,
+            ACCESS_MODE: DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": True,
+        }
+    },
 ]
 
+storage_class_for_storage_migration_a = StorageClassNames.OCI
+storage_class_for_storage_migration_b = StorageClassNames.OCI
 
 for _dir in dir():
     if not config:  # noqa: F821

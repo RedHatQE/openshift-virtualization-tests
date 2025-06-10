@@ -1,6 +1,4 @@
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.data_source import DataSource
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
@@ -8,7 +6,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from pytest_testconfig import py_config
 
 from tests.infrastructure.instance_types.constants import ALL_OPTIONS_VM_PREFERENCE_SPEC
-from utilities.constants import OS_FLAVOR_FEDORA, Images
+from utilities.constants import Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests
 
@@ -36,14 +34,6 @@ def vm_storage_class_preference():
         yield vm_cluster_preference
 
 
-@pytest.fixture(scope="module")
-def golden_images_fedora_data_source(golden_images_namespace):
-    fedora_data_source = DataSource(namespace=golden_images_namespace.name, name=OS_FLAVOR_FEDORA)
-    if fedora_data_source.exists:
-        return fedora_data_source
-    raise ResourceNotFoundError("fedora data source was not found")
-
-
 @pytest.fixture()
 def rhel_vm_with_storage_preference(
     namespace,
@@ -63,19 +53,10 @@ def rhel_vm_with_storage_preference(
 
 
 @pytest.fixture()
-def fedora_data_volume_template(dv_template_api, golden_images_fedora_data_source):
-    # When using data volume template different fields are required depending on pvc/storage API used
+def fedora_data_volume_template(golden_images_fedora_data_source):
+    # When using data volume template with storage API adjustment to the fields are needed
     fedora_dv_template = data_volume_template_with_source_ref_dict(data_source=golden_images_fedora_data_source)
-    if dv_template_api == "pvc":
-        return pvc_api_adjustments(dv_template=fedora_dv_template)
-    else:
-        del fedora_dv_template["spec"]["storage"]["storageClassName"]
-        return fedora_dv_template
-
-
-@pytest.fixture()
-def dv_template_api(request):
-    return request.param
+    return pvc_api_adjustments(dv_template=fedora_dv_template)
 
 
 @pytest.mark.gating
@@ -128,27 +109,9 @@ class TestVmClusterPreference:
             assert vm_cluster_preference.exists
 
 
-class TestPrefStorageClass:
-    @pytest.mark.parametrize(
-        "dv_template_api",
-        [
-            pytest.param(
-                "pvc",
-                marks=pytest.mark.polarion("CNV-10328"),
-            ),
-            pytest.param(
-                "storage",
-                marks=pytest.mark.polarion("CNV-10329"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_vm_pref_storage_class(
-        self,
-        dv_template_api,
-        rhel_vm_with_storage_preference,
-    ):
-        vm_sc = rhel_vm_with_storage_preference.instance.spec.dataVolumeTemplates[0].spec[dv_template_api][
-            "storageClassName"
-        ]
-        assert vm_sc == PREFERENCE_STORAGE_CLASS, f"VM storage class is: {vm_sc}, expected: {PREFERENCE_STORAGE_CLASS}"
+@pytest.mark.polarion("CNV-10328")
+def test_vm_pref_storage_class_pvc_api(
+    rhel_vm_with_storage_preference,
+):
+    vm_sc = rhel_vm_with_storage_preference.instance.spec.dataVolumeTemplates[0].spec["pvc"]["storageClassName"]
+    assert vm_sc == PREFERENCE_STORAGE_CLASS, f"VM storage class is: {vm_sc}, expected: {PREFERENCE_STORAGE_CLASS}"

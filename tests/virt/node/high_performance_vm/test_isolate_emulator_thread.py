@@ -92,9 +92,8 @@ class TestIsolateEmulatorThread:
         # even though the VM is allocated overall 3 dedicated cpus.
         validate_dedicated_emulatorthread(vm=isolated_emulatorthread_vm)
 
+    @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[ISOLATE_EMULATOR_THREAD])
     @pytest.mark.polarion("CNV-10554")
-    def test_vm_with_isolate_emulator_thread_live_migrates(
-        self, skip_access_mode_rwo_scope_function, isolated_emulatorthread_vm
-    ):
+    def test_vm_with_isolate_emulator_thread_live_migrates(self, isolated_emulatorthread_vm):
         migrate_vm_and_verify(vm=isolated_emulatorthread_vm)

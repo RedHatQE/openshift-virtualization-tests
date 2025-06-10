@@ -57,6 +57,7 @@ class ArchImages:
             RHEL9_4_IMG = "rhel-94.qcow2"
             RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
             RHEL9_6_IMG = "rhel-96.qcow2"
+            RHEL9_6_ARM64_IMG = "rhel-96-aarch64.qcow2"
             RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
             RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
             # TODO: change back to registry.redhat.io when rhel10 is available
@@ -251,6 +252,7 @@ CDI_CONFIGMAPS = [
 UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
+QUARANTINED = "quarantined"
 
 # Kernel Device Driver
 # Compute: GPU Devices are bound to this Kernel Driver for GPU Passthrough.
@@ -617,6 +619,8 @@ class StorageClassNames:
     IO2_CSI = "io2-csi"
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
+    OCI_UHP = "oci-bv-uhp"
+    GCP = "sp-balanced-storage"
 
 
 # Namespace constants
@@ -798,6 +802,49 @@ HPP_CAPABILITIES = {
     "online_resize": False,
     "wffc": True,
 }
+
+
+KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_DROPPED_TOTAL = "kubevirt_vmi_network_receive_packets_dropped_total"
+KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_DROPPED_TOTAL = "kubevirt_vmi_network_transmit_packets_dropped_total"
+KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES = "kubevirt_vmi_memory_domain_bytes"
+KUBEVIRT_VMI_MEMORY_UNUSED_BYTES = "kubevirt_vmi_memory_unused_bytes"
+KUBEVIRT_VMI_MEMORY_USABLE_BYTES = "kubevirt_vmi_memory_usable_bytes"
+KUBEVIRT_VMI_MEMORY_ACTUAL_BALLOON_BYTES = "kubevirt_vmi_memory_actual_balloon_bytes"
+KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL = "kubevirt_vmi_memory_pgmajfault_total"
+KUBEVIRT_VMI_STORAGE_FLUSH_REQUESTS_TOTAL = "kubevirt_vmi_storage_flush_requests_total"
+KUBEVIRT_VMI_STORAGE_FLUSH_TIMES_SECONDS_TOTAL = "kubevirt_vmi_storage_flush_times_seconds_total"
+KUBEVIRT_VMI_NETWORK_RECEIVE_BYTES_TOTAL = "kubevirt_vmi_network_receive_bytes_total"
+KUBEVIRT_VMI_NETWORK_TRANSMIT_BYTES_TOTAL = "kubevirt_vmi_network_transmit_bytes_total"
+KUBEVIRT_VMI_STORAGE_IOPS_WRITE_TOTAL = "kubevirt_vmi_storage_iops_write_total"
+KUBEVIRT_VMI_STORAGE_IOPS_READ_TOTAL = "kubevirt_vmi_storage_iops_read_total"
+KUBEVIRT_VMI_STORAGE_WRITE_TRAFFIC_BYTES_TOTAL = "kubevirt_vmi_storage_write_traffic_bytes_total"
+KUBEVIRT_VMI_STORAGE_READ_TRAFFIC_BYTES_TOTAL = "kubevirt_vmi_storage_read_traffic_bytes_total"
+KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL = "kubevirt_vmi_vcpu_wait_seconds_total"
+KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_in_traffic_bytes"
+KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_out_traffic_bytes"
+KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL = "kubevirt_vmi_memory_pgminfault_total"
+
+MONITORING_METRICS = [
+    KUBEVIRT_VMI_MEMORY_ACTUAL_BALLOON_BYTES,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
+    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
+    KUBEVIRT_VMI_NETWORK_RECEIVE_BYTES_TOTAL,
+    KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_DROPPED_TOTAL,
+    KUBEVIRT_VMI_NETWORK_TRANSMIT_BYTES_TOTAL,
+    KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_DROPPED_TOTAL,
+    KUBEVIRT_VMI_STORAGE_FLUSH_REQUESTS_TOTAL,
+    KUBEVIRT_VMI_STORAGE_FLUSH_TIMES_SECONDS_TOTAL,
+    KUBEVIRT_VMI_STORAGE_IOPS_READ_TOTAL,
+    KUBEVIRT_VMI_STORAGE_IOPS_WRITE_TOTAL,
+    KUBEVIRT_VMI_STORAGE_READ_TRAFFIC_BYTES_TOTAL,
+    KUBEVIRT_VMI_STORAGE_WRITE_TRAFFIC_BYTES_TOTAL,
+    KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL,
+]
 
 KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
     "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"

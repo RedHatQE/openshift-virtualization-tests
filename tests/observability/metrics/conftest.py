@@ -15,6 +15,7 @@ from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import py_config
@@ -27,10 +28,12 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+    KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
+    KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -40,6 +43,7 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -64,6 +68,15 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    IPV4_STR,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
+    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
+    MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     PVC,
@@ -72,7 +85,10 @@ from utilities.constants import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -85,8 +101,16 @@ from utilities.constants import (
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
-from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
+from utilities.infra import (
+    create_ns,
+    get_http_image_url,
+    get_node_selector_dict,
+    get_pod_by_name_prefix,
+    is_jira_open,
+    unique_name,
+)
 from utilities.monitoring import get_metrics_value
+from utilities.network import get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     create_dv,
@@ -107,8 +131,15 @@ UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
-RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
+METRICS_WITH_WINDOWS_VM_BUGS = [
+    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
+    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
+    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
+]
 
 
 def wait_for_component_value_to_be_expected(prometheus, component_name, expected_count):
@@ -452,7 +483,7 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
@@ -646,13 +677,23 @@ def generated_network_traffic(vm_for_test):
     run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
 
 
-@pytest.fixture(scope="class")
-def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
+@pytest.fixture()
+def generated_network_traffic_windows_vm(windows_vm_for_test):
+    ping(
+        src_vm=windows_vm_for_test,
+        dst_ip=get_ip_from_vm_or_virt_handler_pod(family=IPV4_STR, vm=windows_vm_for_test),
+        windows=True,
     )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+
+
+@pytest.fixture(scope="class")
+def linux_vm_for_test_interface_name(vm_for_test):
+    return get_interface_name_from_vm(vm=vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test_interface_name(windows_vm_for_test):
+    return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")
@@ -802,68 +843,31 @@ def vm_for_test_with_resource_limits(namespace):
         yield vm
 
 
-@pytest.fixture(scope="class")
-def highest_memory_usage_virt_api_pod(hco_namespace, admin_client):
-    oc_adm_top_pod_output = (
-        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace.name} -l kubevirt.io=virt-api"))[1]
-        .strip()
-        .split("\n")[1:]
-    )
-    virt_api_with_highest_memory_usage = max(
-        {pod.split()[0]: int(bitmath.parse_string_unsafe(pod.split()[2])) for pod in oc_adm_top_pod_output}.items(),
-        key=lambda pod: pod[1],
-    )
-    return {
-        "virt_api_pod": virt_api_with_highest_memory_usage[0],
-        "memory_usage": virt_api_with_highest_memory_usage[1],
-    }
-
-
-@pytest.fixture(scope="class")
-def virt_api_requested_memory(hco_namespace, admin_client, highest_memory_usage_virt_api_pod):
-    return float(
-        bitmath.parse_string_unsafe(
-            get_pod_by_name_prefix(
-                dyn_client=admin_client,
-                pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod"],
-                namespace=hco_namespace.name,
-            )
-            .instance.spec.containers[0]
-            .resources.requests.memory
-        )
-    )
-
-
-@pytest.fixture()
-def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_api_pod):
-    return int(
-        bitmath.Byte(
-            int(
-                get_pod_by_name_prefix(
-                    dyn_client=admin_client,
-                    pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod"],
-                    namespace=hco_namespace.name,
-                ).execute(command=RSS_MEMORY_COMMAND)
-            )
-        ).MiB
-    )
-
-
 @pytest.fixture()
 def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    return int(
-        bitmath.parse_string_unsafe(
-            re.search(
-                r"\b(\d+Mi)\b",
-                run_command(
-                    command=shlex.split(
-                        f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
-                    ),
-                    check=False,
-                )[1],
-            ).group(1)
-        ).bytes
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(
+            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
+        ),
+        check=False,
     )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                return int(
+                    bitmath.parse_string_unsafe(
+                        re.search(
+                            r"\b(\d+Mi)\b",
+                            out,
+                        ).group(1)
+                    ).bytes
+                )
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
+        raise
 
 
 @pytest.fixture()
@@ -1078,7 +1082,7 @@ def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheu
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
         vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     )
 
 
@@ -1110,7 +1114,7 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
@@ -1120,3 +1124,92 @@ def windows_vm_for_test(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="session")
+def memory_metric_has_bug():
+    return is_jira_open(jira_id="CNV-59679")
+
+
+@pytest.fixture()
+def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
+    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metric_has_bug:
+        pytest.xfail(
+            f"Bug (CNV-59679), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
+            "any value for windows vm"
+        )
+
+
+@pytest.fixture()
+def initial_migration_metrics_values(prometheus):
+    yield {
+        metric: get_metric_sum_value(prometheus=prometheus, metric=metric)
+        for metric in [KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE, KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE]
+    }
+
+
+@pytest.fixture(scope="class")
+def vm_for_migration_metrics_test(namespace, cpu_for_migration):
+    name = "vm-for-migration-metrics-test"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)
+        yield vm
+
+
+@pytest.fixture()
+def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
+@pytest.fixture(scope="class")
+def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
+@pytest.fixture()
+def vm_with_node_selector(namespace, worker_node1):
+    name = "vm-with-node-selector"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
+        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def vm_with_node_selector_vmim(vm_with_node_selector):
+    with VirtualMachineInstanceMigration(
+        name="vm-with-node-selector-vmim",
+        namespace=vm_with_node_selector.namespace,
+        vmi_name=vm_with_node_selector.vmi.name,
+    ) as vmim:
+        yield vmim
+
+
+@pytest.fixture(scope="class")
+def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
+    vm_migration_metrics_vmim_scope_class.wait_for_status(
+        status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
+    )
