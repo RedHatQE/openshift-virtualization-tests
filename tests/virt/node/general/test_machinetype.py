@@ -41,17 +41,18 @@ def updated_kubevirt_config_machine_type(
     kubevirt_config,
     admin_client,
     hco_namespace,
+    nodes_cpu_architecture,
 ):
     machine_type = request.param["machine_type"]
     with update_hco_annotations(
         resource=hyperconverged_resource_scope_function,
-        path="machineType",
-        value=machine_type,
+        path="architectureConfiguration",
+        value={nodes_cpu_architecture: {"machineType": machine_type}},
     ):
         wait_for_updated_kv_value(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
-            path=["machineType"],
+            path=["architectureConfiguration", nodes_cpu_architecture, "machineType"],
             value=machine_type,
         )
         yield
@@ -177,7 +178,6 @@ def test_machine_type_after_vm_migrate(
 @pytest.mark.gating
 def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_type, vm):
     """Test machine type change in kubevirt_config; new VM gets new value"""
-
     validate_machine_type(vm=vm, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1)
 
 
