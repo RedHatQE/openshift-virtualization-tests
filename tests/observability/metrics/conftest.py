@@ -43,6 +43,7 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -67,6 +68,7 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    IPV4_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -108,6 +110,7 @@ from utilities.infra import (
     unique_name,
 )
 from utilities.monitoring import get_metrics_value
+from utilities.network import get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     create_dv,
@@ -674,13 +677,23 @@ def generated_network_traffic(vm_for_test):
     run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
 
 
-@pytest.fixture(scope="class")
-def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
+@pytest.fixture()
+def generated_network_traffic_windows_vm(windows_vm_for_test):
+    ping(
+        src_vm=windows_vm_for_test,
+        dst_ip=get_ip_from_vm_or_virt_handler_pod(family=IPV4_STR, vm=windows_vm_for_test),
+        windows=True,
     )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+
+
+@pytest.fixture(scope="class")
+def linux_vm_for_test_interface_name(vm_for_test):
+    return get_interface_name_from_vm(vm=vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test_interface_name(windows_vm_for_test):
+    return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")
