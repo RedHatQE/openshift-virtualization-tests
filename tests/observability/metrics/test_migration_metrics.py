@@ -37,7 +37,7 @@ class TestMigrationMetrics:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
             expected_value=initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE] + 1,
-            check_multiple_times=False,
+            check_times=1,
         )
 
     @pytest.mark.polarion("CNV-8481")
@@ -53,7 +53,7 @@ class TestMigrationMetrics:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
             expected_value=initial_migration_metrics_values[KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE] + 1,
-            check_multiple_times=False,
+            check_times=1,
         )
 
 
