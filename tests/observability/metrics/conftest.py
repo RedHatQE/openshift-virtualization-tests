@@ -30,6 +30,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -71,6 +72,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -105,7 +107,6 @@ UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
-RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
 LOGGER = logging.getLogger(__name__)
 
 
@@ -823,68 +824,31 @@ def vm_for_test_with_resource_limits(namespace):
         yield vm
 
 
-@pytest.fixture(scope="class")
-def highest_memory_usage_virt_api_pod(hco_namespace, admin_client):
-    oc_adm_top_pod_output = (
-        run_command(command=shlex.split(f"oc adm top pod -n {hco_namespace.name} -l kubevirt.io=virt-api"))[1]
-        .strip()
-        .split("\n")[1:]
-    )
-    virt_api_with_highest_memory_usage = max(
-        {pod.split()[0]: int(bitmath.parse_string_unsafe(pod.split()[2])) for pod in oc_adm_top_pod_output}.items(),
-        key=lambda pod: pod[1],
-    )
-    return {
-        "virt_api_pod": virt_api_with_highest_memory_usage[0],
-        "memory_usage": virt_api_with_highest_memory_usage[1],
-    }
-
-
-@pytest.fixture(scope="class")
-def virt_api_requested_memory(hco_namespace, admin_client, highest_memory_usage_virt_api_pod):
-    return float(
-        bitmath.parse_string_unsafe(
-            get_pod_by_name_prefix(
-                dyn_client=admin_client,
-                pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod"],
-                namespace=hco_namespace.name,
-            )
-            .instance.spec.containers[0]
-            .resources.requests.memory
-        )
-    )
-
-
-@pytest.fixture()
-def virt_api_rss_memory(admin_client, hco_namespace, highest_memory_usage_virt_api_pod):
-    return int(
-        bitmath.Byte(
-            int(
-                get_pod_by_name_prefix(
-                    dyn_client=admin_client,
-                    pod_prefix=highest_memory_usage_virt_api_pod["virt_api_pod"],
-                    namespace=hco_namespace.name,
-                ).execute(command=RSS_MEMORY_COMMAND)
-            )
-        ).MiB
-    )
-
-
 @pytest.fixture()
 def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    return int(
-        bitmath.parse_string_unsafe(
-            re.search(
-                r"\b(\d+Mi)\b",
-                run_command(
-                    command=shlex.split(
-                        f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace}"
-                    ),
-                    check=False,
-                )[1],
-            ).group(1)
-        ).bytes
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(
+            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
+        ),
+        check=False,
     )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                return int(
+                    bitmath.parse_string_unsafe(
+                        re.search(
+                            r"\b(\d+Mi)\b",
+                            out,
+                        ).group(1)
+                    ).bytes
+                )
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
+        raise
 
 
 @pytest.fixture()
