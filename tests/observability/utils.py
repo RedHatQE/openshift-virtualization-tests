@@ -39,29 +39,6 @@ def validate_metrics_value(
         raise
 
 
-def validate_metrics_value_greater_than_zero(
-    prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}")
-                if int(sample) > 0:
-                    LOGGER.info(f"Metric value: {sample} and greater than 0")
-                    return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Metrics value: {sample}")
-        raise
-
-
 def verify_no_listed_alerts_on_cluster(prometheus: Prometheus, alerts_list: list[str]) -> None:
     """
     It gets a list of alerts and verifies that none of them are firing on a cluster.

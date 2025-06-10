@@ -1044,7 +1044,11 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
 
 
 def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus, metric_name: str, expected_value: int, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus,
+    metric_name: str,
+    expected_value: int,
+    check_multiple_times: bool = True,
+    timeout: int = TIMEOUT_4MIN,
 ) -> None:
     sampler = TimeoutSampler(
         wait_timeout=timeout,
@@ -1057,7 +1061,11 @@ def wait_for_expected_metric_value_sum(
     current_check = 0
     try:
         for sample in sampler:
-            if sample and sample == expected_value:
+            if sample:
+                LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
+            if sample == expected_value:
+                if not check_multiple_times:
+                    return
                 current_check += 1
                 if current_check >= 3:
                     return
@@ -1065,7 +1073,7 @@ def wait_for_expected_metric_value_sum(
                 current_check = 0
 
     except TimeoutExpiredError:
-        LOGGER.info(f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}")
+        LOGGER.error(f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}")
         raise
 
 
