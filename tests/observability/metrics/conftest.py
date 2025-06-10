@@ -90,6 +90,7 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
+    TIMEOUT_20MIN,
     TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
@@ -1131,6 +1132,15 @@ def windows_vm_for_test_in_error_state(windows_vm_for_test):
         yield
 
 
+@pytest.fixture()
+def windows_vm_with_low_bandwidth_migration_policy(windows_vm_for_test):
+    with ResourceEditor(
+        patches={windows_vm_for_test: {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}}
+    ):
+        windows_vm_for_test.restart(wait=True)
+        yield
+
+
 @pytest.fixture(scope="module")
 def windows_vm_for_test_in_starting_state(namespace, unprivileged_client, pvc_for_vm_in_starting_state):
     with create_windows11_wsl2_vm(
@@ -1318,7 +1328,8 @@ def windows_vm_vmim(windows_vm_for_test):
         namespace=windows_vm_for_test.namespace,
         vmi_name=windows_vm_for_test.vmi.name,
     ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_20MIN)
+        windows_vm_for_test.wait_for_status(status=windows_vm_for_test.Status.MIGRATING, timeout=TIMEOUT_20MIN)
         yield
 
 

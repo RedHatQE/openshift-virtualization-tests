@@ -1420,11 +1420,7 @@ def validate_memory_delta_metrics_value_within_range(
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str,
-    namespace: str,
-    client: DynamicClient,
-    vm_name: str,
-    storage_class: str,
+    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str, pvc=None
 ) -> Generator:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -1449,6 +1445,7 @@ def create_windows11_wsl2_vm(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        pvc=pvc,
     ) as vm:
         yield vm
     cleanup_artifactory_secret_and_config_map(
@@ -1492,7 +1489,7 @@ def get_last_transition_time(vm: VirtualMachineForTests) -> int:
     return 0
 
 
-def check_vm_last_transition_metric_value(prometheus, metric, vm):
+def check_vm_last_transition_metric_value(prometheus: Prometheus, metric: str, vm: VirtualMachineForTests) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
@@ -1504,8 +1501,10 @@ def check_vm_last_transition_metric_value(prometheus, metric, vm):
     try:
         for sample in samples:
             if sample:
+                metric_value = int(sample)
                 last_transition_time = get_last_transition_time(vm=vm)
-                if sample > 0 and int(sample) == last_transition_time:
+                LOGGER.info(f"Metric value: {metric_value}, last_transition_time: {last_transition_time}")
+                if metric_value > 0 and metric_value == last_transition_time:
                     return
     except TimeoutExpiredError:
         LOGGER.error(f"Metric value: {sample} does not match vm's last transition timestamp: {last_transition_time}")

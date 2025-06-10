@@ -124,7 +124,13 @@ class TestVMStatusLastTransitionMetricsWindows:
 
     @pytest.mark.polarion("CNV-11980")
     def test_vm_migrating_status_metrics_windows(
-        self, skip_if_no_common_cpu, prometheus, windows_vm_for_test, windows_vm_vmim
+        self,
+        skip_if_no_common_cpu,
+        prometheus,
+        windows_vm_for_test,
+        windows_vm_with_low_bandwidth_migration_policy,
+        migration_policy_with_bandwidth,
+        windows_vm_vmim,
     ):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
