@@ -89,7 +89,7 @@ def verify_storage_migration_succeeded(
         verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
 
 
-def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str | None:
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
     if storage_class in cluster_storage_classes_names:
         return storage_class
     else:
