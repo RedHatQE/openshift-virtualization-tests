@@ -42,10 +42,11 @@ def deleted_hco_operator_pod(admin_client, hco_namespace, hyperconverged_resourc
 
 
 @pytest.fixture()
-def image_stream_names(admin_client, golden_images_namespace):
+def image_stream_names(admin_client, golden_images_namespace, jira_63351_open):
     return [
         image_stream.name
         for image_stream in ImageStream.get(dyn_client=admin_client, namespace=golden_images_namespace.name)
+        if not (image_stream.name == "rhel10-beta-guest" and jira_63351_open)
     ]
 
 

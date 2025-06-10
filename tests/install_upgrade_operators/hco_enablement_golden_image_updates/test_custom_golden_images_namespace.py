@@ -45,9 +45,12 @@ def get_templates_resources_names_dict(templates):
     return resource_dict
 
 
-def verify_resource_not_in_ns(resource_type, namespace, dyn_client):
+def verify_resource_not_in_ns(resource_type, namespace, dyn_client, jira_open=False):
     resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
-    resources_names = {resource.name for resource in resources}
+    # skipping rhel10-beta-guest image stream if jira is open
+    resources_names = {
+        resource.name for resource in resources if not (resource.name == "rhel10-beta-guest" and jira_open)
+    }
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
 
 
@@ -124,6 +127,7 @@ def updated_common_template_custom_ns(
     golden_images_namespace,
     hyperconverged_resource_scope_class,
     custom_golden_images_namespace,
+    jira_63351_open,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={
@@ -136,6 +140,8 @@ def updated_common_template_custom_ns(
     ):
         yield
     for data_source in get_data_sources_managed_by_data_import_cron(namespace=golden_images_namespace.name):
+        if data_source.name == "rhel10-beta" and jira_63351_open:
+            continue
         data_source.wait_for_condition(
             condition=DataSource.Condition.READY,
             status=DataSource.Condition.Status.TRUE,
@@ -198,6 +204,7 @@ class TestDefaultCommonTemplates:
         default_common_templates_related_resources,
         resource_type,
         ready_condition,
+        jira_63351_open,
     ):
         verify_resource_in_ns(
             expected_resource_names=default_common_templates_related_resources[resource_type.kind],
@@ -211,6 +218,7 @@ class TestDefaultCommonTemplates:
                 resource_type=resource_type,
                 namespace=golden_images_namespace.name,
                 dyn_client=admin_client,
+                jira_open=jira_63351_open,
             )
 
     @pytest.mark.polarion("CNV-11477")
