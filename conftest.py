@@ -15,6 +15,7 @@ import traceback
 from typing import Any
 
 import pytest
+import pytest_html
 import shortuuid
 from _pytest.config import Config
 from _pytest.nodes import Collector, Node
@@ -28,7 +29,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import TIMEOUT_5MIN, NamespacesNames
+from utilities.constants import QUARANTINED, TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -87,7 +88,11 @@ NAMESPACE_COLLECTION = {
     "network": ["openshift-nmstate"],
     "virt": [],
 }
-MUST_GATHER_IGNORE_EXCEPTION_LIST = [MissingEnvironmentVariableError, StorageSanityError, ConflictError]
+MUST_GATHER_IGNORE_EXCEPTION_LIST = [
+    MissingEnvironmentVariableError,
+    StorageSanityError,
+    ConflictError,
+]
 INSPECT_BASE_COMMAND = "oc adm inspect"
 
 
@@ -111,7 +116,9 @@ def pytest_addoption(parser):
         help="Run OCP or CNV or EUS upgrade tests",
     )
     install_upgrade_group.addoption(
-        "--upgrade_custom", choices=["cnv", "ocp"], help="Run OCP or CNV upgrade tests with custom lanes"
+        "--upgrade_custom",
+        choices=["cnv", "ocp"],
+        help="Run OCP or CNV upgrade tests with custom lanes",
     )
 
     # CNV upgrade options
@@ -491,20 +498,34 @@ def pytest_report_teststatus(report, config):
     test_name = report.head_line
     when = report.when
     call_str = "call"
+
     if report.passed:
         if when == call_str:
             BASIC_LOGGER.info(f"\nTEST: {test_name} STATUS: \033[0;32mPASSED\033[0m")
+        return None
 
-    elif report.skipped:
-        BASIC_LOGGER.info(f"\nTEST: {test_name} STATUS: \033[1;33mSKIPPED\033[0m")
+    if report.skipped:
+        quarantined = getattr(report, QUARANTINED, False)
+        test_xfailed = getattr(report, "wasxfail", False)
 
-    elif report.failed:
+        skip_type = QUARANTINED.upper() if quarantined else "XFAILED" if test_xfailed else "SKIPPED"
+        BASIC_LOGGER.info(f"\nTEST: {test_name} STATUS: \033[1;33m{skip_type}\033[0m")
+
+        if quarantined:
+            return QUARANTINED, report.wasxfail, (QUARANTINED, {"yellow": True})
+        return None
+
+    if report.failed:
         if when != call_str:
             BASIC_LOGGER.info(f"\nTEST: {test_name} [{when}] STATUS: \033[0;31mERROR\033[0m")
+            return None
         else:
             BASIC_LOGGER.info(f"\nTEST: {test_name} STATUS: \033[0;31mFAILED\033[0m")
+            return None
+    return None
 
 
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """
     incremental tests implementation
@@ -512,6 +533,18 @@ def pytest_runtest_makereport(item, call):
     if call.excinfo is not None and "incremental" in item.keywords:
         parent = item.parent
         parent._previousfailed = item
+
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == "setup" and hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
+        setattr(report, QUARANTINED, True)
+
+        extras = getattr(report, "extras", [])
+        if match := re.search(r"CNV-\d+", report.wasxfail):
+            extras = getattr(report, "extras", [])
+            extras.append(pytest_html.extras.url(f"https://issues.redhat.com/browse/{match.group(0)}"))
+            report.extras = extras
 
 
 def pytest_fixture_setup(fixturedef, request):
@@ -744,7 +777,8 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
             try:
                 collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")
                 collect_default_cnv_must_gather_with_vm_gather(
-                    since_time=calculate_must_gather_timer(test_start_time=test_start_time), target_dir=collection_dir
+                    since_time=calculate_must_gather_timer(test_start_time=test_start_time),
+                    target_dir=collection_dir,
                 )
                 if inspect_str:
                     target_dir = os.path.join(collection_dir, "inspect_collection")
@@ -761,3 +795,17 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
+
+
+@pytest.mark.optionalhook
+def pytest_html_results_table_header(cells):
+    cells.insert(2, f"<th>{QUARANTINED.title()} Reason</th>")
+
+
+@pytest.mark.optionalhook
+def pytest_html_results_table_row(report, cells):
+    if getattr(report, QUARANTINED, False) and "reason" in report.wasxfail:
+        cells.insert(2, f"<th>{report.wasxfail}</th>")
+
+    else:
+        cells.insert(2, "<th></th>")
