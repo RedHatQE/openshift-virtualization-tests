@@ -2,6 +2,7 @@ import importlib
 import inspect
 import logging
 import re
+from functools import cache
 
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
@@ -22,7 +23,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
 )
-from utilities.infra import get_subscription
+from utilities.infra import get_subscription, is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -277,3 +278,8 @@ def get_resource_key_value(resource, key_name):
         resource.instance.to_dict()["spec"],
         keypath_separator=KEY_PATH_SEPARATOR,
     ).get(key_name)
+
+
+@cache
+def is_rhel10_beta_resource_and_63351_bug_open(resource_name):
+    return resource_name.startswith("rhel10-beta") and is_jira_open(jira_id="CNV-63351")
