@@ -37,22 +37,20 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
-DESCHEDULER_CATALOG_SOURCE = "descheduler-catalog"
-DESCHEDULER_OPERATOR_DEPLOYMENT_NAME = "descheduler-operator"
 
 LOCALHOST = "localhost"
 
 
 @pytest.fixture(scope="module")
-def skip_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
+def xfail_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
     """
     One of QE BM setups has worker with 5 TiB RAM memory while rest workers
-    has 120 GiB RAM. Test should be skipped on this cluster.
+    has 120 GiB RAM. Test should not run on this cluster.
     """
     upper_memory_limit = bitmath.TiB(value=1)
     for node, memory in allocatable_memory_per_node_scope_module.items():
         if memory >= upper_memory_limit:
-            pytest.skip(f"Cluster has node with at least {upper_memory_limit} RAM: {node.name}")
+            pytest.xfail(f"Cluster has node with at least {upper_memory_limit} RAM: {node.name}")
 
 
 @pytest.fixture(scope="module")
