@@ -3,24 +3,12 @@ GPU PCI Passthrough and vGPU Testing
 """
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
-from tests.virt.node.gpu.constants import GPU_CARDS_MAP
 from tests.virt.node.gpu.utils import install_nvidia_drivers_on_windows_vm
 from utilities.constants import OS_FLAVOR_WINDOWS
 from utilities.infra import get_node_selector_dict
 from utilities.storage import create_or_update_data_source
-from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
-
-
-@pytest.fixture(scope="session")
-def supported_gpu_device(workers_utility_pods, nodes_with_supported_gpus):
-    gpu_info = get_nodes_gpu_info(util_pods=workers_utility_pods, node=nodes_with_supported_gpus[0])
-    for gpu_id in GPU_CARDS_MAP:
-        if gpu_id in gpu_info:
-            return GPU_CARDS_MAP[gpu_id]
-
-    raise ResourceNotFoundError("GPU device ID not in current GPU_CARDS_MAP!")
+from utilities.virt import vm_instance_from_template
 
 
 @pytest.fixture(scope="class")

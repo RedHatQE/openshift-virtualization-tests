@@ -11,9 +11,8 @@ from pytest_testconfig import config as py_config
 from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
-    verify_gpu_device_exists_in_vm,
 )
-from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
+from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm, verify_gpu_device_exists_in_vm
 from utilities.constants import Images
 from utilities.virt import get_windows_os_dict
 

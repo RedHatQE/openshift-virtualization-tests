@@ -1,5 +1,4 @@
 import logging
-from contextlib import contextmanager
 from copy import deepcopy
 
 import pytest
@@ -14,6 +13,7 @@ from pytest_testconfig import py_config
 from tests.virt.upgrade.utils import (
     get_all_migratable_vms,
     validate_vms_pod_updated,
+    vm_from_template,
     wait_for_automatic_vm_migrations,
 )
 from utilities.constants import (
@@ -184,33 +184,6 @@ def run_strategy_golden_image_dv(dvs_for_upgrade):
     # Give the priority to RWX storage
     rwx_dv = [dv for dv in dvs_for_upgrade if DataVolume.AccessMode.RWX in dv.pvc.instance.spec.accessModes]
     return rwx_dv[0] if rwx_dv else dvs_for_upgrade[0]
-
-
-@contextmanager
-def vm_from_template(
-    client,
-    namespace,
-    vm_name,
-    data_source,
-    cpu_model,
-    template_labels,
-    networks=None,
-    run_strategy=VirtualMachine.RunStrategy.HALTED,
-    eviction_strategy=None,
-):
-    with VirtualMachineForTestsFromTemplate(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        labels=Template.generate_template_labels(**template_labels),
-        data_source=data_source,
-        cpu_model=cpu_model,
-        run_strategy=run_strategy,
-        networks=networks,
-        interfaces=sorted(networks.keys()) if networks else None,
-        eviction_strategy=eviction_strategy,
-    ) as vm:
-        yield vm
 
 
 @pytest.fixture(scope="session")

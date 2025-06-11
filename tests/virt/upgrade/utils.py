@@ -1,8 +1,10 @@
 import logging
+from contextlib import contextmanager
 from datetime import datetime
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
@@ -21,7 +23,11 @@ from utilities.infra import (
     get_pod_disruption_budget,
     get_related_images_name_and_version,
 )
-from utilities.virt import get_vm_boot_time, wait_for_ssh_connectivity
+from utilities.virt import (
+    VirtualMachineForTestsFromTemplate,
+    get_vm_boot_time,
+    wait_for_ssh_connectivity,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -213,3 +219,34 @@ def verify_windows_boot_time(windows_vm, initial_boot_time):
         assert initial_boot_time == current_boot_time, (
             f"Boot time for Windows VM changed:\n initial: {initial_boot_time}\n current: {current_boot_time}"
         )
+
+
+@contextmanager
+def vm_from_template(
+    client,
+    namespace,
+    vm_name,
+    data_source,
+    template_labels,
+    cpu_model=None,
+    networks=None,
+    run_strategy=VirtualMachine.RunStrategy.HALTED,
+    eviction_strategy=None,
+    node_selector=None,
+    gpu_name=None,
+):
+    with VirtualMachineForTestsFromTemplate(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        labels=Template.generate_template_labels(**template_labels),
+        data_source=data_source,
+        cpu_model=cpu_model,
+        run_strategy=run_strategy,
+        networks=networks,
+        interfaces=sorted(networks.keys()) if networks else None,
+        eviction_strategy=eviction_strategy,
+        node_selector=node_selector,
+        gpu_name=gpu_name,
+    ) as vm:
+        yield vm
