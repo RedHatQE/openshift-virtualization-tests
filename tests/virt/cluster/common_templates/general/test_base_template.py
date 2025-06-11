@@ -279,6 +279,7 @@ def test_validate_rhel_min_max_memory(
         osinfo_filename=osinfo_filename,
     )
 
+
 @pytest.mark.s390x
 @pytest.mark.parametrize(
     ("osinfo_filename", "os_template", "memory_test"),
