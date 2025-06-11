@@ -61,8 +61,10 @@ def test_vm_with_cpu_flag_negative(cpu_flag_vm_negative):
         cpu_flag_vm_negative.vmi.wait_until_running(timeout=TIMEOUT_1MIN)
 
 
-@pytest.mark.polarion("CNV-1269")
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
+@pytest.mark.polarion("CNV-1269")
 def test_vm_with_cpu_flag_positive_case(cpu_flag_vm_positive, cluster_common_node_cpu):
     """
     Test VM with cpu flag, test CPU model and SSH connectivity
