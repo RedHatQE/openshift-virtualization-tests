@@ -26,7 +26,7 @@ class TestMigrationMetrics:
     @pytest.mark.polarion("CNV-8480")
     def test_migration_metrics_scheduling(
         self,
-        admin_client,
+        local_admin_client,
         namespace,
         prometheus,
         initial_migration_metrics_values,
@@ -85,7 +85,7 @@ class TestKubevirtVmiMigrationMetrics:
         self,
         prometheus,
         namespace,
-        admin_client,
+        local_admin_client,
         migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,

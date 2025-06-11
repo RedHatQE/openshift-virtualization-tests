@@ -27,12 +27,12 @@ def assert_log_verbosity_level_in_virt_pods(virt_pods_list):
 
 
 @pytest.fixture()
-def virt_component_pods(admin_client, hco_namespace):
+def virt_component_pods(local_admin_client, hco_namespace):
     virt_pods_list = []
     for virt_component in [VIRT_HANDLER, VIRT_API, VIRT_CONTROLLER]:
         virt_pods_list.extend(
             get_pods(
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 namespace=hco_namespace,
                 label=f"{Pod.ApiGroup.KUBEVIRT_IO}={virt_component}",
             )

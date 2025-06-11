@@ -8,7 +8,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 
 
 @pytest.fixture()
-def updated_workload_strategy_custom_values(hyperconverged_resource_scope_function, admin_client, hco_namespace):
+def updated_workload_strategy_custom_values(hyperconverged_resource_scope_function, local_admin_client, hco_namespace):
     """
     This fixture updates HCO CR with custom values for spec.workloadUpdateStrategy
     Note: This is needed for tests that modify such fields to default values

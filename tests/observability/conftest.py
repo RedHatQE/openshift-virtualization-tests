@@ -29,7 +29,7 @@ ANNOTATIONS_FOR_VIRT_OPERATOR_ENDPOINT = {
 
 
 @pytest.fixture(scope="class")
-def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
+def paused_ssp_operator(local_admin_client, hco_namespace, ssp_resource_scope_class):
     """
     Pause ssp-operator to avoid from reconciling any related objects
     """
@@ -72,9 +72,9 @@ def disabled_olm_operator(olm_namespace):
 
 
 @pytest.fixture(scope="class")
-def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
+def disabled_virt_operator(local_admin_client, hco_namespace, disabled_olm_operator):
     virt_pods_with_running_status = get_all_virt_pods_with_running_status(
-        dyn_client=admin_client, hco_namespace=hco_namespace
+        dyn_client=local_admin_client, hco_namespace=hco_namespace
     )
     virt_pods_count_before_disabling_virt_operator = len(virt_pods_with_running_status.keys())
     with scale_deployment_replicas(
@@ -88,7 +88,7 @@ def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_all_virt_pods_with_running_status,
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         hco_namespace=hco_namespace,
     )
     sample = None
@@ -106,9 +106,9 @@ def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
 
 
 @pytest.fixture(scope="class")
-def csv_scope_class(admin_client, hco_namespace, installing_cnv):
+def csv_scope_class(local_admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
+        return get_installed_hco_csv(admin_client=local_admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")

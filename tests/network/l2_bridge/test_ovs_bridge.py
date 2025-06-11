@@ -56,7 +56,7 @@ def brcnv_ovs_nad_vlan_2(
 
 @pytest.fixture()
 def brcnv_vmb_with_vlan_1(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     worker_node1,
     brcnv_ovs_nad_vlan_1,
@@ -64,7 +64,7 @@ def brcnv_vmb_with_vlan_1(
     yield from vm_for_brcnv_tests(
         vm_name="vmb",
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         nads=[brcnv_ovs_nad_vlan_1],
         address_suffix=2,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -73,7 +73,7 @@ def brcnv_vmb_with_vlan_1(
 
 @pytest.fixture(scope="class")
 def brcnv_vmc_with_vlans_1_2(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     worker_node2,
     brcnv_ovs_nad_vlan_1,
@@ -82,7 +82,7 @@ def brcnv_vmc_with_vlans_1_2(
     yield from vm_for_brcnv_tests(
         vm_name="vmc",
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         nads=[brcnv_ovs_nad_vlan_1, brcnv_ovs_nad_vlan_2],
         address_suffix=3,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -91,7 +91,7 @@ def brcnv_vmc_with_vlans_1_2(
 
 @pytest.fixture()
 def vma_with_ovs_based_l2(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     worker_node1,
     ovs_bridge_on_worker1,
@@ -115,7 +115,7 @@ def vma_with_ovs_based_l2(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm
@@ -129,7 +129,7 @@ def running_vma_with_ovs_based_l2(vma_with_ovs_based_l2):
 
 @pytest.fixture()
 def vmb_with_ovs_based_l2(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     worker_node1,
     ovs_bridge_on_worker1,
@@ -153,7 +153,7 @@ def vmb_with_ovs_based_l2(
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         vm.start(wait=True)
         yield vm

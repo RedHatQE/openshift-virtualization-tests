@@ -187,12 +187,12 @@ class TestMemoryDeltaFromRequestedBytes:
             ),
         ],
     )
-    def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
+    def test_memory_delta_from_requested_bytes(self, prometheus, local_admin_client, hco_namespace, metric, rss):
         validate_memory_delta_metrics_value_within_range(
             prometheus=prometheus,
             metric_name=metric,
             rss=rss,
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace.name,
         )
 

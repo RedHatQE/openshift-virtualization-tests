@@ -35,14 +35,14 @@ def vm_nad_networks_data(upgrade_linux_macspoof_nad):
 
 
 @pytest.fixture(scope="session")
-def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
+def vma_upgrade_mac_spoof(worker_node1, local_unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
     name = "vma-macspoof"
     with VirtualMachineForTests(
         name=name,
         namespace=upgrade_linux_macspoof_nad.namespace,
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.0.1"),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -53,14 +53,14 @@ def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
 
 
 @pytest.fixture(scope="session")
-def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
+def vmb_upgrade_mac_spoof(worker_node1, local_unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
     name = "vmb-macspoof"
     with VirtualMachineForTests(
         name=name,
         namespace=upgrade_linux_macspoof_nad.namespace,
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.0.2"),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -94,7 +94,7 @@ def namespace_with_disabled_kmp():
 
 @pytest.fixture(scope="session")
 def running_vm_with_bridge(
-    unprivileged_client,
+    local_unprivileged_client,
     upgrade_namespace_scope_session,
     upgrade_br1test_nad,
 ):
@@ -104,7 +104,7 @@ def running_vm_with_bridge(
         namespace=upgrade_namespace_scope_session.name,
         networks={upgrade_br1test_nad.name: upgrade_br1test_nad.name},
         interfaces=[upgrade_br1test_nad.name],
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:

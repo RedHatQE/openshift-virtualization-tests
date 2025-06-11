@@ -56,14 +56,14 @@ def enabled_downward_metrics_hco_featuregate(hyperconverged_resource_scope_modul
 @pytest.fixture()
 def vhostmd_vm1(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
     worker_node1,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
@@ -75,14 +75,14 @@ def vhostmd_vm1(
 @pytest.fixture()
 def vhostmd_vm2(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
     worker_node1,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),

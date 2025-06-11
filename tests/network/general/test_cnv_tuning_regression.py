@@ -30,7 +30,7 @@ def linux_bridge_device(worker_node1, linux_bridge_nad):
 
 
 @pytest.fixture()
-def cnv_tuning_vm(unprivileged_client, worker_node1, linux_bridge_nad, linux_bridge_device):
+def cnv_tuning_vm(local_unprivileged_client, worker_node1, linux_bridge_nad, linux_bridge_device):
     name = "tuning-vma"
     networks = {"net1": linux_bridge_nad.name}
     network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.1/24"]}}}
@@ -40,7 +40,7 @@ def cnv_tuning_vm(unprivileged_client, worker_node1, linux_bridge_nad, linux_bri
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=compose_cloud_init_data_dict(

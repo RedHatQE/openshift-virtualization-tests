@@ -240,7 +240,7 @@ def nad_ovs_bridge_vlan_3(
 def vm_linux_bridge_attached_vma_source(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nad_linux_bridge,
     nad_linux_bridge_vlan_1,
     nad_linux_bridge_vlan_2,
@@ -258,7 +258,7 @@ def vm_linux_bridge_attached_vma_source(
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
         dual_stack_network_data=dual_stack_network_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
     )
 
@@ -267,7 +267,7 @@ def vm_linux_bridge_attached_vma_source(
 def vm_ovs_bridge_attached_vma_source(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nad_ovs_bridge,
     nad_ovs_bridge_vlan_1,
     nad_ovs_bridge_vlan_2,
@@ -285,7 +285,7 @@ def vm_ovs_bridge_attached_vma_source(
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
         dual_stack_network_data=dual_stack_network_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
     )
 
@@ -294,7 +294,7 @@ def vm_ovs_bridge_attached_vma_source(
 def vm_linux_bridge_attached_vmb_destination(
     worker_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nad_linux_bridge,
     nad_linux_bridge_vlan_1,
     nad_linux_bridge_vlan_3,
@@ -312,7 +312,7 @@ def vm_linux_bridge_attached_vmb_destination(
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
         dual_stack_network_data=dual_stack_network_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
     )
 
@@ -321,7 +321,7 @@ def vm_linux_bridge_attached_vmb_destination(
 def vm_ovs_bridge_attached_vmb_destination(
     worker_node2,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     nad_ovs_bridge,
     nad_ovs_bridge_vlan_1,
     nad_ovs_bridge_vlan_3,
@@ -339,6 +339,6 @@ def vm_ovs_bridge_attached_vmb_destination(
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
         dual_stack_network_data=dual_stack_network_data,
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=namespace,
     )

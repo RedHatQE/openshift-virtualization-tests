@@ -180,7 +180,7 @@ def second_cirros_dv_for_online_resize(cirros_dv_for_online_resize):
 
 @pytest.fixture()
 def cirros_vm_for_online_resize(
-    admin_client,
+    local_admin_client,
     cirros_dv_for_online_resize,
     namespace,
     cirros_vm_name,
@@ -217,12 +217,12 @@ def orig_cksum(cirros_vm_for_online_resize, running_cirros_vm):
 
 @pytest.fixture(scope="module")
 def skip_if_storage_for_online_resize_does_not_support_snapshots(
-    storage_class_matrix_online_resize_matrix__module__, admin_client
+    storage_class_matrix_online_resize_matrix__module__, local_admin_client
 ):
     sc_name = [*storage_class_matrix_online_resize_matrix__module__][0]
     if not is_snapshot_supported_by_sc(
         sc_name=sc_name,
-        client=admin_client,
+        client=local_admin_client,
     ):
         pytest.skip(f"Storage class for online resize '{sc_name}' doesn't support snapshots")
 

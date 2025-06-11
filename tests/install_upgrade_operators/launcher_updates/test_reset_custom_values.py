@@ -54,7 +54,7 @@ class TestLauncherUpdateResetFields:
     def test_hyperconverged_reset_custom_workload_update_strategy(
         self,
         updated_workload_strategy_custom_values,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         updated_hco_cr,
         expected,
@@ -62,12 +62,14 @@ class TestLauncherUpdateResetFields:
         """Validate ability to reset, hyperconverged's spec.workloadUpdateStrategy from custom values"""
         wait_for_spec_change(
             expected=expected,
-            get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
+            get_spec_func=lambda: get_hco_spec(admin_client=local_admin_client, hco_namespace=hco_namespace),
             base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
         wait_for_spec_change(
             expected=expected,
-            get_spec_func=lambda: get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+            get_spec_func=lambda: get_hyperconverged_kubevirt(
+                admin_client=local_admin_client, hco_namespace=hco_namespace
+            )
             .instance.to_dict()
             .get("spec"),
             base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],

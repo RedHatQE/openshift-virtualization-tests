@@ -30,14 +30,14 @@ def fail_if_amd_cpu_nodes(nodes_cpu_vendor):
     ],
     ids=["Feature: name: pcid", "Feature: name: pcid , policy:force"],
 )
-def cpu_features_vm_positive(request, unprivileged_client, namespace):
+def cpu_features_vm_positive(request, local_unprivileged_client, namespace):
     name = f"vm-cpu-features-positive-{request.param[1]}"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         cpu_flags=request.param[0],
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=local_unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -72,7 +72,7 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
         ),
     ],
 )
-def test_invalid_cpu_feature_policy_negative(unprivileged_client, namespace, features):
+def test_invalid_cpu_feature_policy_negative(local_unprivileged_client, namespace, features):
     """VM should not be created successfully"""
     vm_name = "invalid-cpu-feature-policy-vm"
     with pytest.raises(UnprocessibleEntityError):
@@ -81,6 +81,6 @@ def test_invalid_cpu_feature_policy_negative(unprivileged_client, namespace, fea
             namespace=namespace.name,
             cpu_flags={"features": features},
             body=fedora_vm_body(name=vm_name),
-            client=unprivileged_client,
+            client=local_unprivileged_client,
         ):
             pytest.fail("VM was created with an invalid cpu feature policy.")

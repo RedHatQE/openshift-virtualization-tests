@@ -36,12 +36,12 @@ def expected_all_managed_crs_crypto_policies(resources_dict):
 
 @pytest.fixture()
 def updated_apiserver_with_tls_old_profile(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     api_server,
 ):
     with update_apiserver_crypto_policy(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         apiserver=api_server,
         tls_spec=TLS_OLD_PROFILE,

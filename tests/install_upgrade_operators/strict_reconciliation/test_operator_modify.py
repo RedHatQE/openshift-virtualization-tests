@@ -111,7 +111,7 @@ class TestOperatorsModify:
     )
     def test_modify_cdi_cr(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
@@ -120,7 +120,7 @@ class TestOperatorsModify:
         updated_cdi_cr,
     ):
         assert verify_specs(
-            admin_client,
+            local_admin_client,
             hco_namespace,
             hco_spec,
             kubevirt_hyperconverged_spec_scope_function,
@@ -284,7 +284,7 @@ class TestOperatorsModify:
     )
     def test_modify_kubevirt_cr(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
@@ -293,7 +293,7 @@ class TestOperatorsModify:
         updated_kubevirt_cr,
     ):
         assert verify_specs(
-            admin_client,
+            local_admin_client,
             hco_namespace,
             hco_spec,
             kubevirt_hyperconverged_spec_scope_function,
@@ -372,7 +372,7 @@ class TestOperatorsModify:
     )
     def test_modify_cnao_cr(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
@@ -381,7 +381,7 @@ class TestOperatorsModify:
         updated_cnao_cr,
     ):
         assert verify_specs(
-            admin_client,
+            local_admin_client,
             hco_namespace,
             hco_spec,
             kubevirt_hyperconverged_spec_scope_function,

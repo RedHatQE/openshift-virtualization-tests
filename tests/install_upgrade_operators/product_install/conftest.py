@@ -132,7 +132,7 @@ def updated_icsp_hyperconverged(
 
 
 @pytest.fixture(scope="module")
-def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_url):
+def hyperconverged_catalog_source(local_admin_client, is_production_source, cnv_image_url):
     if is_production_source:
         LOGGER.info("No creation or update to catalogsource is needed for installation from production source.")
         return
@@ -142,17 +142,17 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
         image=cnv_image_url,
     )
     wait_for_catalogsource_ready(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         catalog_name=HCO_CATALOG_SOURCE,
     )
     return catalog_source
 
 
 @pytest.fixture(scope="module")
-def created_cnv_namespace(admin_client):
+def created_cnv_namespace(local_admin_client):
     cnv_namespace_name = py_config["hco_namespace"]
     yield from create_ns(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         name=cnv_namespace_name,
         teardown=False,
         labels={
@@ -195,20 +195,20 @@ def updated_subscription_with_install_plan(installed_cnv_subscription):
 
 @pytest.fixture(scope="module")
 def cnv_install_plan_installed(
-    admin_client,
+    local_admin_client,
     created_cnv_namespace,
     updated_subscription_with_install_plan,
     cnv_version_to_install_info,
 ):
     install_plan = InstallPlan(
-        client=admin_client,
+        client=local_admin_client,
         name=updated_subscription_with_install_plan,
         namespace=created_cnv_namespace.name,
     )
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_5MIN)
     csv = get_csv_by_name(
         csv_name=get_hco_csv_name_by_version(cnv_target_version=cnv_version_to_install_info["version"]),
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=created_cnv_namespace.name,
     )
     csv.wait_for_status(status=ClusterServiceVersion.Status.SUCCEEDED, timeout=TIMEOUT_10MIN)
@@ -216,7 +216,7 @@ def cnv_install_plan_installed(
 
 @pytest.fixture(scope="module")
 def installed_openshift_virtualization(
-    admin_client,
+    local_admin_client,
     disabled_default_sources_in_operatorhub_scope_module,
     updated_icsp_hyperconverged,
     hyperconverged_catalog_source,

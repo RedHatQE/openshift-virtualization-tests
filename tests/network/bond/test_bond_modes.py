@@ -117,7 +117,7 @@ def matrix_bond_modes_bridge(
 def bond_modes_vm(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     bond_modes_nad,
     matrix_bond_modes_bridge,
 ):
@@ -125,7 +125,7 @@ def bond_modes_vm(
         namespace=namespace.name,
         nad=bond_modes_nad,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     ) as vm:
         yield vm
 
@@ -168,7 +168,7 @@ def active_backup_bond_with_fail_over_mac(index_number, worker_node1, nodes_avai
 def vm_with_fail_over_mac_bond(
     worker_node1,
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     bond_modes_nad,
     active_backup_bond_with_fail_over_mac,
     bridge_on_bond_fail_over_mac,
@@ -177,7 +177,7 @@ def vm_with_fail_over_mac_bond(
         namespace=namespace.name,
         nad=bond_modes_nad,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     ) as vm:
         yield vm
 

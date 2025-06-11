@@ -18,11 +18,11 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.fixture()
-def pods_list_with_given_prefix(request, admin_client, hco_namespace):
+def pods_list_with_given_prefix(request, local_admin_client, hco_namespace):
     namespace_name = hco_namespace.name
     pods_prefix_name = request.param["pods_prefix_name"]
     pods_list_by_prefix = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        dyn_client=local_admin_client,
         pod_prefix=pods_prefix_name,
         namespace=namespace_name,
         get_all=True,
@@ -60,10 +60,10 @@ def test_priority_class_value(pods_list_with_given_prefix):
 
 
 @pytest.fixture()
-def virt_template_validator_pods(admin_client, hco_namespace):
+def virt_template_validator_pods(local_admin_client, hco_namespace):
     return list(
         Pod.get(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             namespace=hco_namespace.name,
             label_selector="kubevirt.io=virt-template-validator",
         )

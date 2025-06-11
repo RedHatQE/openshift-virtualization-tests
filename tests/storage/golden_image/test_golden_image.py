@@ -32,11 +32,11 @@ def dv_created_by_unprivileged_user_with_rolebinding(
     request,
     golden_images_namespace,
     golden_images_edit_rolebinding,
-    unprivileged_client,
+    local_unprivileged_client,
     storage_class_name_scope_function,
 ):
     with create_dv(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         namespace=golden_images_namespace.name,
         url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
@@ -50,7 +50,7 @@ def dv_created_by_unprivileged_user_with_rolebinding(
 @pytest.mark.polarion("CNV-4755")
 def test_regular_user_cant_create_dv_in_ns(
     golden_images_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     LOGGER.info("Try as a regular user, to create a DV in golden image NS and receive the proper error")
     with pytest.raises(
@@ -63,7 +63,7 @@ def test_regular_user_cant_create_dv_in_ns(
             url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
             size=RHEL_IMAGE_SIZE,
             storage_class=py_config["default_storage_class"],
-            client=unprivileged_client,
+            client=local_unprivileged_client,
         ):
             return
 
@@ -78,7 +78,7 @@ def test_regular_user_cant_create_dv_in_ns(
 )
 def test_regular_user_cant_delete_dv_from_cloned_dv(
     golden_images_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_volume_scope_module,
 ):
     LOGGER.info("Try as a regular user, to delete a dv from golden image NS and receive the proper error")
@@ -89,7 +89,7 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
         DataVolume(
             name=golden_image_data_volume_scope_module.name,
             namespace=golden_image_data_volume_scope_module.namespace,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
         ).delete()
 
 
@@ -131,13 +131,13 @@ def test_regular_user_can_create_vm_from_cloned_dv(
 )
 def test_regular_user_can_list_all_pvc_in_ns(
     golden_images_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_volume_scope_module,
 ):
     LOGGER.info("Make sure regular user have permissions to view PVC's in golden image NS")
     assert list(
         PersistentVolumeClaim.get(
-            dyn_client=unprivileged_client,
+            dyn_client=local_unprivileged_client,
             namespace=golden_images_namespace.name,
             field_selector=f"metadata.name=={golden_image_data_volume_scope_module.name}",
         )
@@ -153,7 +153,7 @@ def test_regular_user_can_list_all_pvc_in_ns(
     indirect=True,
 )
 def test_regular_user_cant_clone_dv_in_ns(
-    unprivileged_client,
+    local_unprivileged_client,
     golden_image_data_volume_scope_module,
 ):
     LOGGER.info("Try to clone a DV in the golden image NS and fail with the proper message")
@@ -172,7 +172,7 @@ def test_regular_user_cant_clone_dv_in_ns(
             size=golden_image_data_volume_scope_module.size,
             source_pvc=golden_image_data_volume_scope_module.pvc.name,
             source_namespace=golden_images_namespace,
-            client=unprivileged_client,
+            client=local_unprivileged_client,
             storage_class=storage_class,
         ):
             return

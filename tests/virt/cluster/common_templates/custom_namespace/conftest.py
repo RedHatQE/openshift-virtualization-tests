@@ -20,13 +20,13 @@ COMMON_TEMPLATES_NAMESPACE_KEY = "commonTemplatesNamespace"
 
 
 @pytest.fixture(scope="class")
-def custom_vm_template_namespace(admin_client):
-    yield from create_ns(name="test-custom-vm-template-ns", admin_client=admin_client)
+def custom_vm_template_namespace(local_admin_client):
+    yield from create_ns(name="test-custom-vm-template-ns", admin_client=local_admin_client)
 
 
 @pytest.fixture(scope="class")
 def opt_in_custom_template_namespace(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     custom_vm_template_namespace,
     hyperconverged_resource_scope_class,
@@ -46,7 +46,7 @@ def opt_in_custom_template_namespace(
     remove_templates(
         templates_list=list(
             Template.get(
-                dyn_client=admin_client,
+                dyn_client=local_admin_client,
                 namespace=custom_vm_template_namespace.name,
                 singular_name=Template.singular_name,
             )
@@ -65,54 +65,54 @@ def first_base_template(base_templates):
 
 
 @pytest.fixture()
-def deleted_custom_namespace_template(admin_client, first_base_template, custom_vm_template_namespace):
+def deleted_custom_namespace_template(local_admin_client, first_base_template, custom_vm_template_namespace):
     return delete_template_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace_name=custom_vm_template_namespace.name,
         template_name=first_base_template.name,
     )
 
 
 @pytest.fixture()
-def base_template_from_custom_namespace(admin_client, first_base_template, custom_vm_template_namespace):
+def base_template_from_custom_namespace(local_admin_client, first_base_template, custom_vm_template_namespace):
     return get_template_by_name(
-        client=admin_client,
+        client=local_admin_client,
         namespace_name=custom_vm_template_namespace.name,
         name=first_base_template.name,
     )
 
 
 @pytest.fixture()
-def edited_custom_namespace_template(admin_client, hco_namespace, base_template_from_custom_namespace):
+def edited_custom_namespace_template(local_admin_client, hco_namespace, base_template_from_custom_namespace):
     yield from patch_template_labels(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         hco_namespace=hco_namespace,
         template=base_template_from_custom_namespace,
     )
 
 
 @pytest.fixture()
-def deleted_default_namespace_template(admin_client, first_base_template):
+def deleted_default_namespace_template(local_admin_client, first_base_template):
     return delete_template_by_name(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace_name=NamespacesNames.OPENSHIFT,
         template_name=first_base_template.name,
     )
 
 
 @pytest.fixture()
-def edited_default_namespace_template(admin_client, hco_namespace, first_base_template):
+def edited_default_namespace_template(local_admin_client, hco_namespace, first_base_template):
     template = get_template_by_name(
-        client=admin_client,
+        client=local_admin_client,
         namespace_name=NamespacesNames.OPENSHIFT,
         name=first_base_template.name,
     )
-    yield from patch_template_labels(admin_client=admin_client, hco_namespace=hco_namespace, template=template)
+    yield from patch_template_labels(admin_client=local_admin_client, hco_namespace=hco_namespace, template=template)
 
 
 @pytest.fixture()
 def opted_out_custom_template_namespace(
-    admin_client,
+    local_admin_client,
     hco_namespace,
     custom_vm_template_namespace,
     hyperconverged_resource_scope_function,
@@ -130,9 +130,9 @@ def opted_out_custom_template_namespace(
 
 
 @pytest.fixture()
-def vm_from_template_labels(admin_client, first_base_template, custom_vm_template_namespace):
+def vm_from_template_labels(local_admin_client, first_base_template, custom_vm_template_namespace):
     with diskless_vm_from_template(
-        client=admin_client,
+        client=local_admin_client,
         name="custom-template-ns-vm",
         namespace=custom_vm_template_namespace,
         base_template_labels=first_base_template.labels,

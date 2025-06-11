@@ -5,10 +5,10 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_preference(namespace, admin_client, vm_preference_for_test):
+def rhel_vm_with_preference(namespace, local_admin_client, vm_preference_for_test):
     with vm_preference_for_test as vm_preference:
         with VirtualMachineForTests(
-            client=admin_client,
+            client=local_admin_client,
             name="rhel-vm-with-preference",
             namespace=namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,

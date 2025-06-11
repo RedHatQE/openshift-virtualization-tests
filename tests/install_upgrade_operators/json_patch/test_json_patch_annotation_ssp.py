@@ -26,7 +26,7 @@ pytestmark = [pytest.mark.arm64]
 
 
 @pytest.fixture(scope="class")
-def json_patched_ssp(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
+def json_patched_ssp(local_admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
     with update_hco_annotations(
         resource=hyperconverged_resource_scope_class,
         path=TEMPLATE_VALIDATOR,
@@ -36,7 +36,7 @@ def json_patched_ssp(admin_client, hco_namespace, prometheus, hyperconverged_res
         resource_list=[SSP],
     ):
         yield
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    assert not is_hco_tainted(admin_client=local_admin_client, hco_namespace=hco_namespace.name)
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=ALERT_NAME)
 
 
@@ -49,12 +49,12 @@ class TestSSPJsonPatch:
     @pytest.mark.polarion("CNV-8690")
     def test_ssp_json_patch(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         ssp_resource_scope_function,
     ):
         wait_for_hco_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
                 **{"TaintedConfiguration": Resource.Condition.Status.TRUE},

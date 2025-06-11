@@ -63,13 +63,13 @@ def updated_vmi_cpu_model(nodes_cpu_architecture, cluster_common_node_cpu):
 
 
 @pytest.fixture(scope="module")
-def fedora_vm_scope_module(unprivileged_client, namespace):
-    yield from create_vm(client=unprivileged_client, namespace=namespace)
+def fedora_vm_scope_module(local_unprivileged_client, namespace):
+    yield from create_vm(client=local_unprivileged_client, namespace=namespace)
 
 
 @pytest.fixture()
-def fedora_vm_scope_function(unprivileged_client, namespace):
-    yield from create_vm(client=unprivileged_client, namespace=namespace)
+def fedora_vm_scope_function(local_unprivileged_client, namespace):
+    yield from create_vm(client=local_unprivileged_client, namespace=namespace)
 
 
 @pytest.fixture()

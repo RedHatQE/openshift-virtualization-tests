@@ -37,12 +37,12 @@ def vm_storage_class_preference():
 @pytest.fixture()
 def rhel_vm_with_storage_preference(
     namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     vm_storage_class_preference,
     fedora_data_volume_template,
 ):
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name="rhel-vm-with-storage-pref",
         namespace=namespace.name,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,

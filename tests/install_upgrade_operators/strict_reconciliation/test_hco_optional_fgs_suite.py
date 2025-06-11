@@ -55,19 +55,19 @@ class TestNegativeFeatureGates:
     )
     def test_invalid_featuregates_in_hco_cr(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         kubevirt_feature_gates_scope_module,
         hco_spec_scope_module,
         hco_with_non_default_feature_gates,
     ):
         default_hco_fg = hco_spec_scope_module[FEATURE_GATES]
-        updated_hco_fg = get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace)[FEATURE_GATES]
+        updated_hco_fg = get_hco_spec(admin_client=local_admin_client, hco_namespace=hco_namespace)[FEATURE_GATES]
         assert updated_hco_fg == default_hco_fg, (
             f"HCO featuregates: {default_hco_fg} got updated with invalid featuregates {updated_hco_fg}"
         )
 
-        kv_current_fg = get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)[
+        kv_current_fg = get_kubevirt_hyperconverged_spec(admin_client=local_admin_client, hco_namespace=hco_namespace)[
             "configuration"
         ]["developerConfiguration"][FEATURE_GATES]
         assert kubevirt_feature_gates_scope_module == kv_current_fg, (
@@ -93,19 +93,19 @@ class TestNegativeFeatureGates:
     )
     def test_optional_featuregates_removed_from_kubevirt_cr(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         updated_kv_with_feature_gates,
         kubevirt_feature_gates_scope_module,
     ):
         wait_for_kubevirt_conditions(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
         )
-        wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_hco_conditions(admin_client=local_admin_client, hco_namespace=hco_namespace)
         assert (
             kubevirt_feature_gates_scope_module
-            == get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)[
+            == get_kubevirt_hyperconverged_spec(admin_client=local_admin_client, hco_namespace=hco_namespace)[
                 "configuration"
             ]["developerConfiguration"][FEATURE_GATES]
         )
@@ -121,11 +121,11 @@ class TestHCOOptionalFeatureGatesSuite:
     def test_optional_featuregates_fake_removed_from_cdi_cr(
         self,
         updated_cdi_with_feature_gates,
-        admin_client,
+        local_admin_client,
         hco_namespace,
     ):
         wait_for_fg_update(
-            admin_client=admin_client,
+            admin_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_fg=["fakeGate"],
             validate_func=validate_featuregates_not_in_cdi_cr,

@@ -93,7 +93,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9474")
     def test_two_configmaps_and_jobs_with_success_linux_bridge_nad(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_two_configmaps,
@@ -101,7 +101,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     ):
         for index in range(len(latency_two_jobs)):
             wait_for_job_finish(
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 job=latency_two_jobs[index],
                 checkup_ns=checkup_ns,
             )
@@ -110,7 +110,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-8453")
     def test_concurrent_checkup_jobs_linux_bridge_nad(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         default_latency_configmap,
@@ -120,7 +120,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     ):
         # Make sure the second, concurrent, job failed due to the configMap being already in use:
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_concurrent_job,
             checkup_ns=checkup_ns,
             failure_message_regex="configMap is already in use",
@@ -129,7 +129,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-8535")
     def test_job_failure_linux_bridge_nad_nonexistent_configmap(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         default_latency_configmap,
@@ -137,7 +137,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_nonexistent_configmap_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_configmap_env_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_CONFIGMAP_ENV_JOB_ERROR_REGEX_MESSAGE,
@@ -146,7 +146,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9482")
     def test_job_failure_linux_bridge_nad_no_env_variables(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         default_latency_configmap,
@@ -154,7 +154,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_no_env_variables_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_no_env_variables_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NO_ENV_VARIABLES_JOB_ERROR_REGEX_MESSAGE,
@@ -163,7 +163,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9479")
     def test_configmap_error_job_failure_linux_bridge_nad_nonexistent_nad(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_nonexistent_nad_configmap,
@@ -171,7 +171,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_configmap_error_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_configmap_error_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_NAD_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -180,7 +180,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9481")
     def test_configmap_error_job_failure_linux_bridge_nad_nonexistent_namespace(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_nonexistent_namespace_configmap,
@@ -188,7 +188,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_nonexistent_namespace_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_namespace_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_NAMESPACE_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -197,7 +197,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-8656")
     def test_configmap_error_job_failure_linux_bridge_nad_one_second_timeout(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_one_second_timeout_configmap,
@@ -205,7 +205,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_one_second_timeout_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_one_second_timeout_job,
             checkup_ns=checkup_ns,
             failure_message_regex=CONDITION_TIMEOUT_REGEX_MESSAGE,
@@ -214,7 +214,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9475")
     def test_configmap_error_job_failure_linux_bridge_nad_zero_milliseconds(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_zero_milliseconds_configmap,
@@ -222,7 +222,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_zero_milliseconds_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_zero_milliseconds_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_ZERO_MILLISECONDS_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -231,7 +231,7 @@ class TestCheckupLatencyLinuxBridgeNad:
     @pytest.mark.polarion("CNV-9476")
     def test_configmap_error_job_failure_linux_bridge_nad_nonexistent_node(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_nad,
         latency_nonexistent_node_configmap,
@@ -239,7 +239,7 @@ class TestCheckupLatencyLinuxBridgeNad:
         latency_nonexistent_node_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_node_job,
             checkup_ns=checkup_ns,
             failure_message_regex=CONDITION_TIMEOUT_REGEX_MESSAGE,
@@ -280,7 +280,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10420")
     def test_two_configmaps_and_jobs_with_success_sriov_network(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_sriov_network,
         checkup_ns,
         latency_two_configmaps,
@@ -288,7 +288,7 @@ class TestCheckupLatencySriovNetwork:
     ):
         for index in range(len(latency_two_jobs)):
             wait_for_job_finish(
-                client=unprivileged_client,
+                client=local_unprivileged_client,
                 job=latency_two_jobs[index],
                 checkup_ns=checkup_ns,
             )
@@ -297,7 +297,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10421")
     def test_concurrent_checkup_jobs_sriov_network(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         default_latency_configmap,
@@ -307,7 +307,7 @@ class TestCheckupLatencySriovNetwork:
     ):
         # Make sure the second, concurrent, job failed due to the configMap being already in use:
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_concurrent_job,
             checkup_ns=checkup_ns,
             failure_message_regex="configMap is already in use",
@@ -316,7 +316,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10422")
     def test_job_failure_sriov_network_nonexistent_configmap_env(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         default_latency_configmap,
@@ -324,7 +324,7 @@ class TestCheckupLatencySriovNetwork:
         latency_nonexistent_configmap_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_configmap_env_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_CONFIGMAP_ENV_JOB_ERROR_REGEX_MESSAGE,
@@ -333,7 +333,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10423")
     def test_job_failure_sriov_network(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         default_latency_configmap,
@@ -341,7 +341,7 @@ class TestCheckupLatencySriovNetwork:
         latency_no_env_variables_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_no_env_variables_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NO_ENV_VARIABLES_JOB_ERROR_REGEX_MESSAGE,
@@ -350,7 +350,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10424")
     def test_configmap_error_job_failure_sriov_network_nonexistent_nad(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         latency_nonexistent_nad_configmap,
@@ -358,7 +358,7 @@ class TestCheckupLatencySriovNetwork:
         latency_configmap_error_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_configmap_error_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_NAD_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -367,7 +367,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10425")
     def test_configmap_error_job_failure_sriov_network_nonexistent_namespace(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         latency_nonexistent_namespace_configmap,
@@ -375,7 +375,7 @@ class TestCheckupLatencySriovNetwork:
         latency_nonexistent_namespace_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_namespace_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_NONEXISTENT_NAMESPACE_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -384,7 +384,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10426")
     def test_configmap_error_job_failure_sriov_network_one_second_timeout(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         latency_one_second_timeout_configmap,
@@ -392,7 +392,7 @@ class TestCheckupLatencySriovNetwork:
         latency_one_second_timeout_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_one_second_timeout_job,
             checkup_ns=checkup_ns,
             failure_message_regex=CONDITION_TIMEOUT_REGEX_MESSAGE,
@@ -401,7 +401,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10427")
     def test_configmap_error_job_failure_sriov_network_zero_milliseconds(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         latency_zero_milliseconds_configmap,
@@ -409,7 +409,7 @@ class TestCheckupLatencySriovNetwork:
         latency_zero_milliseconds_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_zero_milliseconds_job,
             checkup_ns=checkup_ns,
             failure_message_regex=LATENCY_ZERO_MILLISECONDS_CONFIGMAP_ERROR_REGEX_MESSAGE,
@@ -418,7 +418,7 @@ class TestCheckupLatencySriovNetwork:
     @pytest.mark.polarion("CNV-10428")
     def test_configmap_error_job_failure_sriov_network_nonexistent_node(
         self,
-        unprivileged_client,
+        local_unprivileged_client,
         checkup_ns,
         checkup_sriov_network,
         latency_nonexistent_node_configmap,
@@ -426,7 +426,7 @@ class TestCheckupLatencySriovNetwork:
         latency_nonexistent_node_job_failure,
     ):
         verify_failure_reason_in_log(
-            unprivileged_client=unprivileged_client,
+            unprivileged_client=local_unprivileged_client,
             job=latency_nonexistent_node_job,
             checkup_ns=checkup_ns,
             failure_message_regex=CONDITION_TIMEOUT_REGEX_MESSAGE,

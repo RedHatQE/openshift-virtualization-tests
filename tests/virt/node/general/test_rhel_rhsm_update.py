@@ -24,14 +24,14 @@ def rhsm_cloud_init_data():
 @pytest.fixture()
 def rhsm_vm(
     request,
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
     rhsm_cloud_init_data,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
         cloud_init_data=rhsm_cloud_init_data,
@@ -69,7 +69,7 @@ def registered_rhsm(rhsm_vm):
 # and we don't have any external alternative for it.
 @pytest.mark.redhat_internal_dependency
 def test_rhel_yum_update(
-    unprivileged_client,
+    local_unprivileged_client,
     namespace,
     rhsm_created_secret,
     golden_image_data_volume_scope_function,

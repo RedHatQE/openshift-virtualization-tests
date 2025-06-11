@@ -18,7 +18,7 @@ class TestEUSToEUSUpgrade:
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_eus_upgrade_process(
         self,
-        admin_client,
+        local_admin_client,
         hco_namespace,
         eus_target_cnv_version,
         eus_cnv_upgrade_path,
@@ -35,7 +35,7 @@ class TestEUSToEUSUpgrade:
     ):
         LOGGER.info("Validate EUS to EUS upgrade process")
         verify_upgrade_cnv(
-            dyn_client=admin_client,
+            dyn_client=local_admin_client,
             hco_namespace=hco_namespace,
             expected_images=get_related_images_name_and_version(csv=eus_created_target_hco_csv).values(),
         )

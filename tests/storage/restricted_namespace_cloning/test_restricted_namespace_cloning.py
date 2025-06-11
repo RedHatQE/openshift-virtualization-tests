@@ -84,14 +84,16 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
     indirect=True,
 )
 def test_user_permissions_positive(
-    unprivileged_client,
+    local_unprivileged_client,
     storage_class_matrix__module__,
     storage_class_name_scope_module,
     permissions_pvc_destination,
     dv_destination_cloned_from_pvc,
     requested_verify_image_permissions,
 ):
-    verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
+    verify_snapshot_used_namespace_transfer(
+        cdv=dv_destination_cloned_from_pvc, unprivileged_client=local_unprivileged_client
+    )
     if requested_verify_image_permissions:
         with create_vm_from_dv(dv=dv_destination_cloned_from_pvc) as vm:
             if (
@@ -130,7 +132,7 @@ def test_user_permissions_negative(
     namespace,
     data_volume_multi_storage_scope_module,
     destination_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     permissions_datavolume_source,
     permissions_datavolume_destination,
     user_has_get_permissions_in_source_namespace,
@@ -141,7 +143,7 @@ def test_user_permissions_negative(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=data_volume_multi_storage_scope_module.namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )
 
 
@@ -161,7 +163,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
     storage_class_name_scope_module,
     namespace,
     data_volume_multi_storage_scope_module,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     create_dv_negative(
         namespace=namespace.name,
@@ -169,7 +171,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=data_volume_multi_storage_scope_module.namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )
 
 
@@ -191,7 +193,7 @@ def test_user_permissions_only_for_dst_ns_negative(
     storage_class_name_scope_module,
     data_volume_multi_storage_scope_module,
     destination_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
     permissions_datavolume_destination,
 ):
     create_dv_negative(
@@ -200,5 +202,5 @@ def test_user_permissions_only_for_dst_ns_negative(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=data_volume_multi_storage_scope_module.namespace,
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
     )

@@ -121,12 +121,12 @@ def collected_vm_details_must_gather_function_scope(
 
 
 @pytest.fixture(scope="module")
-def custom_resource_definitions(admin_client):
-    yield list(CustomResourceDefinition.get(dyn_client=admin_client))
+def custom_resource_definitions(local_admin_client):
+    yield list(CustomResourceDefinition.get(dyn_client=local_admin_client))
 
 
 @pytest.fixture(scope="module")
-def kubevirt_crd_resources(admin_client, custom_resource_definitions):
+def kubevirt_crd_resources(local_admin_client, custom_resource_definitions):
     kubevirt_resources = []
     for resource in custom_resource_definitions:
         if "kubevirt.io" in resource.instance.spec.group:
@@ -171,9 +171,9 @@ def must_gather_bridge(worker_node1):
 
 
 @pytest.fixture(scope="module")
-def running_hco_containers(admin_client, hco_namespace):
+def running_hco_containers(local_admin_client, hco_namespace):
     pods = []
-    for pod in Pod.get(dyn_client=admin_client, namespace=hco_namespace.name):
+    for pod in Pod.get(dyn_client=local_admin_client, namespace=hco_namespace.name):
         for container in pod.instance["status"].get("containerStatuses", []):
             if container["ready"]:
                 pods.append((pod, container))
@@ -182,9 +182,9 @@ def running_hco_containers(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="package")
-def node_gather_unprivileged_namespace(unprivileged_client):
+def node_gather_unprivileged_namespace(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="node-gather-unprivileged",
     )
 
@@ -194,13 +194,13 @@ def must_gather_vm(
     node_gather_unprivileged_namespace,
     must_gather_bridge,
     must_gather_nad,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-2"
     networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
 
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=node_gather_unprivileged_namespace.name,
         name=name,
         networks=networks,
@@ -216,13 +216,13 @@ def must_gather_vm_scope_class(
     node_gather_unprivileged_namespace,
     must_gather_bridge,
     must_gather_nad,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-enabled-guest-console-log"
     networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
 
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=node_gather_unprivileged_namespace.name,
         name=name,
         networks=networks,
@@ -234,15 +234,15 @@ def must_gather_vm_scope_class(
 
 
 @pytest.fixture(scope="function")
-def resource_type(request, admin_client):
+def resource_type(request, local_admin_client):
     resource_type = request.param
-    if not next(resource_type.get(dyn_client=admin_client), None):
+    if not next(resource_type.get(dyn_client=local_admin_client), None):
         raise MissingResourceException(resource_type.__name__)
     return resource_type
 
 
 @pytest.fixture(scope="function")
-def config_map_by_name(request, admin_client):
+def config_map_by_name(request, local_admin_client):
     cm_name, cm_namespace = request.param
     return ConfigMap(name=cm_name, namespace=cm_namespace)
 
@@ -403,9 +403,9 @@ def collected_vm_details_must_gather_with_params(
 
 
 @pytest.fixture(scope="class")
-def must_gather_alternate_namespace(unprivileged_client):
+def must_gather_alternate_namespace(local_unprivileged_client):
     yield from create_ns(
-        unprivileged_client=unprivileged_client,
+        unprivileged_client=local_unprivileged_client,
         name="must-gather-alternate",
     )
 
@@ -418,7 +418,7 @@ def must_gather_vms_alternate_namespace_base_path(collected_vm_details_must_gath
 @pytest.fixture(scope="class")
 def must_gather_vms_from_alternate_namespace(
     must_gather_alternate_namespace,
-    unprivileged_client,
+    local_unprivileged_client,
 ):
     vms_list = create_vms(
         name_prefix=MUST_GATHER_VM_NAME_PREFIX,
@@ -450,9 +450,9 @@ def must_gather_stopped_vms(must_gather_vms_from_alternate_namespace):
 
 
 @pytest.fixture(scope="class")
-def must_gather_long_name_vm(node_gather_unprivileged_namespace, unprivileged_client):
+def must_gather_long_name_vm(node_gather_unprivileged_namespace, local_unprivileged_client):
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         namespace=node_gather_unprivileged_namespace.name,
         name=LONG_VM_NAME,
         body=fedora_vm_body(name=LONG_VM_NAME),
@@ -545,10 +545,10 @@ def nftables_ruleset_from_utility_pods(workers_utility_pods):
 
 
 @pytest.fixture(scope="class")
-def multiple_disks_vm(namespace, unprivileged_client, data_volume_scope_class):
+def multiple_disks_vm(namespace, local_unprivileged_client, data_volume_scope_class):
     vm_name = "must-gather-multiple-disks-vm"
     with VirtualMachineForTests(
-        client=unprivileged_client,
+        client=local_unprivileged_client,
         name=vm_name,
         body=fedora_vm_body(name=vm_name),
         namespace=namespace.name,

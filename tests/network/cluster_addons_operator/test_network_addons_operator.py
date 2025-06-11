@@ -249,7 +249,7 @@ def test_linux_bridge_functionality(net_add_op_bridge_attached_vm):
 @pytest.mark.polarion("CNV-6754")
 @pytest.mark.single_nic
 def test_cnao_labels(
-    admin_client,
+    local_admin_client,
     network_addons_config_scope_session,
     check_components,
     hco_namespace,
@@ -260,7 +260,7 @@ def test_cnao_labels(
     then checking each component's resources.
     """
     verify_cnao_labels(
-        admin_client=admin_client,
+        admin_client=local_admin_client,
         namespace=hco_namespace.name,
         network_addons_config=network_addons_config_scope_session,
         is_post_cnv_upgrade_cluster=is_post_cnv_upgrade_cluster,

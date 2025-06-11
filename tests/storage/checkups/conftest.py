@@ -181,11 +181,11 @@ def skip_if_no_ocs_rbd_non_virt_sc(cluster_storage_classes_names):
 
 
 @pytest.fixture()
-def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
+def ocs_rbd_non_virt_vm_for_checkups_test(local_admin_client, checkups_namespace):
     with create_cirros_vm(
         storage_class=StorageClassNames.CEPH_RBD,
         namespace=checkups_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
         dv_name="dv-10709",
         vm_name="vm-10709",
         wait_running=True,
@@ -251,10 +251,10 @@ def default_storage_class_access_modes(default_sc):
 
 
 @pytest.fixture()
-def rhel9_data_import_cron_source_format(admin_client, golden_images_namespace):
+def rhel9_data_import_cron_source_format(local_admin_client, golden_images_namespace):
     data_import_cron = DataImportCron(
         name="rhel9-image-cron",
         namespace=golden_images_namespace.name,
-        client=admin_client,
+        client=local_admin_client,
     )
     return data_import_cron.instance.status["sourceFormat"]

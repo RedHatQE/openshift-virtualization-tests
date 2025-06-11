@@ -58,9 +58,9 @@ def rhel_9_vm_cluster_preference():
 
 
 @pytest.fixture()
-def simple_rhel_vm(admin_client, namespace):
+def simple_rhel_vm(local_admin_client, namespace):
     with VirtualMachineForTests(
-        client=admin_client,
+        client=local_admin_client,
         name="rhel-vm-with-instance-type",
         namespace=namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
