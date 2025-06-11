@@ -12,13 +12,16 @@ import bitmath
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
+from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
+from podman.errors import ContainerNotFound
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -46,6 +49,7 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -1172,21 +1176,27 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
 
 def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
     lines = re.findall(
-        r"fs.(\d).(mountpoint|total-bytes|used-bytes)\s+:\s+(.*)\s+",
+        r"fs\.(\d+)\.(mountpoint|total-bytes|used-bytes)\s*:\s*(.*)\s*",
         vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
         re.MULTILINE,
     )
     mount_points_and_values_dict: dict[str, dict[str, str]] = {}
     for fs_id, label, value in lines:
         mount_points_and_values_dict.setdefault(fs_id, {})[label] = value
-    return {
+    file_system_info = {
         info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
         for info in mount_points_and_values_dict.values()
+        if "used-bytes" in info and "total-bytes" in info
     }
+    assert file_system_info, "No mountpoints found with value."
+    return file_system_info
 
 
 def compare_metric_file_system_values_with_vm_file_system_values(
-    prometheus: Prometheus, vm_for_test: VirtualMachineForTests, mount_point: str, capacity_or_used: str
+    prometheus: Prometheus,
+    vm_for_test: VirtualMachineForTests,
+    mount_point: str,
+    capacity_or_used: str,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
@@ -1205,11 +1215,13 @@ def compare_metric_file_system_values_with_vm_file_system_values(
                         metrics_name=KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT.format(
                             capacity_or_used=capacity_or_used,
                             vm_name=vm_for_test.name,
-                            mountpoint=mount_point,
+                            mountpoint=f"{mount_point}\\" if mount_point.endswith("\\") else mount_point,
                         ),
                     )
                 )
-                if metric_value * 0.95 <= float(sample[mount_point].get(capacity_or_used)) <= metric_value * 1.05:
+                virsh_raw = sample[mount_point].get(capacity_or_used)
+                virsh_bytes = float(virsh_raw if virsh_raw.isdigit() else bitmath.parse_string_unsafe(virsh_raw).bytes)
+                if math.isclose(metric_value, virsh_bytes, rel_tol=0.05):
                     return
     except TimeoutExpiredError:
         LOGGER.info(
@@ -1486,3 +1498,93 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
     }
+
+
+def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+    vm_dv_templates = vm.instance.spec.dataVolumeTemplates
+    assert vm_dv_templates, "VM has no DataVolume templates"
+    return str(
+        int(
+            bitmath.parse_string_unsafe(
+                PersistentVolumeClaim(
+                    name=vm_dv_templates[0].metadata.name,
+                    namespace=vm.namespace,
+                ).instance.spec.resources.requests.storage
+            ).Byte.bytes
+        )
+    )
+
+
+def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int:
+    if containers := vm.vmi.virt_launcher_pod.instance.spec.containers:
+        return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
+    raise ContainerNotFound(f"No containers found in virt-launcher pod of {vm.vmi.virt_launcher_pod.name}")
+
+
+def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
+    vl_name = vm_for_test.vmi.virt_launcher_pod.name
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace, client=vm_for_test.client).exists,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
+        raise
+
+
+def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
+    wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace} --no-headers"),
+        check=False,
+    )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                if match := re.search(r"\b(\d+)([KMG]i)\b", out):
+                    return int(bitmath.parse_string_unsafe(f"{match.group(1)}{match.group(2)}").bytes)
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm.name} after {TIMEOUT_2MIN} seconds")
+        raise
+    return 0
+
+
+def get_vm_memory_rss_bytes(vm: VirtualMachineForTests) -> int:
+    return int(vm.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
+
+
+def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
+    prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests, working_set=False, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample: int | float = 0
+    expected_value = None
+    try:
+        for sample in samples:
+            if sample:
+                sample = abs(float(sample))
+                expected_value = (
+                    get_vm_virt_launcher_pod_requested_memory(vm=vm) - get_vm_memory_working_set_bytes(vm=vm)
+                    if working_set
+                    else get_vm_memory_rss_bytes(vm=vm)
+                )
+                if math.isclose(sample, abs(expected_value), rel_tol=0.05):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
+        raise
