@@ -12,7 +12,6 @@ pytestmark = [
     pytest.mark.post_upgrade,
     pytest.mark.usefixtures(
         "skip_if_1tb_memory_or_more_node",
-        "installed_descheduler_operator",
         "descheduler_kubevirt_releave_and_migrate_profile",
     ),
 ]
