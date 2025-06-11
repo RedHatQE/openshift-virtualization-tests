@@ -18,7 +18,7 @@ pytestmark = [
     pytest.mark.descheduler,
     pytest.mark.post_upgrade,
     pytest.mark.usefixtures(
-        "skip_if_1tb_memory_or_more_node",
+        "xfail_if_1tb_memory_or_more_node",
         "descheduler_long_lifecycle_profile",
     ),
 ]
