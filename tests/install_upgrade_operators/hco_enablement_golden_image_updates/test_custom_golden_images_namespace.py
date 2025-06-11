@@ -49,7 +49,11 @@ def get_templates_resources_names_dict(templates):
 def verify_resource_not_in_ns(resource_type, namespace, dyn_client):
     resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
     # skipping rhel10-beta-guest image stream if jira is open
-    resources_names = {resource.name for resource in resources if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=resource.name)}
+    resources_names = {
+        resource.name
+        for resource in resources
+        if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=resource.name)
+    }
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
 
 
