@@ -5,6 +5,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.chaos.constants import STRESS_NG
 from utilities.constants import (
+    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -85,6 +86,14 @@ def test_control_plane_node_restart(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: There is no deployment `csi-rbdplugin-provisioner` since CNV v4.19.0,"
+        "so we need to get the new one that plays the same role. "
+        "tracked in CNV-62938"
+    ),
+    run=False,
+)
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
     [

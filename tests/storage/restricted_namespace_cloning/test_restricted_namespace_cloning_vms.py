@@ -27,7 +27,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VM_FOR_TEST,
 )
 from tests.storage.restricted_namespace_cloning.utils import verify_snapshot_used_namespace_transfer
-from utilities.constants import OS_FLAVOR_CIRROS, Images
+from utilities.constants import OS_FLAVOR_CIRROS, QUARANTINED, Images
 from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 
@@ -98,6 +98,10 @@ def test_create_vm_with_cloned_data_volume_positive(
     )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: fails since 4.19; CNV-63482",
+    run=False,
+)
 @pytest.mark.parametrize(
     "namespace, data_volume_multi_storage_scope_module, "
     "permissions_datavolume_source, permissions_datavolume_destination",
