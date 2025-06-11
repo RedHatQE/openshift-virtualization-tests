@@ -9,7 +9,6 @@ from ocp_resources.resource import Resource, ResourceEditor
 from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.virt.node.descheduler.constants import (
-    DESCHEDULER_NAMESPACE_NAME,
     NODE_SELECTOR_LABEL,
     RUNNING_PING_PROCESS_NAME_IN_VM,
 )
@@ -26,19 +25,10 @@ from tests.virt.node.descheduler.utils import (
     wait_vmi_failover,
 )
 from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
-from utilities.constants import BREW_REGISTERY_SOURCE, TIMEOUT_5SEC
+from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
-    create_ns,
     wait_for_pods_deletion,
-)
-from utilities.operator import (
-    create_catalog_source,
-    create_operator_group,
-    create_subscription,
-    get_install_plan_from_subscription,
-    wait_for_catalogsource_ready,
-    wait_for_operator_install,
 )
 from utilities.virt import (
     node_mgmt_console,
@@ -63,103 +53,6 @@ def skip_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
     for node, memory in allocatable_memory_per_node_scope_module.items():
         if memory >= upper_memory_limit:
             pytest.skip(f"Cluster has node with at least {upper_memory_limit} RAM: {node.name}")
-
-
-@pytest.fixture(scope="package")
-def descheduler_namespace(admin_client):
-    yield from create_ns(
-        admin_client=admin_client,
-        name=DESCHEDULER_NAMESPACE_NAME,
-        labels={"openshift.io/cluster-monitoring": "true"},
-    )
-
-
-@pytest.fixture(scope="package")
-def created_descheduler_operator_group(descheduler_namespace):
-    descheduler_operator_group = create_operator_group(
-        namespace_name=descheduler_namespace.name,
-        operator_group_name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        target_namespaces=[descheduler_namespace.name],
-    )
-    yield descheduler_operator_group
-    descheduler_operator_group.clean_up()
-
-
-@pytest.fixture(scope="package")
-def catalog_source_fbc_image():
-    # TODO: implement logic for getting latest fbc staging image
-
-    iib = "975349"
-    image = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:{iib}"
-    return image
-
-
-@pytest.fixture(scope="package")
-def descheduler_catalog_source(admin_client, catalog_source_fbc_image):
-    catalog_source = create_catalog_source(
-        catalog_name=DESCHEDULER_CATALOG_SOURCE,
-        image=catalog_source_fbc_image,
-        display_name="Descheduler Index Image",
-    )
-    wait_for_catalogsource_ready(
-        admin_client=admin_client,
-        catalog_name=DESCHEDULER_CATALOG_SOURCE,
-    )
-    yield catalog_source
-    catalog_source.clean_up()
-
-
-@pytest.fixture(scope="package")
-def created_descheduler_subscription(
-    descheduler_catalog_source,
-    descheduler_namespace,
-):
-    descheduler_subscription = create_subscription(
-        subscription_name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        package_name="cluster-kube-descheduler-operator",
-        namespace_name=descheduler_namespace.name,
-        catalogsource_name=descheduler_catalog_source.name,
-    )
-
-    yield descheduler_subscription
-    descheduler_subscription.clean_up()
-
-
-@pytest.fixture(scope="package")
-def subscription_with_descheduler_install_plan(created_descheduler_subscription):
-    return get_install_plan_from_subscription(subscription=created_descheduler_subscription)
-
-
-@pytest.fixture(scope="package")
-def descheduler_install_plan_installed(
-    admin_client,
-    descheduler_namespace,
-    created_descheduler_subscription,
-    subscription_with_descheduler_install_plan,
-):
-    wait_for_operator_install(
-        admin_client=admin_client,
-        install_plan_name=subscription_with_descheduler_install_plan,
-        namespace_name=descheduler_namespace.name,
-        subscription_name=created_descheduler_subscription.name,
-    )
-
-
-@pytest.fixture(scope="package")
-def installed_descheduler_operator(
-    descheduler_namespace,
-    created_descheduler_operator_group,
-    descheduler_catalog_source,
-    created_descheduler_subscription,
-    descheduler_install_plan_installed,
-):
-    deployment = Deployment(
-        name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        namespace=descheduler_namespace.name,
-    )
-    deployment.wait()
-    deployment.wait_for_replicas()
-    yield deployment
 
 
 @pytest.fixture(scope="module")
