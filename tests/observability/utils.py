@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -26,16 +27,19 @@ def validate_metrics_value(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
+    sample = None
+    comparison_values_log = {}
     try:
-        sample = None
         for sample in samples:
             if sample:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}")
+                comparison_values_log[datetime.datetime.now()] = (
+                    f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
+                )
                 if sample == expected_value:
                     LOGGER.info("Metrics value matches the expected value!")
                     return
     except TimeoutExpiredError:
-        LOGGER.info(f"Metrics value: {sample}, expected: {expected_value}")
+        LOGGER.error(f"Metrics value: {sample}, expected: {expected_value}, comparison log: {comparison_values_log}")
         raise
 
 
