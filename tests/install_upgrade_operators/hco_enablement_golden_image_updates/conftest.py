@@ -10,6 +10,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
 )
+from tests.install_upgrade_operators.utils import is_rhel10_beta_resource_and_63351_bug_open
 from utilities.constants import (
     COMMON_TEMPLATES_KEY_NAME,
     HCO_OPERATOR,
@@ -46,6 +47,7 @@ def image_stream_names(admin_client, golden_images_namespace):
     return [
         image_stream.name
         for image_stream in ImageStream.get(dyn_client=admin_client, namespace=golden_images_namespace.name)
+        if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=image_stream.name)
     ]
 
 
