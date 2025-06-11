@@ -12,11 +12,13 @@ from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
 from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR, VGPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
-    verify_gpu_device_exists_in_vm,
-    verify_gpu_device_exists_on_node,
     verify_gpu_expected_count_updated_on_node,
 )
-from tests.virt.utils import running_sleep_in_linux
+from tests.virt.utils import (
+    running_sleep_in_linux,
+    verify_gpu_device_exists_in_vm,
+    verify_gpu_device_exists_on_node,
+)
 from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import get_node_selector_dict
 from utilities.virt import (
