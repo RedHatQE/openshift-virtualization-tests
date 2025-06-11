@@ -27,7 +27,6 @@ from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
     get_pod_by_name_prefix,
-    is_jira_open,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
@@ -236,10 +235,3 @@ def updated_resource(
         wait_for_reconcile_post_update=True,
     ):
         yield cr
-
-
-@pytest.fixture(scope="session")
-def rhel10_beta_resource():
-    return lambda resource_name, _open=is_jira_open(jira_id="CNV-63351"): (
-        resource_name.startswith("rhel10-beta") and _open
-    )

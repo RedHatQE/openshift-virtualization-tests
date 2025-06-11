@@ -15,6 +15,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     COMMON_TEMPLATE,
     get_templates_by_type_from_hco_status,
 )
+from tests.install_upgrade_operators.utils import is_rhel10_beta_resource_and_63351_bug_open
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -45,10 +46,10 @@ def get_templates_resources_names_dict(templates):
     return resource_dict
 
 
-def verify_resource_not_in_ns(resource_type, namespace, dyn_client, rhel10_beta_resource):
+def verify_resource_not_in_ns(resource_type, namespace, dyn_client):
     resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
     # skipping rhel10-beta-guest image stream if jira is open
-    resources_names = {resource.name for resource in resources if not rhel10_beta_resource(resource.name)}
+    resources_names = {resource.name for resource in resources if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=resource.name)}
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
 
 
@@ -125,7 +126,6 @@ def updated_common_template_custom_ns(
     golden_images_namespace,
     hyperconverged_resource_scope_class,
     custom_golden_images_namespace,
-    rhel10_beta_resource,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={
@@ -138,7 +138,7 @@ def updated_common_template_custom_ns(
     ):
         yield
     for data_source in get_data_sources_managed_by_data_import_cron(namespace=golden_images_namespace.name):
-        if not rhel10_beta_resource(data_source.name):
+        if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=data_source.name):
             data_source.wait_for_condition(
                 condition=DataSource.Condition.READY,
                 status=DataSource.Condition.Status.TRUE,
@@ -201,7 +201,6 @@ class TestDefaultCommonTemplates:
         default_common_templates_related_resources,
         resource_type,
         ready_condition,
-        rhel10_beta_resource,
     ):
         verify_resource_in_ns(
             expected_resource_names=default_common_templates_related_resources[resource_type.kind],
@@ -215,7 +214,6 @@ class TestDefaultCommonTemplates:
                 resource_type=resource_type,
                 namespace=golden_images_namespace.name,
                 dyn_client=admin_client,
-                rhel10_beta_resource=rhel10_beta_resource,
             )
 
     @pytest.mark.polarion("CNV-11477")
