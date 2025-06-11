@@ -11,11 +11,11 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 class TestRelatedObjects:
     @pytest.mark.polarion("CNV-9843")
-    def test_no_new_hco_related_objects(self, hco_status_related_objects, jira_63351_open):
+    def test_no_new_hco_related_objects(self, hco_status_related_objects, rhel10_beta_resource):
         actual_related_objects = {
             related_object["name"]: related_object["kind"]
             for related_object in hco_status_related_objects
-            if not (related_object["name"] == "rhel10-beta-guest" and jira_63351_open)
+            if not rhel10_beta_resource(related_object["name"])
         }
         expected_related_objects = {
             object_name: object_kind

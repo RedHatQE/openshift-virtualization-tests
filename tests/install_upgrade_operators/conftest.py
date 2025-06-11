@@ -239,5 +239,7 @@ def updated_resource(
 
 
 @pytest.fixture(scope="session")
-def jira_63351_open():
-    return is_jira_open(jira_id="CNV-63351")
+def rhel10_beta_resource():
+    return lambda resource_name, _open=is_jira_open(jira_id="CNV-63351"): (
+        resource_name.startswith("rhel10-beta") and _open
+    )
