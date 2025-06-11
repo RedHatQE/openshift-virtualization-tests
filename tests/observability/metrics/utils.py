@@ -1513,7 +1513,6 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-
 def get_last_transition_time(vm: VirtualMachineForTests) -> int:
     for condition in vm.instance.get("status", {}).get("conditions"):
         if condition.get("type") == vm.Condition.READY:
@@ -1567,7 +1566,7 @@ def check_vmi_count_metric(expected_vmi_count: int, prometheus: Prometheus) -> N
     except TimeoutExpiredError:
         LOGGER.error(f"Expected value: {expected_vmi_count}, Actual: {sample}")
 
-        
+
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
     assert vm_dv_templates, "VM has no DataVolume templates"
