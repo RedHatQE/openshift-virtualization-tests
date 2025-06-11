@@ -1097,7 +1097,6 @@ def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
     ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
 
 
