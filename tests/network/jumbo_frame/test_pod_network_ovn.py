@@ -17,6 +17,7 @@ pytestmark = [
 class TestJumboPodNetworkOnly:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-9660")
+    @pytest.mark.single_nic
     def test_jumbo_traffic_over_pod_network_separate_nodes(
         self,
         running_vma_jumbo_primary_interface_worker_1,
@@ -31,6 +32,7 @@ class TestJumboPodNetworkOnly:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-9671")
+    @pytest.mark.single_nic
     def test_jumbo_traffic_over_pod_network_same_node(
         self,
         running_vma_jumbo_primary_interface_worker_1,
@@ -45,6 +47,7 @@ class TestJumboPodNetworkOnly:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-9672")
+    @pytest.mark.single_nic
     def test_jumbo_negative_traffic_over_pod_network_with_oversized_traffic(
         self,
         running_vma_jumbo_primary_interface_worker_1,

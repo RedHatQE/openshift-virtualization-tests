@@ -51,6 +51,7 @@ class TestConnectivityLinuxBridge:
     @pytest.mark.polarion("CNV-11125")
     @pytest.mark.ipv6
     @pytest.mark.jira("CNV-58530", run=True)
+    @pytest.mark.single_nic
     def test_ipv6_linux_bridge(
         self,
         fail_if_not_ipv6_supported_cluster,

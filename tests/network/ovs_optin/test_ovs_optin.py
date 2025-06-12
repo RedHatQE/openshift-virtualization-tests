@@ -51,6 +51,7 @@ def hyperconverged_ovs_annotations_removed(
 @pytest.mark.sno
 class TestOVSOptIn:
     @pytest.mark.polarion("CNV-5520")
+    @pytest.mark.single_nic
     def test_ovs_installed(
         self,
         admin_client,
@@ -66,6 +67,7 @@ class TestOVSOptIn:
         )
 
     @pytest.mark.polarion("CNV-5533")
+    @pytest.mark.single_nic
     def test_ovs_not_installed_annotations_removed(
         self,
         admin_client,
@@ -80,6 +82,7 @@ class TestOVSOptIn:
         )
 
     @pytest.mark.polarion("CNV-5531")
+    @pytest.mark.single_nic
     def test_ovs_not_installed_annotations_disabled(
         self,
         admin_client,

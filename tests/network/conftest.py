@@ -218,7 +218,11 @@ def network_sanity(
     failure_msgs = []
     collected_tests = request.session.items
 
-    def _verify_multi_nic():
+    def _verify_multi_nic(request=request):
+        marker_args = request.config.getoption("-m")
+        if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
+            LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
+            return
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
         if len(hosts_common_available_ports) <= 1:
             failure_msgs.append(
@@ -290,7 +294,7 @@ def network_sanity(
             else:
                 LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
 
-    _verify_multi_nic()
+    _verify_multi_nic(request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
