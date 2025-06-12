@@ -3,7 +3,6 @@ vGPU with Windows VM
 """
 
 import logging
-import os
 
 import pytest
 from ocp_resources.template import Template
@@ -37,7 +36,7 @@ pytestmark = [
 
 LOGGER = logging.getLogger(__name__)
 WIN10 = get_windows_os_dict(windows_version="win-10")
-WIN10_LABELS = WIN10["template_labels"]
+WIN10_LABELS = WIN10.get("template_labels", {})
 DV_SIZE = Images.Windows.DEFAULT_DV_SIZE
 TESTS_CLASS_NAME = "TestVGPUWindowsGPUSSpec"
 
@@ -73,8 +72,8 @@ def gpu_vmc(
     [
         pytest.param(
             {
-                "dv_name": WIN10_LABELS["os"],
-                "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+                "dv_name": WIN10_LABELS.get("os"),
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": DV_SIZE,
             },

@@ -13,7 +13,7 @@ from utilities.constants import (
 )
 
 global config
-global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
+global_config = pytest_testconfig.load_python(py_file="tests/global_config_x86.py", encoding="utf-8")
 
 
 RWO = DataVolume.AccessMode.RWO

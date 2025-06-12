@@ -1,4 +1,3 @@
-import os
 import shlex
 
 import pytest
@@ -179,7 +178,7 @@ def custom_windows_vm(
         pytest.param(
             {
                 "dv_name": WINDOWS_2019_OS,
-                "image": os.path.join(Images.Windows.HA_DIR, Images.Windows.WIN2k19_HA_IMG),
+                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
                 "dv_size": "100Gi",
                 "storage_class": py_config["default_storage_class"],
             },
