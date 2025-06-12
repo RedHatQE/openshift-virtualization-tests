@@ -31,6 +31,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
+from tests.os_params import RHEL_LATEST
 from tests.storage.constants import HPP_STORAGE_CLASSES
 from utilities.constants import (
     CDI_UPLOAD,
@@ -364,7 +365,7 @@ def test_hpp_specify_node_immediate(
         source="http",
         dv_name="cnv-3228",
         namespace=namespace.name,
-        url=f"{get_test_artifact_server_url()}{Images.Rhel.RHEL8_0_IMG}",
+        url=f"{get_test_artifact_server_url()}{RHEL_LATEST['image_path']}",
         content_type=DataVolume.ContentType.KUBEVIRT,
         size="35Gi",
         storage_class=[*storage_class_matrix_hpp_matrix__module__][0],

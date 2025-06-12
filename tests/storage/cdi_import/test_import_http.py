@@ -15,7 +15,7 @@ from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST
+from tests.os_params import FEDORA_LATEST, RHEL_LATEST
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
     HTTP,
@@ -636,7 +636,7 @@ def test_disk_falloc(internal_http_configmap, dv_from_http_import):
             {
                 "dv_name": "cnv-3362",
                 "source": HTTP,
-                "image": f"{Images.Rhel.DIR}/{Images.Rhel.RHEL8_2_IMG}",
+                "image": RHEL_LATEST["image_path"],
                 "dv_size": "25Gi",
                 "access_modes": DataVolume.AccessMode.RWX,
                 "wait": False,
