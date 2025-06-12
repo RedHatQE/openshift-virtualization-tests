@@ -457,6 +457,7 @@ def test_vm_annotations_in_template(base_templates):
     assert not unmatched_templates, f"Some templates do not have the right VM annotations:\n{unmatched_templates}."
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "data_volume_scope_function, vm_from_template_with_existing_dv",
     [
