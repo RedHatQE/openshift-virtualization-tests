@@ -1,5 +1,4 @@
 import logging
-import os
 import shlex
 
 import pytest
@@ -135,7 +134,7 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
             {"rwx_access_mode": False},
             {
                 "dv_name": "dv-win11-vtpm-vm",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -146,7 +145,7 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
             {"rwx_access_mode": True},
             {
                 "dv_name": "dv-win2022-vtpm-vm",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN2022_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },

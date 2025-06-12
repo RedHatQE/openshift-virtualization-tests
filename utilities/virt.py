@@ -1550,28 +1550,58 @@ def get_guest_os_info(vmi):
         raise
 
 
-def get_windows_os_dict(windows_version):
-    windows_os_dict = [
-        os_dict
-        for win_os in py_config["system_windows_os_matrix"]
-        for os_name, os_dict in win_os.items()
-        if os_name == windows_version
-    ]
-    if windows_os_dict:
-        return windows_os_dict[0]
-    raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+def get_windows_os_dict(windows_version: str) -> dict[str, Any]:
+    """
+    Returns a dictionary of Windows os information from the system_windows_os_matrix in py_config.
+
+    Args:
+        windows_version: The version of windows to get the os information for.
+
+    Returns:
+        dict: OS dictionary for the version, or empty dict if matrix is missing
+
+    Raises:
+        KeyError: If matrix exists but version is not found
+    """
+    if system_windows_os_matrix := py_config.get("system_windows_os_matrix"):
+        windows_os_dict = [
+            os_dict
+            for win_os in system_windows_os_matrix
+            for os_name, os_dict in win_os.items()
+            if os_name == windows_version
+        ]
+        if windows_os_dict:
+            return windows_os_dict[0]
+        raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+
+    return {}
 
 
-def get_rhel_os_dict(rhel_version):
-    rhel_os_dict = [
-        os_dict
-        for rhel_os in py_config["system_rhel_os_matrix"]
-        for os_name, os_dict in rhel_os.items()
-        if os_name == rhel_version
-    ]
-    if rhel_os_dict:
-        return rhel_os_dict[0]
-    raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+def get_rhel_os_dict(rhel_version: str) -> dict[str, Any]:
+    """
+    Returns a dictionary of RHEL os information from the system_rhel_os_matrix in py_config.
+
+    Args:
+        rhel_version: The version of RHEL to get the os information for.
+
+    Returns:
+        dict: OS dictionary for the version, or empty dict if matrix is missing
+
+    Raises:
+        KeyError: If matrix exists but version is not found
+    """
+    if py_system_rhel_os_matrix := py_config.get("system_rhel_os_matrix"):
+        rhel_os_dict = [
+            os_dict
+            for rhel_os in py_system_rhel_os_matrix
+            for os_name, os_dict in rhel_os.items()
+            if os_name == rhel_version
+        ]
+        if rhel_os_dict:
+            return rhel_os_dict[0]
+        raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+
+    return {}
 
 
 def assert_vm_not_error_status(vm: VirtualMachineForTests, timeout: int = TIMEOUT_5SEC) -> None:
