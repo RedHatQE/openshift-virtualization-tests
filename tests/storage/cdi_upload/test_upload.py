@@ -21,6 +21,7 @@ from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
 import utilities.storage
+from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_1MIN,
@@ -328,7 +329,7 @@ def test_successful_upload_missing_file_in_transit(namespace, storage_class_matr
     dv_name = "cnv-2017"
     storage_class = [*storage_class_matrix__class__][0]
     get_downloaded_artifact(
-        remote_name=f"{Images.Rhel.DIR}/{Images.Rhel.RHEL8_0_IMG}",
+        remote_name=RHEL_LATEST["image_path"],
         local_name=upload_file_path,
     )
     upload_process = multiprocessing.Process(
