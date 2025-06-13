@@ -1,7 +1,7 @@
 import logging
+import shlex
 from multiprocessing import Manager, cpu_count
 from multiprocessing.dummy import Pool
-import shlex
 
 import pytest
 from bitmath import parse_string_unsafe
