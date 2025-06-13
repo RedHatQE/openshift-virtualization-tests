@@ -17,7 +17,8 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_VM_YAML
-from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, Images
+from utilities import infra
+from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, S390X, S390X_TEMPLATE_SUFFIX, Images
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -89,21 +90,31 @@ def check_default_and_validation_memory(get_base_templates, osinfo_memory_value,
         )
 
 
-def get_rhel_templates_list():
+def get_rhel_templates_list(cluster_arch):
     rhel_major_releases_list = ["7", "8", "9"]
+    if cluster_arch == S390X:
+        LOGGER.info("RHEL 7 not supported on s390x: removing RHEL 7 templates")
+        rhel_major_releases_list.remove("7")
     return [
-        f"rhel{release}-{workload}-{flavor}"
+        f"rhel{release}-{workload}-{flavor}{S390X_TEMPLATE_SUFFIX if cluster_arch == S390X else ''}"
         for release in rhel_major_releases_list
         for flavor in LINUX_FLAVORS_LIST
         for workload in LINUX_WORKLOADS_LIST
     ]
 
 
-def get_fedora_templates_list():
-    return [f"fedora-{workload}-{flavor}" for flavor in FEDORA_FLAVORS_LIST for workload in LINUX_WORKLOADS_LIST]
+def get_fedora_templates_list(cluster_arch):
+    return [
+        f"fedora-{workload}-{flavor}{S390X_TEMPLATE_SUFFIX if cluster_arch == S390X else ''}"
+        for flavor in FEDORA_FLAVORS_LIST
+        for workload in LINUX_WORKLOADS_LIST
+    ]
 
 
-def get_windows_templates_list():
+def get_windows_templates_list(cluster_arch):
+    if cluster_arch == S390X:
+        LOGGER.info("Windows is not suported on s390x architecture: removing Windows templates")
+        return []
     windows10 = "windows10"
     windows11 = "windows11"
     windows_os_list = [windows10, windows11, "windows2k16", "windows2k19", "windows2k22", "windows2k25"]
@@ -119,10 +130,10 @@ def get_windows_templates_list():
     return [f"{release}-{flavor}" for release in windows_workload_list for flavor in WINDOWS_FLAVOR_LIST]
 
 
-def get_centos_templates_list():
+def get_centos_templates_list(cluster_arch):
     centos_releases_list = ["-stream9"]
     return [
-        f"centos{release}-{workload}-{flavor}"
+        f"centos{release}-{workload}-{flavor}{S390X_TEMPLATE_SUFFIX if cluster_arch == S390X else ''}"
         for release in centos_releases_list
         for flavor in LINUX_FLAVORS_LIST
         for workload in [Template.Workload.SERVER, Template.Workload.DESKTOP]
@@ -131,10 +142,11 @@ def get_centos_templates_list():
 
 @pytest.fixture()
 def common_templates_expected_list():
-    common_templates_list = get_rhel_templates_list()
-    common_templates_list += get_fedora_templates_list()
-    common_templates_list += get_windows_templates_list()
-    common_templates_list += get_centos_templates_list()
+    node_cpu_arch = infra.get_nodes_cpu_architecture()
+    common_templates_list = get_rhel_templates_list(cluster_arch=node_cpu_arch)
+    common_templates_list += get_fedora_templates_list(cluster_arch=node_cpu_arch)
+    common_templates_list += get_windows_templates_list(cluster_arch=node_cpu_arch)
+    common_templates_list += get_centos_templates_list(cluster_arch=node_cpu_arch)
     return common_templates_list
 
 
