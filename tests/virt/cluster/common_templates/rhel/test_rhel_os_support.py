@@ -279,6 +279,7 @@ class TestCommonTemplatesRhel:
         assert_vm_xml_efi(vm=vm, secure_boot_enabled=False)
         assert_linux_efi(vm=vm)
 
+    @pytest.mark.s390x
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke

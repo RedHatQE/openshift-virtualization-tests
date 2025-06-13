@@ -183,6 +183,7 @@ class TestCommonTemplatesCentos:
             vm=golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class
         ), "Guest agent stopped responding"
 
+    @pytest.mark.s390x
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-5351")
     def test_vm_deletion(self, golden_image_vm_object_from_template_multi_centos_multi_storage_scope_class):
