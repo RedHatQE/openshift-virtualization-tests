@@ -140,6 +140,9 @@ class ArchImages:
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
 
+        Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
+        Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
+
         Cdi = Cdi(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
