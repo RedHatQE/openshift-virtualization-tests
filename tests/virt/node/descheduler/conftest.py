@@ -390,7 +390,7 @@ def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
         if vm_per_node_counters[node.name] > 0:
             return node
 
-    raise ValueError("No suitable node to drain")
+    raise ValueError("No suitable node to run stress")
 
 
 @pytest.fixture(scope="class")
