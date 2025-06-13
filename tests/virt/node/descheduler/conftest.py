@@ -3,6 +3,7 @@ import logging
 
 import bitmath
 import pytest
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
@@ -66,7 +67,7 @@ def descheduler_long_lifecycle_profile():
 
 
 @pytest.fixture(scope="module")
-def descheduler_kubevirt_releave_and_migrate_profile(
+def descheduler_kubevirt_relieve_and_migrate_profile(
     schedulable_nodes,
     nodes_taints_before_descheduler_test_run,
 ):
@@ -93,7 +94,7 @@ def allocatable_memory_per_node_scope_class(schedulable_nodes):
 def cpu_capacity_per_node(schedulable_nodes):
     nodes_cpu = {}
     for node in schedulable_nodes:
-        nodes_cpu[node] = int(node.instance.status.capacity.cpu)
+        nodes_cpu[node] = int(parse_quantity(node.instance.status.capacity.cpu))
         LOGGER.info(f"Node {node.name} has total CPU capacity: {nodes_cpu[node]}")
     return nodes_cpu
 
@@ -102,7 +103,7 @@ def cpu_capacity_per_node(schedulable_nodes):
 def vm_deployment_size(allocatable_memory_per_node_scope_module, cpu_capacity_per_node):
     vm_memory_size = next(iter(allocatable_memory_per_node_scope_module.values())) / 10
     LOGGER.info(f"VM memory is 10% from allocatable: {vm_memory_size.to_GiB()}")
-    vm_cpu_size = next(iter(cpu_capacity_per_node.values())) // 20
+    vm_cpu_size = max(1, next(iter(cpu_capacity_per_node.values())) // 20)
     LOGGER.info(f"VM CPU is 5% from capacity: {vm_cpu_size}")
 
     return {"cpu": vm_cpu_size, "memory": vm_memory_size}
@@ -388,6 +389,8 @@ def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
     for node in schedulable_nodes:
         if vm_per_node_counters[node.name] > 0:
             return node
+
+    raise ValueError("No suitable node to drain")
 
 
 @pytest.fixture(scope="class")
