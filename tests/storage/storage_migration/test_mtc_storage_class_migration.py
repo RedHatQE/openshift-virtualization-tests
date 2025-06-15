@@ -6,6 +6,7 @@ from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
 )
+from tests.storage.storage_migration.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from tests.storage.storage_migration.utils import (
     check_file_in_hotplugged_disk,
     verify_storage_migration_succeeded,
@@ -15,8 +16,6 @@ from utilities.virt import migrate_vm_and_verify
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 TESTS_CLASS_NAME_VOLUME_HOTPLUG = "TestStorageClassMigrationWithVolumeHotplug"
-STORAGE_CLASS_A = "storage_class_for_storage_migration_a"
-STORAGE_CLASS_B = "storage_class_for_storage_migration_b"
 
 
 @pytest.mark.parametrize(

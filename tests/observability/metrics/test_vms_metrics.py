@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -23,8 +24,10 @@ from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     expected_metric_labels_and_values,
     get_metric_labels_non_empty_value,
+    get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_within_range,
+    validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
@@ -301,7 +304,7 @@ class TestVmiMemoryCachedBytes:
 
 
 @pytest.mark.parametrize("vm_for_test", [pytest.param("file-system-metrics")], indirect=True)
-class TestVmiFileSystemMetrics:
+class TestVmiFileSystemMetricsLinux:
     @pytest.mark.parametrize(
         "file_system_metric_mountpoints_existence, capacity_or_used",
         [
@@ -320,13 +323,50 @@ class TestVmiFileSystemMetrics:
         ],
         indirect=["file_system_metric_mountpoints_existence"],
     )
-    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes(
-        self, prometheus, vm_for_test, file_system_metric_mountpoints_existence, dfs_info, capacity_or_used
+    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
+        self,
+        prometheus,
+        vm_for_test,
+        file_system_metric_mountpoints_existence,
+        disk_file_system_info_linux,
+        capacity_or_used,
     ):
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=vm_for_test,
-            mount_point=list(dfs_info.keys())[0],
+            mount_point=[*disk_file_system_info_linux][0],
+            capacity_or_used=capacity_or_used,
+        )
+
+
+@pytest.mark.tier3
+class TestVmiFileSystemMetricsWindows:
+    @pytest.mark.parametrize(
+        "capacity_or_used",
+        [
+            pytest.param(
+                CAPACITY,
+                marks=pytest.mark.polarion("CNV-11917"),
+                id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
+            ),
+            pytest.param(
+                USED,
+                marks=pytest.mark.polarion("CNV-11918"),
+                id="test_metric_kubevirt_vmi_filesystem_used_bytes",
+            ),
+        ],
+    )
+    def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
+        self,
+        prometheus,
+        windows_vm_for_test,
+        disk_file_system_info_windows,
+        capacity_or_used,
+    ):
+        compare_metric_file_system_values_with_vm_file_system_values(
+            prometheus=prometheus,
+            vm_for_test=windows_vm_for_test,
+            mount_point=[*disk_file_system_info_windows][0],
             capacity_or_used=capacity_or_used,
         )
 
@@ -418,25 +458,26 @@ class TestVmResourceLimits:
 @pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
 class TestVmFreeMemoryBytes:
     @pytest.mark.polarion("CNV-11692")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_working_set_bytes
-    ):
-        validate_metric_value_within_range(
+    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(self, prometheus, vm_for_test):
+        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes"
             f"{{pod='{vm_for_test.vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_working_set_bytes,
+            vm=vm_for_test,
+            working_set=True,
         )
 
     @pytest.mark.polarion("CNV-11693")
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_rss_bytes
+        self,
+        prometheus,
+        vm_for_test,
     ):
-        validate_metric_value_within_range(
+        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_rss"
             f"{{pod='{vm_for_test.privileged_vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_rss_bytes,
+            vm=vm_for_test,
         )
 
 
@@ -497,15 +538,28 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
         )
 
 
-class TestVmDiskAllocatedSize:
+class TestVmDiskAllocatedSizeLinux:
     @pytest.mark.polarion("CNV-11817")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
-        self, prometheus, vm_for_vm_disk_allocation_size_test, pvc_size_bytes
+        self,
+        prometheus,
+        vm_for_vm_disk_allocation_size_test,
     ):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"kubevirt_vm_disk_allocated_size_bytes{{name='{vm_for_vm_disk_allocation_size_test.name}'}}",
-            expected_value=pvc_size_bytes,
+            metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=vm_for_vm_disk_allocation_size_test.name),
+            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test),
+        )
+
+
+@pytest.mark.tier3
+class TestVmDiskAllocatedSizeWindows:
+    @pytest.mark.polarion("CNV-11916")
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),
+            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test),
         )
 
 
