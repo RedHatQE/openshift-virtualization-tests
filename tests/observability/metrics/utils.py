@@ -12,13 +12,16 @@ import bitmath
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
+from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
+from podman.errors import ContainerNotFound
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -46,6 +49,7 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -1011,27 +1015,28 @@ def validate_vmi_network_receive_and_transmit_packets_total(
         vm=vm,
         interface_name=vm_interface_name,
     )
-    sample = None
+    sample_value = None
+    packets_kind = metric_dict["packets_kind"]
+    metric_packets_value = None
     try:
         match_counter = 0
-        metric_packets_value = None
         for sample in samples:
             if sample:
-                metric_packets_value = (
-                    prometheus.query(query=f"{metric_dict['metric_name']}{{name='{vm.name}'}}")
-                    .get("data")
-                    .get("result")[0]
-                    .get("value")[1]
+                metric_packets_value = get_metrics_value(
+                    prometheus=prometheus, metrics_name=f"{metric_dict['metric_name']}{{name='{vm.name}'}}"
                 )
+                sample_value = sample[packets_kind]
                 if is_domifstat_compared_prometheus_values(
-                    domifstat_network_packets_received=int(sample[metric_dict["packets_kind"]]),
+                    domifstat_network_packets_received=int(sample_value),
                     prometheus_metric_packets_value=int(metric_packets_value),
                 ):
                     match_counter += 1
                     if match_counter > 5:
                         return
     except TimeoutExpiredError:
-        LOGGER.error(f"Expected metric packets values: {sample}")
+        LOGGER.error(
+            f"Expected metric packets value for {packets_kind}: {sample_value}, actual: {metric_packets_value}"
+        )
         raise
 
 
@@ -1040,11 +1045,16 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
     metrics_result = metrics["data"].get("result", [])
     if metrics_result:
         return sum(int(metric_metrics_result["value"][1]) for metric_metrics_result in metrics_result)
+    LOGGER.warning(f"For Query {metric}, empty results found.")
     return 0
 
 
 def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus, metric_name: str, expected_value: int, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus,
+    metric_name: str,
+    expected_value: int,
+    check_times: int = 3,
+    timeout: int = TIMEOUT_4MIN,
 ) -> None:
     sampler = TimeoutSampler(
         wait_timeout=timeout,
@@ -1055,17 +1065,25 @@ def wait_for_expected_metric_value_sum(
     )
     sample = None
     current_check = 0
+    comparison_values_log = {}
     try:
         for sample in sampler:
-            if sample and sample == expected_value:
+            if sample:
+                comparison_values_log[datetime.now()] = (
+                    f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
+                )
+            if sample == expected_value:
                 current_check += 1
-                if current_check >= 3:
+                if current_check >= check_times:
                     return
             else:
                 current_check = 0
 
     except TimeoutExpiredError:
-        LOGGER.info(f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}")
+        LOGGER.error(
+            f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}, "
+            f"comparison log: {comparison_values_log}"
+        )
         raise
 
 
@@ -1171,21 +1189,27 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
 
 def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
     lines = re.findall(
-        r"fs.(\d).(mountpoint|total-bytes|used-bytes)\s+:\s+(.*)\s+",
+        r"fs\.(\d+)\.(mountpoint|total-bytes|used-bytes)\s*:\s*(.*)\s*",
         vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
         re.MULTILINE,
     )
     mount_points_and_values_dict: dict[str, dict[str, str]] = {}
     for fs_id, label, value in lines:
         mount_points_and_values_dict.setdefault(fs_id, {})[label] = value
-    return {
+    file_system_info = {
         info["mountpoint"]: {USED: info["used-bytes"], CAPACITY: info["total-bytes"]}
         for info in mount_points_and_values_dict.values()
+        if "used-bytes" in info and "total-bytes" in info
     }
+    assert file_system_info, "No mountpoints found with value."
+    return file_system_info
 
 
 def compare_metric_file_system_values_with_vm_file_system_values(
-    prometheus: Prometheus, vm_for_test: VirtualMachineForTests, mount_point: str, capacity_or_used: str
+    prometheus: Prometheus,
+    vm_for_test: VirtualMachineForTests,
+    mount_point: str,
+    capacity_or_used: str,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
@@ -1204,11 +1228,13 @@ def compare_metric_file_system_values_with_vm_file_system_values(
                         metrics_name=KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT.format(
                             capacity_or_used=capacity_or_used,
                             vm_name=vm_for_test.name,
-                            mountpoint=mount_point,
+                            mountpoint=f"{mount_point}\\" if mount_point.endswith("\\") else mount_point,
                         ),
                     )
                 )
-                if metric_value * 0.95 <= float(sample[mount_point].get(capacity_or_used)) <= metric_value * 1.05:
+                virsh_raw = sample[mount_point].get(capacity_or_used)
+                virsh_bytes = float(virsh_raw if virsh_raw.isdigit() else bitmath.parse_string_unsafe(virsh_raw).bytes)
+                if math.isclose(metric_value, virsh_bytes, rel_tol=0.05):
                     return
     except TimeoutExpiredError:
         LOGGER.info(
@@ -1270,6 +1296,14 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
+
+
+def get_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
+    interface_name = vm.privileged_vmi.virt_launcher_pod.execute(
+        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
+    )
+    assert interface_name, f"Interface not found for vm {vm.name}"
+    return interface_name
 
 
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
@@ -1532,4 +1566,93 @@ def check_vmi_count_metric(expected_vmi_count: int, prometheus: Prometheus) -> N
                 return
     except TimeoutExpiredError:
         LOGGER.error(f"Expected value: {expected_vmi_count}, Actual: {sample}")
+
+        
+def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+    vm_dv_templates = vm.instance.spec.dataVolumeTemplates
+    assert vm_dv_templates, "VM has no DataVolume templates"
+    return str(
+        int(
+            bitmath.parse_string_unsafe(
+                PersistentVolumeClaim(
+                    name=vm_dv_templates[0].metadata.name,
+                    namespace=vm.namespace,
+                ).instance.spec.resources.requests.storage
+            ).Byte.bytes
+        )
+    )
+
+
+def get_vm_virt_launcher_pod_requested_memory(vm: VirtualMachineForTests) -> int:
+    if containers := vm.vmi.virt_launcher_pod.instance.spec.containers:
+        return int(bitmath.parse_string_unsafe(containers[0].resources.requests.memory).bytes)
+    raise ContainerNotFound(f"No containers found in virt-launcher pod of {vm.vmi.virt_launcher_pod.name}")
+
+
+def wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test: VirtualMachineForTests) -> None:
+    vl_name = vm_for_test.vmi.virt_launcher_pod.name
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace, client=vm_for_test.client).exists,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
+        raise
+
+
+def get_vm_memory_working_set_bytes(vm: VirtualMachineForTests) -> int:
+    wait_for_virt_launcher_pod_metrics_resource_exists(vm_for_test=vm)
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_command,
+        command=shlex.split(f"oc adm top pod {vm.vmi.virt_launcher_pod.name} -n {vm.namespace} --no-headers"),
+        check=False,
+    )
+    try:
+        for sample in samples:
+            if sample and (out := sample[1]):
+                if match := re.search(r"\b(\d+)([KMG]i)\b", out):
+                    return int(bitmath.parse_string_unsafe(f"{match.group(1)}{match.group(2)}").bytes)
+    except TimeoutExpiredError:
+        LOGGER.error(f"working_set bytes is not available for VM {vm.name} after {TIMEOUT_2MIN} seconds")
+        raise
+    return 0
+
+
+def get_vm_memory_rss_bytes(vm: VirtualMachineForTests) -> int:
+    return int(vm.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
+
+
+def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
+    prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests, working_set=False, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample: int | float = 0
+    expected_value = None
+    try:
+        for sample in samples:
+            if sample:
+                sample = abs(float(sample))
+                expected_value = (
+                    get_vm_virt_launcher_pod_requested_memory(vm=vm) - get_vm_memory_working_set_bytes(vm=vm)
+                    if working_set
+                    else get_vm_memory_rss_bytes(vm=vm)
+                )
+                if math.isclose(sample, abs(expected_value), rel_tol=0.05):
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
