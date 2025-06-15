@@ -294,10 +294,11 @@ def deleted_old_dvs_of_stopped_vms(unprivileged_client, namespace):
 
 
 @pytest.fixture(scope="class")
-def blank_disk_dv_for_storage_migration(namespace, source_storage_class):
+def blank_disk_dv_for_storage_migration(unprivileged_client, namespace, source_storage_class):
     with create_dv(
         source="blank",
         dv_name="blank-dv-for-hotplug",
+        client=unprivileged_client,
         namespace=namespace.name,
         size=DEFAULT_DV_SIZE,
         storage_class=source_storage_class,
@@ -339,10 +340,7 @@ def vm_for_storage_class_migration_with_hotplugged_volume(
 
 @pytest.fixture(scope="class")
 def vm_with_mounted_hotplugged_disk(vm_for_storage_class_migration_with_hotplugged_volume):
-    # Mount the disk to the VM and write some data there
-    # # sudo mkfs.ext4 /dev/sda
-    # # sudo mkdir /mnt/hotplug
-    # # sudo mount /dev/sda /mnt/hotplug
+    # Mount the disk to the VM
     run_ssh_commands(
         host=vm_for_storage_class_migration_with_hotplugged_volume.ssh_exec,
         commands=[

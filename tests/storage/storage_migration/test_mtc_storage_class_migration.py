@@ -5,8 +5,9 @@ from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
+    STORAGE_CLASS_A,
+    STORAGE_CLASS_B,
 )
-from tests.storage.storage_migration.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from tests.storage.storage_migration.utils import (
     check_file_in_hotplugged_disk,
     verify_storage_migration_succeeded,
