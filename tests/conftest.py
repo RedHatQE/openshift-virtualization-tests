@@ -103,8 +103,10 @@ from utilities.constants import (
     POD_SECURITY_NAMESPACE_LABELS,
     PREFERENCE_STR,
     RHEL9_PREFERENCE,
+    RHEL9_PREFERENCE_S390X,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
+    S390X,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -1198,6 +1200,9 @@ def modern_cpu_for_migration(cluster_common_modern_node_cpu, host_cpu_model, nod
         )
     )
 
+@pytest.fixture(scope="session")
+def is_s390x_cluster(nodes_cpu_architecture):
+    return nodes_cpu_architecture == S390X
 
 @pytest.fixture(scope="module")
 def skip_if_no_common_cpu(cluster_common_node_cpu, nodes_cpu_architecture):
@@ -2480,14 +2485,16 @@ def vm_for_test(request, namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client):
+def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client,  is_s390x_cluster):
     with VirtualMachineForCloning(
         name=RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=RHEL9_PREFERENCE),
+        vm_preference=VirtualMachineClusterPreference(
+            name=RHEL9_PREFERENCE_S390X if is_s390x_cluster else RHEL9_PREFERENCE
+        ),
         os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(vm=vm)
