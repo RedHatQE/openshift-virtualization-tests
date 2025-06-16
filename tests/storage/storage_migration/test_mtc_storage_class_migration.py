@@ -136,14 +136,11 @@ class TestStorageClassMigrationBtoA:
 
 
 @pytest.mark.parametrize(
-    "vms_for_storage_class_migration",
+    "source_storage_class, vms_for_storage_class_migration",
     [
         pytest.param(
-            {
-                "vms_fixtures": [
-                    "vm_for_storage_class_migration_with_hotplugged_volume",
-                ]
-            },
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"vms_fixtures": ["vm_for_storage_class_migration_with_hotplugged_volume"]},
             id="mig_volume_hotplug_source_a_target_b",
         )
     ],
@@ -154,10 +151,9 @@ class TestStorageClassMigrationWithVolumeHotplug:
         name=f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"
     )
     @pytest.mark.parametrize(
-        "source_storage_class, target_storage_class, online_vms_for_storage_class_migration",
+        "target_storage_class, online_vms_for_storage_class_migration",
         [
             pytest.param(
-                {"source_storage_class": py_config[STORAGE_CLASS_A]},
                 {"target_storage_class": py_config[STORAGE_CLASS_B]},
                 {"online_vm": [True]},  # Desired VM Running status for VMs in "vms_fixtures" list
                 marks=pytest.mark.polarion("CNV-11496"),
@@ -189,7 +185,9 @@ class TestStorageClassMigrationWithVolumeHotplug:
         depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
     )
     @pytest.mark.polarion("CNV-12002")
-    def test_hotplugged_volume_data_after_storage_migration(self, written_file_to_the_mounted_hotplugged_disk):
+    def test_hotplugged_volume_data_after_storage_migration(
+        self, vms_for_storage_class_migration, written_file_to_the_mounted_hotplugged_disk
+    ):
         verify_file_in_hotplugged_disk(
             vm=written_file_to_the_mounted_hotplugged_disk,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
@@ -200,7 +198,9 @@ class TestStorageClassMigrationWithVolumeHotplug:
         depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
     )
     @pytest.mark.polarion("CNV-11966")
-    def test_migrate_vm_with_hotplugged_volume_after_storage_migration(self, booted_vms_for_storage_class_migration):
+    def test_migrate_vm_with_hotplugged_volume_after_storage_migration(
+        self, source_storage_class, booted_vms_for_storage_class_migration
+    ):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
             try:
