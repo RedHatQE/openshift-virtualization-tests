@@ -2774,9 +2774,10 @@ def cluster_cpu_model_scope_function(
     hco_namespace,
     hyperconverged_resource_scope_function,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
     # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
-    if nodes_cpu_architecture != S390X:
+    if nodes_cpu_architecture == S390X:
         cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
@@ -2794,9 +2795,10 @@ def cluster_cpu_model_scope_module(
     hco_namespace,
     hyperconverged_resource_scope_module,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
     # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
-    if nodes_cpu_architecture != S390X:
+    if nodes_cpu_architecture == S390X:
         cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
@@ -2814,9 +2816,10 @@ def cluster_cpu_model_scope_class(
     hco_namespace,
     hyperconverged_resource_scope_class,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
     # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
-    if nodes_cpu_architecture != S390X:
+    if nodes_cpu_architecture == S390X:
         cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
