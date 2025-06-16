@@ -83,6 +83,7 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
+from utilities.network import assert_ping_successful
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import create_dv, is_snapshot_supported_by_sc, vm_snapshot, wait_for_cdi_worker_pod
 from utilities.virt import (
@@ -645,7 +646,11 @@ def memory_cached_sum_from_vm_console(vm_for_test):
 
 @pytest.fixture()
 def generated_network_traffic(vm_for_test):
-    run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
+    assert_ping_successful(
+        src_vm=vm_for_test,
+        dst_ip=vm_for_test.privileged_vmi.interfaces[0]["ipAddress"],
+        count=20,
+    )
 
 
 @pytest.fixture(scope="class")
