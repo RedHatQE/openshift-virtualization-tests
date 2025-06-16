@@ -11,7 +11,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_DEPLOYMENT_NAME,
-    DESCHEDULER_NAMESPACE_NAME,
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
     RUNNING_PING_PROCESS_NAME_IN_VM,
@@ -23,6 +22,7 @@ from utilities.constants import (
     TIMEOUT_10MIN,
     TIMEOUT_15MIN,
     TIMEOUT_20SEC,
+    NamespacesNames,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -314,10 +314,11 @@ def verify_at_least_one_vm_migrated(vms, node_before):
 
 
 @contextmanager
-def create_kube_descheduler(profiles, profile_customizations):
+def create_kube_descheduler(admin_client, profiles, profile_customizations):
     with KubeDescheduler(
         name="cluster",
-        namespace=DESCHEDULER_NAMESPACE_NAME,
+        namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+        client=admin_client,
         profiles=profiles,
         descheduling_interval_seconds=DESCHEDULING_INTERVAL_120SEC,
         mode="Automatic",
@@ -326,7 +327,8 @@ def create_kube_descheduler(profiles, profile_customizations):
     ) as kd:
         deployment = Deployment(
             name=DESCHEDULER_DEPLOYMENT_NAME,
-            namespace=DESCHEDULER_NAMESPACE_NAME,
+            namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+            client=admin_client,
         )
         deployment.wait()
         deployment.wait_for_replicas()
