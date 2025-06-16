@@ -5,7 +5,7 @@ import pytest_testconfig
 from utilities.infra import generate_latest_os_dict
 
 global config
-global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
+global_config = pytest_testconfig.load_python(py_file="tests/global_config_x86.py", encoding="utf-8")
 
 fedora_os_matrix = [
     generate_latest_os_dict(os_list=config["fedora_os_matrix"])  # noqa: F821

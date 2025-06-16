@@ -76,6 +76,8 @@ DV_PARAMS = {
     "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
 }
 
+LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
+
 
 def get_importer_pod_node(importer_pod):
     for sample in TimeoutSampler(
@@ -688,11 +690,11 @@ def test_vm_from_dv_on_different_node(
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "vm_name": f"vm-win-{py_config['latest_windows_os_dict']['os_version']}",
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
+                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
             },
-            {"os_version": py_config["latest_windows_os_dict"]["os_version"]},
+            {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
         ),
     ],
