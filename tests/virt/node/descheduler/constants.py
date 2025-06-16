@@ -6,6 +6,5 @@ CONFIG_MAP_POLICY_YAML_FILE = "policy.yaml"
 NODE_SELECTOR_LABEL = {"descheduler": "test"}
 
 DESCHEDULER_DEPLOYMENT_NAME = "descheduler"
-DESCHEDULER_NAMESPACE_NAME = "openshift-kube-descheduler-operator"
 
 DESCHEDULER_SOFT_TAINT_KEY = "nodeutilization.descheduler.openshift.io"

@@ -55,8 +55,9 @@ def xfail_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
 
 
 @pytest.fixture(scope="module")
-def descheduler_long_lifecycle_profile():
+def descheduler_long_lifecycle_profile(admin_client):
     with create_kube_descheduler(
+        admin_client=admin_client,
         profiles=["LongLifecycle"],
         profile_customizations={
             "devLowNodeUtilizationThresholds": "High",  # underutilized <40%, overutilized >70%
@@ -68,10 +69,12 @@ def descheduler_long_lifecycle_profile():
 
 @pytest.fixture(scope="module")
 def descheduler_kubevirt_relieve_and_migrate_profile(
+    admin_client,
     schedulable_nodes,
     nodes_taints_before_descheduler_test_run,
 ):
     with create_kube_descheduler(
+        admin_client=admin_client,
         profiles=["DevKubeVirtRelieveAndMigrate"],
         profile_customizations={
             "devActualUtilizationProfile": "PrometheusCPUCombined",

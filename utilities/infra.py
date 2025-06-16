@@ -1549,16 +1549,6 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
     return next(iter(nodes_cpu_arch))
 
 
-def verify_image_info(image_url, generated_pulled_secret, nodes_cpu_architecture):
-    LOGGER.info(f"Checking image {image_url} information.")
-    run_command(
-        command=shlex.split(
-            f"oc image info {image_url} "
-            f"--registry-config={generated_pulled_secret} --filter-by-os={nodes_cpu_architecture}"
-        ),
-    )
-
-
 @cache
 def cache_admin_client():
     return get_client()
