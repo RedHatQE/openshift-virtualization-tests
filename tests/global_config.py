@@ -23,6 +23,7 @@ from utilities.constants import (
     DATA_SOURCE_NAME,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
+    HPP_CAPABILITIES,
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
@@ -43,9 +44,11 @@ from utilities.constants import (
     WIN_10,
     WIN_11,
     Images,
+    NamespacesNames,
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
+from utilities.storage import HppCsiStorageClass
 
 global config
 
@@ -72,7 +75,7 @@ openshift_apiserver_namespace = "openshift-apiserver"
 sriov_namespace = "openshift-sriov-network-operator"
 marketplace_namespace = "openshift-marketplace"
 machine_api_namespace = "openshift-machine-api"
-golden_images_namespace = "openshift-virtualization-os-images"
+golden_images_namespace = NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
 hco_subscription = ""  # TODO: remove constants/HCO_SUBSCRIPTION and use this instead.
 disconnected_cluster = False
 linux_bridge_cni = "cnv-bridge"
@@ -125,16 +128,19 @@ cnv_vm_resource_requests_units_matrix = [
 
 bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
-# storage_class_matrix can be overwritten to include hostpath-csi-pvc-block and hostpath-csi-basic along with ocs,
-# via command line argument. Example usage can be found in README.md.
 storage_class_matrix = [
     {
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
             "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
+    {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
 
 default_storage_class, default_storage_class_configuration = _get_default_storage_class(sc_list=storage_class_matrix)
@@ -384,7 +390,7 @@ instance_type_rhel_os_matrix = [
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             INSTANCE_TYPE_STR: "u1.medium",
             PREFERENCE_STR: "rhel.10",
-            DATA_SOURCE_NAME: "rhel10-beta",
+            DATA_SOURCE_NAME: "rhel10",
             LATEST_RELEASE_STR: True,
         }
     },

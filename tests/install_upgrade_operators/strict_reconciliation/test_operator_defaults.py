@@ -22,7 +22,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     expected_certconfig_stanza,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
 
 LOGGER = logging.getLogger(__name__)
 

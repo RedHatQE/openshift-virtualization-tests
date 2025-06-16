@@ -9,7 +9,9 @@ from utilities.infra import get_related_images_name_and_version
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.product_upgrade_test
 @pytest.mark.upgrade
+@pytest.mark.upgrade_custom
 @pytest.mark.eus_upgrade
 class TestEUSToEUSUpgrade:
     @pytest.mark.polarion("CNV-9509")

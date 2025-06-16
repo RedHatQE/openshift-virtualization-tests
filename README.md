@@ -218,7 +218,7 @@ Command to run entire upgrade test suite for ocp upgrade, including pre and post
 Command to run only ocp upgrade test, without any pre/post validation:
 
 ```bash
--m ocp_upgrade --upgrade ocp --ocp-image <ocp_image_to_upgrade_to>
+-m product_upgrade_test --upgrade ocp --ocp-image <ocp_image_to_upgrade_to>
 ```
 
 To upgrade to ocp version: 4.10.16, using <https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com/releasestream/4-stable/release/4.10.16>, following command can be used:
@@ -232,22 +232,30 @@ Note: OCP images information can be found at: <https://openshift-release.apps.ci
 Currently, automation supports ocp upgrades using stable, ci, nightly and rc images for ocp
 
 #### CNV upgrade
+Parameters:
+
+| Parameter Name  |      Requirement      |  Default Value  |       Possible Value       |
+|:----------------|:---------------------:|:---------------:|:--------------------------:|
+| `--cnv-version` |     **Required**      |        -        |           4.Y.z            |
+| `--cnv-image`   |     **Required**      |        -        |        -image path-        |
+| `--cnv-source`  |     **Optional**      |      osbs       |   osbs, fbc, production    |
+| `--cnv-channel` |     **Optional**      |     stable      | stable, candidate, nightly |
 
 Command to run entire upgrade test suite for cnv upgrade, including pre and post upgrade validation:
 
 ```bash
---upgrade cnv --cnv-version <target_version> --cnv-source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 Command to run only cnv upgrade test, without any pre/post validation:
 
 ```bash
--m cnv_upgrade --upgrade cnv --cnv-version <target_version> --cnv source <osbs|production|staging> --cnv-image <cnv_image_to_upgrade_to>
+-m product_upgrade_test --upgrade cnv --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following command could be used:
 ```bash
---upgrade cnv --cnv-version 4.Y.z --cnv-source osbs --cnv-image <cnv_image_to_upgrade_to>
+--upgrade cnv --cnv-version 4.Y.z --cnv-image <cnv_image_to_upgrade_to>
 ```
 
 #### EUS upgrade

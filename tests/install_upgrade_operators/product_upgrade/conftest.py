@@ -88,7 +88,7 @@ def updated_image_content_source_policy(
     admin_client,
     nodes,
     tmpdir_factory,
-    machine_config_pools,
+    active_machine_config_pools,
     machine_config_pools_conditions,
     cnv_image_url,
     cnv_image_name,
@@ -119,7 +119,7 @@ def updated_image_content_source_policy(
     )
     apply_icsp_idms(
         file_paths=[file_path],
-        machine_config_pools=machine_config_pools,
+        machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
         is_idms_file=is_idms_cluster,
@@ -153,6 +153,7 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
     update_subscription_source(
         subscription=cnv_subscription_scope_session,
         subscription_source=cnv_registry_source["cnv_subscription_source"],
+        subscription_channel=py_config["cnv_subscription_channel"],
     )
 
 
@@ -316,17 +317,6 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 
 
 @pytest.fixture(scope="session")
-def is_eus_upgrade(pytestconfig):
-    return pytestconfig.option.upgrade == EUS
-
-
-@pytest.fixture(scope="session")
-def skip_on_eus_upgrade(is_eus_upgrade):
-    if is_eus_upgrade:
-        pytest.skip("This test is not supported for EUS upgrade")
-
-
-@pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     # Get the shortest path to the target (EUS) version
     upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
@@ -441,9 +431,18 @@ def eus_applied_all_icsp(
     )
 
 
+@pytest.fixture(scope="session")
+def active_machine_config_pools(machine_config_pools):
+    return [
+        machine_config_pool
+        for machine_config_pool in machine_config_pools
+        if machine_config_pool.instance.status.machineCount > 0
+    ]
+
+
 @pytest.fixture()
-def machine_config_pools_conditions(machine_config_pools):
-    return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
+def machine_config_pools_conditions(active_machine_config_pools):
+    return get_machine_config_pools_conditions(machine_config_pools=active_machine_config_pools)
 
 
 @pytest.fixture(scope="session")

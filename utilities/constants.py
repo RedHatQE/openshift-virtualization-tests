@@ -54,7 +54,7 @@ class Images:
         RHEL9_5_IMG = "rhel-95.qcow2"
         RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
         RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
+        RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10/rhel-guest-image"
         DIR = f"{BASE_IMAGES_DIR}/rhel-images"
         DEFAULT_DV_SIZE = "20Gi"
         DEFAULT_MEMORY_SIZE = "1.5Gi"
@@ -250,6 +250,7 @@ PODS_TO_COLLECT_INFO = [
 ]
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
+QUARANTINED = "quarantined"
 
 # Kernel Device Driver
 # Compute: GPU Devices are bound to this Kernel Driver for GPU Passthrough.
@@ -339,7 +340,7 @@ UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
-RHEL10_BETA_GUEST = "rhel10-beta-guest"
+RHEL10_GUEST = "rhel10-guest"
 VIRTIO = "virtio"
 VIRTIO_WIN = "virtio-win"
 NGINX_CONF = "nginx-conf"
@@ -350,6 +351,7 @@ KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
 KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -371,9 +373,11 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
+PASST_BINDING_CNI = "passt-binding-cni"
 # All hco relate objects with kind
 ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE: PROMETHEUSRULE_STR},
@@ -398,7 +402,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS: CONFIGMAP_STR},
     {RHEL8_GUEST: IMAGESTREAM_STR},
     {RHEL9_GUEST: IMAGESTREAM_STR},
-    {RHEL10_BETA_GUEST: IMAGESTREAM_STR},
+    {RHEL10_GUEST: IMAGESTREAM_STR},
     {VIRTIO_WIN: CONFIGMAP_STR},
     {VIRTIO_WIN: ROLE_STR},
     {VIRTIO_WIN: ROLEBINDING_STR},
@@ -410,6 +414,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_FEATURES: CONFIGMAP_STR},
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
+    {HCO_BEARER_AUTH: SECRET_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -436,6 +441,7 @@ CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     VIRT_EXPORTPROXY,
     KUBEVIRT_APISERVER_PROXY,
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
+    PASST_BINDING_CNI,
 ]
 ALL_CNV_PODS = CNV_PODS_NO_HPP_CSI_HPP_POOL + [HOSTPATH_PROVISIONER_CSI]
 ALL_CNV_DEPLOYMENTS_NO_HPP_POOL = [
@@ -466,6 +472,7 @@ ALL_CNV_DAEMONSETS_NO_HPP_CSI = [
     BRIDGE_MARKER,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     VIRT_HANDLER,
+    PASST_BINDING_CNI,
 ]
 ALL_CNV_DAEMONSETS = [HOSTPATH_PROVISIONER_CSI] + ALL_CNV_DAEMONSETS_NO_HPP_CSI
 
@@ -600,6 +607,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-hpp-rules",
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
+    f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
 ]
 
 
@@ -614,7 +622,9 @@ class StorageClassNames:
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     IO2_CSI = "io2-csi"
-    IBM_SPECTRUM_SCALE = "ibm-spectrum-scale-sample-uid-gid-107"
+    GPFS = "ibm-spectrum-scale-sample"
+    OCI = "oci-bv"
+    OCI_UHP = "oci-bv-uhp"
 
 
 # Namespace constants
@@ -629,6 +639,8 @@ class NamespacesNames:
     DEFAULT = "default"
     NVIDIA_GPU_OPERATOR = "nvidia-gpu-operator"
     MACHINE_API_NAMESPACE = "machine-api-namespace"
+    OPENSHIFT_VIRTUALIZATION_OS_IMAGES = "openshift-virtualization-os-images"
+    WASP = "wasp"
 
 
 # CNV supplemental-templates
@@ -787,9 +799,11 @@ PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
-FILESYSTEM = DataVolume.VolumeMode.FILE
-RWO = DataVolume.AccessMode.RWO
-HPP_VOLUME_MODE_ACCESS_MODE = {
-    VOLUME_MODE: FILESYSTEM,
-    ACCESS_MODE: RWO,
+
+HPP_CAPABILITIES = {
+    VOLUME_MODE: DataVolume.VolumeMode.FILE,
+    ACCESS_MODE: DataVolume.AccessMode.RWO,
+    "snapshot": False,
+    "online_resize": False,
+    "wffc": True,
 }
