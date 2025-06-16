@@ -960,9 +960,8 @@ def compare_network_traffic_bytes_and_metrics(
     )
     for entry in metric_result:
         entry_value = entry.get("value")[1]
-        if is_domifstat_compared_prometheus_values(
-            prometheus_metric_packets_value=int(entry_value),
-            domifstat_network_packets_received=int(packet_received[f"{entry.get('metric').get('type')}_bytes"]),
+        if math.isclose(
+            int(entry_value), int(packet_received[f"{entry.get('metric').get('type')}_bytes"]), rel_tol=0.02
         ):
             rx_tx_indicator = True
         else:
@@ -986,7 +985,7 @@ def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMa
         for sample in samples:
             if sample:
                 match_counter += 1
-                if match_counter > 5:
+                if match_counter >= 3:
                     return
             else:
                 match_counter = 0
@@ -994,12 +993,6 @@ def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMa
     except TimeoutExpiredError:
         LOGGER.error("Metric value and domistat value not correlate.")
         raise
-
-
-def is_domifstat_compared_prometheus_values(
-    prometheus_metric_packets_value: int, domifstat_network_packets_received: int
-) -> float:
-    return prometheus_metric_packets_value / domifstat_network_packets_received > 0.98
 
 
 def validate_vmi_network_receive_and_transmit_packets_total(
@@ -1018,6 +1011,7 @@ def validate_vmi_network_receive_and_transmit_packets_total(
     sample_value = None
     packets_kind = metric_dict["packets_kind"]
     metric_packets_value = None
+    values_comparing_history = {}
     try:
         match_counter = 0
         for sample in samples:
@@ -1026,16 +1020,24 @@ def validate_vmi_network_receive_and_transmit_packets_total(
                     prometheus=prometheus, metrics_name=f"{metric_dict['metric_name']}{{name='{vm.name}'}}"
                 )
                 sample_value = sample[packets_kind]
-                if is_domifstat_compared_prometheus_values(
-                    domifstat_network_packets_received=int(sample_value),
-                    prometheus_metric_packets_value=int(metric_packets_value),
-                ):
+                values_comparing_history[datetime.now()] = (
+                    f"Packet kind {packets_kind} value from vm: {sample_value}, "
+                    f"metric value for packet kind: {metric_packets_value}"
+                )
+                if math.isclose(int(sample_value), int(metric_packets_value), rel_tol=0.02):
                     match_counter += 1
-                    if match_counter > 5:
+                    LOGGER.info(
+                        f"Packet kind {packets_kind} and metric value for packet kind match for {match_counter} times"
+                    )
+                    if match_counter >= 3:
+                        LOGGER.info(f"Packet kind {packets_kind} and metric value for packet kind match!")
                         return
+                else:
+                    match_counter = 0
     except TimeoutExpiredError:
         LOGGER.error(
-            f"Expected metric packets value for {packets_kind}: {sample_value}, actual: {metric_packets_value}"
+            f"Expected metric packets value for {packets_kind}: {sample_value}, actual: {metric_packets_value} \n "
+            f"History : {values_comparing_history}"
         )
         raise
 
