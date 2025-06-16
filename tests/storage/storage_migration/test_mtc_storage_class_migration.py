@@ -9,7 +9,7 @@ from tests.storage.storage_migration.constants import (
     STORAGE_CLASS_B,
 )
 from tests.storage.storage_migration.utils import (
-    check_file_in_hotplugged_disk,
+    verify_file_in_hotplugged_disk,
     verify_storage_migration_succeeded,
 )
 from utilities.virt import migrate_vm_and_verify
@@ -184,7 +184,13 @@ class TestStorageClassMigrationWithVolumeHotplug:
             vms_with_written_file_before_migration=written_file_to_vms_before_migration,
             target_storage_class=target_storage_class,
         )
-        check_file_in_hotplugged_disk(
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
+    )
+    @pytest.mark.polarion("CNV-12002")
+    def test_hotplugged_volume_data_after_storage_migration(self, written_file_to_the_mounted_hotplugged_disk):
+        verify_file_in_hotplugged_disk(
             vm=written_file_to_the_mounted_hotplugged_disk,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,

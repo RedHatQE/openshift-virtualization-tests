@@ -103,7 +103,7 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
         )
 
 
-def check_file_in_hotplugged_disk(vm: VirtualMachine, file_name: str, file_content: str) -> None:
+def verify_file_in_hotplugged_disk(vm: VirtualMachine, file_name: str, file_content: str) -> None:
     output = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}")
     )[0]
