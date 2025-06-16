@@ -1,18 +1,20 @@
 import logging
-import os
+import re
 import shlex
 
 import pytest
+import requests
 import xmltodict
+from bs4 import BeautifulSoup
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
-from utilities.constants import TIMEOUT_3MIN
+from utilities.constants import TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import get_node_selector_dict, get_node_selector_name
+from utilities.infra import get_artifactory_header, get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
     running_vm,
     vm_instance_from_template,
@@ -26,19 +28,19 @@ pytestmark = [
 
 LOGGER = logging.getLogger(__name__)
 
+RPMS_REPO_URL = f"{py_config['servers']['https_server']}cnv-tests/rpms/"
 
-VM_DUMP_METRICS_RPM = "vm-dump-metrics.rpm"
 
-
-def download_and_install_vm_dump_metrics(vm):
+def download_and_install_vm_dump_metrics(vm, rpm_file_name):
     LOGGER.info(f"Download and install vm-dump-metrics tool to VM: {vm.name}")
-    url_path = f"{py_config['servers']['https_server']}cnv-tests/rpms/{VM_DUMP_METRICS_RPM}"
-    artifactory_header_string = f"Authorization: Bearer {os.environ['ARTIFACTORY_TOKEN']}"
     run_ssh_commands(
         host=vm.ssh_exec,
         commands=[
-            shlex.split(f"curl {url_path} -H '{artifactory_header_string}' -k -O"),
-            shlex.split(f"sudo yum install -y ./{VM_DUMP_METRICS_RPM}"),
+            shlex.split(
+                f"curl {RPMS_REPO_URL + rpm_file_name} -k -O "
+                f"-H 'Authorization: {get_artifactory_header()['Authorization']}' "
+            ),
+            shlex.split(f"sudo yum install -y ./{rpm_file_name}"),
         ],
     )
 
@@ -51,6 +53,20 @@ def enabled_downward_metrics_hco_featuregate(hyperconverged_resource_scope_modul
         wait_for_reconcile_post_update=True,
     ):
         yield
+
+
+@pytest.fixture(scope="module")
+def rpm_file_name(nodes_cpu_architecture):
+    soup_page = BeautifulSoup(
+        markup=requests.get(RPMS_REPO_URL, headers=get_artifactory_header(), verify=False, timeout=TIMEOUT_30SEC).text,
+        features="html.parser",
+    )
+    rpm_file_names = [link.get("href") for link in soup_page.find_all("a", href=re.compile(r"\.rpm$"))]
+    assert rpm_file_names, f"No RPM files found at the URL - {RPMS_REPO_URL}"
+
+    return next(
+        file_name for file_name in rpm_file_names if ("s390x" in file_name) == (nodes_cpu_architecture == "s390x")
+    )
 
 
 @pytest.fixture()
@@ -92,15 +108,15 @@ def vhostmd_vm2(
 
 
 @pytest.fixture()
-def running_vhostmd_vm1(vhostmd_vm1):
+def running_vhostmd_vm1(vhostmd_vm1, rpm_file_name):
     running_vm(vm=vhostmd_vm1, ssh_timeout=TIMEOUT_3MIN)
-    download_and_install_vm_dump_metrics(vm=vhostmd_vm1)
+    download_and_install_vm_dump_metrics(vm=vhostmd_vm1, rpm_file_name=rpm_file_name)
 
 
 @pytest.fixture()
-def running_vhostmd_vm2(vhostmd_vm2):
+def running_vhostmd_vm2(vhostmd_vm2, rpm_file_name):
     running_vm(vm=vhostmd_vm2, ssh_timeout=TIMEOUT_3MIN)
-    download_and_install_vm_dump_metrics(vm=vhostmd_vm2)
+    download_and_install_vm_dump_metrics(vm=vhostmd_vm2, rpm_file_name=rpm_file_name)
 
 
 def run_vm_dump_metrics(vm):
