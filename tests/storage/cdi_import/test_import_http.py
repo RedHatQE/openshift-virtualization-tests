@@ -666,7 +666,7 @@ def test_vm_from_dv_on_different_node(
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_12MIN)
     with create_vm_from_dv(
         dv=data_volume_multi_storage_scope_function,
-        vm_name=Images.Rhel.RHEL8_2_IMG,
+        vm_name="rhel-vm",
         os_flavor=OS_FLAVOR_RHEL,
         node_selector=get_node_selector_dict(node_selector=nodes[0].name),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
