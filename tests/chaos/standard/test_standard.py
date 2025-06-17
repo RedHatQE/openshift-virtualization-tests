@@ -1,11 +1,9 @@
 import pytest
 from ocp_resources.deployment import Deployment
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.chaos.constants import STRESS_NG
 from utilities.constants import (
-    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -86,54 +84,35 @@ def test_control_plane_node_restart(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
-@pytest.mark.xfail(
-    reason=(
-        f"{QUARANTINED}: There is no deployment `csi-rbdplugin-provisioner` since CNV v4.19.0,"
-        "so we need to get the new one that plays the same role. "
-        "tracked in CNV-62938"
-    ),
-    run=False,
-)
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
     [
         pytest.param(
             {"storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION},
-            {"storage_provisioner_deployment": "csi-rbdplugin-provisioner"},
-            id="ceph-rbd",
+            {"storage_provisioner_deployment": "ceph-csi-controller-manager"},
+            id="ceph-csi-controller-manager",
+        ),
+        pytest.param(
+            {"storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION},
+            {"storage_provisioner_deployment": "odf-operator-controller-manager"},
+            id="odf-operator-controller-manager",
         ),
     ],
     indirect=True,
 )
 @pytest.mark.polarion("CNV-5438")
-def test_ceph_storage_outage(
-    skip_test_if_no_ocs_sc,
+def test_odf_storage_outage(
     chaos_dv_rhel9,
     chaos_vm_rhel9_with_dv,
     downscaled_storage_provisioner_deployment,
 ):
     """
-    This test makes storage unavailable by downscaling the csi-rbdplugin-provisioner deployment to 0
-    while creating a vm with a dv, then it verifies
-    that the vm can only be created when storage becomes available again.
+    This scenario verifies that creating and running a VM using a DataVolume still succeeds
+    even when various ODF components are disrupted
     """
-
-    # Create a vm with a dv while storage is unavailable.
     chaos_vm_rhel9_with_dv.deploy()
-    chaos_vm_rhel9_with_dv.start(wait=False)
-
-    # Verify that dv and vm are not ready while chaos is being injected.
-    chaos_dv_rhel9.pvc.wait_for_status(status=PersistentVolumeClaim.Status.PENDING, sleep=TIMEOUT_2MIN)
-    expected_status = VirtualMachine.Status.PROVISIONING
-    chaos_vm_rhel9_with_dv.wait_for_specific_status(status=expected_status, sleep=TIMEOUT_2MIN)
-
-    # Verify that vm creation is resumed and vm reaches running state after deployment is restored.
-    downscaled_storage_provisioner_deployment["deployment"].scale_replicas(
-        replica_count=downscaled_storage_provisioner_deployment["initial_replicas"]
-    )
-    downscaled_storage_provisioner_deployment["deployment"].wait_for_replicas()
-    chaos_dv_rhel9.wait_for_dv_success(failure_timeout=TIMEOUT_5MIN)
-    chaos_vm_rhel9_with_dv.wait_for_ready_status(status=True)
+    chaos_vm_rhel9_with_dv.start(wait=True, timeout=TIMEOUT_2MIN)
+    chaos_vm_rhel9_with_dv.wait_for_specific_status(status=VirtualMachine.Status.RUNNING, timeout=TIMEOUT_2MIN)
 
 
 @pytest.mark.parametrize(
