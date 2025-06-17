@@ -108,7 +108,7 @@ from utilities.infra import (
     unique_name,
 )
 from utilities.monitoring import get_metrics_value
-from utilities.network import get_ip_from_vm_or_virt_handler_pod, ping
+from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     create_dv,
@@ -672,7 +672,11 @@ def memory_cached_sum_from_vm_console(vm_for_test):
 
 @pytest.fixture()
 def generated_network_traffic(vm_for_test):
-    run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
+    assert_ping_successful(
+        src_vm=vm_for_test,
+        dst_ip=vm_for_test.privileged_vmi.interfaces[0]["ipAddress"],
+        count=20,
+    )
 
 
 @pytest.fixture()
@@ -1083,14 +1087,13 @@ def windows_vm_with_low_bandwidth_migration_policy(windows_vm_for_test):
 
 
 @pytest.fixture(scope="module")
-def windows_vm_for_test_in_starting_state(namespace, unprivileged_client, pvc_for_vm_in_starting_state):
+def windows_vm_for_test_in_starting_state(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
-        dv_name="dv-for-windows",
+        dv_name="dv-for-windows-starting",
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="win-vm-for-test-starting-state",
         storage_class=py_config["default_storage_class"],
-        pvc=pvc_for_vm_in_starting_state,
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
@@ -1269,7 +1272,7 @@ def windows_vm_vmim(windows_vm_for_test):
         vmi_name=windows_vm_for_test.vmi.name,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_20MIN)
-        windows_vm_for_test.wait_for_status(status=windows_vm_for_test.Status.MIGRATING, timeout=TIMEOUT_20MIN)
+        windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.MIGRATING)
         yield
 
 
