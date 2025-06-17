@@ -422,5 +422,4 @@ def written_file_to_windows_vms_before_migration(booted_vms_for_storage_class_mi
             f'powershell -command "\\"{CONTENT}\\" | Out-File -FilePath {WINDOWS_FILE_WITH_PATH} -Append"'
         )
         run_ssh_commands(host=vm.ssh_exec, commands=cmd)
-        # yield windows_vm_with_vtpm_for_storage_migration
     yield booted_vms_for_storage_class_migration
