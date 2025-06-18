@@ -1147,7 +1147,7 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
 
 
 @pytest.fixture()
-def created_fake_data_volume_resource(namespace):
+def created_fake_data_volume_resource(namespace, admin_client):
     with DataVolume(
         name="fake-dv",
         namespace=namespace.name,
@@ -1157,5 +1157,6 @@ def created_fake_data_volume_resource(namespace):
         storage_class=py_config["default_storage_class"],
         bind_immediate_annotation=True,
         api_name="storage",
+        client=admin_client,
     ) as dv:
         yield dv
