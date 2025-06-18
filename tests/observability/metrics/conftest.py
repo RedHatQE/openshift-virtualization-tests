@@ -306,7 +306,7 @@ def error_state_vm(unique_namespace, unprivileged_client):
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-        yield
+        yield vm
 
 
 @pytest.fixture(scope="module")
@@ -1061,7 +1061,7 @@ def windows_vm_for_test(namespace, unprivileged_client):
         yield vm
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def windows_vm_for_test_in_error_state(windows_vm_for_test):
     with ResourceEditor(
         patches={
@@ -1074,7 +1074,7 @@ def windows_vm_for_test_in_error_state(windows_vm_for_test):
     ):
         windows_vm_for_test.restart()
         windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-        yield
+        yield windows_vm_for_test
 
 
 @pytest.fixture()
@@ -1083,21 +1083,7 @@ def windows_vm_with_low_bandwidth_migration_policy(windows_vm_for_test):
         patches={windows_vm_for_test: {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}}
     ):
         windows_vm_for_test.restart(wait=True)
-        yield
-
-
-@pytest.fixture(scope="module")
-def windows_vm_for_test_in_starting_state(namespace, unprivileged_client):
-    with create_windows11_wsl2_vm(
-        dv_name="dv-for-windows-starting",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_name="win-vm-for-test-starting-state",
-        storage_class=py_config["default_storage_class"],
-    ) as vm:
-        vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
-        yield vm
+        yield windows_vm_for_test
 
 
 @pytest.fixture(scope="session")
@@ -1195,43 +1181,32 @@ def stopped_vm_metric_1(vm_metric_1):
 
 @pytest.fixture()
 def stopped_windows_vm(windows_vm_for_test):
-    windows_vm_for_test.stop(wait=True)
-
-
-@pytest.fixture()
-def vm_in_error_state(namespace):
-    vm_name = "vm-in-error-state"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        node_selector=get_node_selector_dict(node_selector="non-existent-node"),
-    ) as vm:
-        vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-        yield vm
+    windows_vm_for_test.stop()
+    return windows_vm_for_test
 
 
 @pytest.fixture(scope="module")
-def pvc_for_vm_in_starting_state(namespace):
+def pvc_for_vm_in_starting_state(namespace, admin_client):
     with PersistentVolumeClaim(
         name="vm-in-starting-state-pvc",
         namespace=namespace.name,
         accessmodes=PersistentVolumeClaim.AccessMode.RWX,
         size="1Gi",
         pvlabel="non-existent-pv",
+        client=admin_client,
     ) as pvc:
         yield pvc
 
 
 @pytest.fixture()
-def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
+def vm_in_starting_state(namespace, admin_client, pvc_for_vm_in_starting_state):
     vm_name = "vm-in-starting-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
         pvc=pvc_for_vm_in_starting_state,
+        client=admin_client,
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
@@ -1265,7 +1240,7 @@ def vm_metric_1_vmim(vm_metric_1):
 
 
 @pytest.fixture()
-def windows_vm_vmim(windows_vm_for_test):
+def windows_vm_vmim(migration_policy_with_bandwidth, windows_vm_for_test):
     with VirtualMachineInstanceMigration(
         name="windows-vm-metric-1-vmim",
         namespace=windows_vm_for_test.namespace,
