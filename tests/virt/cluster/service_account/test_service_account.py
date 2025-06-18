@@ -49,7 +49,6 @@ def test_vm_with_specified_service_account(service_account_vm):
 
     # Verifies that ServiceAccount is attached to VMI
     # Change mount device based on cluster cpu architecture
-    infra.get_nodes_cpu_architecture()
     mount_device = "/dev/vdb" if infra.get_nodes_cpu_architecture() == S390X else "/dev/sda"
     output = run_ssh_commands(
         host=service_account_vm.ssh_exec,
