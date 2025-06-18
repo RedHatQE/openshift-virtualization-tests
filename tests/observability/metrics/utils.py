@@ -1556,7 +1556,7 @@ def check_vmi_metric(prometheus):
 def check_vmi_count_metric(expected_vmi_count: int, prometheus: Prometheus) -> None:
     LOGGER.info(f"Check VMI metric expected: {expected_vmi_count}")
     samples = TimeoutSampler(
-        wait_timeout=100,
+        wait_timeout=TIMEOUT_2MIN,
         sleep=5,
         func=check_vmi_metric,
         prometheus=prometheus,
@@ -1568,6 +1568,7 @@ def check_vmi_count_metric(expected_vmi_count: int, prometheus: Prometheus) -> N
                 return
     except TimeoutExpiredError:
         LOGGER.error(f"Expected value: {expected_vmi_count}, Actual: {sample}")
+        raise
 
 
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:

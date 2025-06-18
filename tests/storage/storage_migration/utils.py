@@ -1,12 +1,16 @@
+import shlex
+
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
+from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
+    MOUNT_HOTPLUGGED_DEVICE_PATH,
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
 from utilities import console
@@ -77,8 +81,7 @@ def verify_storage_migration_succeeded(
     target_storage_class: str,
 ) -> None:
     verify_vms_boot_time_after_storage_migration(
-        vm_list=online_vms_for_storage_class_migration,
-        initial_boot_time=vms_boot_time_before_storage_migration,
+        vm_list=online_vms_for_storage_class_migration, initial_boot_time=vms_boot_time_before_storage_migration
     )
     for vm in vms_with_written_file_before_migration:
         check_file_in_vm(
@@ -98,3 +101,10 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
                 storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
             )
         )
+
+
+def verify_file_in_hotplugged_disk(vm: VirtualMachine, file_name: str, file_content: str) -> None:
+    output = run_ssh_commands(
+        host=vm.ssh_exec, commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}")
+    )[0]
+    assert output.strip() == file_content, f"'{output}' does not equal '{file_content}'"

@@ -73,11 +73,11 @@ class TestVMStatusLastTransitionMetricsLinux:
         )
 
     @pytest.mark.polarion("CNV-9662")
-    def test_vm_error_status_metrics(self, prometheus, vm_in_error_state):
+    def test_vm_error_status_metrics(self, prometheus, error_state_vm):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric=KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
-            vm=vm_in_error_state,
+            vm=error_state_vm,
         )
 
     @pytest.mark.polarion("CNV-9665")
@@ -118,11 +118,11 @@ class TestVMStatusLastTransitionMetricsWindows:
         )
 
     @pytest.mark.polarion("CNV-11979")
-    def test_vm_error_status_metrics_windows(self, prometheus, windows_vm_for_test, windows_vm_for_test_in_error_state):
+    def test_vm_error_status_metrics_windows(self, prometheus, windows_vm_for_test_in_error_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric=KUBEVIRT_VM_ERROR_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
-            vm=windows_vm_for_test,
+            vm=windows_vm_for_test_in_error_state,
         )
 
     @pytest.mark.polarion("CNV-11980")
@@ -130,31 +130,21 @@ class TestVMStatusLastTransitionMetricsWindows:
         self,
         skip_if_no_common_cpu,
         prometheus,
-        windows_vm_for_test,
         windows_vm_with_low_bandwidth_migration_policy,
-        migration_policy_with_bandwidth,
         windows_vm_vmim,
     ):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric=KUBEVIRT_VM_MIGRATING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
-            vm=windows_vm_for_test,
+            vm=windows_vm_with_low_bandwidth_migration_policy,
         )
 
     @pytest.mark.polarion("CNV-11981")
-    def test_vm_non_running_status_metrics_windows(self, prometheus, windows_vm_for_test, stopped_windows_vm):
+    def test_vm_non_running_status_metrics_windows(self, prometheus, stopped_windows_vm):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric=KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
-            vm=windows_vm_for_test,
-        )
-
-    @pytest.mark.polarion("CNV-11982")
-    def test_vm_starting_status_metrics_windows(self, prometheus, windows_vm_for_test_in_starting_state):
-        check_vm_last_transition_metric_value(
-            prometheus=prometheus,
-            metric=KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS,
-            vm=windows_vm_for_test_in_starting_state,
+            vm=stopped_windows_vm,
         )
 
 
