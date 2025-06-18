@@ -166,6 +166,11 @@ Images = get_test_images_arch_class()
 # Virtctl constants
 VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
+
+AMD_64 = "amd64"
+ARM_64 = "arm64"
+S390X = "s390x"
+
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
@@ -363,6 +368,7 @@ DATA_SOURCE_NAME = "DATA_SOURCE_NAME"
 DATA_SOURCE_NAMESPACE = "DATA_SOURCE_NAMESPACE"
 SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME = "dataImportCronTemplates"
 COMMON_TEMPLATES_KEY_NAME = "commonTemplates"
+S390X_TEMPLATE_SUFFIX = f"-{S390X}"
 
 KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE = "kubevirt-hyperconverged-prometheus-rule"
 HYPERCONVERGED_CLUSTER_OPERATOR_METRICS = "hyperconverged-cluster-operator-metrics"
