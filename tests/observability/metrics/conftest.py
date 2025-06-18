@@ -11,13 +11,12 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-from pyhelper_utils.shell import run_command, run_ssh_commands
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -33,7 +32,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
-    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -44,6 +42,7 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
+    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -68,6 +67,7 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    IPV4_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -82,12 +82,10 @@ from utilities.constants import (
     SOURCE_POD,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -109,6 +107,7 @@ from utilities.infra import (
     unique_name,
 )
 from utilities.monitoring import get_metrics_value
+from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     create_dv,
@@ -693,16 +692,30 @@ def memory_cached_sum_from_vm_console(vm_for_test):
 
 @pytest.fixture()
 def generated_network_traffic(vm_for_test):
-    run_vm_commands(vms=[vm_for_test], commands=[f"ping -c 20 {vm_for_test.privileged_vmi.interfaces[0]['ipAddress']}"])
+    assert_ping_successful(
+        src_vm=vm_for_test,
+        dst_ip=vm_for_test.privileged_vmi.interfaces[0]["ipAddress"],
+        count=20,
+    )
+
+
+@pytest.fixture()
+def generated_network_traffic_windows_vm(windows_vm_for_test):
+    ping(
+        src_vm=windows_vm_for_test,
+        dst_ip=get_ip_from_vm_or_virt_handler_pod(family=IPV4_STR, vm=windows_vm_for_test),
+        windows=True,
+    )
 
 
 @pytest.fixture(scope="class")
-def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
-    )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+def linux_vm_for_test_interface_name(vm_for_test):
+    return get_interface_name_from_vm(vm=vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_test_interface_name(windows_vm_for_test):
+    return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="class")
@@ -807,12 +820,17 @@ def vm_for_test_snapshot(vm_for_test):
 
 
 @pytest.fixture()
-def dfs_info(vm_for_test):
+def disk_file_system_info_linux(vm_for_test):
     return disk_file_system_info(vm=vm_for_test)
 
 
 @pytest.fixture()
-def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, dfs_info):
+def disk_file_system_info_windows(windows_vm_for_test):
+    return disk_file_system_info(vm=windows_vm_for_test)
+
+
+@pytest.fixture()
+def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, disk_file_system_info_linux):
     capacity_or_used = request.param
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
@@ -826,7 +844,7 @@ def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, d
     try:
         for sample in samples:
             if sample:
-                if [mount_point for mount_point in dfs_info if not sample.get(mount_point)]:
+                if [mount_point for mount_point in disk_file_system_info_linux if not sample.get(mount_point)]:
                     continue
                 mount_points_with_value_zero = {
                     mount_point: float(sample[mount_point]) for mount_point in sample if int(sample[mount_point]) == 0
@@ -850,65 +868,6 @@ def vm_for_test_with_resource_limits(namespace):
     ) as vm:
         running_vm(vm=vm)
         yield vm
-
-
-@pytest.fixture()
-def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        func=run_command,
-        command=shlex.split(
-            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
-        ),
-        check=False,
-    )
-    try:
-        for sample in samples:
-            if sample and (out := sample[1]):
-                return int(
-                    bitmath.parse_string_unsafe(
-                        re.search(
-                            r"\b(\d+Mi)\b",
-                            out,
-                        ).group(1)
-                    ).bytes
-                )
-    except TimeoutExpiredError:
-        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
-        raise
-
-
-@pytest.fixture()
-def virt_launcher_pod_metrics_resource_exists(vm_for_test):
-    vl_name = vm_for_test.vmi.virt_launcher_pod.name
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
-    )
-    try:
-        for sample in samples:
-            if sample:
-                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
-        raise
-
-
-@pytest.fixture()
-def vm_memory_rss_bytes(vm_for_test):
-    return int(vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
-
-
-@pytest.fixture(scope="class")
-def vm_virt_launcher_pod_requested_memory(vm_for_test):
-    return int(
-        bitmath.parse_string_unsafe(
-            vm_for_test.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
-        ).bytes
-    )
 
 
 @pytest.fixture()
@@ -1055,20 +1014,6 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 
 @pytest.fixture()
-def pvc_size_bytes(vm_for_vm_disk_allocation_size_test):
-    return str(
-        int(
-            bitmath.parse_string_unsafe(
-                PersistentVolumeClaim(
-                    name=vm_for_vm_disk_allocation_size_test.instance.spec.dataVolumeTemplates[0].metadata.name,
-                    namespace=vm_for_vm_disk_allocation_size_test.namespace,
-                ).instance.spec.resources.requests.storage
-            ).Byte.bytes
-        )
-    )
-
-
-@pytest.fixture()
 def vnic_info_from_vm_or_vmi(request, running_metric_vm):
     vm_instance = (
         running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
@@ -1178,7 +1123,6 @@ def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
     ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
 
 
