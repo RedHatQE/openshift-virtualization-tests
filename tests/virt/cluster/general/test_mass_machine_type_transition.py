@@ -1,11 +1,9 @@
-import time
-
 import pytest
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.job import Job
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.utils import get_image_from_csv
 from tests.virt.constants import MachineTypesNames
@@ -14,6 +12,8 @@ from utilities.infra import add_scc_to_service_account, create_ns
 from utilities.virt import VirtualMachineForTests, restart_vm_wait_for_running_vm, running_vm, wait_for_running_vm
 
 KUBEVIRT_API_LIFECYCLE_AUTOMATION = "kubevirt-api-lifecycle-automation"
+TESTS_CLASS_NAME = "TestMachineTypeTransition"
+ERROR_MESSAGE = "VM {} should have machine type {}, current machine type: {}"
 
 
 @pytest.fixture(scope="session")
@@ -27,19 +27,18 @@ def kubevirt_api_lifecycle_image_url(csv_related_images_scope_session):
 @pytest.fixture()
 def kubevirt_api_lifecycle_automation_job(
     request,
-    kubevirt_api_lifecycle_image_url,
     admin_client,
     namespace,
+    kubevirt_api_lifecycle_image_url,
     kubevirt_api_lifecycle_namespace,
 ):
-    params = request.param
     container = {
         "name": KUBEVIRT_API_LIFECYCLE_AUTOMATION,
         "image": kubevirt_api_lifecycle_image_url,
         "imagePullPolicy": "Always",
         "env": [
-            {"name": "MACHINE_TYPE_GLOB", "value": params.get("machine_type_glob")},
-            {"name": "RESTART_REQUIRED", "value": params.get("restart_required")},
+            {"name": "MACHINE_TYPE_GLOB", "value": "pc-q35-rhel8.*.*"},
+            {"name": "RESTART_REQUIRED", "value": request.param["restart_required"]},
             {"name": "NAMESPACE", "value": namespace.name},
         ],
         "securityContext": {
@@ -101,34 +100,56 @@ def kubevirt_api_lifecycle_cluster_role_binding(admin_client, kubevirt_api_lifec
         yield crb
 
 
-@pytest.fixture()
-def vm_with_schedulable_machine_type(admin_client, namespace):
-    name = "vm-with-schedulable-machine-type"
+@pytest.fixture(scope="class")
+def vm_with_schedulable_machine_type(unprivileged_client, namespace):
     with VirtualMachineForTests(
-        name=name,
+        name="vm-with-schedulable-machine-type",
         namespace=namespace.name,
-        client=admin_client,
+        client=unprivileged_client,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         machine_type=MachineTypesNames.pc_q35_rhel8_1,
     ) as vm:
-        running_vm(vm=vm)
+        vm.start()
         yield vm
 
 
 @pytest.fixture()
-def vm_with_unschedulable_machine_type(admin_client, namespace):
+def vm_with_schedulable_machine_type_running_after_job(
+    vm_with_schedulable_machine_type, kubevirt_api_lifecycle_automation_job
+):
+    running_vm(vm=vm_with_schedulable_machine_type)
+    yield vm_with_schedulable_machine_type
+
+
+@pytest.fixture()
+def restarted_vm_with_schedulable_machine_type(vm_with_schedulable_machine_type):
+    restart_vm_wait_for_running_vm(vm=vm_with_schedulable_machine_type)
+    yield vm_with_schedulable_machine_type
+
+
+@pytest.fixture()
+def vm_with_unschedulable_machine_type(unprivileged_client, namespace):
     with VirtualMachineForTests(
         name="vm-with-unschedulable-machine-type",
         namespace=namespace.name,
-        client=admin_client,
+        client=unprivileged_client,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         machine_type=MachineTypesNames.pc_q35_rhel7_4,
     ) as vm:
-        vm.start(wait=False)
-        time.sleep(60)
+        vm.start()
         yield vm
+
+
+@pytest.fixture()
+def update_vm_machine_type(vm_with_schedulable_machine_type):
+    ResourceEditor({
+        vm_with_schedulable_machine_type: {
+            "spec": {"template": {"spec": {"domain": {"machine": {"type": MachineTypesNames.pc_q35_rhel8_1}}}}}
+        }
+    }).update()
+    restart_vm_wait_for_running_vm(vm=vm_with_schedulable_machine_type, wait_for_interfaces=True)
 
 
 @pytest.mark.polarion("CNV-11948")
@@ -146,55 +167,62 @@ def test_nodes_have_machine_type_labels(workers):
     )
 
 
-@pytest.mark.polarion("CNV-11989")
-def test_vm_scheduling_based_on_machine_type(
-    admin_client, vm_with_schedulable_machine_type, vm_with_unschedulable_machine_type
-):
-    assert vm_with_schedulable_machine_type.vmi.status == VirtualMachineInstance.Status.RUNNING, (
-        f"VM {vm_with_schedulable_machine_type.name} with schedulable machine type is not running"
-    )
-    assert (
-        vm_with_unschedulable_machine_type.instance.status.get("printableStatus")
-        == VirtualMachine.Status.ERROR_UNSCHEDULABLE
-    ), f"VM {vm_with_unschedulable_machine_type.name} with unschedulable machine type should not be running"
+@pytest.mark.polarion("CNV-12003")
+def test_vm_with_unschedulable_machine_type_fails_to_schedule(vm_with_unschedulable_machine_type):
+    vm_with_unschedulable_machine_type.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
 
 
-@pytest.mark.usefixtures(
-    "kubevirt_api_lifecycle_namespace",
-    "kubevirt_api_lifecycle_service_account",
-    "kubevirt_api_lifecycle_cluster_role_binding",
-)
 class TestMachineTypeTransition:
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_running_with_schedulable_machine_type")
+    @pytest.mark.polarion("CNV-11989")
+    def test_vm_running_with_schedulable_machine_type(
+        self,
+        vm_with_schedulable_machine_type,
+    ):
+        wait_for_running_vm(vm=vm_with_schedulable_machine_type)
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_running_with_schedulable_machine_type"])
+    @pytest.mark.usefixtures(
+        "kubevirt_api_lifecycle_namespace",
+        "kubevirt_api_lifecycle_service_account",
+        "kubevirt_api_lifecycle_cluster_role_binding",
+    )
     @pytest.mark.parametrize(
         "kubevirt_api_lifecycle_automation_job",
         [
             pytest.param(
                 {
-                    "machine_type_glob": "pc-q35-rhel8.*.*",
                     "restart_required": "true",
                 },
-                marks=pytest.mark.polarion("CNV-11949"),
+                marks=[
+                    pytest.mark.polarion("CNV-11949"),
+                ],
             ),
         ],
         indirect=True,
     )
     def test_machine_type_transition_with_restart_true(
         self,
-        vm_with_schedulable_machine_type,
         machine_type_from_kubevirt_config,
-        kubevirt_api_lifecycle_automation_job,
+        vm_with_schedulable_machine_type_running_after_job,
     ):
-        wait_for_running_vm(vm=vm_with_schedulable_machine_type)
-        assert (
-            vm_with_schedulable_machine_type.vmi.instance.spec.domain.machine.type == machine_type_from_kubevirt_config
-        ), f"VM {vm_with_schedulable_machine_type.name} should have machine type {machine_type_from_kubevirt_config}"
+        vm_machine_type = vm_with_schedulable_machine_type_running_after_job.vmi.instance.spec.domain.machine.type
 
+        assert vm_machine_type == machine_type_from_kubevirt_config, ERROR_MESSAGE.format(
+            vm_with_schedulable_machine_type_running_after_job.name,
+            machine_type_from_kubevirt_config,
+            vm_machine_type,
+        )
+
+    @pytest.mark.dependency(
+        name=f"{TESTS_CLASS_NAME}::machine_type_transition_without_restart",
+        depends=[f"{TESTS_CLASS_NAME}::vm_running_with_schedulable_machine_type"],
+    )
     @pytest.mark.parametrize(
         "kubevirt_api_lifecycle_automation_job",
         [
             pytest.param(
                 {
-                    "machine_type_glob": "pc-q35-rhel8.*.*",
                     "restart_required": "false",
                 },
                 marks=pytest.mark.polarion("CNV-11950"),
@@ -204,15 +232,29 @@ class TestMachineTypeTransition:
     )
     def test_machine_type_transition_without_restart(
         self,
-        vm_with_schedulable_machine_type,
         machine_type_from_kubevirt_config,
-        kubevirt_api_lifecycle_automation_job,
+        update_vm_machine_type,
+        vm_with_schedulable_machine_type_running_after_job,
     ):
-        assert vm_with_schedulable_machine_type.vmi.status == VirtualMachineInstance.Status.RUNNING
-        assert (
-            vm_with_schedulable_machine_type.vmi.instance.spec.domain.machine.type == MachineTypesNames.pc_q35_rhel8_1
-        ), f"VM {vm_with_schedulable_machine_type.name} should have same machine type as before transition"
-        restart_vm_wait_for_running_vm(vm=vm_with_schedulable_machine_type, wait_for_interfaces=True)
-        assert (
-            vm_with_schedulable_machine_type.vmi.instance.spec.domain.machine.type == machine_type_from_kubevirt_config
-        ), f"VM {vm_with_schedulable_machine_type.name} should have machine type {machine_type_from_kubevirt_config}"
+        machine_type_before_restart = (
+            vm_with_schedulable_machine_type_running_after_job.vmi.instance.spec.domain.machine.type
+        )
+        assert machine_type_before_restart == MachineTypesNames.pc_q35_rhel8_1, ERROR_MESSAGE.format(
+            vm_with_schedulable_machine_type_running_after_job.name,
+            MachineTypesNames.pc_q35_rhel8_1,
+            machine_type_before_restart,
+        )
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::machine_type_transition_without_restart"])
+    @pytest.mark.polarion("CNV-12004")
+    def test_restart_vm_with_machine_type_transition(
+        self,
+        machine_type_from_kubevirt_config,
+        restarted_vm_with_schedulable_machine_type,
+    ):
+        machine_type_after_restart = restarted_vm_with_schedulable_machine_type.vmi.instance.spec.domain.machine.type
+        assert machine_type_after_restart == machine_type_from_kubevirt_config, ERROR_MESSAGE.format(
+            restarted_vm_with_schedulable_machine_type.name,
+            machine_type_from_kubevirt_config,
+            machine_type_after_restart,
+        )
