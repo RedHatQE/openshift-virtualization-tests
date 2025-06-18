@@ -1516,12 +1516,12 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-<<<<<<< vmConsoleAndVmCreateTimeStamp
 def connect_to_vnc_console(vm: VirtualMachineForTests) -> Generator:
     with VNCConnection(vm=vm):
         LOGGER.info(f"Checking vnc on {vm.name}")
         yield
-=======
+
+
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
     assert vm_dv_templates, "VM has no DataVolume templates"
@@ -1610,4 +1610,3 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
->>>>>>> main
