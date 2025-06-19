@@ -54,6 +54,7 @@ from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_state import SriovNetworkNodeState
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -2950,3 +2951,9 @@ def golden_images_fedora_data_source(golden_images_namespace):
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture()
+def storage_profile_minimum_supported_pvc_size(storage_class_matrix__function__):
+    storage_profile = StorageProfile(name=[*storage_class_matrix__function__][0])
+    return storage_profile.instance.metadata.annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize", "1Gi")
