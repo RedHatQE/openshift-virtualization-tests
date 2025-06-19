@@ -1,10 +1,6 @@
-import ast
-import shlex
-
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS
 from utilities.constants import TIMEOUT_10MIN
@@ -43,12 +39,6 @@ def fail_to_create_snapshot_no_permissions(snapshot_name, namespace, vm_name, cl
             client=client,
         ):
             return
-
-
-def assert_directory_existence(expected_result, windows_vm, directory_path):
-    cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
-    assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
 
 
 def start_windows_vm_after_restore(vm_restore, windows_vm):
