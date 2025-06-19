@@ -90,9 +90,9 @@ class TestStorageClassMigrationAtoB:
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             {
                 "dv_name": "standalone-dv-fedora",
-                "image": FEDORA_LATEST["image_path"],
+                "image": FEDORA_LATEST.get("image_path"),
                 "storage_class": py_config[STORAGE_CLASS_B],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             {
                 "vm_name": "fedora-vm-with-existing-dv",

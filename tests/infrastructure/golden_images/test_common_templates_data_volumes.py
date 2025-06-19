@@ -62,8 +62,8 @@ def vm_from_golden_image(
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "image": FEDORA_LATEST.get("image_path"),
+                "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             marks=pytest.mark.polarion("CNV-5582"),
         ),
@@ -84,9 +84,9 @@ def test_vm_from_golden_image_cluster_default_storage_class(
         pytest.param(
             {
                 "dv_name": "dv-fedora",
-                "image": FEDORA_LATEST["image_path"],
+                "image": FEDORA_LATEST.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             {
                 "vm_name": "fedora-vm",
@@ -107,9 +107,9 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
+                "image": FEDORA_LATEST.get("image_path"),
                 "storage_class": HOSTPATH_CSI_BASIC,
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             {
                 "ocs_storage_class": False,
@@ -134,8 +134,8 @@ def test_vm_dv_with_different_sc(
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "image": FEDORA_LATEST.get("image_path"),
+                "dv_size": FEDORA_LATEST.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
             {

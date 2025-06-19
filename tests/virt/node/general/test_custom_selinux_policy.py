@@ -3,6 +3,7 @@ import pytest
 from utilities.infra import ExecCommandOnPod
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-9918")
 def test_customselinuxpolicy(workers_utility_pods, schedulable_nodes):
     nodes = []

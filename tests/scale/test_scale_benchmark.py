@@ -199,12 +199,12 @@ def dvs_os_info():
             "size": RHEL_LATEST["dv_size"],
         },
         OS_FLAVOR_FEDORA: {
-            "url": FEDORA_LATEST["image_path"],
-            "size": FEDORA_LATEST["dv_size"],
+            "url": FEDORA_LATEST.get("image_path"),
+            "size": FEDORA_LATEST.get("dv_size"),
         },
         OS_FLAVOR_WINDOWS: {
-            "url": WINDOWS_LATEST["image_path"],
-            "size": WINDOWS_LATEST["dv_size"],
+            "url": WINDOWS_LATEST.get("image_path"),
+            "size": WINDOWS_LATEST.get("dv_size"),
         },
     }
 
