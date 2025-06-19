@@ -542,6 +542,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     ],
 )
 def test_vmi_image_size(
+    xfail_test_if_gcp_sc,
     namespace,
     storage_class_matrix__module__,
     storage_class_name_scope_module,

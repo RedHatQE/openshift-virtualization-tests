@@ -228,7 +228,9 @@ def test_virtctl_image_upload_with_exist_dv_image(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-3728")
-def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_scope_module):
+def test_virtctl_image_upload_pvc(
+    download_image, namespace, storage_class_name_scope_module, storage_profile_minimum_supported_pvc_size
+):
     """
     Check that virtctl can create a new PVC and upload an image to it
     """
@@ -237,7 +239,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
-        size="1Gi",
+        size=storage_profile_minimum_supported_pvc_size,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -283,6 +285,7 @@ def empty_pvc(
     storage_class_matrix__module__,
     storage_class_name_scope_module,
     worker_node1,
+    storage_profile_minimum_supported_pvc_size,
 ):
     with PersistentVolumeClaim(
         name="empty-pvc",
@@ -290,7 +293,7 @@ def empty_pvc(
         storage_class=storage_class_name_scope_module,
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size="1Gi",
+        size=storage_profile_minimum_supported_pvc_size,
         hostpath_node=worker_node1.name
         if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
         else None,
@@ -311,6 +314,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     namespace,
     storage_class_name_scope_module,
     schedulable_nodes,
+    storage_profile_minimum_supported_pvc_size,
 ):
     """
     Check that virtctl can upload an local disk image to an existing empty PVC
@@ -318,7 +322,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=storage_profile_minimum_supported_pvc_size,
         pvc=True,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
@@ -387,6 +391,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     namespace,
     storage_class_name_scope_module,
     schedulable_nodes,
+    storage_profile_minimum_supported_pvc_size,
 ):
     """
     Check that virtctl fails gracefully when attempting to upload an image to a new data volume
@@ -395,7 +400,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=storage_profile_minimum_supported_pvc_size,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,

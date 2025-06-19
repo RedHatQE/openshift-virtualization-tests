@@ -142,7 +142,6 @@ def cirros_dv_unprivileged(
         name=f"cirros-dv-{storage_class_name_scope_module}",
         storage_class=storage_class_name_scope_module,
         client=unprivileged_client,
-        dv_size=DEFAULT_DV_SIZE,
     )
 
 

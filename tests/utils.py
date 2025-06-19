@@ -16,10 +16,12 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
@@ -585,7 +587,7 @@ def create_cirros_vm(
         source="http",
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size=get_default_storage_profile_minimum_supported_pvc_size(),
         api_name="storage",
         volume_mode=volume_mode,
         secret=artifactory_secret,
@@ -608,3 +610,9 @@ def create_cirros_vm(
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+def get_default_storage_profile_minimum_supported_pvc_size() -> str:
+    return StorageProfile(
+        name=next(iter(py_config["system_storage_class_matrix"][0]))
+    ).instance.metadata.annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize", "1Gi")
