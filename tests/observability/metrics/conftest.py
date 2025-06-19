@@ -1160,3 +1160,8 @@ def created_fake_data_volume_resource(namespace, admin_client):
         client=admin_client,
     ) as dv:
         yield dv
+
+
+@pytest.fixture()
+def metric_initial_value(request, prometheus):
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
