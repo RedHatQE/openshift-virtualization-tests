@@ -1,0 +1,56 @@
+name: 'LGTM Label on PR Approve'
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  add-lgtm-label:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: 'Add LGTM label'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const approver = context.payload.review.user.login;
+            const labelName = `lgtm-${approver}`;
+
+            console.log(`Attempting to add label: ${labelName} to PR #${context.issue.number}`);
+
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number, // 'issue_number' refers to the PR number in this context
+                labels: [labelName]
+              });
+              console.log(`Successfully added label: ${labelName}`);
+            } catch (error) {
+              console.error(`Error adding label: ${error.message}`);
+              if (error.message.includes("Label already exists")) {
+                console.log(`Label '${labelName}' already exists on the PR. No action needed.`);
+              } else if (error.message.includes("Not Found")) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelName,
+                  color: '0E8A16', // Green
+                  description: 'Looks Good To Me - Approved by user'
+                });
+                console.log(`Successfully created label: ${labelName}`);
+                // Re-try adding the label now that it's created
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  labels: [labelName]
+                });
+              } else {
+                // For other errors, re-throw to fail the step
+                throw error;
+              }
+            }
