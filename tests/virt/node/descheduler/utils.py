@@ -81,24 +81,6 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
             metadata["annotations"]["descheduler.alpha.kubernetes.io/evict"] = "true"
 
 
-def get_allocatable_memory_per_node(schedulable_nodes):
-    """
-    Node capacity & allocatable statuses determine how much of a resource we can "request".
-    A node may or may not have any allocatable values set by the admin, in which case, we fall back to the capacity.
-    """
-    nodes_memory = {}
-    for node in schedulable_nodes:
-        # memory format does not include the Bytes suffix(e.g: 23514144Ki)
-        memory = getattr(
-            node.instance.status.allocatable,
-            "memory",
-            node.instance.status.capacity.memory,
-        )
-        nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
-        LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
-    return nodes_memory
-
-
 def calculate_vm_deployment(
     available_memory_per_node,
     deployment_size,
@@ -330,7 +312,6 @@ def create_kube_descheduler(admin_client, profiles, profile_customizations):
             namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
             client=admin_client,
         )
-        deployment.wait()
         deployment.wait_for_replicas()
         yield kd
 
@@ -347,5 +328,5 @@ def wait_for_overutilized_soft_taint(node, taint_expected):
             if sample == taint_expected:
                 return
     except TimeoutExpiredError:
-        LOGGER.error("Soft taint was not added/removed in time")
+        LOGGER.error(f"Soft taint was not {'added' if taint_expected else 'removed'} in time")
         raise

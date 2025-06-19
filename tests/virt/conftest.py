@@ -3,6 +3,7 @@ import shlex
 from multiprocessing import Manager, cpu_count
 from multiprocessing.dummy import Pool
 
+import bitmath
 import pytest
 from bitmath import parse_string_unsafe
 from ocp_resources.datavolume import DataVolume
@@ -18,7 +19,11 @@ from tests.virt.node.gpu.constants import (
 from tests.virt.node.gpu.utils import (
     wait_for_manager_pods_deployed,
 )
-from tests.virt.utils import check_node_for_missing_mdev_bus, patch_hco_cr_with_mdev_permitted_hostdevices
+from tests.virt.utils import (
+    check_node_for_missing_mdev_bus,
+    get_allocatable_memory_per_node,
+    patch_hco_cr_with_mdev_permitted_hostdevices,
+)
 from utilities.constants import AMD, INTEL, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
 from utilities.infra import exit_pytest_execution, label_nodes
@@ -30,6 +35,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="session", autouse=True)
 def virt_special_infra_sanity(
     request,
+    admin_client,
     junitxml_plugin,
     is_psi_cluster,
     schedulable_nodes,
@@ -39,6 +45,7 @@ def virt_special_infra_sanity(
     workers,
     nodes_cpu_virt_extension,
     workers_utility_pods,
+    allocatable_memory_per_node_scope_session,
 ):
     """Performs verification that cluster has all required capabilities based on collected tests."""
 
@@ -106,6 +113,7 @@ def virt_special_infra_sanity(
         descheduler_deployment = Deployment(
             name="descheduler-operator",
             namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+            client=admin_client,
         )
         if not descheduler_deployment.exists or descheduler_deployment.instance.status.readyReplicas == 0:
             failed_verifications_list.append("kube-descheduler operator is not working on the cluster")
@@ -114,6 +122,15 @@ def virt_special_infra_sanity(
         for pod in _workers_utility_pods:
             if "psi=1" not in pod.execute(command=shlex.split("cat /proc/cmdline")):
                 failed_verifications_list.append(f"Node {pod.node.name} does not have psi=1 kernel argument")
+
+    def _verify_if_1tb_memory_or_more_node(_memory_per_node):
+        """
+        Descheduler tests should run on nodes with less than 1Tb of memory.
+        """
+        upper_memory_limit = bitmath.TiB(value=1)
+        for node, memory in _memory_per_node.items():
+            if memory >= upper_memory_limit:
+                failed_verifications_list.append(f"Cluster has node with more than 1Tb of memory: {node.name}")
 
     skip_virt_sanity_check = "--skip-virt-sanity-check"
     failed_verifications_list = []
@@ -139,6 +156,7 @@ def virt_special_infra_sanity(
         if any(item.get_closest_marker("descheduler") for item in request.session.items):
             _verify_descheduler_operator_installed()
             _verify_psi_kernel_argument(_workers_utility_pods=workers_utility_pods)
+            _verify_if_1tb_memory_or_more_node(_memory_per_node=allocatable_memory_per_node_scope_session)
     else:
         LOGGER.warning(f"Skipping virt special infra sanity because {skip_virt_sanity_check} was passed")
 
@@ -250,3 +268,8 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
                 "namespace the nvidia-vgpu-manager-daemonset Pod is Running."
             )
         )
+
+
+@pytest.fixture(scope="session")
+def allocatable_memory_per_node_scope_session(schedulable_nodes):
+    return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)

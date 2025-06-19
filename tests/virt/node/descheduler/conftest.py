@@ -17,7 +17,6 @@ from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     create_kube_descheduler,
     deploy_vms,
-    get_allocatable_memory_per_node,
     get_non_terminated_pods,
     get_pod_memory_requests,
     start_vms_with_process,
@@ -25,7 +24,7 @@ from tests.virt.node.descheduler.utils import (
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
+from tests.virt.utils import get_allocatable_memory_per_node, get_match_expressions_dict, start_stress_on_vm
 from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
@@ -40,18 +39,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 LOCALHOST = "localhost"
-
-
-@pytest.fixture(scope="module")
-def xfail_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
-    """
-    One of QE BM setups has worker with 5 TiB RAM memory while rest workers
-    has 120 GiB RAM. Test should not run on this cluster.
-    """
-    upper_memory_limit = bitmath.TiB(value=1)
-    for node, memory in allocatable_memory_per_node_scope_module.items():
-        if memory >= upper_memory_limit:
-            pytest.xfail(f"Cluster has node with at least {upper_memory_limit} RAM: {node.name}")
 
 
 @pytest.fixture(scope="module")
@@ -83,11 +70,6 @@ def descheduler_kubevirt_relieve_and_migrate_profile(
         yield kd
 
 
-@pytest.fixture(scope="module")
-def allocatable_memory_per_node_scope_module(schedulable_nodes):
-    return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
-
-
 @pytest.fixture(scope="class")
 def allocatable_memory_per_node_scope_class(schedulable_nodes):
     return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
@@ -103,8 +85,8 @@ def cpu_capacity_per_node(schedulable_nodes):
 
 
 @pytest.fixture(scope="module")
-def vm_deployment_size(allocatable_memory_per_node_scope_module, cpu_capacity_per_node):
-    vm_memory_size = next(iter(allocatable_memory_per_node_scope_module.values())) / 10
+def vm_deployment_size(allocatable_memory_per_node_scope_session, cpu_capacity_per_node):
+    vm_memory_size = next(iter(allocatable_memory_per_node_scope_session.values())) / 10
     LOGGER.info(f"VM memory is 10% from allocatable: {vm_memory_size.to_GiB()}")
     vm_cpu_size = max(1, next(iter(cpu_capacity_per_node.values())) // 20)
     LOGGER.info(f"VM CPU is 5% from capacity: {vm_cpu_size}")
