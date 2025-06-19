@@ -3,21 +3,20 @@ import logging
 
 import bitmath
 import pytest
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.deployment import Deployment
-from ocp_resources.kube_descheduler import KubeDescheduler
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.virt.node.descheduler.constants import (
-    DESCHEDULING_INTERVAL_120SEC,
     NODE_SELECTOR_LABEL,
     RUNNING_PING_PROCESS_NAME_IN_VM,
 )
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
+    create_kube_descheduler,
     deploy_vms,
-    get_allocatable_memory_per_node,
     get_non_terminated_pods,
     get_pod_memory_requests,
     start_vms_with_process,
@@ -25,24 +24,11 @@ from tests.virt.node.descheduler.utils import (
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import get_match_expressions_dict
-from utilities.constants import FILTER_BY_OS_OPTION, TIMEOUT_5SEC, TIMEOUT_30MIN, TIMEOUT_30SEC
+from tests.virt.utils import get_allocatable_memory_per_node, get_match_expressions_dict, start_stress_on_vm
+from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import (
     check_pod_disruption_budget_for_completed_migrations,
-    create_ns,
     wait_for_pods_deletion,
-)
-from utilities.operator import (
-    create_catalog_source,
-    create_icsp_idms_from_file,
-    create_operator_group,
-    create_subscription,
-    delete_existing_icsp_idms,
-    get_generated_icsp_idms,
-    get_install_plan_from_subscription,
-    wait_for_catalogsource_ready,
-    wait_for_mcp_updated_condition_true,
-    wait_for_operator_install,
 )
 from utilities.virt import (
     node_mgmt_console,
@@ -51,188 +37,37 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
-DESCHEDULER_CATALOG_SOURCE = "descheduler-catalog"
-DESCHEDULER_OPERATOR_DEPLOYMENT_NAME = "descheduler-operator"
-DESCHEDULER_DEPLOYMENT_NAME = "descheduler"
 
 LOCALHOST = "localhost"
 
 
 @pytest.fixture(scope="module")
-def skip_if_1tb_memory_or_more_node(allocatable_memory_per_node_scope_module):
-    """
-    One of QE BM setups has worker with 5 TiB RAM memory while rest workers
-    has 120 GiB RAM. Test should be skipped on this cluster.
-    """
-    upper_memory_limit = bitmath.TiB(value=1)
-    for node, memory in allocatable_memory_per_node_scope_module.items():
-        if memory >= upper_memory_limit:
-            pytest.skip(f"Cluster has node with at least {upper_memory_limit} RAM: {node.name}")
-
-
-@pytest.fixture(scope="module")
-def created_descheduler_namespace(admin_client):
-    yield from create_ns(
+def descheduler_long_lifecycle_profile(admin_client):
+    with create_kube_descheduler(
         admin_client=admin_client,
-        name="openshift-kube-descheduler-operator",
-    )
-
-
-@pytest.fixture(scope="module")
-def created_descheduler_operator_group(created_descheduler_namespace):
-    descheduler_operator_group = create_operator_group(
-        namespace_name=created_descheduler_namespace.name,
-        operator_group_name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        target_namespaces=[created_descheduler_namespace.name],
-    )
-    yield descheduler_operator_group
-    descheduler_operator_group.clean_up()
-
-
-@pytest.fixture(scope="module")
-def created_descheduler_subscription(
-    descheduler_catalog_source,
-    created_descheduler_namespace,
-):
-    descheduler_subscription = create_subscription(
-        subscription_name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        package_name="cluster-kube-descheduler-operator",
-        namespace_name=created_descheduler_namespace.name,
-        catalogsource_name=descheduler_catalog_source.name,
-    )
-    yield descheduler_subscription
-    descheduler_subscription.clean_up()
-
-
-@pytest.fixture(scope="module")
-def generated_descheduler_icsp_idms(
-    pull_secret_directory, generated_pulled_secret, openshift_current_version, ocp_qe_art_image_url, is_idms_cluster
-):
-    return get_generated_icsp_idms(
-        image_url=ocp_qe_art_image_url,
-        registry_source="manifest",
-        generated_pulled_secret=generated_pulled_secret,
-        pull_secret_directory=pull_secret_directory,
-        is_idms_cluster=is_idms_cluster,
-        filter_options=f"--index-{FILTER_BY_OS_OPTION}",
-    )
-
-
-@pytest.fixture(scope="module")
-def updated_icsp_descheduler(
-    nodes,
-    openshift_current_version,
-    machine_config_pools,
-    generated_descheduler_icsp_idms,
-    is_idms_cluster,
-):
-    LOGGER.info(f"Creating descheduler ICSP/IDMS from {generated_descheduler_icsp_idms} path...")
-    create_icsp_idms_from_file(file_path=generated_descheduler_icsp_idms)
-
-    wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=machine_config_pools,
-        timeout=TIMEOUT_30MIN,
-        sleep=TIMEOUT_30SEC,
-    )
-
-    yield
-    delete_existing_icsp_idms(name="aosqe-index", is_idms_file=is_idms_cluster)
-
-    wait_for_mcp_updated_condition_true(
-        machine_config_pools_list=machine_config_pools,
-        timeout=TIMEOUT_30MIN,
-        sleep=TIMEOUT_30SEC,
-    )
-
-
-@pytest.fixture(scope="module")
-def descheduler_catalog_source(admin_client, ocp_qe_art_image_url):
-    catalog_source = create_catalog_source(
-        catalog_name=DESCHEDULER_CATALOG_SOURCE,
-        image=ocp_qe_art_image_url,
-        display_name="Descheduler Index Image",
-    )
-    wait_for_catalogsource_ready(
-        admin_client=admin_client,
-        catalog_name=DESCHEDULER_CATALOG_SOURCE,
-    )
-    yield catalog_source
-    catalog_source.clean_up()
-
-
-@pytest.fixture(scope="module")
-def subscription_with_descheduler_install_plan(created_descheduler_subscription):
-    return get_install_plan_from_subscription(subscription=created_descheduler_subscription)
-
-
-@pytest.fixture(scope="module")
-def descheduler_install_plan_installed(
-    admin_client,
-    created_descheduler_namespace,
-    created_descheduler_subscription,
-    subscription_with_descheduler_install_plan,
-):
-    wait_for_operator_install(
-        admin_client=admin_client,
-        install_plan_name=subscription_with_descheduler_install_plan,
-        namespace_name=created_descheduler_namespace.name,
-        subscription_name=created_descheduler_subscription.name,
-    )
-
-
-@pytest.fixture(scope="module")
-def installed_descheduler_operator(
-    disabled_default_sources_in_operatorhub_scope_module,
-    updated_icsp_descheduler,
-    descheduler_catalog_source,
-    created_descheduler_namespace,
-    created_descheduler_operator_group,
-    created_descheduler_subscription,
-    descheduler_install_plan_installed,
-):
-    deployment = Deployment(
-        name=DESCHEDULER_OPERATOR_DEPLOYMENT_NAME,
-        namespace=created_descheduler_namespace.name,
-    )
-    deployment.wait()
-    deployment.wait_for_replicas()
-    yield deployment
-
-
-@pytest.fixture(scope="module")
-def descheduler_deployment(created_descheduler_namespace):
-    return Deployment(
-        name=DESCHEDULER_DEPLOYMENT_NAME,
-        namespace=created_descheduler_namespace.name,
-    )
-
-
-@pytest.fixture(scope="module")
-def installed_descheduler(
-    created_descheduler_namespace,
-    installed_descheduler_operator,
-    descheduler_deployment,
-):
-    with KubeDescheduler(
-        name="cluster",
-        namespace=created_descheduler_namespace.name,
         profiles=["LongLifecycle"],
-        descheduling_interval_seconds=DESCHEDULING_INTERVAL_120SEC,
-        mode="Automatic",
-        management_state="Managed",
         profile_customizations={
             "devLowNodeUtilizationThresholds": "High",  # underutilized <40%, overutilized >70%
             "devEnableEvictionsInBackground": True,
         },
     ) as kd:
-        descheduler_deployment.wait()
-        descheduler_deployment.wait_for_replicas()
         yield kd
 
 
 @pytest.fixture(scope="module")
-def allocatable_memory_per_node_scope_module(schedulable_nodes):
-    return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
+def descheduler_kubevirt_relieve_and_migrate_profile(
+    admin_client,
+    schedulable_nodes,
+    nodes_taints_before_descheduler_test_run,
+):
+    with create_kube_descheduler(
+        admin_client=admin_client,
+        profiles=["DevKubeVirtRelieveAndMigrate"],
+        profile_customizations={
+            "devActualUtilizationProfile": "PrometheusCPUCombined",
+        },
+    ) as kd:
+        yield kd
 
 
 @pytest.fixture(scope="class")
@@ -241,14 +76,26 @@ def allocatable_memory_per_node_scope_class(schedulable_nodes):
 
 
 @pytest.fixture(scope="module")
-def vm_deployment_size(allocatable_memory_per_node_scope_module):
-    vm_memory_size = next(iter(allocatable_memory_per_node_scope_module.values())) / 10
+def cpu_capacity_per_node(schedulable_nodes):
+    nodes_cpu = {}
+    for node in schedulable_nodes:
+        nodes_cpu[node] = int(parse_quantity(node.instance.status.capacity.cpu))
+        LOGGER.info(f"Node {node.name} has total CPU capacity: {nodes_cpu[node]}")
+    return nodes_cpu
+
+
+@pytest.fixture(scope="module")
+def vm_deployment_size(allocatable_memory_per_node_scope_session, cpu_capacity_per_node):
+    vm_memory_size = next(iter(allocatable_memory_per_node_scope_session.values())) / 10
     LOGGER.info(f"VM memory is 10% from allocatable: {vm_memory_size.to_GiB()}")
-    return {"cpu": "100m", "memory": vm_memory_size}
+    vm_cpu_size = max(1, next(iter(cpu_capacity_per_node.values())) // 20)
+    LOGGER.info(f"VM CPU is 5% from capacity: {vm_cpu_size}")
+
+    return {"cpu": vm_cpu_size, "memory": vm_memory_size}
 
 
 @pytest.fixture(scope="class")
-def calculated_vm_deployment_for_node_drain_test(
+def calculated_vm_deployment_for_descheduler_test(
     request,
     schedulable_nodes,
     vm_deployment_size,
@@ -263,35 +110,35 @@ def calculated_vm_deployment_for_node_drain_test(
 
 
 @pytest.fixture(scope="class")
-def deployed_vms_for_node_drain(
+def deployed_vms_for_descheduler_test(
     namespace,
     unprivileged_client,
     cpu_for_migration,
     vm_deployment_size,
-    calculated_vm_deployment_for_node_drain_test,
+    calculated_vm_deployment_for_descheduler_test,
 ):
     yield from deploy_vms(
-        vm_prefix="node-drain-test",
+        vm_prefix="vm-descheduler-test",
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
-        vm_count=sum(calculated_vm_deployment_for_node_drain_test.values()),
+        vm_count=sum(calculated_vm_deployment_for_descheduler_test.values()),
         deployment_size=vm_deployment_size,
         descheduler_eviction=True,
     )
 
 
 @pytest.fixture(scope="class")
-def vms_orig_nodes_before_node_drain(deployed_vms_for_node_drain):
-    return vm_nodes(vms=deployed_vms_for_node_drain)
+def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
+    return vm_nodes(vms=deployed_vms_for_descheduler_test)
 
 
 @pytest.fixture(scope="class")
 def vms_started_process_for_node_drain(
-    deployed_vms_for_node_drain,
+    deployed_vms_for_descheduler_test,
 ):
     return start_vms_with_process(
-        vms=deployed_vms_for_node_drain,
+        vms=deployed_vms_for_descheduler_test,
         process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
         args=LOCALHOST,
     )
@@ -312,14 +159,14 @@ def node_to_drain(
 
 @pytest.fixture()
 def drain_uncordon_node(
-    deployed_vms_for_node_drain,
+    deployed_vms_for_descheduler_test,
     vms_orig_nodes_before_node_drain,
     node_to_drain,
 ):
     """Return when node is schedulable again after uncordon"""
     with node_mgmt_console(node=node_to_drain, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=node_to_drain, status=False)
-        for vm in deployed_vms_for_node_drain:
+        for vm in deployed_vms_for_descheduler_test:
             if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
                 wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
 
@@ -519,3 +366,38 @@ def utilization_imbalance(
             pod_prefix=utilization_imbalance_deployment_name,
         )
     )
+
+
+@pytest.fixture(scope="class")
+def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
+    vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
+    for node in schedulable_nodes:
+        if vm_per_node_counters[node.name] > 0:
+            return node
+
+    raise ValueError("No suitable node to run stress")
+
+
+@pytest.fixture(scope="class")
+def stressed_vms_on_one_node(node_to_run_stress, deployed_vms_for_descheduler_test):
+    stressed_vms_list = []
+    for vm in deployed_vms_for_descheduler_test:
+        if vm.vmi.node.name == node_to_run_stress.name:
+            stressed_vms_list.append(vm)
+            start_stress_on_vm(
+                vm=vm,
+                stress_command="nohup stress-ng --cpu 0 &> /dev/null &",
+            )
+    yield stressed_vms_list
+
+
+@pytest.fixture(scope="module")
+def nodes_taints_before_descheduler_test_run(nodes):
+    nodes_taints_before = {node: node.instance.spec.taints for node in nodes}
+    yield
+
+    # clean up taints leftovers
+    nodes_taints_after = {node: node.instance.spec.taints for node in nodes}
+    for node in nodes_taints_before:
+        if nodes_taints_after[node] != nodes_taints_before[node]:
+            ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
