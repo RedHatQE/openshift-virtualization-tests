@@ -44,11 +44,20 @@ storage_class_matrix = [
             "default": True,
         }
     },
+    {
+        StorageClassNames.IO2_CSI: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": True,
+        }
+    },
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.TRIDENT_CSI_NFS
-storage_class_for_storage_migration_b = StorageClassNames.TRIDENT_CSI_NFS
+storage_class_for_storage_migration_a = StorageClassNames.IO2_CSI
+storage_class_for_storage_migration_b = StorageClassNames.IO2_CSI
 
 rhel_os_matrix = [
     {

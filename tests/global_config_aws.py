@@ -36,7 +36,7 @@ storage_class_matrix = [
             "access_mode": DataVolume.AccessMode.RWX,
             "snapshot": True,
             "online_resize": True,
-            "wffc": False,
+            "wffc": True,
         }
     },
 ]
