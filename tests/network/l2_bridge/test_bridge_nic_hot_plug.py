@@ -1,6 +1,8 @@
 import time
 
 import pytest
+from ocp_resources.cluster_role import ClusterRole
+from ocp_resources.role_binding import RoleBinding
 
 from libs.net import netattachdef
 from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
@@ -19,7 +21,7 @@ from tests.network.l2_bridge.utils import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from utilities.constants import FLAT_OVERLAY_STR, SRIOV
+from utilities.constants import FLAT_OVERLAY_STR, SRIOV, UNPRIVILEGED_USER
 from utilities.network import (
     IfaceNotFound,
     assert_ping_successful,
@@ -28,11 +30,30 @@ from utilities.network import (
 )
 from utilities.virt import migrate_vm_and_verify
 
-pytestmark = pytest.mark.usefixtures("label_schedulable_nodes")
+pytestmark = pytest.mark.usefixtures(
+    "label_schedulable_nodes",
+    "unprivileged_client_migration_permission_role_binding",
+)
 
 HOT_PLUG_STR = "hot-plug"
 TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY = "test_basic_connectivity_of_hot_plugged_interface"
 SECONDARY_SETUP_INTERFACE_NAME = "eth1"
+
+
+@pytest.fixture(scope="module")
+def unprivileged_client_migration_permission_role_binding(admin_client, namespace):
+    migration_role = ClusterRole(name="kubevirt.io:migrate", client=admin_client, ensure_exists=True)
+
+    with RoleBinding(
+        name="migrate-role-binding",
+        namespace=namespace.name,
+        client=admin_client,
+        subjects_kind="User",
+        subjects_name=UNPRIVILEGED_USER,
+        role_ref_kind=migration_role.kind,
+        role_ref_name=migration_role.name,
+    ):
+        yield
 
 
 @pytest.fixture(scope="class")
@@ -148,6 +169,7 @@ def running_vm_with_secondary_and_hot_plugged_interfaces(
 def hot_plugged_interface_name_on_vm_created_with_secondary_interface(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     network_attachment_definition_for_hot_plug,
+    unprivileged_client,
 ):
     hot_plugged_interface_name = f"{HOT_PLUG_STR}-additional-iface"
     hot_plug_interface(
@@ -157,7 +179,7 @@ def hot_plugged_interface_name_on_vm_created_with_secondary_interface(
     )
     # In order to complete the interface hot-plug, and have the interface available in the guest VM -
     # the VM must be migrated.
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
+    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces, client=unprivileged_client)
 
     return hot_plugged_interface_name
 
@@ -176,10 +198,10 @@ def hot_plugged_second_interface_with_address(
 
 
 @pytest.fixture()
-def migrated_vm_with_hot_plugged_interface_attached(running_vm_for_nic_hot_plug):
+def migrated_vm_with_hot_plugged_interface_attached(running_vm_for_nic_hot_plug, unprivileged_client):
     # In order to complete the interface hot-plug, and have the interface available in the guest VM -
     # the VM must be migrated.
-    migrate_vm_and_verify(vm=running_vm_for_nic_hot_plug)
+    migrate_vm_and_verify(vm=running_vm_for_nic_hot_plug, client=unprivileged_client)
     return running_vm_for_nic_hot_plug
 
 
@@ -353,12 +375,13 @@ def hot_unplugged_additional_interface(
     namespace,
     running_vm_with_secondary_and_hot_plugged_interfaces,
     hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+    unprivileged_client,
 ):
     hot_unplug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
     )
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
+    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces, client=unprivileged_client)
     return hot_plugged_interface_name_on_vm_created_with_secondary_interface
 
 
@@ -411,12 +434,13 @@ def hot_unplug_secondary_interface_from_setup(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     network_attachment_definition_for_hot_plug,
     namespace,
+    unprivileged_client,
 ):
     hot_unplug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=network_attachment_definition_for_hot_plug.name,
     )
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
+    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces, client=unprivileged_client)
 
 
 @pytest.fixture()
