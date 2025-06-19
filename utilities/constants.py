@@ -49,7 +49,6 @@ class ArchImages:
             RHEL7_8_IMG = "rhel-78.qcow2"
             RHEL7_9_IMG = "rhel-79.qcow2"
             RHEL8_0_IMG = "rhel-8.qcow2"
-            RHEL8_2_IMG = "rhel-82.qcow2"
             RHEL8_8_IMG = "rhel-88.qcow2"
             RHEL8_9_IMG = "rhel-89.qcow2"
             RHEL8_10_IMG = "rhel-810.qcow2"
@@ -253,6 +252,7 @@ UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 QUARANTINED = "quarantined"
+SETUP_ERROR = "setup_error"
 
 # Kernel Device Driver
 # Compute: GPU Devices are bound to this Kernel Driver for GPU Passthrough.

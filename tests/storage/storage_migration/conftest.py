@@ -1,3 +1,4 @@
+import shlex
 from copy import deepcopy
 
 import pytest
@@ -9,8 +10,14 @@ from ocp_resources.mig_plan import MigPlan
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pyhelper_utils.shell import run_ssh_commands
 
-from tests.storage.storage_migration.constants import CONTENT, FILE_BEFORE_STORAGE_MIGRATION
+from tests.storage.storage_migration.constants import (
+    CONTENT,
+    FILE_BEFORE_STORAGE_MIGRATION,
+    HOTPLUGGED_DEVICE,
+    MOUNT_HOTPLUGGED_DEVICE_PATH,
+)
 from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
@@ -21,10 +28,23 @@ from utilities.constants import (
     U1_SMALL,
     Images,
 )
-from utilities.storage import data_volume_template_with_source_ref_dict, write_file
-from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm, vm_instance_from_template
+from utilities.storage import (
+    create_dv,
+    data_volume_template_with_source_ref_dict,
+    virtctl_volume,
+    wait_for_vm_volume_ready,
+    write_file,
+)
+from utilities.virt import (
+    VirtualMachineForTests,
+    fedora_vm_body,
+    get_vm_boot_time,
+    running_vm,
+    vm_instance_from_template,
+)
 
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
+DEFAULT_DV_SIZE = "1Gi"
 
 
 @pytest.fixture(scope="module")
@@ -271,3 +291,76 @@ def deleted_old_dvs_of_stopped_vms(unprivileged_client, namespace):
         # target DV after migration name is: <source-dv-name>-mig-<generated_suffix>
         if "-mig-" not in dv.name:
             assert dv.delete(wait=True)
+
+
+@pytest.fixture(scope="class")
+def blank_disk_dv_for_storage_migration(unprivileged_client, namespace, source_storage_class):
+    with create_dv(
+        source="blank",
+        dv_name="blank-dv-for-hotplug",
+        client=unprivileged_client,
+        namespace=namespace.name,
+        size=DEFAULT_DV_SIZE,
+        storage_class=source_storage_class,
+        consume_wffc=False,
+    ) as dv:
+        yield dv
+
+
+@pytest.fixture(scope="class")
+def fedora_vm_for_hotplug_and_storage_migration(unprivileged_client, namespace, cpu_for_migration):
+    name = "fedora-volume-hotplug-vm"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
+        client=unprivileged_client,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def vm_for_storage_class_migration_with_hotplugged_volume(
+    namespace, blank_disk_dv_for_storage_migration, fedora_vm_for_hotplug_and_storage_migration
+):
+    with virtctl_volume(
+        action="add",
+        namespace=namespace.name,
+        vm_name=fedora_vm_for_hotplug_and_storage_migration.name,
+        volume_name=blank_disk_dv_for_storage_migration.name,
+        persist=True,
+    ) as res:
+        status, out, err = res
+        assert status, f"Failed to add volume to VM, out: {out}, err: {err}."
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_and_storage_migration)
+        yield fedora_vm_for_hotplug_and_storage_migration
+
+
+@pytest.fixture(scope="class")
+def vm_with_mounted_hotplugged_disk(vm_for_storage_class_migration_with_hotplugged_volume):
+    # Mount the disk to the VM
+    run_ssh_commands(
+        host=vm_for_storage_class_migration_with_hotplugged_volume.ssh_exec,
+        commands=[
+            shlex.split(cmd)
+            for cmd in [
+                f"sudo mkfs.ext4 {HOTPLUGGED_DEVICE}",
+                f"sudo mkdir {MOUNT_HOTPLUGGED_DEVICE_PATH}",
+                f"sudo mount {HOTPLUGGED_DEVICE} {MOUNT_HOTPLUGGED_DEVICE_PATH}",
+            ]
+        ],
+    )
+    yield vm_for_storage_class_migration_with_hotplugged_volume
+
+
+@pytest.fixture(scope="class")
+def written_file_to_the_mounted_hotplugged_disk(vm_with_mounted_hotplugged_disk):
+    run_ssh_commands(
+        host=vm_with_mounted_hotplugged_disk.ssh_exec,
+        commands=shlex.split(
+            f"echo '{CONTENT}' | sudo tee {MOUNT_HOTPLUGGED_DEVICE_PATH}/{FILE_BEFORE_STORAGE_MIGRATION}"
+        ),
+    )
+    yield vm_with_mounted_hotplugged_disk

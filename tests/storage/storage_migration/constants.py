@@ -12,3 +12,6 @@ NO_STORAGE_CLASS_FAILURE_MESSAGE = (
     f"--tc={STORAGE_CLASS_A}:<storage_class_name> "
     f"--tc={STORAGE_CLASS_B}:<storage_class_name>"
 )
+
+HOTPLUGGED_DEVICE = "/dev/sda"
+MOUNT_HOTPLUGGED_DEVICE_PATH = "/mnt/hotplug"
