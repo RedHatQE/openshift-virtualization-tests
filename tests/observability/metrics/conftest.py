@@ -1144,3 +1144,24 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
         status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
+
+
+@pytest.fixture()
+def created_fake_data_volume_resource(namespace, admin_client):
+    with DataVolume(
+        name="fake-dv",
+        namespace=namespace.name,
+        url="http://broken-link.test",
+        source="http",
+        size=Images.Rhel.DEFAULT_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        bind_immediate_annotation=True,
+        api_name="storage",
+        client=admin_client,
+    ) as dv:
+        yield dv
+
+
+@pytest.fixture()
+def metric_initial_value(request, prometheus):
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
