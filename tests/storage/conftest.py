@@ -45,6 +45,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -188,6 +189,13 @@ def skip_test_if_no_hpp_sc(cluster_storage_classes):
     existing_hpp_sc = [sc.name for sc in cluster_storage_classes if sc.name in HPP_STORAGE_CLASSES]
     if not existing_hpp_sc:
         pytest.skip(f"This test runs only on one of the hpp storage classes: {HPP_STORAGE_CLASSES}")
+
+
+@pytest.fixture(scope="session")
+def skip_test_if_gcp_sc(cluster_storage_classes):
+    existing_gcp_sc = [sc.name for sc in cluster_storage_classes if sc.name in StorageClassNames.GCP]
+    if existing_gcp_sc:
+        pytest.skip(f"This test is skipped due to not supporting GCP storage class '{existing_gcp_sc}'")
 
 
 @pytest.fixture(scope="module")

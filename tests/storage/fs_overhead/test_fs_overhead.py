@@ -9,7 +9,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
 from tests.utils import create_cirros_vm
-from utilities.constants import Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import virtctl_upload_dv
 
@@ -17,7 +16,7 @@ FS_OVERHEAD_20 = 0.2
 
 
 def get_pvc_size_gib(pvc):
-    return bitmath.Byte(int(pvc.instance.spec.resources.requests.storage)).to_GiB()
+    return bitmath.parse_string_unsafe(pvc.instance.spec.resources.requests.storage).to_GiB()
 
 
 def assert_fs_overhead_added(actual_size, requested_size):
@@ -69,7 +68,7 @@ def uploaded_cirros_dv(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size="4Gi",
         image_path=downloaded_cirros_image_full_path,
         storage_class=storage_class_with_filesystem_volume_mode,
         volume_mode=DataVolume.VolumeMode.FILE,
@@ -98,5 +97,5 @@ def test_upload_dv_with_specify_fs_overhead(
 ):
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
-        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE[0])),
+        requested_size=bitmath.parse_string_unsafe("4Gi").to_GiB(),
     )

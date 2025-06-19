@@ -237,7 +237,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
-        size="1Gi",
+        size="4Gi",
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -290,7 +290,7 @@ def empty_pvc(
         storage_class=storage_class_name_scope_module,
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size="1Gi",
+        size="4Gi",
         hostpath_node=worker_node1.name
         if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
         else None,
@@ -318,7 +318,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size="4Gi",
         pvc=True,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
@@ -395,7 +395,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size="4Gi",
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
