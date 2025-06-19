@@ -15,7 +15,6 @@ import traceback
 from typing import Any
 
 import pytest
-import pytest_html
 import shortuuid
 from _pytest.config import Config
 from _pytest.nodes import Collector, Node
@@ -29,7 +28,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import QUARANTINED, TIMEOUT_5MIN, NamespacesNames
+from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -537,14 +536,24 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
 
-    if report.when == "setup" and hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
-        setattr(report, QUARANTINED, True)
+    if report.when == "setup":
+        if hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
+            setattr(report, QUARANTINED, True)
 
-        extras = getattr(report, "extras", [])
-        if match := re.search(r"CNV-\d+", report.wasxfail):
-            extras = getattr(report, "extras", [])
-            extras.append(pytest_html.extras.url(f"https://issues.redhat.com/browse/{match.group(0)}"))
-            report.extras = extras
+            if match := re.search(r"CNV-\d+", report.wasxfail):
+                jira = match.group(0)
+                wasxfail = report.wasxfail.replace(
+                    jira,
+                    f"<a href='https://issues.redhat.com/browse/{jira}' target='_blank'>{jira}</a>",
+                )
+                report.wasxfail = wasxfail
+
+        elif fail_error := re.search(r"(Failed): (.*?)\n", report.longreprtext):
+            setattr(report, SETUP_ERROR, fail_error.group(2))
+
+        elif report.failed and getattr(report.longrepr, "reprcrash", None):
+            if message := getattr(report.longrepr, "message", None):
+                setattr(report, SETUP_ERROR, message)
 
 
 def pytest_fixture_setup(fixturedef, request):
@@ -799,13 +808,29 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
 
 @pytest.mark.optionalhook
 def pytest_html_results_table_header(cells):
-    cells.insert(2, f"<th>{QUARANTINED.title()} Reason</th>")
+    cells.pop()  # Remove the `Links` column
+
+    # Add the `Error` and `Quarantined` columns
+    cells.append(f"<th>{SETUP_ERROR.title()} Reason</th>")
+    cells.append(f"<th>{QUARANTINED.title()} Reason</th>")
 
 
 @pytest.mark.optionalhook
 def pytest_html_results_table_row(report, cells):
+    cells.pop()  # Remove the `Links` entry
+
     if getattr(report, QUARANTINED, False) and "reason" in report.wasxfail:
-        cells.insert(2, f"<th>{report.wasxfail}</th>")
+        cells.append("<th></th>")
+        cells.append(f"<th>{report.wasxfail}</th>")
+
+    elif error_msg := getattr(report, SETUP_ERROR, False):
+        cells.append(f"<th>{error_msg}</th>")
+        cells.append("<th></th>")
 
     else:
-        cells.insert(2, "<th></th>")
+        cells.append("<th></th>")
+        cells.append("<th></th>")
+
+
+def pytest_html_report_title(report):
+    report.title = "Openshift Virtualization Tier2 Tests Results"
