@@ -72,6 +72,7 @@ from timeout_sampler import TimeoutSampler
 
 import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from tests.virt.node.general.constants import MachineTypesNames
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
     AMD,
@@ -107,6 +108,7 @@ from utilities.constants import (
     RHEL9_PREFERENCE,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
+    S390X,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -2772,7 +2774,11 @@ def cluster_cpu_model_scope_function(
     hco_namespace,
     hyperconverged_resource_scope_function,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
+    # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
+    if nodes_cpu_architecture == S390X:
+        cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
@@ -2789,7 +2795,11 @@ def cluster_cpu_model_scope_module(
     hco_namespace,
     hyperconverged_resource_scope_module,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
+    # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
+    if nodes_cpu_architecture == S390X:
+        cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
@@ -2806,7 +2816,11 @@ def cluster_cpu_model_scope_class(
     hco_namespace,
     hyperconverged_resource_scope_class,
     cluster_common_node_cpu,
+    nodes_cpu_architecture,
 ):
+    # TODO: needs a proper fix listing down all the non working CPU models and checking with zKVM team
+    if nodes_cpu_architecture == S390X:
+        cluster_common_node_cpu = "gen15b"
     with update_cluster_cpu_model(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
@@ -2837,7 +2851,11 @@ def cluster_modern_cpu_model_scope_class(
 @pytest.fixture(scope="module")
 def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    if nodes_cpu_architecture == S390X:
+        mc_type = MachineTypesNames.s390_ccw_virtio  # Workaround till fixed in kubeivrt to add architectureConfiguration for s390x similar to arm and amd64 in kubevirt config.
+    else:
+        mc_type = kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    return mc_type
 
 
 @pytest.fixture(scope="module")
