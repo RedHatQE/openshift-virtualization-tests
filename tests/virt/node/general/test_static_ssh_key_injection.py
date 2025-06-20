@@ -69,6 +69,7 @@ def vm_with_ssh_secret(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestVMWithStaticKeyInjection:
     """
     Test VM with static key injection.
