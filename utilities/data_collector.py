@@ -46,6 +46,7 @@ def get_data_collector_base() -> str:
     path_str = normalized.as_posix().rstrip("/") + "/"
     return path_str
 
+
 def get_data_collector_base_directory() -> str:
     return py_config["data_collector"]["data_collector_base_directory"]
 
