@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import shlex
-from pathlib import Path
 
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import get_client
@@ -23,28 +22,30 @@ def get_data_collector_base() -> str:
     Determine the base directory for data collection, with the following priority:
 
     1. The `DATA_COLLECTOR_DIR_OVERWRITE` environment variable, if set.
-    2. A "/data/" prefix when running in a CNV tests container (i.e., when the
+    2. A "/data" prefix when running in a CNV tests container (i.e., when the
        `CNV_TESTS_CONTAINER` environment variable is truthy).
-    3. The current working directory (empty string).
+    3. The current working directory.
 
-    The returned path is always normalized and guaranteed to end with a trailing slash.
+    The returned path is always normalized (expanding '~', collapsing '.'/'..')
+    and guaranteed to end with a trailing slash.
     """
     # 1. Check for explicit override
     override = os.getenv("DATA_COLLECTOR_DIR_OVERWRITE")
     if override:
-        base = Path(override)
+        base_path = override
+    elif os.getenv("CNV_TESTS_CONTAINER"):
+        base_path = "/data"
     else:
-        # 2. Use "/data/" prefix if in test container, otherwise empty
-        prefix = Path("/data") if os.getenv("CNV_TESTS_CONTAINER") else Path()
-        base = prefix
+        base_path = os.getcwd()
 
-    # Normalize path (expand user, remove redundant separators) without requiring existence
-    # This will also collapse any '.' or '..' segments
-    normalized = base.expanduser().resolve(strict=False)
+    # Normalize user home (~), collapse redundant separators, and absolute path
+    normalized = os.path.normpath(os.path.expanduser(base_path))
 
-    # Convert to POSIX string and ensure trailing slash
-    path_str = normalized.as_posix().rstrip("/") + "/"
-    return path_str
+    # Ensure trailing slash
+    if not normalized.endswith(os.sep):
+        normalized += os.sep
+
+    return normalized
 
 
 def get_data_collector_base_directory() -> str:
