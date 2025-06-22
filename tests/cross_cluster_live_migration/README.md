@@ -37,11 +37,6 @@ oc --kubeconfig=$REMOTE_KUBECONFIG get nodes
 uv run pytest tests/cross_cluster_live_migration/ -v
 ```
 
-### Debug Mode
-```bash
-uv run pytest tests/cross_cluster_live_migration/ -v -s --tb=long
-```
-
 ### Debugging Tips
 
 1. **Verify Remote Cluster Access**:
