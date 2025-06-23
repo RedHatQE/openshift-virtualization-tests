@@ -32,7 +32,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
 )
 from tests.os_params import FEDORA_LATEST
 from utilities.constants import ARM_64, COUNT_FIVE
-from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64]
 
@@ -44,8 +43,6 @@ def kubevirt_architecture_configuration_scope_session(
     kubevirt_resource_scope_session,
     nodes_cpu_architecture,
 ):
-    # TODO: When the bug CNV-45481 is resolved, return following object directly:
-    # kubevirt_resource_scope_session.instance.spec.configuration.architectureConfiguration
     kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
         "architectureConfiguration"
     ][nodes_cpu_architecture]
@@ -53,7 +50,7 @@ def kubevirt_architecture_configuration_scope_session(
     # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
     # '/usr/share/AAVMF' but the files in this location are symlinked to
     # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
-    if nodes_cpu_architecture == ARM_64 and is_jira_open(jira_id="CNV-45481"):
+    if nodes_cpu_architecture == ARM_64:
         kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
     return kubevirt_architecture_config
 
