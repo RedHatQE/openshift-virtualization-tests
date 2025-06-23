@@ -121,4 +121,4 @@ def test_upload_https_scratch_space_delete_pvc(
                     dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
                     with storage_utils.create_vm_from_dv(dv=dv) as vm_dv:
                         check_disk_count_in_vm(vm=vm_dv)
-                    return True
+                    return
