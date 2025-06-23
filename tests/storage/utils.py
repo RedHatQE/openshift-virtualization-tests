@@ -23,6 +23,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.os_params import FEDORA_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_2MIN,
@@ -43,6 +44,7 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     get_containers_for_pods_with_pvc,
+    get_test_artifact_server_url,
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -404,6 +406,29 @@ def create_cirros_dv(
         dv_name=f"dv-{name}",
         namespace=namespace,
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+        size=dv_size,
+        storage_class=storage_class,
+        access_modes=access_modes,
+        volume_mode=volume_mode,
+        client=client,
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
+def create_fedora_dv(
+    namespace,
+    name,
+    storage_class,
+    access_modes=None,
+    volume_mode=None,
+    client=None,
+    dv_size=Images.Fedora.DEFAULT_DV_SIZE,
+):
+    with create_dv(
+        dv_name=f"dv-{name}",
+        namespace=namespace,
+        url=f"{get_test_artifact_server_url()}{FEDORA_LATEST.get('image_path')}",
         size=dv_size,
         storage_class=storage_class,
         access_modes=access_modes,
