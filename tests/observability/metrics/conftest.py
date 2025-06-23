@@ -1075,6 +1075,8 @@ def windows_vm_for_test_in_error_state(windows_vm_for_test):
         windows_vm_for_test.restart()
         windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
         yield windows_vm_for_test
+    windows_vm_for_test.restart()
+    windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING)
 
 
 @pytest.fixture()
@@ -1230,22 +1232,24 @@ def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
 
 
 @pytest.fixture()
-def vm_metric_1_vmim(vm_metric_1):
+def vm_metric_1_vmim(vm_metric_1, admin_client):
     with VirtualMachineInstanceMigration(
         name="vm-metric-1-vmim",
         namespace=vm_metric_1.namespace,
         vmi_name=vm_metric_1.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield
 
 
 @pytest.fixture()
-def windows_vm_vmim(migration_policy_with_bandwidth, windows_vm_for_test):
+def windows_vm_vmim(migration_policy_with_bandwidth, windows_vm_for_test, admin_client):
     with VirtualMachineInstanceMigration(
         name="windows-vm-metric-1-vmim",
         namespace=windows_vm_for_test.namespace,
         vmi_name=windows_vm_for_test.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_20MIN)
         windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.MIGRATING)
