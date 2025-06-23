@@ -28,6 +28,8 @@ from urllib3.exceptions import (
 
 # Images
 BASE_IMAGES_DIR = "cnv-tests"
+DOCKER_IMAGES_DIR = "docker"
+CONTAINER_DISK_IMAGE_PATH_STR = "container_disk_image_path"
 NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
 
 
@@ -80,6 +82,12 @@ class ArchImages:
             WIN2022_IMG = "win_2022.qcow2"
             WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
             WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
+            WIN10_CONTAINER_IMG = "windows10-container-disk:4.99"
+            WIN11_CONTAINER_IMG = "windows11-container-disk:4.99"
+            WIN2k16_CONTAINER_IMG = "windows2k16-container-disk:4.99"
+            WIN2k19_CONTAINER_IMG = "windows2k19-container-disk:4.99"
+            WIN2k22_CONTAINER_IMG = "windows2k22-container-disk:4.99"
+            WIN2k25_CONTAINER_IMG = "windows2k25-container-disk:4.99"
             DIR = f"{BASE_IMAGES_DIR}/windows-images"
             UEFI_WIN_DIR = f"{DIR}/uefi"
             HA_DIR = f"{DIR}/HA-images"
@@ -87,7 +95,9 @@ class ArchImages:
             ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
             ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
             ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
+            DOCKER_IMG_QE_DIR = f"{DOCKER_IMAGES_DIR}/kubevirt-common-instancetypes"
             DEFAULT_DV_SIZE = "70Gi"
+            CONTAINER_DISK_DV_SIZE = "40Gi"
             DEFAULT_MEMORY_SIZE = "8Gi"
             DEFAULT_MEMORY_SIZE_WSL = "12Gi"
             DEFAULT_CPU_CORES = 4
