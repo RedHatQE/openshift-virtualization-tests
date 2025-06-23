@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shlex
+from functools import cache
 
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import get_client
@@ -17,17 +18,48 @@ LOGGER = logging.getLogger(__name__)
 BASE_DIRECTORY_NAME = "tests-collected-info"
 
 
-def get_data_collector_base():
-    return f"{'/data/' if os.environ.get('CNV_TESTS_CONTAINER') else ''}"
+@cache
+def get_data_collector_base(base_dir: str | None = None) -> str:
+    """
+    Returns base directory for data collection.
+
+    Priority is set as follows:
+        1. Dir is set by passing --data-collector-output-dir.
+        2. A "/data" prefix when running in a CNV tests container
+            (i.e., when `CNV_TESTS_CONTAINER` environment variable is set).
+        3. The current working directory.
+
+    Args:
+        base_dir (str): base directory to use.
+
+    Returns:
+        str: base directory for data collection.
+    """
+    # TODO: move to pathlib when data collection logic is refactored
+
+    if base_dir:
+        base_path = base_dir
+
+    elif os.environ.get("CNV_TESTS_CONTAINER"):
+        base_path = "/data"
+
+    else:
+        base_path = os.getcwd()
+
+    base_path = os.path.normpath(os.path.expanduser(base_path))
+    if not base_path.endswith(os.sep):
+        base_path = f"{base_path}{os.sep}"
+
+    return base_path
 
 
 def get_data_collector_base_directory() -> str:
     return py_config["data_collector"]["data_collector_base_directory"]
 
 
-def set_data_collector_values():
+def set_data_collector_values(base_dir: str | None = None) -> str:
     py_config["data_collector"] = {
-        "data_collector_base_directory": f"{get_data_collector_base()}tests-collected-info",
+        "data_collector_base_directory": f"{get_data_collector_base(base_dir=base_dir)}tests-collected-info",
     }
     return py_config["data_collector"]
 
