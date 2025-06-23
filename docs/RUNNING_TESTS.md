@@ -220,11 +220,21 @@ uv run pytest <test_to_run> -o log_cli=true
 ```
 
 ### Must-gather and data collection
-openshift-virtualization-tests would collect must-gather data, pexpect logs, alert data for failure analysis, when --data-collector argument is passed.
-Logs will be available under tests-collected-info/ folder for local runs and /data/tests-collected-info for containerized runs.
+When you pass the `--data-collector` flag, **openshift-virtualization-tests** will gather must-gather archives, pexpect logs, and alert data for failure analysis. By default, collected logs land in:
+
+- `tests-collected-info/` for local runs
+- `/data/tests-collected-info/` for containerized runs (i.e., when you’ve exported the `CNV_TESTS_CONTAINER` environment variable)
 
 ```bash
 uv run pytest <test_to_run> --data-collector
+```
+
+If you need to override the default output directory, use --data-collector-output-dir:
+
+```bash
+uv run pytest <test_to_run> \
+  --data-collector \
+  --data-collector-output-dir=<path/to/your/dir>
 ```
 
 To skip must-gather collection on a given module or test, skip_must_gather_collection can be used:

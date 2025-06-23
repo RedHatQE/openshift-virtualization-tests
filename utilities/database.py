@@ -23,8 +23,10 @@ class CnvTestTable(Base):
 
 
 class Database:
-    def __init__(self, database_file_name: str = CNV_TEST_DB, verbose: bool = True) -> None:
-        self.database_file_path = f"{get_data_collector_base()}{database_file_name}"
+    def __init__(
+        self, database_file_name: str = CNV_TEST_DB, verbose: bool = True, base_dir: str | None = None
+    ) -> None:
+        self.database_file_path = f"{get_data_collector_base(base_dir=base_dir)}{database_file_name}"
         self.connection_string = f"sqlite:///{self.database_file_path}"
         self.verbose = verbose
         self.engine = create_engine(url=self.connection_string, echo=self.verbose)
