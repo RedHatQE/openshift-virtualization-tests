@@ -3369,6 +3369,7 @@ ssp-operator:
     - servicemonitors
     verbs:
     - create
+    - delete
     - list
     - update
     - watch
