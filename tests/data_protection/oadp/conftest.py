@@ -97,6 +97,7 @@ def rhel_vm_with_data_volume_template(
     request,
     namespace_for_backup,
     snapshot_storage_class_name_scope_module,
+    cluster_common_node_cpu,
 ):
     volume_mode = request.param.get("volume_mode")
     if not is_storage_class_support_volume_mode(
@@ -114,6 +115,7 @@ def rhel_vm_with_data_volume_template(
         wait_running=True,
         volume_mode=volume_mode,
         rhel_image=request.param.get("rhel_image"),
+        cpu_model=cluster_common_node_cpu,
     ) as vm:
         write_file(
             vm=vm,

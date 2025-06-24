@@ -136,6 +136,7 @@ def create_rhel_vm(
     client=None,
     wait_running=True,
     volume_mode=None,
+    cpu_model=None,
 ):
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -164,6 +165,7 @@ def create_rhel_vm(
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        cpu_model=cpu_model,
     ) as vm:
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=True)
