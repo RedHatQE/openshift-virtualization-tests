@@ -34,6 +34,11 @@ from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
+    MIGRATION_POLICY_VM_LABEL,
+    QUARANTINED,
+    TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
+    TIMEOUT_30SEC,
     USED,
 )
 
@@ -363,6 +368,13 @@ class TestVmFreeMemoryBytes:
             working_set=True,
         )
 
+    @pytest.mark.xfail(
+        reason=(
+            f"{QUARANTINED}: The memory rss value from BMs reported in metric is less than 5% from expected. "
+            f"tracked in CNV-64128"
+        ),
+        run=False,
+    )
     @pytest.mark.polarion("CNV-11693")
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
         self,

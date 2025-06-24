@@ -225,6 +225,10 @@ def pytest_addoption(parser):
         action="store_true",
     )
     data_collector_group.addoption(
+        "--data-collector-output-dir",
+        help="Must-gather/alert output dir if `--data-collector` is set and will overwrite `CNV_TESTS_CONTAINER` env.",
+    )
+    data_collector_group.addoption(
         "--pytest-log-file",
         help="Path to pytest log file",
         default="pytest-tests.log",
@@ -295,6 +299,11 @@ def pytest_cmdline_main(config):
                 f"Two OCP images are needed to perform EUS-to-EUS upgrade with --eus-ocp-images."
                 f" Provided images: {eus_ocp_images}"
             )
+
+    if config.getoption("data_collector_output_dir") and not config.getoption("data_collector"):
+        raise ValueError(
+            "Data will not be collected because `--data-collector-output-dir` is set without `--data-collector`"
+        )
 
     # Default value is set as this value is used to set test name in
     # tests.upgrade_params.UPGRADE_TEST_DEPENDENCY_NODE_ID which is needed for pytest dependency marker
@@ -569,7 +578,7 @@ def pytest_runtest_setup(item):
     if item.config.getoption("--data-collector"):
         # before the setup work starts, insert current epoch time into the database
         try:
-            db = Database()
+            db = Database(base_dir=item.config.getoption("--data-collector-output-dir"))
             db.insert_test_start_time(
                 test_name=f"{item.fspath}::{item.name}",
                 start_time=int(datetime.datetime.now().strftime("%s")),
@@ -647,7 +656,7 @@ def pytest_sessionstart(session):
                 utilities.infra.generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
             ]
 
-    data_collector_dict = set_data_collector_values()
+    data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
         data_collector_dict["data_collector_base_directory"],
         ignore_errors=True,
@@ -716,7 +725,7 @@ def pytest_sessionfinish(session, exitstatus):
     reporter = session.config.pluginmanager.get_plugin("terminalreporter")
     reporter.summary_stats()
     if session.config.getoption("--data-collector"):
-        db = Database()
+        db = Database(base_dir=session.config.getoption("--data-collector-output-dir"))
         file_path = db.database_file_path
         LOGGER.info(f"Removing database file path {file_path}")
         os.remove(file_path)
@@ -777,7 +786,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
             LOGGER.warning(f"Must-gather collection would be skipped for exception: {call.excinfo.type}")
         else:
             try:
-                db = Database()
+                db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
                 test_start_time = db.get_test_start_time(test_name=test_name)
             except Exception as db_exception:
                 test_start_time = 0
