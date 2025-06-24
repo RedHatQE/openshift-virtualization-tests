@@ -34,11 +34,7 @@ from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
-    MIGRATION_POLICY_VM_LABEL,
     QUARANTINED,
-    TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_30SEC,
     USED,
 )
 
