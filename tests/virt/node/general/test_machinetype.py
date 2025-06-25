@@ -3,7 +3,7 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
-from tests.virt.node.general.constants import MachineTypesNames
+from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import validate_machine_type
 from utilities.hco import update_hco_annotations
 from utilities.virt import (
