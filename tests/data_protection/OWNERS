@@ -2,6 +2,9 @@ root-approvers: False
 approvers:
   - jpeimer
 reviewers:
+  - duyanyan
+  - jpeimer
+  - josemacassan
   - kgoldbla
   - dalia-frank
   - stesrn
