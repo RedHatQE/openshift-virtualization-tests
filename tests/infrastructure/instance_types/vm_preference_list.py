@@ -41,5 +41,5 @@ VM_PREFERENCES_LIST = {
         "windows.2k25.virtio",
     ],
     "network": ["centos.stream9.dpdk", "rhel.8.dpdk", "rhel.9.dpdk"],
-    "generic": ["legacy", "linux.efi", "linux"],
+    "generic": ["legacy", "linux.efi", "linux", "linux.virtiotransitional"],
 }
