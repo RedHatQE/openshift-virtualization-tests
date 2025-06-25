@@ -310,6 +310,7 @@ def downloaded_cirros_image(tmpdir):
 
 
 @pytest.mark.polarion("CNV-5708")
+@pytest.mark.s390x
 def test_cert_exposure_rotation(
     enabled_ca,
     updated_certconfig_in_hco_cr,
