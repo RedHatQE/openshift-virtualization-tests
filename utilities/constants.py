@@ -95,7 +95,7 @@ class ArchImages:
 
         class Fedora:
             FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
+            FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:41"
             DISK_DEMO = "fedora-cloud-registry-disk-demo"
             DIR = f"{BASE_IMAGES_DIR}/fedora-images"
             DEFAULT_DV_SIZE = "10Gi"
@@ -109,11 +109,93 @@ class ArchImages:
         class Cdi:
             QCOW2_IMG = "cirros-qcow2.img"
             DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+            DEFAULT_DV_SIZE = "1Gi"
+
+    class S390X:  # noqa: N801
+        class Cirros:
+            RAW_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw"
+            RAW_IMG_GZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.gz"
+            RAW_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz"
+            QCOW2_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
+            QCOW2_IMG_GZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.gz"
+            QCOW2_IMG_XZ = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.xz"
+            DISK_DEMO = "fedora-cloud-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
+            DEFAULT_DV_SIZE = "10Gi"
+            DEFAULT_MEMORY_SIZE = "1Gi"
+
+        class Rhel:
+            RHEL7_8_IMG = ""
+            RHEL7_9_IMG = ""
+            RHEL8_0_IMG = ""
+            RHEL8_2_IMG = ""
+            RHEL8_2_EFI_IMG = ""
+            RHEL8_8_IMG = ""
+            RHEL8_9_IMG = ""
+            RHEL8_10_IMG = ""
+            RHEL9_3_IMG = ""
+            RHEL9_4_IMG = ""
+            RHEL9_5_IMG = "rhel-95-s390x.qcow2"
+            RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
+            RHEL9_6_IMG = "rhel-96-s390x.qcow2"
+            RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
+            RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
+            RHEL10_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel10-beta/rhel-guest-image"
+            DIR = f"{BASE_IMAGES_DIR}/rhel-images"
+            DEFAULT_DV_SIZE = "20Gi"
+            DEFAULT_MEMORY_SIZE = "1.5Gi"
+
+        class Windows:
+            WIN10_IMG = ""
+            WIN10_WSL2_IMG = ""
+            WIN10_ISO_IMG = ""
+            WIN2k16_IMG = ""
+            WIN2k19_IMG = ""
+            WIN2k25_IMG = ""
+            WIN2k19_HA_IMG = ""
+            WIN11_IMG = ""
+            WIN11_WSL2_IMG = ""
+            WIN11_ISO_IMG = ""
+            WIN19_RAW = ""
+            WIN2022_IMG = ""
+            WIN2022_ISO_IMG = ""
+            WIN2025_ISO_IMG = ""
+            DIR = f"{BASE_IMAGES_DIR}/windows-images"
+            RAW_DIR = f"{DIR}/raw_images"
+            UEFI_WIN_DIR = f"{DIR}/uefi"
+            HA_DIR = f"{DIR}/HA-images"
+            ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
+            ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
+            ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
+            ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
+            DEFAULT_DV_SIZE = "70Gi"
+            DEFAULT_MEMORY_SIZE = "8Gi"
+            DEFAULT_MEMORY_SIZE_WSL = "12Gi"
+            DEFAULT_CPU_CORES = 4
+            DEFAULT_CPU_THREADS = 2
+
+        class Fedora:
+            FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
+            FEDORA_CONTAINER_IMAGE = "quay.io/kcrane/qe-cnv-tests-fedora:41"
+            DISK_DEMO = "fedora-cloud-registry-disk-demo"
+            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
+            DEFAULT_DV_SIZE = "10Gi"
+            DEFAULT_MEMORY_SIZE = "1Gi"
+
+        class CentOS:
+            CENTOS_STREAM_9_IMG = ""
+            DIR = f"{BASE_IMAGES_DIR}/centos-images"
+            DEFAULT_DV_SIZE = "15Gi"
+
+        class Cdi:
+            QCOW2_IMG = "Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2"
+            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
+            DEFAULT_DV_SIZE = "10Gi"
 
 
 def get_test_images_arch_class() -> Any:
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
-    if arch not in ("x86_64",):
+    if arch not in ("x86_64", "s390x"):
         raise ValueError(f"{arch} architecture in not supported")
     return getattr(ArchImages, arch.title())
 
@@ -127,6 +209,8 @@ VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
+S390X = "s390x"
+
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
