@@ -79,6 +79,7 @@ def uploaded_cirros_dv(
 
 
 @pytest.mark.polarion("CNV-8635")
+@pytest.mark.s390x
 def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_for_fs_overhead_test):
     vm_metadata = vm_for_fs_overhead_test.data_volume_template["metadata"]
     assert_fs_overhead_added(
@@ -86,17 +87,18 @@ def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_
             pvc=PersistentVolumeClaim(name=vm_metadata["name"], namespace=vm_metadata["namespace"])
         ),
         requested_size=bitmath.GiB(
-            int(vm_for_fs_overhead_test.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"][0])
+            int(vm_for_fs_overhead_test.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"].replace("Gi",""))
         ),
     )
 
 
 @pytest.mark.polarion("CNV-8637")
+@pytest.mark.s390x
 def test_upload_dv_with_specify_fs_overhead(
     updated_fs_overhead_20_with_hco,
     uploaded_cirros_dv,
 ):
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
-        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE[0])),
+        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE.replace("Gi",""))),
     )

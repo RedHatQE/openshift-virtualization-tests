@@ -1195,7 +1195,7 @@ def login_with_token(api_address, token):
     return login_to_account(login_command=login_command)
 
 
-def login_with_user_password(api_address, user, password=None):
+def login_with_user_password(api_address, user, password=None,insecure_skip_tls=True)):
     """
     Log in to an OpenShift cluster using a username and password.
 
@@ -1210,6 +1210,8 @@ def login_with_user_password(api_address, user, password=None):
     login_command = f"oc login {api_address} -u {user}"
     if password:
         login_command += f" -p {password}"
+    if insecure_skip_tls and not user.startswith("system:"):
+        login_command += " --insecure-skip-tls-verify"
     return login_to_account(login_command=login_command)
 
 

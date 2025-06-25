@@ -138,6 +138,7 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_delete_pvc_after_successful_import(
     data_volume_multi_storage_scope_function,
 ):
@@ -158,6 +159,7 @@ def test_delete_pvc_after_successful_import(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-876")
+@pytest.mark.s390x
 def test_invalid_url(dv_non_exist_url):
     dv_non_exist_url.wait_for_status(
         status=DataVolume.Status.IMPORT_IN_PROGRESS,
@@ -173,6 +175,7 @@ def test_invalid_url(dv_non_exist_url):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-674")
+@pytest.mark.s390x
 def test_empty_url(namespace, storage_class_name_scope_module):
     with pytest.raises(UnprocessibleEntityError):
         with create_dv(
@@ -200,6 +203,7 @@ def test_empty_url(namespace, storage_class_name_scope_module):
 )
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2145")
+@pytest.mark.s390x
 def test_successful_import_archive(
     skip_block_volumemode_scope_module,
     running_pod_with_dv_pvc,
@@ -233,6 +237,7 @@ def test_successful_import_archive(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_successful_import_image(
     running_pod_with_dv_pvc,
     dv_from_http_import,
@@ -264,6 +269,7 @@ def test_successful_import_image(
     indirect=True,
 )
 @pytest.mark.sno
+@pytest.mark.s390x
 def test_successful_import_secure_archive(
     skip_block_volumemode_scope_module, internal_http_configmap, running_pod_with_dv_pvc
 ):
@@ -286,6 +292,7 @@ def test_successful_import_secure_archive(
 )
 @pytest.mark.sno
 @pytest.mark.gating
+@pytest.mark.s390x
 def test_successful_import_secure_image(internal_http_configmap, running_pod_with_dv_pvc):
     assert_disk_img(pod=running_pod_with_dv_pvc)
 
@@ -307,6 +314,7 @@ def test_successful_import_secure_image(internal_http_configmap, running_pod_wit
     ],
     ids=["import_basic_auth_archive", "import_basic_auth_kubevirt"],
 )
+@pytest.mark.s390x
 def test_successful_import_basic_auth(
     namespace,
     storage_class_matrix__module__,
@@ -359,6 +367,7 @@ def test_successful_import_basic_auth(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_wrong_content_type(
     admin_client,
     dv_from_http_import,
@@ -399,6 +408,7 @@ def test_wrong_content_type(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_unpack_compressed(
     admin_client,
     dv_from_http_import,
@@ -423,6 +433,7 @@ def test_unpack_compressed(
     indirect=True,
 )
 @pytest.mark.sno
+@pytest.mark.s390x
 def test_certconfigmap(internal_http_configmap, running_pod_with_dv_pvc):
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=1)
 
@@ -454,6 +465,7 @@ def test_certconfigmap(internal_http_configmap, running_pod_with_dv_pvc):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_certconfigmap_incorrect_cert(
     admin_client,
     https_config_map,
@@ -484,6 +496,7 @@ def test_certconfigmap_incorrect_cert(
 )
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2815")
+@pytest.mark.s390x
 def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_function):
     with pytest.raises(TimeoutExpiredError):
         samples = TimeoutSampler(
@@ -514,6 +527,7 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
         ),
     ],
 )
+@pytest.mark.s390x
 def test_successful_concurrent_blank_disk_import(
     dv_list_created_by_multiprocess,
     vm_list_created_by_multiprocess,
@@ -530,6 +544,7 @@ def test_successful_concurrent_blank_disk_import(
 )
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2004")
+@pytest.mark.s390x
 def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_function):
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
 
@@ -539,8 +554,8 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     ("size", "unit", "dv_name"),
     [
         pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
-        pytest.param(1, "G", "cnv-6532", marks=(pytest.mark.polarion("CNV-6532"))),
-        pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
+        pytest.param(6, "G", "cnv-6532", marks=(pytest.mark.polarion("CNV-6532"),pytest.mark.s390x)),
+        pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"),pytest.mark.s390x)),
     ],
 )
 def test_vmi_image_size(
@@ -621,12 +636,13 @@ def test_vmi_image_size(
     indirect=True,
 )
 @pytest.mark.sno
+@pytest.mark.s390x
 def test_disk_falloc(internal_http_configmap, dv_from_http_import):
     dv_from_http_import.wait_for_dv_success()
     with create_vm_from_dv(dv=dv_from_http_import) as vm_dv:
         with console.Console(vm=vm_dv) as vm_console:
             LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/zero of=file bs=1M")
+            vm_console.sendline("dd if=/dev/urandom of=file bs=64M")
             vm_console.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
 
 
@@ -714,12 +730,14 @@ def test_successful_vm_from_imported_dv_windows(
 
 @pytest.mark.polarion("CNV-4032")
 @pytest.mark.sno
+@pytest.mark.s390x
 def test_disk_image_after_import(skip_block_volumemode_scope_module, cirros_dv_unprivileged):
     create_vm_and_verify_image_permission(dv=cirros_dv_unprivileged)
 
 
 @pytest.mark.polarion("CNV-4724")
 @pytest.mark.sno
+@pytest.mark.s390x
 def test_dv_api_version_after_import(cirros_dv_unprivileged):
     assert (
         cirros_dv_unprivileged.api_version
@@ -728,6 +746,7 @@ def test_dv_api_version_after_import(cirros_dv_unprivileged):
 
 
 @pytest.mark.polarion("CNV-5509")
+@pytest.mark.s390x
 def test_importer_pod_annotation(dv_with_annotation, linux_nad):
     # verify "k8s.v1.cni.cncf.io/networks" can pass to the importer pod
     assert dv_with_annotation.get(f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks") == linux_nad.name

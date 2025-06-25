@@ -38,6 +38,7 @@ pytestmark = pytest.mark.usefixtures(
 
 
 @pytest.mark.polarion("CNV-5781")
+@pytest.mark.s390x
 def test_snapshot_feature_gate_present(kubevirt_feature_gates):
     """
     This test will ensure that 'Snapshot' feature gate is present in KubeVirt ConfigMap.
@@ -111,6 +112,7 @@ class TestRestoreSnapshots:
         ],
         indirect=["cirros_vm_name", "snapshots_with_content"],
     )
+    @pytest.mark.s390x
     def test_restore_snapshots(
         self,
         cirros_vm_for_snapshot,
@@ -146,6 +148,7 @@ class TestRestoreSnapshots:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_restore_snapshot_while_vm_is_running(
         self,
         cirros_vm_for_snapshot,
@@ -193,6 +196,7 @@ class TestRestoreSnapshots:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_fail_restore_vm_with_unprivileged_client(
         self,
         cirros_vm_for_snapshot,
@@ -225,6 +229,7 @@ class TestRestoreSnapshots:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_restore_same_snapshot_twice(
         self,
         cirros_vm_for_snapshot,
@@ -263,6 +268,7 @@ class TestRestoreSnapshots:
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_remove_vm_with_snapshots(
     cirros_vm_for_snapshot,
     snapshots_with_content,
@@ -284,6 +290,7 @@ def test_remove_vm_with_snapshots(
     ],
     indirect=["cirros_vm_name", "snapshots_with_content"],
 )
+@pytest.mark.s390x
 def test_remove_snapshots_while_vm_is_running(
     cirros_vm_for_snapshot,
     snapshots_with_content,
@@ -323,6 +330,7 @@ def test_remove_snapshots_while_vm_is_running(
     ],
     indirect=["namespace"],
 )
+@pytest.mark.s390x
 def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_client, resource, error_msg):
     with pytest.raises(
         ApiException,
@@ -343,6 +351,7 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     cirros_vm_for_snapshot,
     unprivileged_client,
@@ -366,6 +375,7 @@ def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     cirros_vm_for_snapshot,
     permissions_for_dv,
@@ -418,6 +428,7 @@ def test_online_windows_vm_successful_restore(
     ],
     indirect=True,
 )
+
 def test_write_to_file_while_snapshot(
     windows_vm_for_snapshot,
     windows_snapshot,
