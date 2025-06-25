@@ -157,7 +157,6 @@ from utilities.infra import (
     name_prefix,
     run_virtctl_command,
     scale_deployment_replicas,
-    verify_image_info,
     wait_for_pods_deletion,
 )
 from utilities.network import (
@@ -2269,19 +2268,6 @@ def common_vm_preference_param_dict(request):
     if request.param.get("cpu_spread_option"):
         common_preference_dict.setdefault("cpu", {}).update({"spreadOption": request.param.get("cpu_spread_option")})
     return common_preference_dict
-
-
-@pytest.fixture(scope="session")
-def ocp_qe_art_image_url(ocp_current_version, nodes_cpu_architecture, generated_pulled_secret):
-    ocp_qe_image = (
-        f"quay.io/openshift-qe-optional-operators/aosqe-index:v{ocp_current_version.major}.{ocp_current_version.minor}"
-    )
-    verify_image_info(
-        image_url=ocp_qe_image,
-        generated_pulled_secret=generated_pulled_secret,
-        nodes_cpu_architecture=nodes_cpu_architecture,
-    )
-    return ocp_qe_image
 
 
 @pytest.fixture(scope="module")

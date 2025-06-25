@@ -14,7 +14,6 @@ from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.image_content_source_policy import ImageContentSourcePolicy
 from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
-from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
@@ -469,20 +468,6 @@ def get_install_plan_from_subscription(subscription):
             f"Subscription: {subscription.name}, did not get updated with install plan: {pformat(subscription)}"
         )
         raise
-
-
-def wait_for_operator_install(admin_client, install_plan_name, namespace_name, subscription_name):
-    install_plan = InstallPlan(
-        client=admin_client,
-        name=install_plan_name,
-        namespace=namespace_name,
-    )
-    install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_5MIN)
-    wait_for_csv_successful_state(
-        admin_client=admin_client,
-        namespace_name=namespace_name,
-        subscription_name=subscription_name,
-    )
 
 
 def wait_for_csv_successful_state(admin_client, namespace_name, subscription_name):
