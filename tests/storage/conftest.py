@@ -61,6 +61,7 @@ from utilities.storage import (
     create_cirros_dv_for_snapshot_dict,
     data_volume,
     get_downloaded_artifact,
+    get_test_artifact_server_url,
     sc_volume_binding_mode_is_wffc,
     write_file,
 )
@@ -591,3 +592,18 @@ def storage_class_name_scope_module(storage_class_matrix__module__):
 @pytest.fixture(scope="session")
 def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+
+
+@pytest.fixture(scope="session")
+def fedora_latest_os_params():
+    """This fixture is needed as during collection pytest_testconfig is empty.
+    os_params or any globals using py_config in conftest cannot be used.
+    """
+    if latest_fedora_dict := py_config.get("latest_fedora_os_dict"):
+        return {
+            "fedora_image_path": f"{get_test_artifact_server_url()}{latest_fedora_dict['image_path']}",
+            "fedora_dv_size": latest_fedora_dict["dv_size"],
+            "fedora_template_labels": latest_fedora_dict["template_labels"],
+        }
+
+    raise ValueError("Failed to get latest Fedora OS parameters")
