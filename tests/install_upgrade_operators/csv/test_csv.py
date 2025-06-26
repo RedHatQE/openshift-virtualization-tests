@@ -1,6 +1,7 @@
 from base64 import b64decode
 
 import pytest
+from ocp_resources.cluster_service_version import ClusterServiceVersion
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
@@ -22,6 +23,14 @@ EXPECTED_LINK_MAP = {
     "OpenShift Virtualization": "https://www.openshift.com/learn/topics/virtualization/",
     "KubeVirt Project": "https://kubevirt.io",
 }
+CSV_INFRASTRUCTURE_FEATURES_ANNOTATION = (
+    f"{ClusterServiceVersion.ApiGroup.OPERATORS_OPENSHIFT_IO}/infrastructure-features"
+)
+
+
+@pytest.fixture(scope="session")
+def csv_infrastructure_features_annotation_value(csv_scope_session):
+    return csv_scope_session.instance.metadata.annotations.get(CSV_INFRASTRUCTURE_FEATURES_ANNOTATION)
 
 
 @pytest.mark.polarion("CNV-4456")
@@ -82,8 +91,13 @@ def test_csv_properties(csv_scope_session):
 
 
 @pytest.mark.parametrize(
-    "expected_value",
+    "expected_feature",
     [
+        pytest.param(
+            "disconnected",
+            marks=pytest.mark.polarion("CNV-5840"),
+            id="test_csv_disconnected_annotation",
+        ),
         pytest.param(
             "fips",
             marks=pytest.mark.polarion("CNV-7297"),
@@ -96,12 +110,12 @@ def test_csv_properties(csv_scope_session):
         ),
     ],
 )
-def test_csv_annotations(csv_scope_session, csv_annotation, expected_value):
+def test_csv_infrastructure_features(csv_scope_session, csv_infrastructure_features_annotation_value, expected_feature):
     """
     Validates badges have been added to csv's operators.openshift.io/infrastructure-features annotation
     """
-    assert expected_value in csv_annotation, (
+    assert expected_feature in csv_infrastructure_features_annotation_value, (
         f"For csv: {csv_scope_session.name} annotation "
-        f"{csv_scope_session.ApiGroup.OPERATORS_OPENSHIFT_IO}/infrastructure-features:"
-        f" {csv_annotation} does not contain expected value: {expected_value}"
+        f"{CSV_INFRASTRUCTURE_FEATURES_ANNOTATION}"
+        f" {csv_infrastructure_features_annotation_value} does not contain expected value: {expected_feature}"
     )
