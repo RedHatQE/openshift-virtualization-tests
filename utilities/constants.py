@@ -135,7 +135,9 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
+            # TODO: Replace with quay.io/openshift-cnv/qe-cnv-tests-fedora-s390x:41 once changes discussed at
+            # https://github.com/RedHatQE/openshift-virtualization-tests/pull/1148#issuecomment-3003921765 are done.
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
