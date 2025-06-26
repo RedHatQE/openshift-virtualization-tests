@@ -560,9 +560,13 @@ def pytest_runtest_makereport(item, call):
         elif fail_error := re.search(r"(Failed): (.*?)\n", report.longreprtext):
             setattr(report, SETUP_ERROR, fail_error.group(2))
 
-        elif report.failed and getattr(report.longrepr, "reprcrash", None):
-            if message := getattr(report.longrepr, "message", None):
-                setattr(report, SETUP_ERROR, message)
+        elif report.failed:
+            if reprcrash := getattr(report.longrepr, "reprcrash", None):
+                if message := getattr(report.longrepr, "message", None):
+                    setattr(report, SETUP_ERROR, message)
+
+                elif message := getattr(reprcrash, "message", None):
+                    setattr(report, SETUP_ERROR, message)
 
 
 def pytest_fixture_setup(fixturedef, request):
