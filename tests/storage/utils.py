@@ -23,7 +23,6 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_2MIN,
@@ -44,7 +43,6 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     get_containers_for_pods_with_pvc,
-    get_test_artifact_server_url,
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -420,6 +418,7 @@ def create_fedora_dv(
     namespace,
     name,
     storage_class,
+    fedora_latest_os_params,
     access_modes=None,
     volume_mode=None,
     client=None,
@@ -428,7 +427,7 @@ def create_fedora_dv(
     with create_dv(
         dv_name=f"dv-{name}",
         namespace=namespace,
-        url=f"{get_test_artifact_server_url()}{FEDORA_LATEST.get('image_path')}",
+        url=fedora_latest_os_params["fedora_image_path"],
         size=dv_size,
         storage_class=storage_class,
         access_modes=access_modes,
