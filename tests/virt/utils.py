@@ -481,3 +481,29 @@ def check_node_for_missing_mdev_bus(node_and_shared_list):
                 return
     except TimeoutExpiredError:
         shared_list.append(node.name)
+
+
+def get_allocatable_memory_per_node(schedulable_nodes):
+    """
+    Gets allocatable memory for each schedulable node.
+
+    A node's allocatable memory is preferred, but if it's not set,
+    the capacity value is used as a fallback.
+
+    Args:
+        schedulable_nodes (list): List of node objects`.
+
+    Returns:
+        dict: A dictionary mapping each node to its allocatable memory.
+    """
+    nodes_memory = {}
+    for node in schedulable_nodes:
+        # memory format does not include the Bytes suffix(e.g: 23514144Ki)
+        memory = getattr(
+            node.instance.status.allocatable,
+            "memory",
+            node.instance.status.capacity.memory,
+        )
+        nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
+        LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
+    return nodes_memory
