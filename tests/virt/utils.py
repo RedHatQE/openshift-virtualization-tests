@@ -41,7 +41,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import ExecCommandOnPod, get_pod_by_name_prefix
+from utilities.infra import get_pod_by_name_prefix
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
@@ -465,22 +465,6 @@ def verify_gpu_device_exists_in_vm(vm, supported_gpu_device):
         assert get_num_gpu_devices_in_rhel_vm(vm=vm) == 1, (
             f"GPU device {fetch_gpu_device_name_from_vm_instance(vm=vm)} does not exist in rhel vm {vm.name}"
         )
-
-
-def check_node_for_missing_mdev_bus(node_and_shared_list):
-    node, shared_list, workers_utility_pods = node_and_shared_list
-    pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
-            sleep=TIMEOUT_5SEC,
-            func=pod_exec.exec,
-            command="ls /sys/class | grep mdev_bus || true",
-        ):
-            if sample:
-                return
-    except TimeoutExpiredError:
-        shared_list.append(node.name)
 
 
 def get_allocatable_memory_per_node(schedulable_nodes):
