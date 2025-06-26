@@ -1,5 +1,6 @@
 import pytest
 
+from tests.observability.metrics.constants import KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART
 from tests.observability.metrics.utils import expected_metric_labels_and_values, get_metric_labels_non_empty_value
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import CDI_OPERATOR
@@ -65,4 +66,15 @@ def test_kubevirt_cdi_operator_up(
         prometheus=prometheus,
         expected_value="0",
         metric_name="kubevirt_cdi_operator_up",
+    )
+
+
+@pytest.mark.polarion("CNV-10019")
+def test_kubevirt_cdi_import_pods_high_restart(
+    prometheus, metric_cdi_import_pods_high_restart_initial_value, created_fake_data_volume_resource
+):
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART,
+        expected_value=str(metric_cdi_import_pods_high_restart_initial_value + 1),
     )

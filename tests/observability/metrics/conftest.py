@@ -25,6 +25,7 @@ from tests.observability.metrics.constants import (
     BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
+    KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
@@ -1144,3 +1145,24 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
         status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
+
+
+@pytest.fixture()
+def created_fake_data_volume_resource(namespace, admin_client):
+    with DataVolume(
+        name="fake-dv",
+        namespace=namespace.name,
+        url="http://broken-link.test",
+        source="http",
+        size=Images.Rhel.DEFAULT_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        bind_immediate_annotation=True,
+        api_name="storage",
+        client=admin_client,
+    ) as dv:
+        yield dv
+
+
+@pytest.fixture()
+def metric_cdi_import_pods_high_restart_initial_value(prometheus):
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART))
