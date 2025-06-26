@@ -66,6 +66,7 @@ def disk_options_vm(
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_class,",
     [
@@ -120,8 +121,8 @@ class TestRHELIOOptions:
         pytest.param(
             {
                 "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
                 "storage_class": STORAGE_CLASS,
             },
         ),

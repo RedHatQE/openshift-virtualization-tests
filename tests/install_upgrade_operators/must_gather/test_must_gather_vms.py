@@ -249,9 +249,9 @@ class TestMustGatherVmDetails:
             pytest.param(
                 {
                     "dv_name": "dv-fedora",
-                    "image": FEDORA_LATEST["image_path"],
+                    "image": FEDORA_LATEST.get("image_path"),
                     "storage_class": py_config["default_storage_class"],
-                    "dv_size": FEDORA_LATEST["dv_size"],
+                    "dv_size": FEDORA_LATEST.get("dv_size"),
                 },
                 marks=(pytest.mark.polarion("CNV-10515")),
                 id="test_blockjob",

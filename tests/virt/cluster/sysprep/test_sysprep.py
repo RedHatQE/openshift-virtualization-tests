@@ -253,8 +253,8 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
         pytest.param(
             {
                 "dv_name": WINDOWS_2019_OS,
-                "image": WINDOWS_2019["image_path"],
-                "dv_size": WINDOWS_2019["dv_size"],
+                "image": WINDOWS_2019.get("image_path"),
+                "dv_size": WINDOWS_2019.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
             {
