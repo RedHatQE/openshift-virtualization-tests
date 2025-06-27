@@ -428,7 +428,6 @@ def test_online_windows_vm_successful_restore(
     ],
     indirect=True,
 )
-
 def test_write_to_file_while_snapshot(
     windows_vm_for_snapshot,
     windows_snapshot,
