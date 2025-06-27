@@ -43,6 +43,7 @@ class TestStorageClassMigrationAtoB:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_vm_storage_class_migration_a_to_b_running_vms(
         self,
         source_storage_class,
@@ -63,6 +64,7 @@ class TestStorageClassMigrationAtoB:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b_running_vms"])
     @pytest.mark.polarion("CNV-11504")
+    @pytest.mark.s390x
     def test_migrate_vms_after_storage_migration(self, booted_vms_for_storage_class_migration):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
@@ -106,6 +108,7 @@ class TestStorageClassMigrationAtoB:
 )
 class TestStorageClassMigrationBtoA:
     @pytest.mark.polarion("CNV-11501")
+    @pytest.mark.s390x
     def test_vm_storage_class_migration_b_to_a_with_running_and_stopped_vms(
         self,
         source_storage_class,
