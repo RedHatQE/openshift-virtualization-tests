@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 @pytest.fixture()
 def crds(admin_client):
     crds_to_check = []
-    bug_status = is_jira_open(jira_id="CNV-58119")
+    bug_status = is_jira_open(jira_id="CNV-64424")
     for crd in CustomResourceDefinition.get(dyn_client=admin_client):
         if bug_status and crd.name in MTV_VOLUME_POPULATOR_CRDS:
             continue
