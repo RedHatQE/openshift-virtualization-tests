@@ -87,7 +87,11 @@ def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_
             pvc=PersistentVolumeClaim(name=vm_metadata["name"], namespace=vm_metadata["namespace"])
         ),
         requested_size=bitmath.GiB(
-            int(vm_for_fs_overhead_test.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"].replace("Gi",""))
+            int(
+                vm_for_fs_overhead_test.data_volume_template["spec"]["storage"]["resources"]["requests"][
+                    "storage"
+                ].replace("Gi", "")
+            )
         ),
     )
 
@@ -100,5 +104,5 @@ def test_upload_dv_with_specify_fs_overhead(
 ):
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
-        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE.replace("Gi",""))),
+        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE.replace("Gi", ""))),
     )

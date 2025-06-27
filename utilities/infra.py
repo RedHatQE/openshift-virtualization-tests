@@ -1195,7 +1195,7 @@ def login_with_token(api_address, token):
     return login_to_account(login_command=login_command)
 
 
-def login_with_user_password(api_address, user, password=None,insecure_skip_tls=True)):
+def login_with_user_password(api_address, user, password=None, insecure_skip_tls=True):
     """
     Log in to an OpenShift cluster using a username and password.
 
