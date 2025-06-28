@@ -83,6 +83,7 @@ class TestMustGatherClusterWithVMs:
         ],
         indirect=["resource_type"],
     )
+    @pytest.mark.s390x
     def test_resource_type(
         self,
         admin_client,
@@ -262,6 +263,7 @@ class TestMustGatherVmDetails:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_blockjob_file_collected_from_virt_launcher(
         self,
         data_volume_scope_class,
@@ -276,6 +278,7 @@ class TestMustGatherVmDetails:
         )
 
     @pytest.mark.polarion("CNV-10243")
+    @pytest.mark.s390x
     def test_must_gather_and_vm_same_node(
         self,
         must_gather_vm,
@@ -291,6 +294,7 @@ class TestMustGatherVmDetails:
 class TestGuestConsoleLog:
     @pytest.mark.usefixtures("updated_disable_serial_console_log_false", "must_gather_vm_scope_class")
     @pytest.mark.polarion("CNV-10630")
+    @pytest.mark.s390x
     def test_guest_console_logs(
         self,
         must_gather_vm_scope_class,
@@ -305,6 +309,7 @@ class TestGuestConsoleLog:
 @pytest.mark.sno
 class TestMustGatherVmLongNameDetails:
     @pytest.mark.polarion("CNV-9233")
+    @pytest.mark.s390x
     def test_data_collected_from_virt_launcher_long(
         self,
         must_gather_long_name_vm,
@@ -330,6 +335,7 @@ class TestNoMultipleFilesCollected:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_no_multiple_empty_files_collected_from_must_gather_migrated_vm(
         self,
         skip_if_no_common_cpu,
@@ -353,6 +359,7 @@ class TestNoMultipleFilesCollected:
 @pytest.mark.sno
 class TestControllerRevisionCollected:
     @pytest.mark.polarion("CNV-10978")
+    @pytest.mark.s390x
     def test_controller_revision_collected(
         self,
         rhel_vm_with_cluster_instance_type_and_preference,

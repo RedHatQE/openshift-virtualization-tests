@@ -62,6 +62,7 @@ def updated_hco_cr_custom_template_scope_class(
 class TestCustomTemplates:
     @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-8707")
+    @pytest.mark.s390x
     def test_custom_template_status(self, hyperconverged_status_templates_scope_function):
         custom_template_name = CUSTOM_CRON_TEMPLATE["metadata"]["name"]
         custom_templates_name = [
@@ -77,6 +78,7 @@ class TestCustomTemplates:
 
     @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7884")
+    @pytest.mark.s390x
     def test_add_custom_data_import_cron_template(
         self,
         hyperconverged_status_templates_scope_function,
@@ -89,6 +91,7 @@ class TestCustomTemplates:
 
     @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7914")
+    @pytest.mark.s390x
     def test_add_custom_data_import_cron_template_disable_spec(
         self,
         admin_client,

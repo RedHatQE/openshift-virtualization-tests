@@ -178,6 +178,7 @@ class TestDefaultCommonTemplates:
             pytest.param("ssp_spec_templates_scope_function", marks=pytest.mark.polarion("CNV-11677")),
         ],
     )
+    @pytest.mark.s390x
     def test_custom_namespace_added_to_templates_metadata(
         self,
         request,
@@ -197,6 +198,7 @@ class TestDefaultCommonTemplates:
             pytest.param(DataSource, DataSource.Condition.READY, marks=pytest.mark.polarion("CNV-11476")),
         ],
     )
+    @pytest.mark.s390x
     def test_resources_in_custom_ns(
         self,
         admin_client,
@@ -221,6 +223,7 @@ class TestDefaultCommonTemplates:
             )
 
     @pytest.mark.polarion("CNV-11477")
+    @pytest.mark.s390x
     def test_boot_sources_not_reconciled_in_default_namespace(self, admin_client, golden_images_namespace):
         verify_resources_not_reconciled(
             resources_to_verify=[DataVolume, VolumeSnapshot],
@@ -230,6 +233,7 @@ class TestDefaultCommonTemplates:
 
 
 @pytest.mark.polarion("CNV-11631")
+@pytest.mark.s390x
 def test_non_existent_namespace(
     admin_client,
     hco_namespace,

@@ -60,6 +60,7 @@ def skip_no_reencrypt_route(upload_proxy_route):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2192")
+@pytest.mark.s390x
 def test_successful_virtctl_upload_no_url(namespace, tmpdir):
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
@@ -109,6 +110,7 @@ def test_successful_virtctl_upload_no_route(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2217")
+@pytest.mark.s390x
 def test_image_upload_with_overridden_url(
     namespace,
     tmpdir,
@@ -131,6 +133,7 @@ def test_image_upload_with_overridden_url(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3031")
+@pytest.mark.s390x
 def test_virtctl_image_upload_with_ca(
     enabled_ca,
     skip_no_reencrypt_route,
@@ -155,6 +158,7 @@ def test_virtctl_image_upload_with_ca(
 @pytest.mark.smoke
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3724")
+@pytest.mark.s390x
 def test_virtctl_image_upload_dv(
     skip_if_sc_volume_binding_mode_is_wffc,
     download_image,
@@ -195,6 +199,7 @@ def test_virtctl_image_upload_dv(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_dv_image(
     data_volume_multi_storage_scope_function,
     storage_class_name_scope_function,
@@ -231,6 +236,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-3728")
+@pytest.mark.s390x
 def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_scope_module):
     """
     Check that virtctl can create a new PVC and upload an image to it
@@ -252,6 +258,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3725")
+@pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_class_name_scope_module):
     """
     Check that virtctl is able to upload a local disk image to an existing DataVolume
@@ -308,6 +315,7 @@ def empty_pvc(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3727")
+@pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_pvc(
     empty_pvc,
     download_image,
@@ -342,6 +350,7 @@ def test_virtctl_image_upload_with_exist_pvc(
 
 
 @pytest.mark.polarion("CNV-3729")
+@pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_pvc_image(
     download_image,
     namespace,
@@ -384,6 +393,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
 
 
 @pytest.mark.polarion("CNV-3730")
+@pytest.mark.s390x
 def test_virtctl_image_upload_dv_with_exist_pvc(
     empty_pvc,
     download_image,
@@ -447,6 +457,7 @@ def test_successful_vm_from_uploaded_dv_windows(
 
 
 @pytest.mark.polarion("CNV-4033")
+@pytest.mark.s390x
 def test_disk_image_after_upload_virtctl(
     skip_block_volumemode_scope_module,
     unprivileged_client,
@@ -487,6 +498,7 @@ def test_disk_image_after_upload_virtctl(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):

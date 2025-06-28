@@ -8,6 +8,7 @@ from utilities.network import assert_ping_successful
 class TestMacSpoof:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-7264")
+    @pytest.mark.s390x
     def test_macspoof_prevent_connectivity(
         self,
         linux_bridge_attached_vma,

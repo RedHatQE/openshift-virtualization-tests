@@ -51,6 +51,7 @@ class TestL2LinuxBridge:
     """
 
     @pytest.mark.polarion("CNV-2285")
+    @pytest.mark.s390x
     def test_connectivity_l2_bridge(
         self,
         configured_l2_bridge_vm_a,
@@ -66,6 +67,7 @@ class TestL2LinuxBridge:
         )
 
     @pytest.mark.polarion("CNV-2282")
+    @pytest.mark.s390x
     def test_dhcp_broadcast(
         self,
         configured_l2_bridge_vm_a,
@@ -89,6 +91,7 @@ class TestL2LinuxBridge:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-2284")
+    @pytest.mark.s390x
     def test_custom_eth_type(
         self,
         configured_l2_bridge_vm_a,
@@ -107,6 +110,7 @@ class TestL2LinuxBridge:
         assert f"Successful connections: {num_of_packets}" in out
 
     @pytest.mark.polarion("CNV-2674")
+    @pytest.mark.s390x
     def test_icmp_multicast(
         self,
         configured_l2_bridge_vm_a,

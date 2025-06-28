@@ -88,6 +88,7 @@ def cnv_resources(hco_namespace):
 
 
 @pytest.mark.polarion("CNV-10307")
+@pytest.mark.s390x
 def test_relationship_labels_all_cnv_resources(
     ocp_resources_submodule_list, admin_client, cnv_resources, hco_namespace
 ):

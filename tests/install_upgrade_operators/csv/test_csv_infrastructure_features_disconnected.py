@@ -6,6 +6,7 @@ pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.mark.polarion("CNV-5840")
+@pytest.mark.s390x
 def test_csv_infrastructure_features_disconnected(csv_annotation):
     """
     In the Cluster Service Version annotations for Infrastructure Feature disconnected looks like:

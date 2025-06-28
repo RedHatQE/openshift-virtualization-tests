@@ -109,6 +109,7 @@ class TestOperatorsModify:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_modify_cdi_cr(
         self,
         admin_client,
@@ -282,6 +283,7 @@ class TestOperatorsModify:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_modify_kubevirt_cr(
         self,
         admin_client,
@@ -370,6 +372,7 @@ class TestOperatorsModify:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_modify_cnao_cr(
         self,
         admin_client,

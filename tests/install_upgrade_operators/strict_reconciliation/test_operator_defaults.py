@@ -118,6 +118,7 @@ class TestOperatorsDefaults:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_verify_expected_config_in_crs(
         self,
         expected,
@@ -160,6 +161,7 @@ class TestOperatorsDefaults:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_no_defaults_in_cr_for_permittedhostdevices_and_obsoletecpu(
         self,
         expected_to_be_absent,
@@ -169,6 +171,7 @@ class TestOperatorsDefaults:
         assert expected_to_be_absent not in str(cr_func_map[resource_kind_str]).lower()
 
     @pytest.mark.polarion("CNV-7312")
+    @pytest.mark.s390x
     def test_bandwidthpermigration_does_not_exist_in_hco_cr(
         self,
         hco_spec,

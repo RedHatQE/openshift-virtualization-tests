@@ -105,6 +105,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
     ],
     indirect=["resource_crypto_policy_settings"],
 )
+@pytest.mark.s390x
 def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
     expected_result = CRYPTO_POLICY_EXPECTED_DICT[TLS_INTERMEDIATE_POLICY].get(resource_type)
     assert resource_crypto_policy_settings == expected_result, (
@@ -114,6 +115,7 @@ def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
 
 
 @pytest.mark.polarion("CNV-9266")
+@pytest.mark.s390x
 def test_default_crypto_policy_check_connectivity(
     workers, workers_utility_pods, services_to_check_connectivity, fips_enabled_cluster
 ):
