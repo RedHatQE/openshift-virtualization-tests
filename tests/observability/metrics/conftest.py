@@ -14,6 +14,7 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
@@ -88,6 +89,7 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
+    TIMEOUT_20MIN,
     TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
@@ -305,7 +307,7 @@ def error_state_vm(unique_namespace, unprivileged_client):
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
-        yield
+        yield vm
 
 
 @pytest.fixture(scope="module")
@@ -1056,7 +1058,34 @@ def windows_vm_for_test(namespace, unprivileged_client):
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
+        running_vm(vm=vm)
         yield vm
+
+
+@pytest.fixture()
+def windows_vm_for_test_in_error_state(windows_vm_for_test):
+    with ResourceEditor(
+        patches={
+            windows_vm_for_test: {
+                "spec": {
+                    "template": {"spec": {"nodeSelector": get_node_selector_dict(node_selector="non-existent-node")}}
+                }
+            }
+        }
+    ):
+        windows_vm_for_test.restart()
+        windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
+        yield windows_vm_for_test
+    windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING)
+
+
+@pytest.fixture()
+def windows_vm_with_low_bandwidth_migration_policy(windows_vm_for_test):
+    with ResourceEditor(
+        patches={windows_vm_for_test: {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}}
+    ):
+        windows_vm_for_test.restart()
+        yield windows_vm_for_test
 
 
 @pytest.fixture(scope="session")
@@ -1145,6 +1174,104 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
         status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
+
+
+@pytest.fixture()
+def stopped_vm_metric_1(vm_metric_1):
+    vm_metric_1.stop(wait=True)
+
+
+@pytest.fixture()
+def stopped_windows_vm(windows_vm_for_test):
+    windows_vm_for_test.stop()
+    yield windows_vm_for_test
+    running_vm(vm=windows_vm_for_test)
+
+
+@pytest.fixture(scope="module")
+def pvc_for_vm_in_starting_state(namespace, admin_client):
+    with PersistentVolumeClaim(
+        name="vm-in-starting-state-pvc",
+        namespace=namespace.name,
+        accessmodes=PersistentVolumeClaim.AccessMode.RWX,
+        size="1Gi",
+        pvlabel="non-existent-pv",
+        client=admin_client,
+    ) as pvc:
+        yield pvc
+
+
+@pytest.fixture()
+def vm_in_starting_state(namespace, admin_client, pvc_for_vm_in_starting_state):
+    vm_name = "vm-in-starting-state"
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=vm_name),
+        pvc=pvc_for_vm_in_starting_state,
+        client=admin_client,
+    ) as vm:
+        vm.start()
+        vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
+    vm_name = "vm-metrics-1"
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=vm_name),
+        client=unprivileged_client,
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
+        cpu_model=cluster_common_node_cpu,
+    ) as vm:
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        yield vm
+
+
+@pytest.fixture()
+def vm_metric_1_vmim(vm_metric_1, admin_client):
+    with VirtualMachineInstanceMigration(
+        name="vm-metric-1-vmim",
+        namespace=vm_metric_1.namespace,
+        vmi_name=vm_metric_1.vmi.name,
+        client=admin_client,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield
+
+
+@pytest.fixture()
+def windows_vm_vmim(migration_policy_with_bandwidth, windows_vm_for_test, admin_client):
+    with VirtualMachineInstanceMigration(
+        name="windows-vm-metric-1-vmim",
+        namespace=windows_vm_for_test.namespace,
+        vmi_name=windows_vm_for_test.vmi.name,
+        client=admin_client,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_20MIN)
+        windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.MIGRATING)
+        yield
+
+
+@pytest.fixture(scope="class")
+def vm_metric_2(namespace, unprivileged_client):
+    vm_name = "vm-metrics-2"
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=vm_name),
+        client=unprivileged_client,
+    ) as vm:
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def number_of_running_vmis(admin_client):
+    return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
 
 
 @pytest.fixture()
