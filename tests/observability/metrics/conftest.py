@@ -95,6 +95,7 @@ from utilities.constants import (
     VERSION_LABEL_KEY,
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
+    VIRTIO,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
@@ -993,15 +994,19 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 
 @pytest.fixture()
-def vnic_info_from_vm_or_vmi(request, running_metric_vm):
+def vnic_info_from_vm_or_vmi(request, vm_for_test_with_network_model):
     vm_instance = (
-        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
+        vm_for_test_with_network_model.vmi.instance.spec
+        if request.param == "vmi"
+        else vm_for_test_with_network_model.instance.spec.template.spec
     )
-    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
+    vm_interface = vm_instance.domain.devices.interfaces[0]
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
     return {
         "vnic_name": vm_instance.networks[0].name,
         BINDING_NAME: binding_name_and_type[BINDING_NAME],
         BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+        "model": vm_interface.model,
     }
 
 
@@ -1166,3 +1171,17 @@ def created_fake_data_volume_resource(namespace, admin_client):
 @pytest.fixture()
 def metric_cdi_import_pods_high_restart_initial_value(prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART))
+
+
+@pytest.fixture(scope="class")
+def vm_for_test_with_network_model(namespace, unprivileged_client):
+    vm_name = "vm-with-network-model"
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name=vm_name,
+        body=fedora_vm_body(name=vm_name),
+        namespace=namespace.name,
+        network_model=VIRTIO,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
