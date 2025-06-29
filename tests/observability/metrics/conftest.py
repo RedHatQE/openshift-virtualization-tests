@@ -1085,7 +1085,7 @@ def windows_vm_with_low_bandwidth_migration_policy(windows_vm_for_test):
     with ResourceEditor(
         patches={windows_vm_for_test: {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}}
     ):
-        windows_vm_for_test.restart(wait=True)
+        windows_vm_for_test.restart()
         yield windows_vm_for_test
 
 
@@ -1274,7 +1274,8 @@ def vm_metric_2(namespace, unprivileged_client):
 def number_of_running_vmis(admin_client):
     return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
 
-  
+
+@pytest.fixture()
 def created_fake_data_volume_resource(namespace, admin_client):
     with DataVolume(
         name="fake-dv",
