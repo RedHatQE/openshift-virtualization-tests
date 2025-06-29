@@ -92,6 +92,7 @@ KUBEVIRT_VM_NON_RUNNING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
 KUBEVIRT_VM_STARTING_STATUS_LAST_TRANSITION_TIMESTAMP_SECONDS = (
     "kubevirt_vm_starting_status_last_transition_timestamp_seconds"
 )
+KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART = "kubevirt_cdi_import_pods_high_restart"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
