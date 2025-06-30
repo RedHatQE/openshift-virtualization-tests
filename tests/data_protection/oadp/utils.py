@@ -164,6 +164,7 @@ def create_rhel_vm(
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        cpu_model="host-passthrough",
     ) as vm:
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=True)
