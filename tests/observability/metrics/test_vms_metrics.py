@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_REST_CLIENT_REQUESTS_TOTAL_WITH_VERB_AND_RESOURCE,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
@@ -593,4 +594,23 @@ class TestVmVnicInfo:
             prometheus=prometheus,
             vnic_info_to_compare=vnic_info_from_vm_or_vmi,
             metric_name=query.format(vm_name=running_metric_vm.name),
+        )
+
+
+class TestRestClientRequestsTotal:
+    @pytest.mark.parametrize(
+        "metric_initial_value",
+        [
+            pytest.param(
+                KUBEVIRT_REST_CLIENT_REQUESTS_TOTAL_WITH_VERB_AND_RESOURCE, marks=pytest.mark.polarion("CNV-12012")
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_rest_client_requests_total(self, prometheus, metric_initial_value, running_metric_vm):
+        running_metric_vm.delete(wait=True)
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_REST_CLIENT_REQUESTS_TOTAL_WITH_VERB_AND_RESOURCE,
+            expected_value=str(metric_initial_value + 1),
         )

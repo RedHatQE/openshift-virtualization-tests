@@ -81,3 +81,6 @@ KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART = "kubevirt_cdi_import_pods_high_restart"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
+KUBEVIRT_REST_CLIENT_REQUESTS_TOTAL_WITH_VERB_AND_RESOURCE = (
+    "kubevirt_rest_client_requests_total{verb='DELETE', resource='virtualmachineinstances'}"
+)
