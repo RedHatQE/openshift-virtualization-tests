@@ -41,8 +41,12 @@ def create_traffic_client(
 
 
 def localnet_vm(
-    namespace: str, name: str, physical_network_name: str, spec_logical_network: str,
-    cidr: str, interface_state: str | None = None,
+    namespace: str,
+    name: str,
+    physical_network_name: str,
+    spec_logical_network: str,
+    cidr: str,
+    interface_state: str | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.

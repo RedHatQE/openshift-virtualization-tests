@@ -1,16 +1,18 @@
+from typing import Final
+
 import pytest
+from ocp_resources.resource import ResourceEditor
 
 from libs.net.traffic_generator import is_tcp_connection
-from utilities.virt import migrate_vm_and_verify
-from ocp_resources.resource import ResourceEditor
-from .liblocalnet import LOCALNET_OVS_BRIDGE_NETWORK
 from tests.network.localnet.liblocalnet import (
     create_traffic_client,
     create_traffic_server,
     run_vms,
 )
 from utilities.network import IfaceNotFound
-from typing import Final
+from utilities.virt import migrate_vm_and_verify
+
+from .liblocalnet import LOCALNET_OVS_BRIDGE_NETWORK
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 
@@ -31,21 +33,7 @@ def patch_localnet_interface(vm, state):
 
 
 def patch_interface_state(vm, interfaces):
-    patches = {
-        vm: {
-            "spec": {
-                "template": {
-                    "spec": {
-                        "domain": {
-                            "devices": {
-                                "interfaces": interfaces
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    patches = {vm: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": interfaces}}}}}}}
     ResourceEditor(patches=patches).update()
 
 
@@ -73,20 +61,18 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_2
 ):
-
     run_vms(vms=(vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_2))
-    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip,
-                                             LOCALNET_OVS_BRIDGE_NETWORK)
+    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "down"
     patch_localnet_interface(vm_ovs_bridge_localnet_no_ip, "up")
-    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip,
-                                             LOCALNET_OVS_BRIDGE_NETWORK)
+    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "up"
-    result=vm_ovs_bridge_localnet_no_ip.console(commands=["ip link show dev eth0"], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
+    result = vm_ovs_bridge_localnet_no_ip.console(commands=["ip link show dev eth0"], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
 
     server = create_traffic_server(vm=vm_ovs_bridge_localnet_no_ip)
     client = create_traffic_client(
         server_vm=vm_ovs_bridge_localnet_no_ip,
         client_vm=vm_ovs_bridge_localnet_2,
-        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,)
+        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
+    )
     assert is_tcp_connection(server=server, client=client)
