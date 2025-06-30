@@ -59,19 +59,21 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
-    vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_2
+    vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_1
 ):
-    run_vms(vms=(vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_2))
+    run_vms(vms=(vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_1))
     link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "down"
     patch_localnet_interface(vm_ovs_bridge_localnet_no_ip, "up")
     link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "up"
 
-    server = create_traffic_server(vm=vm_ovs_bridge_localnet_no_ip)
-    client = create_traffic_client(
-        server_vm=vm_ovs_bridge_localnet_no_ip,
-        client_vm=vm_ovs_bridge_localnet_2,
-        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
-    )
-    assert is_tcp_connection(server=server, client=client)
+    with create_traffic_server(vm=vm_ovs_bridge_localnet_no_ip) as server:
+        assert server.is_running()
+        with create_traffic_client(
+            server_vm=vm_ovs_bridge_localnet_no_ip,
+            client_vm=vm_ovs_bridge_localnet_1,
+            spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
+        ) as client:
+            assert client.is_running()
+            assert is_tcp_connection(server=server, client=client)
