@@ -199,6 +199,23 @@ def cudn_localnet_ovs_bridge(
 
 
 @pytest.fixture(scope="module")
+def vm_ovs_bridge_localnet_no_ip(
+    namespace_localnet_1: Namespace,
+    ipv4_localnet_address_pool: Generator[str],
+    cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="localnet-ovs-vm1",
+        physical_network_name=cudn_localnet_ovs_bridge.name,
+        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
+        cidr=next(ipv4_localnet_address_pool),
+        interface_state="down",
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="module")
 def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],

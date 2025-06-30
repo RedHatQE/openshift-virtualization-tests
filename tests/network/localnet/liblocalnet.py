@@ -42,7 +42,7 @@ def create_traffic_client(
 
 def localnet_vm(
     namespace: str, name: str, physical_network_name: str, spec_logical_network: str,
-    cidr: str,
+    cidr: str, interface_state: str | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
@@ -59,6 +59,7 @@ def localnet_vm(
         physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
         spec_logical_network (str): The name of the localnet network to attach.
+        interface_state (str): The state of the interface, default up.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -72,7 +73,7 @@ def localnet_vm(
     vmi_spec = add_network_interface(
         vmi_spec=vmi_spec,
         network=Network(name=spec_logical_network, multus=Multus(networkName=physical_network_name)),
-        interface=Interface(name=spec_logical_network, bridge={}),
+        interface=Interface(name=spec_logical_network, bridge={}, state=interface_state),
     )
 
     netdata = cloudinit.NetworkData(ethernets={"eth0": cloudinit.EthernetDevice(addresses=[cidr])})
