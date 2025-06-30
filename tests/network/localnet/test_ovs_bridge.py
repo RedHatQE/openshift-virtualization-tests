@@ -67,7 +67,6 @@ def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     patch_localnet_interface(vm_ovs_bridge_localnet_no_ip, "up")
     link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "up"
-    result = vm_ovs_bridge_localnet_no_ip.console(commands=["ip link show dev eth0"], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
 
     server = create_traffic_server(vm=vm_ovs_bridge_localnet_no_ip)
     client = create_traffic_client(
