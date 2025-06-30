@@ -29,7 +29,7 @@ def patch_localnet_interface(vm, state):
         interfaces_list.append(interface_dict)
     if interface_to_patch == "":
         raise IfaceNotFound(name=LOCALNET_OVS_BRIDGE_NETWORK)
-    patch_interface_state(vm, interfaces_list)
+    patch_interface_state(vm=vm, interfaces=interfaces_list)
 
 
 def patch_interface_state(vm, interfaces):
@@ -57,15 +57,17 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 
 @pytest.mark.ipv4
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
-@pytest.mark.polarion("CNV-11905")
+@pytest.mark.polarion("CNV-XXXXX")
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_1
 ):
     run_vms(vms=(vm_ovs_bridge_localnet_no_ip, vm_ovs_bridge_localnet_1))
-    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
+    link_state = get_link_state_of_interface(vm=vm_ovs_bridge_localnet_no_ip,
+                                             interface_name=LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "down"
     patch_localnet_interface(vm_ovs_bridge_localnet_no_ip, "up")
-    link_state = get_link_state_of_interface(vm_ovs_bridge_localnet_no_ip, LOCALNET_OVS_BRIDGE_NETWORK)
+    link_state = get_link_state_of_interface(vm=vm_ovs_bridge_localnet_no_ip,
+                                             interface_name=LOCALNET_OVS_BRIDGE_NETWORK)
     assert link_state == "up"
 
     with create_traffic_server(vm=vm_ovs_bridge_localnet_no_ip) as server:
