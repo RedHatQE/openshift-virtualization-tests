@@ -29,13 +29,3 @@ def kubevirt_package_manifest_current_channel(kubevirt_package_manifest_channels
         f"Not able to find channel matching {cnv_current_version} in the package manifest."
         f"Available channels: {[channel.name for channel in kubevirt_package_manifest_channels]}"
     )
-
-
-@pytest.fixture()
-def csv_annotation(csv_scope_session):
-    """
-    Gets csv annotation for csv_scope_session.ApiGroup.INFRA_FEATURES
-    """
-    return csv_scope_session.instance.metadata.annotations.get(
-        f"{csv_scope_session.ApiGroup.OPERATORS_OPENSHIFT_IO}/infrastructure-features"
-    )
