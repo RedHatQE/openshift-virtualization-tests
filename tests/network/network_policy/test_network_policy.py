@@ -107,10 +107,12 @@ def running_network_policy_vma(network_policy_vma):
     network_policy_vma.wait_for_agent_connected()
     return network_policy_vma
 
+
 @pytest.fixture(scope="module")
 def running_network_policy_vmb(network_policy_vmb):
     network_policy_vmb.wait_for_agent_connected()
     return network_policy_vmb
+
 
 @pytest.mark.order(before="test_network_policy_allow_http80")
 @pytest.mark.polarion("CNV-369")
