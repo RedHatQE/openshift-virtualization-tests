@@ -1063,7 +1063,7 @@ def windows_vm_for_test(namespace, unprivileged_client):
 
 
 @pytest.fixture()
-def windows_vm_for_test_in_error_state(windows_vm_for_test):
+def non_existent_node_windows_vm(windows_vm_for_test):
     with ResourceEditor(
         patches={
             windows_vm_for_test: {
@@ -1190,7 +1190,7 @@ def stopped_windows_vm(windows_vm_for_test):
 
 
 @pytest.fixture(scope="module")
-def pvc_for_vm_in_starting_state(namespace, admin_client):
+def pvc_with_non_existent_pv(namespace, admin_client):
     with PersistentVolumeClaim(
         name="vm-in-starting-state-pvc",
         namespace=namespace.name,
@@ -1203,13 +1203,13 @@ def pvc_for_vm_in_starting_state(namespace, admin_client):
 
 
 @pytest.fixture()
-def vm_in_starting_state(namespace, admin_client, pvc_for_vm_in_starting_state):
+def vm_in_starting_state(namespace, admin_client, pvc_with_non_existent_pv):
     vm_name = "vm-in-starting-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
-        pvc=pvc_for_vm_in_starting_state,
+        pvc=pvc_with_non_existent_pv,
         client=admin_client,
     ) as vm:
         vm.start()

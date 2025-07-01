@@ -1515,7 +1515,7 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def get_last_transition_time(vm: VirtualMachineForTests) -> int:
+def get_last_ready_transition_time(vm: VirtualMachineForTests) -> int:
     for condition in vm.instance.get("status", {}).get("conditions"):
         if condition.get("type") == vm.Condition.READY:
             last_transition_time = condition.get("lastTransitionTime")
@@ -1525,7 +1525,9 @@ def get_last_transition_time(vm: VirtualMachineForTests) -> int:
     return 0
 
 
-def check_vm_last_transition_metric_value(prometheus: Prometheus, metric: str, vm: VirtualMachineForTests) -> None:
+def check_vm_last_ready_transition_metric_value(
+    prometheus: Prometheus, metric: str, vm: VirtualMachineForTests
+) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
@@ -1538,7 +1540,7 @@ def check_vm_last_transition_metric_value(prometheus: Prometheus, metric: str, v
         for sample in samples:
             if sample:
                 metric_value = int(sample)
-                last_transition_time = get_last_transition_time(vm=vm)
+                last_transition_time = get_last_ready_transition_time(vm=vm)
                 LOGGER.info(f"Metric value: {metric_value}, last_transition_time: {last_transition_time}")
                 if metric_value > 0 and metric_value == last_transition_time:
                     return

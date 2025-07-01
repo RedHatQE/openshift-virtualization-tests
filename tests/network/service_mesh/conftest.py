@@ -36,7 +36,7 @@ from tests.network.utils import (
 )
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
-from utilities.virt import running_vm, vm_console_run_commands, wait_for_console
+from utilities.virt import vm_console_run_commands, wait_for_console
 
 LOGGER = logging.getLogger(__name__)
 
@@ -235,7 +235,8 @@ def vm_fedora_with_service_mesh_annotation(
             service_name=vm_name,
             port=SERVICE_MESH_PORT,
         )
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
@@ -254,7 +255,8 @@ def outside_mesh_vm_fedora_with_service_mesh_annotation(
             service_name=vm_name,
             port=SERVICE_MESH_PORT,
         )
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
