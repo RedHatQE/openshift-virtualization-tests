@@ -1,6 +1,7 @@
 import pytest
 
 from tests.observability.metrics.constants import (
+    KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_VM_INFO,
     KUBEVIRT_VMI_INFO,
@@ -222,4 +223,17 @@ class TestAllocatableNodes:
     def test_metirc_kubevirt_allocatable_nodes(self, prometheus, allocatable_nodes):
         validate_metrics_value(
             prometheus=prometheus, metric_name="kubevirt_allocatable_nodes", expected_value=f"{len(allocatable_nodes)}"
+        )
+
+
+class TestDaemonSetDesiredNumScheduled:
+    @pytest.mark.polarion("CNV-12032")
+    def test_kube_daemonset_status_desired_number_scheduled(
+        self, prometheus, daemonsets_desired_number_scheduled, daemonsets_exists_in_metric
+    ):
+        ds_to_check = list(daemonsets_desired_number_scheduled.keys())[0]
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"{KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED}{{daemonset='{ds_to_check}'}}",
+            expected_value=daemonsets_desired_number_scheduled[ds_to_check],
         )

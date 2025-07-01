@@ -24,6 +24,7 @@ from tests.observability.metrics.constants import (
     BINDING_NAME,
     BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
+    KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -1166,3 +1167,22 @@ def created_fake_data_volume_resource(namespace, admin_client):
 @pytest.fixture()
 def metric_cdi_import_pods_high_restart_initial_value(prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART))
+
+
+@pytest.fixture()
+def daemonsets_desired_number_scheduled(admin_client):
+    return {
+        ds.name: str(ds.instance.status.desiredNumberScheduled)
+        for ds in [ds for ds in DaemonSet.get(dyn_client=admin_client)]
+    }
+
+
+@pytest.fixture()
+def daemonsets_exists_in_metric(prometheus, daemonsets_desired_number_scheduled):
+    metric_daemon_sets_results = [
+        ds_name.get("metric")["daemonset"]
+        for ds_name in prometheus.query(query=KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED).get("data").get("result")
+    ]
+    assert metric_daemon_sets_results, f"No data found for metric: {KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED}"
+    mismatch_daemon_sets = set(daemonsets_desired_number_scheduled.keys()) - set(metric_daemon_sets_results)
+    assert not mismatch_daemon_sets, f"Missing DaemonSets in query: {mismatch_daemon_sets}"

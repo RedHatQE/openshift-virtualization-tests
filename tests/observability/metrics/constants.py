@@ -78,6 +78,7 @@ KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_schedu
 KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE = "kubevirt_vmi_migrations_in_running_phase"
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
 KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART = "kubevirt_cdi_import_pods_high_restart"
+KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED = "kube_daemonset_status_desired_number_scheduled"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")
