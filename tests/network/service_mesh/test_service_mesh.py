@@ -9,9 +9,10 @@ from tests.network.utils import assert_authentication_request
 pytestmark = pytest.mark.service_mesh
 
 
+@pytest.mark.single_nic
+@pytest.mark.s390x
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
-    @pytest.mark.single_nic
     def test_service_mesh_traffic_management(
         self,
         traffic_management_service_mesh_convergence,
@@ -26,7 +27,6 @@ class TestSMTrafficManagement:
         )
 
     @pytest.mark.polarion("CNV-7304")
-    @pytest.mark.single_nic
     def test_service_mesh_traffic_management_manipulated_rule(
         self,
         traffic_management_service_mesh_convergence,
@@ -42,10 +42,11 @@ class TestSMTrafficManagement:
         )
 
 
+@pytest.mark.single_nic
+@pytest.mark.s390x
 class TestSMPeerAuthentication:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5784")
-    @pytest.mark.single_nic
     def test_authentication_policy_from_mesh(
         self,
         peer_authentication_service_mesh_deployment,
@@ -58,8 +59,6 @@ class TestSMPeerAuthentication:
         )
 
     @pytest.mark.polarion("CNV-7305")
-    @pytest.mark.ipv4
-    @pytest.mark.single_nic
     def test_authentication_policy_outside_mesh(
         self,
         outside_mesh_vm_fedora_with_service_mesh_annotation,
@@ -74,7 +73,6 @@ class TestSMPeerAuthentication:
             )
 
     @pytest.mark.polarion("CNV-7128")
-    @pytest.mark.single_nic
     def test_service_mesh_inbound_traffic_blocked(
         self,
         outside_mesh_vm_fedora_with_service_mesh_annotation,
