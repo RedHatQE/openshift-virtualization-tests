@@ -12,8 +12,8 @@ from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
-from utilities.virt import CLOUD_INIT_DISK_NAME, get_oc_image_info, vm_console_run_commands
 from utilities.network import IfaceNotFound
+from utilities.virt import CLOUD_INIT_DISK_NAME, get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -76,7 +76,7 @@ class BaseVirtualMachine(VirtualMachine):
         )
 
     def set_interface_state(self, network_name, state: str) -> None:
-        vmi_interfaces = self.get_interfaces() # self.vm.vmi.interfaces
+        vmi_interfaces = self.get_interfaces()  # self.vm.vmi.interfaces
         interfaces_list = []
         interface_to_patch = ""
         for interface in vmi_interfaces:
@@ -87,20 +87,7 @@ class BaseVirtualMachine(VirtualMachine):
             interfaces_list.append(interface_dict)
         if interface_to_patch == "":
             raise IfaceNotFound(name=network_name)
-        patches = {self: {
-            "spec": {
-                "template": {
-            "spec": {
-                "domain": {
-                    "devices": {
-                        "interfaces": interfaces_list
-                    }
-                }
-            }
-                }
-            }
-        }
-        }
+        patches = {self: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": interfaces_list}}}}}}}
         ResourceEditor(patches=patches).update()
 
 

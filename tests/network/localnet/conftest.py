@@ -9,25 +9,24 @@ from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.localnet.liblocalnet import (
+    LINK_STATE_DOWN,
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
-    LINK_STATE_UP,
-    LINK_STATE_DOWN,
     client_server_active_connection,
     create_traffic_client,
     create_traffic_server,
     localnet_cudn,
     localnet_vm,
+    lookup_vm_interface,
     run_vms,
-    lookup_vm_interface
 )
 from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
 )
 from utilities.infra import create_ns
-from utilities.virt import migrate_vm_and_verify
 from utilities.network import IfaceNotFound
+from utilities.virt import migrate_vm_and_verify
 
 NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 
@@ -257,8 +256,8 @@ def ovs_bridge_localnet_running_vms_one_with_interface_down(
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_link_down, vm_ovs_bridge_localnet_1))
     localnet_interface = lookup_vm_interface(
-        vm=vm_ovs_bridge_localnet_link_down,
-        interface_name=LOCALNET_OVS_BRIDGE_NETWORK)
+        vm=vm_ovs_bridge_localnet_link_down, interface_name=LOCALNET_OVS_BRIDGE_NETWORK
+    )
     if not localnet_interface:
         raise IfaceNotFound(name=LOCALNET_OVS_BRIDGE_NETWORK)
     assert localnet_interface["linkState"] == LINK_STATE_DOWN
