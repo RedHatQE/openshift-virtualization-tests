@@ -20,8 +20,8 @@ def remote_kubeconfig_export_path():
     return path
 
 
-@pytest.fixture(scope="session")
-def remote_admin_client(remote_kubeconfig_export_path):
+@pytest.fixture(scope="session") 
+def remote_admin_client(remote_kubeconfig_export_path): # skip-unused-code
     """
     Get DynamicClient for a remote cluster
     """
