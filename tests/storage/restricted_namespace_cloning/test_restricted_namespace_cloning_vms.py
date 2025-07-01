@@ -83,6 +83,7 @@ def create_vm_negative(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_create_vm_with_cloned_data_volume_positive(
     unprivileged_client,
     restricted_role_binding_for_vms_in_destination_namespace,
@@ -116,6 +117,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions_negative(
     namespace,
     destination_namespace,
@@ -147,6 +149,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_perm_negative(
     namespace,
     destination_namespace,
@@ -176,6 +179,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
     unprivileged_client,
     data_volume_clone_settings,

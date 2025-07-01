@@ -34,6 +34,7 @@ TESTS_MIGRATE_VM = f"{TESTS_CLASS_MIGRATION}::test_migrate_vm"
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
+@pytest.mark.s390x
 class TestVMCreationAndValidation:
     @pytest.mark.dependency(name=TEST_CREATE_VM_TEST_NAME)
     @pytest.mark.polarion("CNV-11710")
@@ -116,6 +117,7 @@ class TestVMFeatures:
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 class TestVMMigrationAndState:
     @pytest.mark.polarion("CNV-11714")
     @pytest.mark.dependency(name=TESTS_MIGRATE_VM, depends=[TEST_START_VM_TEST_NAME])

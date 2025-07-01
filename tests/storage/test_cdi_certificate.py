@@ -166,6 +166,7 @@ def dv_of_multi_storage_cirros_vm(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_dv_delete_from_vm(
     valid_cdi_certificates,
     namespace,
@@ -185,6 +186,7 @@ def test_dv_delete_from_vm(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3667")
+@pytest.mark.s390x
 def test_upload_after_certs_renewal(
     skip_if_sc_volume_binding_mode_is_wffc,
     refresh_cdi_certificates,
@@ -227,6 +229,7 @@ def test_upload_after_certs_renewal(
 )
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3678")
+@pytest.mark.s390x
 def test_import_clone_after_certs_renewal(
     refresh_cdi_certificates,
     data_volume_multi_storage_scope_module,
@@ -250,6 +253,7 @@ def test_import_clone_after_certs_renewal(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3977")
+@pytest.mark.s390x
 def test_upload_after_validate_aggregated_api_cert(
     skip_if_sc_volume_binding_mode_is_wffc,
     valid_aggregated_api_client_cert,
@@ -310,6 +314,7 @@ def downloaded_cirros_image(tmpdir):
 
 
 @pytest.mark.polarion("CNV-5708")
+@pytest.mark.s390x
 def test_cert_exposure_rotation(
     enabled_ca,
     updated_certconfig_in_hco_cr,

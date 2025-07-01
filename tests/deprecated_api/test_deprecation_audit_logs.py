@@ -108,6 +108,7 @@ def deprecated_apis_calls(audit_logs):
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-6679")
 @pytest.mark.order("last")
+@pytest.mark.s390x
 def test_deprecated_apis_in_audit_logs(deprecated_apis_calls):
     LOGGER.info(f"Test deprecated API calls, max version for deprecation check: {DEPRECATED_API_MAX_VERSION}")
     if deprecated_apis_calls:
