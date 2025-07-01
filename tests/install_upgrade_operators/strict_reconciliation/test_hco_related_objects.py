@@ -4,7 +4,6 @@ from deepdiff import DeepDiff
 from tests.install_upgrade_operators.strict_reconciliation.utils import (
     validate_related_objects,
 )
-from tests.install_upgrade_operators.utils import is_rhel10_beta_resource_and_63351_bug_open
 from utilities.constants import ALL_HCO_RELATED_OBJECTS
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
@@ -14,9 +13,7 @@ class TestRelatedObjects:
     @pytest.mark.polarion("CNV-9843")
     def test_no_new_hco_related_objects(self, hco_status_related_objects):
         actual_related_objects = {
-            related_object["name"]: related_object["kind"]
-            for related_object in hco_status_related_objects
-            if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=related_object["name"])
+            related_object["name"]: related_object["kind"] for related_object in hco_status_related_objects
         }
         expected_related_objects = {
             object_name: object_kind
