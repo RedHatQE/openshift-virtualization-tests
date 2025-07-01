@@ -87,7 +87,7 @@ def test_default_featuregates_by_resource(
     if isinstance(expected, list):
         assert sorted(expected) == sorted(resource_object_value_by_key), error_message
     else:
-        if is_jira_open(jira_id="CNV-63030"):
-            LOGGER.warning("Applying workaround: removed ‘autoResourceLimits’ due to open Jira CNV-63030")
+        if is_jira_open(jira_id="CNV-64431"):
+            LOGGER.warning("Applying workaround: removed ‘autoResourceLimits’ due to open Jira CNV-64431")
             resource_object_value_by_key.pop("autoResourceLimits", None)
         assert expected == resource_object_value_by_key, error_message
