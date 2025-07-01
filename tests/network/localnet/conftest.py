@@ -12,18 +12,22 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
+    LINK_STATE_UP,
+    LINK_STATE_DOWN,
     client_server_active_connection,
     create_traffic_client,
     create_traffic_server,
     localnet_cudn,
     localnet_vm,
     run_vms,
+    lookup_vm_interface
 )
 from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
 )
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
+from utilities.network import IfaceNotFound
 
 NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 
@@ -199,7 +203,7 @@ def cudn_localnet_ovs_bridge(
 
 
 @pytest.fixture(scope="module")
-def vm_ovs_bridge_localnet_no_ip(
+def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
@@ -245,6 +249,20 @@ def vm_ovs_bridge_localnet_2(
         cidr=next(ipv4_localnet_address_pool),
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="module")
+def ovs_bridge_localnet_running_vms_one_with_interface_down(
+    vm_ovs_bridge_localnet_link_down: BaseVirtualMachine, vm_ovs_bridge_localnet_1: BaseVirtualMachine
+) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
+    vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_link_down, vm_ovs_bridge_localnet_1))
+    localnet_interface = lookup_vm_interface(
+        vm=vm_ovs_bridge_localnet_link_down,
+        interface_name=LOCALNET_OVS_BRIDGE_NETWORK)
+    if not localnet_interface:
+        raise IfaceNotFound(name=LOCALNET_OVS_BRIDGE_NETWORK)
+    assert localnet_interface["linkState"] == LINK_STATE_DOWN
+    yield vm1, vm2
 
 
 @pytest.fixture(scope="module")

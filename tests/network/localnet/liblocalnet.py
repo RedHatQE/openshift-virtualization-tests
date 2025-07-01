@@ -14,6 +14,8 @@ from tests.network.libs.label_selector import LabelSelector
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
+LINK_STATE_UP = "up"
+LINK_STATE_DOWN = "down"
 _IPERF_SERVER_PORT = 5201
 
 
@@ -24,6 +26,13 @@ def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ..
         vm.wait_for_ready_status(status=True)
         vm.wait_for_agent_connected()
     return vms
+
+
+def lookup_vm_interface(vm, interface_name):
+    for interface in vm.vmi.instance.status.interfaces:
+        if interface["name"] == interface_name:
+            return interface
+    return None
 
 
 def create_traffic_server(vm: BaseVirtualMachine) -> Server:
