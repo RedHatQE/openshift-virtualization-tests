@@ -410,8 +410,23 @@ centos_os_matrix = [
 
 instance_type_rhel_os_matrix = [
     {
+        "rhel-8": {
+            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
+            INSTANCE_TYPE_STR: "u1.medium",
+            PREFERENCE_STR: "rhel.8",
+            DATA_SOURCE_NAME: "rhel8",
+        }
+    },
+    {
+        "rhel-9": {
+            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
+            INSTANCE_TYPE_STR: "u1.medium",
+            PREFERENCE_STR: "rhel.9",
+            DATA_SOURCE_NAME: "rhel9",
+        }
+    },
+    {
         "rhel-10": {
-            OS_VERSION_STR: "10",
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             INSTANCE_TYPE_STR: "u1.medium",
             PREFERENCE_STR: "rhel.10",
