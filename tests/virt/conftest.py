@@ -1,10 +1,9 @@
 import logging
-from multiprocessing import Manager, cpu_count
-from multiprocessing.dummy import Pool
 
 import pytest
 from bitmath import parse_string_unsafe
 from ocp_resources.performance_profile import PerformanceProfile
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
@@ -13,10 +12,12 @@ from tests.virt.node.gpu.constants import (
 from tests.virt.node.gpu.utils import (
     wait_for_manager_pods_deployed,
 )
-from tests.virt.utils import check_node_for_missing_mdev_bus, patch_hco_cr_with_mdev_permitted_hostdevices
-from utilities.constants import AMD, INTEL
+from tests.virt.utils import (
+    patch_hco_cr_with_mdev_permitted_hostdevices,
+)
+from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC
 from utilities.exceptions import UnsupportedGPUDeviceError
-from utilities.infra import exit_pytest_execution, label_nodes
+from utilities.infra import ExecCommandOnPod, exit_pytest_execution, label_nodes
 from utilities.virt import get_nodes_gpu_info
 
 LOGGER = logging.getLogger(__name__)
@@ -183,19 +184,27 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
     On the Worker Node on which GPU Device exists, check if the
     mdev_bus needed for vGPU is available.
     If it's not available, this means the nvidia-vgpu-manager-daemonset
-    Pod might not be in running state in nvidia-gpu-operator namespace.
+    Pod might not be in running state in the nvidia-gpu-operator namespace.
     """
-    manager = Manager()
-    non_existent_mdev_bus_nodes = manager.list()
-    with Pool(processes=min(len(vgpu_ready_nodes), cpu_count())) as pool:
-        pool.map(
-            check_node_for_missing_mdev_bus,
-            [(node, non_existent_mdev_bus_nodes, workers_utility_pods) for node in vgpu_ready_nodes],
-        )
+    desired_bus = "mdev_bus"
+    non_existent_mdev_bus_nodes = []
+    for node in vgpu_ready_nodes:
+        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_1MIN,
+                sleep=TIMEOUT_5SEC,
+                func=pod_exec.exec,
+                command=f"ls /sys/class | grep {desired_bus} || true",
+            ):
+                if sample:
+                    return
+        except TimeoutExpiredError:
+            non_existent_mdev_bus_nodes.append(node.name)
     if non_existent_mdev_bus_nodes:
         pytest.fail(
             reason=(
-                f"On these nodes: {list(non_existent_mdev_bus_nodes)} mdev_bus is not available. "
+                f"On these nodes: {non_existent_mdev_bus_nodes} {desired_bus} is not available."
                 "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
             )
         )
