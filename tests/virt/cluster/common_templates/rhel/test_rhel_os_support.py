@@ -39,6 +39,7 @@ TESTS_CLASS_NAME = "TestCommonTemplatesRhel"
 
 class TestCommonTemplatesRhel:
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
@@ -54,6 +55,7 @@ class TestCommonTemplatesRhel:
         golden_image_vm_object_from_template_multi_rhel_os_multi_storage_scope_class.create(wait=True)
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
@@ -66,6 +68,7 @@ class TestCommonTemplatesRhel:
         )
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
@@ -115,6 +118,7 @@ class TestCommonTemplatesRhel:
         assert label == vm.name, f"Wrong domain label: {label}"
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(
@@ -129,6 +133,7 @@ class TestCommonTemplatesRhel:
         ), "Failed to login via SSH"
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(
@@ -224,6 +229,7 @@ class TestCommonTemplatesRhel:
         )
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.smoke
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-3038")
@@ -280,6 +286,7 @@ class TestCommonTemplatesRhel:
         assert_linux_efi(vm=vm)
 
     @pytest.mark.arm64
+    @pytest.mark.s390x
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])

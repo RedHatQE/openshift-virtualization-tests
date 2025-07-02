@@ -301,6 +301,7 @@ def test_clone_from_fs_to_block_using_dv_template(
 
 @pytest.mark.polarion("CNV-5608")
 @pytest.mark.smoke()
+@pytest.mark.s390x
 def test_clone_from_block_to_fs_using_dv_template(
     skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
