@@ -1,11 +1,14 @@
+import logging
 from collections.abc import Callable
 from typing import Any, Final
 
 from kubernetes.dynamic.client import ResourceField
-from timeout_sampler import TimeoutExpiredError, retry
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.vm.spec import Devices, Interface, Network, SpecDisk, VMISpec, Volume
 from libs.vm.vm import BaseVirtualMachine
+
+LOGGER = logging.getLogger(__name__)
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 RETRY_INTERVAL_SEC: Final[int] = 5
@@ -20,14 +23,31 @@ class VMInterfaceStatusNotFoundError(Exception):
     pass
 
 
-def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceField:
+class VMInterfaceStatusStillExistsError(Exception):
+    pass
+
+
+def _default_interface_predicate(interface: ResourceField) -> bool:
+    return "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
+
+
+def lookup_iface_status(
+    vm: BaseVirtualMachine,
+    iface_name: str,
+    predicate: Callable[[Any], bool] = _default_interface_predicate,
+    wait_timeout: int = LOOKUP_IFACE_STATUS_TIMEOUT_SEC,
+) -> ResourceField:
     """
-    Returns the network interface status requested if found, otherwise raises VMInterfaceStatusNotFoundError.
-    The interface status information is expected to be sourced from the guest-agent with an IP address.
+    Awaits and returns the network interface status requested if found and the predicate function,
+    otherwise raises VMInterfaceStatusNotFoundError.
 
     Args:
         vm (BaseVirtualMachine): VM in which to search for the network interface.
         iface_name (str): The name of the requested interface.
+        predicate (Callable[[dict[str, Any]], bool]): A function that takes a network interface as an argument
+            and returns a boolean value. this function should define the condition that
+            the interface needs to meet.
+        wait_timeout (int): lookup operation timeout
 
     Returns:
         iface (ResourceField): The requested interface.
@@ -35,25 +55,32 @@ def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceFiel
     Raises:
         VMInterfaceStatusNotFoundError: If the requested interface was not found in the vmi status.
     """
+    sampler = TimeoutSampler(
+        wait_timeout=wait_timeout,
+        sleep=RETRY_INTERVAL_SEC,
+        func=_lookup_iface_status,
+        vm=vm,
+        iface_name=iface_name,
+        predicate=predicate,
+    )
     try:
-        return _lookup_iface_status(
-            vm=vm,
-            iface_name=iface_name,
-            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS],
-        )
+        for iface in sampler:
+            if iface:
+                return iface
     except TimeoutExpiredError:
+        LOGGER.error(
+            f"Network interface named {iface_name} was not found in VM {vm.name} "
+            f"within {wait_timeout} seconds.\n VMI:\n {vm.vmi.instance}"
+        )
         raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
 
 
-@retry(
-    wait_timeout=LOOKUP_IFACE_STATUS_TIMEOUT_SEC,
-    sleep=RETRY_INTERVAL_SEC,
-    exceptions_dict={VMInterfaceStatusNotFoundError: []},
-)
-def _lookup_iface_status(vm: BaseVirtualMachine, iface_name: str, predicate: Callable[[Any], bool]) -> ResourceField:
+def _lookup_iface_status(
+    vm: BaseVirtualMachine, iface_name: str, predicate: Callable[[Any], bool]
+) -> ResourceField | None:
     """
     Returns the interface requested if found and the predicate function (to which the interface is
-    sent) returns True. Else, raise VMInterfaceStatusNotFoundError.
+    sent) Else, returns None.
 
     Args:
         vm (BaseVirtualMachine): VM in which to search for the network interface.
@@ -63,15 +90,38 @@ def _lookup_iface_status(vm: BaseVirtualMachine, iface_name: str, predicate: Cal
             the interface needs to meet.
 
     Returns:
-        iface (ResourceField): The requested interface.
-
-    Raises:
-        VMInterfaceStatusNotFoundError: If the requested interface was not found in the VM.
+        iface (ResourceField) | None: The requested interface or None
     """
     for iface in vm.vmi.interfaces:
         if iface.name == iface_name and predicate(iface):
             return iface
-    raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
+    return None
+
+
+def wait_for_iface_status_deleted(vm: BaseVirtualMachine, interface_name: str, wait_timeout: int = 30) -> None:
+    """
+    Waits for a network interface to be deleted from the virtual machine's interface status.
+
+    Args:
+        vm (BaseVirtualMachine): The virtual machine to check for the interface status.
+        interface_name (str): The name of the network interface to wait for deletion.
+        wait_timeout (int): The maximum time (in seconds) to wait for the interface to be deleted.
+
+    Raises:
+        VMInterfaceStatusStillExistsError: If the interface still exists after the timeout period.
+    """
+    sampler = TimeoutSampler(
+        wait_timeout=wait_timeout,
+        sleep=RETRY_INTERVAL_SEC,
+        func=lambda: all(iface.name != interface_name for iface in vm.vmi.interfaces),
+    )
+    try:
+        for sample in sampler:
+            if sample:
+                LOGGER.info(f"{interface_name} was successfully deleted from {vm.name}")
+                return
+    except TimeoutExpiredError:
+        raise VMInterfaceStatusStillExistsError(f"Interface {interface_name} still exists in {vm.name}")
 
 
 def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
