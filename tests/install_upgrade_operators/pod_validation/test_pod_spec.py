@@ -40,6 +40,7 @@ def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function
 
 
 @pytest.mark.polarion("CNV-7261")
+@pytest.mark.s390x
 def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
     all_pods = ALL_CNV_PODS.copy()
     all_pods.append(HPP_POOL)
@@ -53,12 +54,14 @@ def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
 
 
 @pytest.mark.polarion("CNV-7262")
+@pytest.mark.s390x
 def test_pods_priority_class_value(cnv_pods_by_type_no_hpp_csi_hpp_pool):
     validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
     validate_priority_class_value(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
 
 
 @pytest.mark.polarion("CNV-7306")
+@pytest.mark.s390x
 def test_pods_resource_request(
     cnv_pods_by_type,
     pod_resource_validation_matrix__function__,
@@ -70,6 +73,7 @@ def test_pods_resource_request(
 
 
 @pytest.mark.polarion("CNV-8267")
+@pytest.mark.s390x
 def test_cnv_pod_container_image(cnv_pods_by_type):
     assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)
     assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)

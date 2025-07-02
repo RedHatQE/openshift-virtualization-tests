@@ -37,6 +37,7 @@ class TestLiveMigrationConfigUpdate:
         ],
         indirect=["updated_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_modify_hco_cr(
         self,
         updated_hco_cr,

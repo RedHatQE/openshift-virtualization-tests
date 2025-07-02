@@ -4,6 +4,7 @@ pytestmark = pytest.mark.sno
 
 
 @pytest.mark.polarion("CNV-4751")
+@pytest.mark.s390x
 def test_immutable_image_using_sha(kubevirt_package_manifest_current_channel):
     """
     check all images of the current channel on the kubevirt-hyperconverged Package Manifest.

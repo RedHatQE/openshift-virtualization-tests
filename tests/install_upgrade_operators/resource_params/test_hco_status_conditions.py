@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
 )
+@pytest.mark.s390x
 def test_hco_status_conditions(admin_client, hco_namespace, expected_condition_fields):
     """Validates hco status conditions contains expected field"""
     LOGGER.info("Check for hco to be in stable condition:")

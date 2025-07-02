@@ -41,6 +41,7 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
 )
+@pytest.mark.s390x
 def test_default_workload_update_strategy(admin_client, hco_namespace, resource_name, expected):
     """Validates by default, hyperconverged's and kubevirt's spec.workloadUpdateStrategy is set to correct values"""
     LOGGER.info("Ensure HCO is is in stable condition before checking for spec.workloadUpdateStrategy")

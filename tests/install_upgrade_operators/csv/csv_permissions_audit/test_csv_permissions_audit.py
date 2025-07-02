@@ -66,6 +66,7 @@ def csv_permissions_from_yaml(pytestconfig):
 
 
 @pytest.mark.polarion("CNV-9805")
+@pytest.mark.s390x
 def test_new_operator_in_csv(operators_from_csv):
     assert sorted(list(operators_from_csv)) == sorted(CNV_OPERATORS), (
         f"Expected cnv operators:{CNV_OPERATORS} does not match operators {operators_from_csv} "
@@ -73,6 +74,7 @@ def test_new_operator_in_csv(operators_from_csv):
 
 
 @pytest.mark.polarion("CNV-9547")
+@pytest.mark.s390x
 def test_compare_csv_permissions(cnv_operators_matrix__function__, csv_permissions_from_yaml, csv_permissions):
     from_yaml = csv_permissions_from_yaml.get(cnv_operators_matrix__function__, {})
     from_csv = csv_permissions.get(cnv_operators_matrix__function__, {})
@@ -86,6 +88,7 @@ def test_compare_csv_permissions(cnv_operators_matrix__function__, csv_permissio
 
 
 @pytest.mark.polarion("CNV-9548")
+@pytest.mark.s390x
 def test_global_csv_permissions(cnv_operators_matrix__function__, global_permission_from_csv):
     error_message = f"Found global permission for {cnv_operators_matrix__function__}"
     errors = {}

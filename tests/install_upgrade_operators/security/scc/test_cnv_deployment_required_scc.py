@@ -35,6 +35,7 @@ def required_scc_deployment_check(admin_client, hco_namespace):
 
 
 @pytest.mark.polarion("CNV-11964")
+@pytest.mark.s390x
 def test_deployments_missing_required_scc_annotation(required_scc_deployment_check):
     assert not required_scc_deployment_check["missing_required_scc_annotation"], (
         f"Deployments missing {REQUIRED_SCC_ANNOTATION} annotation: "
@@ -43,6 +44,7 @@ def test_deployments_missing_required_scc_annotation(required_scc_deployment_che
 
 
 @pytest.mark.polarion("CNV-11965")
+@pytest.mark.s390x
 def test_deployments_with_incorrect_required_scc(required_scc_deployment_check):
     assert not required_scc_deployment_check["incorrect_required_scc_annotation_value"], (
         f"Deployments incorrect {REQUIRED_SCC_ANNOTATION} annotation : "

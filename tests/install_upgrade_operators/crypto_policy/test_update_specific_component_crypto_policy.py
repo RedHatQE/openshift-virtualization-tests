@@ -140,6 +140,7 @@ def updated_cr_with_custom_crypto_policy(
     ],
     indirect=["updated_cr_with_custom_crypto_policy"],
 )
+@pytest.mark.s390x
 def test_update_specific_component_crypto_policy(
     resources_dict,
     updated_cr_with_custom_crypto_policy,

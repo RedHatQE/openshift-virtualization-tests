@@ -42,6 +42,7 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_verify_mismatch_relationship_labels_deployments(self, expected_label_dictionary, cnv_deployment_by_name):
         verify_component_labels_by_resource(
             component=cnv_deployment_by_name,
@@ -58,6 +59,7 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_verify_mismatch_relationship_labels_daemonsets(self, expected_label_dictionary, cnv_daemonset_by_name):
         verify_component_labels_by_resource(
             component=cnv_daemonset_by_name,
@@ -74,6 +76,7 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pod_by_name):
         verify_component_labels_by_resource(
             component=cnv_pod_by_name,
@@ -90,6 +93,7 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_verify_relationship_labels_hco_components(
         self,
         expected_label_dictionary,
