@@ -231,7 +231,7 @@ class TestDaemonSetDesiredNumScheduled:
     def test_kube_daemonset_status_desired_number_scheduled(
         self, prometheus, daemonsets_desired_number_scheduled, daemonsets_exists_in_metric
     ):
-        ds_to_check = list(daemonsets_desired_number_scheduled.keys())[0]
+        ds_to_check = [*daemonsets_desired_number_scheduled][0]
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"{KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED}{{daemonset='{ds_to_check}'}}",

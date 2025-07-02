@@ -1184,5 +1184,10 @@ def daemonsets_exists_in_metric(prometheus, daemonsets_desired_number_scheduled)
         for ds_name in prometheus.query(query=KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED).get("data").get("result")
     ]
     assert metric_daemon_sets_results, f"No data found for metric: {KUBE_DAEMONSET_STATUS_DESIRED_NUMBER_SCHEDULED}"
-    mismatch_daemon_sets = set(daemonsets_desired_number_scheduled.keys()) - set(metric_daemon_sets_results)
+    assert len(daemonsets_desired_number_scheduled.keys()) == len(metric_daemon_sets_results), (
+        "There is a mismatch between metric query result and actual daemonsets."
+    )
+    mismatch_daemon_sets = [
+        ds_name for ds_name in daemonsets_desired_number_scheduled if ds_name not in metric_daemon_sets_results
+    ]
     assert not mismatch_daemon_sets, f"Missing DaemonSets in query: {mismatch_daemon_sets}"
