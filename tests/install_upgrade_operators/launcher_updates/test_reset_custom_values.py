@@ -51,6 +51,7 @@ class TestLauncherUpdateResetFields:
         ],
         indirect=["updated_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_hyperconverged_reset_custom_workload_update_strategy(
         self,
         updated_workload_strategy_custom_values,

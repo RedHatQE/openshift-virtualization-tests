@@ -22,6 +22,7 @@ class TestInstanceTypesAndPreferencesCollected:
         indirect=True,
     )
     @pytest.mark.polarion("CNV-9648")
+    @pytest.mark.s390x
     def test_instancestypes_collected(
         self,
         admin_client,

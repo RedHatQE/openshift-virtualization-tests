@@ -51,6 +51,7 @@ def json_patched_cnao(
 )
 class TestCNAOJsonPatch:
     @pytest.mark.polarion("CNV-8715")
+    @pytest.mark.s390x
     def test_cnao_json_patch(
         self,
         admin_client,
@@ -68,6 +69,7 @@ class TestCNAOJsonPatch:
         assert not cnao_spec.get(PATH), f"Unable to replace {PATH} from CNAO via json patch. Current value: {cnao_spec}"
 
     @pytest.mark.polarion("CNV-9713")
+    @pytest.mark.s390x
     def test_cnao_json_patch_metrics(self, prometheus, kubevirt_all_unsafe_modification_metrics_before_test):
         before_value = filter_metric_by_component(
             metrics=kubevirt_all_unsafe_modification_metrics_before_test,
@@ -82,5 +84,6 @@ class TestCNAOJsonPatch:
         )
 
     @pytest.mark.polarion("CNV-9712")
+    @pytest.mark.s390x
     def test_cnao_json_patch_alert(self, prometheus):
         wait_for_alert(prometheus=prometheus, alert_name=ALERT_NAME, component_name=COMPONENT)

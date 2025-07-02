@@ -45,6 +45,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_change_subscription_on_selected_node_before_workload(
         self,
         admin_client,
@@ -78,6 +79,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         indirect=True,
     )
     @pytest.mark.dependency(name="test_change_infrastructure_components_on_selected_node_before_workload")
+    @pytest.mark.s390x
     def test_change_infrastructure_components_on_selected_node_before_workload(
         self,
         admin_client,
@@ -114,6 +116,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         name="test_change_workload_components_on_selected_node_before_workload",
         depends=["test_change_infrastructure_components_on_selected_node_before_workload"],
     )
+    @pytest.mark.s390x
     def test_change_workload_components_on_selected_node_before_workload(
         self,
         admin_client,
@@ -143,6 +146,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         name="test_deploying_workloads_on_selected_nodes",
         depends=["test_change_workload_components_on_selected_node_before_workload"],
     )
+    @pytest.mark.s390x
     def test_deploying_workloads_on_selected_nodes(
         self,
         vm_placement_vm_work3,
@@ -154,6 +158,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(
         depends=["test_deploying_workloads_on_selected_nodes"],
     )
+    @pytest.mark.s390x
     def test_workload_components_selection_change_denied_with_workloads(
         self,
         nodes_labeled,
@@ -182,6 +187,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         name="test_infrastructure_components_selection_change_allowed_with_workloads",
         depends=["test_deploying_workloads_on_selected_nodes"],
     )
+    @pytest.mark.s390x
     def test_infrastructure_components_selection_change_allowed_with_workloads(
         self,
         admin_client,
@@ -221,6 +227,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(
         depends=["test_infrastructure_components_selection_change_allowed_with_workloads"],
     )
+    @pytest.mark.s390x
     def test_operator_components_selection_change_allowed_with_workloads(
         self,
         admin_client,
@@ -258,6 +265,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         name="test_infrastructure_components_selection_change_allowed_after_workloads",
         depends=["test_infrastructure_components_selection_change_allowed_with_workloads"],
     )
+    @pytest.mark.s390x
     def test_infrastructure_components_selection_change_allowed_after_workloads(
         self,
         admin_client,
@@ -297,6 +305,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(
         depends=["test_infrastructure_components_selection_change_allowed_after_workloads"],
     )
+    @pytest.mark.s390x
     def test_operator_components_selection_change_allowed_after_workloads(
         self,
         admin_client,
@@ -332,6 +341,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.dependency(
         depends=["test_infrastructure_components_selection_change_allowed_after_workloads"],
     )
+    @pytest.mark.s390x
     def test_workload_components_selection_change_allowed_after_workloads(
         self,
         admin_client,

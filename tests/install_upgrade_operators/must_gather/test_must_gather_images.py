@@ -33,6 +33,7 @@ class TestImageGathering:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_image_gather(self, admin_client, gathered_images, resource, resource_path):
         check_list_of_resources(
             dyn_client=admin_client,

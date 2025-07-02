@@ -33,6 +33,7 @@ class TestCertRotation:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_certificate_renewed_in_hco(
         self,
         hco_namespace,

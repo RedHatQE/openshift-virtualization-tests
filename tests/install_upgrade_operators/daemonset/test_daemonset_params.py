@@ -13,6 +13,7 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8509")
+@pytest.mark.s390x
 def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names):
     """
     Since cnv deployments image validations are done via polarion parameterization, this test has been added

@@ -58,6 +58,7 @@ class TestDisconnectedVirtctlDownload:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_download_virtcli_binary(
         self,
         downloaded_and_extracted_virtctl_binary_for_os,
@@ -84,6 +85,7 @@ class TestDisconnectedVirtctlDownloadAndExecute:
         ],
         indirect=["downloaded_and_extracted_virtctl_binary_for_os"],
     )
+    @pytest.mark.s390x
     def test_download_and_execute_virtcli_binary_linux(self, downloaded_and_extracted_virtctl_binary_for_os, platform):
         assert os.path.exists(downloaded_and_extracted_virtctl_binary_for_os)
         # this part should only be repeated if the execution is being done on a matching platform:
@@ -94,6 +96,7 @@ class TestDisconnectedVirtctlDownloadAndExecute:
 @pytest.mark.arm64
 class TestDisconnectedVirtctlAllLinksInternal:
     @pytest.mark.polarion("CNV-6915")
+    @pytest.mark.s390x
     def test_all_links_internal(self, all_virtctl_urls, non_internal_fqdns):
         assert not non_internal_fqdns, (
             "Found virtctl URLs that do not point to the cluster internally: "

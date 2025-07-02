@@ -79,6 +79,7 @@ def resource_object_value_by_key(request):
     ],
     indirect=["resource_object_value_by_key"],
 )
+@pytest.mark.s390x
 def test_default_featuregates_by_resource(
     expected,
     resource_object_value_by_key,

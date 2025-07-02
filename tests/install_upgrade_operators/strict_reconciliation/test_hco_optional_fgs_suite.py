@@ -53,6 +53,7 @@ class TestNegativeFeatureGates:
         ],
         indirect=["hco_with_non_default_feature_gates"],
     )
+    @pytest.mark.s390x
     def test_invalid_featuregates_in_hco_cr(
         self,
         admin_client,
@@ -91,6 +92,7 @@ class TestNegativeFeatureGates:
         ],
         indirect=["updated_kv_with_feature_gates"],
     )
+    @pytest.mark.s390x
     def test_optional_featuregates_removed_from_kubevirt_cr(
         self,
         admin_client,
@@ -118,6 +120,7 @@ class TestHCOOptionalFeatureGatesSuite:
         [["fakeGate"]],
         indirect=["updated_cdi_with_feature_gates"],
     )
+    @pytest.mark.s390x
     def test_optional_featuregates_fake_removed_from_cdi_cr(
         self,
         updated_cdi_with_feature_gates,

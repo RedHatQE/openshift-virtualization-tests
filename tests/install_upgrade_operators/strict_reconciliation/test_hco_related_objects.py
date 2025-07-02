@@ -12,6 +12,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 class TestRelatedObjects:
     @pytest.mark.polarion("CNV-9843")
+    @pytest.mark.s390x
     def test_no_new_hco_related_objects(self, hco_status_related_objects):
         actual_related_objects = {
             related_object["name"]: related_object["kind"]
@@ -28,6 +29,7 @@ class TestRelatedObjects:
         assert not new_related_objects, f"There are new HCO related objects:\n {new_related_objects.to_json(indent=2)}"
 
     @pytest.mark.polarion("CNV-7267")
+    @pytest.mark.s390x
     def test_hco_related_objects(
         self,
         admin_client,

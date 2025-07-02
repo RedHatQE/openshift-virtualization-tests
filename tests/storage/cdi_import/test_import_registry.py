@@ -61,6 +61,7 @@ def test_disk_image_not_conform_to_registy_disk(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2028")
+@pytest.mark.s390x
 def test_public_registry_multiple_data_volume(
     namespace, storage_class_name_scope_function, dvs_and_vms_from_public_registry
 ):
@@ -95,6 +96,7 @@ def test_public_registry_multiple_data_volume(
         "import-public-registry-quay-dv",
     ],
 )
+@pytest.mark.s390x
 def test_public_registry_data_volume(
     namespace,
     dv_name,
@@ -125,6 +127,7 @@ def test_public_registry_data_volume(
 # we can overcome by updating to the right requested volume size and import successfully
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2024")
+@pytest.mark.s390x
 def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_scope_function):
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
@@ -169,6 +172,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2150")
+@pytest.mark.s390x
 def test_public_registry_data_volume_archive(namespace, storage_class_name_scope_function):
     with pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"):
         with create_dv(

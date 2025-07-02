@@ -49,6 +49,7 @@ class TestMustGatherVmDetailsWithParams:
         ],
         indirect=["collected_vm_details_must_gather_with_params"],
     )
+    @pytest.mark.s390x
     def test_must_gather_params(
         self,
         must_gather_vm,
@@ -66,6 +67,7 @@ class TestMustGatherVmDetailsWithParams:
         )
 
     @pytest.mark.polarion("CNV-9039")
+    @pytest.mark.s390x
     def test_must_gather_stopped_vm(
         self,
         must_gather_vms_from_alternate_namespace,

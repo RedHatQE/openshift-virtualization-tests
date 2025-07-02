@@ -156,6 +156,7 @@ class TestHCONonDefaultFields:
         ],
         indirect=["deleted_stanza_on_hco_cr", "reconciled_cr_post_hco_update"],
     )
+    @pytest.mark.s390x
     def test_non_default_fields_cdi(
         self,
         hco_status_related_objects_scope_function,

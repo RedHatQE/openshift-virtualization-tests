@@ -47,6 +47,7 @@ pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_unprivileged_user_clone_dv_same_namespace_positive(
     permissions_pvc_source,
     dv_cloned_by_unprivileged_user_in_the_same_namespace,
@@ -83,6 +84,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_user_permissions_positive(
     unprivileged_client,
     storage_class_matrix__module__,
@@ -125,6 +127,7 @@ def test_user_permissions_positive(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_user_permissions_negative(
     storage_class_name_scope_module,
     namespace,
@@ -157,6 +160,7 @@ def test_user_permissions_negative(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_unprivileged_user_clone_same_namespace_negative(
     storage_class_name_scope_module,
     namespace,
@@ -187,6 +191,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_user_permissions_only_for_dst_ns_negative(
     storage_class_name_scope_module,
     data_volume_multi_storage_scope_module,

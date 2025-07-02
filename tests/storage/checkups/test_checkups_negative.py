@@ -21,6 +21,7 @@ MSG_UNKNOWN_PROVISIONER = "there are StorageProfiles with empty ClaimPropertySet
 )
 class TestCheckupNegative:
     @pytest.mark.polarion("CNV-10701")
+    @pytest.mark.s390x
     def test_no_default_storage_class(
         self,
         removed_default_storage_classes,
@@ -34,13 +35,14 @@ class TestCheckupNegative:
         assert_results_in_configmap(
             configmap=checkup_configmap,
             expected_failure_msg=MSG_NO_DEFAULT_STORAGE_CLASS
-            if rhel9_data_import_cron_source_format == "pvc"
+            if rhel9_data_import_cron_source_format == "snapshot"
             else "^persistentvolumeclaims.*.not found$",
             expected_result=MSG_NO_DEFAULT_STORAGE_CLASS,
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )
 
     @pytest.mark.polarion("CNV-10705")
+    @pytest.mark.s390x
     def test_additional_default_storage_class(
         self,
         updated_two_default_storage_classes,
@@ -54,13 +56,14 @@ class TestCheckupNegative:
         assert_results_in_configmap(
             configmap=checkup_configmap,
             expected_failure_msg=MSG_MULTIPLE_DEFAULT_SC
-            if rhel9_data_import_cron_source_format == "pvc"
+            if rhel9_data_import_cron_source_format == "snapshot"
             else "VMI is not running",
             expected_result=MSG_MULTIPLE_DEFAULT_SC,
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )
 
     @pytest.mark.polarion("CNV-10706")
+    @pytest.mark.s390x
     def test_unknown_provisioner(
         self,
         storage_class_with_unknown_provisioner,
@@ -78,6 +81,7 @@ class TestCheckupNegative:
         )
 
     @pytest.mark.polarion("CNV-10711")
+    @pytest.mark.s390x
     def test_golden_image_data_source_not_ready(
         self,
         broken_data_import_cron,

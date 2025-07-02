@@ -237,6 +237,7 @@ class TestCRDefaultsOnStanzaDeletion:
         ],
         indirect=["deleted_stanza_on_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_certconfig_defaults_on_stanza_delete(
         self,
         deleted_stanza_on_hco_cr,
@@ -270,6 +271,7 @@ class TestCRDefaultsOnStanzaDeletion:
         ],
         indirect=["deleted_stanza_on_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_featuregates_defaults_on_stanza_delete(
         self,
         admin_client,
@@ -428,6 +430,7 @@ class TestCRDefaultsOnStanzaDeletion:
         ],
         indirect=["deleted_stanza_on_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_livemigrationconfig_defaults_on_stanza_delete(
         self,
         deleted_stanza_on_hco_cr,

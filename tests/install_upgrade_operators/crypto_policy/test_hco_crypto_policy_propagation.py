@@ -41,6 +41,7 @@ def updated_hco_crypto_policy(
 
 
 @pytest.mark.polarion("CNV-9331")
+@pytest.mark.s390x
 def test_set_hco_crypto_policy(
     cnv_crypto_policy_matrix__function__,
     updated_hco_crypto_policy,

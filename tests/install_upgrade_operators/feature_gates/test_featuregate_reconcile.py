@@ -52,6 +52,7 @@ class TestHardcodedFeatureGates:
         ],
         indirect=["updated_resource"],
     )
+    @pytest.mark.s390x
     def test_managed_cr_featuregate_reconcile(
         self,
         updated_resource,

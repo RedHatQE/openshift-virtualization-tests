@@ -36,6 +36,7 @@ def crd_operator_resources(request, admin_client):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_check_crd_non_structural_schema(crd_operator_resources):
     failed_crds = [
         crd_resource.name

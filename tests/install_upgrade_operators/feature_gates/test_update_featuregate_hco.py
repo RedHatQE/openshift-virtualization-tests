@@ -42,6 +42,7 @@ def updated_fg_hco(
     ],
     indirect=["updated_fg_hco"],
 )
+@pytest.mark.s390x
 def test_enable_fg_hco(
     updated_fg_hco,
     hco_spec,

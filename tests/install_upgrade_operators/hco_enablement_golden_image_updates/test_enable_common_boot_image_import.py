@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestEnableCommonBootImageImport:
     @pytest.mark.polarion("CNV-7626")
+    @pytest.mark.s390x
     def test_set_enable_common_boot_image_import_true_ssp_cr(
         self,
         ssp_cr_spec,
@@ -26,6 +27,7 @@ class TestEnableCommonBootImageImport:
 
 
 @pytest.mark.polarion("CNV-7778")
+@pytest.mark.s390x
 def test_enable_and_delete_spec_enable_common_boot_image_import_hco_cr(
     admin_client,
     hco_namespace,

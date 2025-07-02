@@ -7,6 +7,7 @@ pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.mark.polarion("CNV-5884")
+@pytest.mark.s390x
 def test_hco_cr_explainable(hyperconverged_resource_scope_function):
     """
     This test case ensure that after executing 'oc explain hyperconvergeds'
@@ -51,6 +52,7 @@ def test_hco_cr_explainable(hyperconverged_resource_scope_function):
         ),
     ],
 )
+@pytest.mark.s390x
 def test_hco_cr_fields_explainable(fields, description):
     """
     This test case ensure that after executing 'oc explain hyperconvergeds.{fields}'

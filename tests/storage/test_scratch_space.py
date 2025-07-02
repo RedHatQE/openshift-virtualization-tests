@@ -81,6 +81,7 @@ def scratch_pvc_bound(dv):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_upload_https_scratch_space_delete_pvc(
     namespace,
     storage_class_name_scope_module,

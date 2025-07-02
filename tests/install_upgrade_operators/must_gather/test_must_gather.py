@@ -78,6 +78,7 @@ class TestMustGatherCluster:
         ],
         indirect=["resource_type"],
     )
+    @pytest.mark.s390x
     def test_resource_type(
         self,
         admin_client,
@@ -95,6 +96,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2982")
+    @pytest.mark.s390x
     def test_namespace(self, hco_namespace, must_gather_for_test):
         namespace_name = hco_namespace.name
         check_resource(
@@ -106,6 +108,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-5885")
+    @pytest.mark.s390x
     def test_no_upstream_only_namespaces(self, must_gather_for_test, sriov_namespace):
         """
         After running must-gather command on the cluster, there are some upstream-only namespaces
@@ -179,6 +182,7 @@ class TestMustGatherCluster:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_pods(
         self,
         admin_client,
@@ -197,6 +201,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2727")
+    @pytest.mark.s390x
     def test_template_in_openshift_ns_data(self, admin_client, must_gather_for_test):
         template_resources = list(
             Template.get(dyn_client=admin_client, singular_name="template", namespace="openshift")
@@ -214,6 +219,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2809")
+    @pytest.mark.s390x
     def test_node_nftables(self, collected_nft_files_must_gather, nftables_from_utility_pods):
         table_not_found_errors = []
         for node_name in collected_nft_files_must_gather:
@@ -255,6 +261,7 @@ class TestMustGatherCluster:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_node_resource(
         self,
         must_gather_for_test,
@@ -273,6 +280,7 @@ class TestMustGatherCluster:
             )
 
     @pytest.mark.polarion("CNV-2801")
+    @pytest.mark.s390x
     def test_nmstate_config_data(self, admin_client, must_gather_for_test):
         check_list_of_resources(
             dyn_client=admin_client,
@@ -287,6 +295,7 @@ class TestMustGatherCluster:
         "label_selector",
         [pytest.param({"app": "cni-plugins"}, marks=(pytest.mark.polarion("CNV-2715")))],
     )
+    @pytest.mark.s390x
     def test_logs_gathering(self, must_gather_for_test, running_hco_containers, label_selector):
         check_logs(
             cnv_must_gather=must_gather_for_test,
@@ -307,6 +316,7 @@ class TestMustGatherCluster:
         ],
         indirect=["config_map_by_name"],
     )
+    @pytest.mark.s390x
     def test_gathered_config_maps(
         self,
         must_gather_for_test,
@@ -326,6 +336,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2723")
+    @pytest.mark.s390x
     def test_apiservice_resources(self, admin_client, must_gather_for_test):
         check_list_of_resources(
             dyn_client=admin_client,
@@ -337,6 +348,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2726")
+    @pytest.mark.s390x
     def test_webhookconfig_resources(self, admin_client, must_gather_for_test):
         check_list_of_resources(
             dyn_client=admin_client,
@@ -365,11 +377,13 @@ class TestMustGatherCluster:
             )
 
     @pytest.mark.polarion("CNV-8508")
+    @pytest.mark.s390x
     def test_no_new_cnv_crds(self, kubevirt_crd_names):
         new_crds = [crd for crd in kubevirt_crd_names if crd not in ALL_CNV_CRDS]
         assert not new_crds, f"Following crds are new: {new_crds}."
 
     @pytest.mark.polarion("CNV-2724")
+    @pytest.mark.s390x
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
         crd_name = kubevirt_crd_by_type.name
         for version in kubevirt_crd_by_type.instance.spec.versions:
@@ -420,6 +434,7 @@ class TestMustGatherCluster:
                 )
 
     @pytest.mark.polarion("CNV-2939")
+    @pytest.mark.s390x
     def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
         resource_path = (
             f"namespaces/{NamespacesNames.OPENSHIFT}/{ImageStreamTag.ApiGroup.IMAGE_OPENSHIFT_IO}/imagestreamtags"
@@ -462,6 +477,7 @@ class TestSriovMustGather:
 
 class TestCNVCollectsLogs:
     @pytest.mark.polarion("CNV-9906")
+    @pytest.mark.s390x
     def test_kubevirt_logs_collected(self, gathered_kubevirt_logs, running_hco_containers, hco_namespace):
         LOGGER.info(f"Pod containers: {running_hco_containers}")
         check_logs(

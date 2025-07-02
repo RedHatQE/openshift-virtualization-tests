@@ -106,7 +106,7 @@ def expand_pvc(dv, size_change):
 
 
 def get_resize_count(vm):
-    commands = shlex.split("dmesg | grep -c 'new size' || true")
+    commands = shlex.split("sudo dmesg | grep -c 'new size' || true")
     return int(run_ssh_commands(host=vm.ssh_exec, commands=commands)[0])
 
 
@@ -238,6 +238,7 @@ def skip_if_storage_for_online_resize_does_not_support_snapshots(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_sequential_disk_expand(
     cirros_dv_for_online_resize,
     cirros_vm_for_online_resize,
@@ -259,6 +260,7 @@ def test_sequential_disk_expand(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_simultaneous_disk_expand(
     cirros_dv_for_online_resize,
     second_cirros_dv_for_online_resize,
@@ -281,6 +283,7 @@ def test_simultaneous_disk_expand(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_then_clone_fail(
     cirros_dv_for_online_resize,
     cirros_vm_after_expand,
@@ -314,6 +317,7 @@ def test_disk_expand_then_clone_fail(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_then_clone_success(
     cirros_dv_for_online_resize,
     cirros_vm_after_expand,
@@ -343,6 +347,7 @@ def test_disk_expand_then_clone_success(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_then_migrate(cpu_for_migration, cirros_vm_after_expand, orig_cksum):
     migrate_vm_and_verify(
         vm=cirros_vm_after_expand,
@@ -362,6 +367,7 @@ def test_disk_expand_then_migrate(cpu_for_migration, cirros_vm_after_expand, ori
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_with_snapshots(
     skip_if_storage_for_online_resize_does_not_support_snapshots,
     cirros_dv_for_online_resize,

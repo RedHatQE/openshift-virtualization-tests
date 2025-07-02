@@ -42,6 +42,7 @@ class TestLauncherUpdateAll:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_modify_custom_workload_update_strategy_all(
         self,
         admin_client,
@@ -162,6 +163,7 @@ class TestCustomWorkLoadStrategy:
         ],
         indirect=["updated_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_hyperconverged_modify_custom_workload_update_strategy(
         self, admin_client, hco_namespace, updated_hco_cr, expected
     ):

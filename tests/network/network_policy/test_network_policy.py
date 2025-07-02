@@ -117,6 +117,7 @@ def running_network_policy_vmb(network_policy_vmb):
 @pytest.mark.order(before="test_network_policy_allow_http80")
 @pytest.mark.polarion("CNV-369")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_network_policy_deny_all_http(
     deny_all_http_ports,
     network_policy_vma,
@@ -138,6 +139,7 @@ def test_network_policy_deny_all_http(
 @pytest.mark.order(before="test_network_policy_allow_all_http")
 @pytest.mark.polarion("CNV-2775")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_network_policy_allow_http80(
     allow_http80_port,
     network_policy_vma,
@@ -160,6 +162,7 @@ def test_network_policy_allow_http80(
 
 @pytest.mark.polarion("CNV-2774")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_network_policy_allow_all_http(
     allow_all_http_ports,
     network_policy_vma,

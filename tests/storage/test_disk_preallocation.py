@@ -93,6 +93,7 @@ def cdi_preallocation_enabled(hyperconverged_resource_scope_module, cdi_config):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_preallocation_dv(
     data_volume_multi_storage_scope_function,
 ):
@@ -120,6 +121,7 @@ def test_preallocation_dv(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_preallocation_globally_dv_spec_without_preallocation(
     cdi_preallocation_enabled,
     data_volume_multi_storage_scope_module,
@@ -149,6 +151,7 @@ def test_preallocation_globally_dv_spec_without_preallocation(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_preallocation_globally_dv_spec_with_preallocation_false(
     cdi_preallocation_enabled,
     data_volume_multi_storage_scope_function,
@@ -180,6 +183,7 @@ def test_preallocation_globally_dv_spec_with_preallocation_false(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_preallocation_for_blank_dv(
     data_volume_multi_storage_scope_function,
 ):

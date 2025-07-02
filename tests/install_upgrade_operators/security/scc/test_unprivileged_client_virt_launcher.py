@@ -36,6 +36,7 @@ def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-4897")
+@pytest.mark.s390x
 def test_unprivileged_client_virt_launcher(unprivileged_client, developer_vm, vm_virt_launcher_pod):
     with pytest.raises(
         ApiException,

@@ -317,6 +317,7 @@ class TestOperatorsModify:
         ],
         indirect=["updated_hco_cr"],
     )
+    @pytest.mark.s390x
     def test_modify_hco_cr(
         self,
         hco_cr_custom_values,

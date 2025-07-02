@@ -128,6 +128,7 @@ class TestModifyCommonTemplateSpec:
         ],
         indirect=["updated_common_template"],
     )
+    @pytest.mark.s390x
     def test_modified_common_template(self, updated_common_template, hyperconverged_status_templates_scope_function):
         template_name = updated_common_template[0]["metadata"]["name"]
         hco_template = get_template_dict_by_name(
@@ -164,6 +165,7 @@ class TestModifyCommonTemplateSpec:
         ],
         indirect=["updated_common_template"],
     )
+    @pytest.mark.s390x
     def test_common_template_modify_spec(
         self,
         updated_common_template,
@@ -249,6 +251,7 @@ class TestCommonTemplatesEnableDisable:
         ],
         indirect=["updated_common_template"],
     )
+    @pytest.mark.s390x
     def test_common_template_config_disable(
         self,
         updated_common_template,

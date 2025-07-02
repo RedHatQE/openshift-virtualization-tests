@@ -49,6 +49,7 @@ def hco_vm(unprivileged_client, namespace):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_remove_workload_label_from_node_while_vm_running(
     node_placement_labels, hyperconverged_with_node_placement, hco_vm
 ):
