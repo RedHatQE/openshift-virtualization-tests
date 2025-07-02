@@ -131,7 +131,6 @@ class TestVMStatusLastTransitionMetricsWindows:
         self,
         skip_if_no_common_cpu,
         prometheus,
-        migration_policy_with_bandwidth,
         windows_vm_with_low_bandwidth_migration_policy,
         windows_vm_vmim,
     ):
