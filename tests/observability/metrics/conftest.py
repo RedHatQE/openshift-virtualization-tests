@@ -89,7 +89,6 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_20MIN,
     TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
@@ -1076,8 +1075,6 @@ def non_existent_node_windows_vm(windows_vm_for_test):
         windows_vm_for_test.restart()
         windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
         yield windows_vm_for_test
-    windows_vm_for_test.restart()
-    windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING)
 
 
 @pytest.fixture()
@@ -1245,14 +1242,13 @@ def vm_metric_1_vmim(vm_metric_1, admin_client):
 
 
 @pytest.fixture()
-def windows_vm_vmim(migration_policy_with_bandwidth, windows_vm_for_test, admin_client):
+def windows_vm_vmim(windows_vm_for_test, admin_client):
     with VirtualMachineInstanceMigration(
         name="windows-vm-metric-1-vmim",
         namespace=windows_vm_for_test.namespace,
         vmi_name=windows_vm_for_test.vmi.name,
         client=admin_client,
-    ) as vmim:
-        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_20MIN)
+    ):
         windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.MIGRATING)
         yield
 
