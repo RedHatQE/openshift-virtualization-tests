@@ -37,9 +37,9 @@ TESTS_MIGRATE_VM = f"{TESTS_CLASS_MIGRATION}::test_migrate_vm"
 class TestVMCreationAndValidation:
     @pytest.mark.dependency(name=TEST_CREATE_VM_TEST_NAME)
     @pytest.mark.polarion("CNV-11710")
-    def test_create_vm(self, golden_image_vm_with_instance_type, instance_type_rhel_os_matrix__class__):
+    def test_create_vm(self, golden_image_vm_with_instance_type, instance_type_rhel_os_matrix__module__):
         golden_image_vm_with_instance_type.create(wait=True)
-        os_param_dict = instance_type_rhel_os_matrix__class__[[*instance_type_rhel_os_matrix__class__][0]]
+        os_param_dict = instance_type_rhel_os_matrix__module__[[*instance_type_rhel_os_matrix__module__][0]]
         assert golden_image_vm_with_instance_type.instance.spec.instancetype.name == os_param_dict[INSTANCE_TYPE_STR]
         assert golden_image_vm_with_instance_type.instance.spec.preference.name == os_param_dict[PREFERENCE_STR]
 
@@ -68,6 +68,7 @@ class TestVMCreationAndValidation:
         )
 
 
+@pytest.mark.usefixtures("skip_if_rhel8")
 @pytest.mark.sno
 class TestVMFeatures:
     @pytest.mark.dependency(depends=[TEST_START_VM_TEST_NAME])
