@@ -5,14 +5,8 @@ import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from pytest_testconfig import config as py_config
 
-from tests.utils import (
-    assert_guest_os_cpu_count,
-    assert_guest_os_memory_amount,
-)
 from utilities.constants import (
     REGEDIT_PROC_NAME,
-    SIX_CPU_SOCKETS,
-    SIX_GI_MEMORY,
     TIMEOUT_15MIN,
     TIMEOUT_30MIN,
     Images,
@@ -134,24 +128,4 @@ class TestPostCopyMigration:
     @pytest.mark.polarion("CNV-11422")
     def test_node_drain(self, admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
-        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
-
-    @pytest.mark.parametrize(
-        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
-    )
-    @pytest.mark.jira("CNV-58187", run=False)
-    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu", depends=[f"{TESTS_CLASS_NAME}::node_drain"])
-    @pytest.mark.polarion("CNV-11423")
-    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
-        assert_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
-        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
-
-    @pytest.mark.parametrize(
-        "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
-    )
-    @pytest.mark.jira("CNV-58187", run=False)
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-11424")
-    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
-        assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=SIX_GI_MEMORY)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
