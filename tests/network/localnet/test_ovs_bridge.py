@@ -1,5 +1,3 @@
-from typing import Final
-
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
