@@ -12,7 +12,6 @@ from tests.storage.storage_migration.constants import (
     FILE_BEFORE_STORAGE_MIGRATION,
     MOUNT_HOTPLUGGED_DEVICE_PATH,
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
-    WINDOWS_FILE_WITH_PATH,
 )
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
@@ -115,17 +114,3 @@ def verify_file_in_windows_vm(windows_vm: VirtualMachine, file_name_with_path: s
     cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
     out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
     assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
-
-
-def verify_windows_storage_migration_succeeded(
-    vms_boot_time_before_storage_migration: dict[str, str],
-    online_vms_for_storage_class_migration: list[VirtualMachine],
-    vms_with_written_file_before_migration: list[VirtualMachine],
-    target_storage_class: str,
-) -> None:
-    verify_vms_boot_time_after_storage_migration(
-        vm_list=online_vms_for_storage_class_migration, initial_boot_time=vms_boot_time_before_storage_migration
-    )
-    for vm in vms_with_written_file_before_migration:
-        verify_file_in_windows_vm(windows_vm=vm, file_name_with_path=WINDOWS_FILE_WITH_PATH, file_content=CONTENT)
-        verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
