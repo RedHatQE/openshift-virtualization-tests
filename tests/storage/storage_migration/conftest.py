@@ -76,6 +76,7 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
         live_migrate=True,
         namespaces=[namespace.name],
         refresh=False,
+        teardown=False,
     ) as mig_plan:
         mig_plan.wait_for_condition(
             condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -86,11 +87,12 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
             pvc_dict["selection"]["storageClass"] = target_storage_class
             pvc_dict["pvc"]["accessModes"][0] = "auto"
             pvc_dict["pvc"]["volumeMode"] = "auto"
-            # Windows vTPM PVC should be skipped
+            # vTPM PVC should be skipped
             if pvc_dict["pvc"]["name"].startswith("persistent-state"):
                 pvc_dict["selection"]["action"] = "skip"
         ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
+        mig_plan.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -103,6 +105,7 @@ def storage_mig_migration(admin_client, storage_mig_plan):
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
+        teardown=False,
     ) as mig_migration:
         mig_migration.wait_for_condition(
             condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -114,6 +117,7 @@ def storage_mig_migration(admin_client, storage_mig_plan):
             sleep_time=TIMEOUT_5SEC,
         )
         yield mig_migration
+        mig_migration.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -388,6 +392,7 @@ def windows_vm_with_vtpm_for_storage_migration(
         namespace=namespace.name,
         storage_class=source_storage_class,
         source="http",
+        # Using WSL image to avoid the issue of the Windows VM not being able to boot
         url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=unprivileged_client,
@@ -404,6 +409,7 @@ def windows_vm_with_vtpm_for_storage_migration(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        cpu_model=modern_cpu_for_migration,
     ) as vm:
         vm.start()
         yield vm
