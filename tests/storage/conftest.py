@@ -19,6 +19,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
@@ -45,6 +46,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
     Images,
+    StorageClassNames,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -188,6 +190,15 @@ def skip_test_if_no_hpp_sc(cluster_storage_classes):
     existing_hpp_sc = [sc.name for sc in cluster_storage_classes if sc.name in HPP_STORAGE_CLASSES]
     if not existing_hpp_sc:
         pytest.skip(f"This test runs only on one of the hpp storage classes: {HPP_STORAGE_CLASSES}")
+
+
+@pytest.fixture(scope="session")
+def xfail_test_if_gcp_sc(cluster_storage_classes):
+    existing_gcp_sc = [sc.name for sc in cluster_storage_classes if sc.name in StorageClassNames.GCP]
+    if existing_gcp_sc:
+        pytest.xfail(
+            reason=f"This test is X failed due to non supporting GCP storage class dv less than 4Gi'{existing_gcp_sc}'"
+        )
 
 
 @pytest.fixture(scope="module")
@@ -591,3 +602,9 @@ def storage_class_name_scope_module(storage_class_matrix__module__):
 @pytest.fixture(scope="session")
 def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+
+
+@pytest.fixture()
+def storage_profile_minimum_supported_pvc_size(storage_class_matrix__function__):
+    storage_profile = StorageProfile(name=[*storage_class_matrix__function__][0])
+    return storage_profile.instance.metadata.annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize", "1Gi")

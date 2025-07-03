@@ -9,7 +9,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
 from tests.utils import create_cirros_vm
-from utilities.constants import Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import virtctl_upload_dv
 
@@ -64,12 +63,13 @@ def uploaded_cirros_dv(
     downloaded_cirros_image_full_path,
     downloaded_cirros_image_scope_class,
     storage_class_with_filesystem_volume_mode,
+    storage_profile_minimum_supported_pvc_size,
 ):
     dv_name = "uploaded-dv"
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size=storage_profile_minimum_supported_pvc_size,
         image_path=downloaded_cirros_image_full_path,
         storage_class=storage_class_with_filesystem_volume_mode,
         volume_mode=DataVolume.VolumeMode.FILE,
@@ -93,10 +93,9 @@ def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_
 
 @pytest.mark.polarion("CNV-8637")
 def test_upload_dv_with_specify_fs_overhead(
-    updated_fs_overhead_20_with_hco,
-    uploaded_cirros_dv,
+    updated_fs_overhead_20_with_hco, uploaded_cirros_dv, storage_profile_minimum_supported_pvc_size
 ):
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
-        requested_size=bitmath.GiB(int(Images.Cirros.DEFAULT_DV_SIZE[0])),
+        requested_size=bitmath.parse_string_unsafe(storage_profile_minimum_supported_pvc_size).to_GiB(),
     )
