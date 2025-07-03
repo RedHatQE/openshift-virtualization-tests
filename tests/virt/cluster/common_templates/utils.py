@@ -3,7 +3,6 @@ import logging
 import re
 import shlex
 from datetime import datetime, timedelta, timezone
-from functools import cache
 
 import bitmath
 import pytest
@@ -22,7 +21,6 @@ from utilities.constants import (
 from utilities.infra import (
     get_linux_guest_agent_version,
     get_linux_os_info,
-    is_jira_open,
     raise_multiple_exceptions,
     run_virtctl_command,
 )
@@ -123,9 +121,6 @@ def validate_user_info_virtctl_vs_linux_os(vm):
         cnv_info = get_cnv_user_info(vm=vm)
         libvirt_info = get_libvirt_user_info(vm=vm)
         linux_info = get_linux_user_info(ssh_exec=vm.ssh_exec)
-        if is_jira_63874_bug_open():
-            LOGGER.warning("Due to bug CNV-63874, loginTime is not available in virtctl output.")
-            linux_info["loginTime"] = 0
         return virtctl_info, cnv_info, libvirt_info, linux_info
 
     user_info_sampler = TimeoutSampler(wait_timeout=30, sleep=10, func=_get_user_info, vm=vm)
@@ -623,8 +618,3 @@ def assert_windows_efi(vm):
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0]
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
-
-
-@cache
-def is_jira_63874_bug_open():
-    return is_jira_open(jira_id="CNV-63874")
