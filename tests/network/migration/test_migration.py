@@ -326,6 +326,7 @@ def brcnv_migrated_vm(
 )
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-2060")
+@pytest.mark.s390x
 def test_ping_vm_migration(
     vma,
     vmb,
@@ -339,6 +340,7 @@ def test_ping_vm_migration(
 
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-2063")
+@pytest.mark.s390x
 def test_ssh_vm_migration(
     namespace,
     br1test_nad,
@@ -370,6 +372,7 @@ def test_cnv_bridge_ssh_vm_migration(
 @pytest.mark.post_upgrade
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5565")
+@pytest.mark.s390x
 def test_connectivity_after_migration_and_restart(
     namespace,
     br1test_nad,
@@ -386,6 +389,7 @@ def test_connectivity_after_migration_and_restart(
 
 
 @pytest.mark.polarion("CNV-2061")
+@pytest.mark.s390x
 def test_migration_with_masquerade(
     ip_stack_version_matrix__module__,
     admin_client,
@@ -407,6 +411,7 @@ def test_migration_with_masquerade(
 
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-6548")
+@pytest.mark.s390x
 def test_ping_from_migrated_vm(
     br1test_nad,
     vma,

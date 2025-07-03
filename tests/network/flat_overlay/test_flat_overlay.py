@@ -19,6 +19,7 @@ class TestFlatOverlayConnectivity:
     @pytest.mark.gating
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10158")
+    @pytest.mark.s390x
     @pytest.mark.dependency(name="test_flat_overlay_basic_ping")
     def test_flat_overlay_basic_ping(self, flat_overlay_vma_vmb_nad, vma_flat_overlay, vmb_flat_overlay):
         assert_ping_successful(
@@ -27,6 +28,7 @@ class TestFlatOverlayConnectivity:
         )
 
     @pytest.mark.polarion("CNV-10159")
+    @pytest.mark.s390x
     @pytest.mark.dependency(name="test_flat_overlay_separate_nads", depends=["test_flat_overlay_basic_ping"])
     def test_flat_overlay_separate_nads(
         self,
@@ -48,6 +50,7 @@ class TestFlatOverlayConnectivity:
         )
 
     @pytest.mark.polarion("CNV-10160")
+    @pytest.mark.s390x
     def test_flat_overlay_separate_nads_no_connectivity(
         self,
         vma_flat_overlay,
@@ -59,6 +62,7 @@ class TestFlatOverlayConnectivity:
         )
 
     @pytest.mark.polarion("CNV-10172")
+    @pytest.mark.s390x
     def test_flat_overlay_connectivity_between_namespaces(
         self,
         flat_overlay_vma_vmb_nad,
@@ -77,6 +81,7 @@ class TestFlatOverlayConnectivity:
         )
 
     @pytest.mark.polarion("CNV-10173")
+    @pytest.mark.s390x
     def test_flat_overlay_consistent_ip(
         self,
         vmc_flat_overlay_ip_address,
@@ -92,6 +97,7 @@ class TestFlatOverlayConnectivity:
 
 class TestFlatOverlayJumboConnectivity:
     @pytest.mark.polarion("CNV-10162")
+    @pytest.mark.s390x
     def test_flat_l2_jumbo_frame_connectivity(
         self,
         flat_l2_jumbo_frame_packet_size,

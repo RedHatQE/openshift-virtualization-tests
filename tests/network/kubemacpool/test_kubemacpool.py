@@ -17,6 +17,7 @@ class TestKMPConnectivity:
     # |.......|---eth4:10.200.4.1: Automatic mac tuning network :10.200.4.2:eth4---|........|
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-2154")
+    @pytest.mark.s390x
     def test_manual_mac_from_pool(self, namespace, running_vm_a, running_vm_b):
         """Test that manually assigned mac address from pool is configured and working"""
         for vm in (running_vm_a, running_vm_b):
@@ -24,6 +25,7 @@ class TestKMPConnectivity:
         assert_ping_successful(src_vm=running_vm_a, dst_ip=running_vm_b.manual_mac_iface_config.ip_address)
 
     @pytest.mark.polarion("CNV-2156")
+    @pytest.mark.s390x
     def test_manual_mac_not_from_pool(self, running_vm_a, running_vm_b):
         """Test that manually assigned mac address out of pool is configured and working"""
         for vm in (running_vm_a, running_vm_b):
@@ -35,6 +37,7 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2241")
+    @pytest.mark.s390x
     def test_automatic_mac_from_pool_pod_network(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to POD's masquerade network
         from kubemacpool belongs to range and connectivity is OK"""
@@ -49,6 +52,7 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2155")
+    @pytest.mark.s390x
     def test_automatic_mac_from_pool(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to interface
         from kubemacpool belongs to range and connectivity is OK"""
@@ -59,6 +63,7 @@ class TestKMPConnectivity:
         assert_ping_successful(src_vm=running_vm_a, dst_ip=running_vm_b.auto_mac_iface_config.ip_address)
 
     @pytest.mark.polarion("CNV-2242")
+    @pytest.mark.s390x
     def test_automatic_mac_from_pool_tuning(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to tuning interface
         from kubemacpool is belongs to range and connectivity is OK"""
@@ -73,12 +78,14 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2157")
+    @pytest.mark.s390x
     def test_mac_preserved_after_shutdown(self, restarted_vmi_a, restarted_vmi_b, running_vm_a, running_vm_b):
         """Test that all macs are preserved even after VM restart"""
         kmp_utils.assert_macs_preseved(vm=running_vm_a)
         kmp_utils.assert_macs_preseved(vm=running_vm_b)
 
     @pytest.mark.polarion("CNV-5941")
+    @pytest.mark.s390x
     def test_enabled_label_ns(
         self,
         mac_pool,
@@ -91,6 +98,7 @@ class TestKMPConnectivity:
         )
 
     @pytest.mark.polarion("CNV-4217")
+    @pytest.mark.s390x
     def test_no_label_ns(
         self,
         mac_pool,
@@ -105,6 +113,7 @@ class TestKMPConnectivity:
 
 class TestNegatives:
     @pytest.mark.polarion("CNV-4199")
+    @pytest.mark.s390x
     def test_disabled_assignment_ns(
         self,
         mac_pool,
@@ -121,6 +130,7 @@ class TestNegatives:
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4405")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_kmp_down(namespace, kmp_down):
     with pytest.raises(ApiException):
         with VirtualMachineForTests(name="kmp-down-vm", namespace=namespace.name):

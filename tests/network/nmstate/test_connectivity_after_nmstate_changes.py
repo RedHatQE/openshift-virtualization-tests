@@ -245,6 +245,7 @@ class TestConnectivityAfterNmstateChanged:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5780")
+    @pytest.mark.s390x
     def test_nmstate_restart_and_check_connectivity(
         self,
         nncp_ready,
@@ -281,6 +282,7 @@ class TestConnectivityAfterNmstateChanged:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-7746")
+    @pytest.mark.s390x
     def test_ssh_alive_after_restart_nmstate_handler(
         self,
         nncp_ready,
@@ -297,6 +299,7 @@ class TestConnectivityAfterNmstateChanged:
     @pytest.mark.gating
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5839")
+    @pytest.mark.s390x
     def test_connectivity_after_nncp_change(
         self,
         nmstate_linux_bridge_attached_vma,
