@@ -997,11 +997,13 @@ def vnic_info_from_vm_or_vmi(request, running_metric_vm):
     vm_instance = (
         running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
     )
-    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_instance.domain.devices.interfaces[0])
+    vm_interface = vm_instance.domain.devices.interfaces[0]
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
     return {
         "vnic_name": vm_instance.networks[0].name,
         BINDING_NAME: binding_name_and_type[BINDING_NAME],
         BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+        "model": vm_interface.model,
     }
 
 
