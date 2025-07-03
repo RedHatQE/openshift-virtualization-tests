@@ -28,13 +28,6 @@ def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ..
     return vms
 
 
-def lookup_vm_interface(vm, interface_name):
-    for interface in vm.vmi.instance.status.interfaces:
-        if interface["name"] == interface_name:
-            return interface
-    return None
-
-
 def create_traffic_server(vm: BaseVirtualMachine) -> Server:
     return Server(vm=vm, port=_IPERF_SERVER_PORT)
 

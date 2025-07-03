@@ -9,7 +9,6 @@ from tests.network.localnet.liblocalnet import (
     LINK_STATE_UP,
     LOCALNET_OVS_BRIDGE_NETWORK,
     client_server_active_connection,
-    lookup_vm_interface,
 )
 from utilities.network import IfaceNotFound
 from utilities.virt import migrate_vm_and_verify
@@ -37,7 +36,7 @@ def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
         network_name=LOCALNET_OVS_BRIDGE_NETWORK, state=LINK_STATE_UP
     )
 
-    localnet_interface=lookup_iface_status(
+    lookup_iface_status(
         vm=ovs_bridge_localnet_running_vms_one_with_interface_down[0],
         iface_name=LOCALNET_OVS_BRIDGE_NETWORK,
         predicate=lambda interface: "guest-agent" in interface["infoSource"] and  interface["linkState"] == LINK_STATE_UP,

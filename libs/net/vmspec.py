@@ -20,8 +20,12 @@ class VMInterfaceStatusNotFoundError(Exception):
     pass
 
 
+def _default_interface_predicate(interface):
+    return "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
+
+
 def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str,
-                        predicate: Callable[[Any], bool] = lambda interface: "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]) -> ResourceField:
+                        predicate: Callable[[Any], bool] = _default_interface_predicate) -> ResourceField:
     """
     Returns the network interface status requested if found, otherwise raises VMInterfaceStatusNotFoundError.
     The interface status information is expected to be sourced from the guest-agent with an IP address.

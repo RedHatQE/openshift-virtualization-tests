@@ -76,16 +76,14 @@ class BaseVirtualMachine(VirtualMachine):
         )
 
     def set_interface_state(self, network_name: str, state: str) -> None:
-        vmi_interfaces = self.get_interfaces()
+        vmi_interfaces = self._spec.template.spec.domain.devices.interfaces
         interfaces_list = []
-        interface_to_patch = ""
         for interface in vmi_interfaces:
-            interface_dict = dict(interface)
-            if interface_dict["name"] == network_name:
-                interface_to_patch = interface_dict["name"]
-                interface_dict["state"] = state
-            interfaces_list.append(interface_dict)
-        if interface_to_patch == "":
+            if interface.name == network_name:
+                interface.state = state
+            interfaces_list.append(asdict(interface))
+            break
+        else:
             raise IfaceNotFound(name=network_name)
         patches = {self: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": interfaces_list}}}}}}}
         ResourceEditor(patches=patches).update()
