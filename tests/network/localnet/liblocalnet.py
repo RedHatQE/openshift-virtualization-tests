@@ -65,7 +65,8 @@ def localnet_vm(
         physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
         spec_logical_network (str): The name of the localnet network to attach.
-        interface_state (str): The state of the interface, default up.
+        interface_state (str): The state of the interface (optional).
+        Possible values are "up" or "down". When not specified, it behaves as "up".
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.

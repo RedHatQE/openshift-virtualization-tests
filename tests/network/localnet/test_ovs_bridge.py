@@ -26,7 +26,7 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 
 @pytest.mark.ipv4
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
-@pytest.mark.polarion("CNV-XXXXX")
+@pytest.mark.polarion("CNV-12006")
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     ovs_bridge_localnet_running_vms_one_with_interface_down,
 ):

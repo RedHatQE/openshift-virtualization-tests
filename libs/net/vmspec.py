@@ -20,7 +20,7 @@ class VMInterfaceStatusNotFoundError(Exception):
     pass
 
 
-def _default_interface_predicate(interface):
+def _default_interface_predicate(interface) -> Callable[[Any], bool]:
     return "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
 
 
