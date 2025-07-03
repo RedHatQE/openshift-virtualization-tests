@@ -200,7 +200,7 @@ def cudn_localnet_ovs_bridge(
         yield cudn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
@@ -249,7 +249,7 @@ def vm_ovs_bridge_localnet_2(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def ovs_bridge_localnet_running_vms_one_with_interface_down(
     vm_ovs_bridge_localnet_link_down: BaseVirtualMachine, vm_ovs_bridge_localnet_1: BaseVirtualMachine
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:

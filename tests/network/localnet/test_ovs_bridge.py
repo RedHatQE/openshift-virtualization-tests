@@ -11,8 +11,6 @@ from tests.network.localnet.liblocalnet import (
 )
 from utilities.virt import migrate_vm_and_verify
 
-_DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
-
 
 @pytest.mark.ipv4
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
