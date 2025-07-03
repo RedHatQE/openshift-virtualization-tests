@@ -108,3 +108,9 @@ def verify_file_in_hotplugged_disk(vm: VirtualMachine, file_name: str, file_cont
         host=vm.ssh_exec, commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}")
     )[0]
     assert output.strip() == file_content, f"'{output}' does not equal '{file_content}'"
+
+
+def verify_file_in_windows_vm(windows_vm: VirtualMachine, file_name_with_path: str, file_content: str) -> None:
+    cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
