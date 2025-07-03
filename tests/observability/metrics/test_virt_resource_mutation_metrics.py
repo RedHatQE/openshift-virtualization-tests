@@ -17,6 +17,7 @@ from tests.observability.metrics.utils import (
     COUNT_THREE,
     COUNT_TWO,
     get_changed_mutation_component_value,
+    get_mutation_component_value_from_prometheus,
     wait_for_summary_count_to_be_expected,
 )
 from utilities.constants import (
@@ -359,4 +360,26 @@ def test_metric_multiple_invalid_change(
         prometheus=prometheus,
         component_name=component_name,
         expected_summary_value=change_count,
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation_count_before_change, updated_resource_with_invalid_label",
+    [
+        pytest.param(
+            COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"],
+            COMPONENT_CONFIG["cdi"]["resource_info"],
+            marks=pytest.mark.polarion("CNV-12054"),
+        )
+    ],
+    indirect=True,
+)
+def test_kubevirt_hco_out_of_band_modifications_total(
+    prometheus, mutation_count_before_change, updated_resource_with_invalid_label
+):
+    assert (
+        get_mutation_component_value_from_prometheus(
+            prometheus=prometheus, component_name=COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"]
+        )
+        == mutation_count_before_change + 1
     )
