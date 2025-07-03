@@ -2,6 +2,7 @@ import logging
 from typing import Final
 
 from ocp_utilities.exceptions import CommandExecFailed
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.vm.vm import BaseVirtualMachine
 
@@ -94,13 +95,17 @@ def _stop_process(vm: BaseVirtualMachine, cmd: str) -> None:
 
 def _is_process_running(vm: BaseVirtualMachine, cmd: str) -> bool:
     try:
-        vm.console(
-            commands=[f"pgrep -fAx '{cmd}'"],
+        for sample in TimeoutSampler(
+            wait_timeout=60,
+            sleep=5,
+            func=vm.console,
+            commands=[f"pgrep -fAx {cmd}"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
-        )
-        return True
-    except CommandExecFailed as e:
-        LOGGER.info(f"Process is not running on VM {vm.name}. Error: {str(e)}")
+        ):
+            if sample:
+                return True
+    except TimeoutExpiredError as e:
+        LOGGER.info(f"Process is not running on VM {vm.name}. Error: {str(e.last_exp)}")
         return False
 
 
