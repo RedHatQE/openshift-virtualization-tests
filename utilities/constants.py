@@ -252,6 +252,7 @@ UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
 FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 QUARANTINED = "quarantined"
+SETUP_ERROR = "setup_error"
 
 # Kernel Device Driver
 # Compute: GPU Devices are bound to this Kernel Driver for GPU Passthrough.
@@ -636,6 +637,7 @@ class NamespacesNames:
     MACHINE_API_NAMESPACE = "machine-api-namespace"
     OPENSHIFT_VIRTUALIZATION_OS_IMAGES = "openshift-virtualization-os-images"
     WASP = "wasp"
+    OPENSHIFT_KUBE_DESCHEDULER_OPERATOR = "openshift-kube-descheduler-operator"
 
 
 # CNV supplemental-templates

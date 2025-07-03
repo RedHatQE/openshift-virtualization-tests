@@ -41,7 +41,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import ExecCommandOnPod, get_pod_by_name_prefix
+from utilities.infra import get_pod_by_name_prefix
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
@@ -467,17 +467,27 @@ def verify_gpu_device_exists_in_vm(vm, supported_gpu_device):
         )
 
 
-def check_node_for_missing_mdev_bus(node_and_shared_list):
-    node, shared_list, workers_utility_pods = node_and_shared_list
-    pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
-            sleep=TIMEOUT_5SEC,
-            func=pod_exec.exec,
-            command="ls /sys/class | grep mdev_bus || true",
-        ):
-            if sample:
-                return
-    except TimeoutExpiredError:
-        shared_list.append(node.name)
+def get_allocatable_memory_per_node(schedulable_nodes):
+    """
+    Gets allocatable memory for each schedulable node.
+
+    A node's allocatable memory is preferred, but if it's not set,
+    the capacity value is used as a fallback.
+
+    Args:
+        schedulable_nodes (list): List of node objects`.
+
+    Returns:
+        dict: A dictionary mapping each node to its allocatable memory.
+    """
+    nodes_memory = {}
+    for node in schedulable_nodes:
+        # memory format does not include the Bytes suffix(e.g: 23514144Ki)
+        memory = getattr(
+            node.instance.status.allocatable,
+            "memory",
+            node.instance.status.capacity.memory,
+        )
+        nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
+        LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
+    return nodes_memory

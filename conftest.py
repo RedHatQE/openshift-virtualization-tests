@@ -15,7 +15,6 @@ import traceback
 from typing import Any
 
 import pytest
-import pytest_html
 import shortuuid
 from _pytest.config import Config
 from _pytest.nodes import Collector, Node
@@ -29,7 +28,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import QUARANTINED, TIMEOUT_5MIN, NamespacesNames
+from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -226,6 +225,10 @@ def pytest_addoption(parser):
         action="store_true",
     )
     data_collector_group.addoption(
+        "--data-collector-output-dir",
+        help="Must-gather/alert output dir if `--data-collector` is set and will overwrite `CNV_TESTS_CONTAINER` env.",
+    )
+    data_collector_group.addoption(
         "--pytest-log-file",
         help="Path to pytest log file",
         default="pytest-tests.log",
@@ -296,6 +299,11 @@ def pytest_cmdline_main(config):
                 f"Two OCP images are needed to perform EUS-to-EUS upgrade with --eus-ocp-images."
                 f" Provided images: {eus_ocp_images}"
             )
+
+    if config.getoption("data_collector_output_dir") and not config.getoption("data_collector"):
+        raise ValueError(
+            "Data will not be collected because `--data-collector-output-dir` is set without `--data-collector`"
+        )
 
     # Default value is set as this value is used to set test name in
     # tests.upgrade_params.UPGRADE_TEST_DEPENDENCY_NODE_ID which is needed for pytest dependency marker
@@ -537,14 +545,28 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
 
-    if report.when == "setup" and hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
-        setattr(report, QUARANTINED, True)
+    if report.when == "setup":
+        if hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
+            setattr(report, QUARANTINED, True)
 
-        extras = getattr(report, "extras", [])
-        if match := re.search(r"CNV-\d+", report.wasxfail):
-            extras = getattr(report, "extras", [])
-            extras.append(pytest_html.extras.url(f"https://issues.redhat.com/browse/{match.group(0)}"))
-            report.extras = extras
+            if match := re.search(r"CNV-\d+", report.wasxfail):
+                jira = match.group(0)
+                wasxfail = report.wasxfail.replace(
+                    jira,
+                    f"<a href='https://issues.redhat.com/browse/{jira}' target='_blank'>{jira}</a>",
+                )
+                report.wasxfail = wasxfail
+
+        elif fail_error := re.search(r"(Failed): (.*?)\n", report.longreprtext):
+            setattr(report, SETUP_ERROR, fail_error.group(2))
+
+        elif report.failed:
+            if reprcrash := getattr(report.longrepr, "reprcrash", None):
+                if message := getattr(report.longrepr, "message", None):
+                    setattr(report, SETUP_ERROR, message)
+
+                elif message := getattr(reprcrash, "message", None):
+                    setattr(report, SETUP_ERROR, message)
 
 
 def pytest_fixture_setup(fixturedef, request):
@@ -560,7 +582,7 @@ def pytest_runtest_setup(item):
     if item.config.getoption("--data-collector"):
         # before the setup work starts, insert current epoch time into the database
         try:
-            db = Database()
+            db = Database(base_dir=item.config.getoption("--data-collector-output-dir"))
             db.insert_test_start_time(
                 test_name=f"{item.fspath}::{item.name}",
                 start_time=int(datetime.datetime.now().strftime("%s")),
@@ -625,6 +647,9 @@ def pytest_sessionstart(session):
         # Update OS matrix list with the latest OS if running with os_group
         if session.config.getoption("latest_rhel"):
             py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=py_config["rhel_os_matrix"])]
+            py_config["instance_type_rhel_os_matrix"] = [
+                utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
+            ]
         if session.config.getoption("latest_windows"):
             py_config["windows_os_matrix"] = [
                 utilities.infra.generate_latest_os_dict(os_list=py_config["windows_os_matrix"])
@@ -638,7 +663,7 @@ def pytest_sessionstart(session):
                 utilities.infra.generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
             ]
 
-    data_collector_dict = set_data_collector_values()
+    data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
         data_collector_dict["data_collector_base_directory"],
         ignore_errors=True,
@@ -707,7 +732,7 @@ def pytest_sessionfinish(session, exitstatus):
     reporter = session.config.pluginmanager.get_plugin("terminalreporter")
     reporter.summary_stats()
     if session.config.getoption("--data-collector"):
-        db = Database()
+        db = Database(base_dir=session.config.getoption("--data-collector-output-dir"))
         file_path = db.database_file_path
         LOGGER.info(f"Removing database file path {file_path}")
         os.remove(file_path)
@@ -744,6 +769,8 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
             if "swap" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.WASP)
+            if "descheduler" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
@@ -768,7 +795,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
             LOGGER.warning(f"Must-gather collection would be skipped for exception: {call.excinfo.type}")
         else:
             try:
-                db = Database()
+                db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
                 test_start_time = db.get_test_start_time(test_name=test_name)
             except Exception as db_exception:
                 test_start_time = 0
@@ -799,13 +826,29 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
 
 @pytest.mark.optionalhook
 def pytest_html_results_table_header(cells):
-    cells.insert(2, f"<th>{QUARANTINED.title()} Reason</th>")
+    cells.pop()  # Remove the `Links` column
+
+    # Add the `Error` and `Quarantined` columns
+    cells.append(f"<th>{SETUP_ERROR.title()} Reason</th>")
+    cells.append(f"<th>{QUARANTINED.title()} Reason</th>")
 
 
 @pytest.mark.optionalhook
 def pytest_html_results_table_row(report, cells):
+    cells.pop()  # Remove the `Links` entry
+
     if getattr(report, QUARANTINED, False) and "reason" in report.wasxfail:
-        cells.insert(2, f"<th>{report.wasxfail}</th>")
+        cells.append("<th></th>")
+        cells.append(f"<th>{report.wasxfail}</th>")
+
+    elif error_msg := getattr(report, SETUP_ERROR, False):
+        cells.append(f"<th>{error_msg}</th>")
+        cells.append("<th></th>")
 
     else:
-        cells.insert(2, "<th></th>")
+        cells.append("<th></th>")
+        cells.append("<th></th>")
+
+
+def pytest_html_report_title(report):
+    report.title = "Openshift Virtualization Tier2 Tests Results"
