@@ -36,6 +36,7 @@ def smbios_defaults(cnv_current_version):
     return smbios_defaults
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-4346")
 def test_cm_smbios_defaults(smbios_from_kubevirt_config, smbios_defaults):
     check_smbios_defaults(smbios_defaults=smbios_defaults, cm_values=smbios_from_kubevirt_config)
