@@ -73,7 +73,7 @@ from utilities.infra import (
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
-from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.virt import VirtualMachineForTests, VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
@@ -1456,7 +1456,7 @@ def validate_memory_delta_metrics_value_within_range(
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str
+    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str, pvc=None
 ) -> Generator:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -1481,8 +1481,8 @@ def create_windows11_wsl2_vm(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        pvc=pvc,
     ) as vm:
-        running_vm(vm=vm)
         yield vm
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
@@ -1513,6 +1513,64 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
         NODE_STR: vm.vmi.virt_launcher_pod.node.name,
         "vmi_pod": vm.vmi.virt_launcher_pod.name,
     }
+
+
+def get_last_ready_transition_time(vm: VirtualMachineForTests) -> int:
+    for condition in vm.instance.get("status", {}).get("conditions"):
+        if condition.get("type") == vm.Condition.READY:
+            last_transition_time = condition.get("lastTransitionTime")
+            return int(
+                (datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)).timestamp()
+            )
+    return 0
+
+
+def check_vm_last_ready_transition_metric_value(
+    prometheus: Prometheus, metric: str, vm: VirtualMachineForTests
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_30SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=f"{metric}{{name='{vm.name}'}}",
+    )
+    sample, last_transition_time = None, None
+    try:
+        for sample in samples:
+            if sample:
+                metric_value = int(sample)
+                last_transition_time = get_last_ready_transition_time(vm=vm)
+                LOGGER.info(f"Metric value: {metric_value}, last_transition_time: {last_transition_time}")
+                if metric_value > 0 and metric_value == last_transition_time:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metric value: {sample} does not match vm's last transition timestamp: {last_transition_time}")
+        raise
+
+
+def check_vmi_metric(prometheus):
+    response = prometheus.query(query="cnv:vmi_status_running:count")
+    assert response["status"] == "success"
+    return sum(int(node["value"][1]) for node in response["data"]["result"])
+
+
+def check_vmi_count_metric(expected_vmi_count: int, prometheus: Prometheus) -> None:
+    LOGGER.info(f"Check VMI metric expected: {expected_vmi_count}")
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=5,
+        func=check_vmi_metric,
+        prometheus=prometheus,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and sample == expected_vmi_count:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Expected value: {expected_vmi_count}, Actual: {sample}")
+        raise
 
 
 def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
