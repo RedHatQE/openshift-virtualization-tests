@@ -5,6 +5,7 @@ import random
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.pod import Pod
 from pytest_testconfig import py_config
 
 from tests.chaos.constants import CHAOS_LABEL, CHAOS_LABEL_KEY, HOST_LABEL
@@ -14,7 +15,9 @@ from tests.chaos.utils import (
     create_pod_deleting_process,
     create_vm_with_nginx_service,
     get_instance_type,
+    get_process_pid_in_utility_pod,
     pod_deleting_process_recover,
+    run_command_in_pod_async,
     terminate_process,
 )
 from utilities.constants import (
@@ -31,6 +34,7 @@ from utilities.constants import (
     Images,
     NamespacesNames,
 )
+from utilities.exceptions import UtilityPodNotFoundError
 from utilities.infra import (
     ExecCommandOnPod,
     create_ns,
@@ -217,42 +221,41 @@ def cluster_monitoring_process(admin_client, hco_namespace, chaos_namespace):
     yield cluster_monitoring_process
     terminate_process(process=cluster_monitoring_process)
 
+    @pytest.fixture()
+    def chaos_worker_background_process(
+        request,
+        workers,
+        utility_pods_for_chaos_tests,
+    ):
+        """
+        Creates a process that, when started,
+        executes a command on the worker node that has the label "chaos=true".
 
-@pytest.fixture()
-def chaos_worker_background_process(
-    request,
-    workers,
-    utility_pods_for_chaos_tests,
-):
-    """
-    Creates a process that, when started,
-    executes a command on the worker node that has the label "chaos=true".
+        request.params:
+            max_duration (int): Used for commands with timeouts.
+            background_command (str): The command that will be executed inside the node.
+            process_name (str): Name for the background process.
+        Returns:
+            multiprocessing.Process: Process that execute a command inside a worker node .
+        """
 
-    request.params:
-        max_duration (int): Used for commands with timeouts.
-        background_command (str): The command that will be executed inside the node.
-        process_name (str): Name for the background process.
-    Returns:
-        multiprocessing.Process: Process that execute a command inside a worker node .
-    """
-
-    process_name = request.param["process_name"]
-    target_nodes = get_nodes_with_label(nodes=workers, label=CHAOS_LABEL_KEY)
-    assert target_nodes, f"no nodes with label:{CHAOS_LABEL_KEY} were found"
-    target_node = target_nodes[0]
-    LOGGER.info(f"Target node is: {target_node.name}")
-    background_process = multiprocessing.Process(
-        name=process_name,
-        target=lambda: ExecCommandOnPod(utility_pods=utility_pods_for_chaos_tests, node=target_node).exec(
-            command=request.param["background_command"],
-            chroot_host=False,
-            timeout=request.param["max_duration"] + TIMEOUT_5SEC,
-        ),
-    )
-    background_process.start()
-    LOGGER.info(f"{process_name} process started")
-    yield background_process
-    terminate_process(process=background_process)
+        process_name = request.param["process_name"]
+        target_nodes = get_nodes_with_label(nodes=workers, label=CHAOS_LABEL_KEY)
+        assert target_nodes, f"no nodes with label:{CHAOS_LABEL_KEY} were found"
+        target_node = target_nodes[0]
+        LOGGER.info(f"Target node is: {target_node.name}")
+        background_process = multiprocessing.Process(
+            name=process_name,
+            target=lambda: ExecCommandOnPod(utility_pods=utility_pods_for_chaos_tests, node=target_node).exec(
+                command=request.param["background_command"],
+                chroot_host=False,
+                timeout=request.param["max_duration"] + TIMEOUT_5SEC,
+            ),
+        )
+        background_process.start()
+        LOGGER.info(f"{process_name} process started")
+        yield background_process
+        terminate_process(process=background_process)
 
 
 @pytest.fixture()
@@ -406,3 +409,100 @@ def deleted_pod_by_name_prefix(admin_client, cnv_pod_deletion_test_matrix__class
         namespace=pod_deletion_config["namespace_name"],
         pod_prefix=pod_deletion_config["pod_prefix"],
     )
+
+
+@pytest.fixture()
+def stress_ng_probe(utility_pod_on_target_node, vm_node_with_chaos_label):
+    """
+    Probe to check whether 'stress-ng' is running inside the utility pod that is colocated with the VM.
+    Returns the PID of the 'stress-ng' process if it's running, else None.
+    """
+    target_node = vm_node_with_chaos_label[0]
+    pod = utility_pod_on_target_node[0]
+
+    try:
+        executor = ExecCommandOnPod(utility_pods=[pod], node=target_node)
+    except UtilityPodNotFoundError as e:
+        LOGGER.warning(f"[stress-ng probe] {e}")
+        return lambda _: None
+
+    def _probe(_):
+        return get_process_pid_in_utility_pod(exec_obj=executor, process_name="stress-ng")
+
+    return _probe
+
+
+@pytest.fixture()
+def chaos_worker_background_thread(request, vm_node_with_chaos_label, utility_pod_on_target_node):
+    """
+    Runs a background command (e.g., stress-ng) on a utility pod via a thread.
+
+    This fixture spawns a background thread that executes a command inside a utility pod
+    located on the same node as the VM under test. It is useful for simulating load or
+    injecting stress on the host node during chaos testing.
+    Supports retries and returns execution result via a queue.
+
+    Args:
+        request (SubRequest): pytest's built-in fixture for accessing parametrized values.
+        vm_node_with_chaos_label (List[Node]): The list of nodes where the target VM resides.
+        utility_pod_on_target_node (List[Pod]): The list of utility pods on the target node.
+
+    Yields:
+        Tuple[threading.Thread, queue.Queue]:
+            - A background thread object running the command.
+            - A result queue used to report command output or failure.
+    """
+
+    config = request.param
+    pod = utility_pod_on_target_node[0]
+    target_node = vm_node_with_chaos_label[0]
+
+    command = config["background_command"]
+    thread_name = config.get("thread_name", "background_thread")
+    timeout = config.get("timeout", 300)
+    retries = config.get("retries", 1)
+    retry_interval = config.get("retry_interval", 5)
+
+    exec_obj = ExecCommandOnPod(utility_pods=[pod], node=target_node)
+
+    thread, result_q = run_command_in_pod_async(
+        exec_obj=exec_obj,
+        command=command,
+        timeout=timeout,
+        thread_name=thread_name,
+        retries=retries,
+        retry_interval=retry_interval,
+    )
+
+    yield thread, result_q
+
+
+@pytest.fixture()
+def utility_pod_on_target_node(vm_node_with_chaos_label, admin_client):
+    """
+    Return the utility pod that runs on the same node as the VM under test.
+    The utility pod must be labeled with 'cnv-test=utility' and live in the 'cnv-tests-utilities' namespace.
+    """
+
+    target_node = vm_node_with_chaos_label[0]
+    target_node_name = str(target_node.name).strip().lower()
+    LOGGER.info(f"Target node name: {repr(target_node_name)} (type: {type(target_node_name)})")
+
+    pods_gen = Pod.get(
+        dyn_client=admin_client,
+        namespace="cnv-tests-utilities",
+        label_selector="cnv-test=utility",
+    )
+
+    pods_list = list(pods_gen)
+    LOGGER.info(f"Got {len(pods_list)} pods: {[pod.name for pod in pods_list]}")
+    for pod in pods_list:
+        pod_node_name = pod.node.name.strip().lower() if pod.node and pod.node.name else "None"
+        LOGGER.info(f"Pod {pod.name} scheduled on node {pod_node_name}")
+
+        if pod_node_name == target_node_name:
+            LOGGER.info(f"[MATCHED] Found utility pod {pod.name} on node {pod_node_name}")
+            return [pod]
+
+    LOGGER.error("Could not find matching utility pod. NodeName comparison failed.")
+    raise RuntimeError(f"No utility pod found on target node: {target_node.name}")
