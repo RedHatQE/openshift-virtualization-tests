@@ -32,7 +32,7 @@ from utilities.constants import (
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
-    OS_FLAVOR_CIRROS,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
     TIMEOUT_1SEC,
@@ -994,13 +994,13 @@ def wait_for_dv_expected_restart_count(dv, expected_result):
 @contextmanager
 def create_vm_from_dv(
     dv,
-    vm_name="cirros-vm",
+    vm_name="fedora-vm",
     image=None,
     start=True,
-    os_flavor=OS_FLAVOR_CIRROS,
+    os_flavor=OS_FLAVOR_FEDORA,
     node_selector=None,
     cpu_model=None,
-    memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+    memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
 ):
     with virt_util.VirtualMachineForTests(
