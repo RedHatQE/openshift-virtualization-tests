@@ -25,7 +25,6 @@ from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
 )
 from utilities.infra import create_ns
-from utilities.network import IfaceNotFound
 from utilities.virt import migrate_vm_and_verify
 
 NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
@@ -258,7 +257,8 @@ def ovs_bridge_localnet_running_vms_one_with_interface_down(
     lookup_iface_status(
         vm=vm_ovs_bridge_localnet_link_down,
         iface_name=LOCALNET_OVS_BRIDGE_NETWORK,
-        predicate=lambda interface: "guest-agent" in interface["infoSource"] and  interface["linkState"] == LINK_STATE_DOWN
+        predicate=lambda interface: "guest-agent" in interface["infoSource"]
+        and interface["linkState"] == LINK_STATE_DOWN,
     )
     yield vm1, vm2
 
