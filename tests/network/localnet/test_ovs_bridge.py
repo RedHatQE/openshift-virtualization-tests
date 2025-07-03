@@ -3,6 +3,7 @@ from typing import Final
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
+from libs.net.vmspec import lookup_iface_status
 from tests.network.localnet.liblocalnet import (
     LINK_STATE_DOWN,
     LINK_STATE_UP,
@@ -32,22 +33,15 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     ovs_bridge_localnet_running_vms_one_with_interface_down,
 ):
-    localnet_interface = lookup_vm_interface(
-        vm=ovs_bridge_localnet_running_vms_one_with_interface_down[0], interface_name=LOCALNET_OVS_BRIDGE_NETWORK
-    )
-    if not localnet_interface:
-        raise IfaceNotFound(name=LOCALNET_OVS_BRIDGE_NETWORK)
-    assert localnet_interface["linkState"] == LINK_STATE_DOWN
-
     ovs_bridge_localnet_running_vms_one_with_interface_down[0].set_interface_state(
         network_name=LOCALNET_OVS_BRIDGE_NETWORK, state=LINK_STATE_UP
     )
-    localnet_interface = lookup_vm_interface(
-        vm=ovs_bridge_localnet_running_vms_one_with_interface_down[0], interface_name=LOCALNET_OVS_BRIDGE_NETWORK
+
+    localnet_interface=lookup_iface_status(
+        vm=ovs_bridge_localnet_running_vms_one_with_interface_down[0],
+        iface_name=LOCALNET_OVS_BRIDGE_NETWORK,
+        predicate=lambda interface: "guest-agent" in interface["infoSource"] and  interface["linkState"] == LINK_STATE_UP,
     )
-    if not localnet_interface:
-        raise IfaceNotFound(name=LOCALNET_OVS_BRIDGE_NETWORK)
-    assert localnet_interface["linkState"] == LINK_STATE_UP
 
     with client_server_active_connection(
         client_vm=ovs_bridge_localnet_running_vms_one_with_interface_down[1],

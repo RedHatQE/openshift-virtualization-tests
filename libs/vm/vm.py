@@ -75,8 +75,8 @@ class BaseVirtualMachine(VirtualMachine):
             status=VirtualMachineInstance.Condition.Status.TRUE,
         )
 
-    def set_interface_state(self, network_name, state: str) -> None:
-        vmi_interfaces = self.get_interfaces()  # self.vm.vmi.interfaces
+    def set_interface_state(self, network_name: str, state: str) -> None:
+        vmi_interfaces = self.get_interfaces()
         interfaces_list = []
         interface_to_patch = ""
         for interface in vmi_interfaces:
