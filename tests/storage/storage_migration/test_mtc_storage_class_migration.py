@@ -249,6 +249,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm"]
     )
+    @pytest.mark.polarion("CNV-12051")
     def test_vm_storage_class_migration_windows_vm_with_vtpm_not_restarted(
         self,
         source_storage_class,
@@ -264,6 +265,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm"]
     )
+    @pytest.mark.polarion("CNV-12058")
     def test_vm_storage_class_migration_windows_vm_with_vtpm_data_integrity(
         self,
         source_storage_class,
@@ -284,6 +286,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm"]
     )
+    @pytest.mark.polarion("CNV-12059")
     def test_vm_storage_class_migration_windows_vm_with_vtpm_storage_class_updated(
         self,
         source_storage_class,
