@@ -17,9 +17,9 @@ from tests.observability.metrics.utils import (
     COUNT_THREE,
     COUNT_TWO,
     get_changed_mutation_component_value,
-    get_mutation_component_value_from_prometheus,
     wait_for_summary_count_to_be_expected,
 )
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     COUNT_FIVE,
@@ -377,9 +377,9 @@ def test_metric_multiple_invalid_change(
 def test_kubevirt_hco_out_of_band_modifications_total(
     prometheus, mutation_count_before_change, updated_resource_with_invalid_label
 ):
-    assert (
-        get_mutation_component_value_from_prometheus(
-            prometheus=prometheus, component_name=COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"]
-        )
-        == mutation_count_before_change + 1
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name=f"kubevirt_hco_out_of_band_modifications_total"
+        f'{{component_name="{COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"]}"}}',
+        expected_value=str(mutation_count_before_change + 1),
     )
