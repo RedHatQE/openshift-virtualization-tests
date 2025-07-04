@@ -128,7 +128,7 @@ class TestVMIMetricsWindowsVms:
         )
 
     @pytest.mark.polarion("CNV-11860")
-    @pytest.mark.jira("CNV-59552")
+    @pytest.mark.jira("CNV-64562")
     def test_vmi_used_memory_bytes_windows(
         self,
         prometheus,
