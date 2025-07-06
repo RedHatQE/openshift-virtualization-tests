@@ -209,6 +209,7 @@ def vm_for_storage_class_migration_from_template_with_existing_dv(
     unprivileged_client,
     namespace,
     data_volume_scope_class,
+    cleaned_up_standalone_data_volume_after_storage_migration,
 ):
     with vm_instance_from_template(
         request=request,
@@ -364,3 +365,11 @@ def written_file_to_the_mounted_hotplugged_disk(vm_with_mounted_hotplugged_disk)
         ),
     )
     yield vm_with_mounted_hotplugged_disk
+
+
+@pytest.fixture(scope="class")
+def cleaned_up_standalone_data_volume_after_storage_migration(unprivileged_client, namespace, data_volume_scope_class):
+    yield
+    for dv in DataVolume.get(dyn_client=unprivileged_client, namespace=namespace.name):
+        if dv.name.startswith(f"{data_volume_scope_class.name}-mig"):
+            assert dv.clean_up(wait=True)
