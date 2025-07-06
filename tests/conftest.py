@@ -117,6 +117,7 @@ from utilities.constants import (
     UNPRIVILEGED_USER,
     UTILITY,
     VIRTCTL_CLI_DOWNLOADS,
+    VIRTIO,
     WORKER_NODE_LABEL_KEY,
     WORKERS_TYPE,
     Images,
@@ -2292,6 +2293,7 @@ def running_metric_vm(namespace, unprivileged_client):
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
+        network_model=VIRTIO,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
         yield vm
