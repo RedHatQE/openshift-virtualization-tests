@@ -77,6 +77,7 @@ def test_create_dv_on_right_node_with_node_placement(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_create_vm_on_node_without_hpp_pod_and_after_update(
     update_node_labels,
     updated_hpp_with_node_placement,
@@ -109,6 +110,7 @@ def test_create_vm_on_node_without_hpp_pod_and_after_update(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_dv_on_functional_after_configuring_hpp_not_to_work_on_that_same_node(
     hostpath_provisioner_scope_module,
     update_node_labels,
@@ -136,6 +138,7 @@ def test_vm_with_dv_on_functional_after_configuring_hpp_not_to_work_on_that_same
     indirect=True,
 )
 @pytest.mark.post_upgrade
+@pytest.mark.s390x
 def test_pv_stay_released_after_deleted_when_no_hpp_pod(
     hostpath_provisioner_scope_module,
     update_node_labels,

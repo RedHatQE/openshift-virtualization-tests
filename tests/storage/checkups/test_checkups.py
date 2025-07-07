@@ -25,6 +25,7 @@ LOGGER = logging.getLogger(__name__)
 )
 class TestCheckupPositive:
     @pytest.mark.polarion("CNV-10707")
+    @pytest.mark.s390x
     def test_overriden_storage_profile_claim_propertyset(
         self,
         updated_default_storage_profile,
