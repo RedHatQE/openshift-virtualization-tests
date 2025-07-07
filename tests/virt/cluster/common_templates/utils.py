@@ -123,9 +123,9 @@ def validate_user_info_virtctl_vs_linux_os(vm):
         cnv_info = get_cnv_user_info(vm=vm)
         libvirt_info = get_libvirt_user_info(vm=vm)
         linux_info = get_linux_user_info(ssh_exec=vm.ssh_exec)
-        if is_jira_63874_bug_open():
-            LOGGER.warning("Due to bug CNV-63874, loginTime is not available in virtctl output.")
-            linux_info["loginTime"] = 0
+        if is_jira_64776_bug_open():
+            LOGGER.warning("Due to bug CNV-64776, loginTime is a bit big different between Libvirt level and OS level.")
+            virtctl_info["loginTime"] = int(virtctl_info["loginTime"] / 1000)
         return virtctl_info, cnv_info, libvirt_info, linux_info
 
     user_info_sampler = TimeoutSampler(wait_timeout=30, sleep=10, func=_get_user_info, vm=vm)
@@ -626,5 +626,5 @@ def assert_windows_efi(vm):
 
 
 @cache
-def is_jira_63874_bug_open():
-    return is_jira_open(jira_id="CNV-63874")
+def is_jira_64776_bug_open():
+    return is_jira_open(jira_id="CNV-64776")
