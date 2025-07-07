@@ -20,6 +20,7 @@ from utilities.constants import (
     CNV_OPERATORS,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
+    CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DV_SIZE_STR,
     FLAVOR_STR,
@@ -300,6 +301,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "10",
             IMAGE_NAME_STR: Images.Windows.WIN10_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN10_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_10,
@@ -313,6 +317,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "2016",
             IMAGE_NAME_STR: Images.Windows.WIN2k16_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k16_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k16_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "win2k16",
@@ -326,6 +333,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "2019",
             IMAGE_NAME_STR: Images.Windows.WIN2k19_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k19_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k19_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
@@ -340,6 +350,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "11",
             IMAGE_NAME_STR: Images.Windows.WIN11_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN11_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_11,
@@ -353,6 +366,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "2022",
             IMAGE_NAME_STR: Images.Windows.WIN2022_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN2022_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k22_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_2K22,
@@ -366,6 +382,9 @@ windows_os_matrix = [
             OS_VERSION_STR: "2025",
             IMAGE_NAME_STR: Images.Windows.WIN2k25_IMG,
             IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k25_IMG),
+            CONTAINER_DISK_IMAGE_PATH_STR: os.path.join(
+                Images.Windows.DOCKER_IMG_QE_DIR, Images.Windows.WIN2k25_CONTAINER_IMG
+            ),
             DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: WIN_2K25,
