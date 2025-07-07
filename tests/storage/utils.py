@@ -1,3 +1,4 @@
+import ast
 import logging
 import shlex
 from contextlib import contextmanager
@@ -20,6 +21,7 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
 from ocp_resources.virtual_machine import VirtualMachine
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -511,3 +513,21 @@ def clean_up_multiprocess(processes, object_list):
             print(f"Error killing process {process}, associated with {object_name}: {e}")
         finally:
             process.close()
+
+
+def assert_windows_directory_existence(expected_result: bool, windows_vm: VirtualMachine, directory_path: str) -> None:
+    cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
+
+
+def create_windows_directory(windows_vm: VirtualMachine, directory_path: str) -> None:
+    cmd = shlex.split(
+        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory"',
+    )
+    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)
+    assert_windows_directory_existence(
+        expected_result=True,
+        windows_vm=windows_vm,
+        directory_path=directory_path,
+    )

@@ -1188,6 +1188,7 @@ def stopped_vm_metric_1(vm_metric_1):
 def stopped_windows_vm(windows_vm_for_test):
     windows_vm_for_test.stop()
     yield windows_vm_for_test
+    running_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="module")
