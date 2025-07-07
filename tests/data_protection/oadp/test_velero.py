@@ -7,6 +7,7 @@ from utilities.constants import TIMEOUT_10SEC, Images
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "velero_backup_single_namespace",
     [
@@ -26,6 +27,7 @@ def test_backup_while_dv_create(
     velero_backup_single_namespace.wait_for_status(status="PartiallyFailed")
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "rhel_vm_with_data_volume_template",
     [
@@ -51,9 +53,11 @@ def test_restore_multiple_namespaces(
         timeout=TIMEOUT_10SEC,
         stop_status=DataVolume.Status.IMPORT_IN_PROGRESS,
     )
+    wait_for_running_vm(vm=rhel_vm_with_data_volume_template)
     check_file_in_vm(vm=rhel_vm_with_data_volume_template)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "rhel_vm_with_data_volume_template",
     [
@@ -81,14 +85,18 @@ def test_restore_multiple_namespaces(
 def test_backup_vm_data_volume_template_with_datamover(
     rhel_vm_with_data_volume_template, velero_restore_first_namespace_with_datamover
 ):
+    wait_for_running_vm(vm=rhel_vm_with_data_volume_template)
     check_file_in_vm(vm=rhel_vm_with_data_volume_template)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-10589")
 def test_restore_vm_with_existing_dv(rhel_vm_from_existing_dv, velero_restore_second_namespace_with_datamover):
+    wait_for_running_vm(vm=rhel_vm_from_existing_dv)
     check_file_in_vm(vm=rhel_vm_from_existing_dv)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-10590")
 def test_restore_cloned_dv(
     cloned_rhel_dv,
@@ -97,6 +105,7 @@ def test_restore_cloned_dv(
     wait_for_restored_dv(dv=cloned_rhel_dv)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-10591")
 def test_restore_uploaded_dv(
     uploaded_rhel_dv,
