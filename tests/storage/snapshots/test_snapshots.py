@@ -20,11 +20,11 @@ from tests.storage.snapshots.constants import (
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
-    assert_directory_existence,
     expected_output_after_restore,
     fail_to_create_snapshot_no_permissions,
     start_windows_vm_after_restore,
 )
+from tests.storage.utils import assert_windows_directory_existence
 from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.storage import run_command_on_cirros_vm_and_check_output
 
@@ -401,7 +401,7 @@ def test_online_windows_vm_successful_restore(
         snapshot_name=windows_snapshot.name,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot)
-        assert_directory_existence(
+        assert_windows_directory_existence(
             expected_result=True,
             windows_vm=windows_vm_for_snapshot,
             directory_path=WINDOWS_DIRECTORY_PATH,

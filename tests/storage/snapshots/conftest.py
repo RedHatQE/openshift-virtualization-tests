@@ -14,8 +14,12 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
-from tests.storage.snapshots.utils import assert_directory_existence
-from tests.storage.utils import create_windows19_vm, set_permissions
+from tests.storage.utils import (
+    assert_windows_directory_existence,
+    create_windows19_vm,
+    create_windows_directory,
+    set_permissions,
+)
 from utilities.constants import TIMEOUT_10MIN, UNPRIVILEGED_USER
 
 LOGGER = logging.getLogger(__name__)
@@ -61,15 +65,7 @@ def windows_vm_for_snapshot(
 
 @pytest.fixture()
 def snapshot_windows_directory(windows_vm_for_snapshot):
-    cmd = shlex.split(
-        f'powershell -command "New-Item -Path {WINDOWS_DIRECTORY_PATH} -ItemType Directory"',
-    )
-    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd)
-    assert_directory_existence(
-        expected_result=True,
-        windows_vm=windows_vm_for_snapshot,
-        directory_path=WINDOWS_DIRECTORY_PATH,
-    )
+    create_windows_directory(windows_vm=windows_vm_for_snapshot, directory_path=WINDOWS_DIRECTORY_PATH)
 
 
 @pytest.fixture()
@@ -92,7 +88,7 @@ def snapshot_dirctory_removed(windows_vm_for_snapshot, windows_snapshot):
         f'powershell -command "Remove-Item -Path {WINDOWS_DIRECTORY_PATH} -Recurse"',
     )
     run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd)
-    assert_directory_existence(
+    assert_windows_directory_existence(
         expected_result=False,
         windows_vm=windows_vm_for_snapshot,
         directory_path=WINDOWS_DIRECTORY_PATH,
