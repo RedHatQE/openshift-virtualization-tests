@@ -89,6 +89,7 @@ LOGGER = logging.getLogger(__name__)
 K8S_TAINT = "node.kubernetes.io/unschedulable"
 NO_SCHEDULE = "NoSchedule"
 CIRROS_IMAGE = "kubevirt/cirros-container-disk-demo:latest"
+FEDORA_IMAGE = "quay.io/containerdisks/fedora:39"
 FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS)
 VM_ERROR_STATUSES = [
     VirtualMachine.Status.CRASH_LOOPBACK_OFF,
