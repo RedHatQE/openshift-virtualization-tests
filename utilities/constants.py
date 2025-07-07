@@ -130,7 +130,11 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE="1Gi",
         )
 
-        Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
+        Rhel = Rhel(
+            RHEL9_5_IMG="rhel-95-s390x.qcow2",
+            RHEL9_4_IMG="rhel-94-s390x.qcow2",
+            RHEL9_3_IMG="rhel-93-s390x.qcow2",
+        )
         Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_5_IMG
 
         Fedora = Fedora(
