@@ -6,11 +6,13 @@ from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
+from utilities.network import IfaceNotFound
 from utilities.virt import CLOUD_INIT_DISK_NAME, get_oc_image_info, vm_console_run_commands
 
 
@@ -72,6 +74,22 @@ class BaseVirtualMachine(VirtualMachine):
             condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
             status=VirtualMachineInstance.Condition.Status.TRUE,
         )
+
+    def set_interface_state(self, network_name: str, state: str) -> None:
+        if not self._spec.template.spec.domain.devices:
+            raise IfaceNotFound(name=network_name)
+        for interface in self._spec.template.spec.domain.devices.interfaces or []:
+            if interface.name == network_name:
+                interface.state = state
+                break
+        else:
+            raise IfaceNotFound(name=network_name)
+
+        devices = asdict(obj=self._spec.template.spec.domain.devices, dict_factory=self._filter_out_none_values)
+        patches = {
+            self: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": devices["interfaces"]}}}}}}
+        }
+        ResourceEditor(patches=patches).update()
 
 
 def container_image(base_image: str) -> str:

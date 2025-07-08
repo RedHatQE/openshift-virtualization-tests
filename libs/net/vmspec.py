@@ -20,7 +20,13 @@ class VMInterfaceStatusNotFoundError(Exception):
     pass
 
 
-def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceField:
+def _default_interface_predicate(interface: ResourceField) -> bool:
+    return "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
+
+
+def lookup_iface_status(
+    vm: BaseVirtualMachine, iface_name: str, predicate: Callable[[Any], bool] = _default_interface_predicate
+) -> ResourceField:
     """
     Returns the network interface status requested if found, otherwise raises VMInterfaceStatusNotFoundError.
     The interface status information is expected to be sourced from the guest-agent with an IP address.
@@ -28,6 +34,10 @@ def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceFiel
     Args:
         vm (BaseVirtualMachine): VM in which to search for the network interface.
         iface_name (str): The name of the requested interface.
+        predicate (Callable[[dict[str, Any]], bool]): A function that takes a network interface as an argument
+            and returns a boolean value. This function should define the condition that
+            the interface needs to meet. By default, this looks for condition
+            "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
 
     Returns:
         iface (ResourceField): The requested interface.
@@ -39,7 +49,7 @@ def lookup_iface_status(vm: BaseVirtualMachine, iface_name: str) -> ResourceFiel
         return _lookup_iface_status(
             vm=vm,
             iface_name=iface_name,
-            predicate=lambda interface: "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS],
+            predicate=predicate,
         )
     except TimeoutExpiredError:
         raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
