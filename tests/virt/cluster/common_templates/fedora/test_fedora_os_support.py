@@ -3,7 +3,7 @@ Common templates test Fedora OS support
 """
 
 import logging
-
+import os
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
@@ -16,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
+from utilities.constants import S390X, X86_64
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
@@ -32,50 +33,58 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesFedora"
 
 
+ARCH = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", X86_64)
 HYPERV_DICT = {
-    "spec": {
-        "template": {
-            "spec": {
-                "domain": {
-                    "clock": {
-                        "utc": {},
-                        "timer": {
-                            "hpet": {"present": False},
-                            "pit": {"tickPolicy": "delay"},
-                            "rtc": {"tickPolicy": "catchup"},
-                            "hyperv": {},
+    X86_64 : {
+        "spec": {
+            "template": {
+                "spec": {
+                    "domain": {
+                        "clock": {
+                            "utc": {},
+                            "timer": {
+                                "hpet": {"present": False},
+                                "pit": {"tickPolicy": "delay"},
+                                "rtc": {"tickPolicy": "catchup"},
+                                "hyperv": {},
+                            },
                         },
-                    },
-                    "features": {
-                        "acpi": {},
-                        "apic": {},
-                        "hyperv": {
-                            "relaxed": {},
-                            "vapic": {},
-                            "synictimer": {"direct": {}},
-                            "vpindex": {},
-                            "synic": {},
-                            "spinlocks": {"spinlocks": 8191},
-                            "frequencies": {},
-                            "ipi": {},
-                            "reenlightenment": {},
-                            "reset": {},
-                            "runtime": {},
-                            "tlbflush": {},
+                        "features": {
+                            "acpi": {},
+                            "apic": {},
+                            "hyperv": {
+                                "relaxed": {},
+                                "vapic": {},
+                                "synictimer": {"direct": {}},
+                                "vpindex": {},
+                                "synic": {},
+                                "spinlocks": {"spinlocks": 8191},
+                                "frequencies": {},
+                                "ipi": {},
+                                "reenlightenment": {},
+                                "reset": {},
+                                "runtime": {},
+                                "tlbflush": {},
+                            },
                         },
-                    },
+                    }
                 }
             }
         }
+    },
+    # remove hyperv config for s390x
+    S390X: {
+        "spec": {}
     }
 }
+
 
 
 @pytest.mark.parametrize(
     "golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class",
     [
         ({
-            "vm_dict": HYPERV_DICT,
+            "vm_dict": HYPERV_DICT[ARCH],
         })
     ],
     indirect=True,
