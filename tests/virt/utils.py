@@ -465,3 +465,8 @@ def verify_gpu_device_exists_in_vm(vm, supported_gpu_device):
         assert get_num_gpu_devices_in_rhel_vm(vm=vm) == 1, (
             f"GPU device {fetch_gpu_device_name_from_vm_instance(vm=vm)} does not exist in rhel vm {vm.name}"
         )
+
+
+def assert_migration_post_copy_mode(vm):
+    migration_state = vm.vmi.instance.status.migrationState
+    assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
