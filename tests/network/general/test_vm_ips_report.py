@@ -40,6 +40,7 @@ def report_masquerade_ip_vmi(unprivileged_client, namespace):
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4455")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_report_masquerade_ip(report_masquerade_ip_vmi):
     assert_ip_mismatch(vm=report_masquerade_ip_vmi)
 
@@ -47,6 +48,7 @@ def test_report_masquerade_ip(report_masquerade_ip_vmi):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-4153")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_report_masquerade_ip_after_migration(report_masquerade_ip_vmi):
     src_node = report_masquerade_ip_vmi.instance.status.nodeName
     with VirtualMachineInstanceMigration(

@@ -9,6 +9,7 @@ from tests.network.utils import assert_authentication_request
 pytestmark = pytest.mark.service_mesh
 
 
+@pytest.mark.s390x
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
     @pytest.mark.single_nic
@@ -42,6 +43,7 @@ class TestSMTrafficManagement:
         )
 
 
+@pytest.mark.s390x
 class TestSMPeerAuthentication:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5784")
