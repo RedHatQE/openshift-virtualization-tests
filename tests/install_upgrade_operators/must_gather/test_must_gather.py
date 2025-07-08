@@ -442,6 +442,7 @@ class TestMustGatherCluster:
         )
 
 
+@pytest.mark.sriov
 @pytest.mark.special_infra
 class TestSriovMustGather:
     @pytest.mark.polarion("CNV-3045")
