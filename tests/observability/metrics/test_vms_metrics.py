@@ -36,7 +36,6 @@ from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
     MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
@@ -458,13 +457,6 @@ class TestVmResourceLimits:
 
 @pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
 class TestVmFreeMemoryBytes:
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: The memory rss value from BMs reported in metric is less than 5% from expected. "
-            f"tracked in CNV-64128"
-        ),
-        run=False,
-    )
     @pytest.mark.polarion("CNV-11692")
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(self, prometheus, vm_for_test):
         validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
@@ -475,13 +467,6 @@ class TestVmFreeMemoryBytes:
             working_set=True,
         )
 
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: The memory rss value from BMs reported in metric is less than 5% from expected. "
-            f"tracked in CNV-64128"
-        ),
-        run=False,
-    )
     @pytest.mark.polarion("CNV-11693")
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
         self,
