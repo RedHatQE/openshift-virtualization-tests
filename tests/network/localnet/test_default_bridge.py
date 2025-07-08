@@ -8,6 +8,7 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.gating
 @pytest.mark.ipv4
 @pytest.mark.single_nic
+@pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11775")
 def test_connectivity_over_migration_between_localnet_vms(localnet_server, localnet_client):
@@ -17,6 +18,7 @@ def test_connectivity_over_migration_between_localnet_vms(localnet_server, local
 
 @pytest.mark.ipv4
 @pytest.mark.single_nic
+@pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11925")
 def test_connectivity_post_migration_between_localnet_vms(migrated_localnet_vm, localnet_running_vms):
