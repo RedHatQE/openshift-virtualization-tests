@@ -4,6 +4,7 @@ Common templates test Fedora OS support
 
 import logging
 import os
+
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
@@ -35,7 +36,7 @@ TESTS_CLASS_NAME = "TestCommonTemplatesFedora"
 
 ARCH = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", X86_64)
 HYPERV_DICT = {
-    X86_64 : {
+    X86_64: {
         "spec": {
             "template": {
                 "spec": {
@@ -73,11 +74,8 @@ HYPERV_DICT = {
         }
     },
     # remove hyperv config for s390x
-    S390X: {
-        "spec": {}
-    }
+    S390X: {"spec": {}},
 }
-
 
 
 @pytest.mark.parametrize(
