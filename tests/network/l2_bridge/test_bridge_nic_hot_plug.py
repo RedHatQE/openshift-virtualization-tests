@@ -155,9 +155,6 @@ def hot_plugged_interface_name_on_vm_created_with_secondary_interface(
         hot_plugged_interface_name=hot_plugged_interface_name,
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
     )
-    # In order to complete the interface hot-plug, and have the interface available in the guest VM -
-    # the VM must be migrated.
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
 
     return hot_plugged_interface_name
 
@@ -173,14 +170,6 @@ def hot_plugged_second_interface_with_address(
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
         vmi_interface=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
     )
-
-
-@pytest.fixture()
-def migrated_vm_with_hot_plugged_interface_attached(running_vm_for_nic_hot_plug):
-    # In order to complete the interface hot-plug, and have the interface available in the guest VM -
-    # the VM must be migrated.
-    migrate_vm_and_verify(vm=running_vm_for_nic_hot_plug)
-    return running_vm_for_nic_hot_plug
 
 
 @pytest.fixture()
@@ -358,7 +347,7 @@ def hot_unplugged_additional_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
     )
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
+
     return hot_plugged_interface_name_on_vm_created_with_secondary_interface
 
 
@@ -416,7 +405,6 @@ def hot_unplug_secondary_interface_from_setup(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=network_attachment_definition_for_hot_plug.name,
     )
-    migrate_vm_and_verify(vm=running_vm_with_secondary_and_hot_plugged_interfaces)
 
 
 @pytest.fixture()
@@ -502,13 +490,13 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     )
     def test_basic_connectivity_of_hot_plugged_interface(
         self,
-        migrated_vm_with_hot_plugged_interface_attached,
+        running_vm_for_nic_hot_plug,
         running_utility_vm_for_connectivity_check,
         hot_plugged_interface_with_address,
         network_attachment_definition_for_hot_plug,
     ):
         assert_ping_successful(
-            src_vm=migrated_vm_with_hot_plugged_interface_attached,
+            src_vm=running_vm_for_nic_hot_plug,
             dst_ip=get_vmi_ip_v4_by_name(
                 vm=running_utility_vm_for_connectivity_check,
                 name=network_attachment_definition_for_hot_plug.name,
@@ -523,12 +511,13 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     )
     def test_basic_connectivity_of_hot_plugged_interface_after_second_migration(
         self,
+        running_vm_for_nic_hot_plug,
         running_utility_vm_for_connectivity_check,
         network_attachment_definition_for_hot_plug,
-        migrated_vm_with_hot_plugged_interface_attached,
     ):
+        migrate_vm_and_verify(vm=running_vm_for_nic_hot_plug)
         assert_ping_successful(
-            src_vm=migrated_vm_with_hot_plugged_interface_attached,
+            src_vm=running_vm_for_nic_hot_plug,
             dst_ip=get_vmi_ip_v4_by_name(
                 vm=running_utility_vm_for_connectivity_check,
                 name=network_attachment_definition_for_hot_plug.name,
