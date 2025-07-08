@@ -685,10 +685,10 @@ class MacPool:
 
 
 class IfaceNotFound(Exception):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Interface not found for NAD {self.name}"
 
 
