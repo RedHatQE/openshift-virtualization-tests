@@ -31,6 +31,9 @@ REQUESTS_INSTANCES_VMI_STR = "requests.instances/vmi"
 REQUESTS_CPU_VMI_STR = "requests.cpu/vmi"
 REQUESTS_MEMORY_VMI_STR = "requests.memory/vmi"
 
+# MigrationPolicy labels
+VM_LABEL = {"post-copy-vm": "true"}
+
 
 # BASH
 REMOVE_NEWLINE = 'tr -d "\n"'
