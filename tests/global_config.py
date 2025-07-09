@@ -17,6 +17,8 @@ from utilities.constants import (
     ALL_HCO_RELATED_OBJECTS,
     BASE_ARTIFACTORY_LOCATION,
     BREW_REGISTERY_SOURCE,
+    CENTOS_STREAM9_PREFERENCE,
+    CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
@@ -30,14 +32,19 @@ from utilities.constants import (
     KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
     LINUX_BRIDGE,
     MONITORING_METRICS,
+    OS_FLAVOR_FEDORA,
     OVS_BRIDGE,
     PRODUCTION_CATALOG_SOURCE,
+    RHEL8_PREFERENCE,
+    RHEL9_PREFERENCE,
+    RHEL10_PREFERENCE,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
+    U1_MEDIUM_STR,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
     Images,
@@ -189,12 +196,12 @@ auto_update_data_source_matrix = [
 ]
 
 data_import_cron_matrix = [
-    {"centos-stream9": {"instance_type": "u1.medium", "preference": "centos.stream9"}},
-    {"centos-stream10": {"instance_type": "u1.medium", "preference": "centos.stream10"}},
-    {"fedora": {"instance_type": "u1.medium", "preference": "fedora"}},
-    {"rhel8": {"instance_type": "u1.medium", "preference": "rhel.8"}},
-    {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
-    {"rhel10": {"instance_type": "u1.medium", "preference": "rhel.10"}},
+    {"centos-stream9": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM9_PREFERENCE}},
+    {"centos-stream10": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM10_PREFERENCE}},
+    {"fedora": {"instance_type": U1_MEDIUM_STR, "preference": OS_FLAVOR_FEDORA}},
+    {"rhel8": {"instance_type": U1_MEDIUM_STR, "preference": RHEL8_PREFERENCE}},
+    {"rhel9": {"instance_type": U1_MEDIUM_STR, "preference": RHEL9_PREFERENCE}},
+    {"rhel10": {"instance_type": U1_MEDIUM_STR, "preference": RHEL10_PREFERENCE}},
 ]
 
 ip_stack_version_matrix = [
