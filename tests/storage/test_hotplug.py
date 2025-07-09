@@ -119,7 +119,7 @@ def hotplug_volume_scope_class(
 
 @pytest.fixture(scope="class")
 def param_substring_scope_class(storage_class_name_scope_class):
-    return storage_class_name_scope_class[0:3]
+    return storage_class_name_scope_class[0:3].strip("-")
 
 
 @pytest.fixture(scope="class")
