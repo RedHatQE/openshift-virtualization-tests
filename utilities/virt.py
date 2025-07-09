@@ -9,6 +9,7 @@ import re
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import cache
 from json import JSONDecodeError
 from subprocess import run
 from typing import Any, Dict
@@ -2044,6 +2045,9 @@ def verify_one_pdb_per_vm(vm):
     Raises:
         AssertionError if there is more than one PDB for the VM
     """
+    if is_jira_64988_bug_open():
+        LOGGER.warning("PodDisruptionBudget not created because of the bug CNV-64988")
+        return
     pdb_resource_name = "PodDisruptionBudget"
     LOGGER.info(f"Verify one {pdb_resource_name} for VM {vm.name}")
     pdbs_dict = {}
@@ -2549,3 +2553,8 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
 def get_vm_boot_time(vm: VirtualMachine) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+
+
+@cache
+def is_jira_64988_bug_open():
+    return utilities.infra.is_jira_open(jira_id="CNV-64988")
