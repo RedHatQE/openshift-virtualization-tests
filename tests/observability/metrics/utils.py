@@ -1593,10 +1593,11 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
         for sample in samples:
             if sample:
                 sample = abs(float(sample))
+                virt_launcher_pod_requested_memory = get_vm_virt_launcher_pod_requested_memory(vm=vm)
                 expected_value = (
-                    get_vm_virt_launcher_pod_requested_memory(vm=vm) - get_vm_memory_working_set_bytes(vm=vm)
+                    virt_launcher_pod_requested_memory - get_vm_memory_working_set_bytes(vm=vm)
                     if working_set
-                    else get_vm_memory_rss_bytes(vm=vm)
+                    else virt_launcher_pod_requested_memory - get_vm_memory_rss_bytes(vm=vm)
                 )
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
