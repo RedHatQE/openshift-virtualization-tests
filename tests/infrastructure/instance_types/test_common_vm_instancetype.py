@@ -4,7 +4,7 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 )
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
-from utilities.constants import VIRT_OPERATOR, Images
+from utilities.constants import QUARANTINED, VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -22,7 +22,10 @@ def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 
 
-@pytest.mark.jira("CNV-61589", run=False)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: the test need fixes; tracked in CNV-61589",
+    run=False,
+)
 @pytest.mark.hugepages
 @pytest.mark.special_infra
 @pytest.mark.tier3
