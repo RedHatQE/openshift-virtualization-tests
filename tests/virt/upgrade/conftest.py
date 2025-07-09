@@ -4,12 +4,14 @@ from copy import deepcopy
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import py_config
 
+from tests.virt.constants import VM_LABEL
 from tests.virt.upgrade.utils import (
     get_all_migratable_vms,
     validate_vms_pod_updated,
@@ -36,6 +38,7 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
+    fedora_vm_body,
     get_base_templates_list,
     get_vm_boot_time,
     running_vm,
@@ -304,3 +307,32 @@ def linux_boot_time_before_upgrade(vms_for_upgrade):
 @pytest.fixture(scope="session")
 def windows_boot_time_before_upgrade(windows_vm):
     yield get_vm_boot_time(vm=windows_vm)
+
+
+@pytest.fixture(scope="session")
+def post_copy_migration_policy_for_upgrade(admin_client):
+    with MigrationPolicy(
+        name="post-copy-migration-policy",
+        allow_auto_converge=True,
+        bandwidth_per_migration="100Mi",
+        completion_timeout_per_gb=1,
+        allow_post_copy=True,
+        vmi_selector=VM_LABEL,
+        client=admin_client,
+    ) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="session")
+def vm_for_post_copy_upgrade(upgrade_namespace_scope_session, unprivileged_client, cpu_for_migration):
+    vm_name = "vm-for-post-copy-upgrade-test"
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=upgrade_namespace_scope_session.name,
+        body=fedora_vm_body(name=vm_name),
+        client=unprivileged_client,
+        cpu_model=cpu_for_migration,
+        additional_labels=VM_LABEL,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
