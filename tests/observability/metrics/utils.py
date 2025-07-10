@@ -754,36 +754,6 @@ def get_resource_object(
             )
 
 
-def wait_for_prometheus_query_result_matches_expected_value(prometheus: Prometheus, query: str, expected_value: str):
-    """
-    This function waiting of Prometheus query output to match expected value
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        expected_value (str): expected_value
-
-    Returns:
-        dict: Dictionary of prometheus query output.
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if sample and sample[0].get("value") and sample[0]["value"][1] == expected_value:
-                return sample[0]
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting Prometheus query to match expected value: {expected_value}"
-            f"query: {query}, results: {sample}"
-        )
-        raise
-
-
 def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
     """
     This function is waiting for Prometheus query node label value to be update.
@@ -814,21 +784,38 @@ def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, q
         raise
 
 
-def assert_instancetype_labels(prometheus_output: dict[str, dict[str, str]], expected_labels: dict[str, str]) -> None:
+def assert_instancetype_labels(prometheus: Prometheus, metric_name: str, expected_labels: dict[str, str]) -> None:
     """
     This function will assert prometheus query output labels against expected labels.
 
     Args:
-        prometheus_output (dict): Prometheus query output.
-        expected_labels (dict): expected instancetype labels
+        prometheus (Prometheus): Prometheus client object to query metrics
+        metric_name (str): The prometheus metric name to query
+        expected_labels (dict): Expected instancetype labels to validate against
     """
-    data_mismatch = []
-    for label in INSTANCE_TYPE_LABELS:
-        if prometheus_output["metric"][label] != expected_labels[label]:
-            data_mismatch.append(prometheus_output["metric"][label])
-    assert not data_mismatch, (
-        f"Data mismatch: {data_mismatch}!expected labels: {expected_labels}, actual labels: {prometheus_output}"
+    validate_metrics_value(prometheus=prometheus, metric_name=metric_name, expected_value="1")
+
+    def check_instancetype_labels():
+        data_mismatch = {}
+        for label in INSTANCE_TYPE_LABELS:
+            prometheus_output = prometheus.query_sampler(query=metric_name)[0].get("metric").get(label)
+            if prometheus_output != expected_labels[label]:
+                data_mismatch[label] = {"Expected": expected_labels[label], "Actual": prometheus_output}
+        return data_mismatch
+
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_10SEC,
+        func=check_instancetype_labels,
     )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"timeout exception waiting for instancetype labels to match expected labels: {sample}")
+        raise
 
 
 def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
