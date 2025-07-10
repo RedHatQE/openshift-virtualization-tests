@@ -175,7 +175,7 @@ def bad_cnao_operator(csv_scope_class):
 
 
 @pytest.fixture(scope="class")
-def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
+def csv_with_invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
     with ResourceEditorValidateHCOReconcile(
         patches={csv_scope_class: bad_cnao_operator},
         list_resource_reconcile=[NetworkAddonsConfig],
@@ -197,9 +197,9 @@ def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_cla
 
 
 @pytest.fixture(scope="class")
-def csv_image_updated_with_bad_image(invalid_cnao_operator):
+def csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
     def get_csv_image():
-        for deployment in invalid_cnao_operator.instance.spec.install.spec.deployments:
+        for deployment in csv_with_invalid_cnao_operator.instance.spec.install.spec.deployments:
             if deployment.name == CLUSTER_NETWORK_ADDONS_OPERATOR:
                 return deployment.spec.template.spec.containers[0].image
 

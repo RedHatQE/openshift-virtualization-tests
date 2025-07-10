@@ -214,19 +214,6 @@ data_import_cron_matrix = [
 
 rhel_os_matrix = [
     {
-        "rhel-7-8": {
-            OS_VERSION_STR: "7.8",
-            IMAGE_NAME_STR: Images.Rhel.RHEL7_8_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL7_8_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel7.8",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
         "rhel-7-9": {
             OS_VERSION_STR: "7.9",
             IMAGE_NAME_STR: Images.Rhel.RHEL7_9_IMG,
@@ -240,19 +227,6 @@ rhel_os_matrix = [
         }
     },
     {
-        "rhel-8-8": {
-            OS_VERSION_STR: "8.8",
-            IMAGE_NAME_STR: Images.Rhel.RHEL8_8_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL8_8_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel8.8",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
         "rhel-8-10": {
             OS_VERSION_STR: "8.10",
             IMAGE_NAME_STR: Images.Rhel.RHEL8_10_IMG,
@@ -260,19 +234,6 @@ rhel_os_matrix = [
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
             TEMPLATE_LABELS_STR: {
                 OS_STR: "rhel8.10",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-9-4": {
-            OS_VERSION_STR: "9.4",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_4_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_4_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.4",
                 WORKLOAD_STR: Template.Workload.SERVER,
                 FLAVOR_STR: Template.Flavor.TINY,
             },
