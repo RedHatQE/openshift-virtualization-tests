@@ -46,10 +46,8 @@ class ArchImages:
             DEFAULT_MEMORY_SIZE = "64M"
 
         class Rhel:
-            RHEL7_8_IMG = "rhel-78.qcow2"
             RHEL7_9_IMG = "rhel-79.qcow2"
             RHEL8_0_IMG = "rhel-8.qcow2"
-            RHEL8_8_IMG = "rhel-88.qcow2"
             RHEL8_9_IMG = "rhel-89.qcow2"
             RHEL8_10_IMG = "rhel-810.qcow2"
             RHEL9_3_IMG = "rhel-93.qcow2"
@@ -621,6 +619,7 @@ class StorageClassNames:
     OCI = "oci-bv"
     OCI_UHP = "oci-bv-uhp"
     GCP = "sp-balanced-storage"
+    GCNV = "gcnv-flex"
 
 
 # Namespace constants

@@ -491,3 +491,8 @@ def get_allocatable_memory_per_node(schedulable_nodes):
         nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
         LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
     return nodes_memory
+
+
+def assert_migration_post_copy_mode(vm):
+    migration_state = vm.vmi.instance.status.migrationState
+    assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
