@@ -1,0 +1,37 @@
+from typing import Any
+
+import pytest_testconfig
+from ocp_resources.datavolume import DataVolume
+
+from utilities.constants import StorageClassNames
+
+global config
+global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
+
+storage_class_matrix = [
+    {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+            "default": True,
+        }
+    },
+]
+
+storage_class_for_storage_migration_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_for_storage_migration_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+
+for _dir in dir():
+    if not config:  # noqa: F821
+        config: dict[str, Any] = {}
+    val = locals()[_dir]
+    if type(val) not in [bool, list, dict, str]:
+        continue
+
+    if _dir in ["encoding", "py_file"]:
+        continue
+
+    config[_dir] = locals()[_dir]  # noqa: F821
