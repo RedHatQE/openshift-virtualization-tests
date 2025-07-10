@@ -30,6 +30,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
+    KUBEVIRT_VMI_PHASE_COUNT,
     KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -59,6 +60,8 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
+    wait_for_prometheus_query_result_matches_expected_value,
+    wait_for_prometheus_query_result_node_value_update,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
@@ -67,6 +70,8 @@ from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
+    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
+    INSTANCE_TYPE_STR,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
@@ -78,6 +83,7 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
+    PREFERENCE_STR,
     PVC,
     SOURCE_POD,
     SSP_OPERATOR,
@@ -119,6 +125,7 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
+    migrate_vm_and_verify,
     running_vm,
     target_vm_from_cloning_job,
 )
@@ -1168,3 +1175,36 @@ def created_fake_data_volume_resource(namespace, admin_client):
 @pytest.fixture()
 def metric_cdi_import_pods_high_restart_initial_value(prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART))
+
+
+@pytest.fixture(scope="class")
+def migrated_instance_type_vm(prometheus, rhel_vm_with_cluster_instance_type_and_preference):
+    before_migration_node = rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name
+    migrate_vm_and_verify(vm=rhel_vm_with_cluster_instance_type_and_preference)
+    wait_for_prometheus_query_result_node_value_update(
+        prometheus=prometheus,
+        query=KUBEVIRT_VMI_PHASE_COUNT_STR,
+        node=before_migration_node,
+    )
+
+
+@pytest.fixture()
+def updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm(
+    prometheus, rhel_vm_with_cluster_instance_type_and_preference
+):
+    return wait_for_prometheus_query_result_matches_expected_value(
+        prometheus=prometheus,
+        query=KUBEVIRT_VMI_PHASE_COUNT.format(
+            node_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name,
+            instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
+            preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+        ),
+        expected_value="1",
+    )
+
+
+@pytest.fixture(scope="class")
+def running_rhel_vm_with_instance_type_and_preference(
+    rhel_vm_with_instance_type_and_preference,
+):
+    return running_vm(vm=rhel_vm_with_instance_type_and_preference)
