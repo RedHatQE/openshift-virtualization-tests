@@ -9,6 +9,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     assert_instancetype_labels,
+    wait_for_prometheus_query_result_node_value_update,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
@@ -18,6 +19,25 @@ from utilities.constants import (
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     Images,
 )
+from utilities.virt import migrate_vm_and_verify, running_vm
+
+
+@pytest.fixture(scope="class")
+def migrated_instance_type_vm(prometheus, rhel_vm_with_cluster_instance_type_and_preference):
+    before_migration_node = rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name
+    migrate_vm_and_verify(vm=rhel_vm_with_cluster_instance_type_and_preference)
+    wait_for_prometheus_query_result_node_value_update(
+        prometheus=prometheus,
+        query=KUBEVIRT_VMI_PHASE_COUNT_STR,
+        node=before_migration_node,
+    )
+
+
+@pytest.fixture(scope="class")
+def running_rhel_vm_with_instance_type_and_preference(
+    rhel_vm_with_instance_type_and_preference,
+):
+    return running_vm(vm=rhel_vm_with_instance_type_and_preference)
 
 
 class TestInstanceType:

@@ -754,36 +754,6 @@ def get_resource_object(
             )
 
 
-def wait_for_prometheus_query_result_matches_expected_value(prometheus: Prometheus, query: str, expected_value: str):
-    """
-    This function waiting of Prometheus query output to match expected value
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        expected_value (str): expected_value
-
-    Returns:
-        dict: Dictionary of prometheus query output.
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if sample and sample[0].get("value") and sample[0]["value"][1] == expected_value:
-                return sample[0]
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting Prometheus query to match expected value: {expected_value}"
-            f"query: {query}, results: {sample}"
-        )
-        raise
-
-
 def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
     """
     This function is waiting for Prometheus query node label value to be update.
