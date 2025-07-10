@@ -3,7 +3,7 @@ from typing import Any
 import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import Images, StorageClassNames
+from utilities.constants import StorageClassNames
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
@@ -34,4 +34,4 @@ for _dir in dir():
     if _dir in ["encoding", "py_file"]:
         continue
 
-    config[_dir] = locals()[_dir]  # noqa: F821 
+    config[_dir] = locals()[_dir]  # noqa: F821
