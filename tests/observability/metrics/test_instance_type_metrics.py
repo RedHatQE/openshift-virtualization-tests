@@ -34,7 +34,6 @@ class TestInstanceType:
                 instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
                 preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
             ),
-            vm=rhel_vm_with_cluster_instance_type_and_preference,
             expected_labels=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
         )
 
@@ -52,7 +51,6 @@ class TestInstanceType:
                 instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
                 preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
             ),
-            vm=rhel_vm_with_cluster_instance_type_and_preference,
             expected_labels=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
         )
 
@@ -85,7 +83,6 @@ class TestInstanceType:
                 instance_type=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
                 preference=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
             ),
-            vm=running_rhel_vm_with_instance_type_and_preference,
             expected_labels=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS,
         )
 

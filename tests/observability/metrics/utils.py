@@ -814,23 +814,19 @@ def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, q
         raise
 
 
-def assert_instancetype_labels(
-    prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests, expected_labels: dict[str, str]
-) -> None:
+def assert_instancetype_labels(prometheus: Prometheus, metric_name: str, expected_labels: dict[str, str]) -> None:
     """
     This function will assert prometheus query output labels against expected labels.
 
     Args:
-        prometheus_output (dict): Prometheus query output.
-        expected_labels (dict): expected instancetype labels
+        prometheus (Prometheus): Prometheus client object to query metrics
+        metric_name (str): The prometheus metric name to query
+        expected_labels (dict): Expected instancetype labels to validate against
     """
     validate_metrics_value(prometheus=prometheus, metric_name=metric_name, expected_value="1")
 
     def check_instancetype_labels():
         data_mismatch = {}
-        import pdb
-
-        pdb.set_trace()
         for label in INSTANCE_TYPE_LABELS:
             prometheus_output = prometheus.query_sampler(query=metric_name)[0].get("metric").get(label)
             if prometheus_output != expected_labels[label]:
