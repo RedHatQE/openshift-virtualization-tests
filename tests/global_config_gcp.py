@@ -16,6 +16,15 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": True,
+        }
+    },
+    {
+        StorageClassNames.GCNV: {
+            "volume_mode": DataVolume.VolumeMode.FILE,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": True,
             "default": True,
         }
     },

@@ -619,6 +619,7 @@ class StorageClassNames:
     OCI = "oci-bv"
     OCI_UHP = "oci-bv-uhp"
     GCP = "sp-balanced-storage"
+    GCNV = "gcnv-flex"
 
 
 # Namespace constants
