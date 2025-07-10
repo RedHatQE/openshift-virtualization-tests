@@ -10,28 +10,19 @@ global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", 
 
 storage_class_matrix = [
     {
-        StorageClassNames.GCP: {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
             "access_mode": DataVolume.AccessMode.RWX,
             "snapshot": True,
             "online_resize": True,
-            "wffc": True,
-        }
-    },
-    {
-        StorageClassNames.GCNV: {
-            "volume_mode": DataVolume.VolumeMode.FILE,
-            "access_mode": DataVolume.AccessMode.RWX,
-            "snapshot": True,
-            "online_resize": True,
-            "wffc": True,
+            "wffc": False,
             "default": True,
         }
     },
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.GCP
-storage_class_for_storage_migration_b = StorageClassNames.GCP
+storage_class_for_storage_migration_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_for_storage_migration_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 
 for _dir in dir():
     if not config:  # noqa: F821
