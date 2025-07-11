@@ -1,6 +1,7 @@
 from collections.abc import Generator
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 
@@ -52,13 +53,13 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_1() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)  # type: ignore
+def namespace_localnet_1(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(admin_client=admin_client, name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_2() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)  # type: ignore
+def namespace_localnet_2(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(admin_client=admin_client, name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)
 
 
 @pytest.fixture(scope="module")

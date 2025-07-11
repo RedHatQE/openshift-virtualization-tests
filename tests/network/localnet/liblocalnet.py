@@ -21,9 +21,9 @@ _IPERF_SERVER_PORT = 5201
 
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
-        vm.start()
+        vm.start()  # type: ignore[no-untyped-call]
     for vm in vms:
-        vm.wait_for_ready_status(status=True)
+        vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
         vm.wait_for_agent_connected()
     return vms
 

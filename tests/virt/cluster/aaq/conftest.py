@@ -212,8 +212,9 @@ def acrq_label_on_first_namespace(admin_client, namespace, application_aware_clu
 
 
 @pytest.fixture(scope="class")
-def second_namespace_for_acrq_test():
+def second_namespace_for_acrq_test(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="acrq-test-second-ns",
         labels={**ACRQ_NAMESPACE_LABEL, **AAQ_NAMESPACE_LABEL},
     )

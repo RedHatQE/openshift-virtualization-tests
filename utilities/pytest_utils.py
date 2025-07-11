@@ -208,9 +208,8 @@ def skip_if_pytest_flags_exists(pytest_config):
 
 def get_artifactory_server_url(cluster_host_url):
     LOGGER.info(f"Getting artifactory server information using cluster host url: {cluster_host_url}")
-    artifactory_server = os.environ.get("ARTIFACTORY_SERVER")
-    if artifactory_server:
-        LOGGER.warning(f"Using user requested ARTIFACTORY_SERVER environment variable: {artifactory_server}")
+    if artifactory_server := os.environ.get("ARTIFACTORY_SERVER"):
+        LOGGER.info(f"Using user requested `ARTIFACTORY_SERVER` environment variable: {artifactory_server}")
         return artifactory_server
     else:
         servers = get_cnv_tests_secret_by_name(secret_name="artifactory_servers")

@@ -85,8 +85,9 @@ def running_vmb_upgrade_mac_spoof(vmb_upgrade_mac_spoof):
 
 
 @pytest.fixture(scope="session")
-def namespace_with_disabled_kmp():
+def namespace_with_disabled_kmp(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="kmp-disabled-ns",
         labels={KMP_VM_ASSIGNMENT_LABEL: KMP_DISABLED_LABEL},
     )

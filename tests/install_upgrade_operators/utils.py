@@ -2,6 +2,7 @@ import importlib
 import inspect
 import logging
 import re
+from typing import Any
 
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
@@ -60,7 +61,7 @@ def wait_for_install_plan(
     hco_namespace: str,
     hco_target_csv_name: str,
     is_production_source: bool,
-) -> InstallPlan:
+) -> Any:
     install_plan_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_40MIN,
         sleep=TIMEOUT_10SEC,
