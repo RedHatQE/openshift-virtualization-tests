@@ -183,8 +183,9 @@ def scale_test_param(pytestconfig):
 
 
 @pytest.fixture(scope="class")
-def scale_namespace(unprivileged_client, scale_test_param, keep_resources):
+def scale_namespace(admin_client, unprivileged_client, scale_test_param, keep_resources):
     yield from create_ns(
+        admin_client=admin_client,
         name=scale_test_param["test_namespace"],
         teardown=not keep_resources,
         unprivileged_client=unprivileged_client,

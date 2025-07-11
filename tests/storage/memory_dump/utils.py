@@ -2,6 +2,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import retry
 
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.virt import VirtualMachineForTests
 
 
 class MemoryDumpPhaseCompletedError(Exception):
@@ -17,7 +18,7 @@ class MemoryDumpPhaseRemovedError(Exception):
     sleep=TIMEOUT_5SEC,
     exceptions_dict={MemoryDumpPhaseCompletedError: []},
 )
-def wait_for_memory_dump_status_completed(vm: VirtualMachine) -> bool:
+def wait_for_memory_dump_status_completed(vm: VirtualMachineForTests) -> bool:
     vm_memory_dump_phase = vm.instance.status.get("memoryDumpRequest", {}).get("phase")
     if vm_memory_dump_phase == VirtualMachine.Status.COMPLETED:
         return True
@@ -29,7 +30,7 @@ def wait_for_memory_dump_status_completed(vm: VirtualMachine) -> bool:
     sleep=TIMEOUT_5SEC,
     exceptions_dict={MemoryDumpPhaseRemovedError: []},
 )
-def wait_for_memory_dump_status_removed(vm: VirtualMachine) -> bool:
+def wait_for_memory_dump_status_removed(vm: VirtualMachineForTests) -> bool:
     vm_memory_dump_request = vm.instance.status.memoryDumpRequest
     if vm_memory_dump_request is None:
         return True

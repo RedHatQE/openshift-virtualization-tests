@@ -36,8 +36,9 @@ KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
 
 
 @pytest.fixture(scope="package")
-def checkups_namespace():
+def checkups_namespace(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="test-storage-checkups",
     )
 

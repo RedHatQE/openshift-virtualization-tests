@@ -30,8 +30,9 @@ def enabled_aaq_in_hco_scope_session(admin_client, hco_namespace, hyperconverged
 
 # ARQ
 @pytest.fixture(scope="session")
-def namespace_for_arq_upgrade_test():
+def namespace_for_arq_upgrade_test(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="arq-upgrate-test-ns",
         labels=AAQ_NAMESPACE_LABEL,
     )
@@ -77,8 +78,9 @@ def vm_for_arq_upgrade_test_in_gated_state(namespace_for_arq_upgrade_test):
 
 # ACRQ
 @pytest.fixture(scope="session")
-def namespace_for_acrq_upgrade_test():
+def namespace_for_acrq_upgrade_test(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="acrq-upgrate-test-ns",
         labels={**ACRQ_NAMESPACE_LABEL, **AAQ_NAMESPACE_LABEL},
     )

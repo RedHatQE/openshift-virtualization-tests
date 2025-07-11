@@ -11,7 +11,8 @@ from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
-from utilities.virt import CLOUD_INIT_DISK_NAME, get_oc_image_info, vm_console_run_commands
+from utilities.constants import CLOUD_INIT_DISK_NAME
+from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -28,12 +29,12 @@ class BaseVirtualMachine(VirtualMachine):
         vm_labels: dict[str, str] | None = None,
         vm_annotations: dict[str, str] | None = None,
         client: DynamicClient | None = None,
-    ):
+    ) -> None:
         self._name = self._new_unique_name(prefix=name)
         self._spec = spec
         self._os_distribution = os_distribution
         vm_spec = asdict(obj=spec, dict_factory=self._filter_out_none_values)
-        super().__init__(
+        super().__init__(  # type: ignore[no-untyped-call]
             namespace=namespace,
             name=self._name,
             body={"spec": vm_spec},
@@ -63,7 +64,6 @@ class BaseVirtualMachine(VirtualMachine):
             vm=self,
             commands=commands,
             timeout=timeout,
-            verify_commands_output=True,
             command_output=True,
         )
 
@@ -79,7 +79,7 @@ def container_image(base_image: str) -> str:
     image_info = get_oc_image_info(
         image=base_image,
         pull_secret=pull_secret,
-        architecture=infra.get_nodes_cpu_architecture(nodes=Node.get()),
+        architecture=infra.get_nodes_cpu_architecture(nodes=list(Node.get())),
     )
     return f"{base_image}@{image_info['digest']}"
 

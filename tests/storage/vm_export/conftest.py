@@ -88,8 +88,8 @@ def secret_headers_for_vmexport_from_vmsnapshot(
 
 
 @pytest.fixture(scope="module")
-def namespace_vmexport_target():
-    yield from create_ns(name="vm-export-test-target")
+def namespace_vmexport_target(admin_client):
+    yield from create_ns(admin_client=admin_client, name="vm-export-test-target")
 
 
 @pytest.fixture()

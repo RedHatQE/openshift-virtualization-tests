@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 import bitmath
 import jinja2
@@ -83,6 +83,10 @@ from utilities.constants import (
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import wait_for_hco_conditions
 from utilities.storage import get_default_storage_class
+
+if TYPE_CHECKING:
+    from libs.vm.vm import BaseVirtualMachine
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -426,10 +430,10 @@ class VirtualMachineForTests(VirtualMachine):
         super().deploy(wait=wait)
         return self
 
-    def clean_up(self) -> bool:
+    def clean_up(self, wait: bool = True, timeout: int | None = None) -> bool:
         if self.exists and self.ready:
             self.stop(wait=True, vmi_delete_timeout=TIMEOUT_8MIN)
-        super().clean_up()
+        super().clean_up(wait=wait, timeout=timeout)
         if self.custom_service:
             self.custom_service.delete(wait=True)
         return True
@@ -1315,7 +1319,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
 
 
 def vm_console_run_commands(
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
     verify_commands_output: bool = True,
@@ -1710,7 +1714,7 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 
 def migrate_vm_and_verify(
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests | BaseVirtualMachine,
     client: DynamicClient | None = None,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
@@ -2400,25 +2404,25 @@ def get_nodes_gpu_info(util_pods, node):
     return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")
 
 
-def assert_linux_efi(vm: VirtualMachine) -> None:
+def assert_linux_efi(vm: VirtualMachineForTests) -> None:
     """
     Verify guest OS is using EFI.
     """
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
 
 
-def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachine, migrate: bool = False) -> None:
+def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachineForTests, migrate: bool = False) -> None:
     vmi = VirtualMachineInstance(client=get_client(), name=vm.vmi.name, namespace=vm.vmi.namespace)
     vmi.pause(wait=True)
     if migrate:
-        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False)
     vmi.unpause(wait=True)
     LOGGER.info("Verify VM is running and ready after unpause")
     wait_for_running_vm(vm=vm)
 
 
 def validate_pause_optional_migrate_unpause_linux_vm(
-    vm: VirtualMachine, pre_pause_pid: int | None = None, migrate: bool = False
+    vm: VirtualMachineForTests, pre_pause_pid: int | None = None, migrate: bool = False
 ) -> None:
     proc_name = OS_PROC_NAME["linux"]
     if not pre_pause_pid:
@@ -2431,7 +2435,7 @@ def validate_pause_optional_migrate_unpause_linux_vm(
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachine, cm_values: Dict[str, str]) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
@@ -2451,7 +2455,7 @@ def check_vm_xml_smbios(vm: VirtualMachine, cm_values: Dict[str, str]) -> None:
     assert all(results.values())
 
 
-def assert_vm_xml_efi(vm: VirtualMachine, secure_boot_enabled: bool = True) -> None:
+def assert_vm_xml_efi(vm: VirtualMachineForTests, secure_boot_enabled: bool = True) -> None:
     LOGGER.info("Verify VM XML - EFI secureBoot values.")
     xml_dict_os = vm.privileged_vmi.xml_dict["domain"]["os"]
     ovmf_path = "/usr/share/OVMF"
@@ -2473,7 +2477,7 @@ def assert_vm_xml_efi(vm: VirtualMachine, secure_boot_enabled: bool = True) -> N
 
 
 def update_vm_efi_spec_and_restart(
-    vm: VirtualMachine, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
+    vm: VirtualMachineForTests, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
 ) -> None:
     ResourceEditor({
         vm: {"spec": {"template": {"spec": {"domain": {"firmware": {"bootloader": {"efi": spec or {}}}}}}}}
@@ -2494,7 +2498,7 @@ def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # Guest agent info gather functions.
-def get_virtctl_os_info(vm: VirtualMachine) -> dict[str, Any] | None:
+def get_virtctl_os_info(vm: VirtualMachineForTests) -> dict[str, Any] | None:
     """
     Returns OS data dict in format:
     {
@@ -2524,7 +2528,7 @@ def get_virtctl_os_info(vm: VirtualMachine) -> dict[str, Any] | None:
     return delete_guestosinfo_keys(data=data)
 
 
-def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
+def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> bool:
     """
     Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
 
@@ -2546,6 +2550,6 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
     return False
 
 
-def get_vm_boot_time(vm: VirtualMachine) -> str:
+def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]

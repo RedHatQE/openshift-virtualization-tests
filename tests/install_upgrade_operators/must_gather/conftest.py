@@ -182,8 +182,9 @@ def running_hco_containers(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="package")
-def node_gather_unprivileged_namespace(unprivileged_client):
+def node_gather_unprivileged_namespace(admin_client, unprivileged_client):
     yield from create_ns(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="node-gather-unprivileged",
     )
@@ -403,8 +404,9 @@ def collected_vm_details_must_gather_with_params(
 
 
 @pytest.fixture(scope="class")
-def must_gather_alternate_namespace(unprivileged_client):
+def must_gather_alternate_namespace(admin_client, unprivileged_client):
     yield from create_ns(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="must-gather-alternate",
     )

@@ -111,7 +111,6 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_6MIN,
     U1_SMALL,
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
@@ -660,7 +659,6 @@ def namespace(request, admin_client, unprivileged_client):
         admin_client=admin_client,
         name=generate_namespace_name(file_path=request.fspath.strpath.split(f"{os.path.dirname(__file__)}/")[1]),
         teardown=teardown,
-        delete_timeout=TIMEOUT_6MIN,
     )
 
 
@@ -1536,10 +1534,10 @@ def kmp_vm_label(admin_client):
 
 
 @pytest.fixture(scope="class")
-def kmp_enabled_ns(kmp_vm_label):
+def kmp_enabled_ns(admin_client, kmp_vm_label):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
-    yield from create_ns(name="kmp-enabled", labels=kmp_vm_label)
+    yield from create_ns(admin_client=admin_client, name="kmp-enabled", labels=kmp_vm_label)
 
 
 @pytest.fixture(scope="session")

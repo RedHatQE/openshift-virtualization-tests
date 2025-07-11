@@ -46,8 +46,8 @@ def imported_dv_second_namespace(imported_dv_in_progress_second_namespace):
 
 
 @pytest.fixture()
-def namespace_for_backup():
-    yield from create_ns(name="velero-test-ns")
+def namespace_for_backup(admin_client):
+    yield from create_ns(admin_client=admin_client, name="velero-test-ns")
 
 
 @pytest.fixture()
@@ -63,8 +63,8 @@ def velero_backup_single_namespace(request, imported_dv_in_progress_second_names
 
 
 @pytest.fixture()
-def namespace_for_backup2():
-    yield from create_ns(name="velero-test-ns2")
+def namespace_for_backup2(admin_client):
+    yield from create_ns(admin_client=admin_client, name="velero-test-ns2")
 
 
 @pytest.fixture()

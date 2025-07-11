@@ -20,7 +20,6 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
-from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -47,6 +46,7 @@ from utilities.storage import (
     get_containers_for_pods_with_pvc,
 )
 from utilities.virt import (
+    VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     running_vm,
     vm_instance_from_template,
@@ -249,7 +249,7 @@ def create_vm_and_verify_image_permission(dv: DataVolume) -> None:
         verify_vm_disk_image_permission(vm=vm)
 
 
-def verify_vm_disk_image_permission(vm: VirtualMachine) -> None:
+def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
     v_pod = vm.vmi.virt_launcher_pod
     LOGGER.debug("Check image exist, permission and ownership")
     output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
@@ -515,13 +515,15 @@ def clean_up_multiprocess(processes, object_list):
             process.close()
 
 
-def assert_windows_directory_existence(expected_result: bool, windows_vm: VirtualMachine, directory_path: str) -> None:
+def assert_windows_directory_existence(
+    expected_result: bool, windows_vm: VirtualMachineForTests, directory_path: str
+) -> None:
     cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
     out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
     assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
 
 
-def create_windows_directory(windows_vm: VirtualMachine, directory_path: str) -> None:
+def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path: str) -> None:
     cmd = shlex.split(
         f'powershell -command "New-Item -Path {directory_path} -ItemType Directory"',
     )
