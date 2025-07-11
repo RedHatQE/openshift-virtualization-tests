@@ -5,6 +5,8 @@ import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from pytest_testconfig import config as py_config
 
+from tests.virt.constants import VM_LABEL
+from tests.virt.utils import assert_migration_post_copy_mode
 from utilities.constants import (
     REGEDIT_PROC_NAME,
     TIMEOUT_15MIN,
@@ -30,7 +32,6 @@ pytestmark = pytest.mark.usefixtures(
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestPostCopyMigration"
-VM_LABEL = {"post-copy-vm": "true"}
 
 
 def assert_same_pid_after_migration(orig_pid, vm):
@@ -39,11 +40,6 @@ def assert_same_pid_after_migration(orig_pid, vm):
     else:
         new_pid = fetch_pid_from_linux_vm(vm=vm, process_name="ping")
     assert new_pid == orig_pid, f"PID mismatch after migration! orig_pid: {orig_pid}; new_pid: {new_pid}"
-
-
-def assert_migration_post_copy_mode(vm):
-    migration_state = vm.vmi.instance.status.migrationState
-    assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
 
 
 @pytest.fixture(scope="module")
