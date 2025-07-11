@@ -3,8 +3,9 @@ from typing import Literal
 
 from ocp_resources.controller_revision import ControllerRevision
 from ocp_resources.resource import Resource
-from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_ssh_commands
+
+from utilities.virt import VirtualMachineForTests
 
 
 def get_mismatch_vendor_label(resources_list):
@@ -22,7 +23,7 @@ def assert_mismatch_vendor_label(resources_list):
 
 
 def get_controller_revision(
-    vm_instance: VirtualMachine, ref_type: Literal["instancetype", "preference"]
+    vm_instance: VirtualMachineForTests, ref_type: Literal["instancetype", "preference"]
 ) -> ControllerRevision:
     ref_mapping = {
         "instancetype": vm_instance.instance.status.instancetypeRef.controllerRevisionRef.name,
@@ -36,7 +37,7 @@ def get_controller_revision(
 
 
 def assert_instance_revision_and_memory_update(
-    vm_for_test: VirtualMachine, old_revision_name: str, updated_memory: str
+    vm_for_test: VirtualMachineForTests, old_revision_name: str, updated_memory: str
 ) -> None:
     guest_memory = vm_for_test.vmi.instance.spec.domain.memory.guest
     assert vm_for_test.instance.status.instancetypeRef.controllerRevisionRef.name != old_revision_name, (
@@ -47,16 +48,16 @@ def assert_instance_revision_and_memory_update(
     )
 
 
-def assert_secure_boot_dmesg(vm: VirtualMachine) -> None:
+def assert_secure_boot_dmesg(vm: VirtualMachineForTests) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo dmesg | grep -i secureboot"))[0]
     assert "enabled" in output.lower(), f"Secure Boot was not enabled at boot time. Found: {output}"
 
 
-def assert_secure_boot_mokutil_status(vm: VirtualMachine) -> None:
+def assert_secure_boot_mokutil_status(vm: VirtualMachineForTests) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].lower()
     assert "enabled" in output, f"Secure Boot is not enabled. Found: {output}"
 
 
-def assert_kernel_lockdown_mode(vm: VirtualMachine) -> None:
+def assert_kernel_lockdown_mode(vm: VirtualMachineForTests) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("cat /sys/kernel/security/lockdown"))[0]
     assert "[none]" not in output, f"Kernel lockdown mode is not '[none]'. Found: {output}"

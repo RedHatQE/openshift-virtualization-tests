@@ -4,7 +4,6 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.storage_migration.constants import (
@@ -15,16 +14,16 @@ from tests.storage.storage_migration.constants import (
 )
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
-from utilities.virt import get_vm_boot_time
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 
 
-def get_source_virt_launcher_pod(client: DynamicClient, vm: VirtualMachine) -> Pod:
+def get_source_virt_launcher_pod(client: DynamicClient, vm: VirtualMachineForTests) -> Pod:
     source_pod_name = vm.vmi.instance.to_dict().get("status", {}).get("migrationState", {}).get("sourcePod")
     assert source_pod_name, f"Source pod name is not found in VMI status.migrationState.sourcePod for VM '{vm.name}'"
     return Pod(client=client, name=source_pod_name, namespace=vm.namespace, ensure_exists=True)
 
 
-def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> None:
+def check_file_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
     if not vm.ready:
         vm.start(wait=True)
     with console.Console(vm=vm) as vm_console:
@@ -35,7 +34,7 @@ def check_file_in_vm(vm: VirtualMachine, file_name: str, file_content: str) -> N
 
 
 def verify_vms_boot_time_after_storage_migration(
-    vm_list: list[VirtualMachine], initial_boot_time: dict[str, str]
+    vm_list: list[VirtualMachineForTests], initial_boot_time: dict[str, str]
 ) -> None:
     """
     Verify that VMs have not rebooted after storage migration.
@@ -55,7 +54,7 @@ def verify_vms_boot_time_after_storage_migration(
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
 
 
-def verify_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: str) -> None:
+def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_class: str) -> None:
     vm_pvcs_names = [
         volume["dataVolume"]["name"]
         for volume in vm.instance.spec.template.spec.volumes
@@ -76,8 +75,8 @@ def verify_vm_storage_class_updated(vm: VirtualMachine, target_storage_class: st
 
 def verify_storage_migration_succeeded(
     vms_boot_time_before_storage_migration: dict[str, str],
-    online_vms_for_storage_class_migration: list[VirtualMachine],
-    vms_with_written_file_before_migration: list[VirtualMachine],
+    online_vms_for_storage_class_migration: list[VirtualMachineForTests],
+    vms_with_written_file_before_migration: list[VirtualMachineForTests],
     target_storage_class: str,
 ) -> None:
     verify_vms_boot_time_after_storage_migration(
@@ -103,14 +102,14 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
         )
 
 
-def verify_file_in_hotplugged_disk(vm: VirtualMachine, file_name: str, file_content: str) -> None:
+def verify_file_in_hotplugged_disk(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
     output = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}")
     )[0]
     assert output.strip() == file_content, f"'{output}' does not equal '{file_content}'"
 
 
-def verify_file_in_windows_vm(windows_vm: VirtualMachine, file_name_with_path: str, file_content: str) -> None:
+def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with_path: str, file_content: str) -> None:
     cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
     out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
     assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"

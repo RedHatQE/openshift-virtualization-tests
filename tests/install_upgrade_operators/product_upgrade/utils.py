@@ -609,8 +609,8 @@ def get_build_info_by_version(version: str, errata_status: str = "true") -> dict
 
 
 def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) -> None:
-    for mcp in mcp:
-        ResourceEditor(patches={mcp: {"spec": {"paused": paused}}}).update()
+    for _mcp in mcp:
+        ResourceEditor(patches={_mcp: {"spec": {"paused": paused}}}).update()
 
 
 def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: list[str]) -> None:
@@ -662,9 +662,7 @@ def perform_cnv_upgrade(
     wait_for_hco_upgrade(dyn_client=admin_client, hco_namespace=hco_namespace, cnv_target_version=cnv_target_version)
 
 
-def wait_for_hco_csv_creation(
-    admin_client: DynamicClient, hco_namespace: str, hco_target_csv_name: str
-) -> ClusterServiceVersion:
+def wait_for_hco_csv_creation(admin_client: DynamicClient, hco_namespace: str, hco_target_csv_name: str) -> Any:
     LOGGER.info(f"Wait for new CSV {hco_target_csv_name} to be created")
     csv_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_10MIN,

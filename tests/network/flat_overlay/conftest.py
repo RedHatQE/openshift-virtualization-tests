@@ -83,8 +83,9 @@ def flat_l2_port(
 
 
 @pytest.fixture(scope="module")
-def flat_overlay_second_namespace(unprivileged_client):
+def flat_overlay_second_namespace(admin_client, unprivileged_client):
     yield from create_ns(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="test-flat-overlay-second-namespace",
     )

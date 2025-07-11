@@ -17,7 +17,6 @@ from ocp_resources.pod import Pod
 from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
@@ -738,7 +737,7 @@ def wait_vmi_dommemstat_match_with_metric_value(prometheus: Prometheus, vm: Virt
 
 def get_resource_object(
     admin_client: DynamicClient, related_objects: list, resource_kind, resource_name: str
-) -> Resource:
+) -> Resource | None:
     for related_obj in related_objects:
         if resource_kind.__name__ == related_obj["kind"]:
             namespace = related_obj.get("namespace")
@@ -752,6 +751,8 @@ def get_resource_object(
                 client=admin_client,
                 name=resource_name,
             )
+
+    return None
 
 
 def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
@@ -958,7 +959,9 @@ def compare_network_traffic_bytes_and_metrics(
     return False
 
 
-def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMachine, interface_name: str) -> None:
+def validate_network_traffic_metrics_value(
+    prometheus: Prometheus, vm: VirtualMachineForTests, interface_name: str
+) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_10SEC,
@@ -984,7 +987,7 @@ def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMa
 
 def validate_vmi_network_receive_and_transmit_packets_total(
     metric_dict: dict[str, str],
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests,
     vm_interface_name: str,
     prometheus: Prometheus,
 ) -> None:

@@ -103,8 +103,8 @@ def verify_common_template_namespace_updated(common_templates, namespace_name):
 
 
 @pytest.fixture(scope="module")
-def custom_golden_images_namespace():
-    yield from create_ns(name="custom-golden-images-namespace")
+def custom_golden_images_namespace(admin_client):
+    yield from create_ns(admin_client=admin_client, name="custom-golden-images-namespace")
 
 
 @pytest.fixture(scope="class")
