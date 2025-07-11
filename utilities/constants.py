@@ -807,7 +807,17 @@ DEPRECATED_CPU_MODELS_S390x = [
     "zEC12.2-base",
 ]
 # Usable (non-deprecated) CPU models for s390x, but crashing for rhel9
-USABLE_NOTWORKING_CPU_MODELS_S390x = ["z14ZR1-base", "z14.2-base", "z14-base", "gen15a-base", "gen15b-base", "gen16a-base", "gen16b-base", "gen17a-base", "gen17b-base"]
+USABLE_NOTWORKING_CPU_MODELS_S390x = [
+    "z14ZR1-base",
+    "z14.2-base",
+    "z14-base",
+    "gen15a-base",
+    "gen15b-base",
+    "gen16a-base",
+    "gen16b-base",
+    "gen17a-base",
+    "gen17b-base",
+]
 EXCLUDED_CPU_MODELS_S390x = [*DEPRECATED_CPU_MODELS_S390x, *USABLE_NOTWORKING_CPU_MODELS_S390x]
 # Opteron - Windows image can't boot
 # Penryn - does not support WSL2
