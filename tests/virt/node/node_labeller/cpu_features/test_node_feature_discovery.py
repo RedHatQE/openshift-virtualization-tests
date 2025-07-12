@@ -87,6 +87,7 @@ def test_obsolete_cpus_in_node_labels(nodes_labels_dict, kubevirt_config):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-3607")
 def test_hardware_required_node_labels(nodes_labels_dict):
     kvm_info_nfd_labels = [
@@ -112,6 +113,7 @@ def test_hardware_required_node_labels(nodes_labels_dict):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-6088")
 def test_hardware_non_required_node_labels(nodes_labels_dict):
     hw_supported_hyperv_features = [
