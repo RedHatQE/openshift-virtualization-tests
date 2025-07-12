@@ -49,6 +49,7 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
+    U1_MEDIUM_STR,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
     WIN_2K22,
@@ -204,12 +205,12 @@ auto_update_data_source_matrix = [
 ]
 
 data_import_cron_matrix = [
-    {"centos-stream9": {"instance_type": "u1.medium", "preference": "centos.stream9"}},
-    {"centos-stream10": {"instance_type": "u1.medium", "preference": "centos.stream10"}},
-    {"fedora": {"instance_type": "u1.medium", "preference": "fedora"}},
-    {"rhel8": {"instance_type": "u1.medium", "preference": "rhel.8"}},
-    {"rhel9": {"instance_type": "u1.medium", "preference": "rhel.9"}},
-    {"rhel10": {"instance_type": "u1.medium", "preference": "rhel.10"}},
+    {"centos-stream9": {"instance_type": U1_MEDIUM_STR, "preference": "centos.stream9"}},
+    {"centos-stream10": {"instance_type": U1_MEDIUM_STR, "preference": "centos.stream10"}},
+    {"fedora": {"instance_type": U1_MEDIUM_STR, "preference": "fedora"}},
+    {"rhel8": {"instance_type": U1_MEDIUM_STR, "preference": "rhel.8"}},
+    {"rhel9": {"instance_type": U1_MEDIUM_STR, "preference": "rhel.9"}},
+    {"rhel10": {"instance_type": U1_MEDIUM_STR, "preference": "rhel.10"}},
 ]
 
 rhel_os_matrix = [
@@ -373,7 +374,7 @@ instance_type_rhel_os_matrix = [
     {
         "rhel-8": {
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            INSTANCE_TYPE_STR: "u1.medium",
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
             PREFERENCE_STR: "rhel.8",
             DATA_SOURCE_NAME: "rhel8",
         }
@@ -381,7 +382,7 @@ instance_type_rhel_os_matrix = [
     {
         "rhel-9": {
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            INSTANCE_TYPE_STR: "u1.medium",
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
             PREFERENCE_STR: "rhel.9",
             DATA_SOURCE_NAME: "rhel9",
         }
@@ -389,7 +390,7 @@ instance_type_rhel_os_matrix = [
     {
         "rhel-10": {
             DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            INSTANCE_TYPE_STR: "u1.medium",
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
             PREFERENCE_STR: "rhel.10",
             DATA_SOURCE_NAME: "rhel10",
             LATEST_RELEASE_STR: True,
