@@ -1037,6 +1037,25 @@ def update_default_sc(default, storage_class):
         yield
 
 
+def set_default_sc(default: bool, storage_class: StorageClass) -> None:
+    is_default = str(default).lower()
+    editor = ResourceEditor(
+        patches={
+            storage_class: {
+                "metadata": {
+                    "annotations": {
+                        StorageClass.Annotations.IS_DEFAULT_CLASS: is_default,
+                        StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: is_default,
+                    },
+                    "name": storage_class.name,
+                },
+            }
+        }
+    )
+    # Apply the changes permanently without backup for restoration
+    editor.update(backup_resources=False)
+
+
 def verify_dv_and_pvc_does_not_exist(name, namespace, timeout=TIMEOUT_10MIN):
     dv = DataVolume(namespace=namespace, name=name)
     pvc = PersistentVolumeClaim(namespace=namespace, name=name)
