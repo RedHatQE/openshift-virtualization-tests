@@ -32,6 +32,7 @@ def unscheduled_node_vm(
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.rwx_default_storage
 @pytest.mark.parametrize(
     "data_volume_scope_function, unscheduled_node_vm",

@@ -76,6 +76,8 @@ DV_PARAMS = {
     "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
 }
 
+LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
+
 
 def get_importer_pod_node(importer_pod):
     for sample in TimeoutSampler(
@@ -324,7 +326,7 @@ def test_successful_import_basic_auth(
         namespace=namespace.name,
         url=get_file_url(url=images_internal_http_server["http_auth"], file_name=file_name),
         content_type=content_type,
-        size="500Mi",
+        size=DEFAULT_DV_SIZE,
         secret=internal_http_secret,
         storage_class=storage_class_name_scope_module,
     ) as dv:
@@ -688,11 +690,11 @@ def test_vm_from_dv_on_different_node(
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "vm_name": f"vm-win-{py_config['latest_windows_os_dict']['os_version']}",
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
+                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
             },
-            {"os_version": py_config["latest_windows_os_dict"]["os_version"]},
+            {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
         ),
     ],

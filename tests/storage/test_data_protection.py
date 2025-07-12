@@ -69,8 +69,8 @@ def test_remove_cdi_pvc(skip_test_if_no_hpp_sc, pvc_hpp, cdi):
         pytest.param(
             {
                 "dv_name": "cnv-3650",
-                "image": py_config["latest_fedora_os_dict"]["image_path"],
-                "dv_size": py_config["latest_fedora_os_dict"]["dv_size"],
+                "image": py_config.get("latest_fedora_os_dict", {}).get("image_path"),
+                "dv_size": py_config.get("latest_fedora_os_dict", {}).get("dv_size"),
             },
             marks=(pytest.mark.polarion("CNV-3650")),
         ),

@@ -57,17 +57,21 @@ def get_matrix_params(pytest_config, matrix_name):
     """
     missing_matrix_error = f"{matrix_name} is missing in config file"
     base_matrix_name = get_base_matrix_name(matrix_name=matrix_name)
+    _skip_if_pytest_flags_exists = skip_if_pytest_flags_exists(pytest_config=pytest_config)
 
     _matrix_params = py_config.get(matrix_name)
     # If matrix is not in py_config, check if it is a function in utilities.pytest_matrix_utils
     if not _matrix_params:
         _matrix_func_name = matrix_name.split(base_matrix_name)[-1].replace("_", "", 1)
         _base_matrix_params = py_config.get(base_matrix_name)
-        if not _base_matrix_params:
-            raise ValueError(missing_matrix_error)
+
+        # Do not raise when running --collect-only or --setup-plan
+        if not _base_matrix_params and not _skip_if_pytest_flags_exists:
+            LOGGER.warning(missing_matrix_error)
+            return []
 
         # When running --collect-only or --setup-plan we cannot execute functions from pytest_matrix_utils
-        if skip_if_pytest_flags_exists(pytest_config=pytest_config):
+        if _skip_if_pytest_flags_exists:
             _matrix_params = _base_matrix_params
 
         else:
@@ -76,11 +80,12 @@ def get_matrix_params(pytest_config, matrix_name):
                 sys.modules[module_name] = importlib.import_module(name=module_name)
 
             pytest_matrix_utils = sys.modules[module_name]
-            matrix_func = getattr(pytest_matrix_utils, _matrix_func_name)
+            matrix_func = getattr(pytest_matrix_utils, _matrix_func_name, None)
             return matrix_func(matrix=_base_matrix_params)
 
-    if not _matrix_params:
-        raise ValueError(missing_matrix_error)
+    if not _matrix_params and not _skip_if_pytest_flags_exists:
+        LOGGER.warning(missing_matrix_error)
+        return []
 
     return _matrix_params if isinstance(_matrix_params, list) else [_matrix_params]
 
@@ -203,7 +208,11 @@ def skip_if_pytest_flags_exists(pytest_config):
     Returns:
         bool: True if skip is needed, otherwise False
     """
-    return pytest_config.getoption("--collect-only") or pytest_config.getoption("--setup-plan")
+    return (
+        pytest_config.getoption("--collect-only")
+        or pytest_config.getoption("--collectonly")
+        or pytest_config.getoption("--setup-plan")
+    )
 
 
 def get_artifactory_server_url(cluster_host_url):
