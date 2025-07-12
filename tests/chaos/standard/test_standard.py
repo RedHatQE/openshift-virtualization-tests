@@ -3,6 +3,7 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.chaos.constants import STRESS_NG
+from tests.chaos.utils import wait_for_process_to_start
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -118,13 +119,14 @@ def test_odf_storage_outage(
 
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
-    "chaos_worker_background_process",
+    "chaos_worker_background_thread",
     [
         pytest.param(
             {
-                "max_duration": TIMEOUT_2MIN,
-                "background_command": f"{STRESS_NG}  --io 5 -t 120s",
-                "process_name": STRESS_NG,
+                "timeout": TIMEOUT_2MIN,
+                "background_command": f"{STRESS_NG}  --iomix 5 -t 120s --metrics-brief 2>&1 | tee /tmp/stress-ng.log",
+                "thread_name": STRESS_NG,
+                "retries": 2,
             },
         ),
     ],
@@ -135,21 +137,39 @@ def test_host_io_stress(
     vm_with_nginx_service,
     vm_node_with_chaos_label,
     nginx_monitoring_process,
-    chaos_worker_background_process,
+    chaos_worker_background_thread,
+    stress_ng_probe,
 ):
     """
     This experiment tests the resilience of the worker node and CNV by running an NGINX server within a VM,
-    stressing the worker IO and testing to make sure the server
-    and its VMI remain responsive throughout chaos duration.
+    stressing the worker IO and verifies VM remains responsive during stress-ng execution on its host node.
     """
-    chaos_worker_background_process.join()
+
+    thread, result_queue = chaos_worker_background_thread
+    target_node = vm_node_with_chaos_label[0]
+
+    stress_pid = wait_for_process_to_start(
+        probe_func=stress_ng_probe,
+        node=target_node,
+        timeout=120,
+        sleep=5,
+    )
+
+    assert stress_pid, f"stress-ng not running on {target_node.name}"
+
     nginx_monitoring_process.join()
+    thread.join()
+
+    result = result_queue.get_nowait()
+    assert result["success"], (
+        f"stress-ng failed after {result['attempt']} attempt(s).\n"
+        f"Error: {result['error']}\nOutput: {result.get('output', '')}"
+    )
+
     assert nginx_monitoring_process.exitcode == 0, (
         f"The NGINX server running inside VM {vm_with_nginx_service.vmi.name} failed to remain responsive "
         f"during the sampling duration"
     )
-
-    assert chaos_worker_background_process.exitcode == 0, "Background process execution failed"
 
 
 @pytest.mark.gpfs
