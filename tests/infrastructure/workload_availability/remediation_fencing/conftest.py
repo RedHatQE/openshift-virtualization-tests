@@ -10,7 +10,7 @@ from tests.infrastructure.workload_availability.remediation_fencing.constants im
     REMEDIATION_OPERATOR_NAMESPACE,
 )
 from tests.infrastructure.workload_availability.remediation_fencing.utils import perform_node_operation
-from utilities.infra import get_utility_pods_from_nodes, is_jira_open
+from utilities.infra import get_utility_pods_from_nodes
 from utilities.operator import wait_for_csv_successful_state
 from utilities.virt import (
     VirtualMachineForTests,
@@ -20,9 +20,9 @@ from utilities.virt import (
 
 
 @pytest.fixture(scope="session")
-def fail_if_compact_cluster_and_jira_47277_open(compact_cluster):
-    if compact_cluster and is_jira_open(jira_id="CNV-47277"):
-        pytest.fail("Test cannot run on compact cluster")
+def xfail_if_compact_cluster(compact_cluster):
+    if compact_cluster:
+        pytest.xfail(reason="Test cannot run on compact cluster")
 
 
 @pytest.fixture(scope="module")
