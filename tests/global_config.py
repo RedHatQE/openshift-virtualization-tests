@@ -37,6 +37,7 @@ from utilities.constants import (
     LATEST_RELEASE_STR,
     LINUX_BRIDGE,
     MONITORING_METRICS,
+    OS_FLAVOR_FEDORA,
     OS_STR,
     OS_VERSION_STR,
     OVS_BRIDGE,
@@ -49,6 +50,7 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
+    U1_MEDIUM_STR,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
     WIN_2K22,
@@ -393,6 +395,33 @@ instance_type_rhel_os_matrix = [
             PREFERENCE_STR: "rhel.10",
             DATA_SOURCE_NAME: "rhel10",
             LATEST_RELEASE_STR: True,
+        }
+    },
+]
+
+instance_type_centos_fedora_os_matrix = [
+    {
+        OS_FLAVOR_FEDORA: {
+            DV_SIZE_STR: Images.Fedora.DEFAULT_DV_SIZE,
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
+            PREFERENCE_STR: OS_FLAVOR_FEDORA,
+            DATA_SOURCE_NAME: OS_FLAVOR_FEDORA,
+        }
+    },
+    {
+        "centos-stream9": {
+            DV_SIZE_STR: Images.CentOS.DEFAULT_DV_SIZE,
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
+            PREFERENCE_STR: "centos.stream9",
+            DATA_SOURCE_NAME: "centos-stream9",
+        }
+    },
+    {
+        "centos-stream10": {
+            DV_SIZE_STR: Images.CentOS.DEFAULT_DV_SIZE,
+            INSTANCE_TYPE_STR: U1_MEDIUM_STR,
+            PREFERENCE_STR: "centos.stream10",
+            DATA_SOURCE_NAME: "centos-stream10",
         }
     },
 ]
