@@ -29,9 +29,9 @@ strict_concatenate = true
 
 
 [project]
-name = "openshift-virtualization-tests-4.19"
+name = "openshift-virtualization-tests-4.20"
 requires-python = "==3.12.*"
-version = "4.19"
+version = "4.20"
 description = "Tests for Openshift Virtualization"
 authors = [{ "name" = "openshift-virtualization-tests" }]
 dependencies = [
@@ -78,7 +78,6 @@ dependencies = [
   "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
-  "openshift-python-wrapper>=11.0.65",
 ]
 
 [tool.hatch.build.targets.wheel]
