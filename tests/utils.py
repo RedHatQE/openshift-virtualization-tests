@@ -287,7 +287,7 @@ def update_cluster_cpu_model(admin_client, hco_namespace, hco_resource, cpu_mode
             hco_namespace=hco_namespace,
             path=["cpuModel"],
             value=cpu_model,
-            timeout=30,
+            timeout=60,
         )
         yield
 

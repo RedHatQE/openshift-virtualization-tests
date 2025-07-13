@@ -1439,7 +1439,7 @@ def get_node_selector_dict(node_selector):
 
 def get_nodes_cpu_model(nodes):
     """
-    Checks the cpu model labels on each nodes passed and returns a dictionary of nodes and supported nodes
+    Checks the cpu model labels on each nodes passed and returns a dictionary of nodes and supported cpu models
 
     :param nodes (list) : Nodes, for which cpu model labels are to be checked
 
@@ -1497,7 +1497,9 @@ def get_common_cpu_from_nodes(cluster_cpus):
     """
     Receives a set of unique common cpus between all the schedulable nodes and returns one from the set
     """
-    return next(iter(cluster_cpus)) if cluster_cpus else None
+    common_cpu_model = next(iter(cluster_cpus)) if cluster_cpus else None
+    LOGGER.info(f"Common CPU used is {common_cpu_model}")
+    return common_cpu_model
 
 
 def delete_resources_from_namespace_by_type(resources_types, namespace, wait=False):

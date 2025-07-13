@@ -71,6 +71,8 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
 
 
 @pytest.mark.arm64
+@pytest.mark.x86_64
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "vm",
     [
@@ -82,22 +84,39 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
     indirect=True,
 )
 def test_default_machine_type(machine_type_from_kubevirt_config, vm):
-    validate_machine_type(vm=vm, expected_machine_type=machine_type_from_kubevirt_config)
+    # Workaround for s390x (https://github.com/kubevirt/kubevirt/issues/14953), as machine type missing in config and
+    # hardcoded to s390_ccw_virtio in kubevirt code.
+    if machine_type_from_kubevirt_config == MachineTypesNames.s390_ccw_virtio:
+        expected_libvirt_machine_type = MachineTypesNames.s390_ccw_virtio_rhel9_6
+    else:
+        expected_libvirt_machine_type = machine_type_from_kubevirt_config
+    validate_machine_type(
+        vm=vm,
+        expected_machine_type=machine_type_from_kubevirt_config,
+        expected_libvirt_machine_type=expected_libvirt_machine_type,
+    )
 
 
 @pytest.mark.parametrize(
-    "vm, expected",
+    "vm, expected, expected_libvirt",
     [
         pytest.param(
             {"vm_name": "pc-q35", "machine_type": MachineTypesNames.pc_q35_rhel7_6},
             MachineTypesNames.pc_q35_rhel7_6,
-            marks=pytest.mark.polarion("CNV-3311"),
-        )
+            MachineTypesNames.pc_q35_rhel7_6,
+            marks=[pytest.mark.polarion("CNV-3311"), pytest.mark.x86_64()],
+        ),
+        pytest.param(
+            {"vm_name": "s390-ccw-virtio", "machine_type": MachineTypesNames.s390_ccw_virtio},
+            MachineTypesNames.s390_ccw_virtio,
+            MachineTypesNames.s390_ccw_virtio_rhel9_6,
+            marks=[pytest.mark.s390x()],
+        ),
     ],
     indirect=["vm"],
 )
-def test_pc_q35_vm_machine_type(vm, expected):
-    validate_machine_type(vm=vm, expected_machine_type=expected)
+def test_vm_machine_type(vm, expected, expected_libvirt):
+    validate_machine_type(vm=vm, expected_machine_type=expected, expected_libvirt_machine_type=expected_libvirt)
 
 
 @pytest.mark.parametrize(
@@ -113,10 +132,21 @@ def test_pc_q35_vm_machine_type(vm, expected):
 @pytest.mark.arm64
 @pytest.mark.rwx_default_storage
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
 def test_migrate_vm(machine_type_from_kubevirt_config, vm):
+    """Migrate VM and check machine type is same"""
     migrate_vm_and_verify(vm=vm)
-
-    validate_machine_type(vm=vm, expected_machine_type=machine_type_from_kubevirt_config)
+    # s390x: machine type missing in config (GH#14953). Same as above.
+    if machine_type_from_kubevirt_config == MachineTypesNames.s390_ccw_virtio:
+        expected_libvirt_machine_type = MachineTypesNames.s390_ccw_virtio_rhel9_6
+    else:
+        expected_libvirt_machine_type = machine_type_from_kubevirt_config
+    validate_machine_type(
+        vm=vm,
+        expected_machine_type=machine_type_from_kubevirt_config,
+        expected_libvirt_machine_type=expected_libvirt_machine_type,
+    )
 
 
 @pytest.mark.parametrize(
@@ -125,7 +155,10 @@ def test_migrate_vm(machine_type_from_kubevirt_config, vm):
         pytest.param(
             {"vm_name": "default-kubevirt-config"},
             {"machine_type": MachineTypesNames.pc_q35_rhel8_1},
-            marks=pytest.mark.polarion("CNV-4347"),
+            marks=[
+                pytest.mark.polarion("CNV-4347"),
+                pytest.mark.x86_64(),  # s390x: machine type missing in config (GH#14953)
+            ],
         )
     ],
     indirect=True,
@@ -148,7 +181,10 @@ def test_machine_type_after_vm_restart(
         pytest.param(
             {"vm_name": "default-kubevirt-config"},
             {"machine_type": MachineTypesNames.pc_q35_rhel8_1},
-            marks=pytest.mark.polarion("CNV-11268"),
+            marks=[
+                pytest.mark.polarion("CNV-11268"),
+                pytest.mark.x86_64(),  # s390x: machine type missing in config (GH#14953)
+            ],
         )
     ],
     indirect=True,
@@ -170,7 +206,10 @@ def test_machine_type_after_vm_migrate(
         pytest.param(
             {"vm_name": "updated-kubevirt-config"},
             {"machine_type": MachineTypesNames.pc_q35_rhel8_1},
-            marks=pytest.mark.polarion("CNV-3681"),
+            marks=[
+                pytest.mark.polarion("CNV-3681"),
+                pytest.mark.x86_64(),  # s390x: machine type missing in config (GH#14953)
+            ],
         )
     ],
     indirect=True,
@@ -181,6 +220,8 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
     validate_machine_type(vm=vm, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1)
 
 
+@pytest.mark.x86_64
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-3688")
 def test_unsupported_machine_type(namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"
@@ -199,6 +240,7 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
 @pytest.mark.arm64
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5658")
+@pytest.mark.x86_64  # s390x: machine type missing in config (GH#14953)
 def test_major_release_machine_type(machine_type_from_kubevirt_config):
     # CNV should always use a major release for machine type, for example: pc-q35-rhel8.3.0
     assert machine_type_from_kubevirt_config.endswith(".0"), (
@@ -208,6 +250,7 @@ def test_major_release_machine_type(machine_type_from_kubevirt_config):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8561")
+@pytest.mark.x86_64  # s390x: machine type missing in config (GH#14953)
 def test_machine_type_as_rhel_9_6(machine_type_from_kubevirt_config):
     """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.6.0"""
     assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_6, (
