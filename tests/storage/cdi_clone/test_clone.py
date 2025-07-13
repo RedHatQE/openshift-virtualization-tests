@@ -292,14 +292,14 @@ def test_clone_from_fs_to_block_using_dv_template(
     skip_test_if_no_block_sc,
     unprivileged_client,
     namespace,
-    fedora_dv_with_filesystem_volume_mode,
+    cirros_dv_with_filesystem_volume_mode,
     storage_class_with_block_volume_mode,
 ):
     create_vm_from_clone_dv_template(
         vm_name="vm-5607",
         dv_name="dv-5607",
         namespace_name=namespace.name,
-        source_dv=fedora_dv_with_filesystem_volume_mode,
+        source_dv=cirros_dv_with_filesystem_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.BLOCK,
         storage_class=storage_class_with_block_volume_mode,
