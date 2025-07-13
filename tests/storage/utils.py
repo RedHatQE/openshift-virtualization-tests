@@ -416,30 +416,6 @@ def create_cirros_dv(
         yield dv
 
 
-def create_fedora_dv(
-    namespace,
-    name,
-    storage_class,
-    fedora_latest_os_params,
-    access_modes=None,
-    volume_mode=None,
-    client=None,
-    dv_size=Images.Fedora.DEFAULT_DV_SIZE,
-):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        url=fedora_latest_os_params["fedora_image_path"],
-        size=dv_size,
-        storage_class=storage_class,
-        access_modes=access_modes,
-        volume_mode=volume_mode,
-        client=client,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
 def check_snapshot_indication(snapshot, is_online):
     snapshot_indications = snapshot.instance.status.indications
     online = "Online"
