@@ -30,6 +30,7 @@ NO_MIGRATION_STORM_ASSERT_MESSAGE = "Verify no migration storm after triggered m
     [pytest.param(0.50)],
     indirect=True,
 )
+@pytest.mark.jira("CNV-64988", run=False)
 class TestDeschedulerEvictsVMAfterDrainUncordon:
     TESTS_CLASS_NAME = "TestDeschedulerEvictsVMAfterDrainUncordon"
 
