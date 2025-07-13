@@ -16,6 +16,7 @@ from tests.storage.utils import (
     create_windows_vm_validate_guest_agent_info,
 )
 from utilities.constants import (
+    OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
@@ -51,9 +52,9 @@ def create_vm_from_clone_dv_template(
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_name,
-        os_flavor=OS_FLAVOR_FEDORA,
+        os_flavor=OS_FLAVOR_CIRROS,
         client=client,
-        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_template_dict(
             target_dv_name=dv_name,
             target_dv_namespace=namespace_name,
@@ -291,14 +292,14 @@ def test_clone_from_fs_to_block_using_dv_template(
     skip_test_if_no_block_sc,
     unprivileged_client,
     namespace,
-    fedora_dv_with_filesystem_volume_mode,
+    cirros_dv_with_filesystem_volume_mode,
     storage_class_with_block_volume_mode,
 ):
     create_vm_from_clone_dv_template(
         vm_name="vm-5607",
         dv_name="dv-5607",
         namespace_name=namespace.name,
-        source_dv=fedora_dv_with_filesystem_volume_mode,
+        source_dv=cirros_dv_with_filesystem_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.BLOCK,
         storage_class=storage_class_with_block_volume_mode,
@@ -312,7 +313,7 @@ def test_clone_from_block_to_fs_using_dv_template(
     skip_test_if_no_block_sc,
     unprivileged_client,
     namespace,
-    fedora_dv_with_block_volume_mode,
+    cirros_dv_with_block_volume_mode,
     storage_class_with_filesystem_volume_mode,
     default_fs_overhead,
 ):
@@ -320,12 +321,12 @@ def test_clone_from_block_to_fs_using_dv_template(
         vm_name="vm-5608",
         dv_name="dv-5608",
         namespace_name=namespace.name,
-        source_dv=fedora_dv_with_block_volume_mode,
+        source_dv=cirros_dv_with_block_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
         # add fs overhead and round up the result
         size=overhead_size_for_dv(
-            image_size=int(fedora_dv_with_block_volume_mode.size[:-2]),
+            image_size=int(cirros_dv_with_block_volume_mode.size[:-2]),
             overhead_value=default_fs_overhead,
         ),
         storage_class=storage_class_with_filesystem_volume_mode,
