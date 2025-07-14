@@ -1,5 +1,3 @@
-import os
-
 from ocp_resources.template import Template
 
 from tests.utils import generate_attached_rhsm_secret_dict, generate_rhsm_cloud_init_data
@@ -32,14 +30,14 @@ PROC_PER_OS_DICT = {
 LINUX_DV_PARAMS = [
     {
         "dv-ocs-lin": {
-            "image_path": os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL8_9_IMG),
+            "image_path": f"{Images.Rhel.DIR}/{Images.Rhel.RHEL8_9_IMG}",
             "dv_size": Images.Rhel.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
         }
     },
     {
         "dv-nfs-lin": {
-            "image_path": os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL8_9_IMG),
+            "image_path": f"{Images.Rhel.DIR}/{Images.Rhel.RHEL8_9_IMG}",
             "dv_size": Images.Rhel.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.NFS,
         }
@@ -49,14 +47,14 @@ LINUX_DV_PARAMS = [
 WINDOWS_DV_PARAMS = [
     {
         "dv-ocs-win": {
-            "image_path": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
         }
     },
     {
         "dv-nfs-win": {
-            "image_path": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.NFS,
         }
@@ -66,14 +64,14 @@ WINDOWS_DV_PARAMS = [
 WSL2_DV_PARAMS = [
     {
         "dv-win10-wsl2-win": {
-            "image_path": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_WSL2_IMG),
+            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
         }
     },
     {
         "dv-win11-wsl2-win": {
-            "image_path": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_WSL2_IMG),
+            "image_path": f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
         }

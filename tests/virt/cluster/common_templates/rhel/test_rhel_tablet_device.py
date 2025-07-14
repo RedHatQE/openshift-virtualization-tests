@@ -149,6 +149,7 @@ class TestRHELTabletDevice:
         )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_volume_multi_storage_scope_class",
     [

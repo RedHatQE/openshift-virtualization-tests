@@ -21,6 +21,7 @@ pytestmark = pytest.mark.post_upgrade
 TESTS_CLASS_NAME = "TestCustomNamespace"
 
 
+@pytest.mark.s390x
 @pytest.mark.usefixtures("base_templates", "opt_in_custom_template_namespace")
 class TestCustomNamespace:
     @pytest.mark.polarion("CNV-8144")

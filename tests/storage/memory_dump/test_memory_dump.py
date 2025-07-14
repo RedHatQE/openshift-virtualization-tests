@@ -16,9 +16,9 @@ from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
         pytest.param(
             {
                 "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST["image_path"],
+                "image": WINDOWS_LATEST.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
             },
             {
                 "vm_name": "windows-vm-mem",

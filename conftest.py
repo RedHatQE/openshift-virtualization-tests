@@ -28,7 +28,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.infra
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, NamespacesNames
+from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, X86_64, NamespacesNames
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -324,15 +324,16 @@ def pytest_cmdline_main(config):
 
 
 def add_polarion_parameters_to_user_properties(item: Item, matrix_name: str) -> None:
-    values = re.findall("(#.*?#)", item.name)  # Extract all substrings enclosed in '#' from item.name
-    for value in values:
-        value = value.strip("#")
-        for param in py_config[matrix_name]:
-            if isinstance(param, dict):
-                param = [*param][0]
+    if matrix_config := py_config.get(matrix_name):
+        values = re.findall("(#.*?#)", item.name)  # Extract all substrings enclosed in '#' from item.name
+        for value in values:
+            value = value.strip("#")
+            for param in matrix_config:
+                if isinstance(param, dict):
+                    param = [*param][0]
 
-            if value == param:
-                item.user_properties.append((f"polarion-parameter-{matrix_name}", value))
+                if value == param:
+                    item.user_properties.append((f"polarion-parameter-{matrix_name}", value))
 
 
 def add_test_id_markers(item: Item, marker_name: str) -> None:
@@ -493,6 +494,9 @@ def pytest_collection_modifyitems(session, config, items):
         add_tier2_marker(item=item)
 
         mark_tests_by_team(item=item)
+
+        # All tests are verified on X86_64 platforms, adding `x86_64` to all tests
+        item.add_marker(marker=X86_64)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep
@@ -641,27 +645,27 @@ def pytest_sessionstart(session):
         # with runtime windows_os_matrix value(s).
         # Some tests extract a single OS from the matrix and may fail if running with
         # passed values from cli
-        py_config["system_windows_os_matrix"] = py_config["windows_os_matrix"]
-        py_config["system_rhel_os_matrix"] = py_config["rhel_os_matrix"]
+        if windows_os_matrix := py_config.get("windows_os_matrix"):
+            py_config["system_windows_os_matrix"] = windows_os_matrix
+
+        if rhel_os_matrix := py_config.get("rhel_os_matrix"):
+            py_config["system_rhel_os_matrix"] = rhel_os_matrix
 
         # Update OS matrix list with the latest OS if running with os_group
-        if session.config.getoption("latest_rhel"):
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=py_config["rhel_os_matrix"])]
+        if session.config.getoption("latest_rhel") and rhel_os_matrix:
+            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
             py_config["instance_type_rhel_os_matrix"] = [
                 utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
             ]
-        if session.config.getoption("latest_windows"):
-            py_config["windows_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["windows_os_matrix"])
-            ]
-        if session.config.getoption("latest_centos"):
-            py_config["centos_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["centos_os_matrix"])
-            ]
-        if session.config.getoption("latest_fedora"):
-            py_config["fedora_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
-            ]
+
+        if session.config.getoption("latest_windows") and windows_os_matrix:
+            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
+
+        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
+            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
+
+        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
+            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
 
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(

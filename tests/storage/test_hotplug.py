@@ -262,14 +262,14 @@ class TestHotPlugWithSerialPersist:
         pytest.param(
             {
                 "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
             },
             {
-                "vm_name": f"vm-win-{WINDOWS_LATEST['os_version']}",
+                "vm_name": f"vm-win-{WINDOWS_LATEST.get('os_version')}",
                 "template_labels": WINDOWS_LATEST_LABELS,
             },
-            {"os_version": WINDOWS_LATEST["os_version"]},
+            {"os_version": WINDOWS_LATEST.get("os_version")},
             {"persist": True, "serial": HOTPLUG_DISK_SERIAL},
         ),
     ],

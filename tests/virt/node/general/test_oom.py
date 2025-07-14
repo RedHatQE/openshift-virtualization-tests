@@ -3,7 +3,6 @@ Test VM with memory requests/limits and guest memory for OOM.
 """
 
 import logging
-import os
 import shlex
 from contextlib import contextmanager
 from threading import Event, Thread
@@ -115,7 +114,7 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
         pytest.param(
             {
                 "dv_name": "dv-win10-wsl2",
-                "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_WSL2_IMG),
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
                 "storage_class": py_config["default_storage_class"],
             },

@@ -74,9 +74,9 @@ def get_disk_usage(ssh_exec):
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
+                "image": FEDORA_LATEST.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             {
                 "vm_name": "fedora-load-vm",

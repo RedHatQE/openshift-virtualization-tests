@@ -69,6 +69,7 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBECONFIG,
     KUBELET_READY_CONDITION,
+    KUBERNETES_ARCH_LABEL,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
@@ -82,6 +83,7 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
+    X86_64,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -101,7 +103,6 @@ from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import guest_agent_version_parser
 from utilities.storage import get_test_artifact_server_url
 
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 JIRA_STATUS_CLOSED = ("on_qa", "verified", "release pending", "closed")
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
@@ -1002,7 +1003,7 @@ def download_file_from_cluster(get_console_spec_links_name, dest_dir):
 
 def get_machine_platform():
     os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == "x86_64" else os_machine_type
+    return AMD_64 if os_machine_type == X86_64 else os_machine_type
 
 
 def get_nodes_with_label(nodes, label):

@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from pytest_testconfig import config as py_config
@@ -51,8 +50,8 @@ class TestMigrationVMWithMemoryLoad:
             pytest.param(
                 {
                     "dv_name": FEDORA_LATEST_OS,
-                    "image": FEDORA_LATEST["image_path"],
-                    "dv_size": FEDORA_LATEST["dv_size"],
+                    "image": FEDORA_LATEST.get("image_path"),
+                    "dv_size": FEDORA_LATEST.get("dv_size"),
                     "storage_class": py_config["default_storage_class"],
                 },
                 {
@@ -81,7 +80,7 @@ class TestMigrationVMWithMemoryLoad:
             pytest.param(
                 {
                     "dv_name": "dv-win10-wsl2",
-                    "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_WSL2_IMG),
+                    "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
                     "dv_size": Images.Windows.DEFAULT_DV_SIZE,
                     "storage_class": py_config["default_storage_class"],
                 },

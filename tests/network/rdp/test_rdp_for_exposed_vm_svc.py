@@ -19,7 +19,7 @@ from utilities.virt import get_windows_os_dict, vm_instance_from_template
 LOGGER = logging.getLogger(__name__)
 # TODO : Use once Win19 RDP issue resolved - WIN_LATEST_VERSION = py_config["latest_windows_os_dict"]["os_version"]
 WIN_VERSION_16_CONFIG = get_windows_os_dict(windows_version="win-2016")
-WIN_OS_VERSION_16 = WIN_VERSION_16_CONFIG["os_version"]
+WIN_OS_VERSION_16 = WIN_VERSION_16_CONFIG.get("os_version")
 
 
 @pytest.fixture(scope="module")
@@ -62,15 +62,15 @@ def rdp_pod(workers_utility_pods, rdp_vm):
     [
         pytest.param(
             {
-                "dv_name": WIN_VERSION_16_CONFIG["template_labels"]["os"],
-                "image": WIN_VERSION_16_CONFIG["image_path"],
+                "dv_name": WIN_VERSION_16_CONFIG.get("template_labels", {}).get("os"),
+                "image": WIN_VERSION_16_CONFIG.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": WIN_VERSION_16_CONFIG["dv_size"],
+                "dv_size": WIN_VERSION_16_CONFIG.get("dv_size"),
             },
             {
                 "vm_name": f"win{WIN_OS_VERSION_16}-vm-test",
                 "os_version": WIN_OS_VERSION_16,
-                "template_labels": WIN_VERSION_16_CONFIG["template_labels"],
+                "template_labels": WIN_VERSION_16_CONFIG.get("template_labels"),
                 "network_model": "virtio",
                 "wait_for_interfaces_timeout": TIMEOUT_35MIN,
             },
