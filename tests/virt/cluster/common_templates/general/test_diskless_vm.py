@@ -31,7 +31,7 @@ SMALL_VM_IMAGE = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
                 "diskless_vm": True,
                 "start_vm": False,
             },
-            marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating()),
+            marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating(), pytest.mark.s390x),
         ),
         pytest.param(
             {

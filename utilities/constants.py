@@ -1,6 +1,3 @@
-import os
-from typing import Any
-
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
@@ -26,105 +23,142 @@ from urllib3.exceptions import (
     ResponseError,
 )
 
+from libs.infra.images import (
+    BASE_IMAGES_DIR,
+    Cdi,
+    Centos,
+    Cirros,
+    Fedora,
+    Rhel,
+    Windows,
+)
+from utilities.architecture import get_cluster_architecture
+
 # Images
-BASE_IMAGES_DIR = "cnv-tests"
 NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
+
+AMD_64 = "amd64"
+ARM_64 = "arm64"
+S390X = "s390x"
+X86_64 = "x86_64"
+
+# Architecture constants
+KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 
 
 class ArchImages:
     class X86_64:  # noqa: N801
-        class Cirros:
-            RAW_IMG = "cirros-0.4.0-x86_64-disk.raw"
-            RAW_IMG_GZ = "cirros-0.4.0-x86_64-disk.raw.gz"
-            RAW_IMG_XZ = "cirros-0.4.0-x86_64-disk.raw.xz"
-            QCOW2_IMG = "cirros-0.4.0-x86_64-disk.qcow2"
-            QCOW2_IMG_GZ = "cirros-0.4.0-x86_64-disk.qcow2.gz"
-            QCOW2_IMG_XZ = "cirros-0.4.0-x86_64-disk.qcow2.xz"
-            DISK_DEMO = "cirros-registry-disk-demo"
-            DIR = f"{BASE_IMAGES_DIR}/cirros-images"
-            DEFAULT_DV_SIZE = "1Gi"
-            DEFAULT_MEMORY_SIZE = "64M"
+        BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
+        Cirros = Cirros(
+            RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
+            RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
+            RAW_IMG_XZ=f"{BASE_CIRROS_NAME}.raw.xz",
+            QCOW2_IMG=f"{BASE_CIRROS_NAME}.qcow2",
+            QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
+            QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
+            DISK_DEMO="cirros-registry-disk-demo",
+        )
 
-        class Rhel:
-            RHEL7_9_IMG = "rhel-79.qcow2"
-            RHEL8_0_IMG = "rhel-8.qcow2"
-            RHEL8_9_IMG = "rhel-89.qcow2"
-            RHEL8_10_IMG = "rhel-810.qcow2"
-            RHEL9_3_IMG = "rhel-93.qcow2"
-            RHEL9_4_IMG = "rhel-94.qcow2"
-            RHEL9_5_ARM64_IMG = "rhel-95-aarch64.qcow2"
-            RHEL9_6_IMG = "rhel-96.qcow2"
-            RHEL9_6_ARM64_IMG = "rhel-96-aarch64.qcow2"
-            RHEL8_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel8/rhel-guest-image"
-            RHEL9_REGISTRY_GUEST_IMG = "registry.redhat.io/rhel9/rhel-guest-image"
-            # TODO: change back to registry.redhat.io when rhel10 is available
-            RHEL10_REGISTRY_GUEST_IMG = "registry.stage.redhat.io/rhel10/rhel-guest-image"
-            DIR = f"{BASE_IMAGES_DIR}/rhel-images"
-            DEFAULT_DV_SIZE = "20Gi"
-            DEFAULT_MEMORY_SIZE = "1.5Gi"
+        Rhel = Rhel(
+            RHEL7_9_IMG="rhel-79.qcow2",
+            RHEL8_0_IMG="rhel-8.qcow2",
+            RHEL8_9_IMG="rhel-89.qcow2",
+            RHEL8_10_IMG="rhel-810.qcow2",
+            RHEL9_3_IMG="rhel-93.qcow2",
+            RHEL9_4_IMG="rhel-94.qcow2",
+            RHEL9_6_IMG="rhel-96.qcow2",
+        )
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
 
-        class Windows:
-            WIN10_IMG = "win_10_uefi.qcow2"
-            WIN10_WSL2_IMG = "win_10_wsl2_uefi.qcow2"
-            WIN10_ISO_IMG = "Win10_22H2_English_x64.iso"
-            WIN2k16_IMG = "win_2k16_uefi.qcow2"
-            WIN2k19_IMG = "win_2k19_uefi.qcow2"
-            WIN2k25_IMG = "win_2k25_uefi.qcow2"
-            WIN2k19_HA_IMG = "win_2019_virtio.qcow2"
-            WIN11_IMG = "win_11.qcow2"
-            WIN11_WSL2_IMG = "win_11_wsl2.qcow2"
-            WIN11_ISO_IMG = "en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso"
-            WIN19_RAW = "win_2k19_uefi.raw"
-            WIN2022_IMG = "win_2022.qcow2"
-            WIN2022_ISO_IMG = "Windows_Server_2022_x64FRE_en-us.iso"
-            WIN2025_ISO_IMG = "windows_server_2025_x64_dvd_eval.iso"
-            DIR = f"{BASE_IMAGES_DIR}/windows-images"
-            UEFI_WIN_DIR = f"{DIR}/uefi"
-            HA_DIR = f"{DIR}/HA-images"
-            ISO_WIN10_DIR = f"{DIR}/install_iso/win10"
-            ISO_WIN11_DIR = f"{DIR}/install_iso/win11"
-            ISO_WIN2022_DIR = f"{DIR}/install_iso/win2022"
-            ISO_WIN2025_DIR = f"{DIR}/install_iso/win2025"
-            DEFAULT_DV_SIZE = "70Gi"
-            DEFAULT_MEMORY_SIZE = "8Gi"
-            DEFAULT_MEMORY_SIZE_WSL = "12Gi"
-            DEFAULT_CPU_CORES = 4
-            DEFAULT_CPU_THREADS = 2
+        Windows = Windows(
+            WIN10_IMG="win_10_uefi.qcow2",
+            WIN10_WSL2_IMG="win_10_wsl2_uefi.qcow2",
+            WIN10_ISO_IMG="Win10_22H2_English_x64.iso",
+            WIN2k16_IMG="win_2k16_uefi.qcow2",
+            WIN2k19_IMG="win_2k19_uefi.qcow2",
+            WIN2k25_IMG="win_2k25_uefi.qcow2",
+            WIN2k19_HA_IMG="win_2019_virtio.qcow2",
+            WIN11_IMG="win_11.qcow2",
+            WIN11_WSL2_IMG="win_11_wsl2.qcow2",
+            WIN11_ISO_IMG="en-us_windows_11_business_editions_version_24h2_x64_dvd_59a1851e.iso",
+            WIN19_RAW="win_2k19_uefi.raw",
+            WIN2022_IMG="win_2022.qcow2",
+            WIN2022_ISO_IMG="Windows_Server_2022_x64FRE_en-us.iso",
+            WIN2025_ISO_IMG="windows_server_2025_x64_dvd_eval.iso",
+        )
+        Windows.LATEST_RELEASE_STR = Windows.WIN2k19_IMG
 
-        class Fedora:
-            FEDORA41_IMG = "Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-            FEDORA_CONTAINER_IMAGE = "quay.io/openshift-cnv/qe-cnv-tests-fedora:41"
-            DISK_DEMO = "fedora-cloud-registry-disk-demo"
-            DIR = f"{BASE_IMAGES_DIR}/fedora-images"
-            DEFAULT_DV_SIZE = "10Gi"
-            DEFAULT_MEMORY_SIZE = "1Gi"
+        Fedora = Fedora(
+            FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
+            DISK_DEMO="fedora-cloud-registry-disk-demo",
+        )
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
 
-        class CentOS:
-            CENTOS_STREAM_9_IMG = "CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2"
-            DIR = f"{BASE_IMAGES_DIR}/centos-images"
-            DEFAULT_DV_SIZE = "15Gi"
+        Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2")
+        Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
 
-        class Cdi:
-            QCOW2_IMG = "cirros-qcow2.img"
-            DIR = f"{BASE_IMAGES_DIR}/cdi-test-images"
+        Cdi = Cdi(QCOW2_IMG="cirros-qcow2.img")
 
+    class ARM64:
+        Cirros = Cirros(RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz")
 
-def get_test_images_arch_class() -> Any:
-    arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", "x86_64")
-    if arch not in ("x86_64",):
-        raise ValueError(f"{arch} architecture in not supported")
-    return getattr(ArchImages, arch.title())
+        Rhel = Rhel(
+            RHEL9_5_IMG="rhel-95-aarch64.qcow2",
+            RHEL9_6_IMG="rhel-96-aarch64.qcow2",
+        )
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+
+        Windows = Windows()
+        Fedora = Fedora()
+        Centos = Centos()
+        Cdi = Cdi()
+
+    class S390X:
+        Cirros = Cirros(
+            # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
+            RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
+            RAW_IMG_GZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.gz",
+            RAW_IMG_XZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz",
+            QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            QCOW2_IMG_GZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.gz",
+            QCOW2_IMG_XZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.xz",
+            DISK_DEMO="fedora-cloud-registry-disk-demo",
+            DIR=f"{BASE_IMAGES_DIR}/fedora-images",
+            DEFAULT_DV_SIZE="10Gi",
+            DEFAULT_MEMORY_SIZE="1Gi",
+        )
+
+        Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_5_IMG
+
+        Fedora = Fedora(
+            FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
+            DISK_DEMO="fedora-cloud-registry-disk-demo",
+        )
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
+
+        Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
+        Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
+
+        Cdi = Cdi(
+            # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
+            QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            DIR=f"{BASE_IMAGES_DIR}/fedora-images",
+            DEFAULT_DV_SIZE="10Gi",
+        )
+
+        Windows = Windows()
 
 
 # Choose the Image class according to the architecture. Default: x86_64
-Images = get_test_images_arch_class()
+Images = getattr(ArchImages, get_cluster_architecture().upper())
 
 
 # Virtctl constants
 VIRTCTL = "virtctl"
 VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
-AMD_64 = "amd64"
-ARM_64 = "arm64"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"

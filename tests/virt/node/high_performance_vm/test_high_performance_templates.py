@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from ocp_resources.resource import ResourceEditor
@@ -143,7 +142,7 @@ class TestHighPerformanceTemplatesRHEL:
         [
             {
                 "dv_name": "win-hp-vm-dv",
-                "image": os.path.join(Images.Windows.HA_DIR, Images.Windows.WIN2k19_HA_IMG),
+                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
                 "storage_class": py_config["default_storage_class"],
             },

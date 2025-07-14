@@ -62,8 +62,8 @@ def verify_evmcs_related_attributes(vmi_xml_dict):
         pytest.param(
             {
                 "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
         ),
@@ -164,8 +164,8 @@ class TestWindowsHyperVFlags:
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "image": FEDORA_LATEST.get("image_path"),
+                "dv_size": FEDORA_LATEST.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
         ),

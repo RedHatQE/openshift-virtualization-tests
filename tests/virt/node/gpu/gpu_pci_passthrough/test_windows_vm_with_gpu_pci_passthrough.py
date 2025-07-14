@@ -3,7 +3,6 @@ GPU PCI Passthrough with Windows VM
 """
 
 import logging
-import os
 
 import pytest
 from pytest_testconfig import config as py_config
@@ -27,9 +26,9 @@ pytestmark = [
 
 LOGGER = logging.getLogger(__name__)
 WIN10 = get_windows_os_dict(windows_version="win-10")
-WIN10_LABELS = WIN10["template_labels"]
+WIN10_LABELS = WIN10.get("template_labels", {})
 WIN19 = get_windows_os_dict(windows_version="win-2019")
-WIN19_LABELS = WIN19["template_labels"]
+WIN19_LABELS = WIN19.get("template_labels", {})
 DV_SIZE = Images.Windows.DEFAULT_DV_SIZE
 TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
 
@@ -39,8 +38,8 @@ TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
     [
         pytest.param(
             {
-                "dv_name": WIN10_LABELS["os"],
-                "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
+                "dv_name": WIN10_LABELS.get("os"),
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": DV_SIZE,
             },
@@ -54,8 +53,8 @@ TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
         ),
         pytest.param(
             {
-                "dv_name": WIN19_LABELS["os"],
-                "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k19_IMG),
+                "dv_name": WIN19_LABELS.get("os"),
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN2k19_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": DV_SIZE,
             },

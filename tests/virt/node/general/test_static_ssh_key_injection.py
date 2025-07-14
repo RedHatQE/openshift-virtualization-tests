@@ -54,6 +54,7 @@ def vm_with_ssh_secret(
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "data_volume_scope_class",
     [

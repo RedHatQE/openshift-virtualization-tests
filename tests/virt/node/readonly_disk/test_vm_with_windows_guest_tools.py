@@ -122,8 +122,8 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
         pytest.param(
             {
                 "dv_name": "dv-win10",
-                "image": WINDOWS_10["image_path"],
-                "dv_size": WINDOWS_10["dv_size"],
+                "image": WINDOWS_10.get("image_path"),
+                "dv_size": WINDOWS_10.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
         ),

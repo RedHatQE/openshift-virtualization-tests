@@ -596,7 +596,7 @@ def test_hostpath_registry_import_dv(
         pytest.param(
             {
                 "dv_name": "cnv-3516-source-dv",
-                "image": py_config["latest_fedora_os_dict"]["image_path"],
+                "image": py_config.get("latest_fedora_os_dict", {}).get("image_path"),
                 "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-3516"),

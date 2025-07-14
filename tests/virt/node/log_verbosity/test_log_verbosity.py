@@ -45,6 +45,7 @@ def virt_component_pods_in_first_node(worker_node1, virt_component_pods):
     return [pod for pod in virt_component_pods if pod.node.name == worker_node1.name]
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "updated_log_verbosity_config",
     [
@@ -61,6 +62,7 @@ def test_component_log_verbosity(updated_log_verbosity_config, virt_component_po
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "updated_log_verbosity_config",
     [

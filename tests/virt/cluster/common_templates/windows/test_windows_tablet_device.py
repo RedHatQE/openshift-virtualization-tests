@@ -52,8 +52,8 @@ def check_windows_vm_tablet_device(vm, driver_state):
         pytest.param(
             {
                 "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
             },
         ),
     ],
@@ -143,13 +143,13 @@ class TestWindowsTabletDevice:
     [
         pytest.param(
             {
-                "dv_name": WINDOWS_DESKTOP_VERSION["template_labels"]["os"],
-                "image": WINDOWS_DESKTOP_VERSION["image_path"],
-                "dv_size": WINDOWS_DESKTOP_VERSION["dv_size"],
+                "dv_name": WINDOWS_DESKTOP_VERSION.get("template_labels", {}).get("os"),
+                "image": WINDOWS_DESKTOP_VERSION.get("image_path"),
+                "dv_size": WINDOWS_DESKTOP_VERSION.get("dv_size"),
             },
             {
                 "vm_name": "windows-desktop-default-tablet-device",
-                "template_labels": WINDOWS_DESKTOP_VERSION["template_labels"],
+                "template_labels": WINDOWS_DESKTOP_VERSION.get("template_labels"),
             },
             marks=pytest.mark.polarion("CNV-4150"),
         ),
