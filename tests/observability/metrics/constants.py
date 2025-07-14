@@ -3,9 +3,7 @@ import shlex
 from ocp_resources.resource import Resource
 
 from utilities.constants import (
-    FLAVOR_STR,
     INSTANCE_TYPE_STR,
-    NONE_STR,
     OS_STR,
     PREFERENCE_STR,
 )
@@ -35,7 +33,6 @@ INSTANCE_TYPE_LABELS = [INSTANCE_TYPE_STR, PREFERENCE_STR, OS_STR]
 EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS = {
     INSTANCE_TYPE_STR: OTHER_STR,
     PREFERENCE_STR: OTHER_STR,
-    FLAVOR_STR: NONE_STR,
     OS_STR: None,
 }
 KUBEVIRT_VMI_PHASE_COUNT_STR = "kubevirt_vmi_phase_count"
