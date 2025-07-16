@@ -5,7 +5,7 @@ from tests.infrastructure.instance_types.utils import (
     assert_secure_boot_dmesg,
     assert_secure_boot_mokutil_status,
 )
-from utilities.constants import INSTANCE_TYPE_STR, PREFERENCE_STR
+from utilities.constants import PREFERENCE_STR, U1_MEDIUM_STR
 from utilities.virt import (
     assert_linux_efi,
     assert_vm_xml_efi,
@@ -41,7 +41,7 @@ class TestVMCreationAndValidation:
     def test_create_vm(self, golden_image_vm_with_instance_type, instance_type_rhel_os_matrix__module__):
         golden_image_vm_with_instance_type.create(wait=True)
         os_param_dict = instance_type_rhel_os_matrix__module__[[*instance_type_rhel_os_matrix__module__][0]]
-        assert golden_image_vm_with_instance_type.instance.spec.instancetype.name == os_param_dict[INSTANCE_TYPE_STR]
+        assert golden_image_vm_with_instance_type.instance.spec.instancetype.name == U1_MEDIUM_STR
         assert golden_image_vm_with_instance_type.instance.spec.preference.name == os_param_dict[PREFERENCE_STR]
 
     @pytest.mark.dependency(
