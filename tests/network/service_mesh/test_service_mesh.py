@@ -60,7 +60,7 @@ class TestSMPeerAuthentication:
     @pytest.mark.polarion("CNV-7305")
     @pytest.mark.ipv4
     @pytest.mark.single_nic
-    def test_authentication_policy_outside_mesh(
+    def test_outside_mesh_traffic_blocked(
         self,
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,
