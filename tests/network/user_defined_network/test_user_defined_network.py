@@ -99,6 +99,7 @@ def client(vma_udn, vmb_udn_non_migratable):
 
 
 @pytest.mark.ipv4
+@pytest.mark.s390x
 class TestPrimaryUdn:
     @pytest.mark.polarion("CNV-11624")
     @pytest.mark.single_nic
