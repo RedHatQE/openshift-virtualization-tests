@@ -6,6 +6,7 @@ from ocp_resources.template import Template
 from pytest_testconfig import py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_OS
+from tests.virt.cluster.common_templates.utils import get_template_arch_suffix
 from utilities.constants import NamespacesNames
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -96,7 +97,7 @@ class TestBaseCustomTemplates:
         [
             pytest.param(
                 {
-                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
+                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}{get_template_arch_suffix()}",
                     "new_template_name": "fedora-custom-template-for-test",
                 },
                 "vm-from-custom-template",
@@ -104,7 +105,7 @@ class TestBaseCustomTemplates:
             ),
             pytest.param(
                 {
-                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
+                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}{get_template_arch_suffix()}",
                     "new_template_name": "fedora-custom-template-disks-wildcard",
                     "validation_rule": {
                         "name": "volumes-validation",
@@ -142,7 +143,7 @@ class TestBaseCustomTemplates:
         [
             pytest.param(
                 {
-                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
+                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}{get_template_arch_suffix()}",
                     "new_template_name": "custom-fedora-template-core-validation",
                     "validation_rule": {
                         "name": "minimal-required-cpu-core",
