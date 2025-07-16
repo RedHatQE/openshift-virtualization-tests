@@ -220,6 +220,7 @@ def restarted_sriov_vm4(request, sriov_vm4):
     LOGGER.info(f"Reboot number {request.param}")
     sriov_vm4.restart(wait=True)
     sriov_vm4.wait_for_agent_connected()
+    wait_for_vm_interfaces(vmi=sriov_vm4.vmi)
     return sriov_vm4
 
 
