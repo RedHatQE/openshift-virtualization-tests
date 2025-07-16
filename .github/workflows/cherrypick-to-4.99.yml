@@ -1,0 +1,98 @@
+name: Cherry-pick to cnv-4.99 on Main Merge (Create PR)
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  cherry_pick_and_create_pr:
+    if: github.event.pull_request.merged == true
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: cnv-4.99
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git user name and email
+        run: |
+          git config user.name "${{ secrets.GH_BOT_USERNAME }}"
+          git config user.email "${{ secrets.GH_BOT_EMAIL }}"
+        env:
+          GH_BOT_USERNAME: ${{ secrets.GH_BOT_USERNAME }}
+          GH_BOT_EMAIL: ${{ secrets.GH_BOT_EMAIL }}
+
+      - name: Get merge commit SHA and PR number
+        id: get_info
+        run: |
+          MERGE_COMMIT_SHA="${{ github.event.pull_request.merge_commit_sha }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "Attempting to cherry-pick commit: $MERGE_COMMIT_SHA from PR #$PR_NUMBER"
+
+      - name: Create new branch for cherry-pick
+        id: create_branch
+        run: |
+          # Create a new branch based on cnv-4.99 for the cherry-pick
+          NEW_BRANCH_NAME="cherry-pick-pr-${{ steps.get_info.outputs.pr_number }}-${{ steps.get_info.outputs.sha }}"
+          git checkout -b "$NEW_BRANCH_NAME"
+          echo "branch_name=$NEW_BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Created new branch: $NEW_BRANCH_NAME"
+
+      - name: Attempt Cherry-pick
+        id: cherry_pick_action
+        run: |
+          git cherry-pick ${{ steps.get_info.outputs.sha }}
+        env:
+          GIT_MERGE_AUTOEDIT: no # Prevent Git from opening an editor
+        continue-on-error: true # Allow this step to fail without stopping the workflow immediately
+
+      - name: Prepare PR details
+        id: pr_details
+        run: |
+          PR_TITLE="Cherry-pick PR #${{ steps.get_info.outputs.pr_number }} to cnv-4.99"
+          COMMIT_MESSAGE="Cherry-pick PR #${{ steps.get_info.outputs.pr_number }}: ${{ github.event.pull_request.title }}"
+          PR_BODY="This PR automatically cherry-picks the changes from PR #${{ steps.get_info.outputs.pr_number }}\n(\"${{ github.event.pull_request.title }}\") that was merged into \`main\`.\n\nOriginal PR: ${{ github.event.pull_request.html_url }}"
+
+          # Check if the cherry-pick failed and adjust PR details accordingly
+          if [ "${{ steps.cherry_pick_action.outcome }}" == "failure" ]; then
+            PR_TITLE="[CONFLICTS] Cherry-pick PR #${{ steps.get_info.outputs.pr_number }} to cnv-4.99"
+            COMMIT_MESSAGE="[CONFLICTS] Cherry-pick PR #${{ steps.get_info.outputs.pr_number }}: ${{ github.event.pull_request.title }}"
+            PR_BODY="${PR_BODY}\n\n**Note: This cherry-pick resulted in conflicts that need manual resolution.**"
+            echo "::warning::Cherry-pick failed with conflicts. Creating PR with conflict indication."
+          fi
+
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+          echo "pr_body=$PR_BODY" >> $GITHUB_OUTPUT
+
+      - name: Push new branch and create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: ${{ steps.pr_details.outputs.commit_message }}
+          title: ${{ steps.pr_details.outputs.pr_title }}
+          body: ${{ steps.pr_details.outputs.pr_body }}
+          branch: ${{ steps.create_branch.outputs.branch_name }}
+          base: cnv-4.99
+          delete-branch: true
+
+      - name: Log Cherry-pick Conflicts (if any)
+        if: steps.cherry_pick_action.outcome == 'failure'
+        run: |
+          echo "::error::Cherry-pick failed due to conflicts. A PR has been created for manual resolution."
+          echo "The commit '${{ steps.get_info.outputs.sha }}' from PR #${{ steps.get_info.outputs.pr_number }} could not be automatically cherry-picked to 'cnv-4.99'."
+          echo "Please resolve conflicts in the created pull request."
+          # Removed 'exit 1' to allow the workflow to continue and create the PR
