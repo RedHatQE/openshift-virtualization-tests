@@ -86,7 +86,6 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     TWO_CPU_CORES,
@@ -152,7 +151,7 @@ def wait_for_component_value_to_be_expected(prometheus, component_name, expected
         int: It will return the value of the component once it matches to the expected_count.
     """
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
+        wait_timeout=200,
         sleep=50,
         func=get_mutation_component_value_from_prometheus,
         prometheus=prometheus,
@@ -228,22 +227,41 @@ def updated_resource_multiple_times_with_invalid_label(
     updated_value = 0
     for index in range(count):
         increasing_value += 1
-        resource_editor = ResourceEditor(
-            patches={
-                resource: {
-                    "metadata": {
-                        "labels": {VERSION_LABEL_KEY: None},
-                    },
+        max_retries = 3
+        retry_count = 0
+
+        while retry_count < max_retries:
+            resource_editor = ResourceEditor(
+                patches={
+                    resource: {
+                        "metadata": {
+                            "labels": {VERSION_LABEL_KEY: None},
+                        },
+                    }
                 }
-            }
-        )
-        resource_editor.update()
-        wait_for_cr_labels_change(component=resource, expected_value=labels)
-        updated_value = wait_for_component_value_to_be_expected(
-            prometheus=prometheus,
-            component_name=comp_name,
-            expected_count=increasing_value,
-        )
+            )
+            resource_editor.update()
+            wait_for_cr_labels_change(component=resource, expected_value=labels)
+            try:
+                updated_value = wait_for_component_value_to_be_expected(
+                    prometheus=prometheus,
+                    component_name=comp_name,
+                    expected_count=increasing_value,
+                )
+                # metric updated, no need to keep retrying
+                break
+            except TimeoutExpiredError:
+                retry_count += 1
+                LOGGER.warning(
+                    f"Retry {retry_count}/{max_retries}: Metric not updated for {comp_name}, "
+                    f"expected {increasing_value}. Retrying modification..."
+                )
+                if retry_count >= max_retries:
+                    LOGGER.error(
+                        f"Failed to update metric for {comp_name} after {max_retries} retries. "
+                        f"Expected count: {increasing_value}"
+                    )
+                    raise
     yield updated_value
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
