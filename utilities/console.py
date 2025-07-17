@@ -30,8 +30,8 @@ class Console(object):
                 vmc.expect('some output')
         """
         self.vm = vm
-        self.username = username or self.vm.login_params["username"]
-        self.password = password or self.vm.login_params["password"]
+        self.username = username or self.vm.username
+        self.password = password or self.vm.password
         self.timeout = timeout
         self.child = None
         self.login_prompt = "login:"
