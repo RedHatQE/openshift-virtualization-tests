@@ -20,7 +20,6 @@ from utilities.constants import (
 from utilities.exceptions import ResourceMissingFieldError
 from utilities.infra import (
     get_csv_by_name,
-    get_pod_disruption_budget,
     get_related_images_name_and_version,
 )
 from utilities.virt import (
@@ -72,30 +71,6 @@ def get_src_pvc_default_name(template):
         return param_value_list[0]
 
     raise ResourceMissingFieldError(f"Template {template.name} does not have a parameter {DATA_SOURCE_NAME}")
-
-
-def get_all_migratable_vms(admin_client, namespaces):
-    # Check pod disruption budget associated with given namespaces. Collect associated vm names. These vms are
-    # the only migratable ones
-    pod_disruption_budget_list = [
-        pod_disruption_budget
-        for ns in namespaces
-        for pod_disruption_budget in get_pod_disruption_budget(admin_client=admin_client, namespace_name=ns.name)
-    ]
-    pod_disruption_budget_info = {
-        pod_disruption_budget.name: pod_disruption_budget.instance.metadata.ownerReferences[0]["name"]
-        for pod_disruption_budget in pod_disruption_budget_list
-    }
-    LOGGER.info(f"PodDisruptionBudgets: {pod_disruption_budget_info}")
-
-    return [
-        VirtualMachine(
-            client=admin_client,
-            namespace=pod_disruption_budget.namespace,
-            name=pod_disruption_budget.instance.metadata.ownerReferences[0]["name"],
-        )
-        for pod_disruption_budget in pod_disruption_budget_list
-    ]
 
 
 def get_workload_update_migrations_list(namespaces):
