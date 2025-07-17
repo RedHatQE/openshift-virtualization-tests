@@ -78,7 +78,12 @@ jobs:
           echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
           echo "pr_body=$PR_BODY" >> $GITHUB_OUTPUT
 
-      - name: Push new branch and create PR
+      - name: Push new branch
+        run: |
+          git push origin HEAD:${{ steps.create_branch.outputs.branch_name }}
+        if: success() || failure()
+
+      - name: Create PR
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
