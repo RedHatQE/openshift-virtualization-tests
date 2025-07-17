@@ -8,6 +8,7 @@ on:
 jobs:
   cherry-pick-to-4-99:
     permissions:
+      actions: write
       contents: write
       pull-requests: write # Required for creating PRs
 
@@ -24,8 +25,8 @@ jobs:
         # Configure Git user for commits made directly in the workflow
         # The create-pull-request action handles its own commit authorship.
         run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${{ secrets.GH_BOT_USERNAME }}"
+          git config user.email "${{ secrets.GH_BOT_EMAIL }}"
 
       - name: Get latest commit from main # Renamed step for clarity
         id: get_latest_commit # Updated ID
