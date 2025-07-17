@@ -38,6 +38,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms
+
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -710,3 +711,16 @@ def deleted_vmi(running_metric_vm):
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
+
+
+@pytest.fixture()
+def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota):
+    return application_aware_resource_quota.instance.metadata.creationTimestamp
+
+
+@pytest.fixture()
+def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
+    application_aware_resource_quota_instance = application_aware_resource_quota.instance
+    resource_hard_limit = application_aware_resource_quota_instance.spec.hard
+    resource_used = application_aware_resource_quota_instance.status.used
+    return resource_hard_limit, resource_used
