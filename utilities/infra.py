@@ -1062,9 +1062,22 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
 
 
 def get_node_audit_log_entries(log, node, log_entry):
-    return subprocess.getoutput(
-        f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
-    ).splitlines()
+    max_retries = 3
+    retry_delay = 5
+    for attempt in range(max_retries + 1):
+        result = subprocess.getoutput(
+            f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
+        )
+        lines = result.splitlines()
+        has_errors = any(line.startswith("error:") for line in lines)
+
+        if not has_errors:
+            return lines
+        if attempt < max_retries:
+            LOGGER.warning(f"oc command failed for node {node}, log {log}. Retrying in {retry_delay}s...")
+            time.sleep(retry_delay)
+        else:
+            return lines
 
 
 def get_node_audit_log_line_dict(logs, node, log_entry):
