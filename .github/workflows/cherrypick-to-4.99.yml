@@ -101,7 +101,7 @@ jobs:
         if: steps.prepare_branch.outputs.status == 'success'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}
           commit-message: "Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }} (from ${{ steps.get_latest_commit.outputs.commit_sha }})" # Updated reference
           title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
           body: |
@@ -124,7 +124,7 @@ jobs:
         if: steps.prepare_branch.outputs.status == 'conflicted'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}
           commit-message: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }} (from ${{ steps.get_latest_commit.outputs.commit_sha }})" # Updated reference
           title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
           body: |
