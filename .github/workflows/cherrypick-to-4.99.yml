@@ -79,7 +79,7 @@ jobs:
           echo "pr_body=$PR_BODY" >> $GITHUB_OUTPUT
 
       - name: Push new branch and create PR
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: ${{ steps.pr_details.outputs.commit_message }}
