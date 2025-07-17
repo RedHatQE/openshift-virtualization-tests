@@ -33,9 +33,7 @@ class TestCheckupNegative:
         """
         assert_results_in_configmap(
             configmap=checkup_configmap,
-            expected_failure_msg=MSG_NO_DEFAULT_STORAGE_CLASS
-            if rhel9_data_import_cron_source_format == "pvc"
-            else "^persistentvolumeclaims.*.not found$",
+            expected_failure_msg=MSG_NO_DEFAULT_STORAGE_CLASS,
             expected_result=MSG_NO_DEFAULT_STORAGE_CLASS,
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )
@@ -53,9 +51,7 @@ class TestCheckupNegative:
         """
         assert_results_in_configmap(
             configmap=checkup_configmap,
-            expected_failure_msg=MSG_MULTIPLE_DEFAULT_SC
-            if rhel9_data_import_cron_source_format == "pvc"
-            else "VMI is not running",
+            expected_failure_msg=MSG_MULTIPLE_DEFAULT_SC,
             expected_result=MSG_MULTIPLE_DEFAULT_SC,
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )

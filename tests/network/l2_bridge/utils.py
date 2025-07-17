@@ -123,7 +123,7 @@ def hot_plug_interface(
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
 
-    lookup_iface_status(
+    return lookup_iface_status(
         vm=vm,
         iface_name=hot_plugged_interface_name,
         predicate=lambda interface: "guest-agent" in interface["infoSource"],
@@ -208,19 +208,20 @@ def hot_plug_interface_and_set_address(
     ipv4_address,
     sriov=False,
 ):
-    hot_plug_interface(
+    iface = hot_plug_interface(
         vm=vm,
         hot_plugged_interface_name=hot_plugged_interface_name,
         net_attach_def_name=net_attach_def_name,
         sriov=sriov,
     )
-    wait_for_interface_hot_plug_completion(vmi=vm.vmi, interface_name=hot_plugged_interface_name)
 
     set_secondary_static_ip_address(
         vm=vm,
         ipv4_address=ipv4_address,
-        vmi_interface=hot_plugged_interface_name,
+        vmi_interface=iface.name,
     )
+
+    return iface
 
 
 def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):

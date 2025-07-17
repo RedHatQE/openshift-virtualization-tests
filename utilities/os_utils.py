@@ -9,7 +9,6 @@ from utilities.constants import (
     FLAVOR_STR,
     IMAGE_NAME_STR,
     IMAGE_PATH_STR,
-    INSTANCE_TYPE_STR,
     LATEST_RELEASE_STR,
     OS_STR,
     OS_VERSION_STR,
@@ -226,19 +225,12 @@ def generate_instance_type_rhel_os_matrix(preferences: list[str]) -> list[dict[s
     Returns:
         list[dict[str, dict[str, Any]]]: A list of dictionaries representing the instance type matrix.
     """
-    base_instance_type_spec: dict[str, str] = {
-        DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-        INSTANCE_TYPE_STR: "u1.medium",
-    }
-    latest_rhel = "rhel-10"
-    if latest_rhel not in preferences:
-        latest_rhel = f"rhel-{max([preference.split('-')[1] for preference in preferences])}"
+    latest_rhel = f"rhel-{max([preference.split('-')[1] for preference in preferences], key=int)}"
 
     instance_types: list[dict[str, dict[str, Any]]] = []
 
     for preference in preferences:
         preference_config: dict[str, Any] = {
-            **base_instance_type_spec,
             PREFERENCE_STR: preference.replace("-", "."),
             DATA_SOURCE_NAME: preference.replace("-", ""),
         }
