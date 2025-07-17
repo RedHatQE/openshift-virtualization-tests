@@ -43,9 +43,9 @@ def lookup_iface_status(
         vm (BaseVirtualMachine): VM in which to search for the network interface.
         iface_name (str): The name of the requested interface.
         predicate (Callable[[dict[str, Any]], bool]): A function that takes a network interface as an argument
-            and returns a boolean value. this function should define the condition that
+            and returns a boolean value. This function should define the condition that
             the interface needs to meet.
-        timeout (int): lookup operation timeout
+        timeout (int): Lookup operation timeout
 
     Returns:
         iface (ResourceField): The requested interface.
@@ -99,17 +99,17 @@ def _lookup_iface_status(
 )
 def wait_for_missing_iface_status(vm: BaseVirtualMachine, iface_name: str) -> bool:
     """
-        Waits for a network interface to be deleted from the virtual machine's interface status.
+    Waits for a network interface to be deleted from the virtual machine's interface status.
 
-        Args:
-            vm (BaseVirtualMachine): The virtual machine to check for the interface status.
-            iface_name: (str): The name of the network interface to wait for deletion.
+    Args:
+        vm (BaseVirtualMachine): The virtual machine to check for the interface status.
+        iface_name: (str): The name of the network interface to wait for deletion.
 
-        Raises:
-            VMInterfaceStatusStillExistsError: If the interface still exists after the timeout period.
-    there was a usage of it
-        Returns:
-            bool: True if the interface is missing otherwise raises an exception.
+    Returns:
+        bool: True if the interface is missing otherwise raises an exception.
+
+    Raises:
+        VMInterfaceStatusStillExistsError: If the interface still exists after the timeout period.
     """
     if _lookup_iface_status(vm=vm, iface_name=iface_name, predicate=lambda _: True) is not None:
         raise VMInterfaceStatusStillExistsError(f"Interface {iface_name} still exists in {vm.name}")
