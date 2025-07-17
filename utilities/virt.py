@@ -20,6 +20,7 @@ import yaml
 from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.node import Node
@@ -79,7 +80,8 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
-from utilities.hco import wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+
 from utilities.storage import get_default_storage_class
 
 if TYPE_CHECKING:
@@ -2556,3 +2558,39 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> b
 def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+
+
+@contextmanager
+def enable_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
+    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
+    if enable_acrq_support:
+        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
+            "allowApplicationAwareClusterResourceQuota": True
+        }
+
+    with ResourceEditorValidateHCOReconcile(
+        patches=patches,
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+    # need to wait when all AAQ system pods removed
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_pod_by_name_prefix,
+        dyn_client=client,
+        pod_prefix="aaq-(controller|server)",
+        namespace=hco_namespace.name,
+        get_all=True,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample:
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Some AAQ pods still present: {sample}")
+        raise
+    except (NotFoundError, ResourceNotFoundError):
+        LOGGER.info("AAQ system PODs removed.")
