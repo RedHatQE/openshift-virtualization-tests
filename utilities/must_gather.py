@@ -4,7 +4,7 @@ import shlex
 
 from pyhelper_utils.shell import run_command
 
-from utilities.constants import TIMEOUT_15MIN, TIMEOUT_20MIN
+from utilities.constants import TIMEOUT_15MIN, TIMEOUT_60MIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def run_must_gather(
     did_succeed, output, error = run_command(
         command=shlex.split(base_command),
         check=False,
-        timeout=TIMEOUT_20MIN,
+        timeout=TIMEOUT_60MIN,
         log_errors=False,
     )
     if not did_succeed and error:
