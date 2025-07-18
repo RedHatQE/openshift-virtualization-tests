@@ -4,7 +4,7 @@ import shlex
 
 from pyhelper_utils.shell import run_command
 
-from utilities.constants import TIMEOUT_15MIN, TIMEOUT_20MIN
+from utilities.constants import TIMEOUT_15MIN, TIMEOUT_40MIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def run_must_gather(
         base_command += f" --node-name={node_name}"
     if since:
         base_command += f" --since={since}"
-    if timeout:
+    if timeout:  # Only applies to gathering and not copying stage - https://issues.redhat.com/browse/OCPBUGS-59774
         base_command += f" --timeout={timeout}"
     if script_name:
         base_command += f" -- {script_name}"
@@ -58,7 +58,7 @@ def run_must_gather(
     did_succeed, output, error = run_command(
         command=shlex.split(base_command),
         check=False,
-        timeout=TIMEOUT_20MIN,
+        timeout=TIMEOUT_40MIN,
         log_errors=False,
     )
     if not did_succeed and error:
