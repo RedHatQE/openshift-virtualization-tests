@@ -18,9 +18,16 @@ This directory contains tests for validating live migration of virtual machines 
 
 You need to provide a kubeconfig file for the remote (target) cluster. This should be a separate kubeconfig from your primary cluster.
 
+There are two ways to provide the remote kubeconfig:
+
+#### Option 1: Using CLI argument
 ```bash
-# Export the remote cluster kubeconfig to a file
-export REMOTE_KUBECONFIG=/path/to/remote-cluster-kubeconfig.yaml
+uv run pytest tests/cross_cluster_live_migration/ --remote-kubeconfig=/path/to/remote-cluster-kubeconfig
+```
+
+#### Option 2: Using environment variable
+```bash
+export REMOTE_KUBECONFIG=/path/to/remote-cluster-kubeconfig
 ```
 
 ### 2. Verify Remote Access
@@ -37,25 +44,15 @@ oc --kubeconfig=$REMOTE_KUBECONFIG get nodes
 uv run pytest tests/cross_cluster_live_migration/ -v
 ```
 
-### Debugging Tips
+### Run Specific Test Files
 
-1. **Verify Remote Cluster Access**:
-   ```bash
-   oc --kubeconfig=$REMOTE_KUBECONFIG cluster-info
-   ```
+#### Connectivity Tests
+Test basic connectivity to the remote cluster:
+```bash
+# Using CLI argument
+uv run pytest tests/cross_cluster_live_migration/test_cross_cluster_connectivity.py -v --remote-kubeconfig=/path/to/remote-kubeconfig.yaml
 
-2. **Check Available Contexts**:
-   ```bash
-   oc --kubeconfig=$REMOTE_KUBECONFIG config get-contexts
-   ```
-
-3. **Test Basic Operations**:
-   ```bash
-   oc --kubeconfig=$REMOTE_KUBECONFIG get namespaces
-   ```
-
-4. **Validate Permissions**:
-   ```bash
-   oc --kubeconfig=$REMOTE_KUBECONFIG auth can-i get vms
-   oc --kubeconfig=$REMOTE_KUBECONFIG auth can-i create vmim
-   ```
+# Using environment variable
+export REMOTE_KUBECONFIG=/path/to/remote-cluster-kubeconfig.yaml
+uv run pytest tests/cross_cluster_live_migration/test_cross_cluster_connectivity.py -v
+```

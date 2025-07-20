@@ -81,7 +81,6 @@ TEAM_MARKERS = {
     "observability": ["observability", "deprecated_api"],
     "infrastructure": ["infrastructure", "deprecated_api"],
     "data_protection": ["data_protection", "deprecated_api"],
-    "cross_cluster_live_migration": ["cross_cluster_live_migration", "deprecated_api"],
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
@@ -274,6 +273,10 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
+    )
+    session_group.addoption(
+        "--remote-kubeconfig",
+        help="Path to the remote cluster kubeconfig file for cross-cluster tests",
     )
 
 
