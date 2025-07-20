@@ -167,16 +167,22 @@ class NodeNetworkConfigurationPolicy(Nncp):
         return {}
 
     def _interfaces_for_deletion(self) -> list[Interface]:
-        to_delete_interfaces = deepcopy(self.desired_state.get("interfaces", []))
-        for iface in to_delete_interfaces:
-            iface["state"] = Nncp.Interface.State.ABSENT
-        return to_delete_interfaces
+        if isinstance(self.desired_state, dict):
+            to_delete_interfaces = deepcopy(self.desired_state.get("interfaces", []))
+            for iface in to_delete_interfaces:
+                iface["state"] = Nncp.Interface.State.ABSENT
+            return to_delete_interfaces
+
+        return []
 
     def _ovn_for_deletion(self) -> OVN:
-        to_delete_ovn = deepcopy(self.desired_state.get("ovn", {}))
-        for bridge_mapping in to_delete_ovn.get("bridge-mappings", []):
-            bridge_mapping["state"] = Nncp.Interface.State.ABSENT
-        return to_delete_ovn
+        if self.desired_state is not None:
+            to_delete_ovn = deepcopy(self.desired_state.get("ovn", {}))
+            for bridge_mapping in to_delete_ovn.get("bridge-mappings", []):
+                bridge_mapping["state"] = Nncp.Interface.State.ABSENT
+            return to_delete_ovn
+
+        return OVN(bridge_mappings=[])
 
     @contextlib.contextmanager
     def _confirm_status_success_on_update(self) -> Iterator[None]:

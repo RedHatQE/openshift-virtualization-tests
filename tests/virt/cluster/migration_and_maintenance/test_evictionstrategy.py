@@ -81,6 +81,7 @@ def added_vm_evictionstrategy(request, vm_from_template_scope_class):
     restart_vm_wait_for_running_vm(vm=vm_from_template_scope_class, wait_for_interfaces=True)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-10085")
 @pytest.mark.post_upgrade
 def test_evictionstrategy_not_in_templates(base_templates):
@@ -94,6 +95,7 @@ def test_evictionstrategy_not_in_templates(base_templates):
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-10086")
@@ -126,6 +128,7 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
     indirect=True,
 )
 @pytest.mark.usefixtures("cluster_cpu_model_scope_class")
+@pytest.mark.jira("CNV-64988", run=False)
 class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(

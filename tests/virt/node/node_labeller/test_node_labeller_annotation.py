@@ -48,6 +48,7 @@ def labelled_worker_node1(worker1_supported_cpu_models_labels, worker_node1):
         yield {worker_node1: updated_label}
 
 
+@pytest.mark.s390x
 class TestNodeLabellerSkipAnnotation:
     @pytest.mark.polarion("CNV-7744")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_node_labeller_added_skip_node_annotation")

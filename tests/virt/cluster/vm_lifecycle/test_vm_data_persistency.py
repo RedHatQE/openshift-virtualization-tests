@@ -276,8 +276,8 @@ class TestRestartPersistenceLinux:
         [
             {
                 "dv_name": "persistence-windows-dv",
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
             {

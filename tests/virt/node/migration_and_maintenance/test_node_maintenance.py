@@ -31,7 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage, pytest.mark.jira("CNV-64988", run=False)]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -192,8 +192,8 @@ class TestNodeMaintenanceRHEL:
         pytest.param(
             {
                 "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST["image_path"],
-                "dv_size": WINDOWS_LATEST["dv_size"],
+                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_size": WINDOWS_LATEST.get("dv_size"),
             },
             {
                 "vm_name": "wind-template-node-cordon-and-drain",

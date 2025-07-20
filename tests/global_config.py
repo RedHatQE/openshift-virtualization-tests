@@ -1,11 +1,11 @@
-import os
 from typing import Any
 
+import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import (
     AAQ_VIRTUAL_RESOURCES,
     AAQ_VMI_POD_USAGE,
@@ -20,50 +20,35 @@ from utilities.constants import (
     CNV_OPERATORS,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
-    DATA_SOURCE_NAME,
-    DV_SIZE_STR,
-    FLAVOR_STR,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
-    IMAGE_NAME_STR,
-    IMAGE_PATH_STR,
-    INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
     KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR,
     KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR,
     KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR,
     KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR,
-    LATEST_RELEASE_STR,
     LINUX_BRIDGE,
     MONITORING_METRICS,
-    OS_STR,
-    OS_VERSION_STR,
     OVS_BRIDGE,
-    PREFERENCE_STR,
     PRODUCTION_CATALOG_SOURCE,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
-    TEMPLATE_LABELS_STR,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
-    WIN_2K22,
-    WIN_2K25,
-    WIN_10,
-    WIN_11,
-    WORKLOAD_STR,
     Images,
     NamespacesNames,
     StorageClassNames,
 )
-from utilities.infra import get_latest_os_dict_list
 from utilities.storage import HppCsiStorageClass
 
+arch = get_cluster_architecture()
 global config
+global_config = pytest_testconfig.load_python(py_file=f"tests/global_config_{arch}.py", encoding="utf-8")
 
 
 def _get_default_storage_class(sc_list):
@@ -212,222 +197,6 @@ data_import_cron_matrix = [
     {"rhel10": {"instance_type": "u1.medium", "preference": "rhel.10"}},
 ]
 
-rhel_os_matrix = [
-    {
-        "rhel-7-8": {
-            OS_VERSION_STR: "7.8",
-            IMAGE_NAME_STR: Images.Rhel.RHEL7_8_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL7_8_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel7.8",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-7-9": {
-            OS_VERSION_STR: "7.9",
-            IMAGE_NAME_STR: Images.Rhel.RHEL7_9_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL7_9_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel7.9",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-8-8": {
-            OS_VERSION_STR: "8.8",
-            IMAGE_NAME_STR: Images.Rhel.RHEL8_8_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL8_8_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel8.8",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-8-10": {
-            OS_VERSION_STR: "8.10",
-            IMAGE_NAME_STR: Images.Rhel.RHEL8_10_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL8_10_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel8.10",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-9-4": {
-            OS_VERSION_STR: "9.4",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_4_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_4_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.4",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-    {
-        "rhel-9-6": {
-            OS_VERSION_STR: "9.6",
-            IMAGE_NAME_STR: Images.Rhel.RHEL9_6_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Rhel.DIR, Images.Rhel.RHEL9_6_IMG),
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "rhel9.6",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-]
-
-windows_os_matrix = [
-    {
-        "win-10": {
-            OS_VERSION_STR: "10",
-            IMAGE_NAME_STR: Images.Windows.WIN10_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: WIN_10,
-                WORKLOAD_STR: Template.Workload.DESKTOP,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-    {
-        "win-2016": {
-            OS_VERSION_STR: "2016",
-            IMAGE_NAME_STR: Images.Windows.WIN2k16_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k16_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "win2k16",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-    {
-        "win-2019": {
-            OS_VERSION_STR: "2019",
-            IMAGE_NAME_STR: Images.Windows.WIN2k19_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k19_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "win2k19",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-    {
-        "win-11": {
-            OS_VERSION_STR: "11",
-            IMAGE_NAME_STR: Images.Windows.WIN11_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: WIN_11,
-                WORKLOAD_STR: Template.Workload.DESKTOP,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-    {
-        "win-2022": {
-            OS_VERSION_STR: "2022",
-            IMAGE_NAME_STR: Images.Windows.WIN2022_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.DIR, Images.Windows.WIN2022_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: WIN_2K22,
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-    {
-        "win-2025": {
-            OS_VERSION_STR: "2025",
-            IMAGE_NAME_STR: Images.Windows.WIN2k25_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN2k25_IMG),
-            DV_SIZE_STR: Images.Windows.DEFAULT_DV_SIZE,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: WIN_2K25,
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.MEDIUM,
-            },
-        }
-    },
-]
-
-fedora_os_matrix = [
-    {
-        "fedora-41": {
-            IMAGE_NAME_STR: Images.Fedora.FEDORA41_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Fedora.DIR, Images.Fedora.FEDORA41_IMG),
-            DV_SIZE_STR: Images.Fedora.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "fedora41",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.SMALL,
-            },
-        }
-    },
-]
-
-centos_os_matrix = [
-    {
-        "centos-stream-9": {
-            IMAGE_NAME_STR: Images.CentOS.CENTOS_STREAM_9_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.CentOS.DIR, Images.CentOS.CENTOS_STREAM_9_IMG),
-            DV_SIZE_STR: Images.CentOS.DEFAULT_DV_SIZE,
-            LATEST_RELEASE_STR: True,
-            TEMPLATE_LABELS_STR: {
-                OS_STR: "centos-stream9",
-                WORKLOAD_STR: Template.Workload.SERVER,
-                FLAVOR_STR: Template.Flavor.TINY,
-            },
-        }
-    },
-]
-
-instance_type_rhel_os_matrix = [
-    {
-        "rhel-10": {
-            OS_VERSION_STR: "10",
-            DV_SIZE_STR: Images.Rhel.DEFAULT_DV_SIZE,
-            INSTANCE_TYPE_STR: "u1.medium",
-            PREFERENCE_STR: "rhel.10",
-            DATA_SOURCE_NAME: "rhel10",
-            LATEST_RELEASE_STR: True,
-        }
-    },
-]
-
-(
-    latest_rhel_os_dict,
-    latest_windows_os_dict,
-    latest_fedora_os_dict,
-    latest_centos_os_dict,
-) = get_latest_os_dict_list(os_list=[rhel_os_matrix, windows_os_matrix, fedora_os_matrix, centos_os_matrix])
-
 ip_stack_version_matrix = [
     IPV4_STR,
     IPV6_STR,
@@ -455,9 +224,9 @@ windows_iterations = 500  # Number of migration iterations of windows VMs
 
 # RHEL container disk image matrix
 cnv_rhel_container_disk_images_matrix = [
-    {"rhel8": {"RHEL_CONTAINER_DISK_IMAGE": Images.Rhel.RHEL8_REGISTRY_GUEST_IMG}},
-    {"rhel9": {"RHEL_CONTAINER_DISK_IMAGE": Images.Rhel.RHEL9_REGISTRY_GUEST_IMG}},
-    {"rhel10": {"RHEL_CONTAINER_DISK_IMAGE": Images.Rhel.RHEL10_REGISTRY_GUEST_IMG}},
+    {"rhel8": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL8_REGISTRY_GUEST_IMG", None)}},
+    {"rhel9": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL9_REGISTRY_GUEST_IMG", None)}},
+    {"rhel10": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL10_REGISTRY_GUEST_IMG", None)}},
 ]
 
 # Tekton resource matrix

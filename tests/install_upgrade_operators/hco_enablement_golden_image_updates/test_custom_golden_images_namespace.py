@@ -15,7 +15,6 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     COMMON_TEMPLATE,
     get_templates_by_type_from_hco_status,
 )
-from tests.install_upgrade_operators.utils import is_rhel10_beta_resource_and_63351_bug_open
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -48,12 +47,7 @@ def get_templates_resources_names_dict(templates):
 
 def verify_resource_not_in_ns(resource_type, namespace, dyn_client):
     resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
-    # skipping rhel10-beta-guest image stream if jira is open
-    resources_names = {
-        resource.name
-        for resource in resources
-        if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=resource.name)
-    }
+    resources_names = {resource.name for resource in resources}
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
 
 
@@ -109,8 +103,8 @@ def verify_common_template_namespace_updated(common_templates, namespace_name):
 
 
 @pytest.fixture(scope="module")
-def custom_golden_images_namespace():
-    yield from create_ns(name="custom-golden-images-namespace")
+def custom_golden_images_namespace(admin_client):
+    yield from create_ns(admin_client=admin_client, name="custom-golden-images-namespace")
 
 
 @pytest.fixture(scope="class")
@@ -142,12 +136,11 @@ def updated_common_template_custom_ns(
     ):
         yield
     for data_source in get_data_sources_managed_by_data_import_cron(namespace=golden_images_namespace.name):
-        if not is_rhel10_beta_resource_and_63351_bug_open(resource_name=data_source.name):
-            data_source.wait_for_condition(
-                condition=DataSource.Condition.READY,
-                status=DataSource.Condition.Status.TRUE,
-                timeout=TIMEOUT_10MIN,
-            )
+        data_source.wait_for_condition(
+            condition=DataSource.Condition.READY,
+            status=DataSource.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
+        )
 
 
 @pytest.fixture()

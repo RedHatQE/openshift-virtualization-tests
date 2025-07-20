@@ -111,12 +111,12 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_6MIN,
     U1_SMALL,
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
     UTILITY,
     VIRTCTL_CLI_DOWNLOADS,
+    VIRTIO,
     WORKER_NODE_LABEL_KEY,
     WORKERS_TYPE,
     Images,
@@ -147,6 +147,7 @@ from utilities.infra import (
     get_hyperconverged_resource,
     get_infrastructure,
     get_node_selector_dict,
+    get_nodes_cpu_architecture,
     get_nodes_cpu_model,
     get_nodes_with_label,
     get_pods,
@@ -659,7 +660,6 @@ def namespace(request, admin_client, unprivileged_client):
         admin_client=admin_client,
         name=generate_namespace_name(file_path=request.fspath.strpath.split(f"{os.path.dirname(__file__)}/")[1]),
         teardown=teardown,
-        delete_timeout=TIMEOUT_6MIN,
     )
 
 
@@ -1148,7 +1148,7 @@ def nodes_cpu_vendor(schedulable_nodes):
 
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture(nodes):
-    return utilities.infra.get_nodes_cpu_architecture(nodes=nodes)
+    return get_nodes_cpu_architecture(nodes=nodes)
 
 
 @pytest.fixture(scope="session")
@@ -1535,10 +1535,10 @@ def kmp_vm_label(admin_client):
 
 
 @pytest.fixture(scope="class")
-def kmp_enabled_ns(kmp_vm_label):
+def kmp_enabled_ns(admin_client, kmp_vm_label):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
-    yield from create_ns(name="kmp-enabled", labels=kmp_vm_label)
+    yield from create_ns(admin_client=admin_client, name="kmp-enabled", labels=kmp_vm_label)
 
 
 @pytest.fixture(scope="session")
@@ -1905,12 +1905,14 @@ def rhel_latest_os_params():
     """This fixture is needed as during collection pytest_testconfig is empty.
     os_params or any globals using py_config in conftest cannot be used.
     """
-    latest_rhel_dict = py_config["latest_rhel_os_dict"]
-    return {
-        "rhel_image_path": f"{get_test_artifact_server_url()}{latest_rhel_dict['image_path']}",
-        "rhel_dv_size": latest_rhel_dict["dv_size"],
-        "rhel_template_labels": latest_rhel_dict["template_labels"],
-    }
+    if latest_rhel_dict := py_config.get("latest_rhel_os_dict"):
+        return {
+            "rhel_image_path": f"{get_test_artifact_server_url()}{latest_rhel_dict['image_path']}",
+            "rhel_dv_size": latest_rhel_dict["dv_size"],
+            "rhel_template_labels": latest_rhel_dict["template_labels"],
+        }
+
+    raise ValueError("Failed to get latest RHEL OS parameters")
 
 
 @pytest.fixture(scope="session")
@@ -2292,6 +2294,7 @@ def running_metric_vm(namespace, unprivileged_client):
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
+        network_model=VIRTIO,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
         yield vm

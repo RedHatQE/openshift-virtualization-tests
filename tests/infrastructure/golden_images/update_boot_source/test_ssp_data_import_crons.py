@@ -173,8 +173,9 @@ def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace
 
 
 @pytest.fixture()
-def data_import_cron_namespace(unprivileged_client):
+def data_import_cron_namespace(admin_client, unprivileged_client):
     yield from create_ns(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="data-import-cron-using-default-sc",
     )

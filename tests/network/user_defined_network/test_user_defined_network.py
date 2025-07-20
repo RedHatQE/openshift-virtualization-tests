@@ -34,8 +34,9 @@ def udn_vm(namespace_name, name, template_labels=None):
 
 
 @pytest.fixture(scope="module")
-def udn_namespace():
+def udn_namespace(admin_client):
     yield from create_ns(
+        admin_client=admin_client,
         name="test-user-defined-network-ns",
         labels={"k8s.ovn.org/primary-user-defined-network": ""},
     )

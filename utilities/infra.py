@@ -41,12 +41,10 @@ from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
-from ocp_resources.project_project_openshift_io import Project
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.exceptions import NodeNotReadyError, NodeUnschedulableError
 from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
@@ -71,6 +69,7 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBECONFIG,
     KUBELET_READY_CONDITION,
+    KUBERNETES_ARCH_LABEL,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
@@ -84,6 +83,7 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
+    X86_64,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -103,7 +103,6 @@ from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import guest_agent_version_parser
 from utilities.storage import get_test_artifact_server_url
 
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 JIRA_STATUS_CLOSED = ("on_qa", "verified", "release pending", "closed")
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
@@ -118,12 +117,12 @@ def label_project(name, label, admin_client):
 
 
 def create_ns(
-    name,
-    unprivileged_client=None,
-    labels=None,
-    admin_client=None,
-    teardown=True,
-    delete_timeout=TIMEOUT_6MIN,
+    name: str,
+    admin_client: DynamicClient,
+    unprivileged_client: DynamicClient | None = None,
+    labels: dict[str, str] | None = None,
+    teardown: bool = True,
+    delete_timeout: int = TIMEOUT_6MIN,
 ):
     """
     For kubemacpool labeling opt-modes, provide kmp_vm_label and admin_client as admin_client
@@ -139,16 +138,14 @@ def create_ns(
             ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield ns
     else:
-        with ProjectRequest(name=name, client=unprivileged_client, teardown=teardown):
-            project = Project(
-                name=name,
-                client=unprivileged_client,
-                teardown=teardown,
-                delete_timeout=delete_timeout,
-            )
-            project.wait_for_status(project.Status.ACTIVE, timeout=TIMEOUT_2MIN)
-            label_project(name=name, label=labels, admin_client=admin_client)
-            yield project
+        project = ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
+        label_project(name=name, label=labels, admin_client=admin_client)
+
+        yield project
+
+        # cleanup must be done with admin client
+        project.client = admin_client
+        project.clean_up()
 
 
 class ClusterHosts:
@@ -1006,7 +1003,7 @@ def download_file_from_cluster(get_console_spec_links_name, dest_dir):
 
 def get_machine_platform():
     os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == "x86_64" else os_machine_type
+    return AMD_64 if os_machine_type == X86_64 else os_machine_type
 
 
 def get_nodes_with_label(nodes, label):
@@ -1536,7 +1533,7 @@ def get_linux_os_info(ssh_exec):
     }
 
 
-def validate_os_info_vmi_vs_linux_os(vm: VirtualMachine) -> None:
+def validate_os_info_vmi_vs_linux_os(vm: utilities.virt.VirtualMachineForTests) -> None:
     vmi_info = utilities.virt.get_guest_os_info(vmi=vm.vmi)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)["os"]
 

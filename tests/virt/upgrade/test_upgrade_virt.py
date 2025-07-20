@@ -22,9 +22,10 @@ from tests.virt.upgrade.utils import (
     verify_windows_boot_time,
     vm_is_migrateable,
 )
+from tests.virt.utils import assert_migration_post_copy_mode
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
-from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
+from utilities.virt import is_jira_64988_bug_open, migrate_vm_and_verify, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
 VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID = f"{VIRT_NODE_ID_PREFIX}::test_is_vm_running_after_upgrade"
@@ -133,6 +134,18 @@ class TestUpgradeVirt:
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
 
+    @pytest.mark.ocp_upgrade
+    @pytest.mark.polarion("CNV-12018")
+    @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID, after=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID)
+    @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade")
+    def test_vm_post_copy_migration_before_upgrade(
+        self,
+        post_copy_migration_policy_for_upgrade,
+        vm_for_post_copy_upgrade,
+    ):
+        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, check_ssh_connectivity=True)
+        assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
+
     """ Post-upgrade tests """
 
     @pytest.mark.gating
@@ -145,6 +158,7 @@ class TestUpgradeVirt:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
+    @pytest.mark.jira("CNV-64988", run=False)
     def test_vmi_pod_image_updates_after_upgrade_optin(
         self,
         unupdated_vmi_pods_names,
@@ -170,7 +184,8 @@ class TestUpgradeVirt:
     def test_is_vm_running_after_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
-        verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
+        if not is_jira_64988_bug_open():
+            verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
@@ -248,7 +263,8 @@ class TestUpgradeVirt:
         windows_boot_time_before_upgrade,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
-        verify_windows_boot_time(windows_vm=windows_vm, initial_boot_time=windows_boot_time_before_upgrade)
+        if not is_jira_64988_bug_open():
+            verify_windows_boot_time(windows_vm=windows_vm, initial_boot_time=windows_boot_time_before_upgrade)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.polarion("CNV-2979")
@@ -285,7 +301,7 @@ class TestUpgradeVirt:
         before=AFTER_UPGRADE_STORAGE_ORDERING,
     )
     @pytest.mark.dependency(
-        depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
+        depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_machine_type_after_upgrade(self, vms_for_upgrade, vms_for_upgrade_dict_before):
@@ -323,3 +339,26 @@ class TestUpgradeVirt:
             raise ResourceValueError(
                 f"Golden image default {DATA_SOURCE_NAME} mismatch after upgrade:\n{mismatching_templates}"
             )
+
+    @pytest.mark.ocp_upgrade
+    @pytest.mark.polarion("CNV-12019")
+    @pytest.mark.order(
+        after=[
+            IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID,
+            VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID,
+        ],
+        before=AFTER_UPGRADE_STORAGE_ORDERING,
+    )
+    @pytest.mark.dependency(
+        depends=[
+            IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+            f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade",
+        ],
+        scope=DEPENDENCY_SCOPE_SESSION,
+    )
+    def test_vm_post_copy_migration_after_upgrade(
+        self,
+        vm_for_post_copy_upgrade,
+    ):
+        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, check_ssh_connectivity=True)
+        assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
