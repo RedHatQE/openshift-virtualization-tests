@@ -72,27 +72,25 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 
 
 @pytest.fixture(scope="class")
-def vmb_udn_non_migratable(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
+def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
     with udn_vm(namespace_name=udn_namespace.name, name="vmb-udn", template_labels=dict((udn_affinity_label,))) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
 
 
-@pytest.fixture()
-def server(vmb_udn_non_migratable):
-    with Server(vm=vmb_udn_non_migratable, port=SERVER_PORT) as server:
+@pytest.fixture(scope="class")
+def server(vmb_udn):
+    with Server(vm=vmb_udn, port=SERVER_PORT) as server:
         assert server.is_running()
         yield server
 
 
-@pytest.fixture()
-def client(vma_udn, vmb_udn_non_migratable):
+@pytest.fixture(scope="class")
+def client(vma_udn, vmb_udn):
     with Client(
         vm=vma_udn,
-        server_ip=lookup_iface_status(
-            vm=vmb_udn_non_migratable, iface_name=lookup_primary_network(vm=vmb_udn_non_migratable).name
-        )[IP_ADDRESS],
+        server_ip=lookup_iface_status(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name)[IP_ADDRESS],
         server_port=SERVER_PORT,
     ) as client:
         assert client.is_running()
@@ -128,23 +126,25 @@ class TestPrimaryUdn:
 
     @pytest.mark.polarion("CNV-11434")
     @pytest.mark.single_nic
-    def test_vm_egress_connectivity(self, vmb_udn_non_migratable):
-        assert lookup_iface_status(
-            vm=vmb_udn_non_migratable, iface_name=lookup_primary_network(vm=vmb_udn_non_migratable).name
-        )[IP_ADDRESS]
-        vmb_udn_non_migratable.console(commands=[f"ping -c 3 {PUBLIC_DNS_SERVER_IP}"], timeout=TIMEOUT_1MINUTE)
+    def test_vm_egress_connectivity(self, vmb_udn):
+        assert lookup_iface_status(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name)[IP_ADDRESS]
+        vmb_udn.console(commands=[f"ping -c 3 {PUBLIC_DNS_SERVER_IP}"], timeout=TIMEOUT_1MINUTE)
 
     @pytest.mark.polarion("CNV-11418")
     @pytest.mark.single_nic
-    def test_basic_connectivity_between_udn_vms(self, vma_udn, vmb_udn_non_migratable):
-        target_vm_ip = lookup_iface_status(
-            vm=vmb_udn_non_migratable, iface_name=lookup_primary_network(vm=vmb_udn_non_migratable).name
-        )[IP_ADDRESS]
+    def test_basic_connectivity_between_udn_vms(self, vma_udn, vmb_udn):
+        target_vm_ip = lookup_iface_status(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name)[IP_ADDRESS]
         vma_udn.console(commands=[f"ping -c 3 {target_vm_ip}"], timeout=TIMEOUT_1MIN)
 
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
     @pytest.mark.gating
-    def test_connectivity_is_preserved_after_live_migration(self, vma_udn, server, client):
-        migrate_vm_and_verify(vm=vma_udn)
+    def test_connectivity_is_preserved_during_client_live_migration(self, server, client):
+        migrate_vm_and_verify(vm=client.vm)
+        assert is_tcp_connection(server=server, client=client)
+
+    @pytest.mark.polarion("CNV-12177")
+    @pytest.mark.single_nic
+    def test_connectivity_is_preserved_during_server_live_migration(self, server, client):
+        migrate_vm_and_verify(vm=server.vm)
         assert is_tcp_connection(server=server, client=client)
