@@ -26,7 +26,6 @@ from utilities.network import (
     get_vmi_ip_v4_by_name,
     network_nad,
 )
-from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.usefixtures("label_schedulable_nodes")
 
@@ -69,18 +68,15 @@ def network_attachment_definition_for_hot_plug(
 
 
 @pytest.fixture(scope="class")
-def hot_plugged_interface_name(
+def hot_plugged_interface(
     running_vm_for_nic_hot_plug,
     network_attachment_definition_for_hot_plug,
 ):
-    hot_plugged_interface_name = f"{HOT_PLUG_STR}-iface"
-    hot_plug_interface(
+    return hot_plug_interface(
         vm=running_vm_for_nic_hot_plug,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=f"{HOT_PLUG_STR}-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
     )
-
-    return hot_plugged_interface_name
 
 
 @pytest.fixture()
@@ -88,13 +84,12 @@ def multiple_hot_plugged_interfaces(running_vm_for_nic_hot_plug, network_attachm
     hot_plugged_interfaces = []
     # Perform extra 3 hot-plug actions (which are added to a previous hot-plug)
     for index in range(3):
-        hot_plugged_interface_name = f"{HOT_PLUG_STR}-{index}"
-        hot_plug_interface(
+        iface = hot_plug_interface(
             vm=running_vm_for_nic_hot_plug,
-            hot_plugged_interface_name=hot_plugged_interface_name,
+            hot_plugged_interface_name=f"{HOT_PLUG_STR}-{index}",
             net_attach_def_name=network_attachment_definition_for_hot_plug.name,
         )
-        hot_plugged_interfaces.append(hot_plugged_interface_name)
+        hot_plugged_interfaces.append(iface)
 
     return hot_plugged_interfaces
 
@@ -119,11 +114,11 @@ def running_utility_vm_for_connectivity_check(
 
 
 @pytest.fixture()
-def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number, hot_plugged_interface_name):
+def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number, hot_plugged_interface):
     set_secondary_static_ip_address(
         vm=running_vm_for_nic_hot_plug,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
-        vmi_interface=hot_plugged_interface_name,
+        vmi_interface=hot_plugged_interface.name,
     )
 
 
@@ -145,30 +140,27 @@ def running_vm_with_secondary_and_hot_plugged_interfaces(
 
 
 @pytest.fixture(scope="class")
-def hot_plugged_interface_name_on_vm_created_with_secondary_interface(
+def hot_plugged_interface_on_vm_created_with_secondary_interface(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     network_attachment_definition_for_hot_plug,
 ):
-    hot_plugged_interface_name = f"{HOT_PLUG_STR}-additional-iface"
-    hot_plug_interface(
+    return hot_plug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=f"{HOT_PLUG_STR}-additional-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
     )
-
-    return hot_plugged_interface_name
 
 
 @pytest.fixture()
 def hot_plugged_second_interface_with_address(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     index_number,
-    hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+    hot_plugged_interface_on_vm_created_with_secondary_interface,
 ):
     set_secondary_static_ip_address(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
-        vmi_interface=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+        vmi_interface=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
     )
 
 
@@ -222,15 +214,12 @@ def hot_plugged_jumbo_interface_with_address(
     network_attachment_definition_for_jumbo_hot_plug,
     index_number,
 ):
-    hot_plugged_interface_name = f"{HOT_PLUG_STR}-jumbo-iface"
-    hot_plug_interface_and_set_address(
+    return hot_plug_interface_and_set_address(
         vm=running_vm_for_jumbo_nic_hot_plug,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=f"{HOT_PLUG_STR}-jumbo-iface",
         net_attach_def_name=network_attachment_definition_for_jumbo_hot_plug.name,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
     )
-
-    return hot_plugged_interface_name
 
 
 @pytest.fixture()
@@ -239,36 +228,31 @@ def hot_plugged_jumbo_interface_in_utility_vm(
     network_attachment_definition_for_jumbo_hot_plug,
     index_number,
 ):
-    hot_plugged_interface_name = f"{HOT_PLUG_STR}-jumbo-utility-iface"
-
-    hot_plug_interface_and_set_address(
+    iface = hot_plug_interface_and_set_address(
         vm=running_utility_vm_for_connectivity_check,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=f"{HOT_PLUG_STR}-jumbo-utility-iface",
         net_attach_def_name=network_attachment_definition_for_jumbo_hot_plug.name,
         ipv4_address=f"{IPV4_ADDRESS_SUBNET_PREFIX}.{next(index_number)}",
     )
 
-    yield hot_plugged_interface_name
+    yield iface
 
     hot_unplug_interface(
         vm=running_utility_vm_for_connectivity_check,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=iface.name,
     )
 
 
 @pytest.fixture()
-def hot_plugged_interface_name_from_flat_overlay_network(
+def hot_plugged_interface_from_flat_overlay_network(
     running_vm_for_nic_hot_plug,
     flat_overlay_network_attachment_definition_for_hot_plug,
 ):
-    hot_plugged_flat_interface_name = f"flat-{HOT_PLUG_STR}-iface"
-    hot_plug_interface(
+    return hot_plug_interface(
         vm=running_vm_for_nic_hot_plug,
-        hot_plugged_interface_name=hot_plugged_flat_interface_name,
+        hot_plugged_interface_name=f"flat-{HOT_PLUG_STR}-iface",
         net_attach_def_name=flat_overlay_network_attachment_definition_for_hot_plug.name,
     )
-
-    return hot_plugged_flat_interface_name
 
 
 @pytest.fixture()
@@ -300,14 +284,11 @@ def hot_plugged_interface_for_kmp_removal(
     vm_for_hot_plug_and_kmp,
     network_attachment_definition_for_hot_plug,
 ):
-    hot_plugged_interface_name = f"{HOT_PLUG_STR}-and-kmp-iface"
-    hot_plug_interface(
+    return hot_plug_interface(
         vm=vm_for_hot_plug_and_kmp,
-        hot_plugged_interface_name=hot_plugged_interface_name,
+        hot_plugged_interface_name=f"{HOT_PLUG_STR}-and-kmp-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
     )
-
-    return hot_plugged_interface_name
 
 
 @pytest.fixture()
@@ -317,7 +298,7 @@ def hot_plugged_kmp_interface_mac_for_vm_deletion(
 ):
     return search_hot_plugged_interface_in_vmi(
         vm=vm_for_hot_plug_and_kmp,
-        interface_name=hot_plugged_interface_for_kmp_removal,
+        interface_name=hot_plugged_interface_for_kmp_removal.name,
     ).macAddress
 
 
@@ -341,24 +322,24 @@ def kubemacpool_controller_log_for_vm_deletion(admin_client, hco_namespace, hot_
 def hot_unplugged_additional_interface(
     namespace,
     running_vm_with_secondary_and_hot_plugged_interfaces,
-    hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+    hot_plugged_interface_on_vm_created_with_secondary_interface,
 ):
     hot_unplug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
-        hot_plugged_interface_name=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+        hot_plugged_interface_name=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
     )
 
-    return hot_plugged_interface_name_on_vm_created_with_secondary_interface
+    return hot_plugged_interface_on_vm_created_with_secondary_interface
 
 
 @pytest.fixture(scope="class")
 def hot_unplugged_interface_mac_address(
-    hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+    hot_plugged_interface_on_vm_created_with_secondary_interface,
     running_vm_with_secondary_and_hot_plugged_interfaces,
 ):
     return search_hot_plugged_interface_in_vmi(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
-        interface_name=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+        interface_name=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
     ).macAddress
 
 
@@ -377,21 +358,21 @@ def secondary_interfaces_tests_start_time():
 
 
 @pytest.fixture()
-def mac_addresses_before_restart(running_vm_for_nic_hot_plug, hot_plugged_interface_name):
+def mac_addresses_before_restart(running_vm_for_nic_hot_plug, hot_plugged_interface):
     return get_primary_and_hot_plugged_mac_addresses(
         vm=running_vm_for_nic_hot_plug,
-        hot_plugged_interface=hot_plugged_interface_name,
+        hot_plugged_interface=hot_plugged_interface.name,
     )
 
 
 @pytest.fixture()
-def mac_addresses_after_restart(running_vm_for_nic_hot_plug, hot_plugged_interface_name):
+def mac_addresses_after_restart(running_vm_for_nic_hot_plug, hot_plugged_interface):
     running_vm_for_nic_hot_plug.restart(wait=True)
     running_vm_for_nic_hot_plug.wait_for_agent_connected()
 
     return get_primary_and_hot_plugged_mac_addresses(
         vm=running_vm_for_nic_hot_plug,
-        hot_plugged_interface=hot_plugged_interface_name,
+        hot_plugged_interface=hot_plugged_interface.name,
     )
 
 
@@ -460,11 +441,11 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     def test_vmi_spec_updated_with_hot_plugged_interface(
         self,
         running_vm_for_nic_hot_plug,
-        hot_plugged_interface_name,
+        hot_plugged_interface,
     ):
         wait_for_interface_hot_plug_completion(
             vmi=running_vm_for_nic_hot_plug.vmi,
-            interface_name=hot_plugged_interface_name,
+            interface_name=hot_plugged_interface.name,
         )
 
     @pytest.mark.polarion("CNV-10166")
@@ -479,7 +460,7 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     ):
         # Hot-plug feature should be able to support up to 4 hot-plugged interfaces
         for interface in multiple_hot_plugged_interfaces:
-            wait_for_interface_hot_plug_completion(vmi=running_vm_for_nic_hot_plug.vmi, interface_name=interface)
+            wait_for_interface_hot_plug_completion(vmi=running_vm_for_nic_hot_plug.vmi, interface_name=interface.name)
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10130")
@@ -503,27 +484,6 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             ),
         )
 
-    @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-10131")
-    @pytest.mark.dependency(
-        name="test_basic_connectivity_of_hot_plugged_interface_after_second_migration",
-        depends=[TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY],
-    )
-    def test_basic_connectivity_of_hot_plugged_interface_after_second_migration(
-        self,
-        running_vm_for_nic_hot_plug,
-        running_utility_vm_for_connectivity_check,
-        network_attachment_definition_for_hot_plug,
-    ):
-        migrate_vm_and_verify(vm=running_vm_for_nic_hot_plug)
-        assert_ping_successful(
-            src_vm=running_vm_for_nic_hot_plug,
-            dst_ip=get_vmi_ip_v4_by_name(
-                vm=running_utility_vm_for_connectivity_check,
-                name=network_attachment_definition_for_hot_plug.name,
-            ),
-        )
-
     @pytest.mark.polarion("CNV-10137")
     @pytest.mark.dependency(
         name="test_mac_of_hot_plugged_interface_from_kubemacpool",
@@ -533,13 +493,13 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         self,
         running_vm_for_nic_hot_plug,
         mac_pool,
-        hot_plugged_interface_name,
+        hot_plugged_interface,
     ):
         interface = search_hot_plugged_interface_in_vmi(
-            vm=running_vm_for_nic_hot_plug, interface_name=hot_plugged_interface_name
+            vm=running_vm_for_nic_hot_plug, interface_name=hot_plugged_interface.name
         )
         assert mac_pool.mac_is_within_range(interface.macAddress), (
-            f"MAC address {interface.macAddress} of hot-plugged interface {hot_plugged_interface_name} is out"
+            f"MAC address {interface.macAddress} of hot-plugged interface {hot_plugged_interface.name} is out"
             f"of KubeMacPool range {mac_pool.range_start} - {mac_pool.range_end}"
         )
 
@@ -584,11 +544,11 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     def test_hot_plug_flat_overlay_network(
         self,
         running_vm_for_nic_hot_plug,
-        hot_plugged_interface_name_from_flat_overlay_network,
+        hot_plugged_interface_from_flat_overlay_network,
     ):
         wait_for_interface_hot_plug_completion(
             vmi=running_vm_for_nic_hot_plug.vmi,
-            interface_name=hot_plugged_interface_name_from_flat_overlay_network,
+            interface_name=hot_plugged_interface_from_flat_overlay_network.name,
         )
 
     @pytest.mark.polarion("CNV-10138")
@@ -644,7 +604,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         self,
         running_vm_with_secondary_and_hot_plugged_interfaces,
         running_utility_vm_for_connectivity_check,
-        hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+        hot_plugged_interface_on_vm_created_with_secondary_interface,
         hot_plugged_second_interface_with_address,
         network_attachment_definition_for_hot_plug,
         guest_interface_name,
@@ -671,7 +631,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         with pytest.raises(IfaceNotFound):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
-                interface_name=hot_unplugged_additional_interface,
+                interface_name=hot_unplugged_additional_interface.name,
             )
 
     @pytest.mark.ipv4

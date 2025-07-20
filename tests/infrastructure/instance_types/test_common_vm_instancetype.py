@@ -1,17 +1,22 @@
+import bitmath
 import pytest
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
-from utilities.constants import QUARANTINED, VIRT_OPERATOR, Images
+from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture(scope="session")
-def fail_if_no_huge_pages(workers):
-    if not any([worker.instance.status.allocatable["hugepages-2Mi"] == "2Gi" for worker in workers]):
-        pytest.fail("Only run on a Cluster with node that has enough huge pages")
+def xfail_if_no_huge_pages(workers):
+    for worker in workers:
+        value = worker.instance.status.allocatable.get("hugepages-1Gi")
+        # all cx1 series require 1Gi hugepages
+        if bitmath.parse_string(f"{value}B") >= bitmath.GiB(1):
+            return
+    pytest.xfail("Only run on a Cluster with node that has enough huge pages")
 
 
 @pytest.mark.sno
@@ -22,21 +27,17 @@ def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: the test need fixes; tracked in CNV-61589",
-    run=False,
-)
 @pytest.mark.hugepages
 @pytest.mark.special_infra
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-10387")
-def test_cx1_instancetype_profile(fail_if_no_huge_pages, unprivileged_client, namespace):
+def test_cx1_instancetype_profile(xfail_if_no_huge_pages, unprivileged_client, namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-cx1",
         namespace=namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="cx1.medium"),
+        vm_instance_type=VirtualMachineClusterInstancetype(name="cx1.medium1gi"),
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
