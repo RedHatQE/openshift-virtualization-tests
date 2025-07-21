@@ -1753,24 +1753,22 @@ def migrate_vm_and_verify(
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
     """
-    create a migration instance. You may choose to wait for migration
+    Create a migration instance. You may choose to wait for migration
     success or not.
 
     Args:
-        vm (VirtualMachine): vm to be migrated
-        client (DynamicClient): client to use for migration
-        wait_for_migration_success (boolean):
-            True = full teardown will be applied.
-            False = no teardown (responsibility on the programmer), and no
+        vm (VirtualMachine): VM to be migrated.
+        client (DynamicClient, default=None): Client to use for migration.
+        timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
+        wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
+        check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
+        wait_for_migration_success (bool, default=True):
+            True = Full teardown will be applied.
+            False = No teardown (responsibility on the programmer), and no
                     wait for migration process to finish.
 
     Returns:
-        VirtualMachineInstanceMigration: if wait_for_migration_success == false
-
-    Raises:
-        AssertionError: if migration ended with SUCCEEDED status, but node was
-                        not changed for migrated vm OR migrationState was not
-                        completed.
+        VirtualMachineInstanceMigration: If wait_for_migration_success == false, else returns None
     """
     node_before = vm.vmi.node
 
