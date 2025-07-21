@@ -289,6 +289,17 @@ def skip_block_volumemode_scope_module(storage_class_matrix__module__):
     _skip_block_volumemode(storage_class_matrix=storage_class_matrix__module__)
 
 
+@pytest.fixture(scope="module")
+def skip_file_system_scope_module(storage_class_matrix__module__):
+    _skip_file_system_volumemode(storage_class_matrix=storage_class_matrix__module__)
+
+
+def _skip_file_system_volumemode(storage_class_matrix):
+    storage_class = [*storage_class_matrix][0]
+    if storage_class_matrix[storage_class]["volume_mode"] == "Filesystem":
+        pytest.skip("Test is not supported on Filesystem volume mode")
+
+
 @pytest.fixture()
 def default_fs_overhead(cdi_config):
     return float(cdi_config.instance.status.filesystemOverhead["global"])
