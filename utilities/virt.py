@@ -1768,12 +1768,7 @@ def migrate_vm_and_verify(
                     wait for migration process to finish.
 
     Returns:
-        VirtualMachineInstanceMigration: If wait_for_migration_success == false
-
-    Raises:
-        AssertionError: If migration ended with SUCCEEDED status, but node was
-                        not changed for migrated vm OR migrationState was not
-                        completed.
+        VirtualMachineInstanceMigration: If wait_for_migration_success == false, else returns None
     """
     node_before = vm.vmi.node
 
