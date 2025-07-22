@@ -301,9 +301,8 @@ def assert_service_mesh_request(expected_output, request_response):
     )
 
 
-def assert_authentication_request(vm, service_app_name):
-    # Envoy proxy IP
-    expected_output = "127.0.0.6"
+def assert_authentication_request(vm, service_app_name, expected_output="127.0.0.6"):
+    # 127.0.0.6 is the default IP for the istio envoy proxy.
     request_response = authentication_request(
         vm=vm,
         service=service_app_name,
