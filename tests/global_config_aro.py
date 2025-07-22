@@ -10,19 +10,19 @@ global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", 
 
 storage_class_matrix = [
     {
-        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
-            "volume_mode": DataVolume.VolumeMode.BLOCK,
+        StorageClassNames.AZURE_FILE_CSI: {
+            "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
             "snapshot": True,
             "online_resize": True,
             "wffc": False,
             "default": True,
         }
-    },
+    }
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
-storage_class_for_storage_migration_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_for_storage_migration_a = StorageClassNames.AZURE_FILE_CSI
+storage_class_for_storage_migration_b = StorageClassNames.AZURE_FILE_CSI
 
 for _dir in dir():
     if not config:  # noqa: F821
