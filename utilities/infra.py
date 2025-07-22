@@ -40,7 +40,6 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
@@ -1134,22 +1133,6 @@ def utility_daemonset_for_custom_tests(
     with DaemonSet(yaml_file=ds_yaml_file) as ds:
         ds.wait_until_deployed()
         yield ds
-
-
-def has_kubevirt_owner(resource):
-    return any([
-        owner_reference.apiVersion.startswith(f"{resource.ApiGroup.KUBEVIRT_IO}/")
-        for owner_reference in resource.instance.metadata.get("ownerReferences", [])
-    ])
-
-
-def get_pod_disruption_budget(admin_client, namespace_name):
-    return list(
-        PodDisruptionBudget.get(
-            dyn_client=admin_client,
-            namespace=namespace_name,
-        )
-    )
 
 
 def login_with_token(api_address, token):
