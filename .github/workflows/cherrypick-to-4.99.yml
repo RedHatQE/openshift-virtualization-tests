@@ -125,6 +125,9 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
+          # Do not create a new commit. The branch is already prepared and pushed.
+          # An empty commit message signals the action to skip the commit phase.
+          commit-message: ''
           title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Automated Cherry-pick
@@ -147,6 +150,9 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
+          # Do not create a new commit. The branch is already prepared and pushed.
+          # An empty commit message signals the action to skip the commit phase.
+          commit-message: ''
           title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Cherry-pick Failed - Manual Intervention Required
