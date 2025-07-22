@@ -654,6 +654,7 @@ class StorageClassNames:
     OCI_UHP = "oci-bv-uhp"
     GCP = "sp-balanced-storage"
     GCNV = "gcnv-flex"
+    AZURE_FILE_CSI = "azurefile-csi"
 
 
 # Namespace constants
