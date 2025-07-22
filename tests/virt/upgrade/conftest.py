@@ -152,17 +152,15 @@ def upgrade_namespaces(upgrade_namespace_scope_session, kmp_enabled_namespace):
 
 @pytest.fixture(scope="session")
 def migratable_vms(admin_client, upgrade_namespaces):
-    all_vms_list = [
-        vm for ns in upgrade_namespaces for vm in list(VirtualMachine.get(client=admin_client, namespace=ns.name))
-    ]
-    migratable_vms = [
-        vm
-        for vm in all_vms_list
-        if any(
-            condition.type == "LiveMigratable" and condition.status == "True"
-            for condition in vm.vmi.instance.status.conditions
-        )
-    ]
+    migratable_vms = []
+    for ns in upgrade_namespaces:
+        for vm in list(VirtualMachine.get(client=admin_client, namespace=ns.name)):
+            if any(
+                condition.type == "LiveMigratable" and condition.status == "True"
+                for condition in vm.vmi.instance.status.conditions
+            ):
+                migratable_vms.append(vm)
+
     LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
     return migratable_vms
 
