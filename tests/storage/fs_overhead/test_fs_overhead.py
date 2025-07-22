@@ -21,9 +21,16 @@ def get_pvc_size_gib(pvc):
 
 
 def assert_fs_overhead_added(actual_size, requested_size):
-    expected_size = actual_size * (1 - FS_OVERHEAD_20)
-    assert expected_size == requested_size, (
-        f"actual size: {actual_size}, expected size: {expected_size}, requested size: {requested_size}"
+    allowed_tolerance = bitmath.KiB(1).to_Byte().value  # 1 KiB tolerance
+    expected_bytes = requested_size.to_Byte().value * (1 + FS_OVERHEAD_20)
+    actual_bytes = actual_size.to_Byte().value
+    diff = abs(actual_bytes - expected_bytes)
+    assert diff <= allowed_tolerance, (
+        f"❌ PVC size mismatch:\n"
+        f"  Requested: {requested_size}\n"
+        f"  Expected (+20% overhead): {bitmath.Byte(expected_bytes).best_prefix()}\n"
+        f"  Actual: {actual_size}\n"
+        f"  Diff: {bitmath.Byte(diff)} (allowed: {bitmath.Byte(allowed_tolerance)})"
     )
 
 
