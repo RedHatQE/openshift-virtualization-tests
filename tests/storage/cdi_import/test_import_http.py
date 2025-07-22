@@ -360,6 +360,7 @@ def test_successful_import_basic_auth(
     indirect=True,
 )
 def test_wrong_content_type(
+    skip_test_if_no_filesystem_sc,
     admin_client,
     dv_from_http_import,
 ):
@@ -400,6 +401,7 @@ def test_wrong_content_type(
     indirect=True,
 )
 def test_unpack_compressed(
+    skip_test_if_no_filesystem_sc,
     admin_client,
     dv_from_http_import,
 ):
