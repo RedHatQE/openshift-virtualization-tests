@@ -81,7 +81,7 @@ def uploaded_cirros_dv(
 @pytest.mark.polarion("CNV-8635")
 def test_import_vm_with_specify_fs_overhead(
     skip_test_if_no_filesystem_sc,
-    updated_fs_overhead_20_with_hco, 
+    updated_fs_overhead_20_with_hco,
     vm_for_fs_overhead_test,
 ):
     vm_metadata = vm_for_fs_overhead_test.data_volume_template["metadata"]
