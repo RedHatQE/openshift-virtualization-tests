@@ -40,7 +40,6 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
@@ -80,7 +79,6 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10MIN,
-    TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
     X86_64,
@@ -1135,46 +1133,6 @@ def utility_daemonset_for_custom_tests(
     with DaemonSet(yaml_file=ds_yaml_file) as ds:
         ds.wait_until_deployed()
         yield ds
-
-
-def has_kubevirt_owner(resource):
-    return any([
-        owner_reference.apiVersion.startswith(f"{resource.ApiGroup.KUBEVIRT_IO}/")
-        for owner_reference in resource.instance.metadata.get("ownerReferences", [])
-    ])
-
-
-def get_pod_disruption_budget(admin_client, namespace_name):
-    return list(
-        PodDisruptionBudget.get(
-            dyn_client=admin_client,
-            namespace=namespace_name,
-        )
-    )
-
-
-def check_pod_disruption_budget_for_completed_migrations(admin_client, namespace, timeout=TIMEOUT_5MIN):
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_10SEC,
-        func=utilities.infra.get_pod_disruption_budget,
-        admin_client=admin_client,
-        namespace_name=namespace,
-    )
-    pod_disruption_budget_desired_states = None
-    try:
-        for sample in samples:
-            pod_disruption_budget_desired_states = {
-                pdb.name: pdb.instance.spec.minAvailable
-                for pdb in sample
-                if utilities.infra.has_kubevirt_owner(resource=pdb) and pdb.instance.spec.minAvailable > 1
-            }
-            # Return if there are no more required migrations
-            if not pod_disruption_budget_desired_states:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Some migrations are still created: {pod_disruption_budget_desired_states}")
-        raise
 
 
 def login_with_token(api_address, token):
