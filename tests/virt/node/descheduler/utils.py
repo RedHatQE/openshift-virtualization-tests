@@ -74,24 +74,6 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
             metadata["annotations"]["descheduler.alpha.kubernetes.io/evict"] = "true"
 
 
-def get_allocatable_memory_per_node(schedulable_nodes):
-    """
-    Node capacity & allocatable statuses determine how much of a resource we can "request".
-    A node may or may not have any allocatable values set by the admin, in which case, we fall back to the capacity.
-    """
-    nodes_memory = {}
-    for node in schedulable_nodes:
-        # memory format does not include the Bytes suffix(e.g: 23514144Ki)
-        memory = getattr(
-            node.instance.status.allocatable,
-            "memory",
-            node.instance.status.capacity.memory,
-        )
-        nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
-        LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
-    return nodes_memory
-
-
 def calculate_vm_deployment(
     available_memory_per_node,
     deployment_size,
