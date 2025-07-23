@@ -25,7 +25,7 @@ from tests.virt.upgrade.utils import (
 from tests.virt.utils import assert_migration_post_copy_mode
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
-from utilities.virt import is_jira_64988_bug_open, migrate_vm_and_verify, vm_console_run_commands
+from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
 VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID = f"{VIRT_NODE_ID_PREFIX}::test_is_vm_running_after_upgrade"
@@ -158,7 +158,6 @@ class TestUpgradeVirt:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    @pytest.mark.jira("CNV-64988", run=False)
     def test_vmi_pod_image_updates_after_upgrade_optin(
         self,
         unupdated_vmi_pods_names,
@@ -184,8 +183,7 @@ class TestUpgradeVirt:
     def test_is_vm_running_after_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
-        if not is_jira_64988_bug_open():
-            verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
+        verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
@@ -263,8 +261,7 @@ class TestUpgradeVirt:
         windows_boot_time_before_upgrade,
     ):
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
-        if not is_jira_64988_bug_open():
-            verify_windows_boot_time(windows_vm=windows_vm, initial_boot_time=windows_boot_time_before_upgrade)
+        verify_windows_boot_time(windows_vm=windows_vm, initial_boot_time=windows_boot_time_before_upgrade)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.polarion("CNV-2979")

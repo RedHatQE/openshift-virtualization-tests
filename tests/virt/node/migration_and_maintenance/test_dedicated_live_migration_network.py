@@ -241,7 +241,6 @@ class TestDedicatedLiveMigrationNetwork:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-7880")
-    @pytest.mark.jira("CNV-64988", run=False)
     def test_drain_node_with_secondary_network(
         self,
         admin_client,

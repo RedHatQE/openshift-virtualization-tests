@@ -123,8 +123,7 @@ class TestPostCopyMigration:
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::node_drain", depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-11422")
-    @pytest.mark.jira("CNV-64988", run=False)
-    def test_node_drain(self, admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
+    def test_node_drain(self, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 
