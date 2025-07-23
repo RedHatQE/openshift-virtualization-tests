@@ -48,17 +48,21 @@ def get_pod_total_cpu_memory(pod_instance):
 
     total_resources = {"limits": {"cpu": 0, "memory": 0}, "requests": {"cpu": 0, "memory": 0}}
 
-    # sum CPU and memory for all containers
-    for container in pod_instance.spec.containers:
-        total_resources["limits"]["cpu"] += _convert_cpu(container.resources.limits.get("cpu", 0))
-        total_resources["limits"]["memory"] += int(
-            bitmath.parse_string_unsafe(container.resources.limits.get("memory", "0B")).to_Byte()
-        )
+    # sum CPU and memory for all containers, including initContainers
+    # virt-launcher pods may have extra containers like guest-console-log
+    all_containers = pod_instance.spec.containers + pod_instance.spec.initContainers
+    containers_statuses = pod_instance.status.containerStatuses + pod_instance.status.initContainerStatuses
+    for container, status in zip(all_containers, containers_statuses):
+        if status.state and status.state.running:
+            total_resources["limits"]["cpu"] += _convert_cpu(container.resources.limits.get("cpu", 0))
+            total_resources["limits"]["memory"] += int(
+                bitmath.parse_string_unsafe(container.resources.limits.get("memory", "0B")).to_Byte()
+            )
 
-        total_resources["requests"]["cpu"] += _convert_cpu(container.resources.requests.get("cpu", 0))
-        total_resources["requests"]["memory"] += int(
-            bitmath.parse_string_unsafe(container.resources.requests.get("memory", "0B")).to_Byte()
-        )
+            total_resources["requests"]["cpu"] += _convert_cpu(container.resources.requests.get("cpu", 0))
+            total_resources["requests"]["memory"] += int(
+                bitmath.parse_string_unsafe(container.resources.requests.get("memory", "0B")).to_Byte()
+            )
 
     total_resources["limits"]["cpu"] = f"{total_resources['limits']['cpu']}m"
     total_resources["requests"]["cpu"] = f"{total_resources['requests']['cpu']}m"
