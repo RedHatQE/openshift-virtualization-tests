@@ -762,6 +762,8 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
             if "swap" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.WASP)
+            if "descheduler" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
