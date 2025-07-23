@@ -61,7 +61,10 @@ def golden_images_rhel9_data_source(golden_images_namespace):
 
 @pytest.fixture(scope="module")
 def mig_cluster(admin_client):
-    return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=admin_client, ensure_exists=True)
+    try:
+        return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=admin_client, ensure_exists=True)
+    except Exception as exp:
+        pytest.xfail(reason=f"Failed to locate MigCluster in namespace '{OPENSHIFT_MIGRATION_NAMESPACE}': {exp}")
 
 
 @pytest.fixture(scope="class")
