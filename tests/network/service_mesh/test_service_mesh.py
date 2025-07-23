@@ -95,7 +95,6 @@ class TestSMPeerAuthentication:
         httpbin_service_service_mesh,
         outside_mesh_console_ready_vm,
     ):
-        expected_failure_output = "curl: (56) Recv failure"
         # We must specify the full service DNS name since the VM is outside the mesh in a different namespace
         # Format: http://<service_name>.<service_namespace>.svc.cluster.local
         assert_authentication_request(
@@ -103,7 +102,7 @@ class TestSMPeerAuthentication:
             service_app_name=(
                 f"{httpbin_service_service_mesh.app_name}.{httpbin_service_service_mesh.namespace}.svc.cluster.local"
             ),
-            expected_output=expected_failure_output,
+            expected_output="curl: (56) Recv failure",
         )
 
     @pytest.mark.polarion("CNV-7128")
