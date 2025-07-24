@@ -75,7 +75,7 @@ dependencies = [
   "timeout-sampler>=1.0.1",
   "urllib3>=2.2.3",
   "xmltodict>=0.14.2",
-  "marshmallow~=3.26.1",
+  "marshmallow~=4.0.0",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
 ]
