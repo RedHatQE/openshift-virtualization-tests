@@ -215,7 +215,7 @@ class TestWFFCUploadVirtctl:
         with virtctl_upload_dv(
             namespace=vm_from_uploaded_dv.namespace,
             name=WFFC_DV_NAME,
-            size=Images.Cirros.DEFAULT_DV_SIZE,
+            size="2Gi",
             image_path=downloaded_cirros_image_full_path,
             storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
             insecure=True,
