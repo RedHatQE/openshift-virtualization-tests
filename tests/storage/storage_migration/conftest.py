@@ -139,10 +139,16 @@ def target_storage_class(request, cluster_storage_classes_names):
 def vm_for_storage_class_migration_with_instance_type(
     unprivileged_client,
     namespace,
-    golden_images_fedora_data_source,
+    golden_images_namespace,
     source_storage_class,
     cpu_for_migration,
 ):
+    golden_images_fedora_data_source = DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
     with VirtualMachineForTests(
         name="vm-with-instance-type",
         namespace=namespace.name,

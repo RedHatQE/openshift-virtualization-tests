@@ -31,7 +31,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage, pytest.mark.jira("CNV-64988", run=False)]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.rwx_default_storage]
 
 
 LOGGER = logging.getLogger(__name__)

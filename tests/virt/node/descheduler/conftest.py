@@ -26,10 +26,7 @@ from tests.virt.node.descheduler.utils import (
 )
 from tests.virt.utils import get_allocatable_memory_per_node, get_match_expressions_dict, start_stress_on_vm
 from utilities.constants import TIMEOUT_5SEC
-from utilities.infra import (
-    check_pod_disruption_budget_for_completed_migrations,
-    wait_for_pods_deletion,
-)
+from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
     node_mgmt_console,
     wait_for_node_schedulable_status,
@@ -169,11 +166,6 @@ def drain_uncordon_node(
         for vm in deployed_vms_for_descheduler_test:
             if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
                 wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
-
-
-@pytest.fixture()
-def completed_migrations(admin_client, namespace):
-    check_pod_disruption_budget_for_completed_migrations(admin_client=admin_client, namespace=namespace.name)
 
 
 @pytest.fixture(scope="class")

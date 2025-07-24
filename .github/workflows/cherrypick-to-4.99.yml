@@ -23,99 +23,124 @@ jobs:
 
       - name: Configure Git
         # Configure Git user for commits made directly in the workflow
-        # The create-pull-request action handles its own commit authorship.
         run: |
           git config user.name "${{ secrets.GH_BOT_USERNAME }}"
           git config user.email "${{ secrets.GH_BOT_EMAIL }}"
 
-      - name: Get latest commit from main # Renamed step for clarity
-        id: get_latest_commit # Updated ID
+      - name: Get latest commit from main
+        id: get_latest_commit
         run: |
           LATEST_COMMIT_SHA=$(git rev-parse HEAD)
           echo "Latest commit on main: $LATEST_COMMIT_SHA"
 
-          # Removed the merge commit check. The workflow will now always attempt
-          # to cherry-pick the latest commit on 'main'.
           # If the latest commit is a merge, keep its 1st parent as mainline
           if [ "$(git rev-list --parents -n1 "$LATEST_COMMIT_SHA" | wc -w)" -gt 2 ]; then
-            COMMIT_TO_CHERRY_PICK="$LATEST_COMMIT_SHA"
             echo "note: $LATEST_COMMIT_SHA is a merge commit – will cherry-pick with -m 1"
             echo "mainline_parent=1" >> "$GITHUB_OUTPUT"
           else
-            COMMIT_TO_CHERRY_PICK="$LATEST_COMMIT_SHA"
             echo "mainline_parent=" >> "$GITHUB_OUTPUT"
           fi
-          echo "Commit to cherry-pick: $COMMIT_TO_CHERRY_PICK"
-          echo "commit_sha=$COMMIT_TO_CHERRY_PICK" >> "$GITHUB_OUTPUT"
-          echo "commit_message=$(git log -1 --format=%s "$COMMIT_TO_CHERRY_PICK")" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$LATEST_COMMIT_SHA" >> "$GITHUB_OUTPUT"
+
+          # Safely set the commit message and body outputs, which may contain special characters.
+          # We use the heredoc syntax for GITHUB_OUTPUT, which is the most robust method.
+          COMMIT_MESSAGE=$(git log -1 --format=%s "$LATEST_COMMIT_SHA")
+          DELIMITER_MSG=$(openssl rand -hex 16)
           {
-            echo 'commit_body<<EOF'
-            git log -1 --format=%b "$COMMIT_TO_CHERRY_PICK"
-            echo 'EOF'
+            echo "commit_message<<$DELIMITER_MSG"
+            echo "$COMMIT_MESSAGE"
+            echo "$DELIMITER_MSG"
+          } >> "$GITHUB_OUTPUT"
+
+          COMMIT_BODY=$(git log -1 --format=%b "$LATEST_COMMIT_SHA")
+          DELIMITER_BODY=$(openssl rand -hex 16)
+          {
+            echo "commit_body<<$DELIMITER_BODY"
+            echo "$COMMIT_BODY"
+            echo "$DELIMITER_BODY"
           } >> "$GITHUB_OUTPUT"
 
       - name: Attempt Cherry-pick and Prepare Branch
         id: prepare_branch
-        # Removed the 'if' condition based on merge commit status, as we now always attempt cherry-pick
         run: |
+          # Capture all workflow expansions into shell variables at the top.
+          # This improves readability and prevents shell re-interpretation issues.
           TARGET_BRANCH="cnv-4.99"
-          COMMIT_SHA="${{ steps.get_latest_commit.outputs.commit_sha }}" # Updated reference
-          COMMIT_MESSAGE_SHORT="${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
+          COMMIT_SHA="${{ steps.get_latest_commit.outputs.commit_sha }}"
+          COMMIT_MESSAGE_SHORT="${{ steps.get_latest_commit.outputs.commit_message }}"
+          MAINLINE_PARENT="${{ steps.get_latest_commit.outputs.mainline_parent }}"
           TEMP_BRANCH_NAME="cherry-pick-auto/${{ github.event.after }}-${{ github.run_id }}"
+          STATUS="no_change" # Default status
 
           echo "Attempting to cherry-pick $COMMIT_SHA to $TARGET_BRANCH on temporary branch $TEMP_BRANCH_NAME"
 
           # Fetch the target branch to ensure it's up-to-date locally
-          git fetch origin $TARGET_BRANCH:$TARGET_BRANCH
+          git fetch origin "$TARGET_BRANCH"
 
-          # Create and switch to the new temporary branch
+          # Create and switch to the new temporary branch from the target branch
           git checkout -b "$TEMP_BRANCH_NAME" "origin/$TARGET_BRANCH"
 
-          # Attempt to cherry-pick the commit.
-          # --no-commit: apply changes but don't commit yet.
-          # --keep-redundant-commits: don't skip if commit already exists (useful for re-runs).
+          # Prepare cherry-pick options
           MAINLINE_OPT=""
-          if [[ -n "${{ steps.get_latest_commit.outputs.mainline_parent }}" ]]; then
-            MAINLINE_OPT="-m ${{ steps.get_latest_commit.outputs.mainline_parent }}"
+          if [[ -n "$MAINLINE_PARENT" ]]; then
+            MAINLINE_OPT="-m $MAINLINE_PARENT"
           fi
 
+          # Attempt to cherry-pick the commit. We use --no-commit to inspect the result.
           if git cherry-pick $MAINLINE_OPT --no-commit --keep-redundant-commits "$COMMIT_SHA"; then
-            echo "Cherry-pick applied successfully to temporary branch."
-            git commit -m "Cherry-pick: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-            echo "status=success" >> "$GITHUB_OUTPUT"
+            # Cherry-pick command succeeded. Now check if there are actual changes.
+            # `git diff --cached --quiet` exits with 1 if there are staged changes, 0 otherwise.
+            if ! git diff --cached --quiet; then
+              echo "Cherry-pick applied successfully with changes. Committing."
+              git commit -m "Cherry-pick: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
+              STATUS="success"
+            else
+              echo "Cherry-pick was successful but resulted in no changes. The commit may already be on the target branch."
+              # Abort the cherry-pick to clean up the repository state (.git/CHERRY_PICK_HEAD).
+              git cherry-pick --quit
+              STATUS="no_change"
+            fi
           else
-            echo "Cherry-pick resulted in conflicts. Committing conflicted state to temporary branch."
-            # Add all changes, including conflict markers, to the staging area
+            # Cherry-pick command failed, indicating a conflict.
+            echo "Cherry-pick resulted in conflicts. Committing conflicted state for manual resolution."
             git add .
-            # Commit the conflicted state. This allows the PR to show the conflicts.
             git commit -m "Cherry-pick Conflicts: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-            echo "status=conflicted" >> "$GITHUB_OUTPUT"
+            STATUS="conflicted"
           fi
 
-          # Push the temporary branch to the remote
-          git push origin "$TEMP_BRANCH_NAME"
+          echo "Final status: $STATUS"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
-          echo "temp_branch_name=$TEMP_BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          # Only push the branch and set the output if a PR needs to be created.
+          if [[ "$STATUS" == "success" || "$STATUS" == "conflicted" ]]; then
+            echo "Pushing temporary branch $TEMP_BRANCH_NAME to origin."
+            git push origin "$TEMP_BRANCH_NAME"
+            echo "temp_branch_name=$TEMP_BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "No PR will be created as there are no changes."
+          fi
 
       - name: Create Pull Request for Successful Cherry-pick
         if: steps.prepare_branch.outputs.status == 'success'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
-          commit-message: "Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }} (from ${{ steps.get_latest_commit.outputs.commit_sha }})" # Updated reference
-          title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
+          # Do not create a new commit. The branch is already prepared and pushed.
+          # An empty commit message signals the action to skip the commit phase.
+          commit-message: ''
+          title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Automated Cherry-pick
 
             This Pull Request contains the automatically cherry-picked commit:
-            `${{ steps.get_latest_commit.outputs.commit_sha }}` # Updated reference
-            "${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
+            `${{ steps.get_latest_commit.outputs.commit_sha }}`
+            "${{ steps.get_latest_commit.outputs.commit_message }}"
 
             The cherry-pick was applied cleanly to `cnv-4.99`. Please review and merge.
 
-            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }} # Updated reference
+            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }}
             ---
-            ${{ steps.get_latest_commit.outputs.commit_body }} # Updated reference
+            ${{ steps.get_latest_commit.outputs.commit_body }}
           branch: ${{ steps.prepare_branch.outputs.temp_branch_name }}
           base: "cnv-4.99"
           delete-branch: true
@@ -125,20 +150,22 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
-          commit-message: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }} (from ${{ steps.get_latest_commit.outputs.commit_sha }})" # Updated reference
-          title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}" # Updated reference
+          # Do not create a new commit. The branch is already prepared and pushed.
+          # An empty commit message signals the action to skip the commit phase.
+          commit-message: ''
+          title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Cherry-pick Failed - Manual Intervention Required
 
-            The automatic cherry-pick of commit `${{ steps.get_latest_commit.outputs.commit_sha }}` # Updated reference
-            "${{ steps.get_latest_commit.outputs.commit_message }}" from `main` to `cnv-4.99` has resulted in conflicts. # Updated reference
+            The automatic cherry-pick of commit `${{ steps.get_latest_commit.outputs.commit_sha }}`
+            "${{ steps.get_latest_commit.outputs.commit_message }}" from `main` to `cnv-4.99` has resulted in conflicts.
 
             This Pull Request has been created with the conflicted state. Please resolve the conflicts
             and merge this PR into `cnv-4.99`.
 
-            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }} # Updated reference
+            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }}
             ---
-            ${{ steps.get_latest_commit.outputs.commit_body }} # Updated reference
+            ${{ steps.get_latest_commit.outputs.commit_body }}
           branch: ${{ steps.prepare_branch.outputs.temp_branch_name }}
           base: "cnv-4.99"
           delete-branch: true

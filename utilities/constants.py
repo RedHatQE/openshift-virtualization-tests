@@ -313,6 +313,7 @@ UNPRIVILEGED_PASSWORD = "unprivileged-password"
 
 # KUBECONFIG variables
 KUBECONFIG = "KUBECONFIG"
+REMOTE_KUBECONFIG = "REMOTE_KUBECONFIG"
 
 # commands
 LS_COMMAND = "ls -1 | sort | tr '\n' ' '"
@@ -716,7 +717,11 @@ WILDCARD_CRON_EXPRESSION = "* * * * *"
 OUTDATED = "Outdated"
 
 RHEL_WITH_INSTANCETYPE_AND_PREFERENCE = "rhel-with-instancetype-and-preference"
+CENTOS_STREAM9_PREFERENCE = "centos.stream9"
+CENTOS_STREAM10_PREFERENCE = "centos.stream10"
+RHEL8_PREFERENCE = "rhel.8"
 RHEL9_PREFERENCE = "rhel.9"
+RHEL10_PREFERENCE = "rhel.10"
 U1_SMALL = "u1.small"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"
