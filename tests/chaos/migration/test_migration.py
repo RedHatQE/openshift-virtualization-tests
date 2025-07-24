@@ -31,6 +31,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "pod_deleting_process",
@@ -135,6 +136,7 @@ def test_stress_migration_target_node(
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, pod_deleting_process",
     [
