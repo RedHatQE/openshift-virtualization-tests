@@ -2,7 +2,9 @@ import http
 import json
 import logging
 import multiprocessing
+import queue
 import random
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
@@ -415,3 +417,126 @@ def get_instance_type(name):
     if not instance_type.exists:
         raise ResourceNotFoundError(f"Required instance type {name} does not exist")
     return instance_type
+
+
+def run_command_in_pod_async(
+    exec_obj,
+    command,
+    timeout,
+    thread_name="background_thread",
+    retries=0,
+    retry_interval=5,
+):
+    """
+    Run a command asynchronously inside a pod using threading, with optional retries.
+
+    Args:
+        exec_obj (ExecCommandOnPod): object to run commands in pod
+        command (str): command to run
+        timeout (int): timeout for each run (in seconds)
+        thread_name (str): name for thread
+        retries (int): number of retries on failure (default: 0)
+        retry_interval (int): seconds to wait between retries
+
+    Returns:
+        (threading.Thread, queue.Queue): thread handle and result queue with:
+            {
+                "success": True/False,
+                "output": str or None,
+                "error": str or None,
+                "attempt": int (1-based),
+            }
+    """
+    result_queue = queue.Queue()
+
+    def _worker():
+        attempt = 1
+        while attempt <= (1 + retries):
+            try:
+                LOGGER.info(f"[{thread_name}] Attempt {attempt}: Running command: {command}")
+                output = exec_obj.exec(
+                    command=command,
+                    chroot_host=False,
+                    timeout=timeout,
+                )
+                LOGGER.info(f"[{thread_name}] Command succeeded on attempt {attempt}")
+                result_queue.put({
+                    "success": True,
+                    "output": output,
+                    "error": None,
+                    "attempt": attempt,
+                })  # noqa: FCN001
+                return
+            except Exception as e:
+                LOGGER.warning(f"[{thread_name}] Attempt {attempt} failed: {e}")
+                if attempt <= retries:
+                    LOGGER.info(f"[{thread_name}] Retrying in {retry_interval}s...")
+                    time.sleep(retry_interval)
+                attempt += 1
+
+        # All retries exhausted
+        LOGGER.error(f"[{thread_name}] All {1 + retries} attempts failed")
+        result_queue.put({
+            "success": False,
+            "output": None,
+            "error": f"Command failed after {1 + retries} attempts",
+            "attempt": attempt - 1,
+        })  # noqa: FCN001
+
+    thread = threading.Thread(target=_worker, name=thread_name)
+    thread.start()
+    LOGGER.info(f"[{thread_name}] Thread started with up to {1 + retries} attempts")
+
+    return thread, result_queue
+
+
+def get_process_pid_in_utility_pod(exec_obj, process_name):
+    """
+    Check once if a given process is running in the utility pod.
+
+    Args:
+        exec_obj (ExecCommandOnPod): The exec interface to utility pod.
+        process_name (str): The name or pattern of the process (used in pgrep -f).
+        retries (int): Max retries to poll for the process.
+        interval (int): Seconds to wait between retries.
+
+    Returns:
+        str or None: PID if found, else None.
+    """
+    try:
+        output = exec_obj.exec(
+            command=f"pgrep -f {process_name}",
+            chroot_host=False,
+            timeout=30,
+        )
+        pids = output.strip().split("\n")
+        if pids and pids[0].strip():
+            LOGGER.info(f"[process probe] Found '{process_name}' with PID(s): {pids}")
+            return pids[0]
+    except Exception as e:
+        LOGGER.debug(f"[process probe] Error probing '{process_name}': {e}")
+    return None
+
+
+def wait_for_process_to_start(probe_func, node, timeout=120, sleep=5):
+    """
+    Wait for a specific process to be detected running on the target node.
+
+    Args:
+        probe_func (Callable): Probe function that takes node and returns PID or None.
+        node (Node): Node to run probe on.
+        timeout (int): Total wait time in seconds.
+        sleep (int): Sleep interval between attempts.
+
+    Returns:
+        str: PID of detected process.
+
+    Raises:
+        AssertionError: If process is not detected within timeout.
+    """
+    for pid in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: probe_func(node)):
+        if pid:
+            LOGGER.info(f"[process wait] Process started with PID: {pid}")
+            return pid
+
+    raise AssertionError(f"[process wait] Process not running on {node.name} after {timeout}s")
