@@ -26,6 +26,8 @@ def fedora_vm(unprivileged_client, namespace):
 
 
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1275")
 def test_owner_references_on_vm(fedora_vm):
     """
