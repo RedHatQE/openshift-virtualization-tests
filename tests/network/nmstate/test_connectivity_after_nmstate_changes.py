@@ -294,6 +294,7 @@ class TestConnectivityAfterNmstateChanged:
     ):
         assert_ssh_alive(ssh_vm=nmstate_linux_bridge_attached_running_vmb, src_ip=vma_src_ip)
 
+    @pytest.mark.conformance
     @pytest.mark.gating
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5839")

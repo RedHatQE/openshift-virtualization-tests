@@ -105,7 +105,7 @@ def test_auto_limits_set_one_resource(
                 "cpu_limits": "2",
                 "memory_limits": "2Gi",
             },
-            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating()),
+            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating, pytest.mark.conformance),
         ),
     ],
     indirect=True,

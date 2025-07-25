@@ -44,6 +44,7 @@ def test_report_masquerade_ip(report_masquerade_ip_vmi):
     assert_ip_mismatch(vm=report_masquerade_ip_vmi)
 
 
+@pytest.mark.conformance
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-4153")
 @pytest.mark.single_nic
