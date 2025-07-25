@@ -2,28 +2,28 @@ import logging
 
 import pytest
 
-from utilities.constants import OS_FLAVOR_CIRROS, Images
+from utilities.constants import OS_FLAVOR_FEDORA, Images
 from utilities.infra import get_node_selector_dict
-from utilities.virt import CIRROS_IMAGE, VirtualMachineForTests
+from utilities.virt import FEDORA_IMAGE, VirtualMachineForTests
 
 DHCPV6_PORT = 547
-VM_CIRROS = "vm-cirros"
+VM_FEDORA = "vm-fedora"
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def vm_cirros(
+def vm_fedora(
     worker_node1,
     unprivileged_client,
     namespace,
 ):
     with VirtualMachineForTests(
-        name=VM_CIRROS,
+        name=VM_FEDORA,
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=OS_FLAVOR_FEDORA,
         memory_requests=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        image=CIRROS_IMAGE,
+        image=FEDORA_IMAGE,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as vm:
         vm.start(wait=True)
@@ -37,7 +37,7 @@ def fail_if_not_ipv4_single_stack_cluster(ipv4_supported_cluster, ipv6_supported
 
 
 @pytest.fixture()
-def virt_launcher_pid(worker_node1_pod_executor, vm_cirros):
+def virt_launcher_pid(worker_node1_pod_executor, vm_fedora):
     """
     Find the compute container (outcome of the VM created for this test) and extract the vm_cirros virt-launcher PID.
     """
@@ -46,14 +46,14 @@ def virt_launcher_pid(worker_node1_pod_executor, vm_cirros):
     assert compute_containers, "No compute container was found!"
 
     for container in compute_containers.split("\n"):
-        if vm_cirros.name in worker_node1_pod_executor.exec(
+        if vm_fedora.name in worker_node1_pod_executor.exec(
             command=f'{crictl_cmd} inspect {container} | grep "hostname"'
         ):
-            vm_cirros_compute_container = container
+            vm_fedora_compute_container = container
             break
 
     return worker_node1_pod_executor.exec(
-        command=f"{crictl_cmd} inspect --output go-template --template {{{{.info.pid}}}} {vm_cirros_compute_container}"
+        command=f"{crictl_cmd} inspect --output go-template --template {{{{.info.pid}}}} {vm_fedora_compute_container}"
     )
 
 
@@ -76,7 +76,7 @@ def listening_dhcpv6_pid_in_virt_launcher_pod(worker_node1_pod_executor, virt_la
 @pytest.mark.single_nic
 def test_dhcp6_disabled_on_ipv4_single_stack_cluster(
     fail_if_not_ipv4_single_stack_cluster,
-    vm_cirros,
+    vm_fedora,
     listening_dhcpv6_pid_in_virt_launcher_pod,
 ):
     """
