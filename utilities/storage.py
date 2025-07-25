@@ -99,6 +99,17 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         )
 
 
+def adjust_size_based_on_sc(storage_class, requested_size_gi=5):
+    storage_class_dict = get_storage_class_dict_from_matrix(storage_class=storage_class)
+    storage_class = [*storage_class_dict][0]
+    volume_mode = storage_class_dict[storage_class]["volume_mode"].lower()
+    if volume_mode == "filesystem":
+        overhead_percent = 20
+        return requested_size_gi * (1 + overhead_percent / 100)
+
+    return requested_size_gi
+
+
 @contextmanager
 def create_dv(
     dv_name,
@@ -108,7 +119,7 @@ def create_dv(
     url=None,
     source="http",
     content_type=DataVolume.ContentType.KUBEVIRT,
-    size="5Gi",
+    size=None,
     secret=None,
     cert_configmap=None,
     hostpath_node=None,
@@ -123,6 +134,11 @@ def create_dv(
     preallocation=None,
     api_name="storage",
 ):
+    # If size is not provided, calculate it using the SC info
+    if size is None:
+        adjusted_size_gi = adjust_size_based_on_sc(storage_class=storage_class)
+        size = f"{adjusted_size_gi}Gi"
+
     artifactory_secret = None
     cert_created = None
     if source in ("http", "https"):
