@@ -592,6 +592,7 @@ cdi-operator:
     - get
   - apiGroups:
     - cdi.kubevirt.io
+    - forklift.cdi.kubevirt.io
     resources:
     - '*'
     verbs:
@@ -651,15 +652,6 @@ cdi-operator:
     - virtualmachines/finalizers
     verbs:
     - update
-  - apiGroups:
-    - forklift.cdi.kubevirt.io
-    resources:
-    - ovirtvolumepopulators
-    - openstackvolumepopulators
-    verbs:
-    - get
-    - list
-    - watch
   - apiGroups:
     - ''
     resources:
@@ -1189,6 +1181,18 @@ cluster-network-addons-operator:
     - get
     - create
     - update
+    - delete
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - networkpolicies
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
     - delete
 hostpath-provisioner-operator:
   cluster_permission:
@@ -2172,6 +2176,7 @@ kubevirt-operator:
     - persistentvolumeclaims
     verbs:
     - get
+    - list
   - apiGroups:
     - kubevirt.io
     resources:
@@ -2568,6 +2573,15 @@ kubevirt-operator:
     - get
     - delete
   - apiGroups:
+    - resource.k8s.io
+    resources:
+    - resourceslices
+    - resourceclaims
+    verbs:
+    - list
+    - watch
+    - get
+  - apiGroups:
     - kubevirt.io
     resources:
     - virtualmachineinstances
@@ -2641,6 +2655,48 @@ kubevirt-operator:
   - apiGroups:
     - kubevirt.io
     resources:
+    - virtualmachineinstances
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+  - apiGroups:
+    - kubevirt.io
+    resources:
+    - virtualmachineinstancemigrations
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - kubevirt.io
+    resources:
+    - kubevirts
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ''
+    resources:
+    - events
+    verbs:
+    - update
+    - create
+    - patch
+  - apiGroups:
+    - apiextensions.k8s.io
+    resources:
+    - customresourcedefinitions
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - kubevirt.io
+    resources:
     - kubevirts
     verbs:
     - get
@@ -2666,6 +2722,8 @@ kubevirt-operator:
     - virtualmachineinstances/sev/fetchcertchain
     - virtualmachineinstances/sev/querylaunchmeasurement
     - virtualmachineinstances/usbredir
+    - virtualmachines/objectgraph
+    - virtualmachineinstances/objectgraph
     verbs:
     - get
   - apiGroups:
@@ -2822,6 +2880,8 @@ kubevirt-operator:
     - virtualmachineinstances/sev/fetchcertchain
     - virtualmachineinstances/sev/querylaunchmeasurement
     - virtualmachineinstances/usbredir
+    - virtualmachines/objectgraph
+    - virtualmachineinstances/objectgraph
     verbs:
     - get
   - apiGroups:
@@ -2982,6 +3042,8 @@ kubevirt-operator:
     - virtualmachineinstances/userlist
     - virtualmachineinstances/sev/fetchcertchain
     - virtualmachineinstances/sev/querylaunchmeasurement
+    - virtualmachines/objectgraph
+    - virtualmachineinstances/objectgraph
     verbs:
     - get
   - apiGroups:
@@ -3107,6 +3169,8 @@ kubevirt-operator:
     - kubevirt-virt-api-certs
     - kubevirt-controller-certs
     - kubevirt-exportproxy-certs
+    - kubevirt-synchronization-controller-certs
+    - kubevirt-synchronization-controller-server-certs
     resources:
     - secrets
     verbs:
@@ -3218,6 +3282,28 @@ kubevirt-operator:
     - get
     - list
     - watch
+  - apiGroups:
+    - ''
+    resourceNames:
+    - kubevirt-ca
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - get
+    - list
+    - watch
+    - delete
+    - update
+    - create
+    - patch
 ssp-operator:
   cluster_permission:
   - apiGroups:
@@ -3369,6 +3455,7 @@ ssp-operator:
     - servicemonitors
     verbs:
     - create
+    - delete
     - list
     - update
     - watch
