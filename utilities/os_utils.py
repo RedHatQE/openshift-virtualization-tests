@@ -98,6 +98,11 @@ FEDORA_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         OS_VERSION_STR: "41",
         OS_STR: "fedora41",
     },
+    "fedora-42": {
+        IMAGE_NAME_STR: "FEDORA42_IMG",
+        OS_VERSION_STR: "42",
+        OS_STR: "fedora42",
+    },
 }
 
 CENTOS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
