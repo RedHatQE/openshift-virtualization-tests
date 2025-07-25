@@ -5,8 +5,8 @@ from ocp_resources.migration_policy import MigrationPolicy
 from pytest_testconfig import config as py_config
 
 from tests.utils import (
-    assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
+    wait_guest_os_cpu_count_updated,
 )
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
@@ -133,7 +133,7 @@ class TestPostCopyMigration:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu", depends=[f"{TESTS_CLASS_NAME}::node_drain"])
     @pytest.mark.polarion("CNV-11423")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
-        assert_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
+        wait_guest_os_cpu_count_updated(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 
     @pytest.mark.parametrize(

@@ -6,10 +6,10 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 
 from tests.utils import (
-    assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
     assert_restart_required_condition,
     hotplug_spec_vm,
+    wait_guest_os_cpu_count_updated,
 )
 from utilities.constants import (
     FIVE_GI_MEMORY,
@@ -92,7 +92,7 @@ class TestCPUHotPlug:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
     @pytest.mark.polarion("CNV-10695")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        assert_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
+        wait_guest_os_cpu_count_updated(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")

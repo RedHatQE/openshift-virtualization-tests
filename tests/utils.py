@@ -27,6 +27,7 @@ from utilities.constants import (
     HCO_DEFAULT_CPU_MODEL_KEY,
     OS_FLAVOR_CIRROS,
     RHSM_SECRET_NAME,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -242,11 +243,21 @@ def get_os_memory_value(vm):
         return f"{round(float(meminfo))}Gi"
 
 
-def assert_guest_os_cpu_count(vm, spec_cpu_amount):
-    guest_os_cpu_amount = get_os_cpu_count(vm=vm)
-    assert guest_os_cpu_amount == spec_cpu_amount, (
-        f"Wrong amount of CPUs! Guest: {guest_os_cpu_amount}; VMI: {spec_cpu_amount}"
+def wait_guest_os_cpu_count_updated(vm, spec_cpu_amount):
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_os_cpu_count,
+        vm=vm,
     )
+    sample = None
+    try:
+        for sample in sampler:
+            if sample == spec_cpu_amount:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Wrong amount of CPUs! Guest: {sample}; VMI: {spec_cpu_amount}")
+        raise
 
 
 def assert_guest_os_memory_amount(vm, spec_memory_amount):
