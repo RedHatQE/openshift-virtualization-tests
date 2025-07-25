@@ -12,7 +12,7 @@ from utilities.constants import (
 )
 from utilities.infra import get_latest_os_dict_list
 from utilities.os_utils import (
-    generate_instance_type_rhel_os_matrix,
+    generate_instance_type_os_matrix,
     generate_os_matrix_dict,
 )
 from utilities.storage import HppCsiStorageClass
@@ -54,7 +54,9 @@ rhel_os_matrix = generate_os_matrix_dict(os_name="rhel", supported_operating_sys
 latest_rhel_os_dict = get_latest_os_dict_list(os_list=[rhel_os_matrix])[0]
 
 # Modify instance_type_rhel_os_matrix for arm64
-instance_type_rhel_os_matrix = generate_instance_type_rhel_os_matrix(preferences=["rhel-8", "rhel-9", "rhel-10"])
+instance_type_rhel_os_matrix = generate_instance_type_os_matrix(
+    os_name="rhel", preferences=["rhel.8", "rhel.9", "rhel.10"]
+)
 for os_matrix_dict in instance_type_rhel_os_matrix:
     for os_params in os_matrix_dict.values():
         os_params[PREFERENCE_STR] += f".{ARM_64}"
