@@ -33,7 +33,7 @@ def service_account_vm(namespace, service_account, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-1000")
-def test_vm_with_specified_service_account(service_account_vm):
+def test_vm_with_specified_service_account(is_s390x_cluster, service_account_vm):
     """
     Verifies VM with specified ServiceAccount
     """
@@ -46,10 +46,12 @@ def test_vm_with_specified_service_account(service_account_vm):
     assert pod_sa == vm_namespace, "ServiceAccount should be attached to the POD"
 
     # Verifies that ServiceAccount is attached to VMI
+    # Change mount device based on cluster cpu architecture
+    mount_device = "/dev/vdb" if is_s390x_cluster else "/dev/sda"
     output = run_ssh_commands(
         host=service_account_vm.ssh_exec,
         commands=[
-            ["sudo", "mount", "/dev/sda", "/mnt"],
+            ["sudo", "mount", mount_device, "/mnt"],
             ["sudo", "cat", "/mnt/namespace"],
         ],
     )
