@@ -28,6 +28,7 @@ class TestConnectivityLinuxBridge:
         ],
     )
     @pytest.mark.ipv4
+    @pytest.mark.conformance
     def test_ipv4_linux_bridge(
         self,
         use_default_bridge,

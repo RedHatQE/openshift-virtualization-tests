@@ -12,6 +12,7 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-8509")
 def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names):
     """
