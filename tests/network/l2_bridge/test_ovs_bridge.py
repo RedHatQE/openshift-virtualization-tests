@@ -167,6 +167,7 @@ def running_vmb_with_ovs_based_l2(vmb_with_ovs_based_l2):
 
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-5636")
+@pytest.mark.s390x
 def test_ovs_bridge_sanity(
     hyperconverged_ovs_annotations_enabled_scope_session,
     vma_with_ovs_based_l2,
