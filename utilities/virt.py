@@ -1358,7 +1358,7 @@ def vm_console_run_commands(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
-    verify_commands_output: bool = True,
+    return_code_validation: bool = True,
 ) -> dict[str, list[str]]:
     """
     Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
@@ -1368,7 +1368,7 @@ def vm_console_run_commands(
         vm (obj): VirtualMachine
         commands (list): List of commands
         timeout (int): Time to wait for the command output
-        verify_commands_output (bool): Check commands return 0
+        return_code_validation (bool): Check commands return 0
     """
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
@@ -1379,7 +1379,7 @@ def vm_console_run_commands(
             vmc.sendline(command)
             vmc.expect(r".*\$")
             output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
-            if verify_commands_output:
+            if return_code_validation:
                 vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                 try:
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
