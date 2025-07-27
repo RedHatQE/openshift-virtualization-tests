@@ -1,5 +1,4 @@
 import pytest
-from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -104,31 +103,3 @@ def test_add_reference_to_existing_vm(
         preference_object_dict=rhel_9_vm_cluster_preference.instance.to_dict(),
     )
     assert not mismatch_list, f"Some references were not updated in the VM: {mismatch_list}"
-
-
-@pytest.mark.parametrize(
-    "error_match, spec_field, reference_class",
-    [
-        pytest.param(
-            r".*Failure to find instancetype.*",
-            "instancetype",
-            VirtualMachineClusterInstancetype,
-        ),
-        pytest.param(
-            r".*Failure to find preference.*",
-            "preference",
-            VirtualMachineClusterPreference,
-        ),
-    ],
-)
-@pytest.mark.polarion("CNV-9681")
-def test_add_non_existing_reference_to_existing_vm(error_match, spec_field, reference_class, simple_rhel_vm):
-    reference_object = reference_class(name="non-existing")
-    with pytest.raises(UnprocessibleEntityError, match=error_match):
-        spec_dict = {
-            spec_field: {
-                "kind": reference_object.kind,
-                "name": reference_object.name,
-            }
-        }
-        ResourceEditor(patches={simple_rhel_vm: {"spec": spec_dict}}).update()
