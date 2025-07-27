@@ -15,5 +15,7 @@ class TestDataImportCronPvcSource:
         )
 
     @pytest.mark.polarion("CNV-11858")
-    def test_data_import_cron_vm_from_import_pvc(self, namespace, vm_for_data_source_import):
+    def test_data_import_cron_vm_from_import_pvc(
+        self, namespace, data_import_cron_with_pvc_source, vm_for_data_source_import
+    ):
         assert vm_for_data_source_import, f"vm {vm_for_data_source_import} did not created from the imported source pvc"
