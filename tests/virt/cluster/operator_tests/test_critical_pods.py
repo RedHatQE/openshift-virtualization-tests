@@ -30,6 +30,7 @@ def virt_pods(request, admin_client, hco_namespace):
     yield pods_list
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "virt_pods",
     [

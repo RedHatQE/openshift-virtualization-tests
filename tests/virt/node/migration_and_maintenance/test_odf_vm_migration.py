@@ -26,8 +26,8 @@ def vm_with_common_cpu_model_scope_function(
         pytest.param(
             {
                 "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST["image_path"],
-                "dv_size": FEDORA_LATEST["dv_size"],
+                "image": FEDORA_LATEST.get("image_path"),
+                "dv_size": FEDORA_LATEST.get("dv_size"),
                 "storage_class_matrix": {
                     StorageClassNames.CEPHFS: {
                         "volume_mode": DataVolume.VolumeMode.FILE,

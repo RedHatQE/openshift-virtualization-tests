@@ -4,7 +4,6 @@ Note: The windows image runs the WSL guest (Fedora-33) at boot.
 """
 
 import logging
-import os
 import re
 import shlex
 
@@ -92,7 +91,7 @@ def migrated_wsl2_vm(windows_wsl2_vm):
         pytest.param(
             {
                 "dv_name": "dv-win10-wsl2",
-                "image": os.path.join(Images.Windows.UEFI_WIN_DIR, Images.Windows.WIN10_WSL2_IMG),
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -102,7 +101,7 @@ def migrated_wsl2_vm(windows_wsl2_vm):
         pytest.param(
             {
                 "dv_name": "dv-win11-wsl2",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_WSL2_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },

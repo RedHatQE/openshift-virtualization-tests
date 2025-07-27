@@ -50,8 +50,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def chaos_namespace():
-    yield from create_ns(name=NamespacesNames.CHAOS)
+def chaos_namespace(admin_client):
+    yield from create_ns(admin_client=admin_client, name=NamespacesNames.CHAOS)
 
 
 @pytest.fixture()

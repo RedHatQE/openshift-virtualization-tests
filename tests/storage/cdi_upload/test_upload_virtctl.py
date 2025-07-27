@@ -37,8 +37,11 @@ pytestmark = pytest.mark.post_upgrade
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
+DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
 POPULATED_STR = "populated"
 NON_CSI_POPULATED_STR = "imported/cloned/updated"
+
+LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
 def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_names):
@@ -165,7 +168,7 @@ def test_virtctl_image_upload_dv(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -206,7 +209,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_function,
         insecure=True,
@@ -237,7 +240,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -265,7 +268,7 @@ def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_c
         with virtctl_upload_dv(
             namespace=namespace.name,
             name=dv.name,
-            size="1Gi",
+            size=DEFAULT_DV_SIZE,
             image_path=LOCAL_PATH,
             insecure=True,
             storage_class=storage_class_name_scope_module,
@@ -318,7 +321,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         pvc=True,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
@@ -352,7 +355,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -361,7 +364,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
         with virtctl_upload_dv(
             namespace=namespace.name,
             name=pvc_name,
-            size="1Gi",
+            size=DEFAULT_DV_SIZE,
             image_path=LOCAL_PATH,
             storage_class=storage_class_name_scope_module,
             insecure=True,
@@ -395,7 +398,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=empty_pvc.name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,
@@ -414,14 +417,14 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
         pytest.param(
             {
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "remote_name": py_config["latest_windows_os_dict"]["image_path"],
-                "image_file": py_config["latest_windows_os_dict"]["image_name"],
+                "remote_name": LATEST_WINDOWS_OS_DICT.get("image_path"),
+                "image_file": LATEST_WINDOWS_OS_DICT.get("image_name"),
             },
             {
-                "vm_name": f"vm-win-{py_config['latest_windows_os_dict']['os_version']}",
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
+                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
-                "os_version": py_config["latest_windows_os_dict"]["os_version"],
+                "os_version": LATEST_WINDOWS_OS_DICT.get("os_version"),
             },
             marks=(pytest.mark.polarion("CNV-3410")),
         ),
@@ -456,7 +459,7 @@ def test_disk_image_after_upload_virtctl(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
         insecure=True,

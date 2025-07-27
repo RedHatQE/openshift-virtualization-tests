@@ -24,9 +24,9 @@ pytestmark = pytest.mark.destructive
 
 LOGGER = logging.getLogger(__name__)
 DV_DICT = {
-    "dv_name": py_config["latest_fedora_os_dict"]["template_labels"]["os"],
-    "image": py_config["latest_fedora_os_dict"]["image_path"],
-    "dv_size": py_config["latest_fedora_os_dict"]["dv_size"],
+    "dv_name": py_config.get("latest_fedora_os_dict", {}).get("template_labels", {}).get("os"),
+    "image": py_config.get("latest_fedora_os_dict", {}).get("image_path"),
+    "dv_size": py_config.get("latest_fedora_os_dict", {}).get("dv_size"),
     "storage_class": "nfs",
     "access_modes": "ReadWriteMany",
     "volume_mode": "Filesystem",
