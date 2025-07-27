@@ -1373,17 +1373,18 @@ def vm_console_run_commands(
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
     ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-    with Console(vm=vm) as vmc:
+    prompt = r"\$ "
+    with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
             try:
                 vmc.sendline(command)
-                vmc.expect(r"\$ ")
+                vmc.expect(prompt)
                 output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
                 if return_code_validation:
                     vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
-                    vmc.expect(r"\$ ")
+                    vmc.expect(prompt)
             except pexpect.exceptions.TIMEOUT:
                 raise CommandExecFailed(str(output.get(command, [])), err=f"timeout: {vmc.before}")
             except pexpect.exceptions.EOF:
