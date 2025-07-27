@@ -183,8 +183,9 @@ def scale_test_param(pytestconfig):
 
 
 @pytest.fixture(scope="class")
-def scale_namespace(unprivileged_client, scale_test_param, keep_resources):
+def scale_namespace(admin_client, unprivileged_client, scale_test_param, keep_resources):
     yield from create_ns(
+        admin_client=admin_client,
         name=scale_test_param["test_namespace"],
         teardown=not keep_resources,
         unprivileged_client=unprivileged_client,
@@ -199,12 +200,12 @@ def dvs_os_info():
             "size": RHEL_LATEST["dv_size"],
         },
         OS_FLAVOR_FEDORA: {
-            "url": FEDORA_LATEST["image_path"],
-            "size": FEDORA_LATEST["dv_size"],
+            "url": FEDORA_LATEST.get("image_path"),
+            "size": FEDORA_LATEST.get("dv_size"),
         },
         OS_FLAVOR_WINDOWS: {
-            "url": WINDOWS_LATEST["image_path"],
-            "size": WINDOWS_LATEST["dv_size"],
+            "url": WINDOWS_LATEST.get("image_path"),
+            "size": WINDOWS_LATEST.get("dv_size"),
         },
     }
 

@@ -31,6 +31,7 @@ def pods_list_with_given_prefix(request, admin_client, hco_namespace):
     return pods_list_by_prefix
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-3737")
 def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
     LOGGER.info("Check SSP CR conditions.")
@@ -44,6 +45,7 @@ def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "pods_list_with_given_prefix",
     [
@@ -94,6 +96,7 @@ def virt_template_validator_without_podantiaffinity(
     ]
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-8660")
 def test_podantiaffinity(
     virt_template_validator_pods,

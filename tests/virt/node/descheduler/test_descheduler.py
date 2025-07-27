@@ -55,7 +55,6 @@ class TestDeschedulerEvictsVMAfterDrainUncordon:
     def test_no_migrations_storm(
         self,
         deployed_vms_for_descheduler_test,
-        completed_migrations,
     ):
         LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
         assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_descheduler_test)
@@ -96,7 +95,6 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         node_with_least_available_memory,
         deployed_vms_for_utilization_imbalance,
         vms_started_process_for_utilization_imbalance,
-        completed_migrations,
         utilization_imbalance,
     ):
         verify_at_least_one_vm_migrated(
@@ -111,7 +109,6 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
     def test_no_migrations_storm(
         self,
         deployed_vms_for_utilization_imbalance,
-        completed_migrations,
     ):
         LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
         assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_utilization_imbalance)

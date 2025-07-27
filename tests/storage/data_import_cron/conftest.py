@@ -13,8 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def data_import_cron_pvc_target_namespace(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="import-namespace")
+def data_import_cron_pvc_target_namespace(admin_client, unprivileged_client):
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="import-namespace")
 
 
 @pytest.fixture(scope="class")

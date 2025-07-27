@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -32,6 +31,8 @@ pytestmark = pytest.mark.rwx_default_storage
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCPUHotPlug"
+
+LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
 @pytest.fixture()
@@ -70,12 +71,12 @@ def hotplug_vm_snapshot(hotplugged_vm):
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": py_config["latest_windows_os_dict"]["image_path"],
+                "image": LATEST_WINDOWS_OS_DICT.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "vm_name": "windows-latest-cpu-hotplug-vm",
             },
             id="WIN-VM",
@@ -142,12 +143,12 @@ class TestCPUHotPlug:
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "template_labels": py_config.get("latest_windows_os_dict", {}).get("template_labels"),
                 "vm_name": "windows-latest-cpu-hotplug-vm",
             },
             id="WIN-VM",

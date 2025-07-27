@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
@@ -9,6 +8,8 @@ from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
 )
+from tests.virt.constants import VM_LABEL
+from tests.virt.utils import assert_migration_post_copy_mode
 from utilities.constants import (
     REGEDIT_PROC_NAME,
     SIX_CPU_SOCKETS,
@@ -32,7 +33,6 @@ pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.usefixtures("created_
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestPostCopyMigration"
-VM_LABEL = {"post-copy-vm": "true"}
 
 
 def assert_same_pid_after_migration(orig_pid, vm):
@@ -41,11 +41,6 @@ def assert_same_pid_after_migration(orig_pid, vm):
     else:
         new_pid = fetch_pid_from_linux_vm(vm=vm, process_name="ping")
     assert new_pid == orig_pid, f"PID mismatch after migration! orig_pid: {orig_pid}; new_pid: {new_pid}"
-
-
-def assert_migration_post_copy_mode(vm):
-    migration_state = vm.vmi.instance.status.migrationState
-    assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
 
 
 @pytest.fixture(scope="module")
@@ -104,12 +99,12 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": os.path.join(Images.Windows.DIR, Images.Windows.WIN11_IMG),
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
-                "template_labels": py_config["latest_windows_os_dict"]["template_labels"],
+                "template_labels": py_config.get("latest_windows_os_dict", {}).get("template_labels"),
                 "vm_name": "windows-latest-post-copy-migration-vm",
                 "additional_labels": VM_LABEL,
             },
@@ -128,7 +123,7 @@ class TestPostCopyMigration:
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::node_drain", depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-11422")
-    def test_node_drain(self, admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
+    def test_node_drain(self, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 

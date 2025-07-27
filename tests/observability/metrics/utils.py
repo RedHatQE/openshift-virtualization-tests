@@ -17,7 +17,6 @@ from ocp_resources.pod import Pod
 from ocp_resources.pod_metrics import PodMetrics
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
@@ -738,7 +737,7 @@ def wait_vmi_dommemstat_match_with_metric_value(prometheus: Prometheus, vm: Virt
 
 def get_resource_object(
     admin_client: DynamicClient, related_objects: list, resource_kind, resource_name: str
-) -> Resource:
+) -> Resource | None:
     for related_obj in related_objects:
         if resource_kind.__name__ == related_obj["kind"]:
             namespace = related_obj.get("namespace")
@@ -753,35 +752,7 @@ def get_resource_object(
                 name=resource_name,
             )
 
-
-def wait_for_prometheus_query_result_matches_expected_value(prometheus: Prometheus, query: str, expected_value: str):
-    """
-    This function waiting of Prometheus query output to match expected value
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        expected_value (str): expected_value
-
-    Returns:
-        dict: Dictionary of prometheus query output.
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if sample and sample[0].get("value") and sample[0]["value"][1] == expected_value:
-                return sample[0]
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting Prometheus query to match expected value: {expected_value}"
-            f"query: {query}, results: {sample}"
-        )
-        raise
+    return None
 
 
 def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
@@ -814,21 +785,38 @@ def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, q
         raise
 
 
-def assert_instancetype_labels(prometheus_output: dict[str, dict[str, str]], expected_labels: dict[str, str]) -> None:
+def assert_instancetype_labels(prometheus: Prometheus, metric_name: str, expected_labels: dict[str, str]) -> None:
     """
     This function will assert prometheus query output labels against expected labels.
 
     Args:
-        prometheus_output (dict): Prometheus query output.
-        expected_labels (dict): expected instancetype labels
+        prometheus (Prometheus): Prometheus client object to query metrics
+        metric_name (str): The prometheus metric name to query
+        expected_labels (dict): Expected instancetype labels to validate against
     """
-    data_mismatch = []
-    for label in INSTANCE_TYPE_LABELS:
-        if prometheus_output["metric"][label] != expected_labels[label]:
-            data_mismatch.append(prometheus_output["metric"][label])
-    assert not data_mismatch, (
-        f"Data mismatch: {data_mismatch}!expected labels: {expected_labels}, actual labels: {prometheus_output}"
+    validate_metrics_value(prometheus=prometheus, metric_name=metric_name, expected_value="1")
+
+    def check_instancetype_labels():
+        data_mismatch = {}
+        for label in INSTANCE_TYPE_LABELS:
+            prometheus_output = prometheus.query_sampler(query=metric_name)[0].get("metric").get(label)
+            if prometheus_output != expected_labels[label]:
+                data_mismatch[label] = {"Expected": expected_labels[label], "Actual": prometheus_output}
+        return data_mismatch
+
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_10SEC,
+        func=check_instancetype_labels,
     )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"timeout exception waiting for instancetype labels to match expected labels: {sample}")
+        raise
 
 
 def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
@@ -971,7 +959,9 @@ def compare_network_traffic_bytes_and_metrics(
     return False
 
 
-def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMachine, interface_name: str) -> None:
+def validate_network_traffic_metrics_value(
+    prometheus: Prometheus, vm: VirtualMachineForTests, interface_name: str
+) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_10SEC,
@@ -997,7 +987,7 @@ def validate_network_traffic_metrics_value(prometheus: Prometheus, vm: VirtualMa
 
 def validate_vmi_network_receive_and_transmit_packets_total(
     metric_dict: dict[str, str],
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests,
     vm_interface_name: str,
     prometheus: Prometheus,
 ) -> None:
@@ -1593,10 +1583,11 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
         for sample in samples:
             if sample:
                 sample = abs(float(sample))
+                virt_launcher_pod_requested_memory = get_vm_virt_launcher_pod_requested_memory(vm=vm)
                 expected_value = (
-                    get_vm_virt_launcher_pod_requested_memory(vm=vm) - get_vm_memory_working_set_bytes(vm=vm)
+                    virt_launcher_pod_requested_memory - get_vm_memory_working_set_bytes(vm=vm)
                     if working_set
-                    else get_vm_memory_rss_bytes(vm=vm)
+                    else virt_launcher_pod_requested_memory - get_vm_memory_rss_bytes(vm=vm)
                 )
                 if math.isclose(sample, abs(expected_value), rel_tol=0.05):
                     return
