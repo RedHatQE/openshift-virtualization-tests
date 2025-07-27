@@ -81,14 +81,6 @@ class Console(object):
         finally:
             self.child.close()
 
-    def force_disconnect(self):
-        """
-        Method is a workaround for RHEL 7.7.
-        For some reason, console may not be logged out successfully in __exit__()
-        """
-        self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
-        self.disconnect()
-
     def console_eof_sampler(self, func, command, timeout):
         sampler = TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
