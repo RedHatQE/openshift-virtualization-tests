@@ -1385,7 +1385,12 @@ def vm_console_run_commands(
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
                     vmc.expect(r"\$ ")
                 except pexpect.exceptions.TIMEOUT:
-                    raise CommandExecFailed(output[command])
+                    raise CommandExecFailed(output[command], err=f"timeout: {vmc.before.decode('utf-8')}")
+                except pexpect.exceptions.EOF:
+                    raise CommandExecFailed(output[command], err=f"EOF: {vmc.before.decode('utf-8')}")
+                except Exception as e:
+                    e.add_note(vmc.before.decode("utf-8"))
+                    raise CommandExecFailed(output[command], err=f"Error: {e}")
     return output
 
 
