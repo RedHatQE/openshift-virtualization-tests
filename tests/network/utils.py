@@ -274,6 +274,19 @@ def assert_nncp_successfully_configured(nncp):
         raise
 
 
+def authentication_command(service: str) -> str:
+    """
+    Generate the authentication command for service mesh testing.
+
+    Args:
+        service (str): target service DNS name.
+
+    Returns:
+        str: The curl command string.
+    """
+    return f"curl http://{service}:{SERVICE_MESH_PORT}/ip"
+
+
 def authentication_request(vm, **kwargs):
     """
     Return server response to a request sent from VM console. This request allows testing client authentication.
@@ -289,7 +302,7 @@ def authentication_request(vm, **kwargs):
     """
     return run_console_command(
         vm=vm,
-        command=f"curl http://{kwargs['service']}:{SERVICE_MESH_PORT}/ip",
+        command=authentication_command(kwargs["service"]),
     )
 
 
@@ -308,7 +321,15 @@ def assert_authentication_request(vm, service_app_name):
 
 def run_console_command(vm, command, timeout=TIMEOUT_1MIN):
     """
-    Run a single command through a VM console.
+    Execute a command in VM console and return the output.
+
+    Args:
+        vm (VirtualMachine): VM to be used for console connection.
+        command (str): Command to execute.
+        timeout (int, default=TIMEOUT_1MIN): Timeout for the command execution.
+
+    Returns:
+        str: Command output.
     """
     prompt = r"\$ "
     with console.Console(vm=vm, prompt=prompt) as vmc:
