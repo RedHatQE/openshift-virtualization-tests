@@ -20,6 +20,7 @@ LOGGER = logging.getLogger(__name__)
 FAILED_VM_IMAGE = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_volume_multi_storage_scope_function,"
     "golden_image_vm_object_from_template_multi_storage_scope_function",

@@ -67,9 +67,9 @@ def vms_mac(mac_pool):
 
 
 @pytest.fixture(scope="class")
-def kmp_disabled_namespace(kmp_vm_label):
+def kmp_disabled_namespace(admin_client, kmp_vm_label):
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = "ignore"
-    yield from create_ns(name="kmp-disabled", labels=kmp_vm_label)
+    yield from create_ns(admin_client=admin_client, name="kmp-disabled", labels=kmp_vm_label)
 
 
 @pytest.fixture(scope="class")
@@ -197,8 +197,8 @@ def csv_with_invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_
 
 
 @pytest.fixture(scope="class")
-def csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
-    def get_csv_image():
+def wait_csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
+    def _get_csv_image_from_cnao():
         for deployment in csv_with_invalid_cnao_operator.instance.spec.install.spec.deployments:
             if deployment.name == CLUSTER_NETWORK_ADDONS_OPERATOR:
                 return deployment.spec.template.spec.containers[0].image
@@ -206,12 +206,11 @@ def csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
     sample = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_10SEC,
-        func=get_csv_image,
+        func=_get_csv_image_from_cnao,
     )
     try:
         for sample in sample:
             if sample == NON_EXISTS_IMAGE:
                 return
     except TimeoutExpiredError:
-        LOGGER.error(f"CSV image not updated after {TIMEOUT_4MIN} seconds")
         raise

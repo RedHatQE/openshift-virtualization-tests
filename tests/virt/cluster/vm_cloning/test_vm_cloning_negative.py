@@ -8,6 +8,7 @@ from tests.virt.cluster.vm_cloning.utils import wait_cloning_job_source_not_exis
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "cloning_job_bad_params",
     [

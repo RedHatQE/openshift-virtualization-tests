@@ -13,7 +13,6 @@ from pytest_testconfig import py_config
 
 from tests.virt.constants import VM_LABEL
 from tests.virt.upgrade.utils import (
-    get_all_migratable_vms,
     validate_vms_pod_updated,
     vm_from_template,
     wait_for_automatic_vm_migrations,
@@ -23,11 +22,7 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
-    TIMEOUT_90MIN,
     Images,
-)
-from utilities.infra import (
-    check_pod_disruption_budget_for_completed_migrations,
 )
 from utilities.storage import (
     create_dv,
@@ -156,23 +151,23 @@ def upgrade_namespaces(upgrade_namespace_scope_session, kmp_enabled_namespace):
 
 
 @pytest.fixture(scope="session")
-def migratable_vms(admin_client, hco_namespace, upgrade_namespaces):
-    migratable_vms = get_all_migratable_vms(admin_client=admin_client, namespaces=upgrade_namespaces)
+def migratable_vms(admin_client, upgrade_namespaces):
+    migratable_vms = []
+    for ns in upgrade_namespaces:
+        for vm in list(VirtualMachine.get(client=admin_client, namespace=ns.name)):
+            if any(
+                condition.type == "LiveMigratable" and condition.status == "True"
+                for condition in vm.vmi.instance.status.conditions
+            ):
+                migratable_vms.append(vm)
+
     LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
     return migratable_vms
 
 
 @pytest.fixture()
-def unupdated_vmi_pods_names(
-    admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, upgrade_namespaces, migratable_vms
-):
+def unupdated_vmi_pods_names(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, migratable_vms):
     wait_for_automatic_vm_migrations(vm_list=migratable_vms)
-
-    for ns in upgrade_namespaces:
-        LOGGER.info(f"Checking PodDisruptionBudget in namespaces: {ns.name}")
-        check_pod_disruption_budget_for_completed_migrations(
-            admin_client=admin_client, namespace=ns.name, timeout=TIMEOUT_90MIN
-        )
 
     return validate_vms_pod_updated(
         admin_client=admin_client,

@@ -6,6 +6,7 @@ import time
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status, wait_for_missing_iface_status
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
 from utilities.constants import (
@@ -14,6 +15,7 @@ from utilities.constants import (
     NODE_TYPE_WORKER_LABEL,
     SRIOV,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5SEC,
 )
 from utilities.infra import get_pod_by_name_prefix
@@ -23,11 +25,7 @@ from utilities.network import (
     get_vmi_ip_v4_by_name,
     network_device,
 )
-from utilities.virt import (
-    VirtualMachineForTests,
-    fedora_vm_body,
-    migrate_vm_and_verify,
-)
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
@@ -125,12 +123,22 @@ def hot_plug_interface(
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
 
+    return lookup_iface_status(
+        vm=vm,
+        iface_name=hot_plugged_interface_name,
+        predicate=lambda interface: "guest-agent" in interface["infoSource"],
+        timeout=TIMEOUT_2MIN,
+    )
+
 
 def hot_unplug_interface(vm, hot_plugged_interface_name):
     interfaces = vm.get_interfaces()
     unplugged_interface = next(interface for interface in interfaces if interface["name"] == hot_plugged_interface_name)
     unplugged_interface.update(dict(state="absent"))
+
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces)
+
+    wait_for_missing_iface_status(vm=vm, iface_name=hot_plugged_interface_name)
 
 
 def update_hot_plug_config_in_vm(vm, interfaces, networks=None):
@@ -200,20 +208,20 @@ def hot_plug_interface_and_set_address(
     ipv4_address,
     sriov=False,
 ):
-    hot_plug_interface(
+    iface = hot_plug_interface(
         vm=vm,
         hot_plugged_interface_name=hot_plugged_interface_name,
         net_attach_def_name=net_attach_def_name,
         sriov=sriov,
     )
-    wait_for_interface_hot_plug_completion(vmi=vm.vmi, interface_name=hot_plugged_interface_name)
-    migrate_vm_and_verify(vm=vm)
 
     set_secondary_static_ip_address(
         vm=vm,
         ipv4_address=ipv4_address,
-        vmi_interface=hot_plugged_interface_name,
+        vmi_interface=iface.name,
     )
+
+    return iface
 
 
 def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):

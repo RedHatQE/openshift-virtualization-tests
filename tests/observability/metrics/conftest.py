@@ -259,7 +259,7 @@ def mutation_count_before_change(request, prometheus):
 
 
 @pytest.fixture(scope="module")
-def unique_namespace(unprivileged_client):
+def unique_namespace(admin_client, unprivileged_client):
     """
     Creates a namespace to be used by key metrics test cases.
 
@@ -267,7 +267,7 @@ def unique_namespace(unprivileged_client):
         Namespace object to be used by the tests
     """
     namespace_name = unique_name(name="key-metrics")
-    yield from create_ns(unprivileged_client=unprivileged_client, name=namespace_name)
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name=namespace_name)
 
 
 @pytest.fixture()
@@ -449,9 +449,9 @@ def virt_pod_names_by_label(request, admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="module")
-def single_metrics_namespace(unprivileged_client):
+def single_metrics_namespace(admin_client, unprivileged_client):
     namespace_name = unique_name(name="test-metrics")
-    yield from create_ns(unprivileged_client=unprivileged_client, name=namespace_name)
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name=namespace_name)
 
 
 @pytest.fixture(scope="module")

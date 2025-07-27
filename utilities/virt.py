@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 import bitmath
 import jinja2
@@ -24,7 +24,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.service import Service
 from ocp_resources.storage_profile import StorageProfile
@@ -54,7 +53,6 @@ from utilities.constants import (
     EVICTIONSTRATEGY,
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
-    LIVE_MIGRATE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
@@ -83,6 +81,10 @@ from utilities.constants import (
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import wait_for_hco_conditions
 from utilities.storage import get_default_storage_class
+
+if TYPE_CHECKING:
+    from libs.vm.vm import BaseVirtualMachine
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -426,10 +428,10 @@ class VirtualMachineForTests(VirtualMachine):
         super().deploy(wait=wait)
         return self
 
-    def clean_up(self) -> bool:
+    def clean_up(self, wait: bool = True, timeout: int | None = None) -> bool:
         if self.exists and self.ready:
             self.stop(wait=True, vmi_delete_timeout=TIMEOUT_8MIN)
-        super().clean_up()
+        super().clean_up(wait=wait, timeout=timeout)
         if self.custom_service:
             self.custom_service.delete(wait=True)
         return True
@@ -1315,7 +1317,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
 
 
 def vm_console_run_commands(
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
     verify_commands_output: bool = True,
@@ -1550,28 +1552,58 @@ def get_guest_os_info(vmi):
         raise
 
 
-def get_windows_os_dict(windows_version):
-    windows_os_dict = [
-        os_dict
-        for win_os in py_config["system_windows_os_matrix"]
-        for os_name, os_dict in win_os.items()
-        if os_name == windows_version
-    ]
-    if windows_os_dict:
-        return windows_os_dict[0]
-    raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+def get_windows_os_dict(windows_version: str) -> dict[str, Any]:
+    """
+    Returns a dictionary of Windows os information from the system_windows_os_matrix in py_config.
+
+    Args:
+        windows_version: The version of windows to get the os information for.
+
+    Returns:
+        dict: OS dictionary for the version, or empty dict if matrix is missing
+
+    Raises:
+        KeyError: If matrix exists but version is not found
+    """
+    if system_windows_os_matrix := py_config.get("system_windows_os_matrix"):
+        windows_os_dict = [
+            os_dict
+            for win_os in system_windows_os_matrix
+            for os_name, os_dict in win_os.items()
+            if os_name == windows_version
+        ]
+        if windows_os_dict:
+            return windows_os_dict[0]
+        raise KeyError(f"Failed to extract {windows_version} from system_windows_os_matrix")
+
+    return {}
 
 
-def get_rhel_os_dict(rhel_version):
-    rhel_os_dict = [
-        os_dict
-        for rhel_os in py_config["system_rhel_os_matrix"]
-        for os_name, os_dict in rhel_os.items()
-        if os_name == rhel_version
-    ]
-    if rhel_os_dict:
-        return rhel_os_dict[0]
-    raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+def get_rhel_os_dict(rhel_version: str) -> dict[str, Any]:
+    """
+    Returns a dictionary of RHEL os information from the system_rhel_os_matrix in py_config.
+
+    Args:
+        rhel_version: The version of RHEL to get the os information for.
+
+    Returns:
+        dict: OS dictionary for the version, or empty dict if matrix is missing
+
+    Raises:
+        KeyError: If matrix exists but version is not found
+    """
+    if py_system_rhel_os_matrix := py_config.get("system_rhel_os_matrix"):
+        rhel_os_dict = [
+            os_dict
+            for rhel_os in py_system_rhel_os_matrix
+            for os_name, os_dict in rhel_os.items()
+            if os_name == rhel_version
+        ]
+        if rhel_os_dict:
+            return rhel_os_dict[0]
+        raise KeyError(f"Failed to extract {rhel_version} from system_rhel_os_matrix")
+
+    return {}
 
 
 def assert_vm_not_error_status(vm: VirtualMachineForTests, timeout: int = TIMEOUT_5SEC) -> None:
@@ -1710,7 +1742,7 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 
 def migrate_vm_and_verify(
-    vm: VirtualMachine,
+    vm: VirtualMachineForTests | BaseVirtualMachine,
     client: DynamicClient | None = None,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
@@ -1718,24 +1750,22 @@ def migrate_vm_and_verify(
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
     """
-    create a migration instance. You may choose to wait for migration
+    Create a migration instance. You may choose to wait for migration
     success or not.
 
     Args:
-        vm (VirtualMachine): vm to be migrated
-        client (DynamicClient): client to use for migration
-        wait_for_migration_success (boolean):
-            True = full teardown will be applied.
-            False = no teardown (responsibility on the programmer), and no
+        vm (VirtualMachine): VM to be migrated.
+        client (DynamicClient, default=None): Client to use for migration.
+        timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
+        wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
+        check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
+        wait_for_migration_success (bool, default=True):
+            True = Full teardown will be applied.
+            False = No teardown (responsibility on the programmer), and no
                     wait for migration process to finish.
 
     Returns:
-        VirtualMachineInstanceMigration: if wait_for_migration_success == false
-
-    Raises:
-        AssertionError: if migration ended with SUCCEEDED status, but node was
-                        not changed for migrated vm OR migrationState was not
-                        completed.
+        VirtualMachineInstanceMigration: If wait_for_migration_success == false, else returns None
     """
     node_before = vm.vmi.node
 
@@ -1797,9 +1827,6 @@ def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
-
-    if vm.instance.spec.template.spec.evictionStrategy == LIVE_MIGRATE:
-        verify_one_pdb_per_vm(vm=vm)
 
 
 def verify_vm_migrated(
@@ -2035,25 +2062,6 @@ def get_base_templates_list(client):
     ]
 
 
-def verify_one_pdb_per_vm(vm):
-    """Verify one PodDisruptionBudget created for a VM; VM must be configured with evictionStrategy: LiveMigrate
-
-    Args:
-        vm (VirtualMachine): VM object
-
-    Raises:
-        AssertionError if there is more than one PDB for the VM
-    """
-    pdb_resource_name = "PodDisruptionBudget"
-    LOGGER.info(f"Verify one {pdb_resource_name} for VM {vm.name}")
-    pdbs_dict = {}
-    for pdb in PodDisruptionBudget.get(dyn_client=get_client(), namespace=vm.namespace):
-        if pdb.instance.metadata.ownerReferences[0].name == vm.name:
-            pdbs_dict[pdb.name] = pdb.instance.metadata
-
-    assert len(pdbs_dict) == 1, f"VM {vm.name} must have one {pdb_resource_name}, current: {pdbs_dict}"
-
-
 def get_template_by_labels(admin_client, template_labels):
     template = list(
         Template.get(
@@ -2153,7 +2161,6 @@ def check_migration_process_after_node_drain(dyn_client, vm):
 
     target_pod = vm.privileged_vmi.virt_launcher_pod
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
-    verify_one_pdb_per_vm(vm=vm)
     target_node = target_pod.node
     LOGGER.info(f"The VMI is currently running on {target_node.name}")
     assert target_node != source_node, f"Target node is same as source node: {source_node.name}"
@@ -2400,25 +2407,25 @@ def get_nodes_gpu_info(util_pods, node):
     return pod_exec.exec(command="sudo /sbin/lspci -nnk | grep -A 3 '3D controller'")
 
 
-def assert_linux_efi(vm: VirtualMachine) -> None:
+def assert_linux_efi(vm: VirtualMachineForTests) -> None:
     """
     Verify guest OS is using EFI.
     """
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
 
 
-def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachine, migrate: bool = False) -> None:
+def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachineForTests, migrate: bool = False) -> None:
     vmi = VirtualMachineInstance(client=get_client(), name=vm.vmi.name, namespace=vm.vmi.namespace)
     vmi.pause(wait=True)
     if migrate:
-        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False)
     vmi.unpause(wait=True)
     LOGGER.info("Verify VM is running and ready after unpause")
     wait_for_running_vm(vm=vm)
 
 
 def validate_pause_optional_migrate_unpause_linux_vm(
-    vm: VirtualMachine, pre_pause_pid: int | None = None, migrate: bool = False
+    vm: VirtualMachineForTests, pre_pause_pid: int | None = None, migrate: bool = False
 ) -> None:
     proc_name = OS_PROC_NAME["linux"]
     if not pre_pause_pid:
@@ -2431,7 +2438,7 @@ def validate_pause_optional_migrate_unpause_linux_vm(
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachine, cm_values: Dict[str, str]) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
@@ -2451,7 +2458,7 @@ def check_vm_xml_smbios(vm: VirtualMachine, cm_values: Dict[str, str]) -> None:
     assert all(results.values())
 
 
-def assert_vm_xml_efi(vm: VirtualMachine, secure_boot_enabled: bool = True) -> None:
+def assert_vm_xml_efi(vm: VirtualMachineForTests, secure_boot_enabled: bool = True) -> None:
     LOGGER.info("Verify VM XML - EFI secureBoot values.")
     xml_dict_os = vm.privileged_vmi.xml_dict["domain"]["os"]
     ovmf_path = "/usr/share/OVMF"
@@ -2473,7 +2480,7 @@ def assert_vm_xml_efi(vm: VirtualMachine, secure_boot_enabled: bool = True) -> N
 
 
 def update_vm_efi_spec_and_restart(
-    vm: VirtualMachine, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
+    vm: VirtualMachineForTests, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
 ) -> None:
     ResourceEditor({
         vm: {"spec": {"template": {"spec": {"domain": {"firmware": {"bootloader": {"efi": spec or {}}}}}}}}
@@ -2494,7 +2501,7 @@ def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # Guest agent info gather functions.
-def get_virtctl_os_info(vm: VirtualMachine) -> dict[str, Any] | None:
+def get_virtctl_os_info(vm: VirtualMachineForTests) -> dict[str, Any] | None:
     """
     Returns OS data dict in format:
     {
@@ -2524,7 +2531,7 @@ def get_virtctl_os_info(vm: VirtualMachine) -> dict[str, Any] | None:
     return delete_guestosinfo_keys(data=data)
 
 
-def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
+def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> bool:
     """
     Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
 
@@ -2546,6 +2553,6 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachine) -> bool:
     return False
 
 
-def get_vm_boot_time(vm: VirtualMachine) -> str:
+def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]

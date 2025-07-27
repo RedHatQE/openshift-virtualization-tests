@@ -2,8 +2,6 @@
 Test networkInterfaceMultiqueue feature with cpu core/socket/thread combinations.
 """
 
-import os
-
 import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
@@ -169,8 +167,8 @@ class TestLatestRHEL:
         (
             {
                 "dv_name": WINDOWS_2019_OS,
-                "image": os.path.join(Images.Windows.HA_DIR, Images.Windows.WIN2k19_HA_IMG),
-                "dv_size": WINDOWS_2019["dv_size"],
+                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
+                "dv_size": WINDOWS_2019.get("dv_size"),
                 "storage_class": py_config["default_storage_class"],
             },
             {

@@ -12,7 +12,7 @@ from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, TIMEOUT_5MIN
 class TestCnaoDown:
     @pytest.mark.polarion("CNV-11302")
     def test_metric_kubevirt_cnao_operator_up(
-        self, prometheus, disabled_virt_operator, csv_image_updated_with_bad_image
+        self, prometheus, disabled_virt_operator, wait_csv_image_updated_with_bad_image
     ):
         validate_metrics_value(
             prometheus=prometheus,

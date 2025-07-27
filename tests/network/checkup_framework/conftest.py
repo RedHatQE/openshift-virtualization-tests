@@ -70,8 +70,10 @@ COMMON_RESOURCE_RULES = [
 
 
 @pytest.fixture(scope="module")
-def checkup_ns(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="test-checkup-framework")
+def checkup_ns(admin_client, unprivileged_client):
+    yield from create_ns(
+        admin_client=admin_client, unprivileged_client=unprivileged_client, name="test-checkup-framework"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -722,8 +724,8 @@ def dpdk_checkup_image_url(csv_related_images_scope_session):
 
 
 @pytest.fixture(scope="module")
-def dpdk_checkup_namespace(unprivileged_client):
-    yield from create_ns(unprivileged_client=unprivileged_client, name="dpdk-checkup")
+def dpdk_checkup_namespace(admin_client, unprivileged_client):
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="dpdk-checkup")
 
 
 @pytest.fixture(scope="module")
