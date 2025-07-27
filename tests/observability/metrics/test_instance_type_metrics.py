@@ -74,7 +74,6 @@ def running_rhel_vm_with_instance_type_and_preference(
 
 class TestInstanceType:
     @pytest.mark.polarion("CNV-10181")
-    @pytest.mark.jira("CNV-64561", run=False)
     def test_verify_instancetype_labels(
         self,
         prometheus,
@@ -87,7 +86,6 @@ class TestInstanceType:
         )
 
     @pytest.mark.polarion("CNV-10182")
-    @pytest.mark.jira("CNV-64561", run=False)
     def test_verify_migrated_instancetype_labels(
         self,
         prometheus,
@@ -146,7 +144,6 @@ class TestInstanceType:
 )
 class TestInstanceTypeLabling:
     @pytest.mark.polarion("CNV-10183")
-    @pytest.mark.jira("CNV-64561", run=False)
     def test_kubevirt_vmi_phase_count_cloned_instance_types(
         self,
         prometheus,
@@ -163,7 +160,6 @@ class TestInstanceTypeLabling:
         )
 
     @pytest.mark.polarion("CNV-10797")
-    @pytest.mark.jira("CNV-64561", run=False)
     def test_cnv_vmi_status_running_count_cloned_instance_types(
         self,
         prometheus,
