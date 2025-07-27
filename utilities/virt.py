@@ -1383,6 +1383,7 @@ def vm_console_run_commands(
                 vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                 try:
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
+                    vmc.expect(r"\$ ")
                 except pexpect.exceptions.TIMEOUT:
                     raise CommandExecFailed(output[command])
     return output
