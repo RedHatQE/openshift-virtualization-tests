@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
@@ -424,6 +425,9 @@ class VirtualMachineForTests(VirtualMachine):
         self.vm_affinity = vm_affinity
         self.annotations = annotations
 
+        # Must be here to apply on existing VMs
+        self.set_login_params()
+
     def deploy(self, wait=False):
         super().deploy(wait=wait)
         return self
@@ -791,8 +795,8 @@ class VirtualMachineForTests(VirtualMachine):
             login_generated_data = generate_cloud_init_data(
                 data={
                     "userData": {
-                        "user": self.login_params["username"],
-                        "password": self.login_params["password"],
+                        "user": self.username,
+                        "password": self.password,
                         "chpasswd": {"expire": False},
                     }
                 }
@@ -1015,7 +1019,34 @@ class VirtualMachineForTests(VirtualMachine):
 
     @property
     def login_params(self):
-        return py_config["os_login_param"][self.os_flavor]
+        os_login_param = py_config.get("os_login_param", {}).get(self.os_flavor, {})
+        if not os_login_param:
+            LOGGER.warning(f"`os_login_param` not defined for {self.os_flavor}")
+
+        return os_login_param
+
+    def set_login_params(self):
+        _login_params = self.login_params
+
+        if not (self.username and self.password):
+            if _login_params:
+                self.username = _login_params.get("username")
+                self.password = _login_params.get("password")
+                return
+
+            # Do not modify the defaults to OS like Windows where the password is already defined in the image
+            if self.os_flavor not in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
+                if self.exists:
+                    self.username, self.password = username_password_from_cloud_init(
+                        vm_volumes=self.instance.spec.template.spec.volumes
+                    )
+                    if not self.username or not self.password:
+                        LOGGER.warning("Could not find credentials in cloud-init")
+
+                else:
+                    LOGGER.info("Setting random username and password")
+                    self.username = secrets.token_urlsafe(nbytes=12)
+                    self.password = secrets.token_urlsafe(nbytes=12)
 
     @property
     def ssh_exec(self):
@@ -1205,6 +1236,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
 
     def to_dict(self):
         self.os_flavor = self._extract_os_from_template()
+        self.set_login_params()
         self.body = self.process_template()
         super().to_dict()
 
@@ -1298,16 +1330,22 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             DATA_SOURCE_NAMESPACE: self.data_source.namespace if self.data_source else "mock-data-source-ns",
         }
 
+        template_object = self.template_object or get_template_by_labels(
+            admin_client=self.client, template_labels=self.template_labels
+        )
+
         # Set password for non-Windows VMs; for Windows VM, the password is already set in the image
         if OS_FLAVOR_WINDOWS not in self.os_flavor:
-            template_kwargs["CLOUD_USER_PASSWORD"] = self.login_params["password"]
+            username, _ = username_password_from_cloud_init(
+                vm_volumes=template_object.instance.objects[0].spec.template.spec.volumes
+            )
+
+            self.username = username
+            template_kwargs["CLOUD_USER_PASSWORD"] = self.password
 
         if self.template_params:
             template_kwargs.update(self.template_params)
 
-        template_object = self.template_object or get_template_by_labels(
-            admin_client=self.client, template_labels=self.template_labels
-        )
         resources_list = template_object.process(client=get_client(), **template_kwargs)
         for resource in resources_list:
             if resource["kind"] == VirtualMachine.kind and resource["metadata"]["name"] == self.name:
@@ -1358,7 +1396,7 @@ def fedora_vm_body(name: str) -> dict[str, Any]:
     # Make sure we can find the file even if utilities was installed via pip.
     yaml_file = os.path.abspath("utilities/manifests/vm-fedora.yaml")
 
-    with open(yaml_file, "r") as fd:
+    with open(yaml_file) as fd:
         data = fd.read()
 
     image = Images.Fedora.FEDORA_CONTAINER_IMAGE
@@ -1660,7 +1698,7 @@ def wait_for_running_vm(
 
 
 def running_vm(
-    vm,
+    vm: VirtualMachineForTests,
     wait_for_interfaces=True,
     check_ssh_connectivity=True,
     ssh_timeout=TIMEOUT_2MIN,
@@ -1704,7 +1742,7 @@ def running_vm(
     ]
 
     try:
-        vm.start(wait=False)
+        vm.start()
     except ApiException as exception:
         if any([message in exception.body for message in allowed_vm_start_exceptions_list]):
             LOGGER.warning(f"VM {vm.name} is already running; will not be started.")
@@ -2236,7 +2274,7 @@ def get_oc_image_info(  # type: ignore[return]
     base_command = f"oc image -o json info {image} --filter-by-os {architecture}"
     if pull_secret:
         base_command = f"{base_command} --registry-config={pull_secret}"
-    sample = None
+
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_10SEC,
@@ -2556,3 +2594,24 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> b
 def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+
+
+def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
+    """
+    Get username and password from cloud-init data.
+
+    Args:
+        vm_volumes (list[dict[str, Any]]): List of volumes with cloud-init data.
+
+    Returns:
+            tuple[str, str]: Username and password. If not found, empty strings.
+    """
+
+    if cloud_init := [volume[CLOUD_INIT_NO_CLOUD] for volume in vm_volumes if volume.get(CLOUD_INIT_NO_CLOUD)]:
+        if (user_data := cloud_init[0].get("userData")) and (
+            _match := re.search(r"user: (?P<user>.*)\npassword: (?P<password>.*)\n", user_data)
+        ):
+            LOGGER.info("Get VM credentials from cloud-init")
+            return _match["user"], _match["password"]
+
+    return "", ""
