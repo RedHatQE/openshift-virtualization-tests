@@ -1377,8 +1377,8 @@ def vm_console_run_commands(
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
             vmc.sendline(command)
-            vmc.expect(r".*\$")
-            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
+            vmc.expect(r"\$ ")
+            output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
             if return_code_validation:
                 vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                 try:
