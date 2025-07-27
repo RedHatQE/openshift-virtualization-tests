@@ -1376,21 +1376,21 @@ def vm_console_run_commands(
     with Console(vm=vm) as vmc:
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
-            vmc.sendline(command)
-            vmc.expect(r"\$ ")
-            output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
-            if return_code_validation:
-                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
-                try:
+            try:
+                vmc.sendline(command)
+                vmc.expect(r"\$ ")
+                output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
+                if return_code_validation:
+                    vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
                     vmc.expect(r"\$ ")
-                except pexpect.exceptions.TIMEOUT:
-                    raise CommandExecFailed(output[command], err=f"timeout: {vmc.before.decode('utf-8')}")
-                except pexpect.exceptions.EOF:
-                    raise CommandExecFailed(output[command], err=f"EOF: {vmc.before.decode('utf-8')}")
-                except Exception as e:
-                    e.add_note(vmc.before.decode("utf-8"))
-                    raise CommandExecFailed(output[command], err=f"Error: {e}")
+            except pexpect.exceptions.TIMEOUT:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"timeout: {vmc.before}")
+            except pexpect.exceptions.EOF:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"EOF: {vmc.before}")
+            except Exception as e:
+                e.add_note(vmc.before)
+                raise CommandExecFailed(str(output.get(command, [])), err=f"Error: {e}")
     return output
 
 
