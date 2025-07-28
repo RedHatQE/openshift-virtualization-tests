@@ -1172,10 +1172,8 @@ def initial_metric_value(request, prometheus):
 @pytest.fixture()
 def deleted_vmi(running_metric_vm):
     running_metric_vm.delete(wait=True)
-    yield
 
 
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
-    yield
