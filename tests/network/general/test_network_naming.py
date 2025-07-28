@@ -13,6 +13,7 @@ def invalid_network_names():
 
 @pytest.mark.polarion("CNV-8304")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_vm_with_illegal_network_name(namespace, unprivileged_client, invalid_network_names):
     vm_name = "unsupported-network-name-vm"
 

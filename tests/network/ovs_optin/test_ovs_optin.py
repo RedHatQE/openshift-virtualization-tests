@@ -49,6 +49,7 @@ def hyperconverged_ovs_annotations_removed(
 
 
 @pytest.mark.sno
+@pytest.mark.s390x
 class TestOVSOptIn:
     @pytest.mark.polarion("CNV-5520")
     @pytest.mark.single_nic

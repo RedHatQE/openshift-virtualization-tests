@@ -114,6 +114,7 @@ def dry_run_vm_with_mac_address(
 
 
 @pytest.mark.polarion("CNV-7872")
+@pytest.mark.s390x
 def test_dry_run_mac_not_saved(
     dry_run_vma_mac_address,
     vm_with_mac_address,
@@ -128,6 +129,7 @@ def test_dry_run_mac_not_saved(
 
 
 @pytest.mark.polarion("CNV-7873")
+@pytest.mark.s390x
 def test_allocated_mac_is_unavailable_for_dry_run(dry_run_vm_with_mac_address):
     with pytest.raises(ApiException, match="Failed to allocate mac to the vm object"):
         with dry_run_vm_with_mac_address as vm:

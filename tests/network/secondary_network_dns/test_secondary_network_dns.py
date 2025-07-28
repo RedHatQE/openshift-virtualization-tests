@@ -327,6 +327,7 @@ def kubernetes_secondary_dns_service_port_number(
 
 
 @pytest.mark.polarion("CNV-9256")
+@pytest.mark.s390x
 def test_kubernetes_secondary_dns_basic_nslookup(
     cluster_base_domain,
     exposed_kubernetes_secondary_dns_service,

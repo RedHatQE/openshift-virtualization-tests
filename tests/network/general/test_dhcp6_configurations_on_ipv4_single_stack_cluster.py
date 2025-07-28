@@ -74,6 +74,7 @@ def listening_dhcpv6_pid_in_virt_launcher_pod(worker_node1_pod_executor, virt_la
 @pytest.mark.polarion("CNV-7407")
 @pytest.mark.ipv4
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_dhcp6_disabled_on_ipv4_single_stack_cluster(
     fail_if_not_ipv4_single_stack_cluster,
     vm_cirros,

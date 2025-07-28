@@ -105,6 +105,7 @@ def expected_num_families_in_service(request, dual_stack_cluster):
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 class TestServiceConfigurationViaManifest:
     @pytest.mark.polarion("CNV-5789")
     @pytest.mark.single_nic
@@ -156,6 +157,7 @@ class TestServiceConfigurationViaVirtctl:
         indirect=["virtctl_expose_service", "expected_num_families_in_service"],
     )
     @pytest.mark.single_nic
+    @pytest.mark.s390x
     def test_vitrctl_expose_services(
         self,
         expected_num_families_in_service,
