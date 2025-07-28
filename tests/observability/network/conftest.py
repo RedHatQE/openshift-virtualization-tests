@@ -5,7 +5,7 @@ import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
@@ -208,5 +208,5 @@ def wait_csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
         sleep=TIMEOUT_10SEC,
         func=_get_csv_image_from_cnao,
     ):
-            if sample == NON_EXISTS_IMAGE:
-                return
+        if sample == NON_EXISTS_IMAGE:
+            return
