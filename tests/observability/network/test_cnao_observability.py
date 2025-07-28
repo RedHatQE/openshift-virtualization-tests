@@ -9,10 +9,11 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, TIMEOUT_5MIN
 
 
-@pytest.mark.usefixtures("disabled_virt_operator", "invalid_cnao_operator")
 class TestCnaoDown:
     @pytest.mark.polarion("CNV-11302")
-    def test_metric_kubevirt_cnao_operator_up(self, prometheus):
+    def test_metric_kubevirt_cnao_operator_up(
+        self, prometheus, disabled_virt_operator, wait_csv_image_updated_with_bad_image
+    ):
         validate_metrics_value(
             prometheus=prometheus,
             expected_value="0",
