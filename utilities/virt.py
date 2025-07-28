@@ -1369,6 +1369,9 @@ def vm_console_run_commands(
         commands (list): List of commands
         timeout (int): Time to wait for the command output
         return_code_validation (bool): Check commands return 0
+
+    Returns:
+        Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
