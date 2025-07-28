@@ -9,7 +9,6 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     assert_instancetype_labels,
-    wait_for_prometheus_query_result_matches_expected_value,
     wait_for_prometheus_query_result_node_value_update,
 )
 from tests.observability.utils import validate_metrics_value
@@ -34,37 +33,6 @@ def migrated_instance_type_vm(prometheus, rhel_vm_with_cluster_instance_type_and
     )
 
 
-@pytest.fixture()
-def updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm(
-    prometheus, rhel_vm_with_cluster_instance_type_and_preference
-):
-    return wait_for_prometheus_query_result_matches_expected_value(
-        prometheus=prometheus,
-        query=KUBEVIRT_VMI_PHASE_COUNT.format(
-            node_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name,
-            instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
-            preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
-        ),
-        expected_value="1",
-    )
-
-
-@pytest.fixture()
-def updated_kubevirt_vmi_phase_count_metric_with_instancetype_vm(
-    prometheus,
-    running_rhel_vm_with_instance_type_and_preference,
-):
-    return wait_for_prometheus_query_result_matches_expected_value(
-        prometheus=prometheus,
-        query=KUBEVIRT_VMI_PHASE_COUNT.format(
-            node_name=running_rhel_vm_with_instance_type_and_preference.vmi.node.name,
-            instance_type=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
-            preference=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
-        ),
-        expected_value="1",
-    )
-
-
 @pytest.fixture(scope="class")
 def running_rhel_vm_with_instance_type_and_preference(
     rhel_vm_with_instance_type_and_preference,
@@ -78,10 +46,14 @@ class TestInstanceType:
         self,
         prometheus,
         rhel_vm_with_cluster_instance_type_and_preference,
-        updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm,
     ):
         assert_instancetype_labels(
-            prometheus_output=updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm,
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_COUNT.format(
+                node_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name,
+                instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
+                preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+            ),
             expected_labels=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
         )
 
@@ -91,10 +63,14 @@ class TestInstanceType:
         prometheus,
         rhel_vm_with_cluster_instance_type_and_preference,
         migrated_instance_type_vm,
-        updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm,
     ):
         assert_instancetype_labels(
-            prometheus_output=updated_kubevirt_vmi_phase_count_metric_with_cluster_instancetype_vm,
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_COUNT.format(
+                node_name=rhel_vm_with_cluster_instance_type_and_preference.vmi.node.name,
+                instance_type=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
+                preference=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+            ),
             expected_labels=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
         )
 
@@ -118,10 +94,15 @@ class TestInstanceType:
     def test_verify_namespace_instancetype_labels(
         self,
         prometheus,
-        updated_kubevirt_vmi_phase_count_metric_with_instancetype_vm,
+        running_rhel_vm_with_instance_type_and_preference,
     ):
         assert_instancetype_labels(
-            prometheus_output=updated_kubevirt_vmi_phase_count_metric_with_instancetype_vm,
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_COUNT.format(
+                node_name=running_rhel_vm_with_instance_type_and_preference.vmi.node.name,
+                instance_type=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
+                preference=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+            ),
             expected_labels=EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS,
         )
 
