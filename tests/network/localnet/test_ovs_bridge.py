@@ -11,6 +11,7 @@ from utilities.virt import migrate_vm_and_verify
 
 
 @pytest.mark.ipv4
+@pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
 def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
