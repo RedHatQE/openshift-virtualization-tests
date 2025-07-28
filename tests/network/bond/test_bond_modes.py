@@ -195,17 +195,20 @@ def bond_resource(index_number, nodes_available_nics, worker_node1):
 
 
 @pytest.mark.polarion("CNV-4382")
+@pytest.mark.s390x
 def test_bond_created(workers_utility_pods, matrix_bond_modes_bond):
     assert_bond_validation(utility_pods=workers_utility_pods, bond=matrix_bond_modes_bond)
 
 
 @pytest.mark.polarion("CNV-4383")
+@pytest.mark.s390x
 def test_vm_started(bond_modes_vm):
     bond_modes_vm.start(wait=True)
     bond_modes_vm.wait_for_agent_connected()
 
 
 @pytest.mark.polarion("CNV-6583")
+@pytest.mark.s390x
 def test_active_backup_bond_with_fail_over_mac(
     index_number,
     worker_node1,
@@ -224,6 +227,7 @@ def test_active_backup_bond_with_fail_over_mac(
 
 
 @pytest.mark.polarion("CNV-6584")
+@pytest.mark.s390x
 def test_vm_bond_with_fail_over_mac_started(
     vm_with_fail_over_mac_bond,
 ):
@@ -232,5 +236,6 @@ def test_vm_bond_with_fail_over_mac_started(
 
 
 @pytest.mark.polarion("CNV-7263")
+@pytest.mark.s390x
 def test_bond_with_bond_port(workers_utility_pods, bond_resource):
     assert_bond_validation(utility_pods=workers_utility_pods, bond=bond_resource)

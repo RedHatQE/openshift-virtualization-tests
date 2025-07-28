@@ -52,6 +52,7 @@ def cnv_tuning_vm(unprivileged_client, worker_node1, linux_bridge_nad, linux_bri
 
 @pytest.mark.polarion("CNV-7287")
 @pytest.mark.ipv4
+@pytest.mark.s390x
 def test_vm_cnv_tuning_regression(cnv_tuning_vm):
     cnv_tuning_vm.start(wait=True)
     cnv_tuning_vm.wait_for_agent_connected()
