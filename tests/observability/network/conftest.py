@@ -203,14 +203,10 @@ def wait_csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
             if deployment.name == CLUSTER_NETWORK_ADDONS_OPERATOR:
                 return deployment.spec.template.spec.containers[0].image
 
-    sample = TimeoutSampler(
+    for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_10SEC,
         func=_get_csv_image_from_cnao,
-    )
-    try:
-        for sample in sample:
+    ):
             if sample == NON_EXISTS_IMAGE:
                 return
-    except TimeoutExpiredError:
-        raise
