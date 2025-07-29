@@ -34,6 +34,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.console_cli_download import ConsoleCLIDownload
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
@@ -143,7 +144,8 @@ def create_ns(
 
         # cleanup must be done with admin client
         project.client = admin_client
-        project.clean_up()
+        if not project.clean_up():
+            raise ResourceTeardownError(resource=project)
 
 
 class ClusterHosts:
