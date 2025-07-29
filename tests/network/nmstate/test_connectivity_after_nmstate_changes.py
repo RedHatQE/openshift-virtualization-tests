@@ -241,6 +241,7 @@ def modified_nncp(
         nncp.wait_for_status_success()
 
 
+@pytest.mark.s390x
 class TestConnectivityAfterNmstateChanged:
     @pytest.mark.post_upgrade
     @pytest.mark.ipv4

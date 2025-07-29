@@ -122,7 +122,7 @@ jobs:
 
       - name: Create Pull Request for Successful Cherry-pick
         if: steps.prepare_branch.outputs.status == 'success'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
           # Do not create a new commit. The branch is already prepared and pushed.
@@ -147,7 +147,7 @@ jobs:
 
       - name: Create Pull Request for Conflicted Cherry-pick
         if: steps.prepare_branch.outputs.status == 'conflicted'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
           # Do not create a new commit. The branch is already prepared and pushed.

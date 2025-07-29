@@ -1015,7 +1015,7 @@ def get_daemonset_yaml_file_with_image_hash(generated_pulled_secret=None, servic
         image=NET_UTIL_CONTAINER_IMAGE,
         pull_secret=generated_pulled_secret,
     )
-    with open(ds_yaml_file, "r") as fd:
+    with open(ds_yaml_file) as fd:
         ds_yaml = yaml.safe_load(fd.read())
 
     template_spec = ds_yaml["spec"]["template"]["spec"]
