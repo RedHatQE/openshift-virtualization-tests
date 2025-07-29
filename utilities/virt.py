@@ -1171,6 +1171,10 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         Returns:
             obj `VirtualMachine`: VM resource
         """
+        # Must be set here to set VM flavor (used to set username and password)
+        self.template_labels = labels
+        self.os_flavor = self._extract_os_from_template()
+
         super().__init__(
             name=name,
             namespace=namespace,
@@ -1214,8 +1218,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             tpm_params=tpm_params,
             eviction_strategy=eviction_strategy,
             additional_labels=additional_labels,
+            os_flavor=self.os_flavor,
         )
-        self.template_labels = labels
         self.data_source = data_source
         self.data_volume_template = data_volume_template
         self.existing_data_volume = existing_data_volume
@@ -1235,7 +1239,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.sno_cluster = sno_cluster
 
     def to_dict(self):
-        self.os_flavor = self._extract_os_from_template()
         self.set_login_params()
         self.body = self.process_template()
         super().to_dict()
