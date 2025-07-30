@@ -159,7 +159,6 @@ def wait_service_mesh_components_convergence(func, vm, **kwargs):
             sleep=TIMEOUT_10SEC,
             func=func,
             vm=vm,
-            expected_output=expected_output,
             **kwargs,
         ):
             if expected_output not in sample:

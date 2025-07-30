@@ -69,12 +69,14 @@ def test_kubevirt_cdi_operator_up(
     )
 
 
-@pytest.mark.polarion("CNV-10019")
-def test_kubevirt_cdi_import_pods_high_restart(
-    prometheus, metric_cdi_import_pods_high_restart_initial_value, created_fake_data_volume_resource
-):
+@pytest.mark.parametrize(
+    "initial_metric_value",
+    [pytest.param(KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART, marks=pytest.mark.polarion("CNV-10019"))],
+    indirect=True,
+)
+def test_kubevirt_cdi_import_pods_high_restart(prometheus, initial_metric_value, created_fake_data_volume_resource):
     validate_metrics_value(
         prometheus=prometheus,
         metric_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART,
-        expected_value=str(metric_cdi_import_pods_high_restart_initial_value + 1),
+        expected_value=str(initial_metric_value + 1),
     )
