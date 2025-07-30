@@ -1594,3 +1594,23 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
+
+
+def validate_metric_value_greater_than_initial_value(
+    prometheus: Prometheus, metric_name: str, initial_value: int, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                if int(sample) > initial_value:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"{sample} should be greater than {initial_value}")
+        raise

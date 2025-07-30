@@ -17,6 +17,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -26,6 +27,7 @@ from tests.observability.metrics.utils import (
     get_metric_labels_non_empty_value,
     get_pvc_size_bytes,
     timestamp_to_seconds,
+    validate_metric_value_greater_than_initial_value,
     validate_metric_value_within_range,
     validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
@@ -585,4 +587,44 @@ class TestVmVnicInfo:
             prometheus=prometheus,
             vnic_info_to_compare=vnic_info_from_vm_or_vmi,
             metric_name=query.format(vm_name=running_metric_vm.name),
+        )
+
+
+class TestVmiPhaseTransitionFromDeletion:
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+                marks=pytest.mark.polarion("CNV-12067"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_linux(
+        self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
+    ):
+        validate_metric_value_greater_than_initial_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            initial_value=initial_metric_value,
+        )
+
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+                marks=(pytest.mark.polarion("CNV-12204"), pytest.mark.tier3),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_windows(
+        self, prometheus, initial_metric_value, windows_vm_for_test, deleted_windows_vmi
+    ):
+        validate_metric_value_greater_than_initial_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            initial_value=initial_metric_value,
         )
