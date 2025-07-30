@@ -4,11 +4,9 @@ Check VM with Service Account
 
 import pytest
 from kubernetes.client.rest import ApiException
-from ocp_resources.node import Node
 from ocp_resources.service_account import ServiceAccount
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.constants import S390X
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
