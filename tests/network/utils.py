@@ -301,9 +301,22 @@ def assert_service_mesh_request(expected_output, request_response):
     )
 
 
-def assert_authentication_request(vm, service_app_name):
-    # Envoy proxy IP
-    expected_output = "127.0.0.6"
+def assert_authentication_request(vm, service_app_name, expected_output="127.0.0.6"):
+    """
+    Validates service mesh authentication request by sending a request from a VM to a service
+    connected to the service mesh, and asserting the response matches the expected output
+         (defaults to 127.0.0.6, which is the expected response for a successful authentication
+    request - it is the default IP for the istio envoy proxy).
+
+    Args:
+        vm (VirtualMachine): VM that will be used for console connection to make the request.
+        service_app_name (str): Target service DNS name to send the authentication request to.
+        expected_output (str, default="127.0.0.6"): The expected response from the server.
+            Defaults to "127.0.0.6" (istio envoy proxy default IP).
+
+    Raises:
+        AssertionError: If the server response does not contain the expected output.
+    """
     request_response = authentication_request(
         vm=vm,
         service=service_app_name,
