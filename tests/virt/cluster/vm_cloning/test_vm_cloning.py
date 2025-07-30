@@ -13,8 +13,8 @@ from tests.virt.cluster.vm_cloning.utils import (
     assert_target_vm_has_new_pvc_disks,
     check_if_files_present_after_cloning,
 )
-from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, S390X, Images
-from utilities.infra import get_artifactory_config_map, get_artifactory_secret, get_nodes_cpu_architecture
+from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
+from utilities.infra import get_artifactory_config_map, get_artifactory_secret
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
@@ -75,10 +75,12 @@ def dv_template_for_vm_cloning(
 
 
 @pytest.fixture()
-def vm_with_dv_for_cloning(request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot, is_s390x_cluster):
+def vm_with_dv_for_cloning(
+    request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot, is_s390x_cluster
+):
     smm_enabled = True
     efi_params = {"secureBoot": True}
-    if  is_s390x_cluster:
+    if is_s390x_cluster:
         smm_enabled = False
         efi_params = None
     with VirtualMachineForCloning(

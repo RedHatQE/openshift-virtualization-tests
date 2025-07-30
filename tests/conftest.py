@@ -1200,9 +1200,11 @@ def modern_cpu_for_migration(cluster_common_modern_node_cpu, host_cpu_model, nod
         )
     )
 
+
 @pytest.fixture(scope="session")
 def is_s390x_cluster(nodes_cpu_architecture):
     return nodes_cpu_architecture == S390X
+
 
 @pytest.fixture(scope="module")
 def skip_if_no_common_cpu(cluster_common_node_cpu, nodes_cpu_architecture):
@@ -2485,7 +2487,7 @@ def vm_for_test(request, namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client,  is_s390x_cluster):
+def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client, is_s390x_cluster):
     with VirtualMachineForCloning(
         name=RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
