@@ -78,11 +78,12 @@ def dv_template_for_vm_cloning(
 def vm_with_dv_for_cloning(
     request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot, is_s390x_cluster
 ):
-    smm_enabled = True
-    efi_params = {"secureBoot": True}
     if is_s390x_cluster:
         smm_enabled = False
         efi_params = None
+    else:
+        smm_enabled = True
+        efi_params = {"secureBoot": True}
     with VirtualMachineForCloning(
         name=request.param["vm_name"],
         namespace=namespace.name,
