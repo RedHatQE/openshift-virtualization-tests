@@ -2,6 +2,7 @@ import logging
 import re
 
 import pytest
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_2MIN, TIMEOUT_5SEC
@@ -48,4 +49,17 @@ def assert_os_version_mismatch_in_vm(vm: VirtualMachineForTests, expected_os: st
         expected_os_name = "red hat"
     assert re.match(rf"({expected_os_name}).*({expected_os_ver}).*", vm_os), (
         f"Wrong VM OS, expected name: {expected_os_name}, ver: {expected_os_ver}, actual: {vm_os}"
+    )
+
+
+def get_storage_class_from_matrix_different_from_data_source(data_source):
+    data_source_sc_name = data_source.source.instance.spec.storageClassName
+    return next(
+        (
+            storage_class_name
+            for storage_class in py_config["storage_class_matrix"]
+            for storage_class_name in storage_class
+            if storage_class_name != data_source_sc_name
+        ),
+        None,
     )
