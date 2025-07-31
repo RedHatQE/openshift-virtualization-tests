@@ -7,6 +7,7 @@ from pytest_testconfig import config as py_config
 from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
+    clean_up_migration_jobs,
 )
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
@@ -77,6 +78,7 @@ def migrated_hotplugged_vm(hotplugged_vm):
 def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
     with node_mgmt_console(node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
         check_migration_process_after_node_drain(dyn_client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 
 @pytest.mark.parametrize(

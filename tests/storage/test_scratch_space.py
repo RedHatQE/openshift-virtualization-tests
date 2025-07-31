@@ -73,10 +73,7 @@ def scratch_pvc_bound(dv):
     [
         pytest.param(
             {"dv_name": "scratch-space-upload-qcow2-https"},
-            marks=(
-                pytest.mark.polarion("CNV-2327"),
-                pytest.mark.gating(),
-            ),
+            marks=pytest.mark.polarion("CNV-2327"),
         ),
     ],
     indirect=True,

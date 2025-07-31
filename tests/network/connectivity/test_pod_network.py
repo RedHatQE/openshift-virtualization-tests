@@ -99,6 +99,7 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
 )
 @pytest.mark.gating
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_connectivity_over_pod_network(
     ip_family,
     pod_net_vma,
