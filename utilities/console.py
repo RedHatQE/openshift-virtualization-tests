@@ -44,7 +44,12 @@ class Console(object):
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
-        self._connect()
+        try:
+            self._connect()
+        except Exception:
+            LOGGER.exception(f"Failed to connect to {self.vm.name} console.")
+            self.child.close()
+            raise
 
         return self.child
 
@@ -66,21 +71,15 @@ class Console(object):
         if self.child.terminated:
             self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
-        self.child.send("\n\n")
-        self.child.expect(self.prompt)
-        if self.username:
-            self.child.send("exit")
+        try:
             self.child.send("\n\n")
-            self.child.expect("login:")
-        self.child.close()
-
-    def force_disconnect(self):
-        """
-        Method is a workaround for RHEL 7.7.
-        For some reason, console may not be logged out successfully in __exit__()
-        """
-        self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
-        self.disconnect()
+            self.child.expect(self.prompt)
+            if self.username:
+                self.child.send("exit")
+                self.child.send("\n\n")
+                self.child.expect("login:")
+        finally:
+            self.child.close()
 
     def console_eof_sampler(self, func, command, timeout):
         sampler = TimeoutSampler(
