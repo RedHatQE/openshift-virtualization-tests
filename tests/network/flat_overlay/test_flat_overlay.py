@@ -17,6 +17,7 @@ pytestmark = [
 
 @pytest.mark.s390x
 class TestFlatOverlayConnectivity:
+    @pytest.mark.conformance
     @pytest.mark.gating
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10158")

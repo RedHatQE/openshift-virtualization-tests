@@ -214,6 +214,7 @@ def net_add_op_bridge_attached_vm(namespace, net_add_op_br1test_nad):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.post_upgrade
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-2520")
