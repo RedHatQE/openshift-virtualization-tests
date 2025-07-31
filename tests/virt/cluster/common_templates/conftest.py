@@ -89,7 +89,7 @@ def matrix_rhel_os_vm_from_template(
     rhel_os_matrix__class__,
     matrix_rhel_os_golden_image_data_source,
 ):
-    return vm_instance_from_template(
+    return matrix_os_vm_from_template(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         os_matrix=rhel_os_matrix__class__,
