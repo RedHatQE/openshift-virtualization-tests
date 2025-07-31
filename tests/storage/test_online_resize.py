@@ -295,9 +295,11 @@ def test_disk_expand_then_clone_fail(
             sleep=TIMEOUT_5SEC,
             func=lambda: dv.instance.status.conditions,
         ):
+            if not sample:
+                continue
+
             if any(
-                "The clone doesn't meet the validation requirements:"
-                " target resources requests storage size is smaller than the source" in condition["message"]
+                "resources requests storage size is smaller than the source" in (condition.get("message") or "")
                 for condition in sample
             ):
                 return
