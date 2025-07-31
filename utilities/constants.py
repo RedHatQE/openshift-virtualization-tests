@@ -826,6 +826,8 @@ WIN_10 = "win10"
 WIN_11 = "win11"
 WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
+WIN_2K16 = "win2k16"
+WIN_2K19 = "win2k19"
 
 PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 
