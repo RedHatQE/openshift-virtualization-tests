@@ -23,6 +23,7 @@ def cnv_prometheus_rules_names(hco_namespace):
 
 
 @pytest.mark.polarion("CNV-10081")
+@pytest.mark.s390x
 def test_no_new_prometheus_rules(cnv_prometheus_rules_names):
     """
     Since validations for runbook url of all cnv alerts are done via polarion parameterization of prometheusrules,
@@ -48,6 +49,7 @@ def cnv_prometheus_rules_unique_alert_names_runbook(cnv_alerts_from_prometheus_r
 
 
 @pytest.mark.polarion("CNV-10083")
+@pytest.mark.s390x
 def test_runbook_upstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
     url_not_reachable = {}
     for alert_name in cnv_prometheus_rules_unique_alert_names_runbook.keys():
@@ -64,6 +66,7 @@ def test_runbook_upstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
 
 
 @pytest.mark.polarion("CNV-10084")
+@pytest.mark.s390x
 def test_runbook_downstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
     error_messages = []
     alerts_without_runbook = {}

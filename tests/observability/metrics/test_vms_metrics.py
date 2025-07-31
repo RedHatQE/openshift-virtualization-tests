@@ -189,6 +189,7 @@ def check_vmi_count_metric(expected_vmi_count, prometheus):
 
 class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3048")
+    @pytest.mark.s390x
     def test_vmi_count_metric_increase(
         self,
         prometheus,
@@ -199,6 +200,7 @@ class TestVMICountMetric:
         assert check_vmi_count_metric(number_of_running_vmis + 2, prometheus)
 
     @pytest.mark.polarion("CNV-3589")
+    @pytest.mark.s390x
     def test_vmi_count_metric_decrease(
         self,
         prometheus,
@@ -212,6 +214,7 @@ class TestVMICountMetric:
 
 class TestVMStatusLastTransitionMetrics:
     @pytest.mark.polarion("CNV-9661")
+    @pytest.mark.s390x
     def test_vm_running_status_metrics(self, prometheus, vm_metric_1):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
@@ -220,6 +223,7 @@ class TestVMStatusLastTransitionMetrics:
         )
 
     @pytest.mark.polarion("CNV-9662")
+    @pytest.mark.s390x
     def test_vm_error_status_metrics(self, prometheus, vm_in_error_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
@@ -228,6 +232,7 @@ class TestVMStatusLastTransitionMetrics:
         )
 
     @pytest.mark.polarion("CNV-9665")
+    @pytest.mark.s390x
     def test_vm_migrating_status_metrics(
         self, skip_if_no_common_cpu, prometheus, vm_metric_1, migration_policy_with_bandwidth, vm_metric_1_vmim
     ):
@@ -238,6 +243,7 @@ class TestVMStatusLastTransitionMetrics:
         )
 
     @pytest.mark.polarion("CNV-9664")
+    @pytest.mark.s390x
     def test_vm_non_running_status_metrics(self, prometheus, vm_metric_1, stopped_vm_metric_1):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
@@ -246,6 +252,7 @@ class TestVMStatusLastTransitionMetrics:
         )
 
     @pytest.mark.polarion("CNV-9751")
+    @pytest.mark.s390x
     def test_vm_starting_status_metrics(self, prometheus, vm_in_starting_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
@@ -262,6 +269,7 @@ class TestVMStatusLastTransitionMetrics:
 @pytest.mark.usefixtures("vm_for_test")
 class TestVmConsolesAndVmCreateDateTimestampMetrics:
     @pytest.mark.polarion("CNV-11024")
+    @pytest.mark.s390x
     def test_kubevirt_console_active_connections(self, prometheus, vm_for_test, connected_vm_console_successfully):
         validate_metrics_value(
             prometheus=prometheus,
@@ -270,6 +278,7 @@ class TestVmConsolesAndVmCreateDateTimestampMetrics:
         )
 
     @pytest.mark.polarion("CNV-10842")
+    @pytest.mark.s390x
     def test_kubevirt_vnc_active_connections(self, prometheus, vm_for_test, connected_vnc_console):
         validate_metrics_value(
             prometheus=prometheus,
@@ -278,6 +287,7 @@ class TestVmConsolesAndVmCreateDateTimestampMetrics:
         )
 
     @pytest.mark.polarion("CNV-11805")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_create_date_timestamp_seconds(self, prometheus, vm_for_test):
         validate_metrics_value(
             prometheus=prometheus,
@@ -292,6 +302,7 @@ class TestVmiMemoryCachedBytes:
         [pytest.param("test-vm-memory-cached", marks=pytest.mark.polarion("CNV-11031"))],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_kubevirt_vmi_memory_cached_bytes(
         self,
         prometheus,
@@ -325,6 +336,7 @@ class TestVmiFileSystemMetricsLinux:
         ],
         indirect=["file_system_metric_mountpoints_existence"],
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
         self,
         prometheus,
@@ -379,6 +391,7 @@ class TestVmiMemoryAvailableBytes:
         [pytest.param("available-mem-test", marks=pytest.mark.polarion("CNV-11497"))],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_kubevirt_vmi_memory_available_bytes(self, prometheus, vm_for_test, vmi_memory_available_memory):
         validate_metric_value_within_range(
             prometheus=prometheus,
@@ -390,6 +403,7 @@ class TestVmiMemoryAvailableBytes:
 @pytest.mark.usefixtures("vm_with_cpu_spec")
 class TestVmResourceRequests:
     @pytest.mark.polarion("CNV-11521")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_resource_requests(
         self,
         prometheus,
@@ -409,6 +423,7 @@ class TestVmiStatusAddresses:
     @pytest.mark.parametrize(
         "vm_for_test", [pytest.param("vmi-status-addresses", marks=pytest.mark.polarion("CNV-11534"))], indirect=True
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmi_status_addresses(
         self,
         prometheus,
@@ -429,6 +444,7 @@ class TestVmSnapshotSucceededTimeStamp:
     @pytest.mark.parametrize(
         "vm_for_test", [pytest.param("vm-snapshot-test", marks=pytest.mark.polarion("CNV-11536"))], indirect=True
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmsnapshot_succeeded_timestamp_seconds(
         self, prometheus, vm_for_test, vm_for_test_snapshot
     ):
@@ -441,6 +457,7 @@ class TestVmSnapshotSucceededTimeStamp:
 
 class TestVmResourceLimits:
     @pytest.mark.polarion("CNV-11601")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_resource_limits(
         self, prometheus, cnv_vm_resources_limits_matrix__function__, vm_for_test_with_resource_limits
     ):
@@ -460,6 +477,7 @@ class TestVmResourceLimits:
 @pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
 class TestVmFreeMemoryBytes:
     @pytest.mark.polarion("CNV-11692")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(self, prometheus, vm_for_test):
         validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
             prometheus=prometheus,
@@ -470,6 +488,7 @@ class TestVmFreeMemoryBytes:
         )
 
     @pytest.mark.polarion("CNV-11693")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
         self,
         prometheus,
@@ -507,6 +526,7 @@ class TestKubevirtVmiNonEvictable:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_kubevirt_vmi_non_evictable(
         self,
         prometheus,
@@ -522,6 +542,7 @@ class TestKubevirtVmiNonEvictable:
 
 class TestVmSnapshotPersistentVolumeClaimLabels:
     @pytest.mark.polarion("CNV-11762")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmsnapshot_persistentvolumeclaim_labels(
         self,
         prometheus,
@@ -542,6 +563,7 @@ class TestVmSnapshotPersistentVolumeClaimLabels:
 
 class TestVmDiskAllocatedSizeLinux:
     @pytest.mark.polarion("CNV-11817")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
         self,
         prometheus,
@@ -582,6 +604,7 @@ class TestVmVnicInfo:
         ],
         indirect=["vnic_info_from_vm_or_vmi"],
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_vnic_info(self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi, query):
         validate_vnic_info(
             prometheus=prometheus,

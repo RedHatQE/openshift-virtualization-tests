@@ -11,6 +11,7 @@ from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR, TIMEOUT_5MIN
 
 class TestCnaoDown:
     @pytest.mark.polarion("CNV-11302")
+    @pytest.mark.s390x
     def test_metric_kubevirt_cnao_operator_up(
         self, prometheus, disabled_virt_operator, wait_csv_image_updated_with_bad_image
     ):
@@ -27,6 +28,7 @@ class TestCnaoDown:
 )
 class TestDuplicateMacs:
     @pytest.mark.polarion("CNV-11304")
+    @pytest.mark.s390x
     def test_metric_kubevirt_cnao_kubemacpool_duplicate_macs(self, prometheus):
         validate_metrics_value(
             prometheus=prometheus,
@@ -38,6 +40,7 @@ class TestDuplicateMacs:
 @pytest.mark.usefixtures("updated_cnao_kubemacpool_with_bad_image_csv")
 class TestKubeMacPool:
     @pytest.mark.polarion("CNV-11305")
+    @pytest.mark.s390x
     def test_metric_kubevirt_cnao_kubemacpool_manager_up(self, prometheus):
         validate_metrics_value(
             prometheus=prometheus,
@@ -55,6 +58,7 @@ class TestKubeMacPool:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_cnao_cr_kubemacpool_aggregated(self, prometheus, scaled_deployment):
         validate_metrics_value(
             prometheus=prometheus,
