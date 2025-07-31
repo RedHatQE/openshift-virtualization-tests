@@ -94,6 +94,7 @@ def updated_cr_with_custom_crypto_policy(
     assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "updated_cr_with_custom_crypto_policy",
     [

@@ -16,6 +16,7 @@ def privileged_scc():
 
 
 @pytest.mark.polarion("CNV-4439")
+@pytest.mark.s390x
 def test_users_in_privileged_scc(privileged_scc):
     """
     Validate that Users in privileged SCC is not updated after installing CNV

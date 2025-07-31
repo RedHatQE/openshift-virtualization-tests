@@ -16,6 +16,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "deployment_by_name",
     [
@@ -38,6 +39,7 @@ def test_liveness_probe(deployment_by_name):
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "deployment_by_name, cpu_min_value",
     [
@@ -63,6 +65,7 @@ def test_request_param(deployment_by_name, cpu_min_value):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-7675")
+@pytest.mark.s390x
 def test_cnv_deployment_priority_class_name(
     cnv_deployment_by_name_no_hpp,
 ):
@@ -75,6 +78,7 @@ def test_cnv_deployment_priority_class_name(
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8289")
+@pytest.mark.s390x
 def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
     """
     Since cnv deployments image validations are done via polarion parameterization, this test has been added
@@ -90,6 +94,7 @@ def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8264")
+@pytest.mark.s390x
 def test_cnv_deployment_container_image(cnv_deployment_by_name):
     assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
     assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)

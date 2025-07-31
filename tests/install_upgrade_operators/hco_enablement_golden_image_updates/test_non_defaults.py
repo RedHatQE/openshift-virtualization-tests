@@ -11,6 +11,7 @@ pytestmark = [pytest.mark.gating, pytest.mark.arm64]
 @pytest.mark.usefixtures("disabled_common_boot_image_import_hco_spec_scope_class")
 class TestDisableCommonBootImageImport:
     @pytest.mark.polarion("CNV-7473")
+    @pytest.mark.s390x
     def test_disable_spec_verify_hco_cr_and_ssp_cr(
         self,
         ssp_cr_spec,
@@ -20,6 +21,7 @@ class TestDisableCommonBootImageImport:
         )
 
     @pytest.mark.polarion("CNV-8183")
+    @pytest.mark.s390x
     def test_image_streams_disable_feature_gate(
         self,
         golden_images_namespace,

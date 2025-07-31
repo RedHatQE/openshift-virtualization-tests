@@ -114,6 +114,7 @@ def updated_common_template(
     assert not modified_common_templates, f"Following templates were not reverted back: {modified_common_templates}"
 
 
+@pytest.mark.s390x
 class TestModifyCommonTemplateSpec:
     @pytest.mark.parametrize(
         "updated_common_template",
@@ -216,6 +217,7 @@ class TestModifyCommonTemplateSpec:
         assert not errors, "".join(errors)
 
 
+@pytest.mark.s390x
 @pytest.mark.usefixtures("common_templates_scope_session")
 class TestCommonTemplatesEnableDisable:
     @pytest.mark.parametrize(

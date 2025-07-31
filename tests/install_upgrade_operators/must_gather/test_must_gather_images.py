@@ -12,6 +12,7 @@ from utilities.constants import NamespacesNames
 pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64]
 
 
+@pytest.mark.s390x
 class TestImageGathering:
     @pytest.mark.parametrize(
         "resource_path, resource",

@@ -14,6 +14,7 @@ SPEC_STR = "spec"
 PATCH_STR = "patch"
 
 
+@pytest.mark.s390x
 class TestLiveMigrationConfigUpdate:
     @pytest.mark.parametrize(
         ("updated_hco_cr", "expected"),

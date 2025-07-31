@@ -35,6 +35,7 @@ LOGGER = logging.getLogger(__name__)
 )
 class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.polarion("CNV-5226")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -70,6 +71,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5228")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -103,6 +105,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5229")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -139,6 +142,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5230")
+    @pytest.mark.s390x
     @pytest.mark.dependency(
         name="test_deploying_workloads_on_selected_nodes",
         depends=["test_change_workload_components_on_selected_node_before_workload"],
@@ -151,6 +155,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         assert vm_placement_vm_work3.vmi.node.name == nodes_labeled["work3"][0]
 
     @pytest.mark.polarion("CNV-5231")
+    @pytest.mark.s390x
     @pytest.mark.dependency(
         depends=["test_deploying_workloads_on_selected_nodes"],
     )
@@ -171,6 +176,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             raise
 
     @pytest.mark.polarion("CNV-5232")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -208,6 +214,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5233")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -247,6 +254,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5236")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -284,6 +292,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5237")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -322,6 +331,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         )
 
     @pytest.mark.polarion("CNV-5235")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [

@@ -54,6 +54,7 @@ def get_resource_current_value(resource_spec, field_to_validate):
     return current_value
 
 
+@pytest.mark.s390x
 class TestHCONonDefaultFields:
     @pytest.mark.parametrize(
         (

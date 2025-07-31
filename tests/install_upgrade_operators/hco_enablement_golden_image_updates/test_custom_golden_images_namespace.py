@@ -162,6 +162,7 @@ def updated_common_templates_non_existent_ns(
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.usefixtures("updated_common_template_custom_ns")
 class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
@@ -223,6 +224,7 @@ class TestDefaultCommonTemplates:
 
 
 @pytest.mark.polarion("CNV-11631")
+@pytest.mark.s390x
 def test_non_existent_namespace(
     admin_client,
     hco_namespace,

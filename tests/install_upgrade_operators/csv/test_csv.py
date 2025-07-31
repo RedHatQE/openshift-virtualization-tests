@@ -36,6 +36,7 @@ def csv_infrastructure_features_annotation_value(csv_scope_session):
 @pytest.mark.polarion("CNV-4456")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
+@pytest.mark.s390x
 def test_csv_keywords(csv_scope_session):
     """
     Assert keywords. Check that each one of the expected keywords are actually there
@@ -46,6 +47,7 @@ def test_csv_keywords(csv_scope_session):
 @pytest.mark.polarion("CNV-4457")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
+@pytest.mark.s390x
 def test_csv_links(csv_scope_session):
     """
     Check links list.
@@ -62,6 +64,7 @@ def test_csv_links(csv_scope_session):
 @pytest.mark.polarion("CNV-4458")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
+@pytest.mark.s390x
 def test_csv_icon(csv_scope_session):
     """
     Assert Icon/Logo.
@@ -78,6 +81,7 @@ def test_csv_icon(csv_scope_session):
 @pytest.mark.polarion("CNV-4376")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
+@pytest.mark.s390x
 def test_csv_properties(csv_scope_session):
     """
     Asserting remaining csv properties.
@@ -90,6 +94,7 @@ def test_csv_properties(csv_scope_session):
     assert annotations.get("support") == "Red Hat"
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "expected_feature",
     [

@@ -15,6 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.polarion("CNV-9367")
+@pytest.mark.s390x
 def test_set_hco_crypto_failed_without_required_cipher(
     hyperconverged_resource_scope_function,
 ):
@@ -41,6 +42,7 @@ def test_set_hco_crypto_failed_without_required_cipher(
 
 
 @pytest.mark.polarion("CNV-10551")
+@pytest.mark.s390x
 def test_set_ciphers_for_tlsv13(hyperconverged_resource_scope_function):
     error_string = r"custom ciphers cannot be selected when minTLSVersion is VersionTLS13"
     tls_custom_profile = copy.deepcopy(TLS_CUSTOM_PROFILE)

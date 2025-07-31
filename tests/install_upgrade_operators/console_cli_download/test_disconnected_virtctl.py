@@ -31,6 +31,7 @@ def validate_virtctl_versions(virtctl_bin):
     )
 
 
+@pytest.mark.s390x
 class TestDisconnectedVirtctlDownload:
     @pytest.mark.parametrize(
         "downloaded_and_extracted_virtctl_binary_for_os",
@@ -65,6 +66,7 @@ class TestDisconnectedVirtctlDownload:
         assert os.path.exists(downloaded_and_extracted_virtctl_binary_for_os)
 
 
+@pytest.mark.s390x
 class TestDisconnectedVirtctlDownloadAndExecute:
     @pytest.mark.parametrize(
         ("downloaded_and_extracted_virtctl_binary_for_os", "platform"),
@@ -92,6 +94,7 @@ class TestDisconnectedVirtctlDownloadAndExecute:
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 class TestDisconnectedVirtctlAllLinksInternal:
     @pytest.mark.polarion("CNV-6915")
     def test_all_links_internal(self, all_virtctl_urls, non_internal_fqdns):

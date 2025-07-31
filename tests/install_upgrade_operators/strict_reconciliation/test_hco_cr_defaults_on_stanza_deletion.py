@@ -44,6 +44,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.s390x
 class TestCRDefaultsOnStanzaDeletion:
     @pytest.mark.parametrize(
         "deleted_stanza_on_hco_cr, expected",

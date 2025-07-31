@@ -27,6 +27,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import verify_s
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
+@pytest.mark.s390x
 class TestOperatorsModify:
     @pytest.mark.parametrize(
         "updated_cdi_cr",

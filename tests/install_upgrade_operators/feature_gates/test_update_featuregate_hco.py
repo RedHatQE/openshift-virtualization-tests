@@ -26,6 +26,7 @@ def updated_fg_hco(
         yield
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     ("updated_fg_hco", "kubevirt_featuregate_name", "hco_featuregate"),
     [

@@ -57,6 +57,7 @@ def pod_security_violations_apis_calls(audit_logs, hco_namespace):
 
 
 @pytest.mark.polarion("CNV-9115")
+@pytest.mark.s390x
 def test_cnv_pod_security_violation_audit_logs(pod_security_violations_apis_calls):
     LOGGER.info("Test pod security violations API calls:")
     if pod_security_violations_apis_calls:

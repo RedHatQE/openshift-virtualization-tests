@@ -40,6 +40,7 @@ def resource_object_value_by_key(request):
     return get_resource_key_value(resource=resource_obj, key_name=request.param.get(KEY_NAME_STR))
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     ("expected", "resource_object_value_by_key"),
     [

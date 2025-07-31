@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 )
 class TestCertRotation:
     @pytest.mark.polarion("CNV-6203")
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "hyperconverged_resource_certconfig_change",
         [

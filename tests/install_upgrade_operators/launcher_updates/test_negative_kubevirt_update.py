@@ -16,6 +16,7 @@ KUBEVIRT_NEGATIVE_STRATEGY = {
 }
 
 
+@pytest.mark.s390x
 class TestLauncherUpdateNegative:
     @pytest.mark.parametrize(
         "updated_kubevirt_cr,",
