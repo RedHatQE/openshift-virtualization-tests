@@ -1,10 +1,10 @@
 import pytest
 
 from tests.network.service_mesh.utils import (
+    assert_authentication_request,
     assert_traffic_management_request,
     inbound_request,
 )
-from tests.network.utils import assert_authentication_request
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.service_mesh
