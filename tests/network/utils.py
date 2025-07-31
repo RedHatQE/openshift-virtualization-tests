@@ -274,6 +274,19 @@ def assert_nncp_successfully_configured(nncp):
         raise
 
 
+def authentication_command(service: str) -> str:
+    """
+    Generate the authentication command for service mesh testing.
+
+    Args:
+        service (str): target service DNS name.
+
+    Returns:
+        str: The curl command string.
+    """
+    return f"curl http://{service}:{SERVICE_MESH_PORT}/ip"
+
+
 def authentication_request(vm, **kwargs):
     """
     Return server response to a request sent from VM console. This request allows testing client authentication.
@@ -287,9 +300,9 @@ def authentication_request(vm, **kwargs):
     Returns:
         str: Server response
     """
-    return run_console_command(
+    return exec_console_command(
         vm=vm,
-        command=f"curl http://{kwargs['service']}:{SERVICE_MESH_PORT}/ip",
+        command=authentication_command(kwargs["service"]),
     )
 
 
@@ -302,26 +315,55 @@ def assert_service_mesh_request(expected_output, request_response):
 def assert_authentication_request(vm, service_app_name):
     # Envoy proxy IP
     expected_output = "127.0.0.6"
-    request_response = authentication_request(vm=vm, service=service_app_name)
+    request_response = authentication_request(
+        vm=vm,
+        service=service_app_name,
+    )
     assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
-def run_console_command(vm, command, timeout=TIMEOUT_1MIN):
+def exec_console_command(vm, command, timeout=TIMEOUT_1MIN):
     """
-    Run a single command through a VM console.
+    Execute a command in VM console and return the output.
+
+    Args:
+        vm (VirtualMachine): VM to be used for console connection.
+        command (str): Command to execute.
+        timeout (int, default=TIMEOUT_1MIN): Timeout for the command execution.
+
+    Returns:
+        str: Command output (child.before.decode('utf-8')).
     """
-    prompt = r"\$ "
+    prompt = [r"\$ "]
     with console.Console(vm=vm, prompt=prompt) as vmc:
         LOGGER.info(f"Execute {command} on {vm.name}")
         try:
             vmc.sendline(command)
             vmc.expect(prompt, timeout=timeout)
-            return vmc.before
         except pexpect.exceptions.TIMEOUT:
-            LOGGER.info(f"Timeout: {vmc.before}")
-            return vmc.before
+            LOGGER.warning(f"Console command '{command}' on {vm.name} timed out after {timeout}s")
         except pexpect.exceptions.EOF:
-            LOGGER.info(f"EOF: {vmc.before}")
+            LOGGER.warning(f"Console command '{command}' on {vm.name} encountered EOF (connection lost)")
+
+        return vmc.before
+
+
+def verify_console_command_output(
+    vm,
+    command,
+    expected_output,
+    timeout=TIMEOUT_1MIN,
+):
+    """
+    Run a list of commands inside a VM and check for expected output.
+    """
+    with console.Console(vm=vm) as vmc:
+        LOGGER.info(f"Execute {command} on {vm.name}")
+        try:
+            vmc.sendline(command)
+            vmc.expect(expected_output, timeout=timeout)
+            return expected_output
+        except pexpect.exceptions.TIMEOUT:
             return vmc.before
 
 
