@@ -1361,9 +1361,8 @@ def vm_console_run_commands(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
-    verify_commands_output: bool = True,
-    command_output: bool = False,
-) -> dict[str, list[str]] | None:
+    return_code_validation: bool = True,
+) -> dict[str, list[str]]:
     """
     Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
     If return code other than 0 then it will break execution and raise exception.
@@ -1372,25 +1371,34 @@ def vm_console_run_commands(
         vm (obj): VirtualMachine
         commands (list): List of commands
         timeout (int): Time to wait for the command output
-        verify_commands_output (bool): Check commands return 0
-        command_output (bool): If selected, returns a dict of command and associated output
+        return_code_validation (bool): Check commands return 0
+
+    Returns:
+        Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
     ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-    with Console(vm=vm) as vmc:
+    prompt = r"\$ "
+    with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
-            vmc.sendline(command)
-            vmc.expect(r".*\$")
-            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
-            if verify_commands_output:
-                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
-                try:
+            try:
+                vmc.sendline(command)
+                vmc.expect(prompt)
+                output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
+                if return_code_validation:
+                    vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
-                except pexpect.exceptions.TIMEOUT:
-                    raise CommandExecFailed(output[command])
-    return output if command_output else None
+                    vmc.expect(prompt)
+            except pexpect.exceptions.TIMEOUT:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"timeout: {vmc.before}")
+            except pexpect.exceptions.EOF:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"EOF: {vmc.before}")
+            except Exception as e:
+                e.add_note(vmc.before)
+                raise CommandExecFailed(str(output.get(command, [])), err=f"Error: {e}")
+    return output
 
 
 def fedora_vm_body(name: str) -> dict[str, Any]:
