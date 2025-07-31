@@ -362,17 +362,21 @@ def wait_for_virt_launcher_pod(vmi):
         raise
 
 
-def validate_machine_type(vm, expected_machine_type):
+def validate_machine_type(
+    vm, expected_machine_type, expected_libvirt_machine_type=None
+):  # Incase of s390x machine_type in VM/VMI are different than one in libvirt xml
     vm_machine_type = vm.instance.spec.template.spec.domain.machine.type
     vmi_machine_type = vm.vmi.instance.spec.domain.machine.type
+    if expected_libvirt_machine_type is None:
+        expected_libvirt_machine_type = expected_machine_type
 
     assert vm_machine_type == vmi_machine_type == expected_machine_type, (
         "Created VM's machine type does not match the request. "
         f"Expected: {expected_machine_type} VM: {vm_machine_type}, VMI: {vmi_machine_type}"
     )
     vmi_xml_machine_type = vm.privileged_vmi.xml_dict["domain"]["os"]["type"]["@machine"]
-    assert vmi_xml_machine_type == expected_machine_type, (
-        f"libvirt machine type {vmi_xml_machine_type} does not match expected type {expected_machine_type}"
+    assert vmi_xml_machine_type == expected_libvirt_machine_type, (
+        f"libvirt machine type {vmi_xml_machine_type} does not match expected type {expected_libvirt_machine_type}"
     )
 
 
