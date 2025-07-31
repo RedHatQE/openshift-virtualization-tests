@@ -33,7 +33,7 @@ spec:
             - /bin/bash
             - -c
             - echo ok > /tmp/healthy && sleep INF
-          image: quay.io/openshift-cnv/qe-cnv-tests-net-util-container:centos-stream-9
+          image: quay.io/qwang1/qe-cnv-tests-net-util-container:centos-stream-9
           imagePullPolicy: IfNotPresent
           name: utility
           readinessProbe:
@@ -48,11 +48,11 @@ spec:
             timeoutSeconds: 1
           resources:
             limits:
-              cpu: 100m
-              memory: 50Mi
+              cpu: 2000m
+              memory: 2Gi
             requests:
-              cpu: 100m
-              memory: 50Mi
+              cpu: 2000m
+              memory: 2Gi
           securityContext:
             privileged: true
             runAsUser: 0
