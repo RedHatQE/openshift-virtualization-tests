@@ -2,6 +2,8 @@
 Filesystem overhead test suite
 """
 
+import math
+
 import bitmath
 import pytest
 from ocp_resources.cdi import CDI
@@ -20,10 +22,33 @@ def get_pvc_size_gib(pvc):
     return bitmath.Byte(int(pvc.instance.spec.resources.requests.storage)).to_GiB()
 
 
-def assert_fs_overhead_added(actual_size, requested_size):
-    expected_size = actual_size * (1 - FS_OVERHEAD_20)
-    assert expected_size == requested_size, (
-        f"actual size: {actual_size}, expected size: {expected_size}, requested size: {requested_size}"
+def assert_fs_overhead_added(actual_size: bitmath.Bitmath, requested_size: bitmath.Bitmath) -> None:
+    """
+    Assert that the actual PVC size includes at least a 20% filesystem overhead on the requested size,
+    allowing a tolerance of 1 MiB shortfall.
+
+    Parameters:
+        actual_size (bitmath.Bitmath): The provisioned PVC size including filesystem overhead.
+        requested_size (bitmath.Bitmath): The originally requested PVC size.
+
+    Raises:
+        AssertionError: If actual_size is smaller than ceil(requested_size * 1.2) by more than 1 MiB.
+
+    Notes:
+        - The expected size is calculated by rounding up the requested size multiplied by 1.2 (20% overhead).
+        - Tolerance of 1 MiB is allowed to account for minor discrepancies.
+    """
+    mib_bytes = bitmath.MiB(1).to_Byte().value
+    requested_bytes = requested_size.to_Byte().value
+    actual_bytes = actual_size.to_Byte().value
+    expected_bytes = math.ceil(requested_bytes * (1 + FS_OVERHEAD_20) / mib_bytes) * mib_bytes
+    diff = expected_bytes - actual_bytes
+
+    assert diff <= mib_bytes, (
+        f" PVC size mismatch:\n"
+        f"  Requested: {requested_size}\n"
+        f"  Expected (+20% overhead, rounded up to nearest MiB): {expected_bytes}\n"
+        f"  Actual: {actual_size}\n"
     )
 
 
