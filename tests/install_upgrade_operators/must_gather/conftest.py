@@ -21,7 +21,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     get_must_gather_dir,
 )
 from tests.utils import create_vms
-from utilities.constants import LINUX_BRIDGE
+from utilities.constants import LINUX_BRIDGE, TIMEOUT_40MIN
 from utilities.exceptions import MissingResourceException
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
@@ -667,6 +667,7 @@ def collected_must_gather_all_images(
     output = run_must_gather(
         target_base_dir=must_gather_tmpdir_all_images,
         flag_names="all-images",
+        command_timeout=TIMEOUT_40MIN,
     )
     with open(os.path.join(must_gather_tmpdir_all_images, "output.log"), "w") as _file:
         _file.write(output)
