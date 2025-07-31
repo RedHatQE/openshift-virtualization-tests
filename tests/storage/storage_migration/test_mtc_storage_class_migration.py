@@ -5,8 +5,6 @@ from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    STORAGE_CLASS_A,
-    STORAGE_CLASS_B,
     WINDOWS_FILE_WITH_PATH,
 )
 from tests.storage.storage_migration.utils import (
@@ -16,6 +14,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
+from utilities.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
