@@ -27,12 +27,11 @@ from tests.network.service_mesh.constants import (
     VERSION_2_DEPLOYMENT,
     VIRTUAL_SERVICE_TYPE,
 )
-from tests.network.service_mesh.utils import traffic_management_request
+from tests.network.service_mesh.utils import authentication_request, traffic_management_request
 from tests.network.utils import (
     FedoraVirtualMachineForServiceMesh,
     ServiceMeshDeployments,
     ServiceMeshDeploymentService,
-    authentication_request,
 )
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
