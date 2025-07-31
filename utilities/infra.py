@@ -34,19 +34,17 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.console_cli_download import ConsoleCLIDownload
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
-from ocp_resources.project_project_openshift_io import Project
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.exceptions import NodeNotReadyError, NodeUnschedulableError
 from ocp_utilities.infra import (
     assert_nodes_in_healthy_condition,
@@ -71,6 +69,7 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBECONFIG,
     KUBELET_READY_CONDITION,
+    KUBERNETES_ARCH_LABEL,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
@@ -81,9 +80,9 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10MIN,
-    TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
+    X86_64,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -103,7 +102,6 @@ from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import guest_agent_version_parser
 from utilities.storage import get_test_artifact_server_url
 
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 JIRA_STATUS_CLOSED = ("on_qa", "verified", "release pending", "closed")
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
@@ -118,12 +116,12 @@ def label_project(name, label, admin_client):
 
 
 def create_ns(
-    name,
-    unprivileged_client=None,
-    labels=None,
-    admin_client=None,
-    teardown=True,
-    delete_timeout=TIMEOUT_6MIN,
+    name: str,
+    admin_client: DynamicClient,
+    unprivileged_client: DynamicClient | None = None,
+    labels: dict[str, str] | None = None,
+    teardown: bool = True,
+    delete_timeout: int = TIMEOUT_6MIN,
 ):
     """
     For kubemacpool labeling opt-modes, provide kmp_vm_label and admin_client as admin_client
@@ -139,16 +137,15 @@ def create_ns(
             ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield ns
     else:
-        with ProjectRequest(name=name, client=unprivileged_client, teardown=teardown):
-            project = Project(
-                name=name,
-                client=unprivileged_client,
-                teardown=teardown,
-                delete_timeout=delete_timeout,
-            )
-            project.wait_for_status(project.Status.ACTIVE, timeout=TIMEOUT_2MIN)
-            label_project(name=name, label=labels, admin_client=admin_client)
-            yield project
+        project = ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
+        label_project(name=name, label=labels, admin_client=admin_client)
+
+        yield project
+
+        # cleanup must be done with admin client
+        project.client = admin_client
+        if not project.clean_up():
+            raise ResourceTeardownError(resource=project)
 
 
 class ClusterHosts:
@@ -1006,7 +1003,7 @@ def download_file_from_cluster(get_console_spec_links_name, dest_dir):
 
 def get_machine_platform():
     os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == "x86_64" else os_machine_type
+    return AMD_64 if os_machine_type == X86_64 else os_machine_type
 
 
 def get_nodes_with_label(nodes, label):
@@ -1020,7 +1017,7 @@ def get_daemonset_yaml_file_with_image_hash(generated_pulled_secret=None, servic
         image=NET_UTIL_CONTAINER_IMAGE,
         pull_secret=generated_pulled_secret,
     )
-    with open(ds_yaml_file, "r") as fd:
+    with open(ds_yaml_file) as fd:
         ds_yaml = yaml.safe_load(fd.read())
 
     template_spec = ds_yaml["spec"]["template"]["spec"]
@@ -1138,46 +1135,6 @@ def utility_daemonset_for_custom_tests(
     with DaemonSet(yaml_file=ds_yaml_file) as ds:
         ds.wait_until_deployed()
         yield ds
-
-
-def has_kubevirt_owner(resource):
-    return any([
-        owner_reference.apiVersion.startswith(f"{resource.ApiGroup.KUBEVIRT_IO}/")
-        for owner_reference in resource.instance.metadata.get("ownerReferences", [])
-    ])
-
-
-def get_pod_disruption_budget(admin_client, namespace_name):
-    return list(
-        PodDisruptionBudget.get(
-            dyn_client=admin_client,
-            namespace=namespace_name,
-        )
-    )
-
-
-def check_pod_disruption_budget_for_completed_migrations(admin_client, namespace, timeout=TIMEOUT_5MIN):
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_10SEC,
-        func=utilities.infra.get_pod_disruption_budget,
-        admin_client=admin_client,
-        namespace_name=namespace,
-    )
-    pod_disruption_budget_desired_states = None
-    try:
-        for sample in samples:
-            pod_disruption_budget_desired_states = {
-                pdb.name: pdb.instance.spec.minAvailable
-                for pdb in sample
-                if utilities.infra.has_kubevirt_owner(resource=pdb) and pdb.instance.spec.minAvailable > 1
-            }
-            # Return if there are no more required migrations
-            if not pod_disruption_budget_desired_states:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Some migrations are still created: {pod_disruption_budget_desired_states}")
-        raise
 
 
 def login_with_token(api_address, token):
@@ -1536,7 +1493,7 @@ def get_linux_os_info(ssh_exec):
     }
 
 
-def validate_os_info_vmi_vs_linux_os(vm: VirtualMachine) -> None:
+def validate_os_info_vmi_vs_linux_os(vm: utilities.virt.VirtualMachineForTests) -> None:
     vmi_info = utilities.virt.get_guest_os_info(vmi=vm.vmi)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)["os"]
 
@@ -1547,16 +1504,6 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
     assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
     return next(iter(nodes_cpu_arch))
-
-
-def verify_image_info(image_url, generated_pulled_secret, nodes_cpu_architecture):
-    LOGGER.info(f"Checking image {image_url} information.")
-    run_command(
-        command=shlex.split(
-            f"oc image info {image_url} "
-            f"--registry-config={generated_pulled_secret} --filter-by-os={nodes_cpu_architecture}"
-        ),
-    )
 
 
 @cache

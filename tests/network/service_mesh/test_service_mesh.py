@@ -5,10 +5,12 @@ from tests.network.service_mesh.utils import (
     inbound_request,
 )
 from tests.network.utils import assert_authentication_request
+from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.service_mesh
 
 
+@pytest.mark.s390x
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
     @pytest.mark.single_nic
@@ -42,10 +44,14 @@ class TestSMTrafficManagement:
         )
 
 
+@pytest.mark.s390x
 class TestSMPeerAuthentication:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5784")
     @pytest.mark.single_nic
+    @pytest.mark.dependency(
+        name="test_authentication_policy_from_mesh",
+    )
     def test_authentication_policy_from_mesh(
         self,
         peer_authentication_service_mesh_deployment,
@@ -57,10 +63,28 @@ class TestSMPeerAuthentication:
             service_app_name=httpbin_service_service_mesh.app_name,
         )
 
+    @pytest.mark.ipv4
+    @pytest.mark.polarion("CNV-12181")
+    @pytest.mark.single_nic
+    @pytest.mark.dependency(
+        name="test_authentication_policy_from_mesh_post_migration",
+        depends=["test_authentication_policy_from_mesh"],
+    )
+    def test_authentication_policy_from_mesh_over_migration(
+        self,
+        vm_fedora_with_service_mesh_annotation,
+        httpbin_service_service_mesh,
+    ):
+        migrate_vm_and_verify(vm=vm_fedora_with_service_mesh_annotation)
+        assert_authentication_request(
+            vm=vm_fedora_with_service_mesh_annotation,
+            service_app_name=httpbin_service_service_mesh.app_name,
+        )
+
     @pytest.mark.polarion("CNV-7305")
     @pytest.mark.ipv4
     @pytest.mark.single_nic
-    def test_authentication_policy_outside_mesh(
+    def test_outside_mesh_traffic_blocked(
         self,
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,

@@ -3,6 +3,7 @@ import logging
 import re
 import shlex
 from datetime import datetime, timedelta, timezone
+from functools import cache
 
 import bitmath
 import pytest
@@ -21,6 +22,7 @@ from utilities.constants import (
 from utilities.infra import (
     get_linux_guest_agent_version,
     get_linux_os_info,
+    is_jira_open,
     raise_multiple_exceptions,
     run_virtctl_command,
 )
@@ -378,17 +380,20 @@ def get_virtctl_user_info(vm):
         LOGGER.error(f"Failed to get guest-agent info via virtctl. Error: {err}")
         return
     for user in json.loads(output)["items"]:
+        login_time = int(user.get("loginTime", 0))
+        if is_jira_64776_bug_open():
+            LOGGER.warning("Due to bug CNV-64776, loginTime is a bit big different between Libvirt level and OS level.")
         return {
-            "userName": user["userName"],
-            "loginTime": int(user["loginTime"]),
+            "userName": user.get("userName"),
+            "loginTime": int(login_time / 1000) if is_jira_64776_bug_open() else login_time,
         }
 
 
 def get_cnv_user_info(vm):
     for user in vm.vmi.guest_user_info["items"]:
         return {
-            "userName": user["userName"],
-            "loginTime": int(user["loginTime"]),
+            "userName": user.get("userName"),
+            "loginTime": int(user.get("loginTime", 0)),
         }
 
 
@@ -396,8 +401,8 @@ def get_libvirt_user_info(vm):
     userinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-users")
     for user in userinfo:
         return {
-            "userName": user["user"],
-            "loginTime": int(user["login-time"]),
+            "userName": user.get("user"),
+            "loginTime": int(user.get("login-time", 0)),
         }
 
 
@@ -618,3 +623,8 @@ def assert_windows_efi(vm):
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0]
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
+
+
+@cache
+def is_jira_64776_bug_open():
+    return is_jira_open(jira_id="CNV-64776")

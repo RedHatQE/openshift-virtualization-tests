@@ -14,14 +14,16 @@ from tests.network.libs.label_selector import LabelSelector
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
+LINK_STATE_UP = "up"
+LINK_STATE_DOWN = "down"
 _IPERF_SERVER_PORT = 5201
 
 
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
-        vm.start()
+        vm.start()  # type: ignore[no-untyped-call]
     for vm in vms:
-        vm.wait_for_ready_status(status=True)
+        vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
         vm.wait_for_agent_connected()
     return vms
 
@@ -41,7 +43,12 @@ def create_traffic_client(
 
 
 def localnet_vm(
-    namespace: str, name: str, physical_network_name: str, spec_logical_network: str, cidr: str
+    namespace: str,
+    name: str,
+    physical_network_name: str,
+    spec_logical_network: str,
+    cidr: str,
+    interface_state: str | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
@@ -58,6 +65,8 @@ def localnet_vm(
         physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
         spec_logical_network (str): The name of the localnet network to attach.
+        interface_state (str): The state of the interface (optional).
+            Possible values are "up" or "down". When not specified, it behaves as "up".
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -71,7 +80,7 @@ def localnet_vm(
     vmi_spec = add_network_interface(
         vmi_spec=vmi_spec,
         network=Network(name=spec_logical_network, multus=Multus(networkName=physical_network_name)),
-        interface=Interface(name=spec_logical_network, bridge={}),
+        interface=Interface(name=spec_logical_network, bridge={}, state=interface_state),
     )
 
     netdata = cloudinit.NetworkData(ethernets={"eth0": cloudinit.EthernetDevice(addresses=[cidr])})

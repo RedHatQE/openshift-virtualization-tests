@@ -3,9 +3,7 @@ import shlex
 from ocp_resources.resource import Resource
 
 from utilities.constants import (
-    FLAVOR_STR,
     INSTANCE_TYPE_STR,
-    NONE_STR,
     OS_STR,
     PREFERENCE_STR,
 )
@@ -30,13 +28,12 @@ PROMETHEUS_STR = "prometheus"
 
 OTHER_STR = "<other>"
 
-INSTANCE_TYPE_LABELS = [INSTANCE_TYPE_STR, PREFERENCE_STR, FLAVOR_STR, OS_STR]
+INSTANCE_TYPE_LABELS = [INSTANCE_TYPE_STR, PREFERENCE_STR, OS_STR]
 
 EXPECTED_NAMESPACE_INSTANCE_TYPE_LABELS = {
     INSTANCE_TYPE_STR: OTHER_STR,
     PREFERENCE_STR: OTHER_STR,
-    FLAVOR_STR: NONE_STR,
-    OS_STR: NONE_STR,
+    OS_STR: None,
 }
 KUBEVIRT_VMI_PHASE_COUNT_STR = "kubevirt_vmi_phase_count"
 KUBEVIRT_VMI_PHASE_COUNT = (
@@ -77,7 +74,10 @@ KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL = "kubevirt_vmi_network_transmit_pac
 KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_scheduling_phase"
 KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE = "kubevirt_vmi_migrations_in_running_phase"
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
-
+KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART = "kubevirt_cdi_import_pods_high_restart"
+KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED = (
+    "kubevirt_vmi_phase_transition_time_from_deletion_seconds_sum{phase='Succeeded'}"
+)
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
 RSS_MEMORY_COMMAND = shlex.split("bash -c \"cat /sys/fs/cgroup/memory.stat | grep '^anon ' | awk '{print $2}'\"")

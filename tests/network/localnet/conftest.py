@@ -1,14 +1,17 @@
 from collections.abc import Generator
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.traffic_generator import Client, Server
+from libs.net.vmspec import lookup_iface_status
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.localnet.liblocalnet import (
+    LINK_STATE_DOWN,
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
@@ -50,13 +53,13 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_1() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)  # type: ignore
+def namespace_localnet_1(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(admin_client=admin_client, name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_2() -> Generator[Namespace]:
-    yield from create_ns(name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)  # type: ignore
+def namespace_localnet_2(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(admin_client=admin_client, name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)
 
 
 @pytest.fixture(scope="module")
@@ -198,6 +201,23 @@ def cudn_localnet_ovs_bridge(
         yield cudn
 
 
+@pytest.fixture(scope="function")
+def vm_ovs_bridge_localnet_link_down(
+    namespace_localnet_1: Namespace,
+    ipv4_localnet_address_pool: Generator[str],
+    cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="localnet-ovs-vm1",
+        physical_network_name=cudn_localnet_ovs_bridge.name,
+        spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
+        cidr=next(ipv4_localnet_address_pool),
+        interface_state=LINK_STATE_DOWN,
+    ) as vm:
+        yield vm
+
+
 @pytest.fixture(scope="module")
 def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
@@ -228,6 +248,20 @@ def vm_ovs_bridge_localnet_2(
         cidr=next(ipv4_localnet_address_pool),
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="function")
+def ovs_bridge_localnet_running_vms_one_with_interface_down(
+    vm_ovs_bridge_localnet_link_down: BaseVirtualMachine, vm_ovs_bridge_localnet_1: BaseVirtualMachine
+) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
+    vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_link_down, vm_ovs_bridge_localnet_1))
+    lookup_iface_status(
+        vm=vm_ovs_bridge_localnet_link_down,
+        iface_name=LOCALNET_OVS_BRIDGE_NETWORK,
+        predicate=lambda interface: "guest-agent" in interface["infoSource"]
+        and interface["linkState"] == LINK_STATE_DOWN,
+    )
+    yield vm1, vm2
 
 
 @pytest.fixture(scope="module")

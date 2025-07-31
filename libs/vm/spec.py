@@ -75,6 +75,7 @@ class Interface:
     bridge: dict[Any, Any] | None = None
     sriov: dict[Any, Any] | None = None
     binding: NetBinding | None = None
+    state: str | None = None
 
 
 @dataclass

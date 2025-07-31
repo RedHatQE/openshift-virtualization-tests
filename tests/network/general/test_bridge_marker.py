@@ -136,6 +136,7 @@ def _assert_failure_reason_is_bridge_missing(pod, bridge):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2234")
+@pytest.mark.s390x
 def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_vmi_for_bridge_marker_no_device):
     """Check that VMI fails to start when bridge device is missing."""
     with pytest.raises(TimeoutExpiredError):
@@ -150,12 +151,14 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
 # device before attaching a VMI to it
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2235")
+@pytest.mark.s390x
 def test_bridge_marker_device_exists(bridge_device_on_all_nodes, bridge_attached_vmi_for_bridge_marker_device_exists):
     """Check that VMI successfully starts when bridge device is present."""
     bridge_attached_vmi_for_bridge_marker_device_exists.wait_until_running(timeout=_VM_RUNNING_TIMEOUT)
 
 
 @pytest.mark.polarion("CNV-2309")
+@pytest.mark.s390x
 def test_bridge_marker_devices_exist_on_different_nodes(
     bridge_networks,
     non_homogenous_bridges,

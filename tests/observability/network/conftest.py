@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
@@ -13,7 +14,9 @@ from utilities.constants import (
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     LINUX_BRIDGE,
     NON_EXISTS_IMAGE,
+    TIMEOUT_4MIN,
     TIMEOUT_10MIN,
+    TIMEOUT_10SEC,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
@@ -64,9 +67,9 @@ def vms_mac(mac_pool):
 
 
 @pytest.fixture(scope="class")
-def kmp_disabled_namespace(kmp_vm_label):
+def kmp_disabled_namespace(admin_client, kmp_vm_label):
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = "ignore"
-    yield from create_ns(name="kmp-disabled", labels=kmp_vm_label)
+    yield from create_ns(admin_client=admin_client, name="kmp-disabled", labels=kmp_vm_label)
 
 
 @pytest.fixture(scope="class")
@@ -172,12 +175,12 @@ def bad_cnao_operator(csv_scope_class):
 
 
 @pytest.fixture(scope="class")
-def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
+def csv_with_invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_class, bad_cnao_operator):
     with ResourceEditorValidateHCOReconcile(
         patches={csv_scope_class: bad_cnao_operator},
         list_resource_reconcile=[NetworkAddonsConfig],
     ):
-        yield
+        yield csv_scope_class
 
     linux_bridge_pods = get_pod_by_name_prefix(
         dyn_client=admin_client,
@@ -191,3 +194,19 @@ def invalid_cnao_operator(prometheus, admin_client, hco_namespace, csv_scope_cla
 
     linux_bridge_plugin_ds = DaemonSet(name=KUBE_CNI_LINUX_BRIDGE_PLUGIN, namespace=hco_namespace.name)
     linux_bridge_plugin_ds.wait_until_deployed(timeout=TIMEOUT_10MIN)
+
+
+@pytest.fixture(scope="class")
+def wait_csv_image_updated_with_bad_image(csv_with_invalid_cnao_operator):
+    def _get_csv_image_from_cnao():
+        for deployment in csv_with_invalid_cnao_operator.instance.spec.install.spec.deployments:
+            if deployment.name == CLUSTER_NETWORK_ADDONS_OPERATOR:
+                return deployment.spec.template.spec.containers[0].image
+
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_4MIN,
+        sleep=TIMEOUT_10SEC,
+        func=_get_csv_image_from_cnao,
+    ):
+        if sample == NON_EXISTS_IMAGE:
+            return
