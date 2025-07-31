@@ -16,7 +16,6 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
-from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
@@ -44,7 +43,6 @@ from utilities.infra import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
-    VirtualMachineForTestsFromTemplate,
     fedora_vm_body,
     get_created_migration_job,
     prepare_cloud_init_user_data,
@@ -519,47 +517,6 @@ def register_vm_to_rhsm(vm):
             f"--password=`sudo cat /mnt/{RHSM_SECRET_NAME}/password` "
             "--auto-attach"
         ),
-    )
-
-
-def vm_object_from_template(
-    unprivileged_client,
-    namespace,
-    data_source_object,
-    request=None,
-    os_matrix=None,
-):
-    """Instantiate a VM object
-
-    The call to this function is triggered by calling either
-    golden_image_vm_object_from_template_multi_storage_scope_function or
-    golden_image_vm_object_from_template_multi_storage_scope_class.
-    """
-
-    param_dict = request.param if request else {}
-
-    if os_matrix:
-        os_matrix_key = [*os_matrix][0]
-        vm_name = os_matrix_key
-        labels = Template.generate_template_labels(**os_matrix[os_matrix_key]["template_labels"])
-
-    else:
-        vm_name = request.param["vm_name"].replace(".", "-").lower()
-        labels = Template.generate_template_labels(**request.param["template_labels"])
-
-    return VirtualMachineForTestsFromTemplate(
-        name=vm_name,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        data_source=data_source_object,
-        labels=labels,
-        vm_dict=param_dict.get("vm_dict"),
-        cpu_threads=param_dict.get("cpu_threads"),
-        memory_requests=param_dict.get("memory_requests"),
-        memory_guest=param_dict.get("memory_guest"),
-        network_model=param_dict.get("network_model"),
-        network_multiqueue=param_dict.get("network_multiqueue"),
-        ssh=param_dict.get("ssh", True),
     )
 
 
