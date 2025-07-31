@@ -19,6 +19,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_vms_list_rhel9, pod_deleting_process",
@@ -53,6 +54,7 @@ def test_pod_delete_openshift_apiserver(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "rebooted_control_plane_node",
@@ -85,6 +87,7 @@ def test_control_plane_node_restart(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
     [
@@ -156,6 +159,7 @@ def test_host_io_stress(
 @pytest.mark.usefixtures("deleted_pod_by_name_prefix")
 @pytest.mark.parametrize("chaos_vms_instancetype_list", [pytest.param({"number_of_vms": 3})], indirect=True)
 class TestVMInstanceTypeOperationsPodDelete:
+    @pytest.mark.s390x
     @pytest.mark.polarion("CNV-11108")
     @pytest.mark.first
     def test_deploy_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
@@ -164,12 +168,14 @@ class TestVMInstanceTypeOperationsPodDelete:
         for vm in chaos_vms_instancetype_list:
             running_vm(vm=vm)
 
+    @pytest.mark.s390x
     @pytest.mark.polarion("CNV-11297")
     @pytest.mark.order(after="test_deploy_vm")
     def test_restart_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
         for vm in chaos_vms_instancetype_list:
             vm.restart(wait=True)
 
+    @pytest.mark.s390x
     @pytest.mark.polarion("CNV-11109")
     @pytest.mark.order(after="test_deploy_vm")
     def test_stop_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
@@ -178,6 +184,7 @@ class TestVMInstanceTypeOperationsPodDelete:
         for vm in chaos_vms_instancetype_list:
             vm.wait_for_ready_status(status=None, timeout=TIMEOUT_2MIN)
 
+    @pytest.mark.s390x
     @pytest.mark.polarion("CNV-11298")
     @pytest.mark.last
     def test_delete_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
