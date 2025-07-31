@@ -16,6 +16,7 @@ def run_must_gather(
     node_name: str = "",
     flag_names: str = "",
     timeout: str = f"{TIMEOUT_15MIN}s",
+    command_timeout: int = TIMEOUT_20MIN,
     since: str | None = None,
 ) -> str:
     """
@@ -58,7 +59,7 @@ def run_must_gather(
     did_succeed, output, error = run_command(
         command=shlex.split(base_command),
         check=False,
-        timeout=TIMEOUT_20MIN,
+        timeout=command_timeout,
         log_errors=False,
     )
     if not did_succeed and error:
@@ -86,6 +87,7 @@ def collect_must_gather(
     flag_names="",
     timeout="",
     node_name="",
+    command_timeout=TIMEOUT_20MIN,
 ):
     """
     Run must gather command and puts the content in directory.
@@ -108,6 +110,7 @@ def collect_must_gather(
         node_name=node_name,
         flag_names=flag_names,
         timeout=timeout,
+        command_timeout=command_timeout,
     )
 
     with open(os.path.join(must_gather_tmpdir, "output.log"), "w") as _file:
