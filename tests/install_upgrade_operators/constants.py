@@ -42,7 +42,7 @@ HCO_DEFAULT_FEATUREGATES = {
     PERSISTENT_RESERVATION: FG_DISABLED,
     "alignCPUs": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
-    "enableMultiArchCommonBootImageImport": FG_DISABLED,
+    "enableMultiArchBootImageImport": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
