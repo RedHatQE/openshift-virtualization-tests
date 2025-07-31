@@ -160,23 +160,23 @@ class TestVMInstanceTypeOperationsPodDelete:
     @pytest.mark.first
     def test_deploy_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
         for vm in chaos_vms_instancetype_list:
-            vm.deploy(wait=False)
-        for vm in chaos_vms_instancetype_list:
             running_vm(vm=vm)
 
     @pytest.mark.polarion("CNV-11297")
     @pytest.mark.order(after="test_deploy_vm")
     def test_restart_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
         for vm in chaos_vms_instancetype_list:
+            if not vm.is_running():
+                vm.start(wait=True, timeout=TIMEOUT_5MIN)
             vm.restart(wait=True)
 
     @pytest.mark.polarion("CNV-11109")
-    @pytest.mark.order(after="test_deploy_vm")
+    @pytest.mark.order(after="test_restart_vm")
     def test_stop_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
         for vm in chaos_vms_instancetype_list:
-            vm.stop(wait=False)
-        for vm in chaos_vms_instancetype_list:
-            vm.wait_for_ready_status(status=None, timeout=TIMEOUT_2MIN)
+            if vm.is_running():
+                vm.stop(wait=False)
+            vm.wait_for_ready_status(status=None, timeout=TIMEOUT_5MIN)
 
     @pytest.mark.polarion("CNV-11298")
     @pytest.mark.last
