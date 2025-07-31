@@ -62,7 +62,7 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
                 "name": "vm-for-cpu-limit",
             },
             {"cpu": True, "memory": False},
-            marks=pytest.mark.polarion("CNV-11216"),
+            marks=[pytest.mark.polarion("CNV-11216"), pytest.mark.s390x],
             id="set_only_cpu",
         ),
         pytest.param(
