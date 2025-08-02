@@ -7,7 +7,6 @@ import math
 import re
 
 import pytest
-from bitmath import GiB, MiB
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
@@ -538,9 +537,9 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 @pytest.mark.parametrize(
     ("size", "unit", "dv_name"),
     [
-        # pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
+        pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
         pytest.param(1, "G", "cnv-6532", marks=(pytest.mark.polarion("CNV-6532"))),
-        # pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
+        pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
     ],
 )
 def test_vmi_image_size(
@@ -552,10 +551,11 @@ def test_vmi_image_size(
     size,
     unit,
     dv_name,
+    expected_virtual_size_bytes,
     default_fs_overhead,
 ):
-    assert size >= 1, "This test support only dv size >= 1"
     volume_mode = storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"]
+
     with create_dv(
         dv_name=dv_name,
         namespace=namespace.name,
@@ -566,6 +566,7 @@ def test_vmi_image_size(
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
         containers = get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=dv.name)
+
         with create_vm_from_dv(dv=dv, start=False):
             with PodWithPVC(
                 namespace=dv.namespace,
@@ -574,30 +575,19 @@ def test_vmi_image_size(
                 containers=containers,
             ) as pod:
                 pod.wait_for_status(status=pod.Status.RUNNING)
-                virtual_size_output_line = pod.execute(
+                output = pod.execute(
                     command=[
                         "bash",
                         "-c",
-                        "qemu-img info /pvc/disk.img|grep 'virtual size'",
+                        "qemu-img info /pvc/disk.img | grep 'virtual size'",
                     ]
                 )
-                match = re.search(r"\((\d+)\s+bytes\)", virtual_size_output_line)
-                assert match, f"Failed to extract byte size from disk image info\nOutput: {virtual_size_output_line}"
+                match = re.search(r"\((\d+)\s+bytes\)", output)
+                assert match, f"Failed to extract byte size from disk image info\nOutput: {output}"
                 image_bytes = int(match.group(1))
-                # Convert to bytes based on unit
-                if unit == "G":
-                    expected_bytes = GiB(size).to_Byte().value
-                elif unit == "M":
-                    expected_bytes = MiB(size).to_Byte().value
-                else:
-                    raise ValueError(f"Unsupported unit: {unit}")
-                # In case of file system volume mode, the FS overhead should be taken into account
-                # the default overhead is 5.5%, so in order to reserve the 5.5% for the overhead
-                # the actual size for the disk will be smaller than the requested size
-                if volume_mode == DataVolume.VolumeMode.FILE:
-                    expected_bytes = int(expected_bytes * (1 - default_fs_overhead))
-                assert math.isclose(image_bytes, expected_bytes, rel_tol=default_fs_overhead), (
-                    f"Expected virtual size ~{expected_bytes} bytes, but got {image_bytes} bytes"
+
+                assert math.isclose(image_bytes, expected_virtual_size_bytes, rel_tol=default_fs_overhead), (
+                    f"Expected virtual size ~{expected_virtual_size_bytes} bytes, but got {image_bytes} bytes"
                 )
 
 
