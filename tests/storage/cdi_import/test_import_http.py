@@ -538,9 +538,9 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 @pytest.mark.parametrize(
     ("size", "unit", "dv_name"),
     [
-        # pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
+        pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
         pytest.param(1, "G", "cnv-6532", marks=(pytest.mark.polarion("CNV-6532"))),
-        # pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
+        pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
     ],
 )
 def test_vmi_image_size(
