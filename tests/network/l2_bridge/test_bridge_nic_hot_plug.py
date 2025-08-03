@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from timeout_sampler import TimeoutExpiredError
 
 from libs.net import netattachdef
 from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
@@ -19,6 +20,7 @@ from tests.network.l2_bridge.utils import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
+from tests.utils import assert_restart_required_condition
 from utilities.constants import FLAT_OVERLAY_STR, SRIOV
 from utilities.network import (
     IfaceNotFound,
@@ -447,6 +449,20 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             vmi=running_vm_for_nic_hot_plug.vmi,
             interface_name=hot_plugged_interface.name,
         )
+
+    @pytest.mark.polarion("CNV-12223")
+    @pytest.mark.dependency(
+        name="test_no_restart_needed_status_in_vm_after_hot_plug",
+        depends=["test_vmi_spec_updated_with_hot_plugged_interface"],
+    )
+    def test_no_restart_needed_status_in_vm_after_hot_plug(
+        self,
+        running_vm_for_nic_hot_plug,
+    ):
+        try:
+            assert_restart_required_condition(vm=running_vm_for_nic_hot_plug, expected_message="")
+        except TimeoutExpiredError:
+            pass
 
     @pytest.mark.polarion("CNV-10166")
     @pytest.mark.dependency(
