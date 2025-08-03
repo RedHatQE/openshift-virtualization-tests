@@ -1,4 +1,6 @@
+import logging
 import os
+import re
 from typing import Any
 
 from ocp_resources.template import Template
@@ -21,6 +23,9 @@ from utilities.constants import (
     WORKLOAD_STR,
     Images,
 )
+
+LOGGER = logging.getLogger(__name__)
+
 
 RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
     WORKLOAD_STR: Template.Workload.SERVER,
@@ -213,30 +218,41 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
     return os_formatted_list
 
 
-def generate_instance_type_rhel_os_matrix(preferences: list[str]) -> list[dict[str, dict[str, Any]]]:
+def generate_linux_instance_type_os_matrix(os_name: str, preferences: list[str]) -> list[dict[str, dict[str, Any]]]:
     """
-    Generate a list of dictionaries representing the instance type matrix for RHEL OS.
-
+    Generate a list of dictionaries representing the instance type matrix for a Linux OS type.
     Each dictionary represents a specific instance type and its configuration.
 
     Args:
-        preferences (list[str]): A list of preferences for the instance types. Preference format is "rhel-<version>".
+        os_name (str): The name of the OS.
+        preferences (list[str]): A list of preferences for the instance types. Preference format is "<os>.<version>".
 
     Returns:
         list[dict[str, dict[str, Any]]]: A list of dictionaries representing the instance type matrix.
-    """
-    latest_rhel = f"rhel-{max([preference.split('-')[1] for preference in preferences], key=int)}"
 
+    """
+
+    def _extract_version(pref: str) -> Any:
+        match = re.search(r"\d+", pref)
+        return int(match.group()) if match else None
+
+    def _format_data_source_name(preference_name: str) -> str:
+        version = _extract_version(pref=preference_name)
+        if version is None:
+            return preference_name
+        return f"{os_name.replace('.', '-')}{version}"
+
+    latest_os = max(preferences, key=_extract_version)
     instance_types: list[dict[str, dict[str, Any]]] = []
 
     for preference in preferences:
         preference_config: dict[str, Any] = {
-            PREFERENCE_STR: preference.replace("-", "."),
-            DATA_SOURCE_NAME: preference.replace("-", ""),
+            PREFERENCE_STR: preference,
+            DATA_SOURCE_NAME: _format_data_source_name(preference_name=preference),
         }
-        if preference == latest_rhel:
+
+        if preference == latest_os:
             preference_config[LATEST_RELEASE_STR] = True
 
         instance_types.append({preference: preference_config})
-
     return instance_types
