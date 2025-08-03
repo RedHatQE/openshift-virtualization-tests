@@ -40,6 +40,7 @@ from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
+    MIGRATION_POLICY_VM_LABEL,
     NODE_STR,
     OS_FLAVOR_WINDOWS,
     RHEL9_PREFERENCE,
@@ -1472,6 +1473,7 @@ def create_windows11_wsl2_vm(
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
         pvc=pvc,
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:
         yield vm
     cleanup_artifactory_secret_and_config_map(

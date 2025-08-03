@@ -1073,21 +1073,10 @@ def non_existent_node_windows_vm(windows_vm_for_test):
             }
         }
     ):
-        windows_vm_for_test.restart()
+        windows_vm_for_test.start()
         windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
         yield windows_vm_for_test
-    windows_vm_for_test.restart()
-    windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.RUNNING, timeout=TIMEOUT_10MIN)
-
-
-@pytest.fixture()
-def windows_vm_with_low_bandwidth_migration_policy(migration_policy_with_bandwidth, windows_vm_for_test):
-    with ResourceEditor(
-        patches={windows_vm_for_test: {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}}
-    ):
-        windows_vm_for_test.restart()
-        windows_vm_for_test.wait_for_specific_status(status=windows_vm_for_test.Status.RUNNING)
-        yield windows_vm_for_test
+    running_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="session")
@@ -1187,7 +1176,6 @@ def stopped_vm_metric_1(vm_metric_1):
 def stopped_windows_vm(windows_vm_for_test):
     windows_vm_for_test.stop()
     yield windows_vm_for_test
-    running_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="module")
