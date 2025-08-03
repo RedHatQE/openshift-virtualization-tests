@@ -12,6 +12,7 @@ exclude =
     ansible/*,
     docs/*,
     .cache/*
+    utilities/unittests/*
 
 fcn_exclude_functions =
     re,

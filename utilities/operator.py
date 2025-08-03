@@ -90,7 +90,7 @@ def generate_icsp_idms_file(folder_name, command, is_idms_file, cnv_version=None
 
 def generate_unique_icsp_idms_file(file_name, version_string):
     # update the metadata.name value to generate unique ICSP/IDMS
-    with open(file_name, "r") as fd:
+    with open(file_name) as fd:
         file_yaml = yaml.safe_load(fd.read())
     file_yaml["metadata"]["name"] = f"iib-{version_string}"
     with open(file_name, "w") as current_mirror_file:

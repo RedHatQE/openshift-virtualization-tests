@@ -80,6 +80,17 @@ dependencies = [
   "pytest-html>=4.1.1",
 ]
 
+[project.optional-dependencies]
+# Dependencies for utilities unit testing
+utilities-test = [
+    "pytest>=8.3.3",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-xdist>=3.5.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-watch>=4.2.0",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["*"]
 
@@ -88,6 +99,64 @@ packages = ["*"]
 dev-dependencies = ["ipdb>=0.13.13", "ipython>=8.12.3"]
 
 [tool.uv.sources]
+
+# Utilities Unit Testing Configuration
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["utilities/unittests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = """
+    -ra
+    --strict-markers
+    --strict-config
+    --cov=utilities
+    --cov-branch
+    --cov-report=term-missing:skip-covered
+    --cov-report=html:utilities/htmlcov
+    --cov-report=xml:utilities/coverage.xml
+    --cov-fail-under=90
+"""
+
+# Coverage configuration for utilities unit tests
+[tool.coverage.run]
+source = ["utilities"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/manifests/*",
+    "*.pyc",
+    "*/test_*.py",
+    "__init__.py",
+    # TODO: Add coverage to these large modules when individual fixes are needed
+    "utilities/data_collector.py",
+    "utilities/hco.py",
+    "utilities/infra.py",
+    "utilities/monitoring.py",
+    "utilities/network.py",
+    "utilities/operator.py",
+    "utilities/os_utils.py",
+    "utilities/pytest_utils.py",
+    "utilities/ssp.py",
+    "utilities/storage.py",
+    "utilities/virt.py",
+]
+
+[tool.coverage.report]
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "except ImportError:",
+]
+show_missing = true
+skip_covered = false
 
 [build-system]
 requires = ["hatchling"]
