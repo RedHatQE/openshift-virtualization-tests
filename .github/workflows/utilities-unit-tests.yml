@@ -1,0 +1,47 @@
+name: Utilities Unit Tests
+
+on:
+  pull_request_target:
+    paths:
+      - 'utilities/**'
+      - '!utilities/unittests/**'
+
+  workflow_dispatch:
+
+jobs:
+  utilities-unit-tests:
+    name: Run Utilities Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install uv-tox
+        run: uv tool install tox --with tox-uv
+
+      - name: Run tests
+        run: tox -e utilities-unittests
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          file: utilities/coverage.xml
+          flags: utilities
+          name: utilities-coverage

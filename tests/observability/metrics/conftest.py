@@ -1076,7 +1076,8 @@ def non_existent_node_windows_vm(windows_vm_for_test):
         windows_vm_for_test.start()
         windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
         yield windows_vm_for_test
-    running_vm(vm=windows_vm_for_test)
+    windows_vm_for_test.restart()
+    windows_vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING, timeout=TIMEOUT_10MIN)
 
 
 @pytest.fixture(scope="session")
@@ -1176,6 +1177,7 @@ def stopped_vm_metric_1(vm_metric_1):
 def stopped_windows_vm(windows_vm_for_test):
     windows_vm_for_test.stop()
     yield windows_vm_for_test
+    running_vm(vm=windows_vm_for_test)
 
 
 @pytest.fixture(scope="module")
