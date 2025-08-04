@@ -49,7 +49,7 @@ def wait_virt_launcher_pod_using_swap(vm):
 def node_affinity_rule_for_two_nodes(worker_node1, worker_node2, node_with_less_available_memory):
     return build_node_affinity_dict(
         required_nodes=[worker_node1.hostname, worker_node2.hostname],
-        preferred_nodes=[next(iter(node_with_less_available_memory))]
+        preferred_nodes=[next(iter(node_with_less_available_memory))],
     )
 
 
