@@ -31,6 +31,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "pod_deleting_process",
@@ -161,7 +162,7 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_5MIN,
             },
-            marks=pytest.mark.polarion("CNV-7754"),
+            marks=[pytest.mark.polarion("CNV-7754"), pytest.mark.s390x],
             id="ocs-operator",
         ),
         pytest.param(
@@ -174,7 +175,7 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_3MIN,
             },
-            marks=pytest.mark.polarion("CNV-7250"),
+            marks=[pytest.mark.polarion("CNV-7250"), pytest.mark.s390x],
             id="rook-ceph-osd",
         ),
     ],
