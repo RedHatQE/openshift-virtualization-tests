@@ -108,7 +108,7 @@ def start_nc_response_on_vm(flat_l2_port, vm, num_connections):
             f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
             f"-lp {flat_l2_port}; done &"
         ],
-        verify_commands_output=False,
+        return_code_validation=False,
     )
     fetch_pid_from_linux_vm(vm=vm, process_name="nc")
 

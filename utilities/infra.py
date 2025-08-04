@@ -34,6 +34,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.console_cli_download import ConsoleCLIDownload
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
@@ -53,7 +54,7 @@ from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
 from utilities.constants import (
@@ -79,6 +80,7 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10MIN,
+    TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
     X86_64,
@@ -143,7 +145,8 @@ def create_ns(
 
         # cleanup must be done with admin client
         project.client = admin_client
-        project.clean_up()
+        if not project.clean_up():
+            raise ResourceTeardownError(resource=project)
 
 
 class ClusterHosts:
@@ -1059,15 +1062,25 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
     return json_file
 
 
+@retry(
+    wait_timeout=TIMEOUT_30SEC,
+    sleep=TIMEOUT_10SEC,
+    exceptions_dict={RuntimeError: []},
+)
 def get_node_audit_log_entries(log, node, log_entry):
-    return subprocess.getoutput(
+    lines = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
     ).splitlines()
+    has_errors = any(line.startswith("error:") for line in lines)
+    if has_errors:
+        LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
+        raise RuntimeError
+    return True, lines
 
 
 def get_node_audit_log_line_dict(logs, node, log_entry):
     for log in logs:
-        deprecated_api_lines = get_node_audit_log_entries(log=log, node=node, log_entry=log_entry)
+        _, deprecated_api_lines = get_node_audit_log_entries(log=log, node=node, log_entry=log_entry)
         if deprecated_api_lines:
             for line in deprecated_api_lines:
                 try:

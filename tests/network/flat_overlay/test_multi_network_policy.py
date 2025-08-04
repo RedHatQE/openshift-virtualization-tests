@@ -12,6 +12,7 @@ pytestmark = pytest.mark.usefixtures(
 
 
 @pytest.mark.polarion("CNV-10644")
+@pytest.mark.s390x
 def test_positive_egress_multi_network_policy(
     vma_flat_overlay,
     vmb_flat_overlay_ip_address,
@@ -24,6 +25,7 @@ def test_positive_egress_multi_network_policy(
 
 
 @pytest.mark.polarion("CNV-10645")
+@pytest.mark.s390x
 def test_negative_ingress_multi_network_policy(
     vma_flat_overlay,
     vmb_flat_overlay_ip_address,
@@ -37,6 +39,7 @@ def test_negative_ingress_multi_network_policy(
 
 @pytest.mark.dependency(name="test_multi_network_policy_is_effective_post_migration")
 @pytest.mark.polarion("CNV-11361")
+@pytest.mark.s390x
 def test_multi_network_policy_is_effective_post_migration(
     flat_l2_port,
     vmc_flat_overlay_ip_address,

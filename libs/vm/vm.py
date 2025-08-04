@@ -63,12 +63,7 @@ class BaseVirtualMachine(VirtualMachine):
         commands: list[str],
         timeout: int,
     ) -> dict[str, list[str]] | None:
-        return vm_console_run_commands(
-            vm=self,
-            commands=commands,
-            timeout=timeout,
-            command_output=True,
-        )
+        return vm_console_run_commands(vm=self, commands=commands, timeout=timeout)
 
     def wait_for_agent_connected(self) -> None:
         self.vmi.wait_for_condition(
