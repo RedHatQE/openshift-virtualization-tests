@@ -1,3 +1,4 @@
+
 import datetime
 import logging
 
@@ -22,6 +23,8 @@ from utilities.storage import write_file
 from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
+
+
 
 
 @pytest.fixture()
