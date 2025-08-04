@@ -1,11 +1,14 @@
 import logging
 
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.template import Template
+from ocp_resources.volume_snapshot import VolumeSnapshot
 
 from tests.infrastructure.golden_images.constants import (
     DEFAULT_FEDORA_REGISTRY_URL,
 )
 from utilities.constants import WILDCARD_CRON_EXPRESSION
+from utilities.storage import RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,3 +48,18 @@ def template_labels(os):
         workload=Template.Workload.SERVER,
         flavor=Template.Flavor.SMALL,
     )
+
+
+def get_all_dic_volume_names(client, namespace):
+    def _fetch_volume_names(resource_cls):
+        return [
+            volume.name
+            for volume in resource_cls.get(
+                client=client,
+                namespace=namespace,
+                label_selector=RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL,
+            )
+            if volume.exists
+        ]
+
+    return _fetch_volume_names(PersistentVolumeClaim) + _fetch_volume_names(VolumeSnapshot)

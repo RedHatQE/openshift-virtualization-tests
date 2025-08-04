@@ -16,6 +16,7 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_SOURCE_NAME,
     DEFAULT_FEDORA_REGISTRY_URL,
 )
+from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     TIMEOUT_1MIN,
@@ -32,10 +33,7 @@ from utilities.ssp import (
     wait_for_condition_message_value,
     wait_for_deleted_data_import_crons,
 )
-from utilities.storage import (
-    DATA_IMPORT_CRON_SUFFIX,
-    data_volume_template_with_source_ref_dict,
-)
+from utilities.storage import DATA_IMPORT_CRON_SUFFIX, data_volume_template_with_source_ref_dict
 from utilities.virt import DV_DISK, VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -105,14 +103,6 @@ def create_vm_with_infer_from_volume(
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=data_source_for_test),
     ) as vm:
         return vm
-
-
-def verify_expected_volumes_exist(existing_volume_names, expected_volume_names):
-    LOGGER.info("Verify volumes are not deleted after opt-out.")
-    assert all([
-        any([expected_name in existing_name for existing_name in existing_volume_names])
-        for expected_name in expected_volume_names
-    ]), f"Not all Volumes exist!\nExisting: {existing_volume_names}\nExpected: {expected_volume_names}"
 
 
 @pytest.fixture()
@@ -249,18 +239,9 @@ def created_data_import_cron(
         yield data_import_cron
 
 
-@pytest.fixture()
-def existing_golden_images_volumes_scope_function(
-    golden_images_persistent_volume_claims_scope_function,
-    golden_images_volume_snapshot_scope_function,
-    golden_images_data_import_crons_scope_function,
-):
-    if golden_images_data_import_crons_scope_function[0].instance.status.sourceFormat == "pvc":
-        cluster_volumes = golden_images_persistent_volume_claims_scope_function
-    else:
-        cluster_volumes = golden_images_volume_snapshot_scope_function
-
-    return [volume.name for volume in cluster_volumes if volume.exists]
+@pytest.fixture
+def existing_dic_volumes_before_disable(admin_client, golden_images_namespace):
+    return get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)
 
 
 @pytest.mark.polarion("CNV-7531")
@@ -346,19 +327,23 @@ class TestDataImportCronDefaultStorageClass:
         )
 
 
-@pytest.mark.jira("CNV-62615", run=False)
 @pytest.mark.polarion("CNV-7532")
 def test_data_import_cron_deletion_on_opt_out(
+    admin_client,
+    golden_images_namespace,
+    existing_dic_volumes_before_disable,
     golden_images_data_import_crons_scope_function,
-    existing_golden_images_volumes_scope_function,
     disabled_common_boot_image_import_hco_spec_scope_function,
 ):
     LOGGER.info("Verify DataImportCrons are deleted after opt-out.")
     wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons_scope_function)
-    expected_volume_names = [list(datasource)[0] for datasource in py_config["auto_update_data_source_matrix"]]
-    verify_expected_volumes_exist(
-        existing_volume_names=existing_golden_images_volumes_scope_function,
-        expected_volume_names=expected_volume_names,
+    volumes_after = get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)
+    assert set(existing_dic_volumes_before_disable) == set(volumes_after), (
+        "DataImportCron deletion should not affect existing volumes.\n"
+        f"Volumes before: {sorted(existing_dic_volumes_before_disable)}\n"
+        f"Volumes after: {sorted(volumes_after)}\n"
+        f"Added: {sorted(set(volumes_after) - set(existing_dic_volumes_before_disable))}\n"
+        f"Removed: {sorted(set(existing_dic_volumes_before_disable) - set(volumes_after))}"
     )
 
 
