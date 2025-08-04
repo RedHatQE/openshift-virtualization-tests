@@ -16,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
     validate_user_info_virtctl_vs_windows_os,
 )
 from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
+from utilities.constants import OS_FLAVOR_WINDOWS
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
     assert_vm_xml_efi,
@@ -23,6 +24,7 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
     validate_libvirt_persistent_domain,
+    validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
 )
 
@@ -30,6 +32,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.special_infra, pytest.mark.h
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"
+WIN = OS_FLAVOR_WINDOWS
 
 
 class TestCommonTemplatesWindows:
@@ -192,6 +195,17 @@ class TestCommonTemplatesWindows:
         assert validate_virtctl_guest_agent_data_over_time(
             vm=golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class
         ), "Guest agent stopped responding"
+
+    @pytest.mark.polarion("CNV-12220")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
+    def test_vmi_guest_agent_info_after_guest_reboot(
+        self,
+        golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
+    ):
+        assert validate_virtctl_guest_agent_after_guest_reboot(
+            vm=golden_image_vm_object_from_template_multi_windows_os_multi_storage_scope_class,
+            os_type=WIN,
+        ), "Guest agent stopped responding after guest reboot"
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])

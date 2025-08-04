@@ -16,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
+from utilities.constants import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
@@ -24,6 +25,7 @@ from utilities.virt import (
     running_vm,
     validate_libvirt_persistent_domain,
     validate_pause_optional_migrate_unpause_linux_vm,
+    validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
@@ -259,6 +261,15 @@ class TestCommonTemplatesFedora:
         assert validate_virtctl_guest_agent_data_over_time(
             vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class
         ), "Guest agent stopped responding"
+
+    @pytest.mark.polarion("CNV-12219")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
+    def test_vmi_guest_agent_info_after_guest_reboot(
+        self, golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class
+    ):
+        assert validate_virtctl_guest_agent_after_guest_reboot(
+            vm=golden_image_vm_object_from_template_multi_fedora_os_multi_storage_scope_class, os_type=LINUX_STR
+        ), "Guest agent stopped responding after guest reboot"
 
     @pytest.mark.sno
     @pytest.mark.ibm_bare_metal
