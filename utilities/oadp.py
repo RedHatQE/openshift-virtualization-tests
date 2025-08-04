@@ -7,19 +7,10 @@ from ocp_resources.backup import Backup
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.virtual_machine import VirtualMachine
 
-import shlex
-
-from ocp_resources.storage_profile import StorageProfile
-
-from utilities import console
 from utilities.constants import (
     ADP_NAMESPACE,
-    FILE_NAME_FOR_BACKUP,
-    LS_COMMAND,
     OS_FLAVOR_RHEL,
-    TEXT_TO_TEST,
     TIMEOUT_5MIN,
-    TIMEOUT_20SEC,
     Images,
 )
 from utilities.infra import (
@@ -91,6 +82,7 @@ class VeleroBackup(Backup):
             LOGGER.exception(f"Failed to delete Velero {self.kind} {self.name}")
         finally:
             super().__exit__(exception_type, exception_value, traceback)
+
 
 @contextmanager
 def create_rhel_vm(

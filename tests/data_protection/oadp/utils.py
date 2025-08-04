@@ -4,6 +4,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.restore import Restore
 from ocp_resources.storage_profile import StorageProfile
 
+from utilities import console
 from utilities.constants import (
     ADP_NAMESPACE,
     FILE_NAME_FOR_BACKUP,
