@@ -1,8 +1,9 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.data_protection.oadp.utils import check_file_in_vm, wait_for_restored_dv
+from tests.data_protection.oadp.utils import wait_for_restored_dv
 from utilities.constants import TIMEOUT_10SEC, Images
+from utilities.oadp import check_file_in_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
