@@ -101,7 +101,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+                "image": py_config.get("latest_windows_os_dict", {}).get("image_path"),
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
