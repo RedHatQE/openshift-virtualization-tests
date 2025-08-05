@@ -11,12 +11,13 @@ from ocp_resources.service_account import ServiceAccount
 from ocp_resources.virtual_service import VirtualService
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import HTTPBIN_COMMAND, HTTPBIN_IMAGE, SERVICE_MESH_PORT
+from tests.network.constants import HTTPBIN_IMAGE
 from tests.network.service_mesh.constants import (
     DESTINATION_RULE_TYPE,
     GATEWAY_SELECTOR,
     GATEWAY_TYPE,
     HTTP_PROTOCOL,
+    HTTPBIN_COMMAND,
     INGRESS_SERVICE,
     PEER_AUTHENTICATION_TYPE,
     SERVER_DEMO_HOST,
@@ -24,6 +25,7 @@ from tests.network.service_mesh.constants import (
     SERVER_DEPLOYMENT_STRATEGY,
     SERVER_V1_IMAGE,
     SERVER_V2_IMAGE,
+    SERVICE_MESH_PORT,
     VERSION_2_DEPLOYMENT,
     VIRTUAL_SERVICE_TYPE,
 )

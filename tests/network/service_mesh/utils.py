@@ -3,9 +3,10 @@ import logging
 import pexpect
 import pytest
 
-from tests.network.constants import SERVICE_MESH_PORT
+from tests.network.service_mesh.constants import AUTH_COMMAND
 from utilities import console
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_3MIN
+from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,19 +48,6 @@ def inbound_request(vm, destination_address, destination_port):
         assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
-def authentication_command(service: str) -> str:
-    """
-    Generate the authentication command for service mesh testing.
-
-    Args:
-        service (str): target service DNS name.
-
-    Returns:
-        str: The curl command string.
-    """
-    return f"curl http://{service}:{SERVICE_MESH_PORT}/ip"
-
-
 def authentication_request(vm, **kwargs):
     """
     Return server response to a request sent from VM console. This request allows testing client authentication.
@@ -75,7 +63,7 @@ def authentication_request(vm, **kwargs):
     """
     return run_console_command(
         vm=vm,
-        command=authentication_command(kwargs["service"]),
+        command=AUTH_COMMAND.format(service=kwargs["service"]),
     )
 
 
@@ -92,12 +80,12 @@ def assert_authentication_request(vm, service_app_name):
     assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
-def run_console_command(vm, command, timeout=TIMEOUT_1MIN):
+def run_console_command(vm: VirtualMachineForTests, command: str, timeout: int = TIMEOUT_1MIN) -> str:
     """
     Execute a command in VM console and return the output.
 
     Args:
-        vm (VirtualMachine): VM to be used for console connection.
+        vm (VirtualMachineForTests): VM to be used for console connection.
         command (str): Command to execute.
         timeout (int, default=TIMEOUT_1MIN): Timeout for the command execution.
 

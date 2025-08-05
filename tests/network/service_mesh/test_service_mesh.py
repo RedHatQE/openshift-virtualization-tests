@@ -1,10 +1,9 @@
 import pytest
 
-from tests.network.service_mesh.constants import EXPECTED_MESH_SUCCESS_OUTPUT
+from tests.network.service_mesh.constants import AUTH_COMMAND, EXPECTED_MESH_SUCCESS_OUTPUT
 from tests.network.service_mesh.utils import (
     assert_authentication_request,
     assert_traffic_management_request,
-    authentication_command,
     inbound_request,
     run_console_command,
 )
@@ -63,7 +62,7 @@ class TestSMPeerAuthentication:
     ):
         result = run_console_command(
             vm=vm_fedora_with_service_mesh_annotation,
-            command=authentication_command(httpbin_service_service_mesh.app_name),
+            command=AUTH_COMMAND.format(service=httpbin_service_service_mesh.app_name),
         )
         assert EXPECTED_MESH_SUCCESS_OUTPUT in result
 
@@ -82,7 +81,7 @@ class TestSMPeerAuthentication:
         migrate_vm_and_verify(vm=vm_fedora_with_service_mesh_annotation)
         result = run_console_command(
             vm=vm_fedora_with_service_mesh_annotation,
-            command=authentication_command(httpbin_service_service_mesh.app_name),
+            command=AUTH_COMMAND.format(service=httpbin_service_service_mesh.app_name),
         )
         assert EXPECTED_MESH_SUCCESS_OUTPUT in result
 
