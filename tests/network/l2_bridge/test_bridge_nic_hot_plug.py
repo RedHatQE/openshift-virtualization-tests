@@ -20,8 +20,7 @@ from tests.network.l2_bridge.utils import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from tests.utils import assert_restart_required_condition
-from utilities.constants import FLAT_OVERLAY_STR, SRIOV
+from utilities.constants import FLAT_OVERLAY_STR, SRIOV, TIMEOUT_20SEC
 from utilities.network import (
     IfaceNotFound,
     assert_ping_successful,
@@ -460,7 +459,11 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         running_vm_for_nic_hot_plug,
     ):
         try:
-            assert_restart_required_condition(vm=running_vm_for_nic_hot_plug, expected_message="")
+            running_vm_for_nic_hot_plug.wait_for_condition(
+                condition="RestartRequired",
+                status=running_vm_for_nic_hot_plug.Condition.Status.TRUE,
+                timeout=TIMEOUT_20SEC,
+            )
         except TimeoutExpiredError:
             pass
 
