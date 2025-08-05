@@ -2,6 +2,9 @@ name: Utilities Unit Tests
 
 on:
   pull_request_target:
+    branches:
+      - main
+      - cnv-4.99
     paths:
       - 'utilities/**'
       - '!utilities/unittests/**'
