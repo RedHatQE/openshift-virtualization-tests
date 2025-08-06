@@ -53,6 +53,7 @@ class TestLowReadyVirtOperatorCount:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_alert_low_virt_operator_count(
         self,
         prometheus,
@@ -86,6 +87,7 @@ class TestVirtPodsDownMetrics:
         ],
         indirect=["scaled_deployment"],
     )
+    @pytest.mark.s390x
     def test_metrics_virt_pods_down(
         self,
         prometheus,
@@ -116,6 +118,7 @@ class TestVirtHandlerDaemonSet:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_alert_virt_handler(
         self,
         prometheus,
@@ -134,6 +137,7 @@ class TestVirtHandlerDaemonSet:
 class TestLowKvmCounts:
     @pytest.mark.dependency(name="test_metric_kubevirt_nodes_with_kvm")
     @pytest.mark.polarion("CNV-11708")
+    @pytest.mark.s390x
     def test_metric_kubevirt_nodes_with_kvm(self, prometheus):
         validate_metrics_value(
             prometheus=prometheus,
@@ -158,6 +162,7 @@ class TestLowKvmCounts:
             )
         ],
     )
+    @pytest.mark.s390x
     def test_low_kvm_nodes_count(
         self,
         prometheus,

@@ -24,6 +24,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 class TestMetricsLinux:
     @pytest.mark.polarion("CNV-11906")
+    @pytest.mark.s390x
     def test_cnv_vmi_monitoring_metrics_linux_vm(
         self, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
     ):
@@ -57,6 +58,7 @@ class TestMetricsWindows:
 
 
 @pytest.mark.polarion("CNV-10438")
+@pytest.mark.s390x
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
@@ -68,6 +70,7 @@ def test_cnv_installation_with_hco_cr_metrics(
 
 class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-8262")
+    @pytest.mark.s390x
     def test_vmi_domain_total_memory_bytes(
         self,
         single_metric_vm,
@@ -81,6 +84,7 @@ class TestVMIMetricsLinuxVms:
         )
 
     @pytest.mark.polarion("CNV-8931")
+    @pytest.mark.s390x
     def test_vmi_used_memory_bytes(
         self,
         prometheus,
@@ -90,6 +94,7 @@ class TestVMIMetricsLinuxVms:
         wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
 
     @pytest.mark.polarion("CNV-11400")
+    @pytest.mark.s390x
     def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
@@ -99,6 +104,7 @@ class TestVMIMetricsLinuxVms:
         )
 
     @pytest.mark.polarion("CNV-11862")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, linux_vm_info_to_compare):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
@@ -187,6 +193,7 @@ class TestMemoryDeltaFromRequestedBytes:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
         validate_memory_delta_metrics_value_within_range(
             prometheus=prometheus,
@@ -199,6 +206,7 @@ class TestMemoryDeltaFromRequestedBytes:
 
 class TestKubeDaemonsetStatusNumberReady:
     @pytest.mark.polarion("CNV-11727")
+    @pytest.mark.s390x
     def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
         validate_metrics_value(
             prometheus=prometheus,
@@ -209,6 +217,7 @@ class TestKubeDaemonsetStatusNumberReady:
 
 class TestKubevirtApiRequestDeprecatedTotal:
     @pytest.mark.polarion("CNV-11739")
+    @pytest.mark.s390x
     def test_metric_kubevirt_api_request_deprecated_total(self, prometheus, generated_api_deprecated_requests):
         validate_metrics_value(
             prometheus=prometheus,
@@ -219,6 +228,7 @@ class TestKubevirtApiRequestDeprecatedTotal:
 
 class TestAllocatableNodes:
     @pytest.mark.polarion("CNV-11818")
+    @pytest.mark.s390x
     def test_metirc_kubevirt_allocatable_nodes(self, prometheus, allocatable_nodes):
         validate_metrics_value(
             prometheus=prometheus, metric_name="kubevirt_allocatable_nodes", expected_value=f"{len(allocatable_nodes)}"

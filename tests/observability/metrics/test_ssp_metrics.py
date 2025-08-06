@@ -61,6 +61,7 @@ def created_multiple_failed_vms(
 
 class TestSSPTemplate:
     @pytest.mark.polarion("CNV-11356")
+    @pytest.mark.s390x
     def test_metric_kubevirt_ssp_common_templates_restored_increase(self, prometheus, template_modified):
         validate_metric_value_within_range(
             prometheus=prometheus,
@@ -84,6 +85,7 @@ class TestSSPTemplate:
         ],
         indirect=["scaled_deployment"],
     )
+    @pytest.mark.s390x
     def test_metrics_kubevirt_ssp_operator_validator_up(
         self, prometheus, paused_ssp_operator, scaled_deployment, metric_name
     ):
@@ -94,6 +96,7 @@ class TestSSPTemplate:
         )
 
     @pytest.mark.polarion("CNV-11357")
+    @pytest.mark.s390x
     def test_metric_kubevirt_ssp_operator_reconcile_succeeded_aggregated(
         self, prometheus, paused_ssp_operator, template_validator_finalizer, deleted_ssp_operator_pod
     ):
@@ -121,6 +124,7 @@ class TestSSPTemplate:
 @pytest.mark.usefixtures("initiate_metric_value", "instance_type_for_test_scope_class", "created_multiple_failed_vms")
 class TestSSPTemplateValidatorRejected:
     @pytest.mark.polarion("CNV-11310")
+    @pytest.mark.s390x
     def test_metric_kubevirt_ssp_template_validator_rejected_increase(self, prometheus, initiate_metric_value):
         validate_metric_value_with_round_down(
             prometheus=prometheus,
