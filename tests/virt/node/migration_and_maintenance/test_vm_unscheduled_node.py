@@ -3,8 +3,8 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.virt.utils import build_node_affinity_dict
 from utilities.constants import TIMEOUT_20SEC
-from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
     node_mgmt_console,
     vm_instance_from_template,
@@ -26,7 +26,7 @@ def unscheduled_node_vm(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_function,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+        vm_affinity=build_node_affinity_dict(required_nodes=[worker_node1.hostname]),
     ) as vm:
         yield vm
 
@@ -54,26 +54,23 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
-def test_schedule_vm_on_cordoned_node(nodes, data_volume_scope_function, unscheduled_node_vm):
+def test_schedule_vm_on_cordoned_node(worker_node1, data_volume_scope_function, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
-    1. Cordon the Node
-    2. Once node status is 'Ready,SchedulingDisabled', start a VM (on the
-    selected node) and check that VMI phase is 'scheduling'
-    3. Uncordon the Node
-    4. Verify the VMI phase is still 'scheduling'
-    5. Wait for node status to be 'Ready'
-    6. Wait for VMI status to be 'Running'
-    7. Verify VMI is running on the selected node
+    1. Cordon the target node specified in the VM's nodeAffinity (worker_node1).
+    2. Wait until the node status becomes 'Ready,SchedulingDisabled'.
+    3. Start the VM and verify that the VMI phase is 'Scheduling'.
+    4. Uncordon the node.
+    5. Wait for the node status to return to 'Ready'.
+    6. Wait for the VMI phase to become 'Running'.
+    7. Verify that the VMI is running on the expected node (worker_node1).
     """
-    vm_node = [
-        node for node in nodes if node.name == get_node_selector_name(node_selector=unscheduled_node_vm.node_selector)
-    ][0]
-    with node_mgmt_console(node=vm_node, node_mgmt="cordon"):
-        wait_for_node_schedulable_status(node=vm_node, status=False)
+
+    with node_mgmt_console(node=worker_node1, node_mgmt="cordon"):
+        wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
         unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.SCHEDULING, timeout=TIMEOUT_20SEC)
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
     vmi_node_name = unscheduled_node_vm.privileged_vmi.virt_launcher_pod.node.name
-    assert vmi_node_name == vm_node.name, (
-        f"VMI is running on {vmi_node_name} and not on the selected node {unscheduled_node_vm.node_selector}"
+    assert vmi_node_name == worker_node1.name, (
+        f"VMI is running on {vmi_node_name} and not on the expected node {worker_node1.name}"
     )
