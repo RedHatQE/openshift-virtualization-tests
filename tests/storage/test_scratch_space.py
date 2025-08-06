@@ -13,6 +13,7 @@ from timeout_sampler import TimeoutSampler
 import utilities.storage
 from tests.storage import utils as storage_utils
 from utilities.constants import (
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
@@ -68,6 +69,11 @@ def scratch_pvc_bound(dv):
             return True
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: flaky test, unable to reproduce locally. Fails occasionally in the "
+    f"automation due to a not found pvc when trying to delete it; CNV-66463",
+    run=False,
+)
 @pytest.mark.parametrize(
     "dv_name",
     [

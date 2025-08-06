@@ -17,6 +17,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_10MIN,
     TIMEOUT_40MIN,
@@ -192,6 +193,10 @@ def test_successful_vm_from_cloned_dv_windows(
         )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: consistently failing test. Timeout into ssh connection to the vm; CNV-66721",
+    run=False,
+)
 @pytest.mark.sno
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function",
