@@ -567,7 +567,7 @@ class TestVmDiskAllocatedSizeWindows:
 
 class TestVmVnicInfo:
     @pytest.mark.parametrize(
-        "vnic_info_from_vm_or_vmi, query",
+        "vnic_info_from_vm_or_vmi_linux, query",
         [
             pytest.param(
                 "vm",
@@ -580,13 +580,24 @@ class TestVmVnicInfo:
                 marks=pytest.mark.polarion("CNV-11811"),
             ),
         ],
-        indirect=["vnic_info_from_vm_or_vmi"],
+        indirect=["vnic_info_from_vm_or_vmi_linux"],
     )
-    def test_metric_kubevirt_vm_vnic_info(self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi, query):
+    def test_metric_kubevirt_vm_vnic_info_linux(
+        self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi_linux, query
+    ):
         validate_vnic_info(
             prometheus=prometheus,
-            vnic_info_to_compare=vnic_info_from_vm_or_vmi,
+            vnic_info_to_compare=vnic_info_from_vm_or_vmi_linux,
             metric_name=query.format(vm_name=running_metric_vm.name),
+        )
+
+    @pytest.mark.tier3
+    @pytest.mark.polarion("CNV-12224")
+    def test_metric_kubevirt_vmi_vnic_info_windows(self, prometheus, windows_vm_for_test, vnic_info_from_vmi_windows):
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=vnic_info_from_vmi_windows,
+            metric_name=f"kubevirt_vmi_vnic_info{{name='{windows_vm_for_test.name}'}}",
         )
 
 
