@@ -458,14 +458,12 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         self,
         running_vm_for_nic_hot_plug,
     ):
-        try:
+        with pytest.raises(TimeoutExpiredError):
             running_vm_for_nic_hot_plug.wait_for_condition(
                 condition="RestartRequired",
                 status=running_vm_for_nic_hot_plug.Condition.Status.TRUE,
                 timeout=TIMEOUT_20SEC,
             )
-        except TimeoutExpiredError:
-            pass
 
     @pytest.mark.polarion("CNV-10166")
     @pytest.mark.dependency(
