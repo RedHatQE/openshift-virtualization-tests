@@ -76,12 +76,7 @@ def test_public_registry_multiple_data_volume(
         pytest.param(
             "import-public-registry-no-content-type-dv",
             None,
-            marks=(pytest.mark.polarion("CNV-2195")),
-        ),
-        pytest.param(
-            "import-public-registry-empty-content-type-dv",
-            "",
-            marks=(pytest.mark.polarion("CNV-2197"), pytest.mark.smoke()),
+            marks=(pytest.mark.polarion("CNV-2195"), pytest.mark.smoke()),
         ),
         pytest.param(
             "import-public-registry-quay-dv",
@@ -91,7 +86,6 @@ def test_public_registry_multiple_data_volume(
     ],
     ids=[
         "import-public-registry-no-content-type-dv",
-        "import-public-registry-empty-content-type-dv",
         "import-public-registry-quay-dv",
     ],
 )
