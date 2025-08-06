@@ -77,6 +77,9 @@ def validate_os_info_virtctl_vs_linux_os(vm):
         cnv_info = get_cnv_os_info(vm=vm)
         libvirt_info = get_libvirt_os_info(vm=vm)
         linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
+        if is_jira_67104_bug_open():
+            virtctl_info.pop("load", None)
+            cnv_info.pop("load", None)
         return virtctl_info, cnv_info, libvirt_info, linux_info
 
     os_info_sampler = TimeoutSampler(wait_timeout=330, sleep=30, func=_get_os_info, vm=vm)
@@ -380,12 +383,9 @@ def get_virtctl_user_info(vm):
         LOGGER.error(f"Failed to get guest-agent info via virtctl. Error: {err}")
         return
     for user in json.loads(output)["items"]:
-        login_time = int(user.get("loginTime", 0))
-        if is_jira_64776_bug_open():
-            LOGGER.warning("Due to bug CNV-64776, loginTime is a bit big different between Libvirt level and OS level.")
         return {
             "userName": user.get("userName"),
-            "loginTime": int(login_time / 1000) if is_jira_64776_bug_open() else login_time,
+            "loginTime": int(user.get("loginTime", 0)),
         }
 
 
@@ -626,5 +626,5 @@ def assert_windows_efi(vm):
 
 
 @cache
-def is_jira_64776_bug_open():
-    return is_jira_open(jira_id="CNV-64776")
+def is_jira_67104_bug_open():
+    return is_jira_open(jira_id="CNV-67104")
