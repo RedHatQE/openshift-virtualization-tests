@@ -34,7 +34,7 @@ from utilities.ssp import (
     wait_for_deleted_data_import_crons,
 )
 from utilities.storage import DATA_IMPORT_CRON_SUFFIX, data_volume_template_with_source_ref_dict
-from utilities.virt import DV_DISK, VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
