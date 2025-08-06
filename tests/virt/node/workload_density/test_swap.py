@@ -7,7 +7,7 @@ from ocp_resources.daemonset import DaemonSet
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import REMOVE_NEWLINE
-from tests.virt.utils import get_match_expressions_dict, start_stress_on_vm
+from tests.virt.utils import build_node_affinity_dict, start_stress_on_vm
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
@@ -47,21 +47,10 @@ def wait_virt_launcher_pod_using_swap(vm):
 
 @pytest.fixture(scope="class")
 def node_affinity_rule_for_two_nodes(worker_node1, worker_node2, node_with_less_available_memory):
-    return {
-        "nodeAffinity": {
-            "preferredDuringSchedulingIgnoredDuringExecution": [
-                {
-                    "preference": get_match_expressions_dict(nodes_list=[next(iter(node_with_less_available_memory))]),
-                    "weight": 1,
-                }
-            ],
-            "requiredDuringSchedulingIgnoredDuringExecution": {
-                "nodeSelectorTerms": [
-                    get_match_expressions_dict(nodes_list=[worker_node1.hostname, worker_node2.hostname])
-                ]
-            },
-        }
-    }
+    return build_node_affinity_dict(
+        required_nodes=[worker_node1.hostname, worker_node2.hostname],
+        preferred_nodes=[next(iter(node_with_less_available_memory))],
+    )
 
 
 @pytest.fixture(scope="package")

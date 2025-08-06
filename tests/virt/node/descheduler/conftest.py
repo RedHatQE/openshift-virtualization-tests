@@ -24,7 +24,7 @@ from tests.virt.node.descheduler.utils import (
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import get_allocatable_memory_per_node, get_match_expressions_dict, start_stress_on_vm
+from tests.virt.utils import build_node_affinity_dict, get_allocatable_memory_per_node, start_stress_on_vm
 from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
@@ -215,16 +215,7 @@ def node_labeled_for_test(node_with_least_available_memory):
 
 @pytest.fixture(scope="class")
 def node_affinity_for_node_with_least_available_memory(node_with_least_available_memory):
-    return {
-        "nodeAffinity": {
-            "preferredDuringSchedulingIgnoredDuringExecution": [
-                {
-                    "preference": get_match_expressions_dict(nodes_list=[node_with_least_available_memory.hostname]),
-                    "weight": 1,
-                }
-            ]
-        }
-    }
+    return build_node_affinity_dict(preferred_nodes=[node_with_least_available_memory.hostname])
 
 
 @pytest.fixture(scope="class")
