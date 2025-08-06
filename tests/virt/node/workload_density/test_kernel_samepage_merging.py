@@ -167,6 +167,7 @@ def pages_to_scan_initial_value(worker_node1, workers_utility_pods):
     )
 
 
+@pytest.mark.jira("CNV-66082", run=False)
 @pytest.mark.usefixtures(
     "ksm_enabled_in_hco",
     "ksm_label_added_to_worker1",
