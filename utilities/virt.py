@@ -1148,6 +1148,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         sno_cluster=False,
         tpm_params=None,
         additional_labels=None,
+        vm_affinity=None,
     ):
         """
         VM creation using common templates.
@@ -1168,6 +1169,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             template_object (Template, optional): Template object to create the VM from
             non_existing_pvc(bool, default=False): If True, referenced PVC in DataSource is missing
             data_volume_template_from_vm_spec (bool, default=False): Use (and don't manipulate) VM's DataVolumeTemplates
+            vm_affinity (dict, optional): Affinity rules for scheduling the VM on specific nodes
         Returns:
             obj `VirtualMachine`: VM resource
         """
@@ -1218,6 +1220,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             tpm_params=tpm_params,
             eviction_strategy=eviction_strategy,
             additional_labels=additional_labels,
+            vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
         )
         self.data_source = data_source
@@ -1237,6 +1240,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.data_volume_template_from_vm_spec = data_volume_template_from_vm_spec
         self.eviction_strategy = eviction_strategy
         self.sno_cluster = sno_cluster
+        self.vm_affinity = vm_affinity
 
     def to_dict(self):
         self.set_login_params()
@@ -1945,6 +1949,7 @@ def vm_instance_from_template(
     vm_cpu_flags=None,
     host_device_name=None,
     gpu_name=None,
+    vm_affinity=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -1994,6 +1999,7 @@ def vm_instance_from_template(
         vhostmd=params.get("vhostmd"),
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
+        vm_affinity=vm_affinity,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
