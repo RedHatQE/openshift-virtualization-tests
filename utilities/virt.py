@@ -1148,6 +1148,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         sno_cluster=False,
         tpm_params=None,
         additional_labels=None,
+        vm_affinity=None,
     ):
         """
         VM creation using common templates.
@@ -1168,6 +1169,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             template_object (Template, optional): Template object to create the VM from
             non_existing_pvc(bool, default=False): If True, referenced PVC in DataSource is missing
             data_volume_template_from_vm_spec (bool, default=False): Use (and don't manipulate) VM's DataVolumeTemplates
+            vm_affinity (dict, optional): Affinity rules for scheduling the VM on specific nodes
         Returns:
             obj `VirtualMachine`: VM resource
         """
@@ -1218,6 +1220,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             tpm_params=tpm_params,
             eviction_strategy=eviction_strategy,
             additional_labels=additional_labels,
+            vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
         )
         self.data_source = data_source
@@ -1237,6 +1240,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.data_volume_template_from_vm_spec = data_volume_template_from_vm_spec
         self.eviction_strategy = eviction_strategy
         self.sno_cluster = sno_cluster
+        self.vm_affinity = vm_affinity
 
     def to_dict(self):
         self.set_login_params()
@@ -1361,9 +1365,8 @@ def vm_console_run_commands(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
-    verify_commands_output: bool = True,
-    command_output: bool = False,
-) -> dict[str, list[str]] | None:
+    return_code_validation: bool = True,
+) -> dict[str, list[str]]:
     """
     Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
     If return code other than 0 then it will break execution and raise exception.
@@ -1372,25 +1375,34 @@ def vm_console_run_commands(
         vm (obj): VirtualMachine
         commands (list): List of commands
         timeout (int): Time to wait for the command output
-        verify_commands_output (bool): Check commands return 0
-        command_output (bool): If selected, returns a dict of command and associated output
+        return_code_validation (bool): Check commands return 0
+
+    Returns:
+        Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
     ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-    with Console(vm=vm) as vmc:
+    prompt = r"\$ "
+    with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
-            vmc.sendline(command)
-            vmc.expect(r".*\$")
-            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
-            if verify_commands_output:
-                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
-                try:
+            try:
+                vmc.sendline(command)
+                vmc.expect(prompt)
+                output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
+                if return_code_validation:
+                    vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
-                except pexpect.exceptions.TIMEOUT:
-                    raise CommandExecFailed(output[command])
-    return output if command_output else None
+                    vmc.expect(prompt)
+            except pexpect.exceptions.TIMEOUT:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"timeout: {vmc.before}")
+            except pexpect.exceptions.EOF:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"EOF: {vmc.before}")
+            except Exception as e:
+                e.add_note(vmc.before)
+                raise CommandExecFailed(str(output.get(command, [])), err=f"Error: {e}")
+    return output
 
 
 def fedora_vm_body(name: str) -> dict[str, Any]:
@@ -1937,6 +1949,7 @@ def vm_instance_from_template(
     vm_cpu_flags=None,
     host_device_name=None,
     gpu_name=None,
+    vm_affinity=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -1986,6 +1999,7 @@ def vm_instance_from_template(
         vhostmd=params.get("vhostmd"),
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
+        vm_affinity=vm_affinity,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
