@@ -98,8 +98,8 @@ def create_vm_with_infer_from_volume(
         name="vm-with-infer-from-volume",
         namespace=namespace.name,
         client=client,
-        vm_instance_type_infer=DV_DISK,
-        vm_preference_infer=DV_DISK,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=data_source_for_test),
     ) as vm:
         return vm

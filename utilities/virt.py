@@ -698,6 +698,7 @@ class VirtualMachineForTests(VirtualMachine):
             and not self.memory_guest
             and not self.memory_requests
             and not self.vm_instance_type
+            and not self.vm_instance_type_infer
         ):
             self.memory_guest = Images.Windows.DEFAULT_MEMORY_SIZE
 
@@ -861,7 +862,12 @@ class VirtualMachineForTests(VirtualMachine):
             template_spec.setdefault("domain", {}).setdefault("cpu", {})["cores"] = self.cpu_cores
 
         # Faster VMI start time
-        if self.os_flavor == OS_FLAVOR_WINDOWS and not self.cpu_threads and not self.vm_instance_type:
+        if (
+            self.os_flavor == OS_FLAVOR_WINDOWS
+            and not self.cpu_threads
+            and not self.vm_instance_type
+            and not self.vm_instance_type_infer
+        ):
             self.cpu_threads = Images.Windows.DEFAULT_CPU_THREADS
 
         if self.cpu_threads:
