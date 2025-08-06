@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for console module"""
 
 import os
