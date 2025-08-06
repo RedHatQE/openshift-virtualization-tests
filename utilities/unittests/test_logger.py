@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for logger.py - independent of main project tests"""
 
 import logging

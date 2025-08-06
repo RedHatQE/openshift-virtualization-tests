@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for must_gather module"""
 
 import os
