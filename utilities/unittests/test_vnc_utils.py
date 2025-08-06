@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for vnc_utils module"""
 
 from unittest.mock import MagicMock, mock_open, patch

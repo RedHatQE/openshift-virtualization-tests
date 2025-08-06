@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for exceptions module"""
 
 from unittest.mock import MagicMock, patch
