@@ -257,12 +257,10 @@ def assert_guest_os_memory_amount(vm, spec_memory_amount):
 
 
 def get_restart_required_condition(vm):
-    conditions = [
-        condition
-        for condition in vm.instance.status.conditions
-        if condition.type == "RestartRequired" and condition.status == "True"
-    ]
-    return conditions[0] if conditions else []
+    return vm.get_condition_message(
+        condition_type="RestartRequired",
+        condition_status=vm.Condition.Status.TRUE,
+    )
 
 
 def assert_restart_required_condition(vm, expected_message):
@@ -274,7 +272,7 @@ def assert_restart_required_condition(vm, expected_message):
     )
     try:
         for sample in sampler:
-            if sample and sample.message == expected_message:
+            if sample and sample == expected_message:
                 return
     except TimeoutExpiredError:
         LOGGER.error("No RestartRequired condition found on VM!")
