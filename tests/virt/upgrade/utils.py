@@ -208,6 +208,7 @@ def vm_from_template(
     run_strategy=VirtualMachine.RunStrategy.HALTED,
     eviction_strategy=None,
     node_selector=None,
+    vm_affinity=None,
     gpu_name=None,
 ):
     with VirtualMachineForTestsFromTemplate(
@@ -222,6 +223,7 @@ def vm_from_template(
         interfaces=sorted(networks.keys()) if networks else None,
         eviction_strategy=eviction_strategy,
         node_selector=node_selector,
+        vm_affinity=vm_affinity,
         gpu_name=gpu_name,
     ) as vm:
         yield vm

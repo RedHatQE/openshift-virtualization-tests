@@ -20,12 +20,12 @@ from tests.virt.node.gpu.utils import (
     verify_gpu_expected_count_updated_on_node,
 )
 from tests.virt.utils import (
+    build_node_affinity_dict,
     get_num_gpu_devices_in_rhel_vm,
     running_sleep_in_linux,
     verify_gpu_device_exists_in_vm,
     verify_gpu_device_exists_on_node,
 )
-from utilities.infra import get_node_selector_dict
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     pause_optional_migrate_unpause_and_check_connectivity,
@@ -62,7 +62,7 @@ def gpu_vmb(
         client=unprivileged_client,
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         data_source=golden_image_dv_scope_module_data_source_scope_class,
-        node_selector=gpu_vma.node_selector,
+        vm_affinity=gpu_vma.vm_affinity,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
     ) as vm:
         running_vm(vm=vm)
@@ -90,7 +90,7 @@ def node_mdevtype_gpu_vm(
         namespace=namespace,
         unprivileged_client=unprivileged_client,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
-        node_selector=get_node_selector_dict(node_selector=[*nodes_with_supported_gpus][1].name),
+        vm_affinity=build_node_affinity_dict(required_nodes=[[*nodes_with_supported_gpus][1].name]),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],
     ) as vm:
         running_vm(vm=vm)
