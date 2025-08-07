@@ -7,9 +7,8 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
 )
 from tests.virt.upgrade.utils import vm_from_template
-from tests.virt.utils import verify_gpu_device_exists_on_node
+from tests.virt.utils import build_node_affinity_dict, verify_gpu_device_exists_on_node
 from utilities.constants import ES_NONE, TIMEOUT_30MIN
-from utilities.infra import get_node_selector_dict
 from utilities.storage import (
     create_dv,
     generate_data_source_dict,
@@ -70,7 +69,7 @@ def rhel_vm_for_upgrade_session_scope(
         namespace=upgrade_namespace_scope_session.name,
         template_labels=RHEL_LATEST_LABELS,
         data_source=rhel_data_source,
-        node_selector=get_node_selector_dict(node_selector=nodes_with_supported_gpus[0].name),
+        vm_affinity=build_node_affinity_dict(required_nodes=[nodes_with_supported_gpus[0].name]),
         gpu_name=supported_gpu_device.get(VGPU_DEVICE_NAME_STR),
         eviction_strategy=ES_NONE,
     ) as vm:

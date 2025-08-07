@@ -15,12 +15,12 @@ from tests.virt.node.gpu.utils import (
     verify_gpu_expected_count_updated_on_node,
 )
 from tests.virt.utils import (
+    build_node_affinity_dict,
     running_sleep_in_linux,
     verify_gpu_device_exists_in_vm,
     verify_gpu_device_exists_on_node,
 )
 from utilities.constants import TIMEOUT_5SEC
-from utilities.infra import get_node_selector_dict
 from utilities.virt import (
     CIRROS_IMAGE,
     VirtualMachineForTests,
@@ -73,7 +73,7 @@ def non_permitted_hostdevices_vm(nodes_with_supported_gpus, unprivileged_client,
         name="passthrough-non-permitted-hostdevices-vm",
         namespace=namespace.name,
         image=CIRROS_IMAGE,
-        node_selector=get_node_selector_dict(node_selector=[*nodes_with_supported_gpus][0].name),
+        vm_affinity=build_node_affinity_dict(required_nodes=[[*nodes_with_supported_gpus][0].name]),
         host_device_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
         memory_requests="1Gi",
     ) as vm:

@@ -5,8 +5,8 @@ GPU PCI Passthrough and vGPU Testing
 import pytest
 
 from tests.virt.node.gpu.utils import install_nvidia_drivers_on_windows_vm
+from tests.virt.utils import build_node_affinity_dict
 from utilities.constants import OS_FLAVOR_WINDOWS
-from utilities.infra import get_node_selector_dict
 from utilities.storage import create_or_update_data_source
 from utilities.virt import vm_instance_from_template
 
@@ -34,7 +34,7 @@ def gpu_vma(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
-        node_selector=get_node_selector_dict(node_selector=nodes_with_supported_gpus[0].name),
+        vm_affinity=build_node_affinity_dict(required_nodes=[nodes_with_supported_gpus[0].name]),
         host_device_name=supported_gpu_device.get(params.get("host_device")),
         gpu_name=supported_gpu_device.get(params.get("gpu_device")),
     ) as gpu_vm:
