@@ -118,7 +118,7 @@ def vm_for_swap_usage_test(
 def swap_vm_stress_started(vm_for_swap_usage_test):
     start_stress_on_vm(
         vm=vm_for_swap_usage_test,
-        stress_command="nohup stress-ng --vm 1 --vm-bytes 80% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
+        stress_command="nohup stress-ng --vm 1 --vm-bytes 90% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
     )
 
 
