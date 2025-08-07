@@ -181,7 +181,9 @@ def wait_for_dp(dp):
         raise
 
 
-def apply_np_changes(admin_client, hco, hco_namespace, infra_placement=None, workloads_placement=None):
+def apply_np_changes(
+    admin_client, hco, hco_namespace, infra_placement=None, workloads_placement=None, exclude_deployments=None
+):
     current_infra = hco.instance.to_dict()["spec"].get("infra")
     current_workloads = hco.instance.to_dict()["spec"].get("workloads")
     target_infra = infra_placement if infra_placement is not None else current_infra
@@ -196,19 +198,24 @@ def apply_np_changes(admin_client, hco, hco_namespace, infra_placement=None, wor
         LOGGER.info(f"Updating HCO with node placement. {patch}")
         editor = ResourceEditor(patches={hco: patch})
         editor.update(backup_resources=False)
-        wait_for_hco_post_update_stable_state(admin_client=admin_client, hco_namespace=hco_namespace)
+        wait_for_hco_post_update_stable_state(
+            admin_client=admin_client, hco_namespace=hco_namespace, exclude_deployments=exclude_deployments
+        )
     else:
         LOGGER.info("No actual changes to node placement configuration, skipping")
 
 
-def wait_for_hco_post_update_stable_state(admin_client, hco_namespace):
+def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_deployments=None):
     """
     Waits for hco to reach stable state post hco update
 
     Args:
         admin_client (DynamicClient): Dynamic client object
         hco_namespace (Namespace): Namespace object
+        exclude_deployments (list): List of deployment names to exclude from verification
     """
+    exclude_deployments = exclude_deployments or []
+
     LOGGER.info("Waiting for all HCO conditions to detect that it's back to a stable configuration.")
     wait_for_hco_conditions(
         admin_client=admin_client,
@@ -235,7 +242,10 @@ def wait_for_hco_post_update_stable_state(admin_client, hco_namespace):
         admin_client=admin_client,
         namespace=hco_namespace.name,
     ):
-        wait_for_dp(dp=deployment)
+        if deployment.name not in exclude_deployments:
+            wait_for_dp(dp=deployment)
+        else:
+            LOGGER.info(f"Skipping deployment {deployment.name} verification as it is excluded: {exclude_deployments}.")
     utilities.infra.wait_for_pods_running(
         admin_client=admin_client,
         namespace=hco_namespace,
