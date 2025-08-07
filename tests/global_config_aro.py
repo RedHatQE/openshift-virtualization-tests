@@ -21,8 +21,8 @@ storage_class_matrix = [
     },
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
-storage_class_for_storage_migration_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 
 for _dir in dir():
     if not config:  # noqa: F821
