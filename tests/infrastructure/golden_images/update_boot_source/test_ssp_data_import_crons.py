@@ -32,11 +32,8 @@ from utilities.ssp import (
     wait_for_condition_message_value,
     wait_for_deleted_data_import_crons,
 )
-from utilities.storage import (
-    DATA_IMPORT_CRON_SUFFIX,
-    data_volume_template_with_source_ref_dict,
-)
-from utilities.virt import DV_DISK, VirtualMachineForTests, running_vm
+from utilities.storage import DATA_IMPORT_CRON_SUFFIX, data_volume_template_with_source_ref_dict
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -100,8 +97,8 @@ def create_vm_with_infer_from_volume(
         name="vm-with-infer-from-volume",
         namespace=namespace.name,
         client=client,
-        vm_instance_type_infer=DV_DISK,
-        vm_preference_infer=DV_DISK,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=data_source_for_test),
     ) as vm:
         return vm
