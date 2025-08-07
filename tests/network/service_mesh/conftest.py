@@ -432,12 +432,9 @@ def peer_authentication_service_mesh_deployment(
     service_mesh_vm_console_connection_ready,
 ):
     wait_service_mesh_components_convergence(
-        func=lambda vm, **kwargs: run_console_command(
-            vm=vm,
-            command=AUTH_COMMAND.format(service=kwargs["service"]),
-        ),
+        func=run_console_command,
         vm=vm_fedora_with_service_mesh_annotation,
-        service=httpbin_service_service_mesh.app_name,
+        command=AUTH_COMMAND.format(service=httpbin_service_service_mesh.app_name),
     )
 
 
