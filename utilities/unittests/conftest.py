@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Pytest configuration for utilities tests - independent of main project"""
 
 import os
