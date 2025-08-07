@@ -338,7 +338,6 @@ def wait_for_pods_running(
         exceptions_dict={NotFoundError: []},
     )
 
-    sample = None
     not_running_pods = []
     try:
         current_check = 0
@@ -1246,15 +1245,13 @@ def get_resources_by_name_prefix(prefix, namespace, api_resource_name):
     ]
 
 
-def get_infrastructure():
-    infrastructure = Infrastructure(name=CLUSTER)
-    if infrastructure.exists:
-        return infrastructure
-    raise ResourceNotFoundError(f"Infrastructure {CLUSTER} not found")
+@cache
+def get_infrastructure(admin_client: DynamicClient) -> Infrastructure:
+    return Infrastructure(client=admin_client, name=CLUSTER, ensure_exists=True)
 
 
-def get_cluster_platform():
-    return get_infrastructure().instance.status.platform
+def get_cluster_platform(admin_client: DynamicClient) -> str:
+    return get_infrastructure(admin_client=admin_client).instance.status.platform
 
 
 def query_version_explorer(api_end_point: str, query_string: str) -> Any:
