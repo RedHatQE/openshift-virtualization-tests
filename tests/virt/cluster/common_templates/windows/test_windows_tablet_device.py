@@ -61,7 +61,7 @@ def check_windows_vm_tablet_device(vm, driver_state):
 )
 class TestWindowsTabletDevice:
     @pytest.mark.parametrize(
-        "golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function",
+        "tablet_device_vm",
         [
             pytest.param(
                 {
@@ -74,17 +74,15 @@ class TestWindowsTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_usb_tablet_device(
-        self, golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
-    ):
+    def test_tablet_usb_tablet_device(self, tablet_device_vm):
         LOGGER.info("Test tablet device - USB bus.")
 
-        vm = golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
+        vm = tablet_device_vm
         check_windows_vm_tablet_device(vm=vm, driver_state="Running")
         check_vm_xml_tablet_device(vm=vm)
 
     @pytest.mark.parametrize(
-        "golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function",
+        "tablet_device_vm",
         [
             pytest.param(
                 {
@@ -97,21 +95,19 @@ class TestWindowsTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_virtio_tablet_device(
-        self, golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
-    ):
+    def test_tablet_virtio_tablet_device(self, tablet_device_vm):
         """Verify that when a Windows VM is configured with virtio tablet input
         device(virtio drivers do not support tablet device), the VM is running.
         """
 
         LOGGER.info("Test tablet device - virtio bus.")
 
-        vm = golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
+        vm = tablet_device_vm
         check_windows_vm_tablet_device(vm=vm, driver_state="Stopped")
         check_vm_xml_tablet_device(vm=vm)
 
     @pytest.mark.parametrize(
-        "golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function",
+        "tablet_device_vm",
         [
             pytest.param(
                 {
@@ -123,16 +119,14 @@ class TestWindowsTabletDevice:
         ],
         indirect=True,
     )
-    def test_windows_server_default_tablet_device(
-        self, golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
-    ):
+    def test_windows_server_default_tablet_device(self, tablet_device_vm):
         """Verify that when a Windows Server VM is configured by default with
         tablet device
         """
 
         LOGGER.info("Test Windows Server tablet device - default table device.")
 
-        vm = golden_image_vm_instance_from_template_multi_storage_dv_scope_class_vm_scope_function
+        vm = tablet_device_vm
         check_windows_vm_tablet_device(vm=vm, driver_state="Running")
         check_vm_xml_tablet_device(vm=vm)
 
