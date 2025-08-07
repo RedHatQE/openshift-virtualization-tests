@@ -135,6 +135,7 @@ def test_stress_migration_target_node(
         url=f"{vm_with_nginx_service_and_node_selector.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}",
     )
 
+
 @pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, pod_deleting_process",
