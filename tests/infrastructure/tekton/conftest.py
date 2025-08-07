@@ -7,7 +7,7 @@ import yaml
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.pipeline import Pipeline
-from ocp_resources.pipelineruns import PipelineRun
+from ocp_resources.pipeline_run import PipelineRun
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.secret import Secret
 from ocp_resources.task import Task
@@ -271,7 +271,7 @@ def configured_windows_efi_pipelinerun_parameters(
         **COMMON_PIPELINEREF_PARAMS[WINDOWS_EFI_INSTALLER_STR],
         **win_iso_download_url_for_pipelineref()[pipeline_dv_name],
     }
-    return params_dict
+    return [{"name": key, "value": value} for key, value in params_dict.items()]
 
 
 @pytest.fixture()
@@ -286,7 +286,7 @@ def pipelinerun_from_pipeline_template(
         namespace=custom_pipeline_namespace.name,
         client=admin_client,
         params=configured_windows_efi_pipelinerun_parameters,
-        pipelineref=WINDOWS_EFI_INSTALLER_STR,
+        pipeline_ref={"name": WINDOWS_EFI_INSTALLER_STR},
     ) as pipelinerun:
         pipelinerun.wait_for_conditions()
         yield pipelinerun
@@ -373,8 +373,8 @@ def pipelinerun_for_disk_uploader(
         name=f"pipelinerun-disk-uploader-{request.param}",
         namespace=custom_pipeline_namespace.name,
         client=admin_client,
-        params=pipeline_run_params,
-        pipelineref=pipeline_disk_uploader.name,
+        params=[{"name": key, "value": value} for key, value in pipeline_run_params.items()],
+        pipeline_ref={"name": pipeline_disk_uploader.name},
     ) as pipelinerun:
         pipelinerun.wait_for_conditions()
         yield pipelinerun

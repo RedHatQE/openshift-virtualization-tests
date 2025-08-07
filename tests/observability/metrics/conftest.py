@@ -21,8 +21,6 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    BINDING_NAME,
-    BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -36,7 +34,6 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
-    binding_name_and_type_from_vm_or_vmi,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -55,6 +52,7 @@ from tests.observability.metrics.utils import (
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+    vnic_info_from_vm_or_vmi,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
@@ -992,18 +990,13 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 
 @pytest.fixture()
-def vnic_info_from_vm_or_vmi(request, running_metric_vm):
-    vm_spec = (
-        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
-    )
-    vm_interface = vm_spec.domain.devices.interfaces[0]
-    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
-    return {
-        "vnic_name": vm_spec.networks[0].name,
-        BINDING_NAME: binding_name_and_type[BINDING_NAME],
-        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
-        "model": vm_interface.model,
-    }
+def vnic_info_from_vm_or_vmi_linux(request, running_metric_vm):
+    return vnic_info_from_vm_or_vmi(vm_or_vmi=request.param, vm=running_metric_vm)
+
+
+@pytest.fixture()
+def vnic_info_from_vmi_windows(windows_vm_for_test):
+    return vnic_info_from_vm_or_vmi(vm_or_vmi="vmi", vm=windows_vm_for_test)
 
 
 @pytest.fixture()

@@ -496,3 +496,19 @@ def get_allocatable_memory_per_node(schedulable_nodes):
 def assert_migration_post_copy_mode(vm):
     migration_state = vm.vmi.instance.status.migrationState
     assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
+
+
+def build_node_affinity_dict(required_nodes=None, preferred_nodes=None):
+    affinity = {"nodeAffinity": {}}
+
+    if required_nodes:
+        affinity["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"] = {
+            "nodeSelectorTerms": [get_match_expressions_dict(nodes_list=required_nodes)]
+        }
+
+    if preferred_nodes:
+        affinity["nodeAffinity"]["preferredDuringSchedulingIgnoredDuringExecution"] = [
+            {"weight": 1, "preference": get_match_expressions_dict(nodes_list=preferred_nodes)}
+        ]
+
+    return affinity
