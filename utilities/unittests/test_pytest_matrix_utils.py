@@ -1,3 +1,5 @@
+# Generated using Claude cli
+
 """Unit tests for pytest_matrix_utils module"""
 
 from unittest.mock import MagicMock, patch
