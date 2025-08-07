@@ -7,6 +7,7 @@ from ocp_resources.template import Template
 
 from utilities.constants import (
     DATA_SOURCE_NAME,
+    DATA_SOURCE_STR,
     DV_SIZE_STR,
     FLAVOR_STR,
     IMAGE_NAME_STR,
@@ -16,6 +17,8 @@ from utilities.constants import (
     OS_VERSION_STR,
     PREFERENCE_STR,
     TEMPLATE_LABELS_STR,
+    WIN_2K16,
+    WIN_2K19,
     WIN_2K22,
     WIN_2K25,
     WIN_10,
@@ -34,21 +37,25 @@ RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
         IMAGE_NAME_STR: "RHEL7_9_IMG",
         OS_VERSION_STR: "7.9",
         OS_STR: "rhel7.9",
+        DATA_SOURCE_STR: "rhel7",
     },
     "rhel-8-10": {
         IMAGE_NAME_STR: "RHEL8_10_IMG",
         OS_VERSION_STR: "8.10",
         OS_STR: "rhel8.10",
+        DATA_SOURCE_STR: "rhel8",
     },
     "rhel-9-5": {
         IMAGE_NAME_STR: "RHEL9_5_IMG",
         OS_VERSION_STR: "9.5",
         OS_STR: "rhel9.5",
+        DATA_SOURCE_STR: "rhel9",
     },
     "rhel-9-6": {
         IMAGE_NAME_STR: "RHEL9_6_IMG",
         OS_VERSION_STR: "9.6",
         OS_STR: "rhel9.6",
+        DATA_SOURCE_STR: "rhel9",
     },
 }
 
@@ -62,18 +69,21 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         WORKLOAD_STR: Template.Workload.DESKTOP,
         FLAVOR_STR: Template.Flavor.MEDIUM,
         "uefi": True,
+        DATA_SOURCE_STR: WIN_10,
     },
     "win-2016": {
         IMAGE_NAME_STR: "WIN2k16_IMG",
         OS_VERSION_STR: "2016",
-        OS_STR: "win2k16",
+        OS_STR: WIN_2K16,
         "uefi": True,
+        DATA_SOURCE_STR: WIN_2K16,
     },
     "win-2019": {
         IMAGE_NAME_STR: "WIN2k19_IMG",
         OS_VERSION_STR: "2019",
-        OS_STR: "win2k19",
+        OS_STR: WIN_2K19,
         "uefi": True,
+        DATA_SOURCE_STR: WIN_2K19,
     },
     "win-11": {
         IMAGE_NAME_STR: "WIN11_IMG",
@@ -81,17 +91,20 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         OS_STR: WIN_11,
         WORKLOAD_STR: Template.Workload.DESKTOP,
         FLAVOR_STR: Template.Flavor.MEDIUM,
+        DATA_SOURCE_STR: WIN_11,
     },
     "win-2022": {
         IMAGE_NAME_STR: "WIN2022_IMG",
         OS_VERSION_STR: "2022",
         OS_STR: WIN_2K22,
+        DATA_SOURCE_STR: WIN_2K22,
     },
     "win-2025": {
         IMAGE_NAME_STR: "WIN2k25_IMG",
         OS_VERSION_STR: "2025",
         OS_STR: WIN_2K25,
         "uefi": True,
+        DATA_SOURCE_STR: WIN_2K25,
     },
 }
 
@@ -102,6 +115,7 @@ FEDORA_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         IMAGE_NAME_STR: "FEDORA41_IMG",
         OS_VERSION_STR: "41",
         OS_STR: "fedora41",
+        DATA_SOURCE_STR: "fedora",
     },
 }
 
@@ -112,6 +126,7 @@ CENTOS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         IMAGE_NAME_STR: "CENTOS_STREAM_9_IMG",
         OS_VERSION_STR: "9",
         OS_STR: "centos-stream9",
+        DATA_SOURCE_STR: "centos-stream9",
     },
 }
 
@@ -141,6 +156,7 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
                             FLAVOR_STR: "tiny",
                             },
                         }
+                        DATA_SOURCE_STR: "rhel7"
                     }
                 ]
 
@@ -202,6 +218,7 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
                     WORKLOAD_STR: base_version_dict.get(WORKLOAD_STR, base_dict[WORKLOAD_STR]),
                     FLAVOR_STR: base_version_dict.get(FLAVOR_STR, base_dict[FLAVOR_STR]),
                 },
+                DATA_SOURCE_STR: base_version_dict.get(DATA_SOURCE_STR),
             }
 
             if image_name == latest_os_release:

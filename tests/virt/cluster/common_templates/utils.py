@@ -3,19 +3,28 @@ import logging
 import re
 import shlex
 from datetime import datetime, timedelta, timezone
+from typing import Generator, Optional
 
 import bitmath
 import pytest
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.data_source import DataSource
+from ocp_resources.namespace import Namespace
+from ocp_resources.template import Template
 from packaging import version
 from pyhelper_utils.shell import run_ssh_commands
+from pytest import FixtureRequest
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_DOM_XML
 from utilities.constants import (
+    DATA_SOURCE_STR,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_15SEC,
+    TIMEOUT_30MIN,
     TIMEOUT_90SEC,
 )
 from utilities.infra import (
@@ -25,7 +34,13 @@ from utilities.infra import (
     run_virtctl_command,
 )
 from utilities.ssp import get_windows_os_info
-from utilities.virt import delete_guestosinfo_keys, get_virtctl_os_info
+from utilities.storage import (
+    create_dv,
+    create_or_update_data_source,
+    data_volume_template_with_source_ref_dict,
+    get_test_artifact_server_url,
+)
+from utilities.virt import VirtualMachineForTestsFromTemplate, delete_guestosinfo_keys, get_virtctl_os_info
 
 LOGGER = logging.getLogger(__name__)
 
@@ -618,3 +633,76 @@ def assert_windows_efi(vm):
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0]
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
+
+
+def get_matrix_os_golden_image_data_source(
+    admin_client: DynamicClient, golden_images_namespace: Namespace, os_matrix: dict[str, dict]
+) -> Generator[DataSource, None, None]:
+    """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
+
+    Args:
+        admin_client (DynamicClient): Kubernetes dynamic client.
+        golden_images_namespace (Namespace): Namespace where golden images are stored.
+        os_matrix (dict[str, dict]): *_os_matrix dict
+
+    Yields:
+        DataSource: DataSource object.
+    """
+
+    os_name = [*os_matrix][0]
+    os_dict = os_matrix[os_name]
+    data_source_name = os_dict[DATA_SOURCE_STR]
+
+    data_source = DataSource(client=admin_client, name=data_source_name, namespace=golden_images_namespace.name)
+    if data_source.exists and data_source.instance.status.source:
+        LOGGER.info(f"DataSource {data_source_name} already exists and has a source pvc/snapshot.")
+        yield data_source
+    else:
+        LOGGER.warning(f"No DataSource {data_source_name} found or it doesn't have a source pvc/snapshot.")
+        with create_dv(
+            dv_name=os_name,
+            namespace=golden_images_namespace.name,
+            storage_class=py_config["default_storage_class"],
+            url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
+            size=os_dict["dv_size"],
+            client=admin_client,
+        ) as dv:
+            dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
+            yield from create_or_update_data_source(admin_client=admin_client, dv=dv)
+
+
+def get_data_volume_template_dict_with_default_storage_class(data_source: DataSource) -> dict[str, dict]:
+    """
+    Generates a dataVolumeTemplate dict with the py_config based storage class.
+
+    Args:
+        data_source (DataSource): The data source object used to create the data volume template.
+
+    Returns:
+        dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
+    """
+    data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
+    data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
+    return data_volume_template
+
+
+def matrix_os_vm_from_template(
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    data_source_object: DataSource,
+    os_matrix: dict[str, dict],
+    request: Optional[FixtureRequest] = None,
+    data_volume_template: Optional[dict[str, dict]] = None,
+) -> VirtualMachineForTestsFromTemplate:
+    param_dict = request.param if request else {}
+    os_matrix_key = [*os_matrix][0]
+
+    return VirtualMachineForTestsFromTemplate(
+        name=os_matrix_key,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        data_source=data_source_object,
+        labels=Template.generate_template_labels(**os_matrix[os_matrix_key]["template_labels"]),
+        data_volume_template=data_volume_template,
+        vm_dict=param_dict.get("vm_dict"),
+    )
