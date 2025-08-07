@@ -251,9 +251,9 @@ def alert_dictionary_hco_not_installed():
 
 
 @pytest.fixture(scope="module")
-def cluster_backend_storage():
+def cluster_backend_storage(admin_client):
     backend_storage = None
-    cluster_platform = get_cluster_platform()
+    cluster_platform = get_cluster_platform(admin_client=admin_client)
     if cluster_platform == "Azure":
         backend_storage = "managed-csi"
     elif cluster_platform == "AWS":
