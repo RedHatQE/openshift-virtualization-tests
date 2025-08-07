@@ -13,6 +13,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.network.constants import HTTPBIN_IMAGE
 from tests.network.service_mesh.constants import (
+    AUTH_COMMAND,
     DESTINATION_RULE_TYPE,
     GATEWAY_SELECTOR,
     GATEWAY_TYPE,
@@ -29,7 +30,7 @@ from tests.network.service_mesh.constants import (
     VERSION_2_DEPLOYMENT,
     VIRTUAL_SERVICE_TYPE,
 )
-from tests.network.service_mesh.utils import authentication_request, traffic_management_request
+from tests.network.service_mesh.utils import run_console_command, traffic_management_request
 from tests.network.utils import (
     FedoraVirtualMachineForServiceMesh,
     ServiceMeshDeployments,
@@ -431,7 +432,10 @@ def peer_authentication_service_mesh_deployment(
     service_mesh_vm_console_connection_ready,
 ):
     wait_service_mesh_components_convergence(
-        func=authentication_request,
+        func=lambda vm, **kwargs: run_console_command(
+            vm=vm,
+            command=AUTH_COMMAND.format(service=kwargs["service"]),
+        ),
         vm=vm_fedora_with_service_mesh_annotation,
         service=httpbin_service_service_mesh.app_name,
     )
