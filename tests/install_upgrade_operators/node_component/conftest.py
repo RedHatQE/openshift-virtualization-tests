@@ -16,6 +16,7 @@ from utilities.constants import (
     CDI_DEPLOYMENT,
     CDI_UPLOADPROXY,
     HCO_SUBSCRIPTION,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
     IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
@@ -219,6 +220,7 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
         hco_namespace=hco_namespace,
         infra_placement=initial_infra,
         workloads_placement=initial_workloads,
+        exclude_deployments=[HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD],
     )
 
 
@@ -244,6 +246,7 @@ def alter_np_configuration(
         hco_namespace=hco_namespace,
         infra_placement=infra_placement,
         workloads_placement=workloads_placement,
+        exclude_deployments=[HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD],
     )
     yield
 

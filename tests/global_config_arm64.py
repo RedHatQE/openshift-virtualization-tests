@@ -49,8 +49,8 @@ storage_class_matrix = [
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.IO2_CSI
-storage_class_for_storage_migration_b = StorageClassNames.IO2_CSI
+storage_class_a = StorageClassNames.IO2_CSI
+storage_class_b = StorageClassNames.IO2_CSI
 
 rhel_os_matrix = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5", "rhel-9-6"])
 
