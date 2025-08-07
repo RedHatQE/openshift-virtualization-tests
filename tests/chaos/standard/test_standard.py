@@ -87,13 +87,13 @@ def test_control_plane_node_restart(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
     [
         pytest.param(
             {"storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION},
             {"storage_provisioner_deployment": "ceph-csi-controller-manager"},
-            marks=pytest.mark.s390x,
             id="ceph-csi-controller-manager",
         ),
         pytest.param(

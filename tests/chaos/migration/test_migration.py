@@ -135,7 +135,7 @@ def test_stress_migration_target_node(
         url=f"{vm_with_nginx_service_and_node_selector.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}",
     )
 
-
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, pod_deleting_process",
     [
@@ -162,7 +162,7 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_5MIN,
             },
-            marks=[pytest.mark.polarion("CNV-7754"), pytest.mark.s390x],
+            marks=pytest.mark.polarion("CNV-7754"),
             id="ocs-operator",
         ),
         pytest.param(
@@ -175,7 +175,7 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_3MIN,
             },
-            marks=[pytest.mark.polarion("CNV-7250"), pytest.mark.s390x],
+            marks=pytest.mark.polarion("CNV-7250"),
             id="rook-ceph-osd",
         ),
     ],
