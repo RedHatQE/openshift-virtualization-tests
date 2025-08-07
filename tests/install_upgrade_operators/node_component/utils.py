@@ -16,6 +16,7 @@ from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     HCO_OPERATOR,
     HCO_WEBHOOK,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
     IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_CERT_MANAGER,
@@ -419,6 +420,7 @@ def update_subscription_config(admin_client, hco_namespace, subscription, config
     wait_for_hco_post_update_stable_state(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
+        exclude_deployments=[HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD],
     )
 
 
