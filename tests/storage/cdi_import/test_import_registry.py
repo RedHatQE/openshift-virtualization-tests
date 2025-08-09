@@ -10,7 +10,7 @@ from tests.storage.utils import (
     get_importer_pod,
     wait_for_importer_container_message,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_5MIN, Images
+from utilities.constants import OS_FLAVOR_FEDORA, SIX_GI_MEMORY, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv
 from utilities.virt import running_vm
@@ -131,6 +131,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         "source": REGISTRY_STR,
         "url": QUAY_FEDORA_CONTAINER_IMAGE,
         "storage_class": storage_class_name_scope_function,
+        "size": SIX_GI_MEMORY,
     }
     # negative flow - low capacity volume
     with create_dv(
@@ -155,6 +156,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         namespace=namespace.name,
         url=dv_param["url"],
         storage_class=dv_param["storage_class"],
+        size=dv_param["size"],
     ) as dv:
         dv.wait_for_dv_success()
         with create_vm_from_dv(
