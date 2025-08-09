@@ -56,6 +56,7 @@ def test_vm_with_specified_service_account(service_account_vm):
     assert output[1] == vm_namespace, f"Wrong ServiceAccount attachment, VM: {vm_namespace}, OS: {output[1]}"
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1001")
 def test_vm_with_2_service_accounts(namespace):
     """
