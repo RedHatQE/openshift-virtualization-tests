@@ -36,6 +36,7 @@ from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
 from ocp_utilities.exceptions import CommandExecFailed
+from paramiko import ProxyCommandFailure
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
@@ -54,6 +55,7 @@ from utilities.constants import (
     EVICTIONSTRATEGY,
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
+    LINUX_STR,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
@@ -100,6 +102,8 @@ VM_ERROR_STATUSES = [
     VirtualMachine.Status.IMAGE_PULL_BACK_OFF,
     VirtualMachine.Status.ERR_IMAGE_PULL,
 ]
+LINUX = LINUX_STR
+WIN = OS_FLAVOR_WINDOWS
 
 
 def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool:
@@ -2638,3 +2642,64 @@ def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple
             return _match["user"], _match["password"]
 
     return "", ""
+
+
+def validate_virtctl_guest_agent_after_guest_reboot(vm: VirtualMachineForTests, os_type: str) -> bool:
+    guest_reboot(vm=vm, os_type=os_type)
+
+    # wait for the VM to come back up
+    wait_for_vm_interfaces(vmi=vm.vmi)
+    wait_for_ssh_connectivity(
+        vm=vm,
+        timeout=TIMEOUT_30MIN if os_type == WIN else TIMEOUT_5MIN,
+        tcp_timeout=TIMEOUT_2MIN,
+    )
+
+    return validate_virtctl_guest_agent_data_over_time(vm=vm)
+
+
+def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
+    commands = {
+        "stop-user-agent": {
+            LINUX: "sudo systemctl stop qemu-guest-agent",
+            WIN: "powershell -command \"Stop-Service -Name 'QEMU-GA'\"",
+        },
+        "reboot": {
+            LINUX: "sudo reboot",
+            WIN: 'powershell -command "Restart-Computer -Force"',
+        },
+    }
+
+    LOGGER.info("Stopping user agent")
+    run_os_command(vm=vm, command=commands["stop-user-agent"][os_type])
+    wait_for_user_agent_down(vm=vm, timeout=TIMEOUT_2MIN)
+
+    LOGGER.info(f"Rebooting {vm.name} from guest")
+    run_os_command(vm=vm, command=commands["reboot"][os_type])
+
+
+def run_os_command(vm: VirtualMachineForTests, command: str) -> None:
+    try:
+        return run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(command),
+            timeout=5,
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+        )[0]
+    except ProxyCommandFailure:
+        # On RHEL on successful reboot command execution ssh gets stuck
+        if "reboot" not in command:
+            raise
+
+
+def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
+    LOGGER.info(f"Waiting up to {round(timeout / 60)} minutes for user agent to go down on {vm.name}")
+    for sample in TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=2,
+        func=lambda: [
+            condition for condition in vm.vmi.instance.status.conditions if condition["type"] == "AgentConnected"
+        ],
+    ):
+        if not sample:
+            break
