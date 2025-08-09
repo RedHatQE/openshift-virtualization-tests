@@ -97,6 +97,7 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         deployed_vms_for_utilization_imbalance,
         vms_started_process_for_utilization_imbalance,
         utilization_imbalance,
+        node_with_max_memory_labeled_for_descheduler_test,
     ):
         verify_at_least_one_vm_migrated(
             vms=deployed_vms_for_utilization_imbalance, node_before=node_with_least_available_memory
@@ -144,6 +145,7 @@ class TestDeschedulerDoesNotEvictVMWithNoAnnotationFromUtilizationImbalance:
     @pytest.mark.polarion("CNV-8920")
     def test_descheduler_does_not_evict_vm_with_no_annotation_from_utilization_imbalance(
         self,
+        node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
     ):
         assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_utilization_imbalance)
@@ -159,6 +161,7 @@ class TestDeschedulerNodeLabel:
     def test_descheduler_node_labels(
         self,
         node_with_least_available_memory,
+        node_with_min_memory_labeled_for_descheduler_test,
         node_with_most_available_memory,
         deployed_vms_on_labeled_node,
     ):
