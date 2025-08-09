@@ -14,8 +14,9 @@ def assert_linux_label_was_added_in_nodes(nodes):
     assert not no_os_labels_nodes, f"Following Nodes {no_os_labels_nodes} does not have Linux label."
 
 
-@pytest.mark.s390x
 @pytest.mark.gating
+@pytest.mark.s390x
+@pytest.mark.x86_64
 @pytest.mark.polarion("CNV-5758")
 def test_linux_label_was_added(schedulable_nodes):
     assert_linux_label_was_added_in_nodes(nodes=schedulable_nodes)

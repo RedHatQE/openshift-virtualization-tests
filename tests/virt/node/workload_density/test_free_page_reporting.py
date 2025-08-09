@@ -87,6 +87,8 @@ def disabled_free_page_reporting_in_vm(free_page_reporting_vm):
 
 
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
 class TestFreePageReporting:
     @pytest.mark.dependency()
     @pytest.mark.polarion("CNV-10540")
