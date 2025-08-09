@@ -3,11 +3,14 @@ CDI Import
 """
 
 import logging
+import re
 
 import pytest
+from bitmath import GiB, MiB
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
+from tests.storage.cdi_import.utils import get_storage_profile_min_supported_pvc_size
 from tests.storage.constants import (
     HPP_STORAGE_CLASSES,
     HTTP,
@@ -233,3 +236,36 @@ def dvs_and_vms_from_public_registry(namespace, storage_class_name_scope_functio
             vm.clean_up()
         for dv in dvs:
             dv.clean_up()
+
+
+@pytest.fixture
+def expected_virtual_size_bytes(
+    size,
+    unit,
+    storage_class_name_scope_module,
+    default_fs_overhead,
+    storage_class_matrix__module__,
+    admin_client,
+):
+    binary_unit = GiB if unit == "G" else MiB
+    requested_bytes = binary_unit(size).to_Byte().value
+
+    volume_mode = storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"]
+    min_size_str = get_storage_profile_min_supported_pvc_size(
+        storage_class_name=storage_class_name_scope_module,
+        client=admin_client,
+    )
+
+    if min_size_str and (match := re.match(r"(\d+)([MG])i?", min_size_str)):
+        min_val, min_unit = int(match.group(1)), match.group(2)
+        min_binary_unit = GiB if min_unit == "G" else MiB
+        min_supported_bytes = min_binary_unit(min_val).to_Byte().value
+        expected_bytes = max(requested_bytes, min_supported_bytes)
+    else:
+        expected_bytes = requested_bytes
+
+    # Apply FS overhead if applicable
+    if volume_mode == DataVolume.VolumeMode.FILE:
+        expected_bytes = int(expected_bytes * (1 - default_fs_overhead))
+
+    return expected_bytes
