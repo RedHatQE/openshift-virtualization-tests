@@ -15,7 +15,7 @@ from utilities.constants import (
     HPP_POOL,
 )
 
-pytestmark = [pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 LOGGER = logging.getLogger(__name__)
 

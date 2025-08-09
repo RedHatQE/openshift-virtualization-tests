@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.constants import (
 )
 from utilities.constants import QUARANTINED
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 LOGGER = logging.getLogger(__name__)
 

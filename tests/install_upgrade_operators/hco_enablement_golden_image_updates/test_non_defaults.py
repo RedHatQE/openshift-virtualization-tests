@@ -5,7 +5,7 @@ from utilities.constants import (
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
 
-pytestmark = [pytest.mark.gating, pytest.mark.arm64]
+pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.mark.usefixtures("disabled_common_boot_image_import_hco_spec_scope_class")

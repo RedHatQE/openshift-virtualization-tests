@@ -12,6 +12,7 @@ from utilities.constants import TLS_CUSTOM_POLICY, TLS_SECURITY_PROFILE
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)
+pytestmark = pytest.mark.s390x
 
 
 @pytest.mark.polarion("CNV-9367")
