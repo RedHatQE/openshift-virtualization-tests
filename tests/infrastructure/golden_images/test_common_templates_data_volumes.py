@@ -4,7 +4,7 @@ from pytest_testconfig import config as py_config
 
 from tests.infrastructure.golden_images.constants import PVC_NOT_FOUND_ERROR
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import HOSTPATH_CSI_BASIC, U1_SMALL, Images
+from utilities.constants import STORAGE_CLASS_A, STORAGE_CLASS_B, U1_SMALL, Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -12,6 +12,12 @@ pytestmark = pytest.mark.post_upgrade
 
 
 NON_EXISTING_DV_NAME = "non-existing-dv"
+
+
+@pytest.fixture()
+def skip_if_no_diff_sc():
+    if py_config[STORAGE_CLASS_A] == py_config[STORAGE_CLASS_B]:
+        pytest.xfail("global config file STORAGE_CLASS_A == STORAGE_CLASS_B")
 
 
 @pytest.fixture()
@@ -39,11 +45,10 @@ def vm_from_golden_image(
     request,
     unprivileged_client,
     namespace,
-    ocs_storage_class,
     golden_image_data_source_scope_function,
 ):
-    use_ocs_storage_class = request.param.get("ocs_storage_class")
-    storage_class = ocs_storage_class.name if use_ocs_storage_class else None
+    set_storage_class = request.param.get("set_storage_class")
+    storage_class = py_config[STORAGE_CLASS_B] if set_storage_class else None
     with VirtualMachineForTests(
         name="vm-from-golden-image",
         namespace=namespace.name,
@@ -108,11 +113,11 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
             {
                 "dv_name": FEDORA_LATEST_OS,
                 "image": FEDORA_LATEST.get("image_path"),
-                "storage_class": HOSTPATH_CSI_BASIC,
+                "storage_class": py_config[STORAGE_CLASS_A],
                 "dv_size": FEDORA_LATEST.get("dv_size"),
             },
             {
-                "ocs_storage_class": False,
+                "set_storage_class": True,
             },
             marks=pytest.mark.polarion("CNV-5529"),
         ),
@@ -120,8 +125,7 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
     indirect=True,
 )
 def test_vm_dv_with_different_sc(
-    fail_test_if_no_ocs_sc,
-    fail_if_no_hostpath_csi_basic_sc,
+    skip_if_no_diff_sc,
     vm_from_golden_image,
 ):
     # VM cloned PVC storage class is different from the original golden image storage class
@@ -139,7 +143,7 @@ def test_vm_dv_with_different_sc(
                 "storage_class": py_config["default_storage_class"],
             },
             {
-                "ocs_storage_class": True,
+                "set_storage_class": False,
             },
             marks=pytest.mark.polarion("CNV-7752"),
         ),
