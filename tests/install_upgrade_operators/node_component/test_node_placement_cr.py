@@ -11,7 +11,7 @@ from tests.install_upgrade_operators.node_component.utils import (
     verify_components_exist_only_on_selected_node,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
 LOGGER = logging.getLogger(__name__)
 

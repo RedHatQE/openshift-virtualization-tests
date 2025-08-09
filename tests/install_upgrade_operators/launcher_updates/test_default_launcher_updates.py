@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.utils import wait_for_spec_change
 from utilities.hco import get_hco_spec, wait_for_hco_conditions
 from utilities.virt import get_hyperconverged_kubevirt
 
-pytestmark = [pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 LOGGER = logging.getLogger(__name__)
 
 

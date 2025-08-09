@@ -19,6 +19,8 @@ from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.s390x
+
 JIRA_LINKS = {
     "kubevirt-operator": "CNV-23061",
 }

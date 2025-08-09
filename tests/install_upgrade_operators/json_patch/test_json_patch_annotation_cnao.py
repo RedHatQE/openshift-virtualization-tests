@@ -18,7 +18,7 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
-pytestmark = [pytest.mark.arm64]
+pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 PATH = "selfSignConfiguration"
 COMPONENT = "cnao"

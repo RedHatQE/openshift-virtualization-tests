@@ -9,7 +9,13 @@ from tests.install_upgrade_operators.must_gather.utils import (
 )
 from utilities.constants import NamespacesNames
 
-pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64]
+pytestmark = [
+    pytest.mark.sno,
+    pytest.mark.post_upgrade,
+    pytest.mark.skip_must_gather_collection,
+    pytest.mark.arm64,
+    pytest.mark.s390x,
+]
 
 
 class TestImageGathering:
