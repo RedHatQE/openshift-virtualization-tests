@@ -1,7 +1,5 @@
-import collections
 import logging
 
-import bitmath
 import pytest
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.deployment import Deployment
@@ -10,21 +8,21 @@ from ocp_resources.resource import Resource, ResourceEditor
 from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.virt.node.descheduler.constants import (
-    NODE_SELECTOR_LABEL,
+    DESCHEDULER_LABEL_KEY,
+    DESCHEDULER_LABEL_VALUE,
+    DESCHEDULER_TEST_LABEL,
     RUNNING_PING_PROCESS_NAME_IN_VM,
 )
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     create_kube_descheduler,
     deploy_vms,
-    get_non_terminated_pods,
-    get_pod_memory_requests,
     start_vms_with_process,
     vm_nodes,
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import build_node_affinity_dict, get_allocatable_memory_per_node, start_stress_on_vm
+from tests.virt.utils import build_node_affinity_dict, get_non_terminated_pods, start_stress_on_vm
 from utilities.constants import TIMEOUT_5SEC
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
@@ -65,11 +63,6 @@ def descheduler_kubevirt_relieve_and_migrate_profile(
         },
     ) as kd:
         yield kd
-
-
-@pytest.fixture(scope="class")
-def allocatable_memory_per_node_scope_class(schedulable_nodes):
-    return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
 
 
 @pytest.fixture(scope="module")
@@ -169,53 +162,20 @@ def drain_uncordon_node(
 
 
 @pytest.fixture(scope="class")
-def non_terminated_pods_per_node(admin_client, schedulable_nodes):
-    return {node: get_non_terminated_pods(client=admin_client, node=node) for node in schedulable_nodes}
+def node_with_min_memory_labeled_for_descheduler_test(node_with_least_available_memory):
+    with ResourceEditor(patches={node_with_least_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
+        yield
 
 
 @pytest.fixture(scope="class")
-def memory_requests_per_node(schedulable_nodes, non_terminated_pods_per_node):
-    memory_requests = collections.defaultdict(bitmath.Byte)
-    for node in schedulable_nodes:
-        for pod in non_terminated_pods_per_node[node]:
-            pod_instance = pod.exists
-            if pod_instance:
-                memory_requests[node] += get_pod_memory_requests(pod_instance=pod_instance)
-    LOGGER.info(f"memory_requests collection: {memory_requests}")
-    return memory_requests
+def node_with_max_memory_labeled_for_descheduler_test(node_with_most_available_memory):
+    with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
+        yield
 
 
 @pytest.fixture(scope="class")
-def available_memory_per_node(
-    schedulable_nodes,
-    allocatable_memory_per_node_scope_class,
-    memory_requests_per_node,
-):
-    return {
-        node: allocatable_memory_per_node_scope_class[node] - memory_requests_per_node[node]
-        for node in schedulable_nodes
-    }
-
-
-@pytest.fixture(scope="class")
-def node_with_most_available_memory(available_memory_per_node):
-    return max(available_memory_per_node, key=available_memory_per_node.get)
-
-
-@pytest.fixture(scope="class")
-def node_with_least_available_memory(available_memory_per_node):
-    return min(available_memory_per_node, key=available_memory_per_node.get)
-
-
-@pytest.fixture(scope="class")
-def node_labeled_for_test(node_with_least_available_memory):
-    with ResourceEditor(patches={node_with_least_available_memory: {"metadata": {"labels": NODE_SELECTOR_LABEL}}}):
-        yield node_with_least_available_memory
-
-
-@pytest.fixture(scope="class")
-def node_affinity_for_node_with_least_available_memory(node_with_least_available_memory):
-    return build_node_affinity_dict(preferred_nodes=[node_with_least_available_memory.hostname])
+def node_affinity_for_descheduler_label():
+    return build_node_affinity_dict(key=DESCHEDULER_LABEL_KEY, values=[DESCHEDULER_LABEL_VALUE])
 
 
 @pytest.fixture(scope="class")
@@ -241,7 +201,7 @@ def deployed_vms_for_utilization_imbalance(
     cpu_for_migration,
     vm_deployment_size,
     calculated_vm_deployment_for_node_with_least_available_memory,
-    node_affinity_for_node_with_least_available_memory,
+    node_affinity_for_descheduler_label,
 ):
     yield from deploy_vms(
         vm_prefix=request.param["vm_prefix"],
@@ -251,7 +211,7 @@ def deployed_vms_for_utilization_imbalance(
         vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
         deployment_size=vm_deployment_size,
         descheduler_eviction=request.param["descheduler_eviction"],
-        vm_affinity=node_affinity_for_node_with_least_available_memory,
+        vm_affinity=node_affinity_for_descheduler_label,
     )
 
 
@@ -262,6 +222,7 @@ def deployed_vms_on_labeled_node(
     cpu_for_migration,
     vm_deployment_size,
     calculated_vm_deployment_for_node_with_least_available_memory,
+    node_affinity_for_descheduler_label,
 ):
     yield from deploy_vms(
         vm_prefix="node-labels-test",
@@ -271,7 +232,7 @@ def deployed_vms_on_labeled_node(
         vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
         deployment_size=vm_deployment_size,
         descheduler_eviction=True,
-        node_selector_labels=NODE_SELECTOR_LABEL,
+        vm_affinity=node_affinity_for_descheduler_label,
     )
 
 
