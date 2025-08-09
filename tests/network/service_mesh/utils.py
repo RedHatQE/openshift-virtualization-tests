@@ -3,9 +3,10 @@ import logging
 import pexpect
 import pytest
 
-from tests.network.constants import SERVICE_MESH_PORT
+from tests.network.service_mesh.constants import AUTH_COMMAND
 from utilities import console
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_3MIN
+from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,25 +48,6 @@ def inbound_request(vm, destination_address, destination_port):
         assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
-def authentication_request(vm, **kwargs):
-    """
-    Return server response to a request sent from VM console. This request allows testing client authentication.
-
-    Args:
-        vm (VirtualMachine): VM that will be used for console connection
-
-    Kwargs: ( Used to allow passing args from wait_service_mesh_components_convergence in service_mesh/conftest)
-        service (str): target svc dns name
-
-    Returns:
-        str: Server response
-    """
-    return run_console_command(
-        vm=vm,
-        command=f"curl http://{kwargs['service']}:{SERVICE_MESH_PORT}/ip",
-    )
-
-
 def assert_service_mesh_request(expected_output, request_response):
     assert expected_output in request_response, (
         f"Server response error.Expected output - {expected_output}received - {request_response}"
@@ -75,13 +57,24 @@ def assert_service_mesh_request(expected_output, request_response):
 def assert_authentication_request(vm, service_app_name):
     # Envoy proxy IP
     expected_output = "127.0.0.6"
-    request_response = authentication_request(vm=vm, service=service_app_name)
+    request_response = run_console_command(
+        vm=vm,
+        command=AUTH_COMMAND.format(service=service_app_name),
+    )
     assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
-def run_console_command(vm, command, timeout=TIMEOUT_1MIN):
+def run_console_command(vm: VirtualMachineForTests, command: str, timeout: int = TIMEOUT_1MIN) -> str:
     """
-    Run a single command through a VM console.
+    Execute a command in VM console and return the output.
+
+    Args:
+        vm (VirtualMachineForTests): VM to be used for console connection.
+        command (str): Command to execute.
+        timeout (int, default=TIMEOUT_1MIN): Timeout for the command execution.
+
+    Returns:
+        str: Command output.
     """
     prompt = r"\$ "
     with console.Console(vm=vm, prompt=prompt) as vmc:
