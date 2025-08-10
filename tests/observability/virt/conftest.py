@@ -92,7 +92,8 @@ def deleted_virt_handler_pods(admin_client, hco_namespace):
         get_all=True,
     )
     for pod in virt_handler_pods:
-        pod.clean_up()
+        if pod.exists:
+            pod.clean_up()
 
 
 @pytest.fixture(scope="class")
