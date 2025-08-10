@@ -649,18 +649,17 @@ def get_matrix_os_golden_image_data_source(
         DataSource: DataSource object.
     """
 
-    os_name = [*os_matrix][0]
-    os_dict = os_matrix[os_name]
+    os_dict = os_matrix[[*os_matrix][0]]
     data_source_name = os_dict[DATA_SOURCE_STR]
 
     data_source = DataSource(client=admin_client, name=data_source_name, namespace=golden_images_namespace.name)
-    if data_source.exists and data_source.instance.status.source:
+    if data_source.exists and data_source.source.exists:
         LOGGER.info(f"DataSource {data_source_name} already exists and has a source pvc/snapshot.")
         yield data_source
     else:
         LOGGER.warning(f"No DataSource {data_source_name} found or it doesn't have a source pvc/snapshot.")
         with create_dv(
-            dv_name=os_name,
+            dv_name=data_source_name,
             namespace=golden_images_namespace.name,
             storage_class=py_config["default_storage_class"],
             url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
