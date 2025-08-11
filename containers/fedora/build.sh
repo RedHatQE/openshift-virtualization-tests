@@ -126,6 +126,6 @@ ${IMAGE_BUILD_CMD} build -f Dockerfile --arch="${CPU_ARCH_CODE}" -t "${FEDORA_CO
 ${IMAGE_BUILD_CMD} tag "${FEDORA_CONTAINER_IMAGE}" "${FEDORA_QUAY_STAGE}"
 
 echo "Save container image as TAR"
-${IMAGE_BUILD_CMD} save --output "fedora-image-${FEDORA_VERSION}-${CPU_ARCH}.tar" "${FEDORA_QUAY_STAGE}"
+${IMAGE_BUILD_CMD} save --output "fedora-image-${CPU_ARCH}.tar" "${FEDORA_QUAY_STAGE}"
 popd
 echo "Fedora image located in ${BUILD_DIR}/"
