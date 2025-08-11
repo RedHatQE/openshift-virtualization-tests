@@ -14,21 +14,25 @@ trap cleanup EXIT
 [ -z "${CPU_ARCH}" ] && echo "Set the env variable CPU_ARCH" && exit 1
 [ -z "${PR_NUMBER}" ] && echo "Missing PR number from github action component-builder.yml" && exit 1
 
-FEDORA_VARS_FILE=fedora-vars
-FEDORA_VERSION=$(sed -n "s/^FEDORA_VERSION:[[:space:]]\(.*\)/\1/pi" ${FEDORA_VARS_FILE})
-FEDORA_IMAGE=$(sed -n "s/^FEDORA_${CPU_ARCH}_IMAGE:[[:space:]]\(.*\)/\1/pi" ${FEDORA_VARS_FILE})
+set -o allexport
+source fedora-vars
+set +o allexport
+
+# FEDORA_VERSION & FEDORA_${CPU_ARCH}_IMAGE are defined in fedora-vars
+IMAGE="FEDORA_${CPU_ARCH}_IMAGE"
+FEDORA_IMAGE=${!IMAGE}
+if [ -z "${FEDORA_VERSION}" ] || [ -z "${FEDORA_IMAGE}" ]; then
+    echo "FEDORA_VERSION or FEDORA_${CPU_ARCH}_IMAGE not set by fedora-vars" >&2
+    exit 1
+fi
+
 BUILD_DIR="fedora_build"
 CLOUD_INIT_ISO="cidata.iso"
-NAME="fedora${FEDORA_VERSION}"
+NAME="fedora${FEDORA_VERSION}-${CPU_ARCH}"
 FEDORA_CONTAINER_IMAGE="localhost/fedora:${FEDORA_VERSION}-${CPU_ARCH}"
 FEDORA_QUAY_STAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${CPU_ARCH}-pr-${PR_NUMBER}"
 NO_SECURE_BOOT=""
-IMAGE_BUILD_CMD=$(which podman 2>/dev/null)
-
-if [ -z ${IMAGE_BUILD_CMD} ]; then
-    echo "No podman installed"
-    exit 1
-fi
+IMAGE_BUILD_CMD=$(which podman)
 
 case "${CPU_ARCH}" in
     "x86_64")
@@ -74,9 +78,8 @@ cloud-localds ${CLOUD_INIT_ISO} user-data
 # therefore use a lower one. It should have no influence on the result.
 OS_VARIANT=$NAME
 vers_num="${FEDORA_VERSION%%[^0-9]*}"
-if [ -n "${vers_num}" ] && [ "${vers_num}" -gt 40 ] 2>/dev/null; then
-   OS_VARIANT="fedora40"
-fi
+vers_num=$((vers_num-1))
+OS_VARIANT="fedora${vers_num}"
 
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
@@ -126,6 +129,6 @@ ${IMAGE_BUILD_CMD} build -f Dockerfile --arch="${CPU_ARCH_CODE}" -t "${FEDORA_CO
 ${IMAGE_BUILD_CMD} tag "${FEDORA_CONTAINER_IMAGE}" "${FEDORA_QUAY_STAGE}"
 
 echo "Save container image as TAR"
-${IMAGE_BUILD_CMD} save --output "fedora-image-${FEDORA_VERSION}-${CPU_ARCH}.tar" "${FEDORA_QUAY_STAGE}"
+${IMAGE_BUILD_CMD} save --output "fedora-image-${CPU_ARCH}.tar" "${FEDORA_QUAY_STAGE}"
 popd
 echo "Fedora image located in ${BUILD_DIR}/"
