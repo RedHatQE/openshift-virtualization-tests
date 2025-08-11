@@ -185,6 +185,7 @@ def vm_from_template_with_existing_dv_on_hpp_pvc(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_install_and_delete_hpp_csi_cr_basic(
     admin_client,
     hpp_csi_custom_resource,
@@ -240,6 +241,7 @@ def test_install_and_delete_hpp_csi_cr_basic(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_install_and_delete_hpp_csi_cr_with_pvc_template(
     admin_client,
     hpp_csi_custom_resource,
@@ -285,6 +287,7 @@ def test_install_and_delete_hpp_csi_cr_with_pvc_template(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_install_and_delete_hpp_csi_cr_basic_and_with_pvc_template(
     admin_client,
     hpp_csi_custom_resource,

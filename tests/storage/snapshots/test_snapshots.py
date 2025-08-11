@@ -38,6 +38,7 @@ pytestmark = pytest.mark.usefixtures(
 
 
 @pytest.mark.polarion("CNV-5781")
+@pytest.mark.s390x
 def test_snapshot_feature_gate_present(kubevirt_feature_gates):
     """
     This test will ensure that 'Snapshot' feature gate is present in KubeVirt ConfigMap.
@@ -323,6 +324,7 @@ def test_remove_snapshots_while_vm_is_running(
     ],
     indirect=["namespace"],
 )
+@pytest.mark.s390x
 def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_client, resource, error_msg):
     with pytest.raises(
         ApiException,
@@ -343,6 +345,7 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     cirros_vm_for_snapshot,
     unprivileged_client,
@@ -366,6 +369,7 @@ def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     cirros_vm_for_snapshot,
     permissions_for_dv,

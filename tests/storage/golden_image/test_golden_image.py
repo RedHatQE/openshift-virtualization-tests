@@ -48,6 +48,7 @@ def dv_created_by_unprivileged_user_with_rolebinding(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4755")
+@pytest.mark.s390x
 def test_regular_user_cant_create_dv_in_ns(
     golden_images_namespace,
     unprivileged_client,
@@ -76,6 +77,7 @@ def test_regular_user_cant_create_dv_in_ns(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_regular_user_cant_delete_dv_from_cloned_dv(
     golden_images_namespace,
     unprivileged_client,
@@ -114,6 +116,7 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_regular_user_can_create_vm_from_cloned_dv(
     golden_image_data_volume_multi_storage_scope_function,
     golden_image_vm_instance_from_template_multi_storage_scope_function,
@@ -129,6 +132,7 @@ def test_regular_user_can_create_vm_from_cloned_dv(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_regular_user_can_list_all_pvc_in_ns(
     golden_images_namespace,
     unprivileged_client,
@@ -152,6 +156,7 @@ def test_regular_user_can_list_all_pvc_in_ns(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_regular_user_cant_clone_dv_in_ns(
     unprivileged_client,
     golden_image_data_volume_scope_module,
@@ -190,6 +195,7 @@ def test_regular_user_cant_clone_dv_in_ns(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_regular_user_can_create_dv_in_ns_given_proper_rolebinding(
     dv_created_by_unprivileged_user_with_rolebinding,
 ):

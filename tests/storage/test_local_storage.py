@@ -56,6 +56,7 @@ def local_storage_profile_claim_property_sets(local_storage_class):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_local_storage_profile_claim_property_sets(
     skip_if_no_local_storage_class,
     local_storage_class,
