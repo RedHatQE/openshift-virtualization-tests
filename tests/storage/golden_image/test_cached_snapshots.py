@@ -221,6 +221,7 @@ def rhel9_golden_image_vm(
 
 
 @pytest.mark.polarion("CNV-10721")
+@pytest.mark.s390x
 def test_automatic_update_for_system_cached_snapshot(
     rhel9_cached_snapshot,
     disabled_common_boot_image_import_hco_spec_rhel9_scope_function,
@@ -234,6 +235,7 @@ def test_automatic_update_for_system_cached_snapshot(
 
 
 @pytest.mark.polarion("CNV-10722")
+@pytest.mark.s390x
 def test_disable_automatic_update_using_annotation(
     disabled_data_import_cron_annotation_rhel9,
     rhel9_data_import_cron,
@@ -260,5 +262,6 @@ def test_disable_automatic_update_using_annotation(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_unprivileged_user_vm_snapshot_datasource(rhel9_golden_image_vm):
     running_vm(vm=rhel9_golden_image_vm)

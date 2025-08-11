@@ -163,12 +163,14 @@ def data_volume_without_snapshot_capability_scope_function(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_verify_pod_cdi_label(cdi_resources_scope_module):
     verify_label(cdi_resources=cdi_resources_scope_module)
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3475")
+@pytest.mark.s390x
 def test_importer_pod_cdi_label(namespace, https_server_certificate):
     # verify "cdi.kubevirt.io" label is included in importer pod
     with import_image_to_dv(
@@ -185,6 +187,7 @@ def test_importer_pod_cdi_label(namespace, https_server_certificate):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3474")
+@pytest.mark.s390x
 def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_name_scope_module):
     """
     Verify "cdi.kubevirt.io" label is included in uploader pod
@@ -216,6 +219,7 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_cloner_pods_cdi_label(
     namespace,
     data_volume_without_snapshot_capability_scope_function,
@@ -301,6 +305,7 @@ def test_cloner_pods_cdi_label(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_verify_cdi_res_app_label(
     cdi_resources_scope_module,
     cnv_current_version,

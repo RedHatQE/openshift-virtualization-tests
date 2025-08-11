@@ -39,6 +39,7 @@ class TestCheckupNegative:
         )
 
     @pytest.mark.polarion("CNV-10705")
+    @pytest.mark.s390x
     def test_additional_default_storage_class(
         self,
         updated_two_default_storage_classes,
@@ -57,6 +58,7 @@ class TestCheckupNegative:
         )
 
     @pytest.mark.polarion("CNV-10706")
+    @pytest.mark.s390x
     def test_unknown_provisioner(
         self,
         storage_class_with_unknown_provisioner,
@@ -74,6 +76,7 @@ class TestCheckupNegative:
         )
 
     @pytest.mark.polarion("CNV-10711")
+    @pytest.mark.s390x
     def test_golden_image_data_source_not_ready(
         self,
         broken_data_import_cron,
