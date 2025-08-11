@@ -31,6 +31,7 @@ TESTS_MODULE_IDENTIFIER = "TestCommonInstancetypeRhel"
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
@@ -120,6 +121,7 @@ class TestVMFeatures:
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 class TestVMMigrationAndState:
     @pytest.mark.polarion("CNV-11714")
     @pytest.mark.dependency(

@@ -3,7 +3,7 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_command
 
-pytestmark = [pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.mark.polarion("CNV-5884")
