@@ -20,3 +20,7 @@ VIRTUAL_SERVICE_TYPE = "vs"
 PEER_AUTHENTICATION_TYPE = "pa"
 DEPLOYMENT_TYPE = "dp"
 INGRESS_SERVICE = "istio-ingressgateway"
+EXPECTED_MESH_SUCCESS_OUTPUT = "127.0.0.6"  # Envoy proxy IP
+SERVICE_MESH_PORT = 8080
+HTTPBIN_COMMAND = f"gunicorn -b 0.0.0.0:{SERVICE_MESH_PORT} -w 1 httpbin:app"
+AUTH_COMMAND = f"curl http://{{service}}:{SERVICE_MESH_PORT}/ip"
