@@ -109,14 +109,14 @@ jobs:
           ARM_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-aarch64-' | head -1)
           S390_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-s390x-' | head -1)
           
-          # Derive version and PR from x86_64 tag (assumes consistent tagging)
+          # Derive version and PR 
           FEDORA_VERSION=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/^\([0-9]\+\)-.*/\1/p')
           PR_TAG=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/.*\(pr-[0-9]\+\).*/\1/p')
           DEST_REPO="quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
           X86_DEST="${DEST_REPO}:${FEDORA_VERSION}-x86_64-${PR_TAG}"
           ARM_DEST="${DEST_REPO}:${FEDORA_VERSION}-aarch64-${PR_TAG}"
           S390_DEST="${DEST_REPO}:${FEDORA_VERSION}-s390x-${PR_TAG}"
-          
+
           # Push per-arch images first
           podman push "${X86_DEST}"
           podman push "${ARM_DEST}"
@@ -131,5 +131,3 @@ jobs:
           
           # Push manifest with all images
           podman manifest push "${MANIFEST}" --all
-
-

@@ -30,7 +30,11 @@ unzip  fedora-container-image-s390x.zip
 
 # 2. Tag images corresponding to private quay repo
 - Load the image into the local image storage using podman
+<<<<<<< HEAD
 - The container images are loaded with the predefined format: 
+=======
+- The container images are loaded with the predefined format:
+>>>>>>> 2ad0154 (OUpdated github actions workflow for ARM & s390x)
     quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:<VERSION>-<ARCH>
 - In this format, <VERSION> is for Fedora release version and <ARCH> is for CPU architectures: [x86_64, aarch64, s390x]
 - Tag container images for each architecture with private quay repo location <REPO>.
