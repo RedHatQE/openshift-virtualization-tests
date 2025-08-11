@@ -2,7 +2,6 @@ import pytest
 
 from tests.network.service_mesh.constants import AUTH_COMMAND, EXPECTED_MESH_SUCCESS_OUTPUT
 from tests.network.service_mesh.utils import (
-    assert_authentication_request,
     assert_traffic_management_request,
     inbound_request,
     run_console_command,
@@ -97,13 +96,16 @@ class TestSMPeerAuthentication:
     ):
         # We must specify the full service DNS name since the VM is outside the mesh in a different namespace
         # Format: http://<service_name>.<service_namespace>.svc.cluster.local
-        assert_authentication_request(
+        result = run_console_command(
             vm=outside_mesh_vm_fedora_with_service_mesh_annotation,
-            service_app_name=(
-                f"{httpbin_service_service_mesh.app_name}.{httpbin_service_service_mesh.namespace}.svc.cluster.local"
+            command=AUTH_COMMAND.format(
+                service=(
+                    f"{httpbin_service_service_mesh.app_name}.{httpbin_service_service_mesh.namespace}."
+                    "svc.cluster.local"
+                )
             ),
-            expected_output="curl: (56) Recv failure",
         )
+        assert "curl: (56) Recv failure" in result
 
     @pytest.mark.polarion("CNV-7128")
     @pytest.mark.single_nic

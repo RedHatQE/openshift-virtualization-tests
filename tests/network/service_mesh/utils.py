@@ -3,7 +3,6 @@ import logging
 import pexpect
 import pytest
 
-from tests.network.service_mesh.constants import AUTH_COMMAND
 from utilities import console
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_3MIN
 from utilities.virt import VirtualMachineForTests
@@ -52,16 +51,6 @@ def assert_service_mesh_request(expected_output, request_response):
     assert expected_output in request_response, (
         f"Server response error.Expected output - {expected_output}received - {request_response}"
     )
-
-
-def assert_authentication_request(vm, service_app_name):
-    # Envoy proxy IP
-    expected_output = "127.0.0.6"
-    request_response = run_console_command(
-        vm=vm,
-        command=AUTH_COMMAND.format(service=service_app_name),
-    )
-    assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
 
 
 def run_console_command(vm: VirtualMachineForTests, command: str, timeout: int = TIMEOUT_1MIN) -> str:
