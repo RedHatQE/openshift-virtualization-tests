@@ -1,6 +1,6 @@
 name: "Component Builder Check"
 on:
-  pull_request:
+  pull_request_target:
     paths:
       - 'containers/fedora/**'
 
@@ -8,12 +8,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  guest-fedora-amd64:
+  build-guest-fedora:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./containers/fedora
+    strategy:
+      matrix:
+        CPU_ARCH: [x86_64, aarch64, s390x]
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
-      FEDORA_VERSION: 41
-      CPU_ARCH: amd64
+      CPU_ARCH: ${{ matrix.CPU_ARCH }}
+      FEDORA_VARS_FILE: "fedora-vars"
+      PR_NUMBER: ${{ github.event.number }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -23,40 +29,107 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qemu-system-x86 \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
-            libguestfs-tools
+            libguestfs-tools \
+            podman
+          case "${{ matrix.CPU_ARCH }}" in
+            x86_64)
+              sudo apt-get install -y qemu-system-x86
+              ;;
+            aarch64)
+              sudo apt-get install -y qemu-system-arm qemu-efi-aarch64
+              ;;
+            s390x)
+              sudo apt-get install -y qemu-system-s390x 
+              ;;
+          esac
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
+      - name: Add the current user to group kvm
+        run: sudo usermod -a -G kvm $(whoami)
       - name: Fetch base Fedora image
-        working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: |
+          set -euo pipefail
+          VERS=$(sed -n "s/^FEDORA_VERSION:[[:space:]]\(.*\)/\1/pi" ${{ env.FEDORA_VARS_FILE }})
+          URL=$(sed -e "s/\${FEDORA_VERSION}/${VERS}/g" -ne "s/^FEDORA_${{ matrix.CPU_ARCH }}_DOWNLOAD_DIR:[[:space:]]\(.*\)/\1/pi" ${{ env.FEDORA_VARS_FILE }})
+          IMAGE=$(sed -n "s/^FEDORA_${{ matrix.CPU_ARCH }}_IMAGE:[[:space:]]\(.*\)/\1/pi" ${{ env.FEDORA_VARS_FILE }})
+          echo "FEDORA_VERSION=$VERS" >> $GITHUB_ENV
+          wget -q "${URL}/${IMAGE}"
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: "0.6.11"
       - name: Create VM
-        working-directory: ./containers/fedora
         env:
           PYTHONPATH: ${{ github.workspace }}
           NO_SECRETS: "true"
         run: ./build.sh
-      - name: Save container image as tarball
-        env:
-          local_repository: "localhost/fedora"
-          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
-          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
-        run: |
-          mkdir -p artifacts
-          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
-          echo "Saved image to artifacts/fedora-image.tar"
       - name: Upload container image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fedora-container-image
-          path: artifacts/fedora-image.tar
+          name: fedora-container-image-${{ matrix.CPU_ARCH }}
+          path: |
+            containers/fedora/fedora_build/fedora-image-${{ env.FEDORA_VERSION }}-${{ matrix.CPU_ARCH }}.tar
           retention-days: 5
           compression-level: 0
+
+  push_images_stage:
+    needs: build-guest-fedora
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Download container images archive
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          pattern: fedora-container-image-*
+      - name: Login in to quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Create image manifest and push the image to stage
+        run: |
+          set -euo pipefail
+          # Load images
+          podman load -i fedora-image-x86_64.tar
+          podman load -i fedora-image-aarch64.tar
+          podman load -i fedora-image-s390x.tar
+
+          # Discover images by arch
+          X86_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-x86_64-' | head -1)
+          ARM_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-aarch64-' | head -1)
+          S390_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-s390x-' | head -1)
+          
+          # Derive version and PR from x86_64 tag (assumes consistent tagging)
+          FEDORA_VERSION=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/^\([0-9]\+\)-.*/\1/p')
+          PR_TAG=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/.*\(pr-[0-9]\+\).*/\1/p')
+          DEST_REPO="quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+          X86_DEST="${DEST_REPO}:${FEDORA_VERSION}-x86_64-${PR_TAG}"
+          ARM_DEST="${DEST_REPO}:${FEDORA_VERSION}-aarch64-${PR_TAG}"
+          S390_DEST="${DEST_REPO}:${FEDORA_VERSION}-s390x-${PR_TAG}"
+          
+          # Push per-arch images first
+          podman push "${X86_DEST}"
+          podman push "${ARM_DEST}"
+          podman push "${S390_DEST}"
+          
+          # Create local manifest and add images
+          MANIFEST="${DEST_REPO}:${FEDORA_VERSION}-${PR_TAG}"
+          podman manifest create "${MANIFEST}"
+          podman manifest add "${MANIFEST}" "${X86_DEST}"
+          podman manifest add "${MANIFEST}" "${ARM_DEST}"
+          podman manifest add "${MANIFEST}" "${S390_DEST}"
+          
+          # Push manifest with all images
+          podman manifest push "${MANIFEST}" --all
+
+
