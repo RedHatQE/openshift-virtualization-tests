@@ -264,7 +264,7 @@ def assert_restart_required_condition(vm, expected_message):
     )
     try:
         for sample in sampler:
-            if sample and sample == expected_message:
+            if sample == expected_message:
                 return
     except TimeoutExpiredError:
         LOGGER.error("No RestartRequired condition found on VM!")
