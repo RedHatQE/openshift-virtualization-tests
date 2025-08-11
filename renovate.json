@@ -1,69 +1,24 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    ":dependencyDashboard",
+    ":maintainLockFilesWeekly",
+    ":prHourlyLimitNone",
+    ":semanticCommitTypeAll(ci)"
+  ],
+  "baseBranches": [
+    "main",
+    "cnv-4.99"
+  ],
+  "prConcurrentLimit": 0,
   "lockFileMaintenance": {
     "enabled": true
   },
-  "baseBranches": [
-    "main",
-    "cnv-4.18"
-  ],
-  "recreateWhen": "never",
+  "schedule": ["every Friday after 6pm"],
   "packageRules": [
     {
-      "matchDepPatterns": [
-        "pexpect",
-        "PyYAML",
-        "pytest",
-        "bitmath",
-        "urllib3",
-        "netaddr",
-        "bcrypt",
-        "pytest-testconfig",
-        "pytest-benchmark",
-        "sh",
-        "pytest-order",
-        "jinja2",
-        "requests",
-        "xmltodict",
-        "pytest-jira",
-        "jira",
-        "python-rrmngmnt",
-        "importlib-metadata",
-        "importlib-resources",
-        "click",
-        "docker",
-        "pyvmomi",
-        "pytest-dependency",
-        "pytest-progress",
-        "pytest-lazy-fixture",
-        "colorlog",
-        "dictdiffer",
-        "python-benedict",
-        "bs4",
-        "shortuuid",
-        "podman",
-        "jsons",
-        "deepdiff",
-        "python-utility-scripts",
-        "pyhelper-utils",
-        "openshift-python-utilities",
-        "timeout-sampler"
-      ],
-      "minimumReleaseAge": "5 days",
-      "groupName": "python dependencies"
-    },
-    {
-      "matchDepPatterns": ["openshift-python-wrapper", "kubernetes"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false,
-      "groupName": "Upstream dependencies"
-    },
-    {
-      "matchManagers": ["dockerfile"],
-      "enabled": false
+      "matchPackagePatterns": ["*"],
+      "groupName": "python-deps"
     }
-  ],
-  "extends": ["docker:disable"],
-  "schedule": ["after 7pm on wednesday"],
-  "timezone": "America/New_York"
+  ]
 }
