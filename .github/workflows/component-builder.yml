@@ -1,6 +1,10 @@
 name: "Component Builder Check"
 on:
+  # Wait for event on pull_request_target so that this action
+  # can access repo secrets: QUAY_USER & QUAY_TOKEN
   pull_request_target:
+    permissions:
+      contents: read
     paths:
       - 'containers/fedora/**'
 
@@ -41,7 +45,7 @@ jobs:
               sudo apt-get install -y qemu-system-arm qemu-efi-aarch64
               ;;
             s390x)
-              sudo apt-get install -y qemu-system-s390x 
+              sudo apt-get install -y qemu-system-s390x
               ;;
           esac
       - name: Tweak hosted runner to enable 'virt-sysprep'
@@ -71,7 +75,7 @@ jobs:
         with:
           name: fedora-container-image-${{ matrix.CPU_ARCH }}
           path: |
-            containers/fedora/fedora_build/fedora-image-${{ env.FEDORA_VERSION }}-${{ matrix.CPU_ARCH }}.tar
+            containers/fedora/fedora_build/fedora-image-${{ matrix.CPU_ARCH }}.tar
           retention-days: 5
           compression-level: 0
 
@@ -99,17 +103,14 @@ jobs:
       - name: Create image manifest and push the image to stage
         run: |
           set -euo pipefail
-          # Load images
           podman load -i fedora-image-x86_64.tar
           podman load -i fedora-image-aarch64.tar
           podman load -i fedora-image-s390x.tar
 
-          # Discover images by arch
           X86_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-x86_64-' | head -1)
           ARM_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-aarch64-' | head -1)
           S390_IMG=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep -E ':[0-9]+-s390x-' | head -1)
-          
-          # Derive version and PR 
+
           FEDORA_VERSION=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/^\([0-9]\+\)-.*/\1/p')
           PR_TAG=$(printf "%s\n" "${X86_IMG#*:}" | sed -n 's/.*\(pr-[0-9]\+\).*/\1/p')
           DEST_REPO="quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
@@ -117,17 +118,14 @@ jobs:
           ARM_DEST="${DEST_REPO}:${FEDORA_VERSION}-aarch64-${PR_TAG}"
           S390_DEST="${DEST_REPO}:${FEDORA_VERSION}-s390x-${PR_TAG}"
 
-          # Push per-arch images first
           podman push "${X86_DEST}"
           podman push "${ARM_DEST}"
           podman push "${S390_DEST}"
-          
-          # Create local manifest and add images
+
           MANIFEST="${DEST_REPO}:${FEDORA_VERSION}-${PR_TAG}"
           podman manifest create "${MANIFEST}"
           podman manifest add "${MANIFEST}" "${X86_DEST}"
           podman manifest add "${MANIFEST}" "${ARM_DEST}"
           podman manifest add "${MANIFEST}" "${S390_DEST}"
-          
-          # Push manifest with all images
+
           podman manifest push "${MANIFEST}" --all
