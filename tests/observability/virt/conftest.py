@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 
@@ -92,8 +93,11 @@ def deleted_virt_handler_pods(admin_client, hco_namespace):
         get_all=True,
     )
     for pod in virt_handler_pods:
-        if pod.exists:
-            pod.clean_up()
+        try:
+            if pod.exists:
+                pod.clean_up()
+        except NotFoundError:
+            continue
 
 
 @pytest.fixture(scope="class")
