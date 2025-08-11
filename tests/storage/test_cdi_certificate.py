@@ -309,6 +309,7 @@ def downloaded_cirros_image(tmpdir):
     return local_path
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-5708")
 def test_cert_exposure_rotation(
     enabled_ca,

@@ -259,6 +259,7 @@ def test_sequential_disk_expand(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_simultaneous_disk_expand(
     cirros_dv_for_online_resize,
     second_cirros_dv_for_online_resize,
@@ -314,6 +315,7 @@ def test_disk_expand_then_clone_fail(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_then_clone_success(
     cirros_dv_for_online_resize,
     cirros_vm_after_expand,
@@ -343,6 +345,7 @@ def test_disk_expand_then_clone_success(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_disk_expand_then_migrate(cpu_for_migration, cirros_vm_after_expand, orig_cksum):
     migrate_vm_and_verify(
         vm=cirros_vm_after_expand,
