@@ -227,7 +227,6 @@ ACCESS_TOKEN = {
     "accessTokenInactivityTimeout": None,
 }
 CNV_NOT_INSTALLED = "CNV not yet installed."
-EUS_ERROR_CODE = 98
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
     StorageClassNames.TRIDENT_CSI_FSX,
@@ -1906,6 +1905,9 @@ def hco_target_csv_name(cnv_target_version):
 
 @pytest.fixture(scope="session")
 def eus_hco_target_csv_name(eus_target_cnv_version):
+    if eus_target_cnv_version is None:
+        LOGGER.warning("Cannot determine EUS HCO target CSV name: EUS target version is None (non-EUS version)")
+        return None
     return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
 
 
@@ -1918,12 +1920,10 @@ def cnv_target_version(pytestconfig):
 def eus_target_cnv_version(pytestconfig, cnv_current_version):
     cnv_current_version = Version(version=cnv_current_version)
     minor = cnv_current_version.minor
-    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, exit if non-eus version
+    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, return None if non-eus version
     if minor % 2:
-        exit_pytest_execution(
-            message=f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}",
-            return_code=EUS_ERROR_CODE,
-        )
+        LOGGER.warning(f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}")
+        return None
     return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
 
 
