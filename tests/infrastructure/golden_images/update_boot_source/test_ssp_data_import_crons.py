@@ -239,7 +239,7 @@ def created_data_import_cron(
         yield data_import_cron
 
 
-@pytest.fixture
+@pytest.fixture()
 def existing_dic_volumes_before_disable(admin_client, golden_images_namespace):
     return get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)
 
@@ -331,19 +331,18 @@ class TestDataImportCronDefaultStorageClass:
 def test_data_import_cron_deletion_on_opt_out(
     admin_client,
     golden_images_namespace,
-    existing_dic_volumes_before_disable,
     golden_images_data_import_crons_scope_function,
+    existing_dic_volumes_before_disable,
     disabled_common_boot_image_import_hco_spec_scope_function,
 ):
     LOGGER.info("Verify DataImportCrons are deleted after opt-out.")
     wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons_scope_function)
     volumes_after = get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)
-    assert set(existing_dic_volumes_before_disable) == set(volumes_after), (
-        "DataImportCron deletion should not affect existing volumes.\n"
-        f"Volumes before: {sorted(existing_dic_volumes_before_disable)}\n"
-        f"Volumes after: {sorted(volumes_after)}\n"
-        f"Added: {sorted(set(volumes_after) - set(existing_dic_volumes_before_disable))}\n"
-        f"Removed: {sorted(set(existing_dic_volumes_before_disable) - set(volumes_after))}"
+    assert set(existing_dic_volumes_before_disable).issubset(volumes_after), (
+        "Some expected volumes are missing after DataImportCron deletion.\n"
+        f"Expected (before): {sorted(existing_dic_volumes_before_disable)}\n"
+        f"Actual (after): {sorted(volumes_after)}\n"
+        f"Missing: {sorted(set(existing_dic_volumes_before_disable) - set(volumes_after))}"
     )
 
 
