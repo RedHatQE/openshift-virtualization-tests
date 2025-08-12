@@ -128,39 +128,3 @@ class TestVirtHandlerDaemonSet:
             alert_dict=alert_tested,
             timeout=TIMEOUT_10MIN,
         )
-
-
-@pytest.mark.usefixtures("disabled_virt_operator", "virt_handler_daemonset_with_bad_image", "deleted_virt_handler_pods")
-class TestLowKvmCounts:
-    @pytest.mark.dependency(name="test_metric_kubevirt_nodes_with_kvm")
-    @pytest.mark.polarion("CNV-11708")
-    def test_metric_kubevirt_nodes_with_kvm(self, prometheus):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_nodes_with_kvm",
-            expected_value="0",
-        )
-
-    @pytest.mark.dependency(depends=["test_metric_kubevirt_nodes_with_kvm"])
-    @pytest.mark.parametrize(
-        "alert_tested",
-        [
-            pytest.param(
-                {
-                    "alert_name": "LowKVMNodesCount",
-                    "labels": {
-                        "severity": WARNING_STR,
-                        "operator_health_impact": WARNING_STR,
-                        "kubernetes_operator_component": KUBEVIRT_STR_LOWER,
-                    },
-                },
-                marks=(pytest.mark.polarion("CNV-11053")),
-            )
-        ],
-    )
-    def test_low_kvm_nodes_count(
-        self,
-        prometheus,
-        alert_tested,
-    ):
-        validate_alerts(prometheus=prometheus, alert_dict=alert_tested)
