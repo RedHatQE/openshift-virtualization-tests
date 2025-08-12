@@ -1738,13 +1738,3 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
     assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
     return next(iter(nodes_cpu_arch))
-
-
-def verify_image_info(image_url, generated_pulled_secret, nodes_cpu_architecture):
-    LOGGER.info(f"Checking image {image_url} information.")
-    run_command(
-        command=shlex.split(
-            f"oc image info {image_url} "
-            f"--registry-config={generated_pulled_secret} --filter-by-os={nodes_cpu_architecture}"
-        ),
-    )
