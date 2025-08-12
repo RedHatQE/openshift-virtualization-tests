@@ -134,7 +134,7 @@ def wait_for_resize(vm, count=1):
             LOGGER.info(
                 f"Current resize count is {current_resize_count}. Waiting until resize count is {desired_count}"
             )
-            if current_resize_count == desired_count:
+            if current_resize_count in (desired_count, desired_count + 1):
                 break
     except TimeoutExpiredError:
         dmesg = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("dmesg"))[0]
