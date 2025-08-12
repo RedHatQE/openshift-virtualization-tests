@@ -81,12 +81,7 @@ def test_public_registry_multiple_data_volume(
         pytest.param(
             "import-public-registry-no-content-type-dv",
             None,
-            marks=(pytest.mark.polarion("CNV-2195")),
-        ),
-        pytest.param(
-            "import-public-registry-empty-content-type-dv",
-            "",
-            marks=(pytest.mark.polarion("CNV-2197"), pytest.mark.smoke()),
+            marks=(pytest.mark.polarion("CNV-2195"), pytest.mark.smoke()),
         ),
         pytest.param(
             "import-public-registry-quay-dv",
@@ -96,7 +91,6 @@ def test_public_registry_multiple_data_volume(
     ],
     ids=[
         "import-public-registry-no-content-type-dv",
-        "import-public-registry-empty-content-type-dv",
         "import-public-registry-quay-dv",
     ],
 )
@@ -120,8 +114,7 @@ def test_public_registry_data_volume(
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
-            wait_for_cloud_init=True,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
@@ -143,7 +136,6 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         dv_name=dv_param["dv_name"],
         namespace=namespace.name,
         url=dv_param["url"],
-        content_type="",
         size="16Mi",
         storage_class=dv_param["storage_class"],
     ) as dv:
@@ -166,8 +158,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
-            memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
-            wait_for_cloud_init=True,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
