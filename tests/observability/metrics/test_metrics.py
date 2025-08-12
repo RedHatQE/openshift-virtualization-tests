@@ -223,3 +223,13 @@ class TestAllocatableNodes:
         validate_metrics_value(
             prometheus=prometheus, metric_name="kubevirt_allocatable_nodes", expected_value=f"{len(allocatable_nodes)}"
         )
+
+
+class TestKubevirtNodesWithKvm:
+    @pytest.mark.polarion("CNV-11708")
+    def test_metric_kubevirt_nodes_with_kvm(self, prometheus, schedulable_nodes):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name="kubevirt_nodes_with_kvm",
+            expected_value=f"{len(schedulable_nodes)}",
+        )
