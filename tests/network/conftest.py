@@ -199,6 +199,14 @@ def ovn_kubernetes_cluster(admin_client):
     return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
 
 
+@pytest.fixture(scope="module")
+def network_operator():
+    network_resource = Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO)
+    if network_resource.exists:
+        return network_resource
+    raise ResourceNotFoundError("Network operator wasn't found in the cluster")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     hosts_common_available_ports,
