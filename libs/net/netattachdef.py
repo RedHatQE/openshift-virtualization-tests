@@ -51,6 +51,35 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
 
 @dataclass
+class IpamRoute:
+    dst: str
+    gw: str
+
+
+@dataclass
+class Ipam:
+    type: str
+    subnet: str
+    range_start: str | None = None
+    range_end: str | None = None
+    gateway: str | None = None
+    routes: list[IpamRoute] | None = None
+
+
+@dataclass
+class CNIPluginMacvlanConfig(CNIPluginConfig):
+    """
+    CNI Macvlan Plugin
+    Ref: https://www.cni.dev/plugins/current/main/macvlan/
+    """
+
+    type: str = field(default="macvlan", init=False)
+    master: str
+    ipam: Ipam | None = None
+    mode: str = "bridge"
+
+
+@dataclass
 class NetConfig:
     """
     CNI specification configuration

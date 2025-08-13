@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.exceptions import NNCPConfigurationFailed
 from ocp_resources.node_network_configuration_policy_latest import NodeNetworkConfigurationPolicy as Nncp
 from ocp_resources.resource import Resource, ResourceEditor
@@ -58,6 +59,12 @@ class Bridge:
 
 
 @dataclass
+class Vlan:
+    id: int
+    base_iface: str
+
+
+@dataclass
 class Interface:
     name: str
     type: str
@@ -65,6 +72,7 @@ class Interface:
     ipv4: IPv4 | None = None
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None
+    vlan: Vlan | None = None
 
 
 @dataclass
@@ -104,6 +112,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
         name: str,
         desired_state: DesiredState,
         node_selector: dict[str, str] | None = None,
+        client: DynamicClient | None = None,
     ):
         """
         Create and manage NodeNetworkConfigurationPolicy
@@ -113,6 +122,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             desired_state (DesiredState): Desired policy configuration - interface creation, modification or removal.
             node_selector (dict, optional): A node selector that specifies the nodes to apply the node network
                 configuration policy to.
+            client (DynamicClient): Optional DynamicClient to use.
         """
         self._desired_state = desired_state
         super().__init__(
@@ -120,6 +130,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             desired_state=asdict(desired_state, dict_factory=dict_normalization_for_dataclass),
             node_selector=node_selector,
             wait_for_resource=True,
+            client=client,
         )
 
     @property
