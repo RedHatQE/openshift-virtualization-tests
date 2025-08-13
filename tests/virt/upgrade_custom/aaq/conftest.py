@@ -7,10 +7,11 @@ from tests.virt.constants import ACRQ_NAMESPACE_LABEL
 from tests.virt.upgrade_custom.aaq.constants import UPGRADE_QUOTA_FOR_ONE_VMI
 from tests.virt.utils import wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import AAQ_NAMESPACE_LABEL
+from utilities.hco import enable_aaq_in_hco
 from utilities.infra import (
     create_ns,
 )
-from utilities.virt import VirtualMachineForTests, enable_aaq_in_hco, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 # AAQ Upgrade

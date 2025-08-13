@@ -8,7 +8,7 @@ from tests.observability.metrics.utils import (
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "enabled_aaq_in_hco_scope_package",
+        "enabled_aaq_in_hco_scope_module",
         "updated_namespace_with_aaq_label",
     ),
 ]
@@ -29,7 +29,7 @@ def test_kube_application_aware_resourcequota_creation_timestamp(
 @pytest.mark.polarion("CNV-12184")
 def test_kube_application_aware_resourcequota_metrics(
     prometheus,
-    application_aware_resource_quota,
+    application_aware_resource_quota_scope_module,
     vm_for_test_with_resource_limits,
     aaq_resource_hard_limit_and_used,
 ):
