@@ -49,7 +49,7 @@ from tests.observability.metrics.utils import (
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
 )
-from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
+from tests.utils import create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
@@ -84,7 +84,7 @@ from utilities.constants import (
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco, wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
     get_http_image_url,
@@ -982,6 +982,16 @@ def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
 
 
+@pytest.fixture(scope="module")
+def enabled_aaq_in_hco_scope_module(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+    with enabled_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_module,
+    ):
+        yield
+
+
 @pytest.fixture()
 def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota):
     return application_aware_resource_quota.instance.metadata.creationTimestamp
@@ -992,4 +1002,12 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     application_aware_resource_quota_instance = application_aware_resource_quota.instance
     resource_hard_limit = application_aware_resource_quota_instance.spec.hard
     resource_used = application_aware_resource_quota_instance.status.used
-    return resource_hard_limit, resource_used
+    formatted_hard_limit = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_hard_limit.items()
+    }
+    formatted_used_value = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_used.items()
+    }
+    return formatted_hard_limit, formatted_used_value
