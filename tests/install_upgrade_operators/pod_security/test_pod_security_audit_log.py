@@ -12,7 +12,7 @@ POD_SECURITY_AUDIT_VIOLATIONS = "pod-security.kubernetes.io/audit-violations"
 POD_SECURITY_REASON = "authorization.k8s.io/reason"
 HCO_NAMESPACE = "openshift-cnv"
 
-pytestmark = [pytest.mark.arm64]
+pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 
 class PodSecurityViolationError(Exception):

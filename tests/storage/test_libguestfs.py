@@ -87,6 +87,7 @@ def client_for_test(request, admin_client, unprivileged_client):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_virtctl_libguestfs_with_specific_user(
     client_for_test,
     virtctl_libguestfs_by_user,

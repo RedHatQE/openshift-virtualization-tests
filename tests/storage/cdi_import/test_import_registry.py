@@ -61,6 +61,7 @@ def test_disk_image_not_conform_to_registy_disk(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2028")
+@pytest.mark.s390x
 def test_public_registry_multiple_data_volume(
     namespace, storage_class_name_scope_function, dvs_and_vms_from_public_registry
 ):
@@ -110,7 +111,6 @@ def test_public_registry_data_volume(
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-            wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
@@ -119,6 +119,7 @@ def test_public_registry_data_volume(
 # we can overcome by updating to the right requested volume size and import successfully
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2024")
+@pytest.mark.s390x
 def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_scope_function):
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
@@ -132,7 +133,6 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         dv_name=dv_param["dv_name"],
         namespace=namespace.name,
         url=dv_param["url"],
-        content_type="",
         size="16Mi",
         storage_class=dv_param["storage_class"],
     ) as dv:
@@ -156,13 +156,13 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-            wait_for_cloud_init=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2150")
+@pytest.mark.s390x
 def test_public_registry_data_volume_archive(namespace, storage_class_name_scope_function):
     with pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"):
         with create_dv(

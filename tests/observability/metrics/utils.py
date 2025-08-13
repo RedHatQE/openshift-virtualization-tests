@@ -1614,3 +1614,15 @@ def validate_metric_value_greater_than_initial_value(
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be greater than {initial_value}")
         raise
+
+
+def vnic_info_from_vm_or_vmi(vm_or_vmi: str, vm: VirtualMachineForTests) -> dict[str, str]:
+    vm_spec = vm.vmi.instance.spec if vm_or_vmi == "vmi" else vm.instance.spec.template.spec
+    vm_interface = vm_spec.domain.devices.interfaces[0]
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
+    return {
+        "vnic_name": vm_spec.networks[0].name,
+        BINDING_NAME: binding_name_and_type[BINDING_NAME],
+        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+        "model": vm_interface.model,
+    }

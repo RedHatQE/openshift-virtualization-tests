@@ -113,6 +113,7 @@ def initial_cdi_config_from_cr(cdi):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2451")
+@pytest.mark.s390x
 def test_cdiconfig_scratchspace_fs_upload_to_block(
     available_hpp_storage_class,
     tmpdir,
@@ -139,6 +140,7 @@ def test_cdiconfig_scratchspace_fs_upload_to_block(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2478")
+@pytest.mark.s390x
 def test_cdiconfig_scratchspace_fs_import_to_block(
     available_hpp_storage_class,
     hyperconverged_resource_scope_module,
@@ -163,6 +165,7 @@ def test_cdiconfig_scratchspace_fs_import_to_block(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2214")
+@pytest.mark.s390x
 def test_cdiconfig_status_scratchspace_update_with_spec(
     available_hpp_storage_class,
     hyperconverged_resource_scope_module,
@@ -185,6 +188,7 @@ def test_cdiconfig_status_scratchspace_update_with_spec(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2440")
+@pytest.mark.s390x
 def test_cdiconfig_scratch_space_not_default(
     available_hpp_storage_class,
     hyperconverged_resource_scope_module,
@@ -210,6 +214,7 @@ def test_cdiconfig_scratch_space_not_default(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2412")
+@pytest.mark.s390x
 def test_cdi_config_scratch_space_value_is_default(
     default_sc_as_fallback_for_scratch,
     cdi_config,
@@ -220,6 +225,7 @@ def test_cdi_config_scratch_space_value_is_default(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2208")
+@pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
     assert cdi_config.upload_proxy_url == upload_proxy_route.host
 
@@ -237,6 +243,7 @@ def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2215")
+@pytest.mark.s390x
 def test_route_for_different_service(cdi_config, upload_proxy_route):
     with Route(namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api") as cdi_api_route:
         assert cdi_config.upload_proxy_url != cdi_api_route.host
@@ -245,6 +252,7 @@ def test_route_for_different_service(cdi_config, upload_proxy_route):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2216")
+@pytest.mark.s390x
 def test_upload_proxy_url_overridden(cdi_config, namespace, cdi_config_upload_proxy_overridden):
     with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY) as new_route:
         assert cdi_config.upload_proxy_url != new_route.host
@@ -252,6 +260,7 @@ def test_upload_proxy_url_overridden(cdi_config, namespace, cdi_config_upload_pr
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2441")
+@pytest.mark.s390x
 def test_cdiconfig_changing_storage_class_default(
     skip_test_if_no_ocs_sc,
     available_hpp_storage_class,
@@ -286,6 +295,7 @@ def test_cdiconfig_changing_storage_class_default(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-6312")
+@pytest.mark.s390x
 def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, updated_cdi_extra_non_existent_feature_gate):
     """
     Test that added feature gate on the CDI CR does not persist
@@ -320,6 +330,7 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, updated_cdi_extr
         ),
     ],
 )
+@pytest.mark.s390x
 def test_cdi_tunables_in_hco_propagated_to_cr(
     hyperconverged_resource_scope_module,
     cdi,

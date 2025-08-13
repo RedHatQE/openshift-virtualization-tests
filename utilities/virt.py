@@ -698,6 +698,7 @@ class VirtualMachineForTests(VirtualMachine):
             and not self.memory_guest
             and not self.memory_requests
             and not self.vm_instance_type
+            and not self.vm_instance_type_infer
         ):
             self.memory_guest = Images.Windows.DEFAULT_MEMORY_SIZE
 
@@ -861,7 +862,12 @@ class VirtualMachineForTests(VirtualMachine):
             template_spec.setdefault("domain", {}).setdefault("cpu", {})["cores"] = self.cpu_cores
 
         # Faster VMI start time
-        if self.os_flavor == OS_FLAVOR_WINDOWS and not self.cpu_threads and not self.vm_instance_type:
+        if (
+            self.os_flavor == OS_FLAVOR_WINDOWS
+            and not self.cpu_threads
+            and not self.vm_instance_type
+            and not self.vm_instance_type_infer
+        ):
             self.cpu_threads = Images.Windows.DEFAULT_CPU_THREADS
 
         if self.cpu_threads:
@@ -1175,6 +1181,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         """
         # Must be set here to set VM flavor (used to set username and password)
         self.template_labels = labels
+        self.template_object = template_object
         self.os_flavor = self._extract_os_from_template()
 
         super().__init__(
@@ -1235,7 +1242,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.use_full_storage_api = use_full_storage_api
         self.access_modes = None  # required for evictionStrategy policy
         self.template_params = template_params
-        self.template_object = template_object
         self.non_existing_pvc = non_existing_pvc
         self.data_volume_template_from_vm_spec = data_volume_template_from_vm_spec
         self.eviction_strategy = eviction_strategy

@@ -16,7 +16,7 @@ from utilities.virt import (
     wait_for_vm_interfaces,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x]
 
 
 LOGGER = logging.getLogger(__name__)
