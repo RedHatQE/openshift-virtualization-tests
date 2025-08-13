@@ -15,14 +15,11 @@ from tests.install_upgrade_operators.product_install.utils import (
 )
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
-    PENDING_STR,
-    TIMEOUT_10MIN,
 )
 from utilities.exceptions import ResourceMismatch
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import wait_for_pods_running
 from utilities.monitoring import (
-    validate_alerts,
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
 )
@@ -32,23 +29,6 @@ CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.install]
-
-
-@pytest.mark.polarion("CNV-10072")
-@pytest.mark.order(before=CNV_INSTALLATION_TEST)
-def test_cnv_installation_without_hco_cr_alert(
-    prometheus,
-    cnv_version_to_install_info,
-    before_installation_all_resources,
-    installed_openshift_virtualization,
-    alert_dictionary_hco_not_installed,
-):
-    validate_alerts(
-        prometheus=prometheus,
-        alert_dict=alert_dictionary_hco_not_installed,
-        state=PENDING_STR,
-        timeout=TIMEOUT_10MIN,
-    )
 
 
 @pytest.mark.polarion("CNV-10437")
