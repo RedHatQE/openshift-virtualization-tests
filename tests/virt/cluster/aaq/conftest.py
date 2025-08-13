@@ -30,7 +30,7 @@ from utilities.constants import (
     VM_MEMORY_GUEST,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import create_ns, get_pod_by_name_prefix, label_project
 from utilities.virt import (
     VirtualMachineForTests,
@@ -45,6 +45,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 # AAQ - ApplicationAwareQuota, operator for managing resource quotas per component
+
+
+@pytest.fixture(scope="package")
+def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
+    with enabled_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_package,
+    ):
+        yield
 
 
 @pytest.fixture(scope="class")

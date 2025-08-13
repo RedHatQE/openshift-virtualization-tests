@@ -863,31 +863,18 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
                 metric_type = metric["type"]
                 value = item["value"][1]
                 value = int(value) if metric["unit"] == "bytes" else float(value)
-
-                if resource not in result:
-                    result[resource] = {}
-                result[resource][metric_type] = value
+                result.setdefault(resource, {})[metric_type] = value
         return result
 
     for metric_sample in TimeoutSampler(
         sleep=2,
         func=_get_metric_values,
-        wait_timeout=60,
+        wait_timeout=TIMEOUT_1MIN,
     ):
         all_match = True
 
-        for resource, value in expected_hard_limit.items():
-            if isinstance(value, str):
-                expected_hard_value = int(bitmath.parse_string_unsafe(value).to_Byte().value)
-            else:
-                expected_hard_value = int(value)
-
-            used_value = expected_used.get(resource)
-            if isinstance(used_value, str):
-                expected_used_value = int(bitmath.parse_string_unsafe(used_value).to_Byte().value)
-            else:
-                expected_used_value = int(used_value)
-
+        for resource, expected_hard_value in expected_hard_limit.items():
+            expected_used_value = expected_used.get(resource)
             actual_resource_metrics = metric_sample.get(resource, {})
             actual_hard_value = actual_resource_metrics.get("hard")
             actual_used_value = actual_resource_metrics.get("used")

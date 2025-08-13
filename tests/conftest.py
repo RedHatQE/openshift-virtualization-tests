@@ -199,7 +199,6 @@ from utilities.virt import (
     VirtualMachineForCloning,
     VirtualMachineForTests,
     create_vm_cloning_job,
-    enable_aaq_in_hco,
     fedora_vm_body,
     get_all_virt_pods_with_running_status,
     get_base_templates_list,
@@ -2914,24 +2913,15 @@ def conformance_tests(request):
     )
 
 
-@pytest.fixture(scope="package")
-def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
-    with enable_aaq_in_hco(
-        client=admin_client,
-        hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_package,
-    ):
-        yield
-
-
 @pytest.fixture(scope="module")
 def updated_namespace_with_aaq_label(admin_client, namespace):
     label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
 
 
 @pytest.fixture(scope="class")
-def application_aware_resource_quota(namespace):
+def application_aware_resource_quota(admin_client, namespace):
     with ApplicationAwareResourceQuota(
+        client=admin_client,
         name="application-aware-resource-quota-for-aaq-test",
         namespace=namespace.name,
         hard=ARQ_QUOTA_HARD_SPEC,
