@@ -135,10 +135,15 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
+            # TODO: Replace with quay.io/openshift-cnv/qe-cnv-tests-fedora-s390x:41 once changes discussed at
+            # https://github.com/RedHatQE/openshift-virtualization-tests/pull/1148#issuecomment-3003921765 are done.
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
+
+        Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
+        Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
 
         Cdi = Cdi(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
