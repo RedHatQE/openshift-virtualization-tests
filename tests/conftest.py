@@ -200,7 +200,6 @@ from utilities.virt import (
     VirtualMachineForCloning,
     VirtualMachineForTests,
     create_vm_cloning_job,
-    enable_aaq_in_hco,
     fedora_vm_body,
     get_all_virt_pods_with_running_status,
     get_base_templates_list,
@@ -2943,16 +2942,6 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
-
-
-@pytest.fixture(scope="package")
-def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
-    with enable_aaq_in_hco(
-        client=admin_client,
-        hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_package,
-    ):
-        yield
 
 
 @pytest.fixture(scope="module")
