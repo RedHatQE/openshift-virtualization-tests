@@ -2,6 +2,8 @@
 Filesystem overhead test suite
 """
 
+import math
+
 import bitmath
 import pytest
 from ocp_resources.cdi import CDI
@@ -20,10 +22,15 @@ def get_pvc_size_gib(pvc):
     return bitmath.Byte(int(pvc.instance.spec.resources.requests.storage)).to_GiB()
 
 
-def assert_fs_overhead_added(actual_size, requested_size):
-    expected_size = actual_size * (1 - FS_OVERHEAD_20)
-    assert expected_size == requested_size, (
-        f"actual size: {actual_size}, expected size: {expected_size}, requested size: {requested_size}"
+def assert_fs_overhead_added(actual_size: bitmath.Bitmath, requested_size: bitmath.Bitmath) -> None:
+    expected_size = requested_size * (1 + FS_OVERHEAD_20)
+    tolerance_gib = bitmath.MiB(1).to_GiB().value
+    assert math.isclose(actual_size.value, expected_size.value, abs_tol=tolerance_gib), (
+        f"PVC size mismatch:\n"
+        f"  Requested: {requested_size}\n"
+        f"  Expected (+20%): {expected_size}\n"
+        f"  Actual: {actual_size}\n"
+        f"  Allowed tolerance: 1 MiB"
     )
 
 
