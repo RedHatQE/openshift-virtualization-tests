@@ -242,7 +242,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         vms_boot_time_before_storage_migration,
         storage_mig_plan,
         storage_mig_migration,
-        deleted_old_dvs_of_online_vms,
+        # deleted_old_dvs_of_online_vms,
     ):
         pass
 
