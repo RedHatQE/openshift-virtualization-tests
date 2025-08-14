@@ -13,7 +13,6 @@ from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.constants import VIRT_PROCESS_MEMORY_LIMITS
 from tests.virt.node.gpu.constants import (
     GPU_PRETTY_NAME_STR,
     MDEV_NAME_STR,
@@ -96,25 +95,6 @@ def running_sleep_in_linux(vm):
     pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
     kill_processes_by_name_linux(vm=vm, process_name=process)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
-
-
-def get_virt_launcher_processes_memory_overuse(pod):
-    memory_overuse = {}
-    for process in VIRT_PROCESS_MEMORY_LIMITS.keys():
-        memory_usage = bitmath.KiB(
-            value=int(
-                pod.execute(
-                    command=shlex.split(f"bash -c 'ps -o rss --no-headers -p $(pidof {process})'"),
-                    container="compute",
-                )
-            )
-        )
-        if memory_usage > VIRT_PROCESS_MEMORY_LIMITS[process]:
-            memory_overuse[process] = {
-                "memory usage": memory_usage,
-                "memory limit": VIRT_PROCESS_MEMORY_LIMITS[process],
-            }
-    return memory_overuse
 
 
 def get_stress_ng_pid(ssh_exec, windows=False):
