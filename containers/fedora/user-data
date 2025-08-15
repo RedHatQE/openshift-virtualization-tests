@@ -20,9 +20,27 @@ write_files:
 
         [Install]
         WantedBy=cloud-init.service
+packages:
+  - tcpdump
+  - qemu-guest-agent
+  - iperf3
+  - dmidecode
+  - nginx
+  - lldpad
+  - kernel-modules
+  - nmap
+  - dhcp-server
+  - dhcp-relay
+  - sshpass
+  - podman
+  - ethtool
+  - libibverbs
+  - dpdk
+  - stress-ng
+  - iotop
+  - fio
 runcmd:
   - systemctl daemon-reload
-  - dnf install -y tcpdump qemu-guest-agent iperf3 dmidecode nginx lldpad kernel-modules nmap dhcp-server dhcp-relay sshpass podman ethtool libibverbs dpdk stress-ng iotop fio
   - dnf autoremove
   - dnf clean all
   - rpm -q kernel-core | sort | head -1 | xargs rpm -e
