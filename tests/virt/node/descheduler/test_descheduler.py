@@ -3,7 +3,7 @@ import logging
 import pytest
 from ocp_resources.resource import ResourceEditor
 
-from tests.virt.node.descheduler.constants import NODE_SELECTOR_LABEL
+from tests.virt.node.descheduler.constants import DESCHEDULER_TEST_LABEL
 from tests.virt.node.descheduler.utils import (
     assert_running_process_after_failover,
     assert_vms_consistent_virt_launcher_pods,
@@ -93,9 +93,11 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
     def test_descheduler_evicts_vm_from_utilization_imbalance(
         self,
         node_with_least_available_memory,
+        node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
         vms_started_process_for_utilization_imbalance,
         utilization_imbalance,
+        node_with_max_memory_labeled_for_descheduler_test,
     ):
         verify_at_least_one_vm_migrated(
             vms=deployed_vms_for_utilization_imbalance, node_before=node_with_least_available_memory
@@ -143,6 +145,7 @@ class TestDeschedulerDoesNotEvictVMWithNoAnnotationFromUtilizationImbalance:
     @pytest.mark.polarion("CNV-8920")
     def test_descheduler_does_not_evict_vm_with_no_annotation_from_utilization_imbalance(
         self,
+        node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
     ):
         assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_utilization_imbalance)
@@ -157,9 +160,14 @@ class TestDeschedulerNodeLabel:
     @pytest.mark.polarion("CNV-7415")
     def test_descheduler_node_labels(
         self,
+        node_with_least_available_memory,
+        node_with_min_memory_labeled_for_descheduler_test,
         node_with_most_available_memory,
-        node_labeled_for_test,
         deployed_vms_on_labeled_node,
     ):
-        with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": NODE_SELECTOR_LABEL}}}):
-            verify_at_least_one_vm_migrated(vms=deployed_vms_on_labeled_node, node_before=node_labeled_for_test)
+        with ResourceEditor(
+            patches={node_with_most_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}
+        ):
+            verify_at_least_one_vm_migrated(
+                vms=deployed_vms_on_labeled_node, node_before=node_with_least_available_memory
+            )

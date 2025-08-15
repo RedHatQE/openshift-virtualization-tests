@@ -26,7 +26,7 @@ def unscheduled_node_vm(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_function,
-        vm_affinity=build_node_affinity_dict(required_nodes=[worker_node1.hostname]),
+        vm_affinity=build_node_affinity_dict(values=[worker_node1.hostname]),
     ) as vm:
         yield vm
 

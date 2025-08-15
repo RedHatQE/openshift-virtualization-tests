@@ -69,7 +69,7 @@ def rhel_vm_for_upgrade_session_scope(
         namespace=upgrade_namespace_scope_session.name,
         template_labels=RHEL_LATEST_LABELS,
         data_source=rhel_data_source,
-        vm_affinity=build_node_affinity_dict(required_nodes=[nodes_with_supported_gpus[0].name]),
+        vm_affinity=build_node_affinity_dict(values=[nodes_with_supported_gpus[0].name]),
         gpu_name=supported_gpu_device.get(VGPU_DEVICE_NAME_STR),
         eviction_strategy=ES_NONE,
     ) as vm:

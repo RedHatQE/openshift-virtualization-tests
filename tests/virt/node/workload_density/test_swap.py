@@ -1,14 +1,16 @@
 import logging
 import shlex
 
-import bitmath
 import pytest
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.constants import REMOVE_NEWLINE
 from tests.virt.utils import build_node_affinity_dict, start_stress_on_vm
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
@@ -25,6 +27,10 @@ pytestmark = [
 
 MEMORY_SWAP_MAX_PATH = "/sys/fs/cgroup/memory.swap.max"
 MEMORY_SWAP_CURRENT_PATH = "/sys/fs/cgroup/memory.swap.current"
+
+SWAP_LABEL_KEY = "swap-label"
+SWAP_LABEL_VALUE = "test"
+SWAP_TEST_LABEL = {SWAP_LABEL_KEY: SWAP_LABEL_VALUE}
 
 
 def wait_virt_launcher_pod_using_swap(vm):
@@ -46,11 +52,36 @@ def wait_virt_launcher_pod_using_swap(vm):
 
 
 @pytest.fixture(scope="class")
-def node_affinity_rule_for_two_nodes(worker_node1, worker_node2, node_with_less_available_memory):
-    return build_node_affinity_dict(
-        required_nodes=[worker_node1.hostname, worker_node2.hostname],
-        preferred_nodes=[next(iter(node_with_less_available_memory))],
-    )
+def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_class: {
+                "spec": {
+                    "higherWorkloadDensity": {"memoryOvercommitPercentage": 200},
+                }
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture(scope="class")
+def node_with_min_memory_labeled_for_swap_test(node_with_least_available_memory):
+    with ResourceEditor(patches={node_with_least_available_memory: {"metadata": {"labels": SWAP_TEST_LABEL}}}):
+        yield
+
+
+@pytest.fixture(scope="class")
+def node_with_max_memory_labeled_for_swap_test(node_with_most_available_memory):
+    with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": SWAP_TEST_LABEL}}}):
+        yield
+
+
+@pytest.fixture(scope="class")
+def node_affinity_for_swap_label():
+    return build_node_affinity_dict(key=SWAP_LABEL_KEY, values=[SWAP_LABEL_VALUE])
 
 
 @pytest.fixture(scope="package")
@@ -86,29 +117,26 @@ def swap_is_available_on_nodes(workers, workers_utility_pods):
 
 
 @pytest.fixture(scope="class")
-def node_with_less_available_memory(worker_node1, worker_node2, workers_utility_pods):
-    # For avoiding flaky tests need to start from the node with the lowest available memory
-    nodes_dict = {}
-    for node in [worker_node1, worker_node2]:
-        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-        nodes_dict[node.hostname] = bitmath.KiB(
-            int(pod_exec.exec(command="cat /proc/meminfo | grep MemAvailable | awk '{print $2}'"))
-        ).to_GB()
-    node_with_less_memory = min(nodes_dict, key=nodes_dict.get)
-    return {node_with_less_memory: f"{round(nodes_dict[node_with_less_memory].value)}Gi"}
+def calculated_vm_memory_size(available_memory_per_node, node_with_least_available_memory):
+    # Due to memory overcommit, the pod created with less memory
+    # Increasing memory to be able to overload the node
+    return available_memory_per_node[node_with_least_available_memory].bytes * 1.8
 
 
 @pytest.fixture(scope="class")
 def vm_for_swap_usage_test(
-    namespace, cpu_for_migration, node_with_less_available_memory, node_affinity_rule_for_two_nodes
+    namespace,
+    cpu_for_migration,
+    calculated_vm_memory_size,
+    node_affinity_for_swap_label,
 ):
     with VirtualMachineForTests(
         name="vm-for-swap-usage-test",
         namespace=namespace.name,
         cpu_model=cpu_for_migration,
-        memory_guest=next(iter(node_with_less_available_memory.values())),
+        memory_guest=calculated_vm_memory_size,
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
-        vm_affinity=node_affinity_rule_for_two_nodes,
+        vm_affinity=node_affinity_for_swap_label,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -118,7 +146,7 @@ def vm_for_swap_usage_test(
 def swap_vm_stress_started(vm_for_swap_usage_test):
     start_stress_on_vm(
         vm=vm_for_swap_usage_test,
-        stress_command="nohup stress-ng --vm 1 --vm-bytes 80% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
+        stress_command="nohup stress-ng --vm 1 --vm-bytes 100% --vm-method zero-one -t 30m --vm-keep &> /dev/null &",
     )
 
 
@@ -165,6 +193,8 @@ class TestVMCanUseSwap:
     @pytest.mark.polarion("CNV-11258")
     def test_virt_launcher_pod_use_swap(
         self,
+        hco_memory_overcommit_increased,
+        node_with_min_memory_labeled_for_swap_test,
         vm_for_swap_usage_test,
         swap_vm_stress_started,
     ):
@@ -172,5 +202,10 @@ class TestVMCanUseSwap:
 
     @pytest.mark.dependency(depends=["test_virt_launcher_pod_use_swap"])
     @pytest.mark.polarion("CNV-11259")
-    def test_migrate_vm_using_swap(self, vm_for_swap_usage_test, migration_policy_with_allow_auto_converge):
+    def test_migrate_vm_using_swap(
+        self,
+        node_with_max_memory_labeled_for_swap_test,
+        vm_for_swap_usage_test,
+        migration_policy_with_allow_auto_converge,
+    ):
         migrate_vm_and_verify(vm=vm_for_swap_usage_test, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN)
