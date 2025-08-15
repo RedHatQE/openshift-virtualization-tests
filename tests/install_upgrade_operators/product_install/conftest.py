@@ -12,19 +12,15 @@ from ocp_resources.resource import get_client
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
-    HCO_NOT_INSTALLED_ALERT,
     OPENSHIFT_VIRTUALIZATION,
 )
 from tests.install_upgrade_operators.product_install.utils import get_all_resources
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
-    CRITICAL_STR,
     HCO_CATALOG_SOURCE,
     HCO_SUBSCRIPTION,
     ICSP_FILE,
     IDMS_FILE,
-    INFO_STR,
-    PENDING_STR,
     PRODUCTION_CATALOG_SOURCE,
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
@@ -236,18 +232,6 @@ def created_hco_cr(created_cnv_namespace, installed_openshift_virtualization):
         operator_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
     )
-
-
-@pytest.fixture(scope="module")
-def alert_dictionary_hco_not_installed():
-    return {
-        "alert_name": HCO_NOT_INSTALLED_ALERT,
-        "labels": {
-            "severity": INFO_STR,
-            "operator_health_impact": CRITICAL_STR,
-        },
-        "state": PENDING_STR,
-    }
 
 
 @pytest.fixture(scope="module")
