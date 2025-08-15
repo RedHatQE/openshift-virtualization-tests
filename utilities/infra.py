@@ -112,8 +112,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def label_project(name, label, admin_client):
-    ns = Namespace(client=admin_client, name=name)
+    ns = Namespace(client=admin_client, name=name, ensure_exists=True)
     ResourceEditor({ns: {"metadata": {"labels": label}}}).update()
+    return ns
 
 
 def create_ns(
@@ -138,15 +139,13 @@ def create_ns(
             ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield ns
     else:
-        project = ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
-        label_project(name=name, label=labels, admin_client=admin_client)
+        ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
+        ns = label_project(name=name, label=labels, admin_client=admin_client)
 
-        yield project
+        yield ns
 
-        # cleanup must be done with admin client
-        project.client = admin_client
-        if not project.clean_up():
-            raise ResourceTeardownError(resource=project)
+        if not ns.clean_up():
+            raise ResourceTeardownError(resource=ns)
 
 
 class ClusterHosts:
