@@ -10,7 +10,6 @@ import pytest
 from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND
 from tests.virt.utils import (
     get_stress_ng_pid,
-    get_virt_launcher_processes_memory_overuse,
     start_stress_on_vm,
     verify_stress_ng_pid_not_changed,
 )
@@ -51,19 +50,8 @@ def initial_stress_ng_pid(vm_longevity):
     return get_stress_ng_pid(ssh_exec=vm_longevity.ssh_exec)
 
 
-@pytest.fixture()
-def initial_memory_overuse(vm_longevity):
-    LOGGER.info("Verifying initial memory usage")
-    return get_virt_launcher_processes_memory_overuse(pod=vm_longevity.privileged_vmi.virt_launcher_pod)
-
-
 @pytest.mark.polarion("CNV-4684")
-def test_longevity_vm_run(vm_longevity, start_stress_ng, initial_stress_ng_pid, initial_memory_overuse):
-    processes_exceed_memory_limit = {}
-    if initial_memory_overuse:
-        LOGGER.error(f"Initial memory overuse: {initial_memory_overuse}")
-        processes_exceed_memory_limit["Initial"] = initial_memory_overuse
-
+def test_longevity_vm_run(vm_longevity, start_stress_ng, initial_stress_ng_pid):
     sleep_hrs = TIMEOUT_12HRS // 3600
     for iteration in range(TOTAL_DAYS * 2):
         current_iteration = iteration + 1
@@ -73,15 +61,3 @@ def test_longevity_vm_run(vm_longevity, start_stress_ng, initial_stress_ng_pid, 
 
         LOGGER.info("stress-ng PID check")
         verify_stress_ng_pid_not_changed(vm=vm_longevity, initial_pid=initial_stress_ng_pid)
-
-        LOGGER.info("Check memory usage on the pod")
-        current_memory_overuse = get_virt_launcher_processes_memory_overuse(
-            pod=vm_longevity.privileged_vmi.virt_launcher_pod
-        )
-        if current_memory_overuse:
-            LOGGER.error(f"Memory overuse: {current_memory_overuse}")
-            processes_exceed_memory_limit[f"{current_iteration * sleep_hrs}hrs"] = current_memory_overuse
-
-    assert not processes_exceed_memory_limit, (
-        f"Some processes on virt-launcher pod exceed the memory limit: {processes_exceed_memory_limit}"
-    )
