@@ -4,6 +4,7 @@ from tests.infrastructure.instance_types.constants import ALL_OPTIONS_VM_PREFERE
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 class TestVmPreference:
     @pytest.mark.parametrize(
         "common_vm_preference_param_dict",
@@ -29,6 +30,7 @@ class TestVmPreference:
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 class TestVmClusterPreference:
     @pytest.mark.parametrize(
         "common_vm_preference_param_dict",

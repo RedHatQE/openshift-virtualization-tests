@@ -60,6 +60,7 @@ def created_cluster_instance_type_for_test_scope_function(cluster_instance_type_
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestInstanceTypesCreation:
     @pytest.mark.polarion("CNV-9082")
     def test_create_instance_type(self, created_instance_type_for_test_scope_function):
