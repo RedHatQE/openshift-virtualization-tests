@@ -7,7 +7,6 @@ import math
 import re
 
 import pytest
-from bitmath import GiB
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
@@ -562,10 +561,11 @@ def test_vmi_image_size(
     size,
     unit,
     dv_name,
+    expected_virtual_size_bytes,
     default_fs_overhead,
 ):
-    m_byte = "M"
-    assert size >= 1, "This test support only dv size >= 1"
+    volume_mode = storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"]
+
     with create_dv(
         dv_name=dv_name,
         namespace=namespace.name,
@@ -575,9 +575,8 @@ def test_vmi_image_size(
         cert_configmap=internal_http_configmap.name,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
-        containers = get_containers_for_pods_with_pvc(
-            volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"], pvc_name=dv.name
-        )
+        containers = get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=dv.name)
+
         with create_vm_from_dv(dv=dv, start=False):
             with PodWithPVC(
                 namespace=dv.namespace,
@@ -585,33 +584,21 @@ def test_vmi_image_size(
                 pvc_name=dv.name,
                 containers=containers,
             ) as pod:
-                # In case of file system volume mode, the FS overhead should be taken into account
-                # the default overhead is 5.5%, so in order to reserve the 5.5% for the overhead
-                # the actual size for the disk will be smaller than the requested size
-                if dv.volume_mode == DataVolume.VolumeMode.FILE:
-                    size *= 1 - default_fs_overhead
-                    # In case that size < 1, convert from Gi to Mi
-                    if size < 1:
-                        size = GiB(size).to_MiB().value
-                        unit = m_byte
                 pod.wait_for_status(status=pod.Status.RUNNING)
-                virtual_size_output_line = pod.execute(
+                output = pod.execute(
                     command=[
                         "bash",
                         "-c",
-                        "qemu-img info /pvc/disk.img|grep 'virtual size'",
+                        "qemu-img info /pvc/disk.img | grep 'virtual size'",
                     ]
                 )
-                match = re.search(
-                    r":\s*(\d+)\s*([MG])",
-                    virtual_size_output_line,
+                match = re.search(r"\((\d+)\s+bytes\)", output)
+                assert match, f"Failed to extract byte size from disk image info\nOutput: {output}"
+                image_bytes = int(match.group(1))
+
+                assert math.isclose(image_bytes, expected_virtual_size_bytes, rel_tol=default_fs_overhead), (
+                    f"Expected virtual size ~{expected_virtual_size_bytes} bytes, but got {image_bytes} bytes"
                 )
-                assert match, (
-                    "Incorrect virtual size found on disk image /pvc/disk.img\n"
-                    f"Virtual size reported as: {virtual_size_output_line}"
-                )
-                assert unit == match.group(2)
-                assert math.floor(size) == float(match.group(1))
 
 
 @pytest.mark.parametrize(
