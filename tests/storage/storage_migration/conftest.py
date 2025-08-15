@@ -1,7 +1,9 @@
+import logging
 import shlex
 from copy import deepcopy
 
 import pytest
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.mig_cluster import MigCluster
@@ -48,6 +50,7 @@ from utilities.virt import (
     vm_instance_from_template,
 )
 
+LOGGER = logging.getLogger(__name__)
 OPENSHIFT_MIGRATION_NAMESPACE = "openshift-migration"
 DEFAULT_DV_SIZE = "1Gi"
 
@@ -289,9 +292,14 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 @pytest.fixture(scope="class")
 def deleted_completed_virt_launcher_source_pod(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
-        source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
-        source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
-        source_pod.delete(wait=True)
+        try:
+            source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
+            source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
+            source_pod.delete(wait=True)
+        except ResourceNotFoundError:
+            LOGGER.warning(f"Pod for VM {vm.name} not found. Skipping deletion.")
+        except Exception as e:
+            LOGGER.error(f"Unexpected error while deleting pod for VM {vm.name}: {e}")
 
 
 @pytest.fixture(scope="class")
