@@ -20,6 +20,7 @@ from utilities.virt import (
 TESTS_MODULE_IDENTIFIER = "TestCommonInstancetypeFedora"
 
 
+@pytest.mark.arm64
 @pytest.mark.sno
 class TestVMCreationAndValidation:
     @pytest.mark.dependency(name=f"{TESTS_MODULE_IDENTIFIER}::{TEST_CREATE_VM_TEST_NAME}")
@@ -98,6 +99,7 @@ class TestVMFeatures:
         check_vm_xml_smbios(vm=golden_image_fedora_vm_with_instance_type, cm_values=smbios_from_kubevirt_config)
 
 
+@pytest.mark.arm64
 @pytest.mark.sno
 @pytest.mark.order(-1)
 class TestVMDeletion:
