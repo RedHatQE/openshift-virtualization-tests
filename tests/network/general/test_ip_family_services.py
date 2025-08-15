@@ -109,6 +109,7 @@ def expected_num_families_in_service(request, dual_stack_cluster):
 class TestServiceConfigurationViaManifest:
     @pytest.mark.polarion("CNV-5789")
     @pytest.mark.single_nic
+    # Not marked as `conformance`; requires NMState
     def test_service_with_configured_ip_families(
         self,
         running_vm_for_exposure,
