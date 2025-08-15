@@ -34,7 +34,7 @@ def gpu_vma(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
-        vm_affinity=build_node_affinity_dict(required_nodes=[nodes_with_supported_gpus[0].name]),
+        vm_affinity=build_node_affinity_dict(values=[nodes_with_supported_gpus[0].name]),
         host_device_name=supported_gpu_device.get(params.get("host_device")),
         gpu_name=supported_gpu_device.get(params.get("gpu_device")),
     ) as gpu_vm:

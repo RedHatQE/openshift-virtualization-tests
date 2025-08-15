@@ -73,7 +73,7 @@ def non_permitted_hostdevices_vm(nodes_with_supported_gpus, unprivileged_client,
         name="passthrough-non-permitted-hostdevices-vm",
         namespace=namespace.name,
         image=CIRROS_IMAGE,
-        vm_affinity=build_node_affinity_dict(required_nodes=[[*nodes_with_supported_gpus][0].name]),
+        vm_affinity=build_node_affinity_dict(values=[[*nodes_with_supported_gpus][0].name]),
         host_device_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
         memory_requests="1Gi",
     ) as vm:

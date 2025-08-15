@@ -1,3 +1,4 @@
+import collections
 import logging
 import shlex
 
@@ -20,6 +21,8 @@ from tests.virt.node.gpu.utils import (
 )
 from tests.virt.utils import (
     get_allocatable_memory_per_node,
+    get_non_terminated_pods,
+    get_pod_memory_requests,
     patch_hco_cr_with_mdev_permitted_hostdevices,
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
@@ -270,3 +273,47 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
 @pytest.fixture(scope="session")
 def allocatable_memory_per_node_scope_session(schedulable_nodes):
     return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
+
+
+@pytest.fixture(scope="class")
+def allocatable_memory_per_node_scope_class(schedulable_nodes):
+    return get_allocatable_memory_per_node(schedulable_nodes=schedulable_nodes)
+
+
+@pytest.fixture(scope="class")
+def non_terminated_pods_per_node(admin_client, schedulable_nodes):
+    return {node: get_non_terminated_pods(client=admin_client, node=node) for node in schedulable_nodes}
+
+
+@pytest.fixture(scope="class")
+def memory_requests_per_node(schedulable_nodes, non_terminated_pods_per_node):
+    memory_requests = collections.defaultdict(bitmath.Byte)
+    for node in schedulable_nodes:
+        for pod in non_terminated_pods_per_node[node]:
+            pod_instance = pod.exists
+            if pod_instance:
+                memory_requests[node] += get_pod_memory_requests(pod_instance=pod_instance)
+    LOGGER.info(f"memory_requests collection: {memory_requests}")
+    return memory_requests
+
+
+@pytest.fixture(scope="class")
+def available_memory_per_node(
+    schedulable_nodes,
+    allocatable_memory_per_node_scope_class,
+    memory_requests_per_node,
+):
+    return {
+        node: allocatable_memory_per_node_scope_class[node] - memory_requests_per_node[node]
+        for node in schedulable_nodes
+    }
+
+
+@pytest.fixture(scope="class")
+def node_with_most_available_memory(available_memory_per_node):
+    return max(available_memory_per_node, key=available_memory_per_node.get)
+
+
+@pytest.fixture(scope="class")
+def node_with_least_available_memory(available_memory_per_node):
+    return min(available_memory_per_node, key=available_memory_per_node.get)
