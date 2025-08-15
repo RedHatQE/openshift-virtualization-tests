@@ -73,6 +73,7 @@ import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AAQ_NAMESPACE_LABEL,
     AMD,
     ARM_64,
     AUDIT_LOGS_PATH,
@@ -153,6 +154,7 @@ from utilities.infra import (
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
+    label_project,
     login_with_user_password,
     name_prefix,
     run_virtctl_command,
@@ -2938,3 +2940,8 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+@pytest.fixture(scope="module")
+def updated_namespace_with_aaq_label(admin_client, namespace):
+    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)

@@ -12,26 +12,27 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.utils import clean_up_migration_jobs, hotplug_spec_vm, hotplug_spec_vm_and_verify_hotplug
 from tests.virt.cluster.aaq.constants import (
     ACRQ_QUOTA_HARD_SPEC,
-    ARQ_QUOTA_HARD_SPEC,
     CPU_MAX_SOCKETS,
     MEMORY_MAX_GUEST,
     POD_RESOURCES_SPEC,
-    VM_CPU_CORES,
-    VM_MEMORY_GUEST,
 )
 from tests.virt.cluster.aaq.utils import (
     wait_for_aacrq_object_created,
 )
-from tests.virt.constants import AAQ_NAMESPACE_LABEL, ACRQ_NAMESPACE_LABEL, ACRQ_TEST
-from tests.virt.utils import enable_aaq_in_hco, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
+from tests.virt.constants import ACRQ_NAMESPACE_LABEL, ACRQ_TEST
+from tests.virt.utils import wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
+    AAQ_NAMESPACE_LABEL,
+    ARQ_QUOTA_HARD_SPEC,
     POD_CONTAINER_SPEC,
     POD_SECURITY_CONTEXT_SPEC,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    VM_CPU_CORES,
+    VM_MEMORY_GUEST,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, enable_aaq_in_hco
 from utilities.infra import create_ns, get_pod_by_name_prefix, label_project
 from utilities.virt import (
     VirtualMachineForTests,
@@ -46,6 +47,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 # AAQ - ApplicationAwareQuota, operator for managing resource quotas per component
+
+
 @pytest.fixture(scope="package")
 def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged_resource_scope_package):
     with enable_aaq_in_hco(
@@ -54,11 +57,6 @@ def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged
         hyperconverged_resource=hyperconverged_resource_scope_package,
     ):
         yield
-
-
-@pytest.fixture(scope="module")
-def updated_namespace_with_aaq_label(admin_client, namespace):
-    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
 
 
 @pytest.fixture(scope="class")
@@ -152,6 +150,8 @@ def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
 
 
 # ARQ - ApplicationAwareResourceQuota, namespaced object containing quotas for resources
+
+
 @pytest.fixture(scope="class")
 def application_aware_resource_quota(namespace):
     with ApplicationAwareResourceQuota(

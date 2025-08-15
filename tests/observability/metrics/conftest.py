@@ -5,6 +5,7 @@ import shlex
 import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
+from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -52,15 +53,16 @@ from tests.observability.metrics.utils import (
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+    validate_metrics_value,
     vnic_info_from_vm_or_vmi,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
+    ARQ_QUOTA_HARD_SPEC,
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
@@ -94,7 +96,7 @@ from utilities.constants import (
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, enable_aaq_in_hco, wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
     get_http_image_url,
@@ -1170,3 +1172,36 @@ def deleted_vmi(running_metric_vm):
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
+
+
+@pytest.fixture()
+def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota_scope_module):
+    return application_aware_resource_quota_scope_module.instance.metadata.creationTimestamp
+
+
+@pytest.fixture(scope="module")
+def enabled_aaq_in_hco_scope_module(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+    with enable_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_module,
+    ):
+        yield
+
+
+@pytest.fixture()
+def aaq_resource_hard_limit_and_used(application_aware_resource_quota_scope_module):
+    application_aware_resource_quota_instance = application_aware_resource_quota_scope_module.instance
+    resource_hard_limit = application_aware_resource_quota_instance.spec.hard
+    resource_used = application_aware_resource_quota_instance.status.used
+    return resource_hard_limit, resource_used
+
+
+@pytest.fixture(scope="module")
+def application_aware_resource_quota_scope_module(namespace):
+    with ApplicationAwareResourceQuota(
+        name="application-aware-resource-quota-for-aaq-test",
+        namespace=namespace.name,
+        hard=ARQ_QUOTA_HARD_SPEC,
+    ) as arq:
+        yield arq
