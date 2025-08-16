@@ -12,3 +12,4 @@ EXPECTED_CNAO_COMP_NAMES = [
 ]
 HTTPBIN_IMAGE = "quay.io/openshifttest/httpbin:1.2.2"
 BRCNV = "brcnv"
+UDN_NS_LABEL = {"k8s.ovn.org/primary-user-defined-network": ""}

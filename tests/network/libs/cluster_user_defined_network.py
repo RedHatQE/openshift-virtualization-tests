@@ -1,6 +1,8 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
+from typing import List
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_user_defined_network import ClusterUserDefinedNetwork as Cudn
 
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
@@ -24,9 +26,22 @@ class Vlan:
 @dataclass
 class Ipam:
     class Mode(Enum):
+        ENABLED = "Enabled"
         DISABLED = "Disabled"
 
     mode: str
+    lifecycle: str | None = None
+
+
+@dataclass
+class Layer2:
+    class Role(Enum):
+        PRIMARY = "Primary"
+        SECONDARY = "Secondary"
+
+    role: str
+    ipam: Ipam
+    subnets: List[str]
 
 
 @dataclass
@@ -43,10 +58,12 @@ class Localnet:
 @dataclass
 class Network:
     class Topology(Enum):
+        LAYER2 = "Layer2"
         LOCALNET = "Localnet"
 
     topology: str
-    localnet: Localnet
+    layer2: Layer2 | None = None
+    localnet: Localnet | None = None
 
 
 class ClusterUserDefinedNetwork(Cudn):
@@ -59,6 +76,8 @@ class ClusterUserDefinedNetwork(Cudn):
         name: str,
         namespace_selector: LabelSelector,
         network: Network,
+        label: dict[str, str] | None = None,
+        client: DynamicClient | None = None,
     ):
         """
         Create and manage ClusterUserDefinedNetwork
@@ -71,11 +90,15 @@ class ClusterUserDefinedNetwork(Cudn):
             namespace_selector (NamespaceSelector): NamespaceSelector Label selector for which namespace network should
                 be available for.
             network (Network): Network is the user-defined-network spec.
+            label (dict[str, str]): Optional labels to apply to the ClusterUserDefinedNetwork.
+            client (DynamicClient): Optional DynamicClient to use.
         """
         super().__init__(
             name=name,
             namespace_selector=asdict(namespace_selector, dict_factory=dict_normalization_for_dataclass),
             network=asdict(network, dict_factory=dict_normalization_for_dataclass),
+            label=label,
+            client=client,
         )
 
     class Status:
