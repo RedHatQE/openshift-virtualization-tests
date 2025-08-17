@@ -10,7 +10,7 @@ import os
 import re
 
 from kubernetes.dynamic import ResourceInstance
-from ocp_resources.pipelineruns import PipelineRun
+from ocp_resources.pipeline_run import PipelineRun
 from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 

@@ -41,7 +41,13 @@ from utilities.constants import (
 )
 from utilities.must_gather import get_must_gather_output_file
 
-pytestmark = [pytest.mark.sno, pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64]
+pytestmark = [
+    pytest.mark.sno,
+    pytest.mark.post_upgrade,
+    pytest.mark.skip_must_gather_collection,
+    pytest.mark.arm64,
+    pytest.mark.s390x,
+]
 LOGGER = logging.getLogger(__name__)
 
 

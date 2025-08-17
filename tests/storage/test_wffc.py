@@ -179,6 +179,7 @@ def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_d
 class TestWFFCUploadVirtctl:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-4711")
+    @pytest.mark.s390x
     def test_wffc_fail_to_upload_dv_via_virtctl(
         self,
         namespace,
@@ -206,6 +207,7 @@ class TestWFFCUploadVirtctl:
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-7413")
+    @pytest.mark.s390x
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
         downloaded_cirros_image_full_path,
@@ -230,6 +232,7 @@ class TestWFFCUploadVirtctl:
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4739")
+@pytest.mark.s390x
 def test_wffc_import_registry_dv(
     namespace,
     storage_class_matrix_wffc_matrix__module__,
@@ -250,6 +253,7 @@ def test_wffc_import_registry_dv(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4741")
+@pytest.mark.s390x
 def test_wffc_upload_dv_via_token(
     unprivileged_client,
     namespace,
@@ -286,6 +290,7 @@ def test_wffc_upload_dv_via_token(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_wffc_import_http_dv(data_volume_multi_wffc_storage_scope_module):
     with create_vm_from_dv(
         dv=data_volume_multi_wffc_storage_scope_module, vm_name=data_volume_multi_wffc_storage_scope_module.name
@@ -304,6 +309,7 @@ def test_wffc_import_http_dv(data_volume_multi_wffc_storage_scope_module):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_wffc_clone_dv(data_volume_multi_wffc_storage_scope_module):
     with create_dv(
         source="pvc",
@@ -335,6 +341,7 @@ def test_wffc_clone_dv(data_volume_multi_wffc_storage_scope_module):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_wffc_add_dv_to_vm_with_data_volume_template(
     namespace,
     data_volume_multi_wffc_storage_scope_function,
@@ -360,6 +367,7 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4743")
+@pytest.mark.s390x
 def test_wffc_vm_with_two_data_volume_templates(
     namespace,
     storage_class_matrix_wffc_matrix__module__,

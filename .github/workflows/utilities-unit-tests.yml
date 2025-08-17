@@ -2,6 +2,9 @@ name: Utilities Unit Tests
 
 on:
   pull_request_target:
+    branches:
+      - main
+      - cnv-4.99
     paths:
       - 'utilities/**'
       - '!utilities/unittests/**'
@@ -40,7 +43,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: success()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: utilities/coverage.xml
           flags: utilities

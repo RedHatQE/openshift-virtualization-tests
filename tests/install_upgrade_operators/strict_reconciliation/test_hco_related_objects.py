@@ -6,7 +6,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
 )
 from utilities.constants import ALL_HCO_RELATED_OBJECTS
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 
 class TestRelatedObjects:

@@ -2,6 +2,8 @@
 import pytest
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 
+pytestmark = pytest.mark.s390x
+
 
 @pytest.fixture(scope="module")
 def crd_operator_resources(request, admin_client):

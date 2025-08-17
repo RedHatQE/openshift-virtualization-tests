@@ -136,6 +136,7 @@ from utilities.infra import (
     generate_namespace_name,
     generate_openshift_pull_secret_file,
     get_artifactory_header,
+    get_cluster_platform,
     get_clusterversion,
     get_common_cpu_from_nodes,
     get_daemonset_yaml_file_with_image_hash,
@@ -913,7 +914,7 @@ def vm_instance_from_template_multi_storage_scope_function(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_multi_storage_scope_function,
-        vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
+        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
     ) as vm:
         yield vm
 
@@ -936,7 +937,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_function,
-        vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
+        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
     ) as vm:
         yield vm
 
@@ -959,7 +960,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_class(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_class,
-        vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
+        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
     ) as vm:
         yield vm
 
@@ -1985,7 +1986,7 @@ def golden_images_data_import_crons_scope_function(admin_client, golden_images_n
 
 @pytest.fixture(scope="session")
 def sno_cluster(admin_client):
-    return get_infrastructure().instance.status.infrastructureTopology == "SingleReplica"
+    return get_infrastructure(admin_client=admin_client).instance.status.infrastructureTopology == "SingleReplica"
 
 
 @pytest.fixture(scope="session")
@@ -2340,7 +2341,10 @@ def rhel_vm_with_instance_type_and_preference(
     instance_type_for_test_scope_class,
     vm_preference_for_test,
 ):
-    with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
+    with (
+        instance_type_for_test_scope_class as vm_instance_type,
+        vm_preference_for_test as vm_preference,
+    ):
         with VirtualMachineForTests(
             client=unprivileged_client,
             name="rhel-vm-with-instance-type",
@@ -2675,7 +2679,7 @@ def dvs_for_upgrade(
             url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
             bind_immediate_annotation=True,
-            hostpath_node=worker_node1.name if sc_is_hpp_with_immediate_volume_binding(sc=storage_class) else None,
+            hostpath_node=(worker_node1.name if sc_is_hpp_with_immediate_volume_binding(sc=storage_class) else None),
             api_name="storage",
         )
         dv.create()
@@ -2688,7 +2692,8 @@ def dvs_for_upgrade(
     for dv in dvs_list:
         dv.clean_up()
     utilities.infra.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        artifactory_secret=artifactory_secret,
+        artifactory_config_map=artifactory_config_map,
     )
 
 
@@ -2743,8 +2748,8 @@ def kube_system_namespace():
 
 
 @pytest.fixture(scope="session")
-def is_aws_cluster():
-    return get_infrastructure().instance.status.platform == Infrastructure.Type.AWS
+def is_aws_cluster(admin_client):
+    return get_cluster_platform(admin_client=admin_client) == Infrastructure.Type.AWS
 
 
 @pytest.fixture(scope="session")
@@ -2900,10 +2905,11 @@ def machine_config_pools():
 
 
 @pytest.fixture(scope="session")
-def nmstate_namespace(admin_client):
-    nmstate_ns = Namespace(name="openshift-nmstate")
-    assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
-    return nmstate_ns
+def nmstate_namespace(admin_client, nmstate_required):
+    if nmstate_required:
+        return Namespace(client=admin_client, name="openshift-nmstate", ensure_exists=True)
+
+    return None
 
 
 @pytest.fixture()
@@ -2927,3 +2933,8 @@ def ping_process_in_rhel_os():
 def smbios_from_kubevirt_config(kubevirt_config_scope_module):
     """Extract SMBIOS default from kubevirt CR."""
     return kubevirt_config_scope_module["smbios"]
+
+
+@pytest.fixture(scope="session")
+def nmstate_required(admin_client):
+    return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")

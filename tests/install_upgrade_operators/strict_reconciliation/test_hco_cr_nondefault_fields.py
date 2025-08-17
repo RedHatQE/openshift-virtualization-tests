@@ -30,7 +30,7 @@ from utilities.constants import (
     RESOURCE_REQUIREMENTS_KEY_HCO_CR,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 LOGGER = logging.getLogger(__name__)
 

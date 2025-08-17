@@ -11,6 +11,8 @@ from utilities.constants import ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 REQUIRED_SCC_ANNOTATION = "openshift.io/required-scc"
 REQUIRED_SCC_VALUE = "restricted-v2"
 
+pytestmark = pytest.mark.s390x
+
 
 @pytest.fixture(scope="module")
 def required_scc_deployment_check(admin_client, hco_namespace):

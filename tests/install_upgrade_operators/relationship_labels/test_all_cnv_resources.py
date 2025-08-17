@@ -11,7 +11,7 @@ from tests.install_upgrade_operators.utils import (
 from utilities.exceptions import ResourceValueError
 from utilities.infra import is_jira_open
 
-pytestmark = pytest.mark.arm64
+pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 ALLOWLIST_STRING_LIST = [
     "dockercfg",
