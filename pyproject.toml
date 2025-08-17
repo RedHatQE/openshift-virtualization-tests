@@ -129,16 +129,12 @@ omit = [
     "*.pyc",
     "*/test_*.py",
     "__init__.py",
+    "utilities/unittests/conftest.py",
     # TODO: Add coverage to these large modules when individual fixes are needed
-    "utilities/data_collector.py",
     "utilities/hco.py",
     "utilities/infra.py",
-    "utilities/monitoring.py",
     "utilities/network.py",
     "utilities/operator.py",
-    "utilities/os_utils.py",
-    "utilities/pytest_utils.py",
-    "utilities/ssp.py",
     "utilities/storage.py",
     "utilities/virt.py",
 ]
