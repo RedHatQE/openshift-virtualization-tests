@@ -90,7 +90,7 @@ def node_mdevtype_gpu_vm(
         namespace=namespace,
         unprivileged_client=unprivileged_client,
         data_source=golden_image_dv_scope_module_data_source_scope_class,
-        vm_affinity=build_node_affinity_dict(required_nodes=[[*nodes_with_supported_gpus][1].name]),
+        vm_affinity=build_node_affinity_dict(values=[[*nodes_with_supported_gpus][1].name]),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],
     ) as vm:
         running_vm(vm=vm)
