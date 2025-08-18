@@ -116,7 +116,6 @@ def label_project(name, label, admin_client):
     ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
     if label:
         ResourceEditor({ns: {"metadata": {"labels": label}}}).update()
-    return ns
 
 
 def create_ns(
@@ -142,7 +141,8 @@ def create_ns(
             yield ns
     else:
         ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
-        ns = label_project(name=name, label=labels, admin_client=admin_client)
+        label_project(name=name, label=labels, admin_client=admin_client)
+        ns = Namespace(client=admin_client, name=name, ensure_exists=True)
 
         yield ns
 
