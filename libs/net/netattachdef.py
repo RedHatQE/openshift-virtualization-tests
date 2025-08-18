@@ -12,6 +12,39 @@ _DEFAULT_CNI_VERSION: Final[str] = "0.3.1"
 
 
 @dataclass
+class Ipam:
+    """
+    IP Address Management (IPAM) base class
+    Ref: https://www.cni.dev/plugins/current/ipam/
+    """
+
+    type: str = field(init=False)
+
+
+@dataclass
+class IpamRoute:
+    dst: str
+    gw: str | None = None
+
+
+@dataclass
+class IpamStatic(Ipam):
+    """
+    IPAM static plugin
+    Ref: https://www.cni.dev/plugins/current/ipam/static/
+    """
+
+    type: str = field(default="static", init=False)
+    addresses: list["IpamStatic.Address"]
+    routes: list[IpamRoute] | None = None
+
+    @dataclass
+    class Address:
+        address: str
+        gateway: str | None = None
+
+
+@dataclass
 class CNIPluginConfig:
     type: str = field(init=False)
 
@@ -48,6 +81,19 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
     class Topology(Enum):
         LOCALNET = "localnet"
+
+
+@dataclass
+class CNIPluginMacvlanConfig(CNIPluginConfig):
+    """
+    CNI Macvlan Plugin
+    Ref: https://www.cni.dev/plugins/current/main/macvlan/
+    """
+
+    type: str = field(default="macvlan", init=False)
+    master: str
+    ipam: Ipam | None = None
+    mode: str = "bridge"
 
 
 @dataclass
