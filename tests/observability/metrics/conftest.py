@@ -44,9 +44,7 @@ from tests.observability.metrics.utils import (
     get_not_running_prometheus_pods,
     get_resource_object,
     get_vm_comparison_info_dict,
-    get_vmi_dommemstat_from_vm,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
-    get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
     restart_cdi_worker_pod,
@@ -65,7 +63,6 @@ from utilities.constants import (
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
     IPV4_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -445,23 +442,6 @@ def virt_up_metrics_values(request, prometheus):
         query=request.param,
     )
     return int(query_response[0]["value"][1])
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, single_metric_vm):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_vm(single_metric_vm):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=single_metric_vm.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
 
 
 @pytest.fixture()
@@ -977,23 +957,6 @@ def vnic_info_from_vmi_windows(windows_vm_for_test):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
-
-
-@pytest.fixture()
-def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
 
 
 @pytest.fixture()

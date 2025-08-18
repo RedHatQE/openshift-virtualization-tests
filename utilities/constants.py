@@ -846,7 +846,7 @@ HPP_CAPABILITIES = {
 
 KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_DROPPED_TOTAL = "kubevirt_vmi_network_receive_packets_dropped_total"
 KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_DROPPED_TOTAL = "kubevirt_vmi_network_transmit_packets_dropped_total"
-KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES = "kubevirt_vmi_memory_domain_bytes"
+KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES = "kubevirt_vmi_memory_domain_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MEMORY_UNUSED_BYTES = "kubevirt_vmi_memory_unused_bytes"
 KUBEVIRT_VMI_MEMORY_USABLE_BYTES = "kubevirt_vmi_memory_usable_bytes"
 KUBEVIRT_VMI_MEMORY_ACTUAL_BALLOON_BYTES = "kubevirt_vmi_memory_actual_balloon_bytes"

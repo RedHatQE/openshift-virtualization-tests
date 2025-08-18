@@ -659,18 +659,6 @@ def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: V
     )
 
 
-def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, vmi_name: str, query: str) -> int:
-    metric_query_output = prometheus.query(query=query)["data"]["result"]
-    LOGGER.info(f"Query {query} Output: {metric_query_output}")
-    value = [
-        int(query_ouput["value"][1])
-        for query_ouput in metric_query_output
-        if query_ouput["metric"].get("name") == vmi_name
-    ]
-    assert value, f"Metrics: '{query}' did not return any value, Current Metrics data: {metric_query_output}"
-    return value[0]
-
-
 def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
     # Find string from list in the dommemstat and convert to bytes from KiB.
     vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
