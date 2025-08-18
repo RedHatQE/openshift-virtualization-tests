@@ -2,10 +2,8 @@ import logging
 from collections import Counter
 from contextlib import contextmanager
 
-import bitmath
 from ocp_resources.deployment import Deployment
 from ocp_resources.kube_descheduler import KubeDescheduler
-from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -264,24 +262,6 @@ def deploy_vms(
 
     for vm in vms:
         vm.wait_deleted()
-
-
-def get_pod_memory_requests(pod_instance):
-    """Sum all memory requests of the pod's containers"""
-    memory_requests = bitmath.Byte(value=0)
-    for container in pod_instance.spec.containers:
-        if hasattr(container.resources.requests, "memory"):
-            memory_requests += bitmath.parse_string_unsafe(s=container.resources.requests.memory).to_KiB()
-    return memory_requests
-
-
-def get_non_terminated_pods(client, node):
-    return list(
-        Pod.get(
-            dyn_client=client,
-            field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
-        )
-    )
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):
