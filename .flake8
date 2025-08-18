@@ -74,6 +74,8 @@ fcn_exclude_functions =
     skip,
     QueueListener,
     requests,
+    getrlimit,
+    setrlimit,
 
 nit_exclude_imports =
     os_params,

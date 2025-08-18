@@ -78,6 +78,7 @@ dependencies = [
   "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
+  "openshift-python-scale-utilities>=0.1.1.4",
 ]
 
 [project.optional-dependencies]

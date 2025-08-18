@@ -234,8 +234,10 @@ def consecutive_checks_for_mcp_condition(mcp_sampler, machine_config_pools_list)
         raise
 
 
-def wait_for_mcp_update_end(machine_config_pools_list):
-    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list)
+def wait_for_mcp_update_end(machine_config_pools_list, timeout=TIMEOUT_75MIN, sleep=TIMEOUT_5SEC):
+    wait_for_mcp_updated_condition_true(
+        machine_config_pools_list=machine_config_pools_list, timeout=timeout, sleep=sleep
+    )
     wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list)
 
 
