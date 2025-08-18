@@ -168,31 +168,6 @@ def wait_for_component_value_to_be_expected(prometheus, component_name, expected
 
 
 @pytest.fixture()
-def updated_resource_with_invalid_label(request, admin_client, hco_namespace, hco_status_related_objects):
-    resource_name = request.param["name"]
-    resource = get_resource_object(
-        related_objects=hco_status_related_objects,
-        admin_client=admin_client,
-        resource_kind=request.param["resource"],
-        resource_name=request.param["name"],
-    )
-    labels = resource.instance.metadata.labels
-    LOGGER.info(f"Updating metadata.label.{VERSION_LABEL_KEY} for {resource_name} ")
-    with ResourceEditor(
-        patches={
-            resource: {
-                "metadata": {
-                    "labels": {VERSION_LABEL_KEY: None},
-                    "namespace": hco_namespace.name,
-                },
-            }
-        }
-    ):
-        wait_for_cr_labels_change(component=resource, expected_value=labels)
-        yield
-
-
-@pytest.fixture()
 def updated_resource_multiple_times_with_invalid_label(
     request, prometheus, admin_client, hco_namespace, hco_status_related_objects
 ):
