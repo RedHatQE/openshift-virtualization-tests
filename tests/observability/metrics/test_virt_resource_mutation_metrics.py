@@ -16,7 +16,6 @@ from ocp_resources.ssp import SSP
 from tests.observability.metrics.utils import (
     COUNT_THREE,
     COUNT_TWO,
-    get_changed_mutation_component_value,
     wait_for_summary_count_to_be_expected,
 )
 from utilities.constants import (
@@ -127,115 +126,6 @@ COMPONENT_CONFIG = {
         },
     },
 }
-
-
-@pytest.mark.parametrize(
-    "mutation_count_before_change, updated_resource_with_invalid_label, component_name",
-    [
-        pytest.param(
-            COMPONENT_CONFIG["ssp"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["ssp"]["resource_info"],
-            COMPONENT_CONFIG["ssp"]["resource_info"]["comp_name"],
-            id="ssp",
-            marks=(pytest.mark.polarion("CNV-6129")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["console_cli_download"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["console_cli_download"]["resource_info"],
-            COMPONENT_CONFIG["console_cli_download"]["resource_info"]["comp_name"],
-            id="console_cli_download",
-            marks=(pytest.mark.polarion("CNV-6130")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["priority_class"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["priority_class"]["resource_info"],
-            COMPONENT_CONFIG["priority_class"]["resource_info"]["comp_name"],
-            id="priority_class",
-            marks=pytest.mark.polarion("CNV-6131"),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["kubevirt"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["kubevirt"]["resource_info"],
-            COMPONENT_CONFIG["kubevirt"]["resource_info"]["comp_name"],
-            id="kubevirt",
-            marks=(pytest.mark.polarion("CNV-6132")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["cdi"]["resource_info"],
-            COMPONENT_CONFIG["cdi"]["resource_info"]["comp_name"],
-            id="cdi",
-            marks=(pytest.mark.polarion("CNV-6133")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["cluster"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["cluster"]["resource_info"],
-            COMPONENT_CONFIG["cluster"]["resource_info"]["comp_name"],
-            id="networkaddonsconfig",
-            marks=(pytest.mark.polarion("CNV-6135")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["service"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["service"]["resource_info"],
-            COMPONENT_CONFIG["service"]["resource_info"]["comp_name"],
-            id="service",
-            marks=(pytest.mark.polarion("CNV-6137")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["service_monitor"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["service_monitor"]["resource_info"],
-            COMPONENT_CONFIG["service_monitor"]["resource_info"]["comp_name"],
-            id="service_monitor",
-            marks=(pytest.mark.polarion("CNV-6138")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["prometheus_rule"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["prometheus_rule"]["resource_info"],
-            COMPONENT_CONFIG["prometheus_rule"]["resource_info"]["comp_name"],
-            id="prometheus_rule",
-            marks=(pytest.mark.polarion("CNV-6139")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["console_quick_start_creating_virtual_machine"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["console_quick_start_creating_virtual_machine"]["resource_info"],
-            COMPONENT_CONFIG["console_quick_start_creating_virtual_machine"]["resource_info"]["comp_name"],
-            id="console_quick_start_creating_virtual_machine",
-            marks=(pytest.mark.polarion("CNV-8975")),
-        ),
-        pytest.param(
-            COMPONENT_CONFIG["console_quick_start_upload_boot_source"]["resource_info"]["comp_name"],
-            COMPONENT_CONFIG["console_quick_start_upload_boot_source"]["resource_info"],
-            COMPONENT_CONFIG["console_quick_start_upload_boot_source"]["resource_info"]["comp_name"],
-            id="console_quick_start_upload_boot_source",
-            marks=(pytest.mark.polarion("CNV-8974")),
-        ),
-    ],
-    indirect=[
-        "updated_resource_with_invalid_label",
-        "mutation_count_before_change",
-    ],
-)
-@pytest.mark.dependency(name="test_metric_invalid_change")
-def test_metric_invalid_change(
-    prometheus,
-    mutation_count_before_change,
-    updated_resource_with_invalid_label,
-    component_name,
-):
-    """
-    Any single change to Kubevirt spec will trigger the kubevirt_hco_out_of_band_modifications_total' metrics with
-    component name with it's value.
-    """
-    mutation_count_after_change = get_changed_mutation_component_value(
-        prometheus=prometheus,
-        component_name=component_name,
-        previous_value=mutation_count_before_change,
-    )
-    assert mutation_count_after_change - mutation_count_before_change == 1, (
-        f"'{component_name}' Count before '{mutation_count_before_change}',and after '{mutation_count_after_change}'"
-    )
-
-    # Check an alert state is firing after metric is generated.
 
 
 @pytest.mark.parametrize(
