@@ -94,26 +94,6 @@ def get_mutation_component_value_from_prometheus(prometheus: Prometheus, compone
     return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
-def get_changed_mutation_component_value(
-    prometheus: Prometheus, component_name: str, previous_value: int
-) -> Optional[int]:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=10,
-        func=get_mutation_component_value_from_prometheus,
-        prometheus=prometheus,
-        component_name=component_name,
-    )
-    try:
-        for sample in samples:
-            if sample != previous_value:
-                return sample
-    except TimeoutExpiredError:
-        LOGGER.error(f"component value did not change for component_name '{component_name}'.")
-        raise
-    return None
-
-
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
     """
     This function will wait for the expected metrics core cpu to show up in Prometheus query output
