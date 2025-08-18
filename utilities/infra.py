@@ -113,7 +113,9 @@ LOGGER = logging.getLogger(__name__)
 
 def label_project(name, label, admin_client):
     ns = Namespace(client=admin_client, name=name, ensure_exists=True)
-    ResourceEditor({ns: {"metadata": {"labels": label}}}).update()
+    ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
+    if label:
+        ResourceEditor({ns: {"metadata": {"labels": label}}}).update()
     return ns
 
 
@@ -144,7 +146,7 @@ def create_ns(
 
         yield ns
 
-        if not ns.clean_up():
+        if teardown and not ns.clean_up():
             raise ResourceTeardownError(resource=ns)
 
 
