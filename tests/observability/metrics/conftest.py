@@ -714,18 +714,7 @@ def modified_vm_cpu_requests(vm_with_cpu_spec):
 
 
 @pytest.fixture()
-def vm_ip_address(vm_for_test):
-    vm_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
-    assert vm_ip, f"Failed to find {vm_for_test.name} vm ip."
-    return vm_ip.group(1)
-
-
-@pytest.fixture()
-def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_test):
+def kubevirt_vmi_status_addresses_ip_labels_values(prometheus, vm_for_test):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_15SEC,
@@ -746,22 +735,16 @@ def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_t
 
 
 @pytest.fixture()
-def vm_virt_controller_ip_address(
-    prometheus, admin_client, hco_namespace, metric_validate_metric_labels_values_ip_labels
-):
-    virt_controller_pod_name = metric_validate_metric_labels_values_ip_labels.get("pod")
+def vm_virt_controller_ip_address(admin_client, hco_namespace, kubevirt_vmi_status_addresses_ip_labels_values):
+    virt_controller_pod_name = kubevirt_vmi_status_addresses_ip_labels_values.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
-    virt_controller_pod_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        get_pod_by_name_prefix(
-            dyn_client=admin_client,
-            pod_prefix=virt_controller_pod_name,
-            namespace=hco_namespace.name,
-        ).execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
+    virt_controller_pod_ip = get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=virt_controller_pod_name,
+        namespace=hco_namespace.name,
+    ).ip
     assert virt_controller_pod_ip, f"virt-controller: {virt_controller_pod_name} ip not found."
-    return virt_controller_pod_ip.group(1)
+    return virt_controller_pod_ip
 
 
 @pytest.fixture()
