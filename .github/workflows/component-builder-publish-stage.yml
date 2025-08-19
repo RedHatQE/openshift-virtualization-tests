@@ -1,0 +1,53 @@
+name: "Push Container Images to Stage"
+on:
+  workflow_run:
+    workflows: [ "Component Builder Check" ]
+    types:
+      - completed
+
+jobs:
+  push-container-images-stage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      FULL_EMULATION: "true"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies for VM build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Download container images archive
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Login in to quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Create multi-arch image manifest and push to stage repo
+        run: |
+          set -euo pipefail
+          podman load -i fedora-image-x86_64.tar
+          podman load -i fedora-image-aarch64.tar
+          podman load -i fedora-image-s390x.tar
+          FEDORA_VERSION=$(podman images -n --format "{{ .Tag }}"|head -1|sed -n "s/^\([0-9]*\)-.*/\1/p")
+          PR_NUMBER=$(podman images -n --format "{{ .Tag }}"|head -1|sed -n "s/.*\(pr-[0-9]*\)/\1/p")
+          podman manifest create \
+            quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${PR_NUMBER} \
+            quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-x86_64-${PR_NUMBER} \
+            quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-aarch64-${PR_NUMBER} \
+            quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-s390x-${PR_NUMBER}
+          podman push quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-x86_64-{PR_NUMBER}
+          podman push quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-aarch64-{PR_NUMBER}
+          podman push quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-s390x-{PR_NUMBER}
+          podman manifest push quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${PR_NUMBER} --all
