@@ -413,12 +413,12 @@ class TestVmiStatusAddresses:
         self,
         prometheus,
         vm_for_test,
-        metric_validate_metric_labels_values_ip_labels,
+        kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
-        vm_ip_address,
     ):
-        instance_value = metric_validate_metric_labels_values_ip_labels.get("instance").split(":")[0]
-        address_value = metric_validate_metric_labels_values_ip_labels.get("address")
+        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
+        vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (
             f"Expected value: {vm_virt_controller_ip_address}, Actual: {instance_value}"
         )
