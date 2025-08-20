@@ -586,7 +586,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     )
     dv.to_dict()
     # dataVolumeTemplate is not required to have the namespace explicitly set
-    del dv.res["metadata"]["namespace"]
+    dv.res["metadata"].pop("namespace", None)
     return dv.res
 
 
