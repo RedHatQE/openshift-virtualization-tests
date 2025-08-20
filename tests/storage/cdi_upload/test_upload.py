@@ -24,6 +24,7 @@ import utilities.storage
 from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -181,6 +182,10 @@ def test_successful_upload_with_supported_formats(
             check_disk_count_in_vm(vm=vm_dv)
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky test, timeout failure; CNV-67422",
+    run=False,
+)
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function",
     [
