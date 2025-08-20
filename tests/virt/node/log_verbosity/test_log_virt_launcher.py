@@ -3,10 +3,12 @@ import logging
 import pytest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import clean_up_migration_jobs
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_1MIN, TIMEOUT_5SEC
+from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -65,6 +67,7 @@ def wait_for_all_progress_keys_in_pod_log(pod):
 @pytest.fixture(scope="class")
 def vm_for_migration_progress_test(
     namespace,
+    admin_client,
     unprivileged_client,
     cpu_for_migration,
 ):
@@ -78,6 +81,9 @@ def vm_for_migration_progress_test(
     ) as vm:
         running_vm(vm=vm)
         yield vm
+        # Due to the bug - migration job should be removed before stopping the VM
+        if is_jira_open(jira_id="CNV-67515"):
+            clean_up_migration_jobs(client=admin_client, vm=vm)
 
 
 @pytest.fixture()
