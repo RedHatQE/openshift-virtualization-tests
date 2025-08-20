@@ -573,6 +573,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_spec_dict = source_dict["spec"]
     dv = DataVolume(
         name=data_source.name,
+        namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
         storage_class=storage_class or source_spec_dict.get("storageClassName"),
@@ -584,6 +585,8 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
         },
     )
     dv.to_dict()
+    # dataVolumeTemplate is not required to have the namespace explicitly set
+    del dv.res["metadata"]["namespace"]
     return dv.res
 
 
