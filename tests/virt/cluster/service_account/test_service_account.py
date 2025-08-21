@@ -31,7 +31,7 @@ def service_account_vm(namespace, service_account, unprivileged_client):
         running_vm(vm=vm)
         yield vm
 
-
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1000")
 def test_vm_with_specified_service_account(is_s390x_cluster, service_account_vm):
     """
