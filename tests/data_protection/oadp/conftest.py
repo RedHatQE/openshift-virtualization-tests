@@ -2,16 +2,16 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 
-from tests.data_protection.oadp.utils import (
+from tests.data_protection.oadp.utils import VeleroRestore
+from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, TIMEOUT_15MIN, Images
+from utilities.infra import create_ns
+from utilities.oadp import (
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
     VeleroBackup,
-    VeleroRestore,
     create_rhel_vm,
     is_storage_class_support_volume_mode,
 )
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, TIMEOUT_15MIN, Images
-from utilities.infra import create_ns
 from utilities.storage import (
     check_upload_virtctl_result,
     create_dv,
