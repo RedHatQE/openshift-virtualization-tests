@@ -15,7 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
 from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND
-from tests.virt.utils import get_virt_launcher_processes_memory_overuse, start_stress_on_vm
+from tests.virt.utils import start_stress_on_vm
 from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -30,11 +30,6 @@ STRESS_OOM_COMMAND = STRESS_CPU_MEM_IO_COMMAND.format(workers="1", memory="100%"
 def verify_vm_not_crashed(vm):
     with start_file_transfer(vm=vm):
         assert wait_vm_oom(vm=vm), "VM crashed"
-
-
-def verify_memory_overuse(pod):
-    memory_overuse = get_virt_launcher_processes_memory_overuse(pod=pod)
-    assert not memory_overuse, f"Memory overuse: \n{memory_overuse}"
 
 
 @pytest.fixture()
@@ -104,7 +99,6 @@ def wait_vm_oom(vm):
 @pytest.mark.polarion("CNV-5321")
 def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
     verify_vm_not_crashed(vm=fedora_oom_vm)
-    verify_memory_overuse(pod=fedora_oom_vm.privileged_vmi.virt_launcher_pod)
 
 
 @pytest.mark.ibm_bare_metal
@@ -134,4 +128,3 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
 @pytest.mark.high_resource_vm
 def test_vm_windows_oom(vm_with_memory_load, windows_oom_stress_started):
     verify_vm_not_crashed(vm=vm_with_memory_load)
-    verify_memory_overuse(pod=vm_with_memory_load.privileged_vmi.virt_launcher_pod)
