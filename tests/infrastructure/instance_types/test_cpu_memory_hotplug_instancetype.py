@@ -109,6 +109,7 @@ def hotplug_vm_snapshot_instance_type(instance_type_hotplug_vm):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestCPUHotPlugInstanceType:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type")
     @pytest.mark.polarion("CNV-11401")

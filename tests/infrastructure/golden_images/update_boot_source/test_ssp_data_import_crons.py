@@ -246,6 +246,7 @@ def existing_dic_volumes_before_disable(admin_client, golden_images_namespace):
 
 
 @pytest.mark.polarion("CNV-7531")
+@pytest.mark.s390x
 def test_opt_in_data_import_cron_creation(
     admin_client,
     golden_images_namespace,
@@ -268,6 +269,7 @@ def test_opt_in_data_import_cron_creation(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_custom_data_import_cron_via_hco(
     updated_hco_with_custom_data_import_cron_scope_function,
     reconciled_custom_data_source,
@@ -294,6 +296,7 @@ def test_custom_data_import_cron_via_hco(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_opt_out_custom_data_import_cron_via_hco_not_deleted(
     admin_client,
     updated_hco_with_custom_data_import_cron_scope_function,
@@ -308,6 +311,7 @@ def test_opt_out_custom_data_import_cron_via_hco_not_deleted(
     ).exists, f"Custom DataImportCron {CUSTOM_DATA_IMPORT_CRON_NAME} not found after opt out"
 
 
+@pytest.mark.s390x
 class TestDataImportCronDefaultStorageClass:
     @pytest.mark.polarion("CNV-7594")
     def test_data_import_cron_using_default_storage_class(
@@ -333,6 +337,7 @@ class TestDataImportCronDefaultStorageClass:
     run=False,
 )
 @pytest.mark.polarion("CNV-7532")
+@pytest.mark.s390x
 def test_data_import_cron_deletion_on_opt_out(
     admin_client,
     golden_images_namespace,
@@ -353,6 +358,7 @@ def test_data_import_cron_deletion_on_opt_out(
 
 
 @pytest.mark.polarion("CNV-7569")
+@pytest.mark.s390x
 def test_data_import_cron_reconciled_after_deletion(
     golden_images_data_import_crons_scope_function,
 ):
@@ -377,6 +383,7 @@ def test_data_import_cron_reconciled_after_deletion(
 
 
 @pytest.mark.polarion("CNV-8032")
+@pytest.mark.s390x
 def test_data_import_cron_blocked_update(
     golden_images_data_import_crons_scope_function,
 ):
@@ -403,6 +410,7 @@ def test_data_import_cron_blocked_update(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_custom_data_import_cron_image_updated_via_hco(
     admin_client,
     updated_hco_with_custom_data_import_cron_scope_function,
@@ -415,6 +423,7 @@ def test_custom_data_import_cron_image_updated_via_hco(
 
 
 @pytest.mark.polarion("CNV-7669")
+@pytest.mark.s390x
 def test_data_import_cron_recreated_after_opt_out_opt_in(
     admin_client,
     golden_images_namespace,
@@ -439,6 +448,7 @@ def test_data_import_cron_recreated_after_opt_out_opt_in(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_data_import_cron_invalid_source_url_failed_creation(
     updated_hco_with_custom_data_import_cron_scope_function,
     ssp_resource_scope_function,
@@ -471,6 +481,7 @@ def test_data_import_cron_invalid_source_url_failed_creation(
 
 
 @pytest.mark.polarion("CNV-9917")
+@pytest.mark.s390x
 def test_data_source_instancetype_preference_label(
     unprivileged_client,
     namespace,

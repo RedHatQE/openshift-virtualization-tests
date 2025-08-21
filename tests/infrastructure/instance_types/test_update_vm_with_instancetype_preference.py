@@ -88,6 +88,7 @@ def updated_vm_with_instancetype_and_preference(
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-9680")
+@pytest.mark.s390x
 def test_add_reference_to_existing_vm(
     updated_vm_with_instancetype_and_preference,
     vm_cluster_instance_type_to_update,

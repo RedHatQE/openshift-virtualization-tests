@@ -70,6 +70,7 @@ def vm_from_golden_image(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_from_golden_image_cluster_default_storage_class(
     updated_default_storage_class_scope_function,
     golden_image_data_volume_multi_storage_scope_function,
@@ -97,6 +98,7 @@ def test_vm_from_golden_image_cluster_default_storage_class(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_existing_dv):
     vm_from_template_with_existing_dv.ssh_exec.executor().is_connective()
 
@@ -119,6 +121,7 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_dv_with_different_sc(
     fail_test_if_no_ocs_sc,
     fail_if_no_hostpath_csi_basic_sc,
@@ -146,6 +149,7 @@ def test_vm_dv_with_different_sc(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_from_golden_image_missing_default_storage_class(
     removed_default_storage_classes,
     vm_from_golden_image,
