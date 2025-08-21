@@ -13,7 +13,6 @@ from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.constants import VIRT_PROCESS_MEMORY_LIMITS
 from tests.virt.node.gpu.constants import (
     GPU_PRETTY_NAME_STR,
     MDEV_NAME_STR,
@@ -96,25 +95,6 @@ def running_sleep_in_linux(vm):
     pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
     kill_processes_by_name_linux(vm=vm, process_name=process)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
-
-
-def get_virt_launcher_processes_memory_overuse(pod):
-    memory_overuse = {}
-    for process in VIRT_PROCESS_MEMORY_LIMITS.keys():
-        memory_usage = bitmath.KiB(
-            value=int(
-                pod.execute(
-                    command=shlex.split(f"bash -c 'ps -o rss --no-headers -p $(pidof {process})'"),
-                    container="compute",
-                )
-            )
-        )
-        if memory_usage > VIRT_PROCESS_MEMORY_LIMITS[process]:
-            memory_overuse[process] = {
-                "memory usage": memory_usage,
-                "memory limit": VIRT_PROCESS_MEMORY_LIMITS[process],
-            }
-    return memory_overuse
 
 
 def get_stress_ng_pid(ssh_exec, windows=False):
@@ -339,18 +319,6 @@ def validate_pause_optional_migrate_unpause_windows_vm(vm, pre_pause_pid=None, m
     )
 
 
-def get_match_expressions_dict(nodes_list):
-    return {
-        "matchExpressions": [
-            {
-                "key": f"{Resource.ApiGroup.KUBERNETES_IO}/hostname",
-                "operator": "In",
-                "values": nodes_list,
-            }
-        ]
-    }
-
-
 def wait_for_virt_launcher_pod(vmi):
     samples = TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_1SEC, func=lambda: vmi.virt_launcher_pod)
     try:
@@ -498,17 +466,39 @@ def assert_migration_post_copy_mode(vm):
     assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
 
 
-def build_node_affinity_dict(required_nodes=None, preferred_nodes=None):
-    affinity = {"nodeAffinity": {}}
-
-    if required_nodes:
-        affinity["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"] = {
-            "nodeSelectorTerms": [get_match_expressions_dict(nodes_list=required_nodes)]
+def build_node_affinity_dict(values, key=None):
+    return {
+        "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                    {
+                        "matchExpressions": [
+                            {
+                                "key": key or f"{Resource.ApiGroup.KUBERNETES_IO}/hostname",
+                                "operator": "In",
+                                "values": values,
+                            }
+                        ]
+                    }
+                ]
+            },
         }
+    }
 
-    if preferred_nodes:
-        affinity["nodeAffinity"]["preferredDuringSchedulingIgnoredDuringExecution"] = [
-            {"weight": 1, "preference": get_match_expressions_dict(nodes_list=preferred_nodes)}
-        ]
 
-    return affinity
+def get_pod_memory_requests(pod_instance):
+    """Sum all memory requests of the pod's containers"""
+    memory_requests = bitmath.Byte(value=0)
+    for container in pod_instance.spec.containers:
+        if hasattr(container.resources.requests, "memory"):
+            memory_requests += bitmath.parse_string_unsafe(s=container.resources.requests.memory).to_KiB()
+    return memory_requests
+
+
+def get_non_terminated_pods(client, node):
+    return list(
+        Pod.get(
+            dyn_client=client,
+            field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
+        )
+    )

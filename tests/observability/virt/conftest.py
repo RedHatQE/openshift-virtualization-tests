@@ -13,7 +13,7 @@ from tests.observability.virt.utils import (
 )
 from utilities.constants import VIRT_HANDLER, VIRT_OPERATOR
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import get_daemonset_by_name, get_pod_by_name_prefix
+from utilities.infra import get_daemonset_by_name
 
 LOGGER = logging.getLogger(__name__)
 
@@ -81,18 +81,6 @@ def virt_handler_daemonset_with_bad_image(virt_handler_daemonset_scope_class):
         list_resource_reconcile=[KubeVirt],
     ):
         yield
-
-
-@pytest.fixture(scope="class")
-def deleted_virt_handler_pods(admin_client, hco_namespace):
-    virt_handler_pods = get_pod_by_name_prefix(
-        dyn_client=admin_client,
-        pod_prefix=VIRT_HANDLER,
-        namespace=hco_namespace.name,
-        get_all=True,
-    )
-    for pod in virt_handler_pods:
-        pod.clean_up()
 
 
 @pytest.fixture(scope="class")
