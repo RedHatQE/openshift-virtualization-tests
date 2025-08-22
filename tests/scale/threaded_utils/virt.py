@@ -24,6 +24,8 @@ LOGGER = logging.getLogger(__name__)
 def threaded_wait_for_accessible_vms(
     vms: list[VirtualMachineForTests], timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
 ) -> list[Any]:
+    assert vms, "No VMs provided {vms!r}"
+
     def _wait_for_accessible_vm(_vm: VirtualMachineForTests) -> None:
         wait_for_ssh_connectivity(vm=_vm, timeout=timeout, tcp_timeout=tcp_timeout)
 
@@ -50,6 +52,7 @@ def threaded_wait_for_running_vms(
     Returns:
         dict: Data related to the running of the async function
     """
+    assert vms, "No VMs provided {vms!r}"
 
     def _wait_running_vm(_vm: VirtualMachineForTests) -> None:
         try:
@@ -81,6 +84,7 @@ def threaded_wait_for_scheduled_vms(vms: list[VirtualMachine], wait_timeout=TIME
     Returns:
         dict: Data related to the running of the async function
     """
+    assert vms, "No VMs provided {vms!r}"
 
     def _wait_for_scheduled_vm(_vm: VirtualMachine) -> None:
         def _get_virt_launcher_instance():
@@ -110,6 +114,8 @@ def threaded_wait_for_scheduled_vms(vms: list[VirtualMachine], wait_timeout=TIME
 def threaded_run_vm_ssh_command(
     vms: list[VirtualMachineForTests], commands: list[str], tcp_timeout=TIMEOUT_8MIN
 ) -> list:
+    assert vms, "No VMs provided {vms!r}"
+
     def _run_ssh_commands(_vm: VirtualMachineForTests) -> list:
         return run_ssh_commands(
             host=_vm.ssh_exec,
@@ -122,6 +128,7 @@ def threaded_run_vm_ssh_command(
 
 
 def threaded_get_vm_guest_data(vms: list[VirtualMachineForTests], commands: list[str]) -> list[Any]:
+    assert vms, "No VMs provided {vms!r}"
     result = threaded_run_vm_ssh_command(vms=vms, commands=commands)
     all_guest_data = []
     for idx, entry in enumerate(result):
@@ -166,5 +173,9 @@ def verify_guest_data(input_tuple: tuple) -> None:
 
 
 def threaded_verify_guest_data(before_list: list[dict], after_list: list[dict]) -> list[Any]:
-    with ThreadPoolExecutor(max_workers=len(before_list)) as executor:
+    before_list_length = len(before_list)
+    assert before_list and after_list and before_list_length == len(after_list), (
+        "Guest data lists must be provided and be of equal length"
+    )
+    with ThreadPoolExecutor(max_workers=before_list_length) as executor:
         return list(executor.map(verify_guest_data, list(zip(before_list, after_list, strict=True))))

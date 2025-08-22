@@ -3,17 +3,19 @@ from __future__ import annotations
 import logging
 import math
 import resource
+from copy import deepcopy
 
+import kubernetes
 import pytest
 from ocp_resources.cdi import CDI
 from ocp_resources.kubelet_config import KubeletConfig
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import get_client
 from ocp_resources.ssp import SSP
 
-from tests.scale.utils import label_mcps
-from utilities.constants import TIMEOUT_20MIN, TIMEOUT_30SEC, VIRT_HANDLER
+from tests.scale.utils import get_user_kubeconfig_context, label_mcps, pause_mcps
+from utilities.constants import TIMEOUT_20MIN, TIMEOUT_30SEC, UNPRIVILEGED_USER, VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import get_pods
 from utilities.operator import (
@@ -25,6 +27,27 @@ from utilities.operator import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def scale_client_configuration(request):
+    client_configuration = kubernetes.client.Configuration()
+    client_configuration.connection_pool_maxsize = request.param["connection_pool_maxsize"]
+    return client_configuration
+
+
+@pytest.fixture(scope="module")
+def scale_unprivileged_client(
+    scale_client_configuration, skip_unprivileged_client, exported_kubeconfig, unprivileged_client
+):
+    if skip_unprivileged_client:
+        yield
+    else:
+        yield get_client(
+            client_configuration=deepcopy(scale_client_configuration),
+            config_file=exported_kubeconfig,
+            context=get_user_kubeconfig_context(kubeconfig_filename=exported_kubeconfig, username=UNPRIVILEGED_USER),
+        )
 
 
 @pytest.fixture(scope="module")
@@ -90,6 +113,8 @@ def existing_pod_count(admin_client):
 
 @pytest.fixture(scope="module")
 def calculated_max_vms_per_virt_node(request, existing_pod_count, virt_handler_nodes):
+    assert virt_handler_nodes, "No virt-handler pods present"
+
     total_pod_count = existing_pod_count + request.param["total_vm_count"]
     max_pods = total_pod_count / (len(virt_handler_nodes) - 1)
 
@@ -122,6 +147,7 @@ def created_kubeletconfigs_for_scale(request, calculated_max_vms_per_virt_node, 
         mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
     )
 
+    pause_mcps(paused=True, mcps=machine_config_pools)
     with KubeletConfig(
         name="test-custom-kubelet-config",
         auto_sizing_reserved=True,
@@ -142,6 +168,7 @@ def created_kubeletconfigs_for_scale(request, calculated_max_vms_per_virt_node, 
         ):
             with label_mcps([control_plane_mcp, worker_mcp], {"custom-kubelet": "enabled"}):
                 with label_mcps([worker_mcp], {"custom-worker-max-pods": "enabled"}):
+                    pause_mcps(paused=False, mcps=machine_config_pools)
                     wait_for_mcp_update_start(
                         machine_config_pools_list=machine_config_pools,
                         initial_transition_times=initial_updating_transition_times,
@@ -156,9 +183,9 @@ def created_kubeletconfigs_for_scale(request, calculated_max_vms_per_virt_node, 
                     teardown_updating_transition_times = get_mcp_updating_transition_times(
                         mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
                     )
-                    ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}).update()
+                    pause_mcps(paused=True, mcps=machine_config_pools)
 
-    ResourceEditor(patches={mcp: {"spec": {"paused": False}} for mcp in machine_config_pools}).update()
+    pause_mcps(paused=False, mcps=machine_config_pools)
     wait_for_mcp_update_start(
         machine_config_pools_list=machine_config_pools,
         initial_transition_times=teardown_updating_transition_times,

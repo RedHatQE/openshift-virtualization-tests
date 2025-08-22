@@ -42,6 +42,7 @@ from utilities.constants import (
     CNV_VM_SSH_KEY_PATH,
     DEPENDENCY_SCOPE_SESSION,
     OS_FLAVOR_CIRROS,
+    PORT_80,
     TIMEOUT_5MIN,
     TIMEOUT_20MIN,
     TIMEOUT_30MIN,
@@ -56,34 +57,37 @@ LOGGER = logging.getLogger(__name__)
 DEPENDENCIES_NODE_ID_PREFIX = f"{os.path.abspath(__file__)}::TestUpgradeScale"
 CACHE_KEY_PREFIX = "test_upgrade_scale"
 
-TOTAL_VM_COUNT = 1000
+TOTAL_VM_COUNT = int(os.environ.get("SCALE_TEST_TOTAL_VM_COUNT", 2))
 CIRROS_IMG_URL = "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img"
 CIRROS_DV_SIZE = "150Mi"
 
 STRESS_NG_PATH = "tests/scale/stress-ng"
 
 U1_PICO = "u1.pico"
+ALLOW_POST_COPY_MIGRATION_PROFILE_NAME = "allow-post-copy"
 
 pytestmark = [
     pytest.mark.scale,
     pytest.mark.threaded,
     pytest.mark.cpu_manager,
     pytest.mark.cnv_upgrade,
-    # pytest.mark.upgrade_custom,
+    pytest.mark.upgrade_custom,
     pytest.mark.usefixtures(
         "fail_if_no_stress_ng",
         "cache_key_scope_module",
         "increased_open_file_limit",
-        "patched_hco_for_scale_testing",
+        "scale_client_configuration",
         "calculated_max_vms_per_virt_node",
+        "patched_hco_for_scale_testing",
         "created_kubeletconfigs_for_scale",
     ),
     pytest.mark.parametrize(
-        "cache_key_scope_module,increased_open_file_limit,calculated_max_vms_per_virt_node",
+        "cache_key_scope_module,increased_open_file_limit,scale_client_configuration,calculated_max_vms_per_virt_node",
         [
             pytest.param(
                 "test_upgrade_scale",
                 {"nofile_hard_limit": 2**19},
+                {"connection_pool_maxsize": TOTAL_VM_COUNT},
                 {"total_vm_count": TOTAL_VM_COUNT},
             ),
         ],
@@ -153,11 +157,11 @@ def created_data_source_for_scale(request, admin_client, created_pico_instancety
 @pytest.fixture(scope="module")
 def created_post_copy_migration_policy_for_upgrade(admin_client, upgrade_scale_namespace):
     with MigrationPolicy(
-        name="allow-post-copy-vm-policy",
+        name=ALLOW_POST_COPY_MIGRATION_PROFILE_NAME,
         client=admin_client,
         allow_post_copy=True,
-        namespace_selector={"kubernetes.io/metadata.name": upgrade_scale_namespace.name},
-        vmi_selector={"kubevirt.io/migration-profile": "allow-post-copy"},
+        namespace_selector={f"{Resource.ApiGroup.KUBERNETES_IO}/metadata.name": upgrade_scale_namespace.name},
+        vmi_selector={f"{Resource.ApiGroup.KUBEVIRT_IO}/migration-profile": ALLOW_POST_COPY_MIGRATION_PROFILE_NAME},
     ) as migration_policy:
         yield migration_policy
 
@@ -173,6 +177,7 @@ def vm_with_nginx_service_scope_module(upgrade_scale_namespace, admin_client, wo
 
 
 @pytest.fixture(scope="module")
+@pytest.mark.usefixtures("vm_with_nginx_service_scope_module", "stress_ng_url_for_cirros", "vms_for_upgrade_test")
 def stopped_nginx_vm(vm_with_nginx_service_scope_module):
     vm_with_nginx_service_scope_module.stop(wait=True)
     yield
@@ -195,14 +200,13 @@ def stress_ng_url_for_cirros(vm_with_nginx_service_scope_module):
         host=vm_with_nginx_service_scope_module.ssh_exec,
         commands=shlex.split("sudo cp ~/stress-ng /usr/share/nginx/html/"),
     )
-    yield f"http://{vm_with_nginx_service_scope_module.custom_service.instance.spec.clusterIPs[0]}:80/stress-ng"
+    yield f"http://{vm_with_nginx_service_scope_module.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}/stress-ng"
 
 
 @pytest.fixture(scope="module")
 def vms_for_upgrade_test(
     request,
-    admin_client,
-    unprivileged_client,
+    scale_unprivileged_client,
     upgrade_scale_namespace,
     prometheus,
     cache_key_scope_module,
@@ -219,7 +223,7 @@ def vms_for_upgrade_test(
             cloud_init_data = prepare_cloud_init_user_data(section="runcmd", data=entry["runcmd"])
         vms.extend([
             VirtualMachineForTests(
-                client=admin_client,
+                client=scale_unprivileged_client,
                 name=f"vm-scale-load-test-{vm_instancetype.name}-{vm_preference.name}-{index}",
                 namespace=upgrade_scale_namespace.name,
                 run_strategy="Always",
@@ -230,7 +234,11 @@ def vms_for_upgrade_test(
                 vm_preference=vm_preference,
                 os_flavor=entry["os_flavor"],
                 cloud_init_data=cloud_init_data,
-                additional_labels={"kubevirt.io/migration-profile": "allow-post-copy"} if index % 2 else None,
+                additional_labels={
+                    f"{Resource.ApiGroup.KUBEVIRT_IO}/migration-profile": ALLOW_POST_COPY_MIGRATION_PROFILE_NAME
+                }
+                if index % 2
+                else None,
             )
             for index in range(entry["vm_count"])
         ])
@@ -395,7 +403,12 @@ class TestUpgradeScale:
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{SCALE_NODE_ID_PREFIX}::test_load_running_before_upgrade")
     def test_load_running_before_upgrade(
-        self, request, running_vms_with_load, get_vm_guest_data_scope_class, idle_monitored_api_requests
+        self,
+        request,
+        cache_key_scope_class,
+        running_vms_with_load,
+        get_vm_guest_data_scope_class,
+        idle_monitored_api_requests,
     ):
         before_upgrade_list = threaded_get_vm_guest_data(vms=running_vms_with_load, commands=GUEST_DATA_COMMANDS)
         request.config.cache.set(f"{cache_key_scope_class}::before_upgrade_list", before_upgrade_list)
@@ -416,6 +429,7 @@ class TestUpgradeScale:
     def test_load_running_after_upgrade(
         self,
         request,
+        cache_key_scope_class,
         running_vms_with_load,
         get_vm_guest_data_scope_class,
         idle_monitored_api_requests,
