@@ -274,6 +274,10 @@ def pytest_addoption(parser):
         default=False,
         help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
     )
+    session_group.addoption(
+        "--remote-kubeconfig",
+        help="Path to the remote cluster kubeconfig file for cross-cluster tests",
+    )
 
 
 def pytest_cmdline_main(config):
@@ -828,7 +832,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_header(cells):
     cells.pop()  # Remove the `Links` column
 
@@ -837,7 +841,7 @@ def pytest_html_results_table_header(cells):
     cells.append(f"<th>{QUARANTINED.title()} Reason</th>")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(report, cells):
     cells.pop()  # Remove the `Links` entry
 

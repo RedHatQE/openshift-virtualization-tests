@@ -39,6 +39,7 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
     unprivileged_client,
     data_volume_scope_function,
@@ -74,6 +75,7 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vmexport_snapshot_manifests(
     namespace,
     vmexport_from_vmsnapshot,
@@ -91,6 +93,7 @@ def test_vmexport_snapshot_manifests(
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-11597")
 def test_virtctl_vmexport_unprivileged(
     vmexport_download_path, blank_dv_created_by_specific_user, virtctl_unprivileged_client

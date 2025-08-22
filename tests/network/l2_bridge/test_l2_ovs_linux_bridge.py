@@ -43,6 +43,7 @@ def wait_for_no_packet_loss_after_connection(src_vm, dst_ip, interface=None):
         raise
 
 
+@pytest.mark.s390x
 class TestL2LinuxBridge:
     """
     Test L2 connectivity via linux bridge CNI plugin.
@@ -68,9 +69,9 @@ class TestL2LinuxBridge:
     @pytest.mark.polarion("CNV-2282")
     def test_dhcp_broadcast(
         self,
-        configured_l2_bridge_vm_a,
-        l2_bridge_running_vm_b,
         dhcp_nad,
+        l2_bridge_running_vm_b,
+        configured_l2_bridge_vm_a,
         started_vmb_dhcp_client,
     ):
         """

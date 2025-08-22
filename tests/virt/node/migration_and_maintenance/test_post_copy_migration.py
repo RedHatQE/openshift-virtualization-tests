@@ -7,6 +7,7 @@ from pytest_testconfig import config as py_config
 from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
+    clean_up_migration_jobs,
 )
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
@@ -77,6 +78,7 @@ def migrated_hotplugged_vm(hotplugged_vm):
 def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
     with node_mgmt_console(node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
         check_migration_process_after_node_drain(dyn_client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 
 @pytest.mark.parametrize(
@@ -99,7 +101,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
         pytest.param(
             {
                 "dv_name": "dv-windows-latest-vm",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+                "image": py_config.get("latest_windows_os_dict", {}).get("image_path"),
                 "storage_class": py_config["default_storage_class"],
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -123,8 +125,7 @@ class TestPostCopyMigration:
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::node_drain", depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-11422")
-    @pytest.mark.jira("CNV-64988", run=False)
-    def test_node_drain(self, admin_client, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
+    def test_node_drain(self, hotplugged_vm, vm_background_process_id, drained_node_with_hotplugged_vm):
         assert_migration_post_copy_mode(vm=hotplugged_vm)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
 

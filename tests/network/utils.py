@@ -2,7 +2,6 @@ import logging
 import shlex
 from collections import OrderedDict
 
-import pexpect
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
@@ -10,8 +9,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import BRCNV, SERVICE_MESH_PORT
-from utilities import console
+from tests.network.constants import BRCNV
 from utilities.constants import (
     IPV4_STR,
     OS_FLAVOR_FEDORA,
@@ -29,15 +27,25 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-DHCP_SERVICE_RESTART = "sudo systemctl start dhcpd"
+DHCP_SERVICE_RESTART = "sudo systemctl restart dhcpd"
 DHCP_SERVER_CONF_FILE = """
 cat <<EOF >> /etc/dhcp/dhcpd.conf
 default-lease-time 3600;
 max-lease-time 7200;
 authoritative;
 subnet {DHCP_IP_SUBNET}.0 netmask 255.255.255.0 {{
-option subnet-mask 255.255.255.0;
-range {DHCP_IP_RANGE_START} {DHCP_IP_RANGE_END};
+  option subnet-mask 255.255.255.0;
+  option routers {DHCP_IP_SUBNET}.1;
+  option domain-name-servers {DHCP_IP_SUBNET}.1;
+
+  pool {{
+    range {DHCP_IP_RANGE_START} {DHCP_IP_RANGE_END};
+    allow known-clients;
+    deny  unknown-clients;
+  }}
+}}
+host intended_client_vm {{
+  hardware ethernet {CLIENT_MAC_ADDRESS};
 }}
 EOF
 """
@@ -272,63 +280,6 @@ def assert_nncp_successfully_configured(nncp):
     except TimeoutExpiredError:
         LOGGER.error(f"{nncp.name} is not {successfully_configured}, but rather {nncp.status}.")
         raise
-
-
-def authentication_request(vm, expected_output, **kwargs):
-    """
-    Return server response to a request sent from VM console. This request allows testing client authentication.
-
-    Args:
-        vm (VirtualMachine): VM that will be used for console connection
-        expected_output (str): The expected response from the server
-
-    Kwargs: ( Used to allow passing args from wait_service_mesh_components_convergence in service_mesh/conftest)
-        service (str): target svc dns name
-
-    Returns:
-        str: Server response
-    """
-    return verify_console_command_output(
-        vm=vm,
-        command=f"curl http://{kwargs['service']}:{SERVICE_MESH_PORT}/ip",
-        expected_output=expected_output,
-    )
-
-
-def assert_service_mesh_request(expected_output, request_response):
-    assert expected_output in request_response, (
-        f"Server response error.Expected output - {expected_output}received - {request_response}"
-    )
-
-
-def assert_authentication_request(vm, service_app_name):
-    # Envoy proxy IP
-    expected_output = "127.0.0.6"
-    request_response = authentication_request(
-        vm=vm,
-        service=service_app_name,
-        expected_output=expected_output,
-    )
-    assert_service_mesh_request(expected_output=expected_output, request_response=request_response)
-
-
-def verify_console_command_output(
-    vm,
-    command,
-    expected_output,
-    timeout=TIMEOUT_1MIN,
-):
-    """
-    Run a list of commands inside a VM and check for expected output.
-    """
-    with console.Console(vm=vm) as vmc:
-        LOGGER.info(f"Execute {command} on {vm.name}")
-        try:
-            vmc.sendline(command)
-            vmc.expect(expected_output, timeout=timeout)
-            return expected_output
-        except pexpect.exceptions.TIMEOUT:
-            return vmc.before
 
 
 def vm_for_brcnv_tests(

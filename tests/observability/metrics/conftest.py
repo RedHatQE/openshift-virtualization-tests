@@ -21,11 +21,8 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    BINDING_NAME,
-    BINDING_TYPE,
     CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
-    KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
@@ -37,7 +34,6 @@ from tests.observability.metrics.constants import (
 from tests.observability.metrics.utils import (
     SINGLE_VM,
     ZERO_CPU_CORES,
-    binding_name_and_type_from_vm_or_vmi,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -56,6 +52,7 @@ from tests.observability.metrics.utils import (
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+    vnic_info_from_vm_or_vmi,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
@@ -168,31 +165,6 @@ def wait_for_component_value_to_be_expected(prometheus, component_name, expected
             f"{component_name} value did not update. Current value {sample} and expected value {expected_count}"
         )
         raise
-
-
-@pytest.fixture()
-def updated_resource_with_invalid_label(request, admin_client, hco_namespace, hco_status_related_objects):
-    resource_name = request.param["name"]
-    resource = get_resource_object(
-        related_objects=hco_status_related_objects,
-        admin_client=admin_client,
-        resource_kind=request.param["resource"],
-        resource_name=request.param["name"],
-    )
-    labels = resource.instance.metadata.labels
-    LOGGER.info(f"Updating metadata.label.{VERSION_LABEL_KEY} for {resource_name} ")
-    with ResourceEditor(
-        patches={
-            resource: {
-                "metadata": {
-                    "labels": {VERSION_LABEL_KEY: None},
-                    "namespace": hco_namespace.name,
-                },
-            }
-        }
-    ):
-        wait_for_cr_labels_change(component=resource, expected_value=labels)
-        yield
 
 
 @pytest.fixture()
@@ -742,18 +714,7 @@ def modified_vm_cpu_requests(vm_with_cpu_spec):
 
 
 @pytest.fixture()
-def vm_ip_address(vm_for_test):
-    vm_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
-    assert vm_ip, f"Failed to find {vm_for_test.name} vm ip."
-    return vm_ip.group(1)
-
-
-@pytest.fixture()
-def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_test):
+def kubevirt_vmi_status_addresses_ip_labels_values(prometheus, vm_for_test):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_15SEC,
@@ -774,22 +735,16 @@ def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_t
 
 
 @pytest.fixture()
-def vm_virt_controller_ip_address(
-    prometheus, admin_client, hco_namespace, metric_validate_metric_labels_values_ip_labels
-):
-    virt_controller_pod_name = metric_validate_metric_labels_values_ip_labels.get("pod")
+def vm_virt_controller_ip_address(admin_client, hco_namespace, kubevirt_vmi_status_addresses_ip_labels_values):
+    virt_controller_pod_name = kubevirt_vmi_status_addresses_ip_labels_values.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
-    virt_controller_pod_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        get_pod_by_name_prefix(
-            dyn_client=admin_client,
-            pod_prefix=virt_controller_pod_name,
-            namespace=hco_namespace.name,
-        ).execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
+    virt_controller_pod_ip = get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=virt_controller_pod_name,
+        namespace=hco_namespace.name,
+    ).ip
     assert virt_controller_pod_ip, f"virt-controller: {virt_controller_pod_name} ip not found."
-    return virt_controller_pod_ip.group(1)
+    return virt_controller_pod_ip
 
 
 @pytest.fixture()
@@ -993,18 +948,13 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
 
 
 @pytest.fixture()
-def vnic_info_from_vm_or_vmi(request, running_metric_vm):
-    vm_spec = (
-        running_metric_vm.vmi.instance.spec if request.param == "vmi" else running_metric_vm.instance.spec.template.spec
-    )
-    vm_interface = vm_spec.domain.devices.interfaces[0]
-    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
-    return {
-        "vnic_name": vm_spec.networks[0].name,
-        BINDING_NAME: binding_name_and_type[BINDING_NAME],
-        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
-        "model": vm_interface.model,
-    }
+def vnic_info_from_vm_or_vmi_linux(request, running_metric_vm):
+    return vnic_info_from_vm_or_vmi(vm_or_vmi=request.param, vm=running_metric_vm)
+
+
+@pytest.fixture()
+def vnic_info_from_vmi_windows(windows_vm_for_test):
+    return vnic_info_from_vm_or_vmi(vm_or_vmi="vmi", vm=windows_vm_for_test)
 
 
 @pytest.fixture()
@@ -1166,5 +1116,15 @@ def created_fake_data_volume_resource(namespace, admin_client):
 
 
 @pytest.fixture()
-def metric_cdi_import_pods_high_restart_initial_value(prometheus):
-    return int(get_metrics_value(prometheus=prometheus, metrics_name=KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART))
+def initial_metric_value(request, prometheus):
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
+
+
+@pytest.fixture()
+def deleted_vmi(running_metric_vm):
+    running_metric_vm.delete(wait=True)
+
+
+@pytest.fixture()
+def deleted_windows_vmi(windows_vm_for_test):
+    windows_vm_for_test.delete(wait=True)

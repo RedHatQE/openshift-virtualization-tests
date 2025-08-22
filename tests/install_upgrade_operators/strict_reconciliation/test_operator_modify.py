@@ -24,7 +24,7 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
 )
 from tests.install_upgrade_operators.strict_reconciliation.utils import verify_specs
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 
 class TestOperatorsModify:

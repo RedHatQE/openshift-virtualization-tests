@@ -17,6 +17,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -26,6 +27,7 @@ from tests.observability.metrics.utils import (
     get_metric_labels_non_empty_value,
     get_pvc_size_bytes,
     timestamp_to_seconds,
+    validate_metric_value_greater_than_initial_value,
     validate_metric_value_within_range,
     validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
@@ -411,12 +413,12 @@ class TestVmiStatusAddresses:
         self,
         prometheus,
         vm_for_test,
-        metric_validate_metric_labels_values_ip_labels,
+        kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
-        vm_ip_address,
     ):
-        instance_value = metric_validate_metric_labels_values_ip_labels.get("instance").split(":")[0]
-        address_value = metric_validate_metric_labels_values_ip_labels.get("address")
+        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
+        vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (
             f"Expected value: {vm_virt_controller_ip_address}, Actual: {instance_value}"
         )
@@ -565,7 +567,7 @@ class TestVmDiskAllocatedSizeWindows:
 
 class TestVmVnicInfo:
     @pytest.mark.parametrize(
-        "vnic_info_from_vm_or_vmi, query",
+        "vnic_info_from_vm_or_vmi_linux, query",
         [
             pytest.param(
                 "vm",
@@ -578,11 +580,62 @@ class TestVmVnicInfo:
                 marks=pytest.mark.polarion("CNV-11811"),
             ),
         ],
-        indirect=["vnic_info_from_vm_or_vmi"],
+        indirect=["vnic_info_from_vm_or_vmi_linux"],
     )
-    def test_metric_kubevirt_vm_vnic_info(self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi, query):
+    def test_metric_kubevirt_vm_vnic_info_linux(
+        self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi_linux, query
+    ):
         validate_vnic_info(
             prometheus=prometheus,
-            vnic_info_to_compare=vnic_info_from_vm_or_vmi,
+            vnic_info_to_compare=vnic_info_from_vm_or_vmi_linux,
             metric_name=query.format(vm_name=running_metric_vm.name),
+        )
+
+    @pytest.mark.tier3
+    @pytest.mark.polarion("CNV-12224")
+    def test_metric_kubevirt_vmi_vnic_info_windows(self, prometheus, windows_vm_for_test, vnic_info_from_vmi_windows):
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=vnic_info_from_vmi_windows,
+            metric_name=f"kubevirt_vmi_vnic_info{{name='{windows_vm_for_test.name}'}}",
+        )
+
+
+class TestVmiPhaseTransitionFromDeletion:
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+                marks=pytest.mark.polarion("CNV-12067"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_linux(
+        self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
+    ):
+        validate_metric_value_greater_than_initial_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            initial_value=initial_metric_value,
+        )
+
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+                marks=(pytest.mark.polarion("CNV-12204"), pytest.mark.tier3),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_windows(
+        self, prometheus, initial_metric_value, windows_vm_for_test, deleted_windows_vmi
+    ):
+        validate_metric_value_greater_than_initial_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            initial_value=initial_metric_value,
         )

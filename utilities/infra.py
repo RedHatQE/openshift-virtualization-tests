@@ -34,13 +34,13 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.console_cli_download import ConsoleCLIDownload
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
@@ -54,7 +54,7 @@ from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
 from utilities.constants import (
@@ -145,7 +145,8 @@ def create_ns(
 
         # cleanup must be done with admin client
         project.client = admin_client
-        project.clean_up()
+        if not project.clean_up():
+            raise ResourceTeardownError(resource=project)
 
 
 class ClusterHosts:
@@ -337,7 +338,6 @@ def wait_for_pods_running(
         exceptions_dict={NotFoundError: []},
     )
 
-    sample = None
     not_running_pods = []
     try:
         current_check = 0
@@ -1017,7 +1017,7 @@ def get_daemonset_yaml_file_with_image_hash(generated_pulled_secret=None, servic
         image=NET_UTIL_CONTAINER_IMAGE,
         pull_secret=generated_pulled_secret,
     )
-    with open(ds_yaml_file, "r") as fd:
+    with open(ds_yaml_file) as fd:
         ds_yaml = yaml.safe_load(fd.read())
 
     template_spec = ds_yaml["spec"]["template"]["spec"]
@@ -1061,15 +1061,25 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
     return json_file
 
 
+@retry(
+    wait_timeout=TIMEOUT_30SEC,
+    sleep=TIMEOUT_10SEC,
+    exceptions_dict={RuntimeError: []},
+)
 def get_node_audit_log_entries(log, node, log_entry):
-    return subprocess.getoutput(
+    lines = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
     ).splitlines()
+    has_errors = any(line.startswith("error:") for line in lines)
+    if has_errors:
+        LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
+        raise RuntimeError
+    return True, lines
 
 
 def get_node_audit_log_line_dict(logs, node, log_entry):
     for log in logs:
-        deprecated_api_lines = get_node_audit_log_entries(log=log, node=node, log_entry=log_entry)
+        _, deprecated_api_lines = get_node_audit_log_entries(log=log, node=node, log_entry=log_entry)
         if deprecated_api_lines:
             for line in deprecated_api_lines:
                 try:
@@ -1135,46 +1145,6 @@ def utility_daemonset_for_custom_tests(
     with DaemonSet(yaml_file=ds_yaml_file) as ds:
         ds.wait_until_deployed()
         yield ds
-
-
-def has_kubevirt_owner(resource):
-    return any([
-        owner_reference.apiVersion.startswith(f"{resource.ApiGroup.KUBEVIRT_IO}/")
-        for owner_reference in resource.instance.metadata.get("ownerReferences", [])
-    ])
-
-
-def get_pod_disruption_budget(admin_client, namespace_name):
-    return list(
-        PodDisruptionBudget.get(
-            dyn_client=admin_client,
-            namespace=namespace_name,
-        )
-    )
-
-
-def check_pod_disruption_budget_for_completed_migrations(admin_client, namespace, timeout=TIMEOUT_5MIN):
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_10SEC,
-        func=utilities.infra.get_pod_disruption_budget,
-        admin_client=admin_client,
-        namespace_name=namespace,
-    )
-    pod_disruption_budget_desired_states = None
-    try:
-        for sample in samples:
-            pod_disruption_budget_desired_states = {
-                pdb.name: pdb.instance.spec.minAvailable
-                for pdb in sample
-                if utilities.infra.has_kubevirt_owner(resource=pdb) and pdb.instance.spec.minAvailable > 1
-            }
-            # Return if there are no more required migrations
-            if not pod_disruption_budget_desired_states:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Some migrations are still created: {pod_disruption_budget_desired_states}")
-        raise
 
 
 def login_with_token(api_address, token):
@@ -1275,15 +1245,13 @@ def get_resources_by_name_prefix(prefix, namespace, api_resource_name):
     ]
 
 
-def get_infrastructure():
-    infrastructure = Infrastructure(name=CLUSTER)
-    if infrastructure.exists:
-        return infrastructure
-    raise ResourceNotFoundError(f"Infrastructure {CLUSTER} not found")
+@cache
+def get_infrastructure(admin_client: DynamicClient) -> Infrastructure:
+    return Infrastructure(client=admin_client, name=CLUSTER, ensure_exists=True)
 
 
-def get_cluster_platform():
-    return get_infrastructure().instance.status.platform
+def get_cluster_platform(admin_client: DynamicClient) -> str:
+    return get_infrastructure(admin_client=admin_client).instance.status.platform
 
 
 def query_version_explorer(api_end_point: str, query_string: str) -> Any:

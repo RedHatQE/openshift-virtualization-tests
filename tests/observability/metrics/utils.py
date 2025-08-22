@@ -94,26 +94,6 @@ def get_mutation_component_value_from_prometheus(prometheus: Prometheus, compone
     return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
-def get_changed_mutation_component_value(
-    prometheus: Prometheus, component_name: str, previous_value: int
-) -> Optional[int]:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=10,
-        func=get_mutation_component_value_from_prometheus,
-        prometheus=prometheus,
-        component_name=component_name,
-    )
-    try:
-        for sample in samples:
-            if sample != previous_value:
-                return sample
-    except TimeoutExpiredError:
-        LOGGER.error(f"component value did not change for component_name '{component_name}'.")
-        raise
-    return None
-
-
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
     """
     This function will wait for the expected metrics core cpu to show up in Prometheus query output
@@ -1594,3 +1574,35 @@ def validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_byte
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
+
+
+def validate_metric_value_greater_than_initial_value(
+    prometheus: Prometheus, metric_name: str, initial_value: int, timeout: int = TIMEOUT_4MIN
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                if int(sample) > initial_value:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"{sample} should be greater than {initial_value}")
+        raise
+
+
+def vnic_info_from_vm_or_vmi(vm_or_vmi: str, vm: VirtualMachineForTests) -> dict[str, str]:
+    vm_spec = vm.vmi.instance.spec if vm_or_vmi == "vmi" else vm.instance.spec.template.spec
+    vm_interface = vm_spec.domain.devices.interfaces[0]
+    binding_name_and_type = binding_name_and_type_from_vm_or_vmi(vm_interface=vm_interface)
+    return {
+        "vnic_name": vm_spec.networks[0].name,
+        BINDING_NAME: binding_name_and_type[BINDING_NAME],
+        BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
+        "model": vm_interface.model,
+    }

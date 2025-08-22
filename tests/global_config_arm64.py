@@ -7,12 +7,15 @@ from utilities.constants import (
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     HPP_CAPABILITIES,
     PREFERENCE_STR,
+    RHEL8_PREFERENCE,
+    RHEL9_PREFERENCE,
+    RHEL10_PREFERENCE,
     Images,
     StorageClassNames,
 )
 from utilities.infra import get_latest_os_dict_list
 from utilities.os_utils import (
-    generate_instance_type_rhel_os_matrix,
+    generate_linux_instance_type_os_matrix,
     generate_os_matrix_dict,
 )
 from utilities.storage import HppCsiStorageClass
@@ -46,15 +49,17 @@ storage_class_matrix = [
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
 ]
 
-storage_class_for_storage_migration_a = StorageClassNames.IO2_CSI
-storage_class_for_storage_migration_b = StorageClassNames.IO2_CSI
+storage_class_a = StorageClassNames.IO2_CSI
+storage_class_b = StorageClassNames.IO2_CSI
 
 rhel_os_matrix = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5", "rhel-9-6"])
 
 latest_rhel_os_dict = get_latest_os_dict_list(os_list=[rhel_os_matrix])[0]
 
 # Modify instance_type_rhel_os_matrix for arm64
-instance_type_rhel_os_matrix = generate_instance_type_rhel_os_matrix(preferences=["rhel-8", "rhel-9", "rhel-10"])
+instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(
+    os_name="rhel", preferences=[RHEL8_PREFERENCE, RHEL9_PREFERENCE, RHEL10_PREFERENCE]
+)
 for os_matrix_dict in instance_type_rhel_os_matrix:
     for os_params in os_matrix_dict.values():
         os_params[PREFERENCE_STR] += f".{ARM_64}"

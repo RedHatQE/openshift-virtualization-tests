@@ -6,10 +6,10 @@ import json
 import logging
 import os
 import re
+import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import cache
 from json import JSONDecodeError
 from subprocess import run
 from typing import TYPE_CHECKING, Any, Dict
@@ -25,7 +25,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.service import Service
 from ocp_resources.storage_profile import StorageProfile
@@ -55,7 +54,6 @@ from utilities.constants import (
     EVICTIONSTRATEGY,
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
-    LIVE_MIGRATE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
@@ -427,6 +425,9 @@ class VirtualMachineForTests(VirtualMachine):
         self.vm_affinity = vm_affinity
         self.annotations = annotations
 
+        # Must be here to apply on existing VMs
+        self.set_login_params()
+
     def deploy(self, wait=False):
         super().deploy(wait=wait)
         return self
@@ -697,6 +698,7 @@ class VirtualMachineForTests(VirtualMachine):
             and not self.memory_guest
             and not self.memory_requests
             and not self.vm_instance_type
+            and not self.vm_instance_type_infer
         ):
             self.memory_guest = Images.Windows.DEFAULT_MEMORY_SIZE
 
@@ -794,8 +796,8 @@ class VirtualMachineForTests(VirtualMachine):
             login_generated_data = generate_cloud_init_data(
                 data={
                     "userData": {
-                        "user": self.login_params["username"],
-                        "password": self.login_params["password"],
+                        "user": self.username,
+                        "password": self.password,
                         "chpasswd": {"expire": False},
                     }
                 }
@@ -860,7 +862,12 @@ class VirtualMachineForTests(VirtualMachine):
             template_spec.setdefault("domain", {}).setdefault("cpu", {})["cores"] = self.cpu_cores
 
         # Faster VMI start time
-        if self.os_flavor == OS_FLAVOR_WINDOWS and not self.cpu_threads and not self.vm_instance_type:
+        if (
+            self.os_flavor == OS_FLAVOR_WINDOWS
+            and not self.cpu_threads
+            and not self.vm_instance_type
+            and not self.vm_instance_type_infer
+        ):
             self.cpu_threads = Images.Windows.DEFAULT_CPU_THREADS
 
         if self.cpu_threads:
@@ -1018,7 +1025,34 @@ class VirtualMachineForTests(VirtualMachine):
 
     @property
     def login_params(self):
-        return py_config["os_login_param"][self.os_flavor]
+        os_login_param = py_config.get("os_login_param", {}).get(self.os_flavor, {})
+        if not os_login_param:
+            LOGGER.warning(f"`os_login_param` not defined for {self.os_flavor}")
+
+        return os_login_param
+
+    def set_login_params(self):
+        _login_params = self.login_params
+
+        if not (self.username and self.password):
+            if _login_params:
+                self.username = _login_params.get("username")
+                self.password = _login_params.get("password")
+                return
+
+            # Do not modify the defaults to OS like Windows where the password is already defined in the image
+            if self.os_flavor not in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
+                if self.exists:
+                    self.username, self.password = username_password_from_cloud_init(
+                        vm_volumes=self.instance.spec.template.spec.volumes
+                    )
+                    if not self.username or not self.password:
+                        LOGGER.warning("Could not find credentials in cloud-init")
+
+                else:
+                    LOGGER.info("Setting random username and password")
+                    self.username = secrets.token_urlsafe(nbytes=12)
+                    self.password = secrets.token_urlsafe(nbytes=12)
 
     @property
     def ssh_exec(self):
@@ -1120,6 +1154,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         sno_cluster=False,
         tpm_params=None,
         additional_labels=None,
+        vm_affinity=None,
     ):
         """
         VM creation using common templates.
@@ -1140,9 +1175,15 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             template_object (Template, optional): Template object to create the VM from
             non_existing_pvc(bool, default=False): If True, referenced PVC in DataSource is missing
             data_volume_template_from_vm_spec (bool, default=False): Use (and don't manipulate) VM's DataVolumeTemplates
+            vm_affinity (dict, optional): Affinity rules for scheduling the VM on specific nodes
         Returns:
             obj `VirtualMachine`: VM resource
         """
+        # Must be set here to set VM flavor (used to set username and password)
+        self.template_labels = labels
+        self.template_object = template_object
+        self.os_flavor = self._extract_os_from_template()
+
         super().__init__(
             name=name,
             namespace=namespace,
@@ -1186,8 +1227,9 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             tpm_params=tpm_params,
             eviction_strategy=eviction_strategy,
             additional_labels=additional_labels,
+            vm_affinity=vm_affinity,
+            os_flavor=self.os_flavor,
         )
-        self.template_labels = labels
         self.data_source = data_source
         self.data_volume_template = data_volume_template
         self.existing_data_volume = existing_data_volume
@@ -1200,14 +1242,14 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.use_full_storage_api = use_full_storage_api
         self.access_modes = None  # required for evictionStrategy policy
         self.template_params = template_params
-        self.template_object = template_object
         self.non_existing_pvc = non_existing_pvc
         self.data_volume_template_from_vm_spec = data_volume_template_from_vm_spec
         self.eviction_strategy = eviction_strategy
         self.sno_cluster = sno_cluster
+        self.vm_affinity = vm_affinity
 
     def to_dict(self):
-        self.os_flavor = self._extract_os_from_template()
+        self.set_login_params()
         self.body = self.process_template()
         super().to_dict()
 
@@ -1301,16 +1343,22 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             DATA_SOURCE_NAMESPACE: self.data_source.namespace if self.data_source else "mock-data-source-ns",
         }
 
+        template_object = self.template_object or get_template_by_labels(
+            admin_client=self.client, template_labels=self.template_labels
+        )
+
         # Set password for non-Windows VMs; for Windows VM, the password is already set in the image
         if OS_FLAVOR_WINDOWS not in self.os_flavor:
-            template_kwargs["CLOUD_USER_PASSWORD"] = self.login_params["password"]
+            username, _ = username_password_from_cloud_init(
+                vm_volumes=template_object.instance.objects[0].spec.template.spec.volumes
+            )
+
+            self.username = username
+            template_kwargs["CLOUD_USER_PASSWORD"] = self.password
 
         if self.template_params:
             template_kwargs.update(self.template_params)
 
-        template_object = self.template_object or get_template_by_labels(
-            admin_client=self.client, template_labels=self.template_labels
-        )
         resources_list = template_object.process(client=get_client(), **template_kwargs)
         for resource in resources_list:
             if resource["kind"] == VirtualMachine.kind and resource["metadata"]["name"] == self.name:
@@ -1323,9 +1371,8 @@ def vm_console_run_commands(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     commands: list[str],
     timeout: int = TIMEOUT_1MIN,
-    verify_commands_output: bool = True,
-    command_output: bool = False,
-) -> dict[str, list[str]] | None:
+    return_code_validation: bool = True,
+) -> dict[str, list[str]]:
     """
     Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
     If return code other than 0 then it will break execution and raise exception.
@@ -1334,25 +1381,34 @@ def vm_console_run_commands(
         vm (obj): VirtualMachine
         commands (list): List of commands
         timeout (int): Time to wait for the command output
-        verify_commands_output (bool): Check commands return 0
-        command_output (bool): If selected, returns a dict of command and associated output
+        return_code_validation (bool): Check commands return 0
+
+    Returns:
+        Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
     # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
     ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-    with Console(vm=vm) as vmc:
+    prompt = r"\$ "
+    with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
             LOGGER.info(f"Execute {command} on {vm.name}")
-            vmc.sendline(command)
-            vmc.expect(r".*\$")
-            output[command] = ansi_escape.sub("", vmc.after).replace("\r", "").split("\n")
-            if verify_commands_output:
-                vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
-                try:
+            try:
+                vmc.sendline(command)
+                vmc.expect(prompt)
+                output[command] = ansi_escape.sub("", vmc.before).replace("\r", "").split("\n")
+                if return_code_validation:
+                    vmc.sendline("echo rc==$?==")  # This construction rc==$?== is unique. Return code validation
                     vmc.expect("rc==0==", timeout=timeout)  # Expected return code is 0
-                except pexpect.exceptions.TIMEOUT:
-                    raise CommandExecFailed(output[command])
-    return output if command_output else None
+                    vmc.expect(prompt)
+            except pexpect.exceptions.TIMEOUT:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"timeout: {vmc.before}")
+            except pexpect.exceptions.EOF:
+                raise CommandExecFailed(str(output.get(command, [])), err=f"EOF: {vmc.before}")
+            except Exception as e:
+                e.add_note(vmc.before)
+                raise CommandExecFailed(str(output.get(command, [])), err=f"Error: {e}")
+    return output
 
 
 def fedora_vm_body(name: str) -> dict[str, Any]:
@@ -1361,7 +1417,7 @@ def fedora_vm_body(name: str) -> dict[str, Any]:
     # Make sure we can find the file even if utilities was installed via pip.
     yaml_file = os.path.abspath("utilities/manifests/vm-fedora.yaml")
 
-    with open(yaml_file, "r") as fd:
+    with open(yaml_file) as fd:
         data = fd.read()
 
     image = Images.Fedora.FEDORA_CONTAINER_IMAGE
@@ -1663,7 +1719,7 @@ def wait_for_running_vm(
 
 
 def running_vm(
-    vm,
+    vm: VirtualMachineForTests,
     wait_for_interfaces=True,
     check_ssh_connectivity=True,
     ssh_timeout=TIMEOUT_2MIN,
@@ -1707,7 +1763,7 @@ def running_vm(
     ]
 
     try:
-        vm.start(wait=False)
+        vm.start()
     except ApiException as exception:
         if any([message in exception.body for message in allowed_vm_start_exceptions_list]):
             LOGGER.warning(f"VM {vm.name} is already running; will not be started.")
@@ -1753,24 +1809,22 @@ def migrate_vm_and_verify(
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
     """
-    create a migration instance. You may choose to wait for migration
+    Create a migration instance. You may choose to wait for migration
     success or not.
 
     Args:
-        vm (VirtualMachine): vm to be migrated
-        client (DynamicClient): client to use for migration
-        wait_for_migration_success (boolean):
-            True = full teardown will be applied.
-            False = no teardown (responsibility on the programmer), and no
+        vm (VirtualMachine): VM to be migrated.
+        client (DynamicClient, default=None): Client to use for migration.
+        timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
+        wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
+        check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
+        wait_for_migration_success (bool, default=True):
+            True = Full teardown will be applied.
+            False = No teardown (responsibility on the programmer), and no
                     wait for migration process to finish.
 
     Returns:
-        VirtualMachineInstanceMigration: if wait_for_migration_success == false
-
-    Raises:
-        AssertionError: if migration ended with SUCCEEDED status, but node was
-                        not changed for migrated vm OR migrationState was not
-                        completed.
+        VirtualMachineInstanceMigration: If wait_for_migration_success == false, else returns None
     """
     node_before = vm.vmi.node
 
@@ -1832,9 +1886,6 @@ def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
-
-    if vm.instance.spec.template.spec.evictionStrategy == LIVE_MIGRATE:
-        verify_one_pdb_per_vm(vm=vm)
 
 
 def verify_vm_migrated(
@@ -1904,6 +1955,7 @@ def vm_instance_from_template(
     vm_cpu_flags=None,
     host_device_name=None,
     gpu_name=None,
+    vm_affinity=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -1953,6 +2005,7 @@ def vm_instance_from_template(
         vhostmd=params.get("vhostmd"),
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
+        vm_affinity=vm_affinity,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
@@ -2070,28 +2123,6 @@ def get_base_templates_list(client):
     ]
 
 
-def verify_one_pdb_per_vm(vm):
-    """Verify one PodDisruptionBudget created for a VM; VM must be configured with evictionStrategy: LiveMigrate
-
-    Args:
-        vm (VirtualMachine): VM object
-
-    Raises:
-        AssertionError if there is more than one PDB for the VM
-    """
-    if is_jira_64988_bug_open():
-        LOGGER.warning("PodDisruptionBudget not created because of the bug CNV-64988")
-        return
-    pdb_resource_name = "PodDisruptionBudget"
-    LOGGER.info(f"Verify one {pdb_resource_name} for VM {vm.name}")
-    pdbs_dict = {}
-    for pdb in PodDisruptionBudget.get(dyn_client=get_client(), namespace=vm.namespace):
-        if pdb.instance.metadata.ownerReferences[0].name == vm.name:
-            pdbs_dict[pdb.name] = pdb.instance.metadata
-
-    assert len(pdbs_dict) == 1, f"VM {vm.name} must have one {pdb_resource_name}, current: {pdbs_dict}"
-
-
 def get_template_by_labels(admin_client, template_labels):
     template = list(
         Template.get(
@@ -2191,7 +2222,6 @@ def check_migration_process_after_node_drain(dyn_client, vm):
 
     target_pod = vm.privileged_vmi.virt_launcher_pod
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
-    verify_one_pdb_per_vm(vm=vm)
     target_node = target_pod.node
     LOGGER.info(f"The VMI is currently running on {target_node.name}")
     assert target_node != source_node, f"Target node is same as source node: {source_node.name}"
@@ -2267,7 +2297,7 @@ def get_oc_image_info(  # type: ignore[return]
     base_command = f"oc image -o json info {image} --filter-by-os {architecture}"
     if pull_secret:
         base_command = f"{base_command} --registry-config={pull_secret}"
-    sample = None
+
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_10SEC,
@@ -2589,6 +2619,22 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
 
 
-@cache
-def is_jira_64988_bug_open():
-    return utilities.infra.is_jira_open(jira_id="CNV-64988")
+def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
+    """
+    Get username and password from cloud-init data.
+
+    Args:
+        vm_volumes (list[dict[str, Any]]): List of volumes with cloud-init data.
+
+    Returns:
+            tuple[str, str]: Username and password. If not found, empty strings.
+    """
+
+    if cloud_init := [volume[CLOUD_INIT_NO_CLOUD] for volume in vm_volumes if volume.get(CLOUD_INIT_NO_CLOUD)]:
+        if (user_data := cloud_init[0].get("userData")) and (
+            _match := re.search(r"user: (?P<user>.*)\npassword: (?P<password>.*)\n", user_data)
+        ):
+            LOGGER.info("Get VM credentials from cloud-init")
+            return _match["user"], _match["password"]
+
+    return "", ""

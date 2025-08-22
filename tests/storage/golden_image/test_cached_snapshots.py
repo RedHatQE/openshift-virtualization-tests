@@ -20,7 +20,7 @@ from utilities.hco import (
 )
 from utilities.ssp import wait_for_deleted_data_import_crons
 from utilities.storage import (
-    data_volume_dict_modify_to_source_ref,
+    data_volume_template_with_source_ref_dict,
     verify_dv_and_pvc_does_not_exist,
     wait_for_succeeded_dv,
     wait_for_volume_snapshot_ready_to_use,
@@ -201,26 +201,20 @@ def rhel9_golden_image_vm(
     unprivileged_client,
     namespace,
 ):
-    dv = DataVolume(
-        name=f"{RHEL9_STR}-test-vm",
-        namespace=namespace.name,
-        size=rhel9_cached_snapshot.instance.status.get("restoreSize"),
-        storage_class=snapshot_storage_class_name_scope_module,
-        api_name="storage",
-    )
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_volume_template=data_volume_dict_modify_to_source_ref(
-            dv=dv,
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=rhel9_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
         yield vm
 
 
 @pytest.mark.polarion("CNV-10721")
+@pytest.mark.s390x
 def test_automatic_update_for_system_cached_snapshot(
     rhel9_cached_snapshot,
     disabled_common_boot_image_import_hco_spec_rhel9_scope_function,
@@ -234,6 +228,7 @@ def test_automatic_update_for_system_cached_snapshot(
 
 
 @pytest.mark.polarion("CNV-10722")
+@pytest.mark.s390x
 def test_disable_automatic_update_using_annotation(
     disabled_data_import_cron_annotation_rhel9,
     rhel9_data_import_cron,
@@ -260,5 +255,6 @@ def test_disable_automatic_update_using_annotation(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_unprivileged_user_vm_snapshot_datasource(rhel9_golden_image_vm):
     running_vm(vm=rhel9_golden_image_vm)

@@ -107,6 +107,7 @@ class TestCommonVmPreference:
             ),
         ],
     )
+    @pytest.mark.s390x
     def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
         run_general_vm_preferences(
             client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]

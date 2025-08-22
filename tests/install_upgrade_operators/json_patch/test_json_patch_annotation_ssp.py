@@ -22,7 +22,7 @@ from utilities.hco import (
 COMPONENT = "ssp"
 REPLICAS = 5
 
-pytestmark = [pytest.mark.arm64]
+pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.fixture(scope="class")

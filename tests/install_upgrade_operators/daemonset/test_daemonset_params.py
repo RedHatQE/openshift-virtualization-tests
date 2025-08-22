@@ -3,7 +3,7 @@ import pytest
 from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DAEMONSETS_NO_HPP_CSI
 from utilities.infra import get_daemonsets
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.fixture(scope="module")

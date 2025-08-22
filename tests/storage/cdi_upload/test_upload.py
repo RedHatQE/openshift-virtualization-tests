@@ -24,6 +24,7 @@ import utilities.storage
 from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -54,6 +55,7 @@ def wait_for_upload_response_code(token, data, response_code, asynchronous=False
 
 
 @pytest.mark.polarion("CNV-2318")
+@pytest.mark.s390x
 def test_cdi_uploadproxy_route_owner_references(hco_namespace):
     route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name)
     assert route.instance
@@ -180,6 +182,10 @@ def test_successful_upload_with_supported_formats(
             check_disk_count_in_vm(vm=vm_dv)
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky test, timeout failure; CNV-67422",
+    run=False,
+)
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function",
     [
@@ -198,6 +204,7 @@ def test_successful_upload_with_supported_formats(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2018")
+@pytest.mark.s390x
 def test_successful_upload_token_validity(
     namespace,
     data_volume_multi_storage_scope_function,
@@ -248,6 +255,7 @@ def test_successful_upload_token_validity(
 )
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2011")
+@pytest.mark.s390x
 def test_successful_upload_token_expiry(namespace, data_volume_multi_storage_scope_function):
     dv = data_volume_multi_storage_scope_function
     dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
@@ -288,6 +296,7 @@ def _upload_image(dv_name, namespace, storage_class, local_name, size=None):
 
 
 @pytest.mark.sno
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-2015")
 def test_successful_concurrent_uploads(
     upload_file_path,
@@ -369,6 +378,7 @@ def test_successful_upload_missing_file_in_transit(namespace, storage_class_matr
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_print_response_body_on_error_upload(
     namespace,
     download_specified_image,

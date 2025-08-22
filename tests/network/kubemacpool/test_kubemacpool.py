@@ -7,6 +7,7 @@ from utilities.virt import VirtualMachineForTests
 from . import utils as kmp_utils
 
 
+@pytest.mark.s390x
 class TestKMPConnectivity:
     #: KMPTestConnectivity setup
     # .........                                                                    ..........
@@ -105,6 +106,7 @@ class TestKMPConnectivity:
 
 class TestNegatives:
     @pytest.mark.polarion("CNV-4199")
+    @pytest.mark.s390x
     def test_disabled_assignment_ns(
         self,
         mac_pool,
@@ -121,6 +123,7 @@ class TestNegatives:
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-4405")
 @pytest.mark.single_nic
+@pytest.mark.s390x
 def test_kmp_down(namespace, kmp_down):
     with pytest.raises(ApiException):
         with VirtualMachineForTests(name="kmp-down-vm", namespace=namespace.name):

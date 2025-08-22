@@ -11,12 +11,14 @@ from ocp_resources.service_account import ServiceAccount
 from ocp_resources.virtual_service import VirtualService
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import HTTPBIN_COMMAND, HTTPBIN_IMAGE, SERVICE_MESH_PORT
+from tests.network.constants import HTTPBIN_IMAGE
 from tests.network.service_mesh.constants import (
+    AUTH_COMMAND,
     DESTINATION_RULE_TYPE,
     GATEWAY_SELECTOR,
     GATEWAY_TYPE,
     HTTP_PROTOCOL,
+    HTTPBIN_COMMAND,
     INGRESS_SERVICE,
     PEER_AUTHENTICATION_TYPE,
     SERVER_DEMO_HOST,
@@ -24,15 +26,15 @@ from tests.network.service_mesh.constants import (
     SERVER_DEPLOYMENT_STRATEGY,
     SERVER_V1_IMAGE,
     SERVER_V2_IMAGE,
+    SERVICE_MESH_PORT,
     VERSION_2_DEPLOYMENT,
     VIRTUAL_SERVICE_TYPE,
 )
-from tests.network.service_mesh.utils import traffic_management_request
+from tests.network.service_mesh.utils import run_console_command, traffic_management_request
 from tests.network.utils import (
     FedoraVirtualMachineForServiceMesh,
     ServiceMeshDeployments,
     ServiceMeshDeploymentService,
-    authentication_request,
 )
 from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
@@ -159,7 +161,6 @@ def wait_service_mesh_components_convergence(func, vm, **kwargs):
             sleep=TIMEOUT_10SEC,
             func=func,
             vm=vm,
-            expected_output=expected_output,
             **kwargs,
         ):
             if expected_output not in sample:
@@ -431,9 +432,9 @@ def peer_authentication_service_mesh_deployment(
     service_mesh_vm_console_connection_ready,
 ):
     wait_service_mesh_components_convergence(
-        func=authentication_request,
+        func=run_console_command,
         vm=vm_fedora_with_service_mesh_annotation,
-        service=httpbin_service_service_mesh.app_name,
+        command=AUTH_COMMAND.format(service=httpbin_service_service_mesh.app_name),
     )
 
 
