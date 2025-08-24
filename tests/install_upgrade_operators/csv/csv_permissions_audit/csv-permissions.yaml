@@ -1726,6 +1726,7 @@ hyperconverged-cluster-operator:
     - watch
     - create
     - update
+    - delete
   - apiGroups:
     - ''
     resources:
