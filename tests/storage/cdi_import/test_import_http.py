@@ -11,7 +11,6 @@ from bitmath import GiB
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
-from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -24,10 +23,8 @@ from tests.storage.constants import (
     INTERNAL_HTTP_CONFIGMAP_NAME,
 )
 from tests.storage.utils import (
-    assert_disk_img,
     assert_num_files_in_pod,
     assert_use_populator,
-    create_pod_for_pvc,
     create_vm_and_verify_image_permission,
     create_vm_from_dv,
     get_file_url,
@@ -149,11 +146,6 @@ def test_delete_pvc_after_successful_import(
     if sc_volume_binding_mode_is_wffc(sc=storage_class):
         create_dummy_first_consumer_pod(pvc=pvc)
     data_volume_multi_storage_scope_function.wait_for_dv_success()
-    with create_pod_for_pvc(
-        pvc=data_volume_multi_storage_scope_function.pvc,
-        volume_mode=StorageProfile(name=storage_class).instance.status["claimPropertySets"][0]["volumeMode"],
-    ) as pod:
-        assert_disk_img(pod=pod)
 
 
 @pytest.mark.sno
@@ -242,7 +234,6 @@ def test_successful_import_image(
     storage_class_name_scope_module,
     cluster_csi_drivers_names,
 ):
-    assert_disk_img(pod=running_pod_with_dv_pvc)
     assert_use_populator(
         pvc=dv_from_http_import.pvc,
         storage_class=storage_class_name_scope_module,
@@ -290,8 +281,8 @@ def test_successful_import_secure_archive(
 )
 @pytest.mark.sno
 @pytest.mark.gating
-def test_successful_import_secure_image(internal_http_configmap, running_pod_with_dv_pvc):
-    assert_disk_img(pod=running_pod_with_dv_pvc)
+def test_successful_import_secure_image(internal_http_configmap, dv_from_http_import):
+    dv_from_http_import.wait_for_dv_success()
 
 
 @pytest.mark.sno

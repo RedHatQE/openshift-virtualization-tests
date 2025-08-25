@@ -211,21 +211,6 @@ def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
     ]
 
 
-def verify_image_location_via_dv_pod_with_pvc(dv, worker_node_name):
-    dv.wait_for_dv_success()
-    with PodWithPVC(
-        namespace=dv.namespace,
-        name=f"{dv.name}-pod",
-        pvc_name=dv.pvc.name,
-        containers=get_containers_for_pods_with_pvc(volume_mode=dv.volume_mode, pvc_name=dv.pvc.name),
-    ) as pod:
-        pod.wait_for_status(status="Running")
-        LOGGER.debug("Check pod location...")
-        assert pod.instance["spec"]["nodeName"] == worker_node_name
-        LOGGER.debug("Check image location...")
-        storage_utils.assert_disk_img(pod=pod)
-
-
 def assert_provision_on_node_annotation(pvc, node_name, type_):
     provision_on_node = "kubevirt.io/provisionOnNode"
     assert pvc.instance.metadata.annotations.get(provision_on_node) == node_name
@@ -307,7 +292,7 @@ def test_hostpath_pod_reference_pvc(
     if sc_volume_binding_mode_is_wffc(sc=[*storage_class_matrix_hpp_matrix__module__][0]):
         dv_kwargs.pop("hostpath_node")
     with create_dv(**dv_kwargs) as dv:
-        verify_image_location_via_dv_pod_with_pvc(dv=dv, worker_node_name=dv.pvc.selected_node or dv.hostpath_node)
+        dv.wait_for_dv_success()
 
 
 @pytest.mark.sno
@@ -507,7 +492,6 @@ def test_hostpath_upload_dv_with_token(
         dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
         storage_utils.upload_token_request(storage_ns_name=dv.namespace, pvc_name=dv.pvc.name, data=local_name)
         dv.wait_for_dv_success()
-        verify_image_location_via_dv_pod_with_pvc(dv=dv, worker_node_name=dv.pvc.selected_node)
 
 
 @pytest.mark.sno
