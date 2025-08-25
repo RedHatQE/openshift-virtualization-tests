@@ -1,4 +1,3 @@
-import http
 import json
 import logging
 import multiprocessing
@@ -11,7 +10,6 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
-from ocp_resources.service import Service
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -20,10 +18,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, TimeoutWatch
 
 from utilities.constants import (
     DEFAULT_HCO_CONDITIONS,
-    MIGRATION_POLICY_VM_LABEL,
-    PORT_80,
     TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -42,7 +37,7 @@ from utilities.infra import (
     get_resources_by_name_prefix,
     wait_for_node_status,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import is_http_ok
 
 LOGGER = logging.getLogger(__name__)
 
@@ -333,51 +328,6 @@ def resource_log_level_error(resource):
     resource.logger.setLevel(level=logging.ERROR)
     yield resource
     resource.logger.setLevel(level=logging.INFO)
-
-
-def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, node, node_selector_label=None):
-    name = "nginx"
-    with VirtualMachineForTests(
-        namespace=chaos_namespace.name,
-        name=name,
-        body=fedora_vm_body(name=name),
-        client=admin_client,
-        node_selector_labels=node_selector_label,
-        additional_labels=MIGRATION_POLICY_VM_LABEL,
-    ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
-        vm.custom_service_enable(service_name=name, port=PORT_80, service_type=Service.Type.CLUSTER_IP)
-        verify_vm_service_reachable(
-            utility_pods=utility_pods,
-            node=node,
-            url=f"{vm.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}",
-        )
-        LOGGER.info(f"VMI Host Node:{vm.vmi.node.name}")
-        yield vm
-
-
-def verify_vm_service_reachable(utility_pods, node, url):
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-            func=is_http_ok,
-            utility_pods=utility_pods,
-            node=node,
-            url=url,
-        ):
-            if sample:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"Service at {url} is not reachable")
-        raise
-
-
-def is_http_ok(utility_pods, node, url):
-    http_result = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
-        command=f"curl -s --connect-timeout {TIMEOUT_10SEC} -w '%{{http_code}}' {url}  -o /dev/null"
-    )
-    return int(http_result) == http.HTTPStatus.OK
 
 
 def rebooting_node(node, utility_pods):
