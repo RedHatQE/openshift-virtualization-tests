@@ -63,24 +63,7 @@ def vm_os_version(vm):
 
 
 def restart_qemu_guest_agent_service(vm):
-    qemu_kvm_version = vm.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("/usr/libexec/qemu-kvm --version | grep kvm"),
-        container="compute",
-    )
-    qemu_guest_agent_version = get_linux_guest_agent_version(ssh_exec=vm.ssh_exec)
-    if version.parse(qemu_kvm_version.split()[3]) >= version.parse("5.1.0") and version.parse(
-        qemu_guest_agent_version
-    ) >= version.parse("4.2.0-40"):
-        return
-
-    LOGGER.warning(
-        f"Restart qemu-guest-agent service, qemu KVM version: {qemu_kvm_version},"
-        f"qemu-guest-agent version: {qemu_guest_agent_version}"
-    )
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split("sudo systemctl restart qemu-guest-agent"),
-    )
+    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo systemctl restart qemu-guest-agent"))
 
 
 # Guest agent data comparison functions.

@@ -2,9 +2,15 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.data_protection.oadp.utils import check_file_in_vm, wait_for_restored_dv
-from utilities.constants import TIMEOUT_10SEC, Images
+from utilities.constants import QUARANTINED, TIMEOUT_10SEC, Images
 
-pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
+pytestmark = [
+    pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot"),
+    pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Restore bug ; RHCEPH-11933",
+        run=False,
+    ),
+]
 
 
 @pytest.mark.parametrize(
