@@ -68,7 +68,7 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
                 {"name": "pclmuldq", "policy": "nomatch"},
             ],
             id="1 valid, 1 invalid policy",
-            marks=pytest.mark.polarion("CNV-3056"),
+            marks=[pytest.mark.polarion("CNV-3056"), pytest.mark.x86_64()],
         ),
     ],
 )

@@ -48,3 +48,7 @@ class MachineTypesNames:
     pc_q35_rhel7_4 = f"{pc_q35}-rhel7.4.0"
     pc_i440fx = "pc-i440fx"
     pc_i440fx_rhel7_6 = f"{pc_i440fx}-rhel7.6.0"
+    s390_ccw_virtio = "s390-ccw-virtio"
+    s390_ccw_virtio_rhel9_6 = f"{s390_ccw_virtio}-rhel9.6.0"
+    s390_ccw_virtio_rhel8_6 = f"{s390_ccw_virtio}-rhel8.6.0"
+    s390_ccw_virtio_rhel7_6 = f"{s390_ccw_virtio}-rhel7.6.0"
