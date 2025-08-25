@@ -976,7 +976,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5b/8b/824ae9292bbaa548d
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.90"
+version = "11.0.91"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloup" },
