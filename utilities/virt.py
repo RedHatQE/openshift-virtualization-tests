@@ -440,6 +440,9 @@ class VirtualMachineForTests(VirtualMachine):
             self.custom_service.delete(wait=True)
         return True
 
+    def is_running(self):
+        return self.instance.status.ready
+
     def to_dict(self):
         super().to_dict()
         self.set_labels()
