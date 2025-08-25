@@ -775,8 +775,6 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
             all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
-            if "swap" in all_markers:
-                namespaces_to_collect.append(NamespacesNames.WASP)
             if "descheduler" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
@@ -832,7 +830,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_header(cells):
     cells.pop()  # Remove the `Links` column
 
@@ -841,7 +839,7 @@ def pytest_html_results_table_header(cells):
     cells.append(f"<th>{QUARANTINED.title()} Reason</th>")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(report, cells):
     cells.pop()  # Remove the `Links` entry
 
