@@ -10,11 +10,6 @@ from ocp_resources.virtual_machine_cluster_preference import (
 COMMON_INSTANCETYPE_SELECTOR = f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/vendor=redhat.com"
 
 
-@pytest.fixture()
-def cluster_instance_type_for_test_scope_function(common_instance_type_param_dict):
-    return VirtualMachineClusterInstancetype(**common_instance_type_param_dict)
-
-
 @pytest.fixture(scope="class")
 def vm_cluster_preference_for_test(common_vm_preference_param_dict):
     return VirtualMachineClusterPreference(**common_vm_preference_param_dict)
