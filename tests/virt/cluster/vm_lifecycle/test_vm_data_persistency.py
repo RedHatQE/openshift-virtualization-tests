@@ -5,10 +5,8 @@ import shlex
 import string
 
 import pytest
-from paramiko import ProxyCommandFailure
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
-from timeout_sampler import TimeoutSampler
 
 from tests.os_params import (
     RHEL_LATEST,
@@ -17,15 +15,17 @@ from tests.os_params import (
     WINDOWS_LATEST_LABELS,
 )
 from utilities.constants import (
+    LINUX_STR,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
-    TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_30MIN,
 )
 from utilities.ssp import get_windows_timezone
 from utilities.virt import (
+    guest_reboot,
+    run_os_command,
     vm_instance_from_template,
     wait_for_ssh_connectivity,
     wait_for_vm_interfaces,
@@ -80,10 +80,10 @@ def changed_os_preferences(request, persistence_vm, vm_generated_new_password):
 @pytest.fixture()
 def restarted_persistence_vm(request, persistence_vm):
     restart_type = request.param["restart_type"]
-    os = request.param["os"]
+    os_type = request.param["os_type"]
 
     if restart_type == "guest":
-        guest_reboot(vm=persistence_vm, os=os)
+        guest_reboot(vm=persistence_vm, os_type=os_type)
     elif restart_type == "API":
         LOGGER.info(f"Rebooting {persistence_vm.name} from API")
         persistence_vm.restart(wait=True)
@@ -92,36 +92,9 @@ def restarted_persistence_vm(request, persistence_vm):
     wait_for_vm_interfaces(vmi=persistence_vm.vmi)
     wait_for_ssh_connectivity(
         vm=persistence_vm,
-        timeout=TIMEOUT_30MIN if os == WIN else TIMEOUT_5MIN,
+        timeout=TIMEOUT_30MIN if os_type == WIN else TIMEOUT_5MIN,
         tcp_timeout=TIMEOUT_2MIN,
     )
-
-
-def run_os_command(vm, command):
-    try:
-        return run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split(command),
-            timeout=5,
-            tcp_timeout=TCP_TIMEOUT_30SEC,
-        )[0]
-    except ProxyCommandFailure:
-        # On RHEL on successful reboot command execution ssh gets stuck
-        if "reboot" not in command:
-            raise
-
-
-def wait_for_user_agent_down(vm, timeout):
-    LOGGER.info(f"Waiting up to {round(timeout / 60)} minutes for user agent to go down on {vm.name}")
-    for sample in TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=2,
-        func=lambda: [
-            condition for condition in vm.vmi.instance.status.conditions if condition["type"] == "AgentConnected"
-        ],
-    ):
-        if not sample:
-            break
 
 
 def get_linux_timezone(ssh_exec):
@@ -200,26 +173,6 @@ def set_passwd(vm, os, passwd):
     vm.ssh_exec.executor().is_connective()
 
 
-def guest_reboot(vm, os):
-    commands = {
-        "stop-user-agent": {
-            RHEL: "sudo systemctl stop qemu-guest-agent",
-            WIN: "powershell -command \"Stop-Service -Name 'QEMU-GA'\"",
-        },
-        "reboot": {
-            RHEL: "sudo reboot",
-            WIN: 'powershell -command "Restart-Computer -Force"',
-        },
-    }
-
-    LOGGER.info("Stopping user agent")
-    run_os_command(vm=vm, command=commands["stop-user-agent"][os])
-    wait_for_user_agent_down(vm=vm, timeout=TIMEOUT_2MIN)
-
-    LOGGER.info(f"Rebooting {vm.name} from guest")
-    run_os_command(vm=vm, command=commands["reboot"][os])
-
-
 def verify_changes(vm, os):
     # Verify passwd change and timezone
     # Password is verified by logging in using the new password
@@ -253,13 +206,13 @@ class TestRestartPersistenceLinux:
         [
             pytest.param(
                 RHEL,
-                {"restart_type": "guest", "os": RHEL},
+                {"restart_type": "guest", "os_type": LINUX_STR},
                 marks=pytest.mark.polarion("CNV-5618"),
                 id="guest reboot",
             ),
             pytest.param(
                 RHEL,
-                {"restart_type": "API", "os": RHEL},
+                {"restart_type": "API", "os_type": LINUX_STR},
                 marks=pytest.mark.polarion("CNV-5188"),
                 id="API reboot",
             ),
@@ -296,13 +249,13 @@ class TestRestartPersistenceWindows:
         [
             pytest.param(
                 WIN,
-                {"restart_type": "guest", "os": WIN},
+                {"restart_type": "guest", "os_type": WIN},
                 marks=pytest.mark.polarion("CNV-5617"),
                 id="guest reboot",
             ),
             pytest.param(
                 WIN,
-                {"restart_type": "API", "os": WIN},
+                {"restart_type": "API", "os_type": WIN},
                 marks=pytest.mark.polarion("CNV-5619"),
                 id="API reboot",
             ),
