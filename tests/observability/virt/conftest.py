@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 
 from tests.observability.constants import BAD_HTTPGET_PATH
@@ -11,9 +10,7 @@ from tests.observability.virt.utils import (
     delete_replica_set_by_prefix,
     wait_hco_csv_updated_virt_operator_httpget,
 )
-from utilities.constants import VIRT_HANDLER, VIRT_OPERATOR
-from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import get_daemonset_by_name
+from utilities.constants import VIRT_OPERATOR
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,25 +65,3 @@ def initial_readiness_probe_httpget_path(csv_scope_class):
             break
     assert initial_readiness_probe_httpget_path, f"{VIRT_OPERATOR} deployment not found in hco csv"
     return initial_readiness_probe_httpget_path
-
-
-@pytest.fixture(scope="class")
-def virt_handler_daemonset_with_bad_image(virt_handler_daemonset_scope_class):
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            virt_handler_daemonset_scope_class: {
-                "spec": {"template": {"spec": {"containers": [{"name": "virt-handler", "image": "bad_image"}]}}}
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-    ):
-        yield
-
-
-@pytest.fixture(scope="class")
-def virt_handler_daemonset_scope_class(hco_namespace, admin_client):
-    return get_daemonset_by_name(
-        admin_client=admin_client,
-        daemonset_name=VIRT_HANDLER,
-        namespace_name=hco_namespace.name,
-    )
