@@ -12,6 +12,7 @@ from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import retry
 
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
+from utilities.infra import cache_admin_client
 
 WAIT_FOR_STATUS_TIMEOUT_SEC = 90
 WAIT_FOR_STATUS_INTERVAL_SEC = 5
@@ -58,6 +59,12 @@ class Bridge:
 
 
 @dataclass
+class Vlan:
+    id: int
+    base_iface: str
+
+
+@dataclass
 class Interface:
     name: str
     type: str
@@ -65,6 +72,7 @@ class Interface:
     ipv4: IPv4 | None = None
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None
+    vlan: Vlan | None = None
 
 
 @dataclass
@@ -120,6 +128,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
             desired_state=asdict(desired_state, dict_factory=dict_normalization_for_dataclass),
             node_selector=node_selector,
             wait_for_resource=True,
+            client=cache_admin_client(),
         )
 
     @property
