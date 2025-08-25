@@ -378,13 +378,13 @@ windows_os_matrix = [
 
 fedora_os_matrix = [
     {
-        "fedora-41": {
-            IMAGE_NAME_STR: Images.Fedora.FEDORA41_IMG,
-            IMAGE_PATH_STR: os.path.join(Images.Fedora.DIR, Images.Fedora.FEDORA41_IMG),
+        "fedora-42": {
+            IMAGE_NAME_STR: Images.Fedora.FEDORA42_IMG,
+            IMAGE_PATH_STR: os.path.join(Images.Fedora.DIR, Images.Fedora.FEDORA42_IMG),
             DV_SIZE_STR: Images.Fedora.DEFAULT_DV_SIZE,
             LATEST_RELEASE_STR: True,
             TEMPLATE_LABELS_STR: {
-                OS_STR: "fedora41",
+                OS_STR: "fedora42",
                 WORKLOAD_STR: Template.Workload.SERVER,
                 FLAVOR_STR: Template.Flavor.SMALL,
             },
