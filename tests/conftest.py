@@ -2190,13 +2190,6 @@ def instance_type_for_test_scope_class(namespace, common_instance_type_param_dic
     return VirtualMachineInstancetype(**instance_type_param_dict)
 
 
-@pytest.fixture()
-def instance_type_for_test_scope_function(namespace, common_instance_type_param_dict):
-    instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
-    instance_type_param_dict["namespace"] = namespace.name
-    return VirtualMachineInstancetype(**instance_type_param_dict)
-
-
 @pytest.fixture(scope="class")
 def common_instance_type_param_dict(request):
     common_instance_dict = {
