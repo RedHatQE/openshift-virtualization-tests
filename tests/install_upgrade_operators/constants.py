@@ -43,6 +43,7 @@ HCO_DEFAULT_FEATUREGATES = {
     "alignCPUs": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
     "enableMultiArchBootImageImport": FG_DISABLED,
+    "decentralizedLiveMigration": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
