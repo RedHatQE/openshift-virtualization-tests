@@ -52,12 +52,12 @@ from tests.observability.metrics.utils import (
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+    validate_metrics_value,
     vnic_info_from_vm_or_vmi,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
 from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
@@ -94,7 +94,7 @@ from utilities.constants import (
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, enable_aaq_in_hco, wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
     get_http_image_url,
@@ -1128,3 +1128,26 @@ def deleted_vmi(running_metric_vm):
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
+
+
+@pytest.fixture(scope="module")
+def enabled_aaq_in_hco_scope_module(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+    with enable_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_module,
+    ):
+        yield
+
+
+@pytest.fixture()
+def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota):
+    return application_aware_resource_quota.instance.metadata.creationTimestamp
+
+
+@pytest.fixture()
+def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
+    application_aware_resource_quota_instance = application_aware_resource_quota.instance
+    resource_hard_limit = application_aware_resource_quota_instance.spec.hard
+    resource_used = application_aware_resource_quota_instance.status.used
+    return resource_hard_limit, resource_used
