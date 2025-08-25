@@ -5,6 +5,7 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
+import os
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -199,7 +200,7 @@ def ovn_kubernetes_cluster(admin_client):
     return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def network_operator():
     network_resource = Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO)
     if network_resource.exists:
@@ -302,12 +303,28 @@ def network_sanity(
             else:
                 LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
 
+    def _verify_bgp():
+        """
+        Verify if the cluster supports running BGP tests.
+        VLAN_TAG: expected VLAN number on the node br-ex interface.
+        EXTERNAL_FRR_STATIC_IPV4: reserved IP for the external FRR pod inside VLAN_TAG network.
+        """
+        if any(test.get_closest_marker("bgp") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running BGP tests...")
+            if not os.getenv("VLAN_TAG") or not os.getenv("EXTERNAL_FRR_STATIC_IPV4"):
+                failure_msgs.append(
+                    "BGP tests require the VLAN_TAG and EXTERNAL_FRR_STATIC_IPV4 environment variables to be set."
+                )
+            else:
+                LOGGER.info("Validated BGP lane is running against a valid cluster")
+
     _verify_multi_nic(request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
     _verify_ipv4()
+    _verify_bgp()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
