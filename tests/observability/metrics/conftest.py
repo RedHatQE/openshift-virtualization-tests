@@ -38,7 +38,6 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
-    get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
@@ -661,12 +660,12 @@ def generated_network_traffic_windows_vm(windows_vm_for_test):
 
 @pytest.fixture(scope="class")
 def linux_vm_for_test_interface_name(vm_for_test):
-    return get_interface_name_from_vm(vm=vm_for_test)
+    return vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test_interface_name(windows_vm_for_test):
-    return get_interface_name_from_vm(vm=windows_vm_for_test)
+    return windows_vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
