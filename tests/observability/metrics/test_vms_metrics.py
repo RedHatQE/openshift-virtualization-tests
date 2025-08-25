@@ -14,6 +14,7 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
@@ -168,25 +169,6 @@ def number_of_running_vmis(admin_client):
     return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
 
 
-def check_vmi_metric(prometheus):
-    response = prometheus.query(query="cnv:vmi_status_running:count")
-    assert response["status"] == "success"
-    return sum(int(node["value"][1]) for node in response["data"]["result"])
-
-
-def check_vmi_count_metric(expected_vmi_count, prometheus):
-    LOGGER.info(f"Check VMI metric expected: {expected_vmi_count}")
-    samples = TimeoutSampler(
-        wait_timeout=100,
-        sleep=5,
-        func=check_vmi_metric,
-        prometheus=prometheus,
-    )
-    for sample in samples:
-        if sample == expected_vmi_count:
-            return True
-
-
 class TestVMICountMetric:
     @pytest.mark.polarion("CNV-3048")
     def test_vmi_count_metric_increase(
@@ -196,7 +178,11 @@ class TestVMICountMetric:
         vm_metric_1,
         vm_metric_2,
     ):
-        assert check_vmi_count_metric(number_of_running_vmis + 2, prometheus)
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
+            expected_value=str(number_of_running_vmis + 2),
+        )
 
     @pytest.mark.polarion("CNV-3589")
     def test_vmi_count_metric_decrease(
@@ -207,7 +193,11 @@ class TestVMICountMetric:
         vm_metric_2,
     ):
         vm_metric_2.stop(wait=True)
-        assert check_vmi_count_metric(number_of_running_vmis + 1, prometheus)
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
+            expected_value=str(number_of_running_vmis + 1),
+        )
 
 
 class TestVMStatusLastTransitionMetrics:
