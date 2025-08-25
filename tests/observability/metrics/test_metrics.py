@@ -1,3 +1,4 @@
+import bitmath
 import pytest
 
 from tests.observability.metrics.constants import (
@@ -15,6 +16,7 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
+    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     VIRT_API,
     VIRT_HANDLER,
 )
@@ -70,14 +72,15 @@ class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-8262")
     def test_vmi_domain_total_memory_bytes(
         self,
+        prometheus,
         single_metric_vm,
-        vmi_domain_total_memory_in_bytes_from_vm,
-        vmi_domain_total_memory_bytes_metric_value_from_prometheus,
     ):
-        """This test will check the domain total memory of VMI with given metrics output in bytes."""
-        assert vmi_domain_total_memory_in_bytes_from_vm == vmi_domain_total_memory_bytes_metric_value_from_prometheus, (
-            f"VM {single_metric_vm.name}'s domain memory total {vmi_domain_total_memory_in_bytes_from_vm} "
-            f"is not matching with metrics value {vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES.format(vm_name=single_metric_vm.name),
+            expected_value=str(
+                int(bitmath.parse_string_unsafe(single_metric_vm.vmi.instance.spec.domain.memory.guest).bytes)
+            ),
         )
 
     @pytest.mark.polarion("CNV-8931")
@@ -113,18 +116,15 @@ class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11859")
     def test_vmi_domain_total_memory_bytes_windows(
         self,
+        prometheus,
         windows_vm_for_test,
-        vmi_domain_total_memory_in_bytes_from_windows_vm,
-        windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus,
     ):
-        """This test will check the domain total memory of VMI with given metrics output in bytes."""
-        assert (
-            vmi_domain_total_memory_in_bytes_from_windows_vm
-            == windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus
-        ), (
-            f"VM {windows_vm_for_test.name}'s domain memory total "
-            f"{vmi_domain_total_memory_in_bytes_from_windows_vm} is not matching with metrics value "
-            f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES.format(vm_name=windows_vm_for_test.name),
+            expected_value=str(
+                int(bitmath.parse_string_unsafe(windows_vm_for_test.vmi.instance.spec.domain.memory.guest).bytes)
+            ),
         )
 
     @pytest.mark.polarion("CNV-11860")
