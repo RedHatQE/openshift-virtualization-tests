@@ -36,8 +36,6 @@ from utilities.constants import (
     OVS_BRIDGE,
     PRODUCTION_CATALOG_SOURCE,
     RHEL8_PREFERENCE,
-    RHEL9_PREFERENCE,
-    RHEL10_PREFERENCE,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
     TIMEOUT_5MIN,
@@ -194,6 +192,10 @@ auto_update_data_source_matrix = [
     {"rhel8": {"template_os": "rhel8.4"}},
     {"rhel9": {"template_os": "rhel9.0"}},
 ]
+
+
+RHEL9_PREFERENCE = f"rhel.9.{arch}" if arch in ["arm64", "s390x"] else "rhel.9"
+RHEL10_PREFERENCE = f"rhel.10.{arch}" if arch in ["arm64", "s390x"] else "rhel.10"
 
 data_import_cron_matrix = [
     {"centos-stream9": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM9_PREFERENCE}},

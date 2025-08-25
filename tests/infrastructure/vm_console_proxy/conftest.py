@@ -30,12 +30,17 @@ from tests.infrastructure.vm_console_proxy.utils import (
     create_vnc_console_token,
     get_vm_console_proxy_resource,
 )
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_10MIN, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import login_with_token, login_with_user_password
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
+
+
+ARCH = get_cluster_architecture()
+PREFERENCE = f"rhel.10.{ARCH}" if ARCH in ["arm64", "s390x"] else "rhel.10"
 
 
 @pytest.fixture(scope="class")
@@ -95,7 +100,7 @@ def vm_for_console_proxy(namespace, unprivileged_client):
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.small"),
-        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        vm_preference=VirtualMachineClusterPreference(name=PREFERENCE),
         os_flavor=OS_FLAVOR_RHEL,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
