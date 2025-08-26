@@ -144,7 +144,7 @@ class ArchImages:
 
         Cdi = Cdi(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
-            QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            QCOW2_IMG="Fedora-qcow2.img",
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
         )
