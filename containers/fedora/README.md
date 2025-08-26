@@ -25,7 +25,7 @@ Once the PR is merged, the container images are automatically pushed to the
 production repo: `quay.io/openshift-cnv/qe-cnv-tests-fedora:<VERS>`
 
 Once the PR is merged, the container images in the staging repo are
-automatically pushed to the production repository using 
+automatically pushed to the production repository using
 per-architecture tags:
 `quay.io/openshift-cnv/qe-cnv-tests-fedora:<FEDORA_VERSION>-<ARCH>`
 and also the multi-arch image manifest:
