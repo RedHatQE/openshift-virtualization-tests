@@ -15,7 +15,6 @@ from utilities.constants import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
 from utilities.infra import get_deployment_by_name, scale_deployment_replicas
-from utilities.monitoring import wait_for_firing_alert_clean_up
 from utilities.virt import get_all_virt_pods_with_running_status
 
 LOGGER = logging.getLogger(__name__)
@@ -38,22 +37,6 @@ def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
         list_resource_reconcile=[SSP],
     ):
         yield
-
-
-@pytest.fixture()
-def alert_tested(prometheus, request):
-    alert_dict = request.param
-    yield alert_dict
-    if alert_dict.get("check_alert_cleaned"):
-        wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=alert_dict["alert_name"])
-
-
-@pytest.fixture(scope="class")
-def alert_tested_scope_class(prometheus, request):
-    alert_dict = request.param
-    yield alert_dict
-    if alert_dict.get("check_alert_cleaned"):
-        wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=alert_dict["alert_name"])
 
 
 @pytest.fixture(scope="session")

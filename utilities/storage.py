@@ -568,19 +568,6 @@ def data_volume_template_dict(
     return dv.res
 
 
-def data_volume_dict_modify_to_source_ref(dv, data_source):
-    dv.to_dict()
-    del dv.res["metadata"]["namespace"]
-    del dv.res["spec"]["source"]
-    del dv.res["spec"]["contentType"]
-    dv.res["spec"]["sourceRef"] = {
-        "kind": data_source.kind,
-        "name": data_source.name,
-        "namespace": data_source.namespace,
-    }
-    return dv.res
-
-
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
     source_spec_dict = source_dict["spec"]
@@ -591,8 +578,16 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
         or source_dict.get("status", {}).get("restoreSize"),
         storage_class=storage_class or source_spec_dict.get("storageClassName"),
         api_name="storage",
+        source_ref={
+            "kind": data_source.kind,
+            "name": data_source.name,
+            "namespace": data_source.namespace,
+        },
     )
-    return data_volume_dict_modify_to_source_ref(dv=dv, data_source=data_source)
+    dv.to_dict()
+    # dataVolumeTemplate is not required to have the namespace explicitly set
+    dv.res["metadata"].pop("namespace", None)
+    return dv.res
 
 
 def get_test_artifact_server_url(schema="https"):
