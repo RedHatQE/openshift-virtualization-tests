@@ -15,6 +15,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
+from utilities.constants import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
@@ -26,6 +27,7 @@ from utilities.virt import (
     update_vm_efi_spec_and_restart,
     validate_libvirt_persistent_domain,
     validate_pause_optional_migrate_unpause_linux_vm,
+    validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
@@ -125,7 +127,9 @@ class TestCommonTemplatesRhel:
 
     @pytest.mark.arm64
     @pytest.mark.sno
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
+    @pytest.mark.dependency(
+        name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"]
+    )
     @pytest.mark.polarion("CNV-3513")
     def test_vmi_guest_agent_info(self, matrix_rhel_os_vm_from_template):
         validate_os_info_vmi_vs_linux_os(vm=matrix_rhel_os_vm_from_template)
@@ -208,6 +212,11 @@ class TestCommonTemplatesRhel:
         assert validate_virtctl_guest_agent_data_over_time(vm=matrix_rhel_os_vm_from_template), (
             "Guest agent stopped responding"
         )
+
+    @pytest.mark.polarion("CNV-12221")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent_info"])
+    def test_vmi_guest_agent_info_after_guest_reboot(self, matrix_rhel_os_vm_from_template):
+        validate_virtctl_guest_agent_after_guest_reboot(vm=matrix_rhel_os_vm_from_template, os_type=LINUX_STR)
 
     @pytest.mark.polarion("CNV-6951")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])

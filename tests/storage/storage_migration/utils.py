@@ -1,9 +1,7 @@
 import shlex
 
 import pytest
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.pod import Pod
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.storage_migration.constants import (
@@ -15,12 +13,6 @@ from tests.storage.storage_migration.constants import (
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
-
-
-def get_source_virt_launcher_pod(client: DynamicClient, vm: VirtualMachineForTests) -> Pod:
-    source_pod_name = vm.vmi.instance.to_dict().get("status", {}).get("migrationState", {}).get("sourcePod")
-    assert source_pod_name, f"Source pod name is not found in VMI status.migrationState.sourcePod for VM '{vm.name}'"
-    return Pod(client=client, name=source_pod_name, namespace=vm.namespace, ensure_exists=True)
 
 
 def check_file_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
