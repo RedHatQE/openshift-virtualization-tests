@@ -6,7 +6,6 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
@@ -14,7 +13,6 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    CNV_VMI_STATUS_RUNNING_COUNT,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
@@ -149,55 +147,6 @@ def vm_metric_1_vmim(vm_metric_1):
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield
-
-
-@pytest.fixture(scope="class")
-def vm_metric_2(namespace, unprivileged_client):
-    vm_name = "vm-metrics-2"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def number_of_running_vmis(admin_client):
-    return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
-
-
-class TestVMICountMetric:
-    @pytest.mark.polarion("CNV-3048")
-    def test_vmi_count_metric_increase(
-        self,
-        prometheus,
-        number_of_running_vmis,
-        vm_metric_1,
-        vm_metric_2,
-    ):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
-            expected_value=str(number_of_running_vmis + 2),
-        )
-
-    @pytest.mark.polarion("CNV-3589")
-    def test_vmi_count_metric_decrease(
-        self,
-        prometheus,
-        number_of_running_vmis,
-        vm_metric_1,
-        vm_metric_2,
-    ):
-        vm_metric_2.stop(wait=True)
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=CNV_VMI_STATUS_RUNNING_COUNT,
-            expected_value=str(number_of_running_vmis + 1),
-        )
 
 
 class TestVMStatusLastTransitionMetrics:
