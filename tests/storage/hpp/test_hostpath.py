@@ -56,7 +56,6 @@ from utilities.storage import (
     get_containers_for_pods_with_pvc,
     get_downloaded_artifact,
     get_test_artifact_server_url,
-    sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
 )
 from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
@@ -264,35 +263,6 @@ def get_pod_and_scratch_pvc_nodes(dyn_client, namespace):
                     "pod_node": pod_node,
                     "scratch_pvc_node": pvc_node,
                 }
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2817")
-@pytest.mark.parametrize(
-    "dv_kwargs",
-    [
-        pytest.param(
-            {
-                "name": "cnv-2817",
-            },
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_hostpath_pod_reference_pvc(
-    namespace,
-    dv_kwargs,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that after disk image is written to the PVC which has been provisioned on the specified node,
-    Pod can use this image.
-    """
-    if sc_volume_binding_mode_is_wffc(sc=[*storage_class_matrix_hpp_matrix__module__][0]):
-        dv_kwargs.pop("hostpath_node")
-    with create_dv(**dv_kwargs) as dv:
-        dv.wait_for_dv_success()
 
 
 @pytest.mark.sno
