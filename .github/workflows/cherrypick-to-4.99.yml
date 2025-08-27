@@ -10,7 +10,7 @@ jobs:
     permissions:
       actions: write
       contents: write
-      pull-requests: write # Required for creating PRs
+      pull-requests: write
 
     runs-on: ubuntu-latest
 
@@ -27,20 +27,31 @@ jobs:
           git config user.name "${{ secrets.GH_BOT_USERNAME }}"
           git config user.email "${{ secrets.GH_BOT_EMAIL }}"
 
-      - name: Get latest commit from main
+      - name: Get commits to cherry-pick
         id: get_latest_commit
         run: |
-          LATEST_COMMIT_SHA=$(git rev-parse HEAD)
+          # Use the commit SHA from the push event to ensure consistency
+          LATEST_COMMIT_SHA="${{ github.event.after }}"
+          BEFORE_COMMIT_SHA="${{ github.event.before }}"
           echo "Latest commit on main: $LATEST_COMMIT_SHA"
+          echo "Previous commit: $BEFORE_COMMIT_SHA"
 
-          # If the latest commit is a merge, keep its 1st parent as mainline
-          if [ "$(git rev-list --parents -n1 "$LATEST_COMMIT_SHA" | wc -w)" -gt 2 ]; then
-            echo "note: $LATEST_COMMIT_SHA is a merge commit – will cherry-pick with -m 1"
+          # Get all commits that were pushed (could be one commit or multiple from a merged PR)
+          COMMITS_TO_CHERRY_PICK=$(git rev-list --reverse "$BEFORE_COMMIT_SHA..$LATEST_COMMIT_SHA")
+          echo "Commits to cherry-pick:"
+          echo "$COMMITS_TO_CHERRY_PICK"
+
+          # For now, cherry-pick the latest commit only (we can extend this later for multiple commits)
+          COMMIT_TO_CHERRY_PICK="$LATEST_COMMIT_SHA"
+
+          # Check if this is a merge commit
+          if [ "$(git rev-list --parents -n1 "$COMMIT_TO_CHERRY_PICK" | wc -w)" -gt 2 ]; then
+            echo "note: $COMMIT_TO_CHERRY_PICK is a merge commit – will cherry-pick with -m 1"
             echo "mainline_parent=1" >> "$GITHUB_OUTPUT"
           else
             echo "mainline_parent=" >> "$GITHUB_OUTPUT"
           fi
-          echo "commit_sha=$LATEST_COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_TO_CHERRY_PICK" >> "$GITHUB_OUTPUT"
 
           # Safely set the commit message and body outputs, which may contain special characters.
           # We use the heredoc syntax for GITHUB_OUTPUT, which is the most robust method.
@@ -69,7 +80,7 @@ jobs:
           COMMIT_SHA="${{ steps.get_latest_commit.outputs.commit_sha }}"
           COMMIT_MESSAGE_SHORT="${{ steps.get_latest_commit.outputs.commit_message }}"
           MAINLINE_PARENT="${{ steps.get_latest_commit.outputs.mainline_parent }}"
-          TEMP_BRANCH_NAME="cherry-pick-auto/${{ github.event.after }}-${{ github.run_id }}"
+          TEMP_BRANCH_NAME="cherry-pick-auto/$COMMIT_SHA-${{ github.run_id }}"
           STATUS="no_change" # Default status
 
           echo "Attempting to cherry-pick $COMMIT_SHA to $TARGET_BRANCH on temporary branch $TEMP_BRANCH_NAME"
@@ -86,36 +97,41 @@ jobs:
             MAINLINE_OPT="-m $MAINLINE_PARENT"
           fi
 
-          # Attempt to cherry-pick the commit. We use --no-commit to inspect the result.
-          if git cherry-pick $MAINLINE_OPT --no-commit --keep-redundant-commits "$COMMIT_SHA"; then
-            # Cherry-pick command succeeded. Now check if there are actual changes.
-            # `git diff --cached --quiet` exits with 1 if there are staged changes, 0 otherwise.
-            if ! git diff --cached --quiet; then
-              echo "Cherry-pick applied successfully with changes. Committing."
-              git commit -m "Cherry-pick: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-              STATUS="success"
-            else
-              echo "Cherry-pick was successful but resulted in no changes. The commit may already be on the target branch."
-              # Abort the cherry-pick to clean up the repository state (.git/CHERRY_PICK_HEAD).
-              git cherry-pick --quit
-              STATUS="no_change"
-            fi
+          # First check if the commit already exists on the target branch
+          if git merge-base --is-ancestor "$COMMIT_SHA" HEAD; then
+            echo "Commit $COMMIT_SHA already exists on $TARGET_BRANCH - skipping"
+            STATUS="no_change"
           else
-            # Cherry-pick command failed, indicating a conflict.
-            echo "Cherry-pick resulted in conflicts. Committing conflicted state for manual resolution."
-            git add .
-            git commit -m "Cherry-pick Conflicts: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-            STATUS="conflicted"
+            # Attempt to cherry-pick the commit. We use --no-commit to inspect the result.
+            if git cherry-pick $MAINLINE_OPT --no-commit "$COMMIT_SHA"; then
+              # Cherry-pick command succeeded. Now check if there are actual changes.
+              # `git diff --cached --quiet` exits with 1 if there are staged changes, 0 otherwise.
+              if ! git diff --cached --quiet; then
+                echo "Cherry-pick applied successfully with changes. Committing."
+                git commit -m "Cherry-pick: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
+                STATUS="success"
+              else
+                echo "Cherry-pick was successful but resulted in no changes."
+                # Abort the cherry-pick to clean up the repository state (.git/CHERRY_PICK_HEAD).
+                git cherry-pick --quit
+                STATUS="no_change"
+              fi
+            else
+              # Cherry-pick command failed, indicating a conflict.
+              echo "Cherry-pick resulted in conflicts. Committing conflicted state for manual resolution."
+              git add .
+              git commit -m "Cherry-pick Conflicts: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
+              STATUS="conflicted"
+            fi
           fi
 
           echo "Final status: $STATUS"
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
-          # Only push the branch and set the output if a PR needs to be created.
+          # Set the branch name output for all cases where we need to create a PR
           if [[ "$STATUS" == "success" || "$STATUS" == "conflicted" ]]; then
-            echo "Pushing temporary branch $TEMP_BRANCH_NAME to origin."
-            git push origin "$TEMP_BRANCH_NAME"
             echo "temp_branch_name=$TEMP_BRANCH_NAME" >> "$GITHUB_OUTPUT"
+            echo "Branch prepared for PR creation: $TEMP_BRANCH_NAME"
           else
             echo "No PR will be created as there are no changes."
           fi
@@ -125,9 +141,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
-          # Do not create a new commit. The branch is already prepared and pushed.
-          # An empty commit message signals the action to skip the commit phase.
-          commit-message: ''
+          push-to-fork: false
           title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Automated Cherry-pick
@@ -150,9 +164,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.WORKFLOW_TOKEN }}
-          # Do not create a new commit. The branch is already prepared and pushed.
-          # An empty commit message signals the action to skip the commit phase.
-          commit-message: ''
+          push-to-fork: false
+          draft: true
+          labels: "needs-manual-cherry-pick"
           title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}"
           body: |
             ## Cherry-pick Failed - Manual Intervention Required
