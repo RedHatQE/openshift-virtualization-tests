@@ -4,7 +4,7 @@ import pytest
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
 
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_RHEL, Images
+from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_RHEL, TIMEOUT_10MIN, Images
 from utilities.infra import create_ns
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -78,7 +78,9 @@ def data_import_cron_with_pvc_source(
             }
         },
     ) as data_import_cron:
-        data_import_cron.wait_for_condition(condition="UpToDate", status=data_import_cron.Condition.Status.TRUE)
+        data_import_cron.wait_for_condition(
+            condition="UpToDate", status=data_import_cron.Condition.Status.TRUE, timeout=TIMEOUT_10MIN
+        )
         yield data_import_cron
     imported_data_source.clean_up(wait=True)
 
