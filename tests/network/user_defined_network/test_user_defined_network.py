@@ -147,7 +147,6 @@ class TestPrimaryUdn:
     @pytest.mark.gating
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: Flaky test, fails on connecting to VM console; tracked in CNV-66779",
-        run=False,
     )
     def test_connectivity_is_preserved_after_live_migration(self, vma_udn, server, client):
         migrate_vm_and_verify(vm=vma_udn)
