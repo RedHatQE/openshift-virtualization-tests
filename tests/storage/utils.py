@@ -439,12 +439,6 @@ def create_pod_for_pvc(pvc, volume_mode):
         yield pod
 
 
-def assert_disk_img(pod):
-    disk_img = "disk.img"
-    ls_pvc_output = pod.execute(command=shlex.split(f"ls -1 /pvc/{disk_img}"))
-    assert disk_img in ls_pvc_output, f"{disk_img} is not in: {ls_pvc_output}"
-
-
 def get_file_url(url, file_name):
     return f"{url}{file_name}"
 
