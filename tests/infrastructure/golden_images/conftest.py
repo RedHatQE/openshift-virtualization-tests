@@ -34,7 +34,7 @@ def updated_default_storage_class_scope_function(
 def latest_fedora_release_version(downloaded_latest_libosinfo_db):
     """
     Extract the version from file name, if no files found raise KeyError
-    file example: /tmp/pytest-6axFnW3vzouCkjWokhvbDi/osinfodb0/osinfo-db-20221121/os/fedoraproject.org/fedora-41.xml
+    file example: /tmp/pytest-6axFnW3vzouCkjWokhvbDi/osinfodb0/osinfo-db-20221121/os/fedoraproject.org/fedora-42.xml
     """
     osinfo_file_folder_path = os.path.join(downloaded_latest_libosinfo_db, "os/fedoraproject.org/")
     list_of_fedora_os_files = list(sorted(Path(osinfo_file_folder_path).glob("*fedora-[0-9][0-9]*.xml")))
