@@ -1,8 +1,6 @@
 import logging
-import re
 import shlex
 
-import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
@@ -16,7 +14,6 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -44,16 +41,11 @@ from tests.observability.metrics.utils import (
     get_not_running_prometheus_pods,
     get_resource_object,
     get_vm_comparison_info_dict,
-    get_vmi_dommemstat_from_vm,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
-    get_vmi_memory_domain_metric_value_from_prometheus,
     get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
     restart_cdi_worker_pod,
-    run_node_command,
-    run_vm_commands,
     vnic_info_from_vm_or_vmi,
-    wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
     wait_for_no_metrics_value,
 )
@@ -62,10 +54,8 @@ from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
-    CLUSTER_NETWORK_ADDONS_OPERATOR,
     COUNT_FIVE,
     IPV4_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -78,7 +68,6 @@ from utilities.constants import (
     PVC,
     SOURCE_POD,
     SSP_OPERATOR,
-    TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -300,55 +289,6 @@ def vm_list(unique_namespace):
         vm.clean_up()
 
 
-@pytest.fixture()
-def node_setup(request, vm_list, workers_utility_pods):
-    """
-    This fixture runs commands on nodes hosting vms and reverses the changes at the end.
-
-    Args:
-        vm_list (list): Gets the list of vms created as a part of suite level set up.
-        workers_utility_pods (list): Utility pods from worker nodes.
-
-    """
-    node_command = request.param.get("node_command")
-
-    if node_command:
-        vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
-        run_node_command(
-            vms=vms,
-            utility_pods=workers_utility_pods,
-            command=node_command["setup"],
-        )
-
-        yield
-        run_node_command(
-            vms=vms,
-            utility_pods=workers_utility_pods,
-            command=node_command["cleanup"],
-        )
-    else:
-        yield
-
-
-@pytest.fixture()
-def vm_metrics_setup(request, vm_list):
-    """
-    This fixture runs commands against the vms to generate metrics
-
-    Args:
-        vm_list (list): Gets the list of vms created as a part of suite level set up
-
-    Yields:
-        list: list of vm objects against which commands to generate metric has been issued
-    """
-    vm_commands = request.param.get("vm_commands")
-    vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
-    if vm_commands:
-        run_vm_commands(vms=vms, commands=vm_commands)
-
-    yield vms
-
-
 @pytest.fixture(scope="class")
 def vmi_phase_count_before(request, prometheus):
     """
@@ -445,38 +385,6 @@ def virt_up_metrics_values(request, prometheus):
         query=request.param,
     )
     return int(query_response[0]["value"][1])
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, single_metric_vm):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_vm(single_metric_vm):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=single_metric_vm.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
-
-
-@pytest.fixture()
-def cluster_network_addons_operator_scaled_down_and_up(request, prometheus, hco_namespace):
-    metric_name = request.param
-    deployment = Deployment(name=CLUSTER_NETWORK_ADDONS_OPERATOR, namespace=hco_namespace.name)
-    initial_replicas = deployment.instance.spec.replicas
-    deployment.scale_replicas(replica_count=0)
-    deployment.wait_for_replicas(deployed=False)
-    wait_for_metric_reset(
-        prometheus=prometheus,
-        metric_name=metric_name,
-    )
-    deployment.scale_replicas(replica_count=initial_replicas)
-    deployment.wait_for_replicas(deployed=initial_replicas > 0)
 
 
 @pytest.fixture()
@@ -626,22 +534,6 @@ def connected_vnc_console(prometheus, vm_for_test):
 
 
 @pytest.fixture()
-def memory_cached_sum_from_vm_console(vm_for_test):
-    info_to_sum = ["Buffers", "Cached", "SwapCached"]
-    proc_meminfo_content = run_ssh_commands(
-        host=vm_for_test.ssh_exec,
-        commands=shlex.split("cat /proc/meminfo"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-    matches = re.findall(rf"({'|'.join(info_to_sum)}):\s+(\d+)\s+\S+", proc_meminfo_content)
-    assert matches, f"/proc/meminfo content: {proc_meminfo_content}"
-    assert sorted(list(dict(matches).keys())) == sorted(info_to_sum), (
-        f"Expected info to collect: {info_to_sum}, Actual: {matches}"
-    )
-    return bitmath.kB(value=sum(list(map(int, dict(matches).values())))).bytes
-
-
-@pytest.fixture()
 def generated_network_traffic(vm_for_test):
     assert_ping_successful(
         src_vm=vm_for_test,
@@ -674,18 +566,6 @@ def initial_total_created_vms(prometheus, namespace):
     return get_metric_sum_value(
         prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
     )
-
-
-@pytest.fixture()
-def vmi_memory_available_memory(vm_for_test):
-    memory_available_bytes = run_ssh_commands(
-        host=vm_for_test.ssh_exec,
-        commands=shlex.split("free -b"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-    memory_available = re.search(r"Mem:\s+(\d+)", memory_available_bytes)
-    assert memory_available, f"No information available for vm memory: {memory_available_bytes}"
-    return float(memory_available.group(1))
 
 
 @pytest.fixture(scope="class")
@@ -960,23 +840,6 @@ def vnic_info_from_vmi_windows(windows_vm_for_test):
 @pytest.fixture()
 def allocatable_nodes(nodes):
     return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
-
-
-@pytest.fixture()
-def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
 
 
 @pytest.fixture()

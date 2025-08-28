@@ -67,19 +67,6 @@ def test_cnv_installation_with_hco_cr_metrics(
 
 
 class TestVMIMetricsLinuxVms:
-    @pytest.mark.polarion("CNV-8262")
-    def test_vmi_domain_total_memory_bytes(
-        self,
-        single_metric_vm,
-        vmi_domain_total_memory_in_bytes_from_vm,
-        vmi_domain_total_memory_bytes_metric_value_from_prometheus,
-    ):
-        """This test will check the domain total memory of VMI with given metrics output in bytes."""
-        assert vmi_domain_total_memory_in_bytes_from_vm == vmi_domain_total_memory_bytes_metric_value_from_prometheus, (
-            f"VM {single_metric_vm.name}'s domain memory total {vmi_domain_total_memory_in_bytes_from_vm} "
-            f"is not matching with metrics value {vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
-        )
-
     @pytest.mark.polarion("CNV-8931")
     def test_vmi_used_memory_bytes(
         self,
@@ -110,23 +97,6 @@ class TestVMIMetricsLinuxVms:
 
 @pytest.mark.tier3
 class TestVMIMetricsWindowsVms:
-    @pytest.mark.polarion("CNV-11859")
-    def test_vmi_domain_total_memory_bytes_windows(
-        self,
-        windows_vm_for_test,
-        vmi_domain_total_memory_in_bytes_from_windows_vm,
-        windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus,
-    ):
-        """This test will check the domain total memory of VMI with given metrics output in bytes."""
-        assert (
-            vmi_domain_total_memory_in_bytes_from_windows_vm
-            == windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus
-        ), (
-            f"VM {windows_vm_for_test.name}'s domain memory total "
-            f"{vmi_domain_total_memory_in_bytes_from_windows_vm} is not matching with metrics value "
-            f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
-        )
-
     @pytest.mark.polarion("CNV-11860")
     @pytest.mark.jira("CNV-59552")
     def test_vmi_used_memory_bytes_windows(

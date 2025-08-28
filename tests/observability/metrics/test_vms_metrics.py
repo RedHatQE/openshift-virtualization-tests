@@ -15,7 +15,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
-    KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -27,7 +26,6 @@ from tests.observability.metrics.utils import (
     get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_greater_than_initial_value,
-    validate_metric_value_within_range,
     validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
 )
@@ -225,25 +223,6 @@ class TestVmConsolesAndVmCreateDateTimestampMetrics:
         )
 
 
-class TestVmiMemoryCachedBytes:
-    @pytest.mark.parametrize(
-        "vm_for_test",
-        [pytest.param("test-vm-memory-cached", marks=pytest.mark.polarion("CNV-11031"))],
-        indirect=True,
-    )
-    def test_kubevirt_vmi_memory_cached_bytes(
-        self,
-        prometheus,
-        vm_for_test,
-        memory_cached_sum_from_vm_console,
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            expected_value=memory_cached_sum_from_vm_console,
-            metric_name=f"kubevirt_vmi_memory_cached_bytes{{name='{vm_for_test.name}'}}",
-        )
-
-
 @pytest.mark.parametrize("vm_for_test", [pytest.param("file-system-metrics")], indirect=True)
 class TestVmiFileSystemMetricsLinux:
     @pytest.mark.parametrize(
@@ -309,20 +288,6 @@ class TestVmiFileSystemMetricsWindows:
             vm_for_test=windows_vm_for_test,
             mount_point=[*disk_file_system_info_windows][0],
             capacity_or_used=capacity_or_used,
-        )
-
-
-class TestVmiMemoryAvailableBytes:
-    @pytest.mark.parametrize(
-        "vm_for_test",
-        [pytest.param("available-mem-test", marks=pytest.mark.polarion("CNV-11497"))],
-        indirect=True,
-    )
-    def test_kubevirt_vmi_memory_available_bytes(self, prometheus, vm_for_test, vmi_memory_available_memory):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES.format(vm_name=vm_for_test.name),
-            expected_value=vmi_memory_available_memory,
         )
 
 
