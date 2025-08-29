@@ -10,7 +10,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.scale.constants import GUEST_DATA_COMMAND_LIST, GUEST_DATA_RESULT_SEPARATOR
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_4MIN, TIMEOUT_8MIN
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_4MIN, TIMEOUT_8MIN, TIMEOUT_10SEC
 from utilities.virt import (
     VirtualMachineForTests,
     wait_for_cloud_init_complete,
@@ -22,12 +22,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 def threaded_wait_for_accessible_vms(
-    vms: list[VirtualMachineForTests], timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
+    vms: list[VirtualMachineForTests],
+    timeout: int = TIMEOUT_2MIN,
+    tcp_timeout: int = TIMEOUT_1MIN,
+    sleep: int = TIMEOUT_10SEC,
 ) -> list[Any]:
     assert vms, "No VMs provided {vms!r}"
 
     def _wait_for_accessible_vm(_vm: VirtualMachineForTests) -> None:
-        wait_for_ssh_connectivity(vm=_vm, timeout=timeout, tcp_timeout=tcp_timeout)
+        wait_for_ssh_connectivity(vm=_vm, timeout=timeout, tcp_timeout=tcp_timeout, sleep=sleep)
 
     with ThreadPoolExecutor(max_workers=len(vms)) as executor:
         return list(executor.map(_wait_for_accessible_vm, vms))
