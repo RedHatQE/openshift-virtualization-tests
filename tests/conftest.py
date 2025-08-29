@@ -570,11 +570,7 @@ def node_physical_nics(workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def nodes_active_nics(
-    workers,
-    workers_utility_pods,
-    node_physical_nics,
-):
+def nodes_active_nics(workers, workers_utility_pods, node_physical_nics, nmstate_required):
     # TODO: Reduce cognitive complexity
     def _bridge_ports(node_interface):
         ports = set()
@@ -590,6 +586,10 @@ def nodes_active_nics(
     Get nodes active NICs.
     First NIC is management NIC
     """
+    if not nmstate_required:
+        LOGGER.info(f"Running on cloud; using nodes physical NICs {node_physical_nics}")
+        return node_physical_nics
+
     nodes_nics = {}
     for node in workers:
         nodes_nics[node.name] = {"available": [], "occupied": []}
