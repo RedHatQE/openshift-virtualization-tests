@@ -13,18 +13,21 @@ from tests.virt.node.descheduler.constants import (
     DESCHEDULER_LABEL_KEY,
     DESCHEDULER_LABEL_VALUE,
     DESCHEDULER_TEST_LABEL,
-    RUNNING_PING_PROCESS_NAME_IN_VM,
 )
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     create_kube_descheduler,
     deploy_vms,
-    start_vms_with_process,
     vm_nodes,
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import build_node_affinity_dict, get_non_terminated_pods, start_stress_on_vm
+from tests.virt.utils import (
+    build_node_affinity_dict,
+    get_boot_time_for_multiple_vms,
+    get_non_terminated_pods,
+    start_stress_on_vm,
+)
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
@@ -103,6 +106,7 @@ def calculated_vm_deployment_for_descheduler_test(
 
 @pytest.fixture(scope="class")
 def deployed_vms_for_descheduler_test(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -111,6 +115,7 @@ def deployed_vms_for_descheduler_test(
 ):
     yield from deploy_vms(
         vm_prefix="vm-descheduler-test",
+        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -126,14 +131,10 @@ def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
 
 
 @pytest.fixture(scope="class")
-def vms_started_process_for_node_drain(
+def vms_boot_time_before_node_drain(
     deployed_vms_for_descheduler_test,
 ):
-    return start_vms_with_process(
-        vms=deployed_vms_for_descheduler_test,
-        process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
-        args=LOCALHOST,
-    )
+    return get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
 
 
 @pytest.fixture(scope="class")
@@ -218,6 +219,7 @@ def calculated_vm_deployment_for_node_with_least_available_memory(
 @pytest.fixture(scope="class")
 def deployed_vms_for_utilization_imbalance(
     request,
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -227,6 +229,7 @@ def deployed_vms_for_utilization_imbalance(
 ):
     yield from deploy_vms(
         vm_prefix=request.param["vm_prefix"],
+        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -239,6 +242,7 @@ def deployed_vms_for_utilization_imbalance(
 
 @pytest.fixture(scope="class")
 def deployed_vms_on_labeled_node(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -248,6 +252,7 @@ def deployed_vms_on_labeled_node(
 ):
     yield from deploy_vms(
         vm_prefix="node-labels-test",
+        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -259,14 +264,10 @@ def deployed_vms_on_labeled_node(
 
 
 @pytest.fixture(scope="class")
-def vms_started_process_for_utilization_imbalance(
+def vms_boot_time_before_utilization_imbalance(
     deployed_vms_for_utilization_imbalance,
 ):
-    return start_vms_with_process(
-        vms=deployed_vms_for_utilization_imbalance,
-        process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
-        args=LOCALHOST,
-    )
+    return get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_utilization_imbalance)
 
 
 @pytest.fixture(scope="class")

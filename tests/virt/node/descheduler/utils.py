@@ -7,11 +7,11 @@ from ocp_resources.kube_descheduler import KubeDescheduler
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import clean_up_migration_jobs
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_DEPLOYMENT_NAME,
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
-    RUNNING_PING_PROCESS_NAME_IN_VM,
 )
 from utilities.constants import (
     TIMEOUT_1MIN,
@@ -22,12 +22,11 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     NamespacesNames,
 )
+from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    fetch_pid_from_linux_vm,
     running_vm,
-    start_and_fetch_processid_on_linux_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -106,23 +105,6 @@ def wait_vmi_failover(vm, orig_node):
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to deploy on new node")
         raise
-
-
-def assert_running_process_after_failover(vms_list, process_dict):
-    LOGGER.info(f"Verify {RUNNING_PING_PROCESS_NAME_IN_VM} is running after migrations.")
-    failed_vms = []
-    for vm in vms_list:
-        vm_name = vm.name
-        new_pid = None
-        try:
-            new_pid = fetch_pid_from_linux_vm(vm=vm, process_name=RUNNING_PING_PROCESS_NAME_IN_VM)
-        except (ValueError, AssertionError):
-            failed_vms.append(vm_name)
-            continue
-        if new_pid != process_dict[vm_name]:
-            failed_vms.append(vm_name)
-
-    assert not failed_vms, f"The following VMs process ID has changed after migration: {failed_vms}"
 
 
 def assert_vms_distribution_after_failover(vms, nodes, all_nodes=True):
@@ -212,19 +194,10 @@ def assert_vms_consistent_virt_launcher_pods(running_vms):
         LOGGER.info("No VMs were migrated.")
 
 
-def start_vms_with_process(vms, process_name, args):
-    vms_process_id_dict = {}
-    for vm in vms:
-        vms_process_id_dict[vm.name] = start_and_fetch_processid_on_linux_vm(
-            vm=vm, process_name=process_name, args=args
-        )
-
-    return vms_process_id_dict
-
-
 def deploy_vms(
     vm_prefix,
     client,
+    admin_client,
     namespace_name,
     cpu_model,
     vm_count,
@@ -258,6 +231,10 @@ def deploy_vms(
 
     # delete all VMs simultaneously
     for vm in vms:
+        # Due to the bug - migration job should be removed before stopping the VM
+        if is_jira_open(jira_id="CNV-67515"):
+            clean_up_migration_jobs(client=admin_client, vm=vm)
+
         vm.delete()
 
     for vm in vms:

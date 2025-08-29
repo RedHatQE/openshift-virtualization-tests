@@ -45,6 +45,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
+    get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
     pause_optional_migrate_unpause_and_check_connectivity,
@@ -502,3 +503,19 @@ def get_non_terminated_pods(client, node):
             field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
         )
     )
+
+
+def get_boot_time_for_multiple_vms(vm_list):
+    boot_time_dict = {}
+    for vm in vm_list:
+        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
+    return
+
+
+def verify_linux_boot_time(vm_list, initial_boot_time):
+    rebooted_vms = {}
+    for vm in vm_list:
+        current_boot_time = get_vm_boot_time(vm=vm)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
