@@ -19,6 +19,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import OS_FLAVOR_RHEL
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
@@ -91,6 +92,26 @@ def parsed_metrics_command_data(vm):
     )
 
 
+def get_preference_name(rhel_version):
+    """Generate a preference name for a given RHEL version, adjusted by architecture.
+
+    Args:
+        rhel_version (str): The RHEL version (e.g., 'rhel8', 'rhel10').
+
+    Returns:
+        str: The formatted preference name (e.g., 'rhel.8', 'rhel.10.s390x', 'rhel.10.arm64').
+             For s390x or arm64 architectures, appends the architecture suffix (e.g., '.s390x')
+             unless the version is 'rhel8'. For other architectures or 'rhel8', returns the version
+             with a dot separator (e.g., 'rhel.8', 'rhel.10').
+    """
+    preference_name = re.sub(r"(\D+)(\d+)", r"\1.\2", rhel_version)
+    # Append architecture suffix for s390x or arm64, except for rhel8
+    arch = get_cluster_architecture()
+    if rhel_version != "rhel8" and arch in ("s390x", "arm64"):
+        preference_name += f".{arch}"
+    return preference_name
+
+
 @pytest.fixture()
 def enabled_feature_gate_for_downward_metrics_scope_function(
     hyperconverged_resource_scope_function,
@@ -125,7 +146,7 @@ def preferred_cluster_instance_type():
 
 @pytest.fixture()
 def preferred_preference_for_rhel_version(rhel_version):
-    preference_name = re.sub(r"(\D+)(\d+)", r"\1.\2", rhel_version)
+    preference_name = get_preference_name(rhel_version)
     preference_object = VirtualMachineClusterPreference(name=preference_name)
     if preference_object.exists:
         return preference_object
