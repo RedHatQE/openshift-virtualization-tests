@@ -1,11 +1,3 @@
-from utilities.constants import KUBEVIRT_STR
-
-KUBEVIRT_STR_LOWER = KUBEVIRT_STR.lower()
-ROLE_BINDING_LIST = [
-    "kubevirt-controller",
-    "kubevirt-handler",
-    "kubevirt-apiserver",
-]
 KUBEVIRT_VIRT_OPERATOR_READY = "kubevirt_virt_operator_ready"
 SSP_HIGH_RATE_REJECTED_VMS = "SSPHighRateRejectedVms"
 BAD_HTTPGET_PATH = "/metrics-fake"
