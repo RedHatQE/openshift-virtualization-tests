@@ -4,10 +4,10 @@ from contextlib import contextmanager
 
 from ocp_resources.deployment import Deployment
 from ocp_resources.kube_descheduler import KubeDescheduler
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import clean_up_migration_jobs
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_DEPLOYMENT_NAME,
     DESCHEDULER_SOFT_TAINT_KEY,
@@ -197,7 +197,6 @@ def assert_vms_consistent_virt_launcher_pods(running_vms):
 def deploy_vms(
     vm_prefix,
     client,
-    admin_client,
     namespace_name,
     cpu_model,
     vm_count,
@@ -231,14 +230,12 @@ def deploy_vms(
 
     # delete all VMs simultaneously
     for vm in vms:
-        # Due to the bug - migration job should be removed before stopping the VM
-        if is_jira_open(jira_id="CNV-67515"):
-            clean_up_migration_jobs(client=admin_client, vm=vm)
-
         vm.delete()
 
     for vm in vms:
-        vm.wait_deleted()
+        # Due to the bug - VM may hang in terminating state, need to remove the finalizer from VMI
+        if not vm.wait_deleted() and is_jira_open(jira_id="CNV-67515"):
+            ResourceEditor(patches={vm.vmi: {"metadata": {"finalizers": []}}}).update()
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):

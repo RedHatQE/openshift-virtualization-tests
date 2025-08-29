@@ -45,5 +45,6 @@ class TestDeschedulerLoadAwareRebalancing:
     def test_soft_taint_removed_when_node_not_overloaded(
         self,
         node_to_run_stress,
+        all_existing_migrations_completed,
     ):
         wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False)
