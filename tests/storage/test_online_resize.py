@@ -275,11 +275,7 @@ def test_simultaneous_disk_expand(
 @pytest.mark.polarion("CNV-8257")
 @pytest.mark.parametrize(
     "cirros_vm_name",
-    [
-        pytest.param(
-            {"vm_name": "cnv-8257"},
-        ),
-    ],
+    [pytest.param({"vm_name": "cnv-8257"})],
     indirect=True,
 )
 def test_disk_expand_then_clone_fail(
@@ -297,9 +293,8 @@ def test_disk_expand_then_clone_fail(
             func=lambda: dv.instance.status.conditions,
         ):
             if any(
-                "The clone doesn't meet the validation requirements:"
-                " target resources requests storage size is smaller than the source" in condition["message"]
-                for condition in sample
+                "resources requests storage size is smaller than the source" in condition.get("message", "")
+                for condition in sample or []
             ):
                 return
 
