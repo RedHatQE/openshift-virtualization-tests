@@ -16,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
     validate_user_info_virtctl_vs_windows_os,
 )
 from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
+from utilities.constants import OS_FLAVOR_WINDOWS
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
     assert_vm_xml_efi,
@@ -23,6 +24,7 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
     validate_libvirt_persistent_domain,
+    validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
 )
 
@@ -62,7 +64,7 @@ class TestCommonTemplatesWindows:
         assert_windows_efi(vm=matrix_windows_os_vm_from_template)
 
     @pytest.mark.sno
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-3512")
     def test_vmi_guest_agent_info(self, matrix_windows_os_vm_from_template):
         """Test Guest OS agent info."""
@@ -144,6 +146,13 @@ class TestCommonTemplatesWindows:
     def test_verify_virtctl_guest_agent_data_after_migrate(self, matrix_windows_os_vm_from_template):
         assert validate_virtctl_guest_agent_data_over_time(vm=matrix_windows_os_vm_from_template), (
             "Guest agent stopped responding"
+        )
+
+    @pytest.mark.polarion("CNV-12220")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent_info"])
+    def test_vmi_guest_agent_info_after_guest_reboot(self, matrix_windows_os_vm_from_template):
+        validate_virtctl_guest_agent_after_guest_reboot(
+            vm=matrix_windows_os_vm_from_template, os_type=OS_FLAVOR_WINDOWS
         )
 
     @pytest.mark.sno
