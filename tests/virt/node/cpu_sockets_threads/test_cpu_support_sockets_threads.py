@@ -45,22 +45,32 @@ def vm_with_cpu_support(request, namespace, unprivileged_client):
     [
         pytest.param(
             {"sockets": 2, "cores": 2, "threads": 2},
-            marks=(pytest.mark.polarion("CNV-2820"), pytest.mark.gating()),
+            marks=(pytest.mark.polarion("CNV-2820"), pytest.mark.gating(), pytest.mark.x86_64()),
             id="case1: 2 cores, 2 threads, 2 sockets",
         ),
         pytest.param(
             {"sockets": None, "cores": 1, "threads": 2},
-            marks=(pytest.mark.polarion("CNV-2823")),
+            marks=(pytest.mark.polarion("CNV-2823"), pytest.mark.x86_64()),
             id="case2: 1 cores, 2 threads, no sockets",
         ),
         pytest.param(
+            {"sockets": 2, "cores": 2, "threads": 1},
+            marks=(pytest.mark.gating(), pytest.mark.s390x()),
+            id="case1: 2 cores, 1 threads, 2 sockets",
+        ),
+        pytest.param(
+            {"sockets": None, "cores": 1, "threads": 1},
+            marks=[pytest.mark.s390x()],
+            id="case2: 1 cores, 1 threads, no sockets",
+        ),
+        pytest.param(
             {"sockets": 2, "cores": 1, "threads": None},
-            marks=(pytest.mark.polarion("CNV-2822")),
+            marks=(pytest.mark.polarion("CNV-2822"), pytest.mark.x86_64(), pytest.mark.s390x()),
             id="case3: 1 cores, no threads, 2 sockets",
         ),
         pytest.param(
             {"sockets": None, "cores": 2, "threads": None},
-            marks=(pytest.mark.polarion("CNV-2821")),
+            marks=(pytest.mark.polarion("CNV-2821"), pytest.mark.x86_64(), pytest.mark.s390x()),
             id="case4: 2 cores, no threads, no sockets",
         ),
     ],
@@ -96,6 +106,8 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
 
 
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1485")
 def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
     """
@@ -107,6 +119,8 @@ def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
 
 
 @pytest.mark.gating
+@pytest.mark.x86_64
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-2818")
 def test_vm_with_cpu_limitation(namespace, unprivileged_client):
     """
@@ -129,6 +143,8 @@ def test_vm_with_cpu_limitation(namespace, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-2819")
+@pytest.mark.x86_64
+@pytest.mark.s390x
 def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
     """
     Test VM with cpu limitation

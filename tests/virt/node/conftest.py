@@ -17,6 +17,7 @@ from utilities.constants import (
     FOUR_GI_MEMORY,
     ONE_CPU_CORE,
     ONE_CPU_THREAD,
+    S390X,
     TEN_GI_MEMORY,
 )
 from utilities.virt import (
@@ -55,6 +56,7 @@ def hotplugged_vm(
     unprivileged_client,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
+    nodes_cpu_architecture,
 ):
     with VirtualMachineForTestsFromTemplate(
         name=request.param["vm_name"],
@@ -64,7 +66,8 @@ def hotplugged_vm(
         client=unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
-        memory_max_guest=TEN_GI_MEMORY,
+        # s390x doesn't support maxGuest as it doesn't support hotplug
+        memory_max_guest=TEN_GI_MEMORY if nodes_cpu_architecture != S390X else None,
         cpu_sockets=FOUR_CPU_SOCKETS,
         cpu_threads=ONE_CPU_THREAD,
         cpu_cores=ONE_CPU_CORE,

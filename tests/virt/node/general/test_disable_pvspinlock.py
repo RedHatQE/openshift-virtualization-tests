@@ -20,7 +20,8 @@ def vm_for_test_pvspinlock(
 
 
 @pytest.mark.polarion("CNV-6877")
-def test_disable_pvcpinlock(vm_for_test_pvspinlock):
+@pytest.mark.x86_64
+def test_disable_pvspinlock(vm_for_test_pvspinlock):
     assert vm_for_test_pvspinlock.privileged_vmi.xml_dict["domain"]["features"]["pvspinlock"]["@state"] == "off", (
         "pvspinlock is not disabled in domain xml."
     )

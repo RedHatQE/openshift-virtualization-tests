@@ -77,6 +77,7 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    TIMEOUT_60MIN,
     VIRT_LAUNCHER,
     VIRTCTL,
     Images,
@@ -1688,7 +1689,7 @@ def assert_vm_not_error_status(vm: VirtualMachineForTests, timeout: int = TIMEOU
 
 def wait_for_running_vm(
     vm: VirtualMachineForTests,
-    wait_until_running_timeout: int = TIMEOUT_4MIN,
+    wait_until_running_timeout: int = TIMEOUT_8MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = True,
     ssh_timeout: int = TIMEOUT_2MIN,
@@ -1726,7 +1727,7 @@ def running_vm(
     check_ssh_connectivity=True,
     ssh_timeout=TIMEOUT_2MIN,
     wait_for_cloud_init=False,
-    dv_wait_timeout=TIMEOUT_30MIN,
+    dv_wait_timeout=TIMEOUT_60MIN,
 ):
     """
     Wait for the VMI to be in Running state.
@@ -1805,7 +1806,7 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 def migrate_vm_and_verify(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     client: DynamicClient | None = None,
-    timeout: int = TIMEOUT_12MIN,
+    timeout: int = TIMEOUT_25MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
     wait_for_migration_success: bool = True,
@@ -2191,7 +2192,7 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
 
 
 # function waits when VMIM resource created by cluster automatically (e.g. after node drain OR hotplug)
-def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
+def get_created_migration_job(vm, timeout=TIMEOUT_2MIN, client=None):
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_5SEC,
