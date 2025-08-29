@@ -5,11 +5,11 @@ from ocp_resources.resource import ResourceEditor
 
 from tests.virt.node.descheduler.constants import DESCHEDULER_TEST_LABEL
 from tests.virt.node.descheduler.utils import (
-    assert_running_process_after_failover,
     assert_vms_consistent_virt_launcher_pods,
     assert_vms_distribution_after_failover,
     verify_at_least_one_vm_migrated,
 )
+from tests.virt.utils import verify_linux_boot_time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class TestDeschedulerEvictsVMAfterDrainUncordon:
         self,
         schedulable_nodes,
         deployed_vms_for_descheduler_test,
-        vms_started_process_for_node_drain,
+        vms_boot_time_before_node_drain,
         drain_uncordon_node,
     ):
         assert_vms_distribution_after_failover(
@@ -62,14 +62,14 @@ class TestDeschedulerEvictsVMAfterDrainUncordon:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
     @pytest.mark.polarion("CNV-8288")
-    def test_running_process_after_migrations_complete(
+    def test_boot_time_after_migrations_complete(
         self,
         deployed_vms_for_descheduler_test,
-        vms_started_process_for_node_drain,
+        vms_boot_time_before_node_drain,
     ):
-        assert_running_process_after_failover(
-            vms_list=deployed_vms_for_descheduler_test,
-            process_dict=vms_started_process_for_node_drain,
+        verify_linux_boot_time(
+            vm_list=deployed_vms_for_descheduler_test,
+            initial_boot_time=vms_boot_time_before_node_drain,
         )
 
 
@@ -96,7 +96,7 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         node_with_least_available_memory,
         node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
-        vms_started_process_for_utilization_imbalance,
+        vms_boot_time_before_utilization_imbalance,
         utilization_imbalance,
         node_with_max_memory_labeled_for_descheduler_test,
     ):
@@ -119,14 +119,14 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
     @pytest.mark.polarion("CNV-8919")
-    def test_running_process_after_migrations_complete(
+    def test_boot_time_after_migrations_complete(
         self,
         deployed_vms_for_utilization_imbalance,
-        vms_started_process_for_utilization_imbalance,
+        vms_boot_time_before_utilization_imbalance,
     ):
-        assert_running_process_after_failover(
-            vms_list=deployed_vms_for_utilization_imbalance,
-            process_dict=vms_started_process_for_utilization_imbalance,
+        verify_linux_boot_time(
+            vm_list=deployed_vms_for_utilization_imbalance,
+            initial_boot_time=vms_boot_time_before_utilization_imbalance,
         )
 
 
