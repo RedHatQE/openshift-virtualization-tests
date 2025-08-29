@@ -509,7 +509,7 @@ def get_boot_time_for_multiple_vms(vm_list):
     boot_time_dict = {}
     for vm in vm_list:
         boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
-    return
+    return boot_time_dict
 
 
 def verify_linux_boot_time(vm_list, initial_boot_time):

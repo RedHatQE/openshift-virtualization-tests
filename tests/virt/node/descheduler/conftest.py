@@ -62,7 +62,7 @@ def descheduler_kubevirt_relieve_and_migrate_profile(
 ):
     with create_kube_descheduler(
         admin_client=admin_client,
-        profiles=["DevKubeVirtRelieveAndMigrate"],
+        profiles=["KubeVirtRelieveAndMigrate"],
         profile_customizations={
             "devActualUtilizationProfile": "PrometheusCPUCombined",
         },
@@ -106,7 +106,6 @@ def calculated_vm_deployment_for_descheduler_test(
 
 @pytest.fixture(scope="class")
 def deployed_vms_for_descheduler_test(
-    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -115,7 +114,6 @@ def deployed_vms_for_descheduler_test(
 ):
     yield from deploy_vms(
         vm_prefix="vm-descheduler-test",
-        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -134,7 +132,7 @@ def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
 def vms_boot_time_before_node_drain(
     deployed_vms_for_descheduler_test,
 ):
-    return get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
+    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
 
 
 @pytest.fixture(scope="class")
@@ -219,7 +217,6 @@ def calculated_vm_deployment_for_node_with_least_available_memory(
 @pytest.fixture(scope="class")
 def deployed_vms_for_utilization_imbalance(
     request,
-    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -229,7 +226,6 @@ def deployed_vms_for_utilization_imbalance(
 ):
     yield from deploy_vms(
         vm_prefix=request.param["vm_prefix"],
-        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -242,7 +238,6 @@ def deployed_vms_for_utilization_imbalance(
 
 @pytest.fixture(scope="class")
 def deployed_vms_on_labeled_node(
-    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -252,7 +247,6 @@ def deployed_vms_on_labeled_node(
 ):
     yield from deploy_vms(
         vm_prefix="node-labels-test",
-        admin_client=admin_client,
         client=unprivileged_client,
         namespace_name=namespace.name,
         cpu_model=cpu_for_migration,
@@ -267,7 +261,7 @@ def deployed_vms_on_labeled_node(
 def vms_boot_time_before_utilization_imbalance(
     deployed_vms_for_utilization_imbalance,
 ):
-    return get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_utilization_imbalance)
+    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_utilization_imbalance)
 
 
 @pytest.fixture(scope="class")
