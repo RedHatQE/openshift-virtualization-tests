@@ -45,7 +45,7 @@ def vm_with_cpu_support(request, namespace, unprivileged_client):
     [
         pytest.param(
             {"sockets": 2, "cores": 2, "threads": 2},
-            marks=(pytest.mark.polarion("CNV-2820"), pytest.mark.gating()),
+            marks=(pytest.mark.polarion("CNV-2820"), pytest.mark.gating, pytest.mark.conformance),
             id="case1: 2 cores, 2 threads, 2 sockets",
         ),
         pytest.param(
@@ -96,6 +96,7 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-1485")
 def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
     """
