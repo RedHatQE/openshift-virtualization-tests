@@ -3,15 +3,23 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 
 from tests.data_protection.oadp.utils import (
-    FILE_NAME_FOR_BACKUP,
-    TEXT_TO_TEST,
-    VeleroBackup,
     VeleroRestore,
-    create_rhel_vm,
     is_storage_class_support_volume_mode,
 )
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, TIMEOUT_15MIN, Images
+from utilities.constants import (
+    BACKUP_STORAGE_LOCATION,
+    FILE_NAME_FOR_BACKUP,
+    OS_FLAVOR_RHEL,
+    TEXT_TO_TEST,
+    TIMEOUT_8MIN,
+    TIMEOUT_15MIN,
+    Images,
+)
 from utilities.infra import create_ns
+from utilities.oadp import (
+    VeleroBackup,
+    create_rhel_vm,
+)
 from utilities.storage import (
     check_upload_virtctl_result,
     create_dv,
@@ -132,7 +140,7 @@ def velero_backup_first_namespace_using_datamover(namespace_for_backup):
         ],
         name="datamover-backup-ns",
         snapshot_move_data=True,
-        storage_location="dpa-1",
+        storage_location=BACKUP_STORAGE_LOCATION,
     ) as backup:
         yield backup
 
@@ -226,7 +234,7 @@ def velero_backup_second_namespace_using_datamover(namespace_for_backup2):
         ],
         name="datamover-backup-ns2",
         snapshot_move_data=True,
-        storage_location="dpa-1",
+        storage_location=BACKUP_STORAGE_LOCATION,
     ) as backup:
         yield backup
 

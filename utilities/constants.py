@@ -903,3 +903,9 @@ WORKLOAD_STR = "workload"
 LATEST_RELEASE_STR = "latest_released"
 OS_VERSION_STR = "os_version"
 DATA_SOURCE_STR = "data_source"
+
+# OADP
+ADP_NAMESPACE = "openshift-adp"
+FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
+TEXT_TO_TEST = "text"
+BACKUP_STORAGE_LOCATION = "dpa-1"
