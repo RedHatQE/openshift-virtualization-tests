@@ -1,185 +1,331 @@
-name: Cherry-pick to cnv-4.99 on Main Merge
+name: PR Cherry-pick to cnv-4.99
 
 on:
   push:
     branches:
       - main
 
+concurrency:
+  group: cherry-pick-cnv-4.99
+  cancel-in-progress: true
+
 jobs:
-  cherry-pick-to-4-99:
+  cherry-pick-pr:
+    runs-on: ubuntu-latest
     permissions:
-      actions: write
       contents: write
       pull-requests: write
-
-    runs-on: ubuntu-latest
+      issues: write
+      actions: read
 
     steps:
-      - name: Checkout main branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch all history for cherry-picking
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git
-        # Configure Git user for commits made directly in the workflow
+      - name: Check if push is from PR merge
+        id: check-pr
         run: |
-          git config user.name "${{ secrets.GH_BOT_USERNAME }}"
-          git config user.email "${{ secrets.GH_BOT_EMAIL }}"
+          set -euo pipefail
 
-      - name: Get commits to cherry-pick
-        id: get_latest_commit
-        run: |
-          # Use the commit SHA from the push event to ensure consistency
-          LATEST_COMMIT_SHA="${{ github.event.after }}"
-          BEFORE_COMMIT_SHA="${{ github.event.before }}"
-          echo "Latest commit on main: $LATEST_COMMIT_SHA"
-          echo "Previous commit: $BEFORE_COMMIT_SHA"
+          # Get the commit SHA that was just pushed
+          COMMIT_SHA="${{ github.sha }}"
+          echo "Checking commit: $COMMIT_SHA"
 
-          # Get all commits that were pushed (could be one commit or multiple from a merged PR)
-          COMMITS_TO_CHERRY_PICK=$(git rev-list --reverse "$BEFORE_COMMIT_SHA..$LATEST_COMMIT_SHA")
-          echo "Commits to cherry-pick:"
-          echo "$COMMITS_TO_CHERRY_PICK"
-
-          # For now, cherry-pick the latest commit only (we can extend this later for multiple commits)
-          COMMIT_TO_CHERRY_PICK="$LATEST_COMMIT_SHA"
-
-          # Check if this is a merge commit
-          if [ "$(git rev-list --parents -n1 "$COMMIT_TO_CHERRY_PICK" | wc -w)" -gt 2 ]; then
-            echo "note: $COMMIT_TO_CHERRY_PICK is a merge commit – will cherry-pick with -m 1"
-            echo "mainline_parent=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "mainline_parent=" >> "$GITHUB_OUTPUT"
+          # Validate SHA format
+          if [[ ! "$COMMIT_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Invalid commit SHA format: $COMMIT_SHA"
+            exit 1
           fi
-          echo "commit_sha=$COMMIT_TO_CHERRY_PICK" >> "$GITHUB_OUTPUT"
 
-          # Safely set the commit message and body outputs, which may contain special characters.
-          # We use the heredoc syntax for GITHUB_OUTPUT, which is the most robust method.
-          COMMIT_MESSAGE=$(git log -1 --format=%s "$LATEST_COMMIT_SHA")
-          DELIMITER_MSG=$(openssl rand -hex 16)
+          # Use GitHub API to detect if commit is associated with a PR
+          echo "Using GitHub API to check for associated PR..."
+
+          # Query the commits/{sha}/pulls API endpoint
+          if ! PR_RESPONSE=$(curl -sf \
+            --connect-timeout 5 \
+            --max-time 30 \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls"); then
+            echo "Failed to query GitHub API for commit $COMMIT_SHA"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if any PRs are associated with this commit
+          PR_COUNT=$(echo "$PR_RESPONSE" | jq -r 'length')
+
+          if [ "$PR_COUNT" -eq 0 ]; then
+            echo "No PR associated with commit $COMMIT_SHA - skipping"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Get the first (most relevant) PR from the response
+          if ! PR_DATA=$(echo "$PR_RESPONSE" | jq -r '.[0]'); then
+            echo "Failed to parse PR data from API response"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract PR details from API response with safe fallbacks
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number // ""')
+          PR_OWNER=$(echo "$PR_DATA" | jq -r '.head.repo.owner.login // .base.repo.owner.login // ""')
+          PR_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.name // .base.repo.name // ""')
+          BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.head.ref // "deleted-branch"')
+
+          # Use repository defaults when head repo is unavailable (fork deleted)
+          if [ -z "$PR_OWNER" ] || [ "$PR_OWNER" = "null" ]; then
+            PR_OWNER="${{ github.repository_owner }}"
+          fi
+          if [ -z "$PR_REPO" ] || [ "$PR_REPO" = "null" ]; then
+            PR_REPO="${{ github.event.repository.name }}"
+          fi
+          if [ -z "$BRANCH_NAME" ] || [ "$BRANCH_NAME" = "null" ]; then
+            BRANCH_NAME="deleted-branch"
+          fi
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "Invalid PR number from API response"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found PR associated with commit (with safe fallbacks applied):"
+          echo "PR Number: $PR_NUMBER"
+          echo "PR Owner: $PR_OWNER"
+          echo "PR Repo: $PR_REPO"
+          echo "Branch: $BRANCH_NAME"
+
+          echo "is_pr=true" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_owner=$PR_OWNER" >> "$GITHUB_OUTPUT"
+          echo "pr_repo=$PR_REPO" >> "$GITHUB_OUTPUT"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Get PR details via GitHub API
+        if: steps.check-pr.outputs.is_pr == 'true'
+        id: get-pr-details
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ steps.check-pr.outputs.pr_number }}"
+
+          # Get PR details from GitHub API with error handling
+          if ! PR_DATA=$(curl -sf \
+            --connect-timeout 5 \
+            --max-time 30 \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER"); then
+            echo "Failed to fetch PR data for PR #$PR_NUMBER"
+            exit 1
+          fi
+
+          # Extract relevant information with jq
+          if ! PR_TITLE=$(echo "$PR_DATA" | jq -r '.title // ""'); then
+            echo "Failed to extract PR title"
+            exit 1
+          fi
+
+          if ! PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login // ""'); then
+            echo "Failed to extract PR author"
+            exit 1
+          fi
+
+          if ! PR_BODY=$(echo "$PR_DATA" | jq -r '.body // ""'); then
+            echo "Failed to extract PR body"
+            exit 1
+          fi
+
+          # Use random delimiters to safely set multiline outputs
+          DELIMITER_TITLE=$(openssl rand -hex 16)
+          DELIMITER_AUTHOR=$(openssl rand -hex 16)
+          DELIMITER_BODY=$(openssl rand -hex 16)
+
           {
-            echo "commit_message<<$DELIMITER_MSG"
-            echo "$COMMIT_MESSAGE"
-            echo "$DELIMITER_MSG"
+            echo "pr_title<<$DELIMITER_TITLE"
+            echo "$PR_TITLE"
+            echo "$DELIMITER_TITLE"
           } >> "$GITHUB_OUTPUT"
 
-          COMMIT_BODY=$(git log -1 --format=%b "$LATEST_COMMIT_SHA")
-          DELIMITER_BODY=$(openssl rand -hex 16)
           {
-            echo "commit_body<<$DELIMITER_BODY"
-            echo "$COMMIT_BODY"
+            echo "pr_author<<$DELIMITER_AUTHOR"
+            echo "$PR_AUTHOR"
+            echo "$DELIMITER_AUTHOR"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "pr_body<<$DELIMITER_BODY"
+            echo "$PR_BODY"
             echo "$DELIMITER_BODY"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Attempt Cherry-pick and Prepare Branch
-        id: prepare_branch
+      - name: Setup Git configuration
+        if: steps.check-pr.outputs.is_pr == 'true'
         run: |
-          # Capture all workflow expansions into shell variables at the top.
-          # This improves readability and prevents shell re-interpretation issues.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare cherry-pick to cnv-4.99
+        if: steps.check-pr.outputs.is_pr == 'true'
+        id: cherry-pick
+        run: |
+          set -euo pipefail
+
           TARGET_BRANCH="cnv-4.99"
-          COMMIT_SHA="${{ steps.get_latest_commit.outputs.commit_sha }}"
-          COMMIT_MESSAGE_SHORT="${{ steps.get_latest_commit.outputs.commit_message }}"
-          MAINLINE_PARENT="${{ steps.get_latest_commit.outputs.mainline_parent }}"
-          TEMP_BRANCH_NAME="cherry-pick-auto/$COMMIT_SHA-${{ github.run_id }}"
-          STATUS="no_change" # Default status
+          COMMIT_SHA="${{ steps.check-pr.outputs.commit_sha }}"
+          PR_NUMBER="${{ steps.check-pr.outputs.pr_number }}"
 
-          echo "Attempting to cherry-pick $COMMIT_SHA to $TARGET_BRANCH on temporary branch $TEMP_BRANCH_NAME"
+          echo "Preparing to cherry-pick $COMMIT_SHA to $TARGET_BRANCH"
 
-          # Fetch the target branch to ensure it's up-to-date locally
-          git fetch origin "$TARGET_BRANCH"
-
-          # Create and switch to the new temporary branch from the target branch
-          git checkout -b "$TEMP_BRANCH_NAME" "origin/$TARGET_BRANCH"
-
-          # Prepare cherry-pick options
-          MAINLINE_OPT=""
-          if [[ -n "$MAINLINE_PARENT" ]]; then
-            MAINLINE_OPT="-m $MAINLINE_PARENT"
+          # Fetch and checkout target branch
+          if ! git fetch origin "$TARGET_BRANCH"; then
+            echo "Failed to fetch target branch: $TARGET_BRANCH"
+            exit 1
           fi
 
-          # First check if the commit already exists on the target branch
+          if ! git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"; then
+            echo "Failed to checkout target branch: $TARGET_BRANCH"
+            exit 1
+          fi
+
+          # Check if commit was already cherry-picked via -x trailer
+          if git log --grep="(cherry picked from commit $COMMIT_SHA)" --oneline HEAD | grep -q "(cherry picked from commit $COMMIT_SHA)"; then
+            echo "Commit $COMMIT_SHA already cherry-picked to $TARGET_BRANCH (found -x trailer) - skipping"
+            echo "skip_cherry_pick=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if commit already exists on target branch
           if git merge-base --is-ancestor "$COMMIT_SHA" HEAD; then
             echo "Commit $COMMIT_SHA already exists on $TARGET_BRANCH - skipping"
-            STATUS="no_change"
-          else
-            # Attempt to cherry-pick the commit. We use --no-commit to inspect the result.
-            if git cherry-pick $MAINLINE_OPT --no-commit "$COMMIT_SHA"; then
-              # Cherry-pick command succeeded. Now check if there are actual changes.
-              # `git diff --cached --quiet` exits with 1 if there are staged changes, 0 otherwise.
-              if ! git diff --cached --quiet; then
-                echo "Cherry-pick applied successfully with changes. Committing."
-                git commit -m "Cherry-pick: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-                STATUS="success"
-              else
-                echo "Cherry-pick was successful but resulted in no changes."
-                # Abort the cherry-pick to clean up the repository state (.git/CHERRY_PICK_HEAD).
-                git cherry-pick --quit
-                STATUS="no_change"
-              fi
-            else
-              # Cherry-pick command failed, indicating a conflict.
-              echo "Cherry-pick resulted in conflicts. Committing conflicted state for manual resolution."
-              git add .
-              git commit -m "Cherry-pick Conflicts: $COMMIT_MESSAGE_SHORT (from $COMMIT_SHA)"
-              STATUS="conflicted"
-            fi
+            echo "skip_cherry_pick=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-          echo "Final status: $STATUS"
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "skip_cherry_pick=false" >> "$GITHUB_OUTPUT"
 
-          # Set the branch name output for all cases where we need to create a PR
-          if [[ "$STATUS" == "success" || "$STATUS" == "conflicted" ]]; then
-            echo "temp_branch_name=$TEMP_BRANCH_NAME" >> "$GITHUB_OUTPUT"
-            echo "Branch prepared for PR creation: $TEMP_BRANCH_NAME"
+          # Attempt cherry-pick to working directory (let peter-evans handle the rest)
+          echo "Attempting to cherry-pick $COMMIT_SHA"
+
+          # Check if this is a merge commit (has multiple parents)
+          PARENT_COUNT=$(git rev-list --parents -n 1 "$COMMIT_SHA" | wc -w)
+          PARENT_COUNT=$((PARENT_COUNT - 1))  # Subtract 1 because rev-list includes the commit itself
+
+          # Build cherry-pick command based on commit type
+          if [ "$PARENT_COUNT" -gt 1 ]; then
+            # Merge commit - use -m 1 to specify mainline parent
+            CHERRY_PICK_CMD="git cherry-pick --no-commit -x -m 1 $COMMIT_SHA"
           else
-            echo "No PR will be created as there are no changes."
+            # Regular commit - no need for -m flag
+            CHERRY_PICK_CMD="git cherry-pick --no-commit -x $COMMIT_SHA"
           fi
 
-      - name: Create Pull Request for Successful Cherry-pick
-        if: steps.prepare_branch.outputs.status == 'success'
+          echo "Commit has $PARENT_COUNT parent(s), using command: $CHERRY_PICK_CMD"
+
+          if $CHERRY_PICK_CMD; then
+            echo "Cherry-pick successful - changes ready for PR creation"
+            echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Cherry-pick failed with conflicts - leaving in working tree for peter-evans"
+
+            # Get list of conflicted files
+            CONFLICTED_FILES=$(git diff --name-only --diff-filter=U | tr '\n' ' ' || echo "Unable to determine conflicted files")
+            echo "Conflicted files: $CONFLICTED_FILES"
+
+            # Use random delimiter for conflicted files output
+            DELIMITER_CONFLICTS=$(openssl rand -hex 16)
+            {
+              echo "conflicted_files<<$DELIMITER_CONFLICTS"
+              echo "$CONFLICTED_FILES"
+              echo "$DELIMITER_CONFLICTS"
+            } >> "$GITHUB_OUTPUT"
+
+            echo "has_conflicts=true" >> "$GITHUB_OUTPUT"
+
+            # Don't commit conflicts - let peter-evans handle the working tree state
+            # The action will detect the conflicts and create appropriate commit
+          fi
+
+      - name: Create PR for successful cherry-pick
+        if: steps.check-pr.outputs.is_pr == 'true' && steps.cherry-pick.outputs.skip_cherry_pick == 'false' && steps.cherry-pick.outputs.has_conflicts == 'false'
+        id: create-pr-success
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.WORKFLOW_TOKEN }}
-          push-to-fork: false
-          title: "Auto Cherry-pick: ${{ steps.get_latest_commit.outputs.commit_message }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: "cherry-pick-pr-${{ steps.check-pr.outputs.pr_number }}-${{ github.run_id }}"
+          title: "Cherry-pick: ${{ steps.get-pr-details.outputs.pr_title }} (PR #${{ steps.check-pr.outputs.pr_number }})"
           body: |
-            ## Automated Cherry-pick
+            ## 🍒 Automated Cherry-pick from PR
 
-            This Pull Request contains the automatically cherry-picked commit:
-            `${{ steps.get_latest_commit.outputs.commit_sha }}`
-            "${{ steps.get_latest_commit.outputs.commit_message }}"
+            This PR contains the cherry-pick of **PR #${{ steps.check-pr.outputs.pr_number }}** from `${{ steps.check-pr.outputs.pr_owner }}/${{ steps.check-pr.outputs.pr_repo }}`.
 
-            The cherry-pick was applied cleanly to `cnv-4.99`. Please review and merge.
+            **Original PR:** ${{ steps.get-pr-details.outputs.pr_title }}
+            **Author:** @${{ steps.get-pr-details.outputs.pr_author }}
+            **Merge Commit:** ${{ steps.check-pr.outputs.commit_sha }}
 
-            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }}
-            ---
-            ${{ steps.get_latest_commit.outputs.commit_body }}
-          branch: ${{ steps.prepare_branch.outputs.temp_branch_name }}
+            The cherry-pick was applied cleanly to `cnv-4.99` without conflicts.
+
+            **Original PR Link:** ${{ github.server_url }}/${{ github.repository }}/pull/${{ steps.check-pr.outputs.pr_number }}
+            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.check-pr.outputs.commit_sha }}
+
+            ### Original PR Description
+            ${{ steps.get-pr-details.outputs.pr_body }}
           base: "cnv-4.99"
           delete-branch: true
+          labels: cherry-pick-to-4.99
 
-      - name: Create Pull Request for Conflicted Cherry-pick
-        if: steps.prepare_branch.outputs.status == 'conflicted'
+      - name: Check if PR was created or already exists
+        if: steps.check-pr.outputs.is_pr == 'true' && steps.cherry-pick.outputs.skip_cherry_pick == 'false' && steps.cherry-pick.outputs.has_conflicts == 'false'
+        run: |
+          if [ "${{ steps.create-pr-success.outputs.pull-request-operation }}" = "none" ]; then
+            echo "No changes were found to create a PR - changes might already exist on target branch"
+          else
+            echo "PR created successfully: ${{ steps.create-pr-success.outputs.pull-request-url }}"
+          fi
+
+      - name: Create draft PR for conflicted cherry-pick
+        if: steps.check-pr.outputs.is_pr == 'true' && steps.cherry-pick.outputs.skip_cherry_pick == 'false' && steps.cherry-pick.outputs.has_conflicts == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.WORKFLOW_TOKEN }}
-          push-to-fork: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: "cherry-pick-pr-${{ steps.check-pr.outputs.pr_number }}-${{ github.run_id }}-conflicts"
+          title: "🚨 Cherry-pick Conflicts: ${{ steps.get-pr-details.outputs.pr_title }} (PR #${{ steps.check-pr.outputs.pr_number }})"
+          body: |
+            ## ⚠️ Cherry-pick Conflicts - Manual Resolution Required
+
+            The automatic cherry-pick of **PR #${{ steps.check-pr.outputs.pr_number }}** from `${{ steps.check-pr.outputs.pr_owner }}/${{ steps.check-pr.outputs.pr_repo }}` resulted in conflicts.
+
+            **Original PR:** ${{ steps.get-pr-details.outputs.pr_title }}
+            **Author:** @${{ steps.get-pr-details.outputs.pr_author }}
+            **Merge Commit:** ${{ steps.check-pr.outputs.commit_sha }}
+
+            ### 🔧 How to resolve:
+            1. Check out this branch locally: `git fetch origin && git checkout cherry-pick-pr-${{ steps.check-pr.outputs.pr_number }}-${{ github.run_id }}-conflicts`
+            2. Resolve conflicts in the affected files
+            3. Test your changes thoroughly
+            4. Commit your resolution: `git add . && git commit`
+            5. Push changes: `git push origin cherry-pick-pr-${{ steps.check-pr.outputs.pr_number }}-${{ github.run_id }}-conflicts`
+            6. Mark this PR as ready for review
+
+            ### 📁 Files with conflicts:
+            ```
+            ${{ steps.cherry-pick.outputs.conflicted_files }}
+            ```
+
+            **Original PR Link:** ${{ github.server_url }}/${{ github.repository }}/pull/${{ steps.check-pr.outputs.pr_number }}
+            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.check-pr.outputs.commit_sha }}
+
+            ### Original PR Description
+            ${{ steps.get-pr-details.outputs.pr_body }}
+          base: "cnv-4.99"
+          delete-branch: true
           draft: true
-          labels: "needs-manual-cherry-pick"
-          title: "Cherry-pick Conflicts: ${{ steps.get_latest_commit.outputs.commit_message }}"
-          body: |
-            ## Cherry-pick Failed - Manual Intervention Required
-
-            The automatic cherry-pick of commit `${{ steps.get_latest_commit.outputs.commit_sha }}`
-            "${{ steps.get_latest_commit.outputs.commit_message }}" from `main` to `cnv-4.99` has resulted in conflicts.
-
-            This Pull Request has been created with the conflicted state. Please resolve the conflicts
-            and merge this PR into `cnv-4.99`.
-
-            **Original Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.get_latest_commit.outputs.commit_sha }}
-            ---
-            ${{ steps.get_latest_commit.outputs.commit_body }}
-          branch: ${{ steps.prepare_branch.outputs.temp_branch_name }}
-          base: "cnv-4.99"
-          delete-branch: true
+          labels: cherry-pick-conflicts
