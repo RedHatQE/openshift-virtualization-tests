@@ -19,8 +19,7 @@ def run_must_gather(
     command_timeout: int = TIMEOUT_20MIN,
     since: str | None = None,
 ) -> str:
-    """
-    Run must gather command with an option to create target directory.
+    """Run must gather command with an option to create target directory.
 
     Args:
         image_url (str, optional): must-gather plugin image to run.
@@ -89,8 +88,7 @@ def collect_must_gather(
     node_name="",
     command_timeout=TIMEOUT_20MIN,
 ):
-    """
-    Run must gather command and puts the content in directory.
+    """Run must gather command and puts the content in directory.
 
     Args:
         must_gather_tmpdir (str): tmp dir for must gather data

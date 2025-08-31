@@ -15,8 +15,7 @@ IfaceTuple = namedtuple("IfaceTuple", ["ip_address", "mac_address", "name"])
 
 
 def vm_network_config(mac_pool, all_nads, end_ip_octet, mac_uid):
-    """
-    Args:
+    """Args:
         end_ip_octet(int): int in range [1,254]
         mac_uid(str): string in range ['0','f'] in hex
 

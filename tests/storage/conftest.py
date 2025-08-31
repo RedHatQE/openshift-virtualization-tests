@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Pytest conftest file for CNV CDI tests
-"""
+"""Pytest conftest file for CNV CDI tests"""
 
 import base64
 import logging
@@ -142,8 +140,7 @@ def internal_http_secret(namespace):
 
 @pytest.fixture(scope="session")
 def internal_http_deployment(cnv_tests_utilities_namespace):
-    """
-    Deploy internal HTTP server Deployment into the cnv_tests_utilities_namespace namespace.
+    """Deploy internal HTTP server Deployment into the cnv_tests_utilities_namespace namespace.
     This Deployment deploys a pod that runs an HTTP server
     """
     with Deployment(
@@ -198,8 +195,7 @@ def skip_when_hpp_no_waitforfirstconsumer(storage_class_matrix_hpp_matrix__modul
 
 @pytest.fixture()
 def uploadproxy_route_deleted(hco_namespace):
-    """
-    Delete uploadproxy route from kubevirt-hyperconverged namespace.
+    """Delete uploadproxy route from kubevirt-hyperconverged namespace.
 
     This scales down cdi-operator replicas to 0 so that the route is not auto-created by the cdi-operator pod.
     Once the cdi-operator is terminated, route is deleted to perform the test.
@@ -433,9 +429,7 @@ def data_volume_multi_hpp_storage(
 
 @pytest.fixture(scope="session")
 def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes):
-    """
-    Get an HPP storage class if there is any in the cluster
-    """
+    """Get an HPP storage class if there is any in the cluster"""
     for storage_class in cluster_storage_classes:
         if storage_class.name in HPP_STORAGE_CLASSES:
             return storage_class
@@ -481,9 +475,7 @@ def cirros_vm_for_snapshot(
     cirros_vm_name,
     cirros_dv_for_snapshot_dict,
 ):
-    """
-    Create a VM with a DV that supports snapshots
-    """
+    """Create a VM with a DV that supports snapshots"""
     dv_metadata = cirros_dv_for_snapshot_dict["metadata"]
     with VirtualMachineForTests(
         client=admin_client,
@@ -506,8 +498,7 @@ def snapshots_with_content(
     admin_client,
     cirros_vm_for_snapshot,
 ):
-    """
-    Creates a requested number of snapshots with content
+    """Creates a requested number of snapshots with content
     The default behavior of the fixture is creating an offline
     snapshot unless {online_vm = True} declared in the test
     """

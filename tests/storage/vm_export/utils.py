@@ -1,6 +1,4 @@
-"""
-Pytest utils file for CNV VMExport tests
-"""
+"""Pytest utils file for CNV VMExport tests"""
 
 import io
 import logging

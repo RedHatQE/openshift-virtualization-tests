@@ -105,8 +105,7 @@ VM_ERROR_STATUSES = [
 
 
 def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_12MIN) -> bool:
-    """
-    Wait until guest agent report VMI network interfaces.
+    """Wait until guest agent report VMI network interfaces.
 
     Args:
         vmi (VirtualMachineInstance): VMI object.
@@ -136,8 +135,7 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
 
 
 def generate_cloud_init_data(data):
-    """
-    Generate cloud init data from a dictionary.
+    """Generate cloud init data from a dictionary.
 
     Args:
         data (dict): cloud init data to set under desired section.
@@ -182,7 +180,6 @@ def generate_cloud_init_data(data):
 
 def merge_dicts(source_dict, target_dict):
     """Merge nested source_dict into target_dict"""
-
     for key, value in source_dict.items():
         if isinstance(value, dict):
             node = target_dict.setdefault(key, {})
@@ -267,8 +264,7 @@ class VirtualMachineForTests(VirtualMachine):
         vm_affinity=None,
         annotations=None,
     ):
-        """
-        Virtual machine creation
+        """Virtual machine creation
 
         Args:
             name (str): VM name
@@ -980,8 +976,7 @@ class VirtualMachineForTests(VirtualMachine):
         ip_family_policy=None,
         ip_families=None,
     ):
-        """
-        service_type is set with K8S default service type (ClusterIP)
+        """service_type is set with K8S default service type (ClusterIP)
         service_ip - relevant for node port; default will be set to vm node IP
         ip_families - list of IP families to be supported in the service (IPv4/6 or both)
         ip_family_policy - SingleStack, RequireDualStack or PreferDualStack
@@ -1158,8 +1153,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         additional_labels=None,
         vm_affinity=None,
     ):
-        """
-        VM creation using common templates.
+        """VM creation using common templates.
 
         Args:
             eviction_strategy (str, optional): valid options("None", "LiveMigrate", "LiveMigrateIfPossible", "External")
@@ -1375,8 +1369,7 @@ def vm_console_run_commands(
     timeout: int = TIMEOUT_1MIN,
     return_code_validation: bool = True,
 ) -> dict[str, list[str]]:
-    """
-    Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
+    """Run a list of commands inside VM and (if verify_commands_output) check all commands return 0.
     If return code other than 0 then it will break execution and raise exception.
 
     Args:
@@ -1546,8 +1539,7 @@ def wait_for_console(vm):
 
 
 def generate_dict_from_yaml_template(stream, **kwargs):
-    """
-    Generate YAML from yaml template.
+    """Generate YAML from yaml template.
 
     Args:
         stream (io.StringIO): Yaml file content.
@@ -1579,10 +1571,7 @@ class MissingTemplateVariables(Exception):
 
 
 def wait_for_windows_vm(vm, version, timeout=TIMEOUT_25MIN):
-    """
-    Samples Windows VM; wait for it to complete the boot process.
-    """
-
+    """Samples Windows VM; wait for it to complete the boot process."""
     LOGGER.info(f"Windows VM {vm.name} booting up, will attempt to access it up to {round(timeout / 60)} minutes.")
 
     sampler = TimeoutSampler(
@@ -1614,8 +1603,7 @@ def get_guest_os_info(vmi):
 
 
 def get_windows_os_dict(windows_version: str) -> dict[str, Any]:
-    """
-    Returns a dictionary of Windows os information from the system_windows_os_matrix in py_config.
+    """Returns a dictionary of Windows os information from the system_windows_os_matrix in py_config.
 
     Args:
         windows_version: The version of windows to get the os information for.
@@ -1641,8 +1629,7 @@ def get_windows_os_dict(windows_version: str) -> dict[str, Any]:
 
 
 def get_rhel_os_dict(rhel_version: str) -> dict[str, Any]:
-    """
-    Returns a dictionary of RHEL os information from the system_rhel_os_matrix in py_config.
+    """Returns a dictionary of RHEL os information from the system_rhel_os_matrix in py_config.
 
     Args:
         rhel_version: The version of RHEL to get the os information for.
@@ -1693,8 +1680,7 @@ def wait_for_running_vm(
     check_ssh_connectivity: bool = True,
     ssh_timeout: int = TIMEOUT_2MIN,
 ) -> None:
-    """
-    Wait for the VMI to be in Running state.
+    """Wait for the VMI to be in Running state.
 
     Args:
         vm (VirtualMachine): VM object.
@@ -1728,8 +1714,7 @@ def running_vm(
     wait_for_cloud_init=False,
     dv_wait_timeout=TIMEOUT_30MIN,
 ):
-    """
-    Wait for the VMI to be in Running state.
+    """Wait for the VMI to be in Running state.
 
     Args:
         vm (VirtualMachine): VM object.
@@ -1744,9 +1729,7 @@ def running_vm(
     """
 
     def _wait_for_dv_success(_vm, _vm_dv_volumes_names_list, _dv_wait_timeout):
-        """
-        In case VM is not starting because it's DV is not ready, wait for DV to be succeeded.
-        """
+        """In case VM is not starting because it's DV is not ready, wait for DV to be succeeded."""
         assert_vm_not_error_status(vm=vm)
 
         LOGGER.info(f"VM {_vm.name} status before dv check: {_vm.printable_status}")
@@ -1810,8 +1793,7 @@ def migrate_vm_and_verify(
     check_ssh_connectivity: bool = False,
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
-    """
-    Create a migration instance. You may choose to wait for migration
+    """Create a migration instance. You may choose to wait for migration
     success or not.
 
     Args:
@@ -1931,8 +1913,7 @@ def vm_cloud_init_disk(vm_spec):
 
 
 def prepare_cloud_init_user_data(section, data):
-    """
-    Generates userData dict to be used with cloud init and add data under the required section.
+    """Generates userData dict to be used with cloud init and add data under the required section.
 
     section (str): key name under userData
     data: value to be added under "section" key
@@ -2046,8 +2027,7 @@ def create_vm_cloning_job(
     new_mac_addresses=None,
     new_smbios_serial=None,
 ):
-    """
-    Create VirtualMachineClone object.
+    """Create VirtualMachineClone object.
 
     Args:
         name (str): the name of cloning job
@@ -2075,9 +2055,7 @@ def create_vm_cloning_job(
 
 
 def wait_for_node_schedulable_status(node, status, timeout=60):
-    """
-    Wait for node status to be ready (status=True) or unschedulable (status=False)
-    """
+    """Wait for node status to be ready (status=True) or unschedulable (status=False)"""
     LOGGER.info(f"Wait for node {node.name} to be {Node.Status.READY if status else Node.Status.SCHEDULING_DISABLED}.")
 
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: node.instance.spec.unschedulable)
@@ -2146,8 +2124,7 @@ def get_template_by_labels(admin_client, template_labels):
 
 
 def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=15):
-    """
-    Waits for updated values in KV CR configuration
+    """Waits for updated values in KV CR configuration
 
     Args:
         admin_client (:obj:`DynamicClient`): DynamicClient object
@@ -2212,9 +2189,7 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
 
 
 def check_migration_process_after_node_drain(dyn_client, vm):
-    """
-    Wait for migration process to succeed and verify that VM indeed moved to new node.
-    """
+    """Wait for migration process to succeed and verify that VM indeed moved to new node."""
     vmi_old_uid = vm.vmi.instance.metadata.uid
     source_node = vm.privileged_vmi.virt_launcher_pod.node
     LOGGER.info(f"The VMI was running on {source_node.name}")
@@ -2254,9 +2229,7 @@ def wait_for_kubevirt_conditions(
     condition_key1="type",
     condition_key2="status",
 ):
-    """
-    Checking Kubevirt status.conditions
-    """
+    """Checking Kubevirt status.conditions"""
     utilities.infra.wait_for_consistent_resource_conditions(
         dynamic_client=admin_client,
         namespace=hco_namespace.name,
@@ -2471,9 +2444,7 @@ def get_nodes_gpu_info(util_pods, node):
 
 
 def assert_linux_efi(vm: VirtualMachineForTests) -> None:
-    """
-    Verify guest OS is using EFI.
-    """
+    """Verify guest OS is using EFI."""
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
 
 
@@ -2502,11 +2473,9 @@ def validate_pause_optional_migrate_unpause_linux_vm(
 
 
 def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -> None:
-    """
-    Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
+    """Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
     """
-
     LOGGER.info("Verify VM XML - SMBIOS values.")
     smbios_vm = vm.privileged_vmi.xml_dict["domain"]["sysinfo"]["system"]["entry"]
     smbios_vm_dict = {entry["@name"]: entry["#text"] for entry in smbios_vm}
@@ -2552,8 +2521,7 @@ def update_vm_efi_spec_and_restart(
 
 
 def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    supportedCommands - removed as the data is used for internal guest agent validations
+    """SupportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
     """
@@ -2565,8 +2533,7 @@ def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
 
 # Guest agent info gather functions.
 def get_virtctl_os_info(vm: VirtualMachineForTests) -> dict[str, Any] | None:
-    """
-    Returns OS data dict in format:
+    """Returns OS data dict in format:
     {
         "guestAgentVersion": guestAgentVersion,
         "hostname": hostname,
@@ -2595,8 +2562,7 @@ def get_virtctl_os_info(vm: VirtualMachineForTests) -> dict[str, Any] | None:
 
 
 def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> bool:
-    """
-    Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
+    """Validates that virtctl guest info is available over time. (BZ 1886453 <skip-bug-check>)
 
     Returns:
         bool: True - if virtctl guest info is available after timeout else False
@@ -2622,8 +2588,7 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
-    """
-    Get username and password from cloud-init data.
+    """Get username and password from cloud-init data.
 
     Args:
         vm_volumes (list[dict[str, Any]]): List of volumes with cloud-init data.
@@ -2631,7 +2596,6 @@ def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple
     Returns:
             tuple[str, str]: Username and password. If not found, empty strings.
     """
-
     if cloud_init := [volume[CLOUD_INIT_NO_CLOUD] for volume in vm_volumes if volume.get(CLOUD_INIT_NO_CLOUD)]:
         if (user_data := cloud_init[0].get("userData")) and (
             _match := re.search(r"user: (?P<user>.*)\npassword: (?P<password>.*)\n", user_data)

@@ -1,6 +1,4 @@
-"""
-Pytest conftest file for CNV Storage restricted namespace cloning tests
-"""
+"""Pytest conftest file for CNV Storage restricted namespace cloning tests"""
 
 import pytest
 from ocp_resources.cluster_role import ClusterRole

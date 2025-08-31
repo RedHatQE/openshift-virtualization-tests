@@ -11,8 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def remote_kubeconfig_export_path(request):
-    """
-    Resolve path to the remote cluster kubeconfig.
+    """Resolve path to the remote cluster kubeconfig.
     First check for CLI argument, then fall back to environment variable.
     Fail if neither is provided or file does not exist.
     """
@@ -33,7 +32,5 @@ def remote_kubeconfig_export_path(request):
 
 @pytest.fixture(scope="session")
 def remote_admin_client(remote_kubeconfig_export_path):  # skip-unused-code
-    """
-    Get DynamicClient for a remote cluster
-    """
+    """Get DynamicClient for a remote cluster"""
     return get_client(config_file=remote_kubeconfig_export_path)

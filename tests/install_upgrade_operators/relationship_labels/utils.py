@@ -12,8 +12,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def verify_component_labels_by_resource(component, expected_component_labels):
-    """
-    extract the expected & actual labels and call for comparison function expected against actual
+    """Extract the expected & actual labels and call for comparison function expected against actual
 
     Args:
         component (obj) : cnv deployment / related object
@@ -55,8 +54,7 @@ def assert_expected_vs_actual_labels_and_values_get_mismatches(
     expected_labels,
     related_object_name,
 ):
-    """
-    Compare label actual value against the expected value and update the mismatch results dict
+    """Compare label actual value against the expected value and update the mismatch results dict
 
     Args:
         actual_labels (dict): actual labels-values pairs from the cluster

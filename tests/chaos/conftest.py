@@ -224,18 +224,17 @@ def chaos_worker_background_process(
     workers,
     utility_pods_for_chaos_tests,
 ):
-    """
-    Creates a process that, when started,
+    """Creates a process that, when started,
     executes a command on the worker node that has the label "chaos=true".
 
     request.params:
         max_duration (int): Used for commands with timeouts.
         background_command (str): The command that will be executed inside the node.
         process_name (str): Name for the background process.
+
     Returns:
         multiprocessing.Process: Process that execute a command inside a worker node .
     """
-
     process_name = request.param["process_name"]
     target_nodes = get_nodes_with_label(nodes=workers, label=CHAOS_LABEL_KEY)
     assert target_nodes, f"no nodes with label:{CHAOS_LABEL_KEY} were found"
@@ -316,8 +315,7 @@ def utility_daemonset_for_chaos_tests(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
 ):
-    """
-    Deploy utility daemonset into the cnv-tests-utilities namespace.
+    """Deploy utility daemonset into the cnv-tests-utilities namespace.
     This daemonset deploys a pod on every node with the label "chaos=true" and the main usage
     is to run stress-ng commands on the hosts.
     """

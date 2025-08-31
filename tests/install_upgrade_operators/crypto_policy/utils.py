@@ -36,8 +36,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_resource_crypto_policy(resource, name, key_name, namespace=None):
-    """
-    This function is used to get crypto policy settings associated with a resource
+    """This function is used to get crypto policy settings associated with a resource
 
     Args:
         resource (Resource): Resource kind
@@ -55,8 +54,7 @@ def get_resource_crypto_policy(resource, name, key_name, namespace=None):
 
 
 def get_resources_crypto_policy_dict(resources_dict, resources=MANAGED_CRS_LIST):
-    """
-    This function collects crypto policy corresponding to each resources in the list
+    """This function collects crypto policy corresponding to each resources in the list
     'resources'
 
     Args:
@@ -111,8 +109,7 @@ def assert_crypto_policy_propagated_to_components(
     resources_dict,
     updated_resource_kind,
 ):
-    """
-    This function is used to assert whether the updated crypto policy settings
+    """This function is used to assert whether the updated crypto policy settings
     propagated to all CNV components - CDI, KubeVirt, CNAO & SSP
 
     Args:

@@ -49,8 +49,7 @@ def node_placement_labels(
     control_plane_nodes,
     workers,
 ):
-    """
-    Set Infra and Workloads Labels on the worker nodes and
+    """Set Infra and Workloads Labels on the worker nodes and
     Set Operators Labels on the control plane nodes.
 
     This would help with Installing CNV components on specific nodes.
@@ -206,9 +205,7 @@ def hco_pods_per_nodes_after_altering_placement(admin_client, hco_namespace, alt
 
 @pytest.fixture(scope="class")
 def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverged_resource_scope_class):
-    """
-    Update HCO CR with infrastructure and workloads spec.
-    """
+    """Update HCO CR with infrastructure and workloads spec."""
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
     initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
     initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
@@ -231,8 +228,7 @@ def alter_np_configuration(
     hco_namespace,
     hyperconverged_resource_scope_function,
 ):
-    """
-    Update HCO CR with infrastructure and workloads spec.
+    """Update HCO CR with infrastructure and workloads spec.
     By design, this fixture will not revert back the configuration
     of HCO CR to its initial configuration so that it can be used in
     subsequent tests.
@@ -294,9 +290,7 @@ def cnv_subscription_scope_class(admin_client, hco_namespace):
 
 @pytest.fixture()
 def cnv_subscription_scope_function(admin_client, hco_namespace):
-    """
-    Retrieves the CNV subscription
-    """
+    """Retrieves the CNV subscription"""
     return get_subscription(
         admin_client=admin_client,
         namespace=hco_namespace.name,
@@ -306,9 +300,7 @@ def cnv_subscription_scope_function(admin_client, hco_namespace):
 
 @pytest.fixture(scope="class")
 def cnv_subscription_resource_before_np(admin_client, hco_namespace, cnv_subscription_scope_class):
-    """
-    Update HCO CR with infrastructure and workloads spec.
-    """
+    """Update HCO CR with infrastructure and workloads spec."""
     LOGGER.info("Fetching CNV Subscription to save its initial node placement configuration ")
     initial_config = cnv_subscription_scope_class.instance.to_dict()["spec"].get("config")
     yield cnv_subscription_scope_class
@@ -328,8 +320,7 @@ def alter_cnv_subscription_configuration(
     hco_namespace,
     cnv_subscription_scope_function,
 ):
-    """
-    Update CNV subscription with node placement configurations.
+    """Update CNV subscription with node placement configurations.
     By design, this fixture will not revert back the configuration
     of CNV subscription to its initial configuration so that it can
     be used in subsequent tests.

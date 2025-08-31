@@ -41,8 +41,8 @@ def create_checkup_job(
     include_uid=False,
     client=None,
 ):
-    """
-    Creates a VM checkup job.
+    """Creates a VM checkup job.
+
     Args:
         vm_checkup_image (str): The image of the VM checkup. Example of the expected image:
             'registry.redhat.io/container-native-virtualization/vm-network-latency-checkup-rhel9@sha256:<sha_content>'
@@ -150,8 +150,7 @@ def compose_configmap_data(
     dpdk_vmgen_container_diskimage=None,
     dpdk_vmtest_container_diskimage=None,
 ):
-    """
-    Compose a dictionary with the ConfigMap data.
+    """Compose a dictionary with the ConfigMap data.
 
     Args:
         network_attachment_definition_name (str): NAD name.

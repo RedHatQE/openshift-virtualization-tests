@@ -86,8 +86,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
         dns_resolver=None,
         bridge_state=IFACE_UP_STATE,
     ):
-        """
-        Create bridge on nodes (according node_selector, all if no selector presents)
+        """Create bridge on nodes (according node_selector, all if no selector presents)
 
         Args:
             name (str): Policy name.
@@ -632,15 +631,12 @@ class EthernetNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
 
 
 def sriov_network_dict(namespace, network):
-    """
-    This function returns sriov network dictionary passed as an argument during vm creation
-    """
+    """This function returns sriov network dictionary passed as an argument during vm creation"""
     return {network.name: f"{namespace.name}/{network.name}"}
 
 
 class MacPool:
-    """
-    Class to manage the mac addresses pool.
+    """Class to manage the mac addresses pool.
     to get this class, use mac_pool fixture.
     whenever you create a VM, before yield, call: mac_pool.append_macs(vm)
     and after yield, call: mac_pool.remove_macs(vm).
@@ -700,8 +696,7 @@ def get_vmi_mac_address_by_iface_name(vmi, iface_name):
 
 
 def cloud_init_network_data(data):
-    """
-    Generate cloud init network data.
+    """Generate cloud init network data.
     https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html
 
     data (dict): Dict of interface name and ip addresses.
@@ -724,8 +719,7 @@ def cloud_init_network_data(data):
 
 
 def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interface=None, windows=False):
-    """
-    Ping from source VM to destination IP.
+    """Ping from source VM to destination IP.
 
     Args:
         src_vm: Source VM to execute the ping from.
@@ -779,10 +773,9 @@ def assert_ping_successful(
 
 
 def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None):
-    """
-    Attempt to find an IP in one of 2 possible sources - VirtualMachine or virt-handler Pod.
+    """Attempt to find an IP in one of 2 possible sources - VirtualMachine or virt-handler Pod.
 
-     Args:
+    Args:
         vm (object): the VM which IP address is requested
         virt_handler_pod (pod): a virt-handler pod which IP address is requested
         family (str): IP version requested - "ipv4" or "ipv6"
@@ -803,8 +796,7 @@ def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None):
 
 
 def get_valid_ip_address(dst_ip, family):
-    """
-    Return the IP address string if the input address is either IPv4 or IPv6 address, else None.
+    """Return the IP address string if the input address is either IPv4 or IPv6 address, else None.
 
     Args:
         family (str): IP version requested - "ipv4" or "ipv6"
@@ -819,8 +811,7 @@ def get_valid_ip_address(dst_ip, family):
 
 
 def ip_version_data_from_matrix(request):
-    """
-    Check if fixture ip_stack_version_matrix__<scope>__ is used in the flow, to indicate whether
+    """Check if fixture ip_stack_version_matrix__<scope>__ is used in the flow, to indicate whether
     it's a dual-stack test or not.
 
     Args:

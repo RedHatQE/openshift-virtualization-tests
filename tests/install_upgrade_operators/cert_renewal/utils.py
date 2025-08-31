@@ -31,8 +31,7 @@ API_SERVICES = [
 
 
 def get_certificates_validity_period_and_checkend_result(hco_namespace_name, tmpdir, secrets_to_skip, seconds=0):
-    """
-    Get CNV certificates dates
+    """Get CNV certificates dates
 
     Args:
         hco_namespace_name (str): HCO namespace string
@@ -77,8 +76,7 @@ def get_certificates_validity_period_and_checkend_result(hco_namespace_name, tmp
 
 
 def get_base64_decoded_certificate(certificate_data):
-    """
-    Decode the Base64 certificate
+    """Decode the Base64 certificate
 
     Args:
          certificate_data (str): raw certificate string
@@ -90,8 +88,7 @@ def get_base64_decoded_certificate(certificate_data):
 
 
 def dump_certificates_to_files(certificates_filenames_dict):
-    """
-    Dump the certificates PEM content to file in order to files in order to later on use them in openssl command
+    """Dump the certificates PEM content to file in order to files in order to later on use them in openssl command
 
     Args:
         certificates_filenames_dict (dict): dict of certificates filenames and data (filename as key, data as value)
@@ -102,8 +99,7 @@ def dump_certificates_to_files(certificates_filenames_dict):
 
 
 def wait_for_certificates_renewal(hco_namespace, initial_certificates_dates, secrets_to_skip, tmpdir):
-    """
-    Wait for certificate renewal to occur, by practically comparing the actual certificates dates (notBefore/notAfter)
+    """Wait for certificate renewal to occur, by practically comparing the actual certificates dates (notBefore/notAfter)
     to the initial certificate data.
 
     Args:
@@ -152,8 +148,7 @@ def verify_certificates_dates_identical_to_initial_dates(
     secrets_to_skip,
     tmpdir,
 ):
-    """
-    Verifies (in intervals) that the actual certificates dates are identical to the initial dates
+    """Verifies (in intervals) that the actual certificates dates are identical to the initial dates
 
     Args:
         hco_namespace (Namespace): HCO namespace

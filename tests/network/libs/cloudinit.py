@@ -15,8 +15,7 @@ class MatchSelector:
 
 @dataclass
 class EthernetDevice:
-    """
-    Ethernet Device
+    """Ethernet Device
 
     Example:
         addresses:
@@ -35,8 +34,7 @@ class EthernetDevice:
 
 @dataclass
 class NetworkData:
-    """
-    Cloud init network data.
+    """Cloud init network data.
     https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html
 
     Example:
@@ -73,8 +71,7 @@ def asyaml(no_cloud: NetworkData | UserData) -> str:
 
 
 def format_cloud_config(userdata: UserData) -> str:
-    """
-    Formats UserData as a cloud-init '#cloud-config' file.
+    """Formats UserData as a cloud-init '#cloud-config' file.
     See: https://cloudinit.readthedocs.io/en/latest/explanation/format.html#headers-and-content-types
     """
     body = yaml.safe_dump(todict(no_cloud=userdata), sort_keys=False)

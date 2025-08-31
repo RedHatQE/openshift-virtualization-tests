@@ -54,8 +54,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_random_minutes_hours_fields_from_data_import_schedule(target_string):
-    """
-    Gets the minutes field from the dataImportSchedule field in HCO CR
+    """Gets the minutes field from the dataImportSchedule field in HCO CR
 
     Args:
         target_string (str): dataImportSchedule string (crontab format)

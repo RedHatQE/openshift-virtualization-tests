@@ -50,9 +50,7 @@ class Network:
 
 
 class ClusterUserDefinedNetwork(Cudn):
-    """
-    ClusterUserDefinedNetwork object.
-    """
+    """ClusterUserDefinedNetwork object."""
 
     def __init__(
         self,
@@ -60,8 +58,7 @@ class ClusterUserDefinedNetwork(Cudn):
         namespace_selector: LabelSelector,
         network: Network,
     ):
-        """
-        Create and manage ClusterUserDefinedNetwork
+        """Create and manage ClusterUserDefinedNetwork
 
         API reference:
         https://ovn-kubernetes.io/api-reference/userdefinednetwork-api-spec/#clusteruserdefinednetwork

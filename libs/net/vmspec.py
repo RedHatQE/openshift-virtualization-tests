@@ -35,8 +35,7 @@ def lookup_iface_status(
     predicate: Callable[[Any], bool] = _default_interface_predicate,
     timeout: int = LOOKUP_IFACE_STATUS_TIMEOUT_SEC,
 ) -> ResourceField:
-    """
-    Awaits and returns the network interface status requested if found and the predicate function,
+    """Awaits and returns the network interface status requested if found and the predicate function,
     otherwise raises VMInterfaceStatusNotFoundError.
 
     Args:
@@ -72,8 +71,7 @@ def lookup_iface_status(
 def _lookup_iface_status(
     vm: BaseVirtualMachine, iface_name: str, predicate: Callable[[Any], bool]
 ) -> ResourceField | None:
-    """
-    Returns the interface requested if found and the predicate function (to which the interface is
+    """Returns the interface requested if found and the predicate function (to which the interface is
     sent) Else, returns None.
 
     Args:
@@ -98,8 +96,7 @@ def _lookup_iface_status(
     exceptions_dict={VMInterfaceStatusStillExistsError: []},
 )
 def wait_for_missing_iface_status(vm: BaseVirtualMachine, iface_name: str) -> bool:
-    """
-    Waits for a network interface to be deleted from the virtual machine's interface status.
+    """Waits for a network interface to be deleted from the virtual machine's interface status.
 
     Args:
         vm (BaseVirtualMachine): The virtual machine to check for the interface status.

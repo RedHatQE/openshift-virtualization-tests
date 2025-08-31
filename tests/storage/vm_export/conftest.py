@@ -1,6 +1,4 @@
-"""
-Pytest conftest file for CNV VMExport tests
-"""
+"""Pytest conftest file for CNV VMExport tests"""
 
 import base64
 from subprocess import check_output

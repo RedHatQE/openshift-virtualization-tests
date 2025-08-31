@@ -125,9 +125,7 @@ def virt_special_infra_sanity(
                 failed_verifications_list.append(f"Node {pod.node.name} does not have psi=1 kernel argument")
 
     def _verify_if_1tb_memory_or_more_node(_memory_per_node):
-        """
-        Descheduler tests should run on nodes with less than 1Tb of memory.
-        """
+        """Descheduler tests should run on nodes with less than 1Tb of memory."""
         upper_memory_limit = bitmath.TiB(value=1)
         for node, memory in _memory_per_node.items():
             if memory >= upper_memory_limit:
@@ -238,8 +236,7 @@ def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
 
 @pytest.fixture(scope="session")
 def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
-    """
-    Check if the mdev_bus needed for vGPU is available.
+    """Check if the mdev_bus needed for vGPU is available.
 
     On the Worker Node on which GPU Device exists, check if the
     mdev_bus needed for vGPU is available.

@@ -50,8 +50,7 @@ def localnet_vm(
     cidr: str,
     interface_state: str | None = None,
 ) -> BaseVirtualMachine:
-    """
-    Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
+    """Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
 
     The VM will:
     - Attach to a Multus network using a bridge interface.
@@ -102,8 +101,7 @@ def localnet_vm(
 def localnet_cudn(
     name: str, match_labels: dict[str, str], vlan_id: int, physical_network_name: str
 ) -> libcudn.ClusterUserDefinedNetwork:
-    """
-    Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
+    """Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
 
     The function creates a CUDN with:
     - IPAM disabled

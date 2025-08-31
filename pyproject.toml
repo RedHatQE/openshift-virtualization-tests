@@ -1,15 +1,31 @@
 [tool.ruff]
 preview = true
 line-length = 120
-fix = true
 output-format = "grouped"
 
+[tool.ruff.lint]
+select = ["D", "I"]
+# Do not force docstrings; linter only when a docstring is added
+ignore = [
+    "D100",  # missing-module-docstring
+    "D101",  # missing-class-docstring
+    "D102",  # missing-function-docstring
+    "D103",  # missing-docstring
+    "D107",  # missing-init-docstring
+]
+# Ignore all docstring-related rules for files that are tests.
+per-file-ignores = {"test_*.py" = ["D"]}
+
 [tool.ruff.format]
-exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
+exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__", "utilities/unittests/*"]
+docstring-code-format = true
 
 [tool.ruff.lint.isort]
 order-by-type = true
 known-third-party = ["ocp_resources", "ocp_utilities", "timeout_sampler", "pyhelper_utils"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 warn_unused_configs = true

@@ -79,8 +79,7 @@ def verify_specs(
 
 
 def validate_featuregates_not_in_cdi_cr(admin_client, hco_namespace, feature_gates_under_test):
-    """
-    Validates that all expected featuregates are present in cdi CR
+    """Validates that all expected featuregates are present in cdi CR
 
     Args:
         admin_client(DynamicClient): DynamicClient object
@@ -120,8 +119,7 @@ def expected_certconfig_stanza():
 
 
 def wait_for_fg_update(admin_client, hco_namespace, expected_fg, validate_func):
-    """
-    Waits for featuregate updates to get propagated
+    """Waits for featuregate updates to get propagated
 
     Args:
         admin_client(DynamicClient): DynamicClient object
@@ -150,8 +148,7 @@ def wait_for_fg_update(admin_client, hco_namespace, expected_fg, validate_func):
 
 
 def get_hco_related_object_version(client, hco_namespace, resource_name, resource_kind):
-    """
-    Gets related object version from hco.status.relatedObject
+    """Gets related object version from hco.status.relatedObject
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -171,8 +168,7 @@ def get_hco_related_object_version(client, hco_namespace, resource_name, resourc
 
 
 def wait_for_hco_related_object_version_change(admin_client, hco_namespace, resource, resource_kind):
-    """
-    Waits for hco.status.relatedObject to get updated with expected resourceVersion value
+    """Waits for hco.status.relatedObject to get updated with expected resourceVersion value
 
     Args:
         admin_client (DynamicClient): Dynamic client object
@@ -211,8 +207,7 @@ def wait_for_hco_related_object_version_change(admin_client, hco_namespace, reso
 
 
 def validate_related_objects(admin_client, hco_namespace, resource, pre_update_resource_version):
-    """
-    Validates appropriate resourceVersion gets reported after a given related object gets reconciled
+    """Validates appropriate resourceVersion gets reported after a given related object gets reconciled
 
     Args:
         admin_client (DynamicClient): Dynamic client object
@@ -233,8 +228,7 @@ def validate_related_objects(admin_client, hco_namespace, resource, pre_update_r
 
 
 def wait_for_resource_version_update(resource, pre_update_resource_version):
-    """
-    Validates a resource is getting reconciled post patch command
+    """Validates a resource is getting reconciled post patch command
 
     Args:
         resource (Resource): Resource object to be checked

@@ -105,8 +105,7 @@ def wait_for_hco_conditions(
     condition_key2="status",
     list_dependent_crs_to_check=None,
 ):
-    """
-    Checking HCO conditions.
+    """Checking HCO conditions.
 
     If list_dependent_crs_to_check information is passed, we would wait for them to
     stabilize first, before checking hco.status.conditions. Please note, EXPECTED_STATUS_CONDITIONS defines what all
@@ -206,8 +205,7 @@ def apply_np_changes(
 
 
 def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_deployments=None):
-    """
-    Waits for hco to reach stable state post hco update
+    """Waits for hco to reach stable state post hco update
 
     Args:
         admin_client (DynamicClient): Dynamic client object
@@ -255,8 +253,7 @@ def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_d
 
 
 def add_labels_to_nodes(nodes, node_labels):
-    """
-    Adds given labels to a list of nodes
+    """Adds given labels to a list of nodes
 
     Args:
         nodes (list): list of nodes
@@ -295,8 +292,7 @@ def get_installed_hco_csv(admin_client, hco_namespace):
 
 
 def get_hco_version(client, hco_ns_name):
-    """
-    Get current hco version
+    """Get current hco version
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -313,8 +309,7 @@ def get_hco_version(client, hco_ns_name):
 
 
 def wait_for_hco_version(client, hco_ns_name, cnv_version):
-    """
-    Wait for hco version to get updated.
+    """Wait for hco version to get updated.
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -440,8 +435,7 @@ def update_hco_annotations(
     op="add",
     resource_list=None,
 ):
-    """
-    Update jsonpatch annotation in HCO CR.
+    """Update jsonpatch annotation in HCO CR.
 
     Args:
         resource (HyperConverged): HCO resource object

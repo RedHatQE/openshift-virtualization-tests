@@ -12,8 +12,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_bitwarden_secrets_client():
-    """
-    Creates a BitwardenClient instance, logs in using ACCESS_TOKEN environment variable and bitwarden AuthClient
+    """Creates a BitwardenClient instance, logs in using ACCESS_TOKEN environment variable and bitwarden AuthClient
     instance, and returns SecretsClient. To use bitwarden secret manager ACCESS_TOKEN and ORGANIZATION_ID environment
     variables must be set
 
@@ -31,8 +30,7 @@ def get_bitwarden_secrets_client():
 
 @lru_cache
 def get_all_cnv_tests_secrets(bitwarden_secrets_client):
-    """
-    Using Bitwarden SecretsClient, gets a list of all cnv-secrets saved in bitwarden secret manager (associated with
+    """Using Bitwarden SecretsClient, gets a list of all cnv-secrets saved in bitwarden secret manager (associated with
     a specific organization id). ORGANIZATION_ID is expected to set via environment variable.
 
     Args:
@@ -48,8 +46,7 @@ def get_all_cnv_tests_secrets(bitwarden_secrets_client):
 
 @lru_cache
 def get_cnv_tests_secret_by_name(secret_name):
-    """
-    Pull a specific secret from bitwarden secret manager by name
+    """Pull a specific secret from bitwarden secret manager by name
 
     Args:
         secret_name (str): Bitwarden secret manager secret name

@@ -14,8 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Server:
-    """
-    Represents a server running on a virtual machine for testing network performance.
+    """Represents a server running on a virtual machine for testing network performance.
     Implemented with iperf3
 
     Args:
@@ -51,8 +50,7 @@ class Server:
 
 
 class Client:
-    """
-    Represents a client that connects to a server to test network performance.
+    """Represents a client that connects to a server to test network performance.
     Implemented with iperf3
 
     Args:

@@ -55,8 +55,7 @@ def get_virt_handler_pods(client, namespace):
 
 
 def check_virt_handler_pods_for_migration_network(client, namespace, network_name, migration_network=True):
-    """
-    Checks whether virt-handler pods have migration network.
+    """Checks whether virt-handler pods have migration network.
 
     Args:
         client (:obj:`DynamicClient`): DynamicClient object

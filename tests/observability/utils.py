@@ -44,9 +44,7 @@ def validate_metrics_value(
 
 
 def verify_no_listed_alerts_on_cluster(prometheus: Prometheus, alerts_list: list[str]) -> None:
-    """
-    It gets a list of alerts and verifies that none of them are firing on a cluster.
-    """
+    """It gets a list of alerts and verifies that none of them are firing on a cluster."""
     fired_alerts = {}
     for alert in alerts_list:
         alerts_by_name = prometheus.get_all_alerts_by_alert_name(alert_name=alert)

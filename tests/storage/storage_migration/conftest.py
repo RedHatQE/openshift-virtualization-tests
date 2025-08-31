@@ -241,8 +241,7 @@ def vm_for_storage_class_migration_from_template_with_existing_dv(
 
 @pytest.fixture(scope="class")
 def vms_for_storage_class_migration(request):
-    """
-    Only fixtures from the "vms_fixtures" test param will be called
+    """Only fixtures from the "vms_fixtures" test param will be called
     Only VMs that are listed in "vms_fixtures" param will be created
     VM fixtures that are not listed in the param will not be called, and those VMs will not be created
     """

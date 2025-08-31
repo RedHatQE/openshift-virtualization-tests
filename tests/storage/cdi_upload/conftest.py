@@ -1,6 +1,4 @@
-"""
-CDI Import
-"""
+"""CDI Import"""
 
 import logging
 

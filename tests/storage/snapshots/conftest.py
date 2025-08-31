@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Pytest conftest file for CNV Storage snapshots tests
-"""
+"""Pytest conftest file for CNV Storage snapshots tests"""
 
 import logging
 import shlex
@@ -27,9 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def permissions_for_dv(namespace):
-    """
-    Sets DV permissions for an unprivileged client
-    """
+    """Sets DV permissions for an unprivileged client"""
     with set_permissions(
         role_name="datavolume-cluster-role",
         role_api_groups=[DataVolume.api_group],

@@ -54,8 +54,7 @@ def assert_target_vm_has_new_pvc_disks(source_vm, target_vm):
     exceptions_dict={VirtualMachineCloneConditionRunningError: []},
 )
 def wait_cloning_job_source_not_exist_reason(vmc: VirtualMachineClone) -> bool:
-    """
-    Check if the VirtualMachineClone source does not exist.
+    """Check if the VirtualMachineClone source does not exist.
 
     Args:
         vmc (VirtualMachineClone): The VirtualMachineClone resource to check.

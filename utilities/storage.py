@@ -62,14 +62,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=None, pvc=None):
-    """
-    Create a dummy pod that will become the PVCs first consumer
+    """Create a dummy pod that will become the PVCs first consumer
     Triggers start of CDI worker pod
 
     To consume PVCs that are not backed by DVs, just pass in pvc param
     Otherwise, it is needed to pass in dv
     """
-
     if not (pvc or dv):
         raise ValueError("Exactly one of the args: (dv,pvc) must be passed")
     if dv:
@@ -177,8 +175,7 @@ def data_volume(
     admin_client=None,
     bind_immediate=None,
 ):
-    """
-    DV creation using create_dv.
+    """DV creation using create_dv.
 
     Args:
         namespace (:obj: `Namespace`): namespace resource
@@ -292,9 +289,7 @@ def data_volume(
 
 
 def get_downloaded_artifact(remote_name, local_name):
-    """
-    Download image or artifact to local tmpdir path
-    """
+    """Download image or artifact to local tmpdir path"""
     artifactory_header = utilities.infra.get_artifactory_header()
     url = f"{get_test_artifact_server_url()}{remote_name}"
     resp = requests.head(
@@ -379,8 +374,7 @@ def virtctl_memory_dump(
     storage_class=None,
     create_claim=None,
 ):
-    """
-    Dump the memory of a running VM to a PVC.
+    """Dump the memory of a running VM to a PVC.
 
     Args:
         namespace (:obj: `Namespace`): namespace resource
@@ -483,9 +477,7 @@ def check_upload_virtctl_result(
 
 
 class ErrorMsg:
-    """
-    error messages that might show in pod containers
-    """
+    """error messages that might show in pod containers"""
 
     EXIT_STATUS_2 = (
         "Unable to process data: "
@@ -591,8 +583,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
 
 
 def get_test_artifact_server_url(schema="https"):
-    """
-    Verify https server server connectivity (regardless of schema).
+    """Verify https server server connectivity (regardless of schema).
     Return the requested "registry" or "https" server url.
 
     Args:
@@ -615,8 +606,7 @@ def get_test_artifact_server_url(schema="https"):
 
 
 def overhead_size_for_dv(image_size, overhead_value):
-    """
-    Calculate the size of the dv to include overhead and rounds up
+    """Calculate the size of the dv to include overhead and rounds up
 
     DV creation can be with a fraction only if the corresponding  mebibyte is an integer
     """
@@ -632,9 +622,7 @@ def cdi_feature_gate_list_with_added_feature(feature):
 
 
 def wait_for_default_sc_in_cdiconfig(cdi_config, sc):
-    """
-    Wait for the default storage class to propagate to CDIConfig as the storage class for scratch space
-    """
+    """Wait for the default storage class to propagate to CDIConfig as the storage class for scratch space"""
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_20SEC,
         sleep=TIMEOUT_1SEC,
@@ -700,8 +688,7 @@ def generate_data_source_dict(dv):
 
 
 def create_or_update_data_source(admin_client, dv):
-    """
-    Create or updates a data source referencing a provided DV.
+    """Create or updates a data source referencing a provided DV.
 
     As dataSources are automatically created with CNV deployment for golden images support, they can be re-used.
     If a dataSource already exists (with the same name as the target dv), it will be updated.
@@ -811,8 +798,7 @@ def check_disk_count_in_vm(vm):
 
 
 def add_dv_to_vm(vm, dv_name=None, template_dv=None):
-    """
-    Add another DV to a VM
+    """Add another DV to a VM
 
     Can also be used to add a dataVolumeTemplate DV, just pass in template_dv param
     """
@@ -1096,9 +1082,7 @@ def get_data_sources_managed_by_data_import_cron(namespace):
 
 
 def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) -> bool:
-    """
-    Verify that the boot sources are re-imported while changing a storage class.
-    """
+    """Verify that the boot sources are re-imported while changing a storage class."""
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(namespace=namespace):
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")

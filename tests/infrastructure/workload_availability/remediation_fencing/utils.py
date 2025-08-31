@@ -1,6 +1,4 @@
-"""
-Node Health Check common use cases
-"""
+"""Node Health Check common use cases"""
 
 import logging
 

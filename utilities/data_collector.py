@@ -20,8 +20,7 @@ BASE_DIRECTORY_NAME = "tests-collected-info"
 
 @cache
 def get_data_collector_base(base_dir: str | None = None) -> str:
-    """
-    Returns base directory for data collection.
+    """Returns base directory for data collection.
 
     Priority is set as follows:
         1. Dir is set by passing --data-collector-output-dir.
@@ -78,8 +77,7 @@ def get_data_collector_dir():
 
 
 def write_to_file(file_name, content, base_directory, mode="w"):
-    """
-    Write to a file that will be available after the run execution.
+    """Write to a file that will be available after the run execution.
 
     Args:
         file_name (str): name of the file to write, including full path.
@@ -143,8 +141,7 @@ def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir):
 
 
 def prepare_pytest_item_data_dir(item, output_dir):
-    """
-    Prepare output directory for pytest item
+    """Prepare output directory for pytest item
 
     "testpaths" must be configured in pytest.ini.
 

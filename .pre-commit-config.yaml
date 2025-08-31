@@ -17,9 +17,7 @@ repos:
     hooks:
       - id: ruff
         stages: [pre-commit]
-      - id: ruff
-        name: sort imports with ruff
-        args: [--select, I, --fix]
+        args: [--fix]
       - id: ruff-format
         stages: [pre-commit]
 

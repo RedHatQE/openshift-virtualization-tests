@@ -65,9 +65,7 @@ WHITELIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
 
 
 def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images, status_dict):
-    """
-    Wait for a new pod to be created and running
-
+    """Wait for a new pod to be created and running
 
     Args:
         dyn_client (DynamicClient): OCP Client to use
@@ -150,8 +148,7 @@ def wait_for_expected_pods_exist(
     hco_namespace,
     expected_images,
 ):
-    """
-    Verifies that only pods with expected images (taken from target CSV) exist.
+    """Verifies that only pods with expected images (taken from target CSV) exist.
 
     Args:
         dyn_client (DynamicClient): OCP Client to use
@@ -199,8 +196,7 @@ def get_pods_with_mismatch_image(dyn_client, hco_namespace, expected_images):
 
 
 def get_nodes_taints(nodes):
-    """
-    Capture taints information out of all nodes and create a dictionary.
+    """Capture taints information out of all nodes and create a dictionary.
 
     Args:
         nodes (list): list of Node objects
@@ -212,8 +208,7 @@ def get_nodes_taints(nodes):
 
 
 def verify_nodes_taints_after_upgrade(nodes, nodes_taints_before_upgrade):
-    """
-    Verify that none of the nodes taints changed after cnv upgrade
+    """Verify that none of the nodes taints changed after cnv upgrade
 
     Args:
         nodes (list): list of Node objects
@@ -232,8 +227,7 @@ def verify_nodes_taints_after_upgrade(nodes, nodes_taints_before_upgrade):
 
 
 def get_nodes_labels(nodes, cnv_upgrade):
-    """
-    Based on cnv_upgrade type being used, this function captures appropriate labels information from the nodes.
+    """Based on cnv_upgrade type being used, this function captures appropriate labels information from the nodes.
     For ocp upgrade, any labels containing Resource.ApiGroup.KUBEVIRT_IO string would be collected to ensure such
     labels remains unaltered post ocp upgrade, while for cnv upgrade non-cnv labels would be checked to ensure no
     accidental modification happened to those during upgrade.
@@ -258,8 +252,7 @@ def get_nodes_labels(nodes, cnv_upgrade):
 
 
 def verify_nodes_labels_after_upgrade(nodes, nodes_labels_before_upgrade, cnv_upgrade):
-    """
-    Validate that node labels after upgrade are as expected, in case of y stream upgrade ensures that expected changes
+    """Validate that node labels after upgrade are as expected, in case of y stream upgrade ensures that expected changes
     in node labels don't cause failure
 
     Args:
@@ -286,8 +279,7 @@ def verify_nodes_labels_after_upgrade(nodes, nodes_labels_before_upgrade, cnv_up
 
 
 def get_node_with_label_value_diff(labels_before_upgrade, labels_after_upgrade, node_name):
-    """
-    Logging the labels values changes by category for a specific node.
+    """Logging the labels values changes by category for a specific node.
 
     Args:
         labels_before_upgrade(dict): before upgrade labels values.
@@ -406,8 +398,7 @@ def wait_for_cluster_version_state_and_version(cluster_version, target_ocp_versi
 
 
 def extract_ocp_version_from_ocp_image(ocp_image_url: str) -> str:
-    """
-    Extract the OCP version from the OCP URL input.
+    """Extract the OCP version from the OCP URL input.
     Expected inputs / output examples:
       quay.io/openshift-release-dev/ocp-release:4.10.9-x86_64 -> 4.10.9
       quay.io/openshift-release-dev/ocp-release:4.10.0-rc.6-x86_64 -> 4.10.0-rc.6
@@ -560,8 +551,7 @@ def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list
 
 
 def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]:
-    """
-    Get the shortest upgrade path to a given CNV target version(latest z stream)
+    """Get the shortest upgrade path to a given CNV target version(latest z stream)
 
     Args:
         target_version (str): The target version of the upgrade path.

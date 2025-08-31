@@ -169,10 +169,9 @@ def guest_agent_version_parser(version_string):
 
 
 def get_windows_timezone(ssh_exec, get_standard_name=False):
-    """
-    Args:
-        ssh_exec: vm SSH executor
-        get_standard_name (bool, default False): If True, get only Windows StandardName
+    """Args:
+    ssh_exec: vm SSH executor
+    get_standard_name (bool, default False): If True, get only Windows StandardName
     """
     standard_name_cmd = '| findstr "StandardName"' if get_standard_name else ""
     timezone_cmd = shlex.split(f'powershell -command "Get-TimeZone {standard_name_cmd}"')
@@ -259,8 +258,7 @@ def verify_ssp_pod_is_running(
     sleep: int = TIMEOUT_10SEC,
     consecutive_checks_count: int = 3,
 ):
-    """
-    Verifies that SSP pod is up and running
+    """Verifies that SSP pod is up and running
 
     This function polls for the status of SSP pod every 'sleep' seconds for
     the maximum time duration of 'wait_timeout', before it raises

@@ -160,8 +160,7 @@ def assert_vms_distribution_after_failover(vms, nodes, all_nodes=True):
 
 
 def vms_per_nodes(vms):
-    """
-    Args:
+    """Args:
         vms (dict): dict of VM objects
 
     Returns:
@@ -171,8 +170,7 @@ def vms_per_nodes(vms):
 
 
 def vm_nodes(vms):
-    """
-    Args:
+    """Args:
         vms (list): list of VM objects
 
     Returns:

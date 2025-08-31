@@ -121,8 +121,7 @@ def wait_for_install_plan(
 
 
 def get_network_addon_config(admin_client):
-    """
-    Gets NetworkAddonsConfig object
+    """Gets NetworkAddonsConfig object
 
     Args:
         admin_client (DynamicClient): a DynamicClient object
@@ -135,15 +134,13 @@ def get_network_addon_config(admin_client):
 
 
 def wait_for_spec_change(expected, get_spec_func, base_path):
-    """
-    Waits for spec values to get propagated
+    """Waits for spec values to get propagated
 
     Args:
         expected (dict): dictionary of values that would be used to update hco cr
         get_spec_func (function): function to fetch current spec dictionary
         base_path (list): list of associated keys for a given kind
     """
-
     samplers = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
@@ -168,8 +165,7 @@ def wait_for_spec_change(expected, get_spec_func, base_path):
 
 
 def get_function_name(function_name):
-    """
-    Return the text of the source code for a function
+    """Return the text of the source code for a function
 
     Args:
         function_name (function object): function object
@@ -194,8 +190,7 @@ def get_resource_container_env_image_mismatch(container):
 
 
 def get_ocp_resource_module_name(related_object_kind, list_submodules):
-    """
-    From a list of ocp_resources submodule, based on kubernetes 'kind' name pick the right module name
+    """From a list of ocp_resources submodule, based on kubernetes 'kind' name pick the right module name
 
     Args:
         related_object_kind (str): Kubernetes kind name of a resource
@@ -215,8 +210,7 @@ def get_ocp_resource_module_name(related_object_kind, list_submodules):
 
 
 def get_resource(related_obj, admin_client, module_name):
-    """
-    Gets CR based on associated HCO.status.relatedObject entry and ocp_reources module name
+    """Gets CR based on associated HCO.status.relatedObject entry and ocp_reources module name
 
     Args:
         related_obj (dict): Associated HCO.status.relatedObject dict
@@ -241,8 +235,7 @@ def get_resource(related_obj, admin_client, module_name):
 
 
 def get_resource_from_module_name(related_obj, ocp_resources_submodule_list, admin_client):
-    """
-    Gets resource object based on module name
+    """Gets resource object based on module name
 
     Args:
         related_obj (dict): Related object Dictionary

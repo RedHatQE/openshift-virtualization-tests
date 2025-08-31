@@ -28,8 +28,7 @@ def check_file_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: s
 def verify_vms_boot_time_after_storage_migration(
     vm_list: list[VirtualMachineForTests], initial_boot_time: dict[str, str]
 ) -> None:
-    """
-    Verify that VMs have not rebooted after storage migration.
+    """Verify that VMs have not rebooted after storage migration.
 
     Args:
         vm_list: List of VMs to check

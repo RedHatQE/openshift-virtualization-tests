@@ -84,8 +84,7 @@ class OVN:
 
 @dataclass
 class DesiredState:
-    """
-    Represents the desired network configuration for NMstate.
+    """Represents the desired network configuration for NMstate.
     Following the NMstate YAML-based API specification:
     https://nmstate.io/devel/yaml_api.html
     """
@@ -95,9 +94,7 @@ class DesiredState:
 
 
 class NodeNetworkConfigurationPolicy(Nncp):
-    """
-    NodeNetworkConfigurationPolicy object.
-    """
+    """NodeNetworkConfigurationPolicy object."""
 
     def __init__(
         self,
@@ -105,8 +102,7 @@ class NodeNetworkConfigurationPolicy(Nncp):
         desired_state: DesiredState,
         node_selector: dict[str, str] | None = None,
     ):
-        """
-        Create and manage NodeNetworkConfigurationPolicy
+        """Create and manage NodeNetworkConfigurationPolicy
 
         Args:
             name (str): Name of the NodeNetworkConfigurationPolicy object.

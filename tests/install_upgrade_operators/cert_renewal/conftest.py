@@ -30,9 +30,7 @@ LOGGER = logging.getLogger(__name__)
 def hyperconverged_resource_certconfig_change(
     request, admin_client, hco_namespace, hyperconverged_resource_scope_class
 ):
-    """
-    Update HCO CR with certconfig
-    """
+    """Update HCO CR with certconfig"""
     target_certconfig_stanza = {
         HCO_CR_CERT_CONFIG_CA_KEY: {**request.param},
         HCO_CR_CERT_CONFIG_SERVER_KEY: {**request.param},

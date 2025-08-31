@@ -18,8 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def virtctl_console_cli_downloads_spec_links(admin_client):
-    """
-    Get console cli downloads spec links
+    """Get console cli downloads spec links
 
     Returns:
         ConsoleCLIDownload instance.spec.links
@@ -35,8 +34,7 @@ def all_virtctl_urls(virtctl_console_cli_downloads_spec_links):
 
 @pytest.fixture()
 def internal_fqdn(admin_client, hco_namespace):
-    """
-    This fixture returns the prefix url for the cluster, which is used to identify if certain links are routed or
+    """This fixture returns the prefix url for the cluster, which is used to identify if certain links are routed or
     served from within the cluster
     """
     cluster_route = Route(name=HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD, namespace=hco_namespace.name)
@@ -46,8 +44,7 @@ def internal_fqdn(admin_client, hco_namespace):
 
 @pytest.fixture()
 def non_internal_fqdns(all_virtctl_urls, internal_fqdn):
-    """
-    Get URLs containing FQDN that is not matching the cluster's route
+    """Get URLs containing FQDN that is not matching the cluster's route
 
     Returns:
         list: list of all non-internal FQDNs
@@ -57,9 +54,7 @@ def non_internal_fqdns(all_virtctl_urls, internal_fqdn):
 
 @pytest.fixture()
 def downloaded_and_extracted_virtctl_binary_for_os(request, all_virtctl_urls, tmpdir):
-    """
-    This fixture downloads the virtctl archive from the provided OS, and extracts it to a temporary dir
-    """
+    """This fixture downloads the virtctl archive from the provided OS, and extracts it to a temporary dir"""
     return get_and_extract_file_from_cluster(
         system_os=request.param.get("os"),
         urls=all_virtctl_urls,

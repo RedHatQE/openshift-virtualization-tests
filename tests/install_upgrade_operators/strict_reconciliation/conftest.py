@@ -37,8 +37,7 @@ def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function, ad
 
 @pytest.fixture()
 def hco_cr_custom_values(hyperconverged_resource_scope_function, admin_client, hco_namespace):
-    """
-    This fixture updates HCO CR with custom values for spec.CertConfig, spec.liveMigrationConfig and
+    """This fixture updates HCO CR with custom values for spec.CertConfig, spec.liveMigrationConfig and
     spec.featureGates and cleans those up at the end.
     Note: This is needed for tests that modifies such fields to default values
 
@@ -56,8 +55,7 @@ def hco_cr_custom_values(hyperconverged_resource_scope_function, admin_client, h
 
 @pytest.fixture()
 def updated_cdi_cr(request, cdi_resource_scope_function, admin_client, hco_namespace):
-    """
-    Attempts to update cdi, however, since these changes get reconciled to values propagated by hco cr, we don't need
+    """Attempts to update cdi, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
     """
     with ResourceEditorValidateHCOReconcile(
@@ -72,8 +70,7 @@ def updated_cdi_cr(request, cdi_resource_scope_function, admin_client, hco_names
 
 @pytest.fixture()
 def updated_cnao_cr(request, cnao_resource, admin_client, hco_namespace):
-    """
-    Attempts to update cnao, however, since these changes get reconciled to values propagated by hco cr, we don't need
+    """Attempts to update cnao, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
     """
     with ResourceEditorValidateHCOReconcile(
@@ -148,9 +145,7 @@ def cr_func_map(
 
 @pytest.fixture()
 def hco_status_related_objects_scope_function(hyperconverged_resource_scope_function):
-    """
-    Gets HCO.status.relatedObjects list
-    """
+    """Gets HCO.status.relatedObjects list"""
     return hyperconverged_resource_scope_function.instance.status.relatedObjects
 
 

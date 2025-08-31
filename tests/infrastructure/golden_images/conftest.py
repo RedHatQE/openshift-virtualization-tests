@@ -32,8 +32,7 @@ def updated_default_storage_class_scope_function(
 
 @pytest.fixture(scope="module")
 def latest_fedora_release_version(downloaded_latest_libosinfo_db):
-    """
-    Extract the version from file name, if no files found raise KeyError
+    """Extract the version from file name, if no files found raise KeyError
     file example: /tmp/pytest-6axFnW3vzouCkjWokhvbDi/osinfodb0/osinfo-db-20221121/os/fedoraproject.org/fedora-42.xml
     """
     osinfo_file_folder_path = os.path.join(downloaded_latest_libosinfo_db, "os/fedoraproject.org/")
@@ -46,9 +45,7 @@ def latest_fedora_release_version(downloaded_latest_libosinfo_db):
 
 @pytest.fixture(scope="session")
 def fail_if_no_hostpath_csi_basic_sc(cluster_storage_classes_names):
-    """
-    Fail the test if no CSI basic storage class is available
-    """
+    """Fail the test if no CSI basic storage class is available"""
     if HOSTPATH_CSI_BASIC not in cluster_storage_classes_names:
         pytest.fail(
             f"Test failed: {HOSTPATH_CSI_BASIC} basic storage class is not deployed. "

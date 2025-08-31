@@ -68,8 +68,7 @@ def create_vms(
     ssh=True,
     node_selector_labels=None,
 ):
-    """
-    Create n number of fedora vms.
+    """Create n number of fedora vms.
 
     Args:
         name_prefix (str): prefix to be used to name virtualmachines
@@ -100,8 +99,7 @@ def create_vms(
 
 
 def wait_for_cr_labels_change(expected_value, component, timeout=TIMEOUT_10MIN):
-    """
-    Waits for CR metadata.labels to reach expected values
+    """Waits for CR metadata.labels to reach expected values
 
     Args:
         expected_value (dict): expected value for metadata.labels
@@ -297,15 +295,15 @@ def get_vm_cpu_list(vm):
 
 
 def get_numa_node_cpu_dict(vm):
-    """
-    Extract NUMA nodes from libvirt
+    """Extract NUMA nodes from libvirt
 
     Args:
         vm (VirtualMachine): VM
 
     Returns:
         dict with numa id as key and cpu list as value.
-        Example:
+
+    Example:
             {'<numa_node_id>': [cpu_list]}
     """
     out = vm.privileged_vmi.virt_launcher_pod.execute(command=shlex.split("virsh capabilities"))
@@ -315,9 +313,7 @@ def get_numa_node_cpu_dict(vm):
 
 
 def get_numa_cpu_allocation(vm_cpus, numa_nodes):
-    """
-    Find NUMA node # where VM CPUs are allocated.
-    """
+    """Find NUMA node # where VM CPUs are allocated."""
 
     def _parse_ranges_to_list(ranges):
         cpus = []
@@ -335,8 +331,7 @@ def get_numa_cpu_allocation(vm_cpus, numa_nodes):
 
 
 def get_sriov_pci_address(vm):
-    """
-    Get PCI address of SRIOV device in virsh.
+    """Get PCI address of SRIOV device in virsh.
 
     Args:
         vm (VirtualMachine): VM object
@@ -358,9 +353,7 @@ def get_sriov_pci_address(vm):
 
 
 def get_numa_sriov_allocation(vm, utility_pods):
-    """
-    Find NUMA node number where SR-IOV device is allocated.
-    """
+    """Find NUMA node number where SR-IOV device is allocated."""
     sriov_alocation_list = []
     sriov_addresses = get_sriov_pci_address(vm=vm)
     for address in sriov_addresses:

@@ -32,8 +32,7 @@ class TestLogFormatter(ColoredFormatter):
 
 
 def setup_logging(log_level, log_file="/tmp/pytest-tests.log"):
-    """
-    Setup basic/root logging using QueueHandler/QueueListener
+    """Setup basic/root logging using QueueHandler/QueueListener
     to consolidate log messages into a single stream to be written to multiple outputs.
 
     Args:

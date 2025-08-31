@@ -9,8 +9,7 @@ from utilities.infra import ResourceMismatch
 
 
 def validate_liveness_probe_fields(deployment):
-    """
-    Validates that for a given deployment object values of certain "livenessProbe" fields matches with expected
+    """Validates that for a given deployment object values of certain "livenessProbe" fields matches with expected
     values
 
     Args:
@@ -44,8 +43,7 @@ def validate_liveness_probe_fields(deployment):
 
 
 def validate_request_fields(deployment, cpu_min_value):
-    """
-    Validates that for a given deployment object, for each containers: resources.requests contains cpu and memory
+    """Validates that for a given deployment object, for each containers: resources.requests contains cpu and memory
     fields. Cpu values can not be less than cpu_min_value
 
     Args:
@@ -56,7 +54,6 @@ def validate_request_fields(deployment, cpu_min_value):
         AssertionError: if resources.requests does not contains both cpu and memory, or if cpu request value is less
         than cpu_min_value
     """
-
     field_keys = ["cpu", "memory"]
     containers = deployment.instance.spec.template.spec.containers
     missing_cpu_memory_values = {

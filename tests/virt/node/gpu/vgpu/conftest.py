@@ -1,6 +1,4 @@
-"""
-vGPU VM
-"""
+"""vGPU VM"""
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt

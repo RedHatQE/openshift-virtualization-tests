@@ -5,8 +5,7 @@ from ocp_resources.resource import get_client
 
 
 def get_cluster_architecture() -> str:
-    """
-    Returns cluster architecture.
+    """Returns cluster architecture.
 
     Returns:
         str: cluster architecture.

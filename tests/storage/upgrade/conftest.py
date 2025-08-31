@@ -32,9 +32,7 @@ def skip_if_less_than_two_storage_classes(cluster_storage_classes):
 def storage_class_for_updating_cdiconfig_scratch(
     skip_if_less_than_two_storage_classes, cdi_config, cluster_storage_classes
 ):
-    """
-    Choose one StorageClass which is not the current one for scratch space.
-    """
+    """Choose one StorageClass which is not the current one for scratch space."""
     current_sc_for_scratch = cdi_config.scratch_space_storage_class_from_status
     LOGGER.info(f"The current StorageClass for scratch space on CDIConfig is: {current_sc_for_scratch}")
     for sc in cluster_storage_classes:
@@ -49,9 +47,7 @@ def override_cdiconfig_scratch_spec(
     cdi_config,
     storage_class_for_updating_cdiconfig_scratch,
 ):
-    """
-    Change spec.scratchSpaceStorageClass to the selected StorageClass on CDIConfig.
-    """
+    """Change spec.scratchSpaceStorageClass to the selected StorageClass on CDIConfig."""
     if storage_class_for_updating_cdiconfig_scratch:
         new_sc = storage_class_for_updating_cdiconfig_scratch.name
 

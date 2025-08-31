@@ -61,9 +61,7 @@ def get_interface_by_attribute(all_connections, att):
 
 @pytest.fixture(scope="module")
 def bond_and_privileged_pod(workers_utility_pods):
-    """
-    Get OVS BOND from the worker, if OVS BOND not exists the tests should be skipped.
-    """
+    """Get OVS BOND from the worker, if OVS BOND not exists the tests should be skipped."""
     fail_msg = "BOND is not configured on the workers on primary interface"
     for pod in workers_utility_pods:
         pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=pod.node)

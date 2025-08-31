@@ -55,8 +55,7 @@ def create_pod_deleting_process(
     interval=TIMEOUT_5SEC,
     max_duration=TIMEOUT_1MIN,
 ):
-    """
-    Creates a process that, when started,
+    """Creates a process that, when started,
     continuously deletes pods for a certain amount of time or until the process is stopped.
 
     Args:
@@ -153,8 +152,7 @@ def create_nginx_monitoring_process(
     utility_pods: list[Pod],
     control_plane_host_node: Node,
 ) -> multiprocessing.Process:
-    """
-    Creates a process that, when started,
+    """Creates a process that, when started,
     Continuously queries the HTTP server that runs on the VM. Runs for the duration defined
     in 'sampling_duration' or until interrupted.
 
@@ -389,9 +387,7 @@ def rebooting_node(node, utility_pods):
 
 
 def pod_deleting_process_recover(resource, namespace, pod_prefix):
-    """
-    This function will make sure that the pods for the affected deployment recover after the test.
-    """
+    """This function will make sure that the pods for the affected deployment recover after the test."""
     resource_objs = get_resources_by_name_prefix(
         prefix=pod_prefix,
         namespace=namespace,
@@ -408,9 +404,7 @@ def pod_deleting_process_recover(resource, namespace, pod_prefix):
 
 
 def get_instance_type(name):
-    """
-    Function to check if the instance type exists
-    """
+    """Function to check if the instance type exists"""
     instance_type = VirtualMachineClusterInstancetype(name=name)
     if not instance_type.exists:
         raise ResourceNotFoundError(f"Required instance type {name} does not exist")

@@ -1,6 +1,4 @@
-"""
-GPU PCI Passthrough and vGPU Testing
-"""
+"""GPU PCI Passthrough and vGPU Testing"""
 
 import pytest
 
@@ -25,9 +23,7 @@ def gpu_vma(
     supported_gpu_device,
     nodes_with_supported_gpus,
 ):
-    """
-    VM Fixture for both GPU Passthrough and vGPU based Tests.
-    """
+    """VM Fixture for both GPU Passthrough and vGPU based Tests."""
     params = request.param
     with vm_instance_from_template(
         request=request,

@@ -11,8 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def traffic_management_request(vm, **kwargs):
-    """
-    Return server response to a request sent from VM console. This request allows testing traffic manipulation.
+    """Return server response to a request sent from VM console. This request allows testing traffic manipulation.
 
     Args:
         vm (VirtualMachine): VM that will be used for console connection
@@ -54,8 +53,7 @@ def assert_service_mesh_request(expected_output, request_response):
 
 
 def run_console_command(vm: VirtualMachineForTests, command: str, timeout: int = TIMEOUT_1MIN) -> str:
-    """
-    Execute a command in VM console and return the output.
+    """Execute a command in VM console and return the output.
 
     Args:
         vm (VirtualMachineForTests): VM to be used for console connection.

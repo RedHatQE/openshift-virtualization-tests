@@ -1,5 +1,4 @@
-"""
-all function in this file must accept only matrix arg.
+"""all function in this file must accept only matrix arg.
 def foo_matrix(matrix):
     <customize matrix code>
     return matrix

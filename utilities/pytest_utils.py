@@ -35,8 +35,7 @@ def get_base_matrix_name(matrix_name):
 
 
 def get_matrix_params(pytest_config, matrix_name):
-    """
-    Customize matrix based on existing matrix
+    """Customize matrix based on existing matrix
     Name should be <base_matrix><_extra_matrix>_<scope>
     base_matrix should exist in py_config.
     _extra_matrix should be a function in utilities.pytest_matrix_utils
@@ -136,8 +135,7 @@ def separator(symbol_, val=None):
 
 
 def reorder_early_fixtures(metafunc):
-    """
-    Put fixtures with `pytest.mark.early` first during execution
+    """Put fixtures with `pytest.mark.early` first during execution
 
     This allows patch of configurations before the application is initialized
 
@@ -198,8 +196,7 @@ def get_current_running_data(session):
 
 
 def skip_if_pytest_flags_exists(pytest_config):
-    """
-    In some cases we want to skip some operation when pytest got executed with some flags
+    """In some cases we want to skip some operation when pytest got executed with some flags
     Used in dynamic fixtures and in check if run already in progress.
 
     Args:

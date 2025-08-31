@@ -1,6 +1,4 @@
-"""
-Node Health Check common use cases
-"""
+"""Node Health Check common use cases"""
 
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
@@ -69,8 +67,7 @@ def refreshed_worker_utility_pods(admin_client, workers):
 
 @pytest.fixture()
 def performed_node_operation(nhc_vm_with_run_strategy_always, refreshed_worker_utility_pods, node_operation):
-    """
-    Performs node operations like node start/stop, node kubelet start/stop
+    """Performs node operations like node start/stop, node kubelet start/stop
     node reboot, node shutdown. After remediation action, utility pods are recreated.
     """
     perform_node_operation(

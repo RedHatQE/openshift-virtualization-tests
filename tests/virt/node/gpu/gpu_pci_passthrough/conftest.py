@@ -1,6 +1,4 @@
-"""
-GPU PCI Passthrough VM
-"""
+"""GPU PCI Passthrough VM"""
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -28,9 +26,7 @@ def gpu_passthrough_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_passthro
 
 @pytest.fixture(scope="session")
 def fail_if_device_unbound_to_vfiopci_driver(workers_utility_pods, gpu_passthrough_ready_nodes):
-    """
-    Fail if the Kernel Driver vfio-pci is not in use by the NVIDIA GPU Device.
-    """
+    """Fail if the Kernel Driver vfio-pci is not in use by the NVIDIA GPU Device."""
     device_unbound_nodes = []
     for node in gpu_passthrough_ready_nodes:
         try:

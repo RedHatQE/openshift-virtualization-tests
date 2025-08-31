@@ -1,6 +1,4 @@
-"""
-Tekton Pipeline Use Cases
-"""
+"""Tekton Pipeline Use Cases"""
 
 from __future__ import annotations
 

@@ -8,8 +8,7 @@ from utilities.virt import running_vm
 
 
 def expected_output_after_restore(snapshot_number):
-    """
-    Returns a string representing the list of files that should exist in the VM (sorted)
+    """Returns a string representing the list of files that should exist in the VM (sorted)
     after a restore snapshot was performed
 
     Args:

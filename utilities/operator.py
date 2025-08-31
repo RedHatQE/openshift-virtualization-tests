@@ -47,8 +47,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_icsp_idms_command(image, source_url, folder_name, pull_secret=None, filter_options=""):
-    """
-        Create ImageContentSourcePolicy command.
+    """Create ImageContentSourcePolicy command.
 
     Args:
         image (str): name of image to be mirrored.
@@ -121,8 +120,7 @@ def delete_existing_icsp_idms(name, is_idms_file):
 
 
 def get_mcps_with_different_transition_times(condition_type, machine_config_pools_list, initial_transition_times):
-    """
-    Return a set of machine config pool (MCP) names with different transition times.
+    """Return a set of machine config pool (MCP) names with different transition times.
 
     Filters a list of MCPs based on a given condition type and returns a set of names
     of the MCPs that have a different last transition time compared to the corresponding
@@ -151,8 +149,7 @@ def get_mcps_with_different_transition_times(condition_type, machine_config_pool
 
 
 def get_mcps_with_true_condition_status(condition_type, machine_config_pools_list):
-    """
-    Return a set of machine config pool (MCP) names with true status conditions.
+    """Return a set of machine config pool (MCP) names with true status conditions.
 
     Filters a list of MCPs based on a given condition type and returns a set of names
     of the MCPs that have a true status condition.
@@ -366,9 +363,7 @@ def create_catalog_source(
 
 
 def wait_for_catalogsource_ready(admin_client, catalog_name):
-    """
-    ### unused_code: ignore ###
-    """
+    """### unused_code: ignore ###"""
     LOGGER.info(f"Wait for pods associated with catalog source: {catalog_name} to get to 'Running' state")
 
     def _get_catalog_source_pods_not_running():
@@ -400,8 +395,7 @@ def wait_for_catalogsource_ready(admin_client, catalog_name):
 
 
 def create_operator_group(operator_group_name, namespace_name, target_namespaces=None):
-    """
-        Create specified Operator group.
+    """Create specified Operator group.
 
     Args:
         operator_group_name (str): name of the operator group
@@ -429,9 +423,7 @@ def create_subscription(
     channel_name="stable",
     install_plan_approval="Automatic",
 ):
-    """
-    ### unused_code: ignore ###
-    """
+    """### unused_code: ignore ###"""
     LOGGER.info(f"Create subscription {subscription_name} on namespace {namespace_name}")
     with Subscription(
         name=subscription_name,
@@ -545,10 +537,7 @@ def wait_for_nodes_to_have_same_kubelet_version(nodes):
 
 
 def get_mcp_updating_transition_times(mcp_conditions):
-    """
-    Extract the initial transition times for the Updating MCP condition
-    """
-
+    """Extract the initial transition times for the Updating MCP condition"""
     updating_transition_times = {}
 
     for role, conditions_list in mcp_conditions.items():
@@ -560,9 +549,7 @@ def get_mcp_updating_transition_times(mcp_conditions):
 
 
 def create_operator(operator_class, operator_name, namespace_name=None):
-    """
-    ### unused_code: ignore ###
-    """
+    """### unused_code: ignore ###"""
     if namespace_name:
         operator = operator_class(name=operator_name, namespace=namespace_name)
     else:

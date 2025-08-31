@@ -168,9 +168,7 @@ def get_file_url_https_server(images_https_server, file_name):
 def create_cluster_role(
     name: str, api_groups: list[str], verbs: list[str], permissions_to_resources: list[str]
 ) -> Generator:
-    """
-    Create cluster role
-    """
+    """Create cluster role"""
     with ClusterRole(
         name=name,
         rules=[
@@ -195,9 +193,7 @@ def create_role_binding(
     subjects_namespace: str | None = None,
     subjects_api_group: str | None = None,
 ) -> Generator:
-    """
-    Create role binding
-    """
+    """Create role binding"""
     with RoleBinding(
         name=name,
         namespace=namespace,
@@ -300,8 +296,7 @@ def wait_for_importer_container_message(importer_pod, msg):
 
 
 def importer_container_status_reason(pod):
-    """
-    Get status for why importer pod container is waiting or terminated
+    """Get status for why importer pod container is waiting or terminated
     (for container status running there is no 'reason' key)
     """
     container_state = pod.instance.status.containerStatuses[0].state

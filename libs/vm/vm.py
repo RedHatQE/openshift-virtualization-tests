@@ -19,9 +19,7 @@ from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
-    """
-    Virtual Machine object.
-    """
+    """Virtual Machine object."""
 
     def __init__(
         self,

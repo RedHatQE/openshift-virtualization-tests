@@ -18,8 +18,7 @@ class CNIPluginConfig:
 
 @dataclass
 class CNIPluginBridgeConfig(CNIPluginConfig):
-    """
-    CNI Bridge Plugin
+    """CNI Bridge Plugin
     Ref: https://www.cni.dev/plugins/current/main/bridge/#network-configuration-reference
     """
 
@@ -33,8 +32,7 @@ class CNIPluginBridgeConfig(CNIPluginConfig):
 
 @dataclass
 class CNIPluginOvnK8sConfig(CNIPluginConfig):
-    """
-    CNI OVN-Kubernetes Plugin
+    """CNI OVN-Kubernetes Plugin
     Ref:
     https://docs.openshift.com/container-platform/4.14/networking/multiple_networks/
     configuring-additional-network.html#configuration-ovnk-network-plugin-json-object_
@@ -52,8 +50,7 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
 @dataclass
 class NetConfig:
-    """
-    CNI specification configuration
+    """CNI specification configuration
     Ref: https://www.cni.dev/docs/spec/#configuration-format
     """
 
@@ -63,9 +60,7 @@ class NetConfig:
 
 
 class NetworkAttachmentDefinition(NamespacedResource):
-    """
-    NetworkAttachmentDefinition object.
-    """
+    """NetworkAttachmentDefinition object."""
 
     api_group = NamespacedResource.ApiGroup.K8S_CNI_CNCF_IO
 
@@ -77,8 +72,7 @@ class NetworkAttachmentDefinition(NamespacedResource):
         resource_name: str | None = None,
         client: DynamicClient | None = None,
     ):
-        """
-        Create and manage NetworkAttachmentDefinition
+        """Create and manage NetworkAttachmentDefinition
 
         Args:
             name (str): Name of the NetworkAttachmentDefinition.

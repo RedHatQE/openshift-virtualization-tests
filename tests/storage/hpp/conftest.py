@@ -28,8 +28,7 @@ def utility_daemonset_for_hpp_test(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
 ):
-    """
-    Deploy utility daemonset into the cnv_tests_utilities_namespace namespace.
+    """Deploy utility daemonset into the cnv_tests_utilities_namespace namespace.
     This daemonset deploys a pod on every node with hostNetwork and the main usage is to run commands on the hosts.
     """
     utility_pods_for_hpp_test = "utility-pods-for-hpp-test"

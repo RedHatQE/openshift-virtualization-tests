@@ -83,10 +83,7 @@ class FedoraVirtualMachineForServiceMesh(VirtualMachineForTests):
         namespace,
         client,
     ):
-        """
-        Fedora VM Creation. Used for Service Mesh tests
-        """
-
+        """Fedora VM Creation. Used for Service Mesh tests"""
         super().__init__(
             name=name, namespace=namespace, client=client, os_flavor=OS_FLAVOR_FEDORA, body=fedora_vm_body(name=name)
         )
@@ -195,8 +192,7 @@ def update_cloud_init_extra_user_data(cloud_init_data, cloud_init_extra_user_dat
 
 
 def wait_for_address_on_iface(worker_pod, iface_name):
-    """
-    This function returns worker's ip else throws 'resources.utils.TimeoutExpiredError: Timed Out:
+    """This function returns worker's ip else throws 'resources.utils.TimeoutExpiredError: Timed Out:
     if function passed in func argument failed.
     """
     sample = None
@@ -218,8 +214,7 @@ def wait_for_address_on_iface(worker_pod, iface_name):
 
 
 def assert_ssh_alive(ssh_vm, src_ip):
-    """
-    Check the ssh process is alive
+    """Check the ssh process is alive
 
     Args:
         ssh_vm (VirtualMachine): VM to ssh, this is the dst VM of run_ssh_in_background().
@@ -246,9 +241,7 @@ def assert_ssh_alive(ssh_vm, src_ip):
 
 
 def run_ssh_in_background(nad, src_vm, dst_vm, dst_vm_user, dst_vm_password):
-    """
-    Start ssh connection to the vm
-    """
+    """Start ssh connection to the vm"""
     dst_ip = get_vmi_ip_v4_by_name(vm=dst_vm, name=nad.name)
     src_ip = str(get_vmi_ip_v4_by_name(vm=src_vm, name=nad.name))
     LOGGER.info(f"Start ssh connection to {dst_vm.name} from {src_vm.name}")

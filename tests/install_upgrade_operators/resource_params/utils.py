@@ -1,6 +1,5 @@
 def assert_status_condition(conditions, field_dict):
-    """
-    Validate that expected field is present in all conditions of status.conditions and not expected field does not
+    """Validate that expected field is present in all conditions of status.conditions and not expected field does not
     show up there
 
     Args:
@@ -11,7 +10,6 @@ def assert_status_condition(conditions, field_dict):
         Asserts if expected field does not show up or unexpected field shows up in hyperconverged resource's
         status.conditions
     """
-
     for field in field_dict:
         condition_match = [condition for condition in conditions if field in condition.keys()]
         assert bool(condition_match) == field_dict[field], (
@@ -25,8 +23,7 @@ def assert_status_condition(conditions, field_dict):
 
 
 def assert_observed_generation(hyperconverged_resource):
-    """
-    Validate observed generation of hyperconverged resource status.conditions matches with metadata.generation
+    """Validate observed generation of hyperconverged resource status.conditions matches with metadata.generation
 
     Args:
         hyperconverged_resource(Hyperconverged): Hyperconverged object

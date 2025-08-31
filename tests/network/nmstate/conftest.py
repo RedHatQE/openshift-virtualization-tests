@@ -15,12 +15,11 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def worker_nodes_management_iface_stats(nodes_active_nics, worker_node1, worker_node2):
-    """
-    The fixture create a daictionary containing the host node name and the iface_name:
-        node_stats = {
-            'n-awax-49-8-v6cnv-worker-0-qsb45': {'iface_name': 'ens3'},
-            'n-awax-49-8-v6cnv-worker-0-tgxlk': {'iface_name': 'ens3'}
-        }
+    """The fixture create a daictionary containing the host node name and the iface_name:
+    node_stats = {
+        'n-awax-49-8-v6cnv-worker-0-qsb45': {'iface_name': 'ens3'},
+        'n-awax-49-8-v6cnv-worker-0-tgxlk': {'iface_name': 'ens3'}
+    }
     """
     node_stats = {}
     for worker in worker_node1, worker_node2:

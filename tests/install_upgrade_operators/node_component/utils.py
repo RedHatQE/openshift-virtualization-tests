@@ -180,8 +180,7 @@ CNV_OPERATOR_PODS_COMPONENTS = [
 
 
 def find_components_on_node(component_list, node_name, admin_client, hco_namespace):
-    """
-    This function is used to check the Pod on given node. It breaks the loop once it finds Pod from the given list.
+    """This function is used to check the Pod on given node. It breaks the loop once it finds Pod from the given list.
 
     Args:
         component_list (list): list of components to be matched
@@ -216,8 +215,7 @@ def find_components_on_node(component_list, node_name, admin_client, hco_namespa
 
 
 def verify_all_components_on_node(component_list, node_name, admin_client, hco_namespace):
-    """
-    This function validates that actual pods associated with a given node matches with the list of expected pods for
+    """This function validates that actual pods associated with a given node matches with the list of expected pods for
     same node
 
     Args:
@@ -259,8 +257,7 @@ def verify_no_components_on_nodes(
     admin_client,
     hco_namespace,
 ):
-    """
-    This function validates that a list of pods are not associated with any of node from a given list
+    """This function validates that a list of pods are not associated with any of node from a given list
 
     Args:
         component_list (list): list of components to be matched
@@ -314,8 +311,7 @@ def verify_components_exist_only_on_selected_node(
     admin_client,
     hco_namespace,
 ):
-    """
-    This function validates only expected pods have been spin'ed up on a given node.
+    """This function validates only expected pods have been spin'ed up on a given node.
 
     Args:
         hco_pods_per_nodes(dict): dictionary with node names as keys and associated list of pod apps as values
@@ -340,8 +336,7 @@ def verify_components_exist_only_on_selected_node(
 
 
 def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
-    """
-    This function creates a dictionary, with nodes as keys and associated list of pod apps as values
+    """This function creates a dictionary, with nodes as keys and associated list of pod apps as values
 
     Args:
         admin_client(DynamicClient): DynamicClient object
@@ -392,8 +387,7 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
 
 
 def update_subscription_config(admin_client, hco_namespace, subscription, config):
-    """
-    Updates CNV subscription spec.config
+    """Updates CNV subscription spec.config
 
     Args:
         admin_client(DynamicClient): DynamicClient object

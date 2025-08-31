@@ -102,9 +102,7 @@ def cnv_pod_by_name(
 
 @pytest.fixture(scope="session")
 def ocp_resources_submodule_list():
-    """
-    Gets the list of submodules in ocp_resources. This list is needed to make get and patch call to the right resource
-    """
+    """Gets the list of submodules in ocp_resources. This list is needed to make get and patch call to the right resource"""
     path = importlib.util.find_spec("ocp_resources").submodule_search_locations
     return [module.name for module in pkgutil.iter_modules(path)]
 
@@ -136,9 +134,7 @@ def cnao_spec(cnao_resource):
 
 @pytest.fixture()
 def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client, hco_namespace):
-    """
-    This fixture updates HCO CR with values specified via request.param
-    """
+    """This fixture updates HCO CR with values specified via request.param"""
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_function: request.param["patch"]},
         list_resource_reconcile=request.param.get("list_resource_reconcile", [NetworkAddonsConfig, CDI, KubeVirt]),
@@ -149,9 +145,7 @@ def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client
 
 @pytest.fixture()
 def updated_kubevirt_cr(request, kubevirt_resource, admin_client, hco_namespace):
-    """
-    Attempts to update kubevirt CR
-    """
+    """Attempts to update kubevirt CR"""
     with ResourceEditorValidateHCOReconcile(
         patches={kubevirt_resource: request.param["patch"]},
         list_resource_reconcile=[KubeVirt],

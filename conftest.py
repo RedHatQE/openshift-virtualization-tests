@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Pytest conftest file for CNV tests
-"""
+"""Pytest conftest file for CNV tests"""
 
 import datetime
 import logging
@@ -426,8 +424,7 @@ def remove_upgrade_tests_based_on_config(
     cnv_source: str,
     upgrade_tests: list[Item],
 ) -> tuple[list[Item], list[Item]]:
-    """
-    Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
+    """Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
     If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
     If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
     If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
@@ -502,8 +499,7 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(session, config, items):
-    """
-    Pytest builtin function.
+    """Pytest builtin function.
     Modify the test items during pytest collection to include necessary test metadata.
 
     This function performs the following actions:
@@ -585,9 +581,7 @@ def pytest_report_teststatus(report, config):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """
-    incremental tests implementation
-    """
+    """Incremental tests implementation"""
     if call.excinfo is not None and "incremental" in item.keywords:
         parent = item.parent
         parent._previousfailed = item
@@ -624,9 +618,7 @@ def pytest_fixture_setup(fixturedef, request):
 
 
 def pytest_runtest_setup(item):
-    """
-    Use incremental
-    """
+    """Use incremental"""
     # set the data collector directory irrespective of --data-collector. This is to enable collecting pexcpect logs
     set_data_collector_directory(item=item, directory_path=get_data_collector_dir())
     if item.config.getoption("--data-collector"):

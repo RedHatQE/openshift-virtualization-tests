@@ -15,8 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Console(object):
     def __init__(self, vm, username=None, password=None, timeout=30, prompt=None):
-        """
-        Connect to VM console
+        """Connect to VM console
 
         Args:
             vm (VirtualMachine): VM resource
@@ -105,13 +104,9 @@ class Console(object):
         return cmd
 
     def __enter__(self):
-        """
-        Connect to console
-        """
+        """Connect to console"""
         return self.connect()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Logout from shell
-        """
+        """Logout from shell"""
         self.disconnect()

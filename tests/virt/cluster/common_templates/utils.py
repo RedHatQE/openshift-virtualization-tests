@@ -53,7 +53,6 @@ def xfail_old_guest_agent_version(vm, ga_version):
 
 def vm_os_version(vm):
     """Verify VM os version using SSH"""
-
     # Replace rhel with "redhat"
     os_name = "redhat" if OS_FLAVOR_RHEL in vm.os_flavor else vm.os_flavor
     os = re.search(r"(\w+-)?(\d+(-\d+)?)(-\d+-\d+)$", vm.name).group(2)
@@ -217,8 +216,7 @@ def validate_user_info_virtctl_vs_windows_os(vm):
 
 
 def get_cnv_os_info(vm):
-    """
-    Returns OS data dict in format:
+    """Returns OS data dict in format:
     {
         "guestAgentVersion": guestAgentVersion,
         "hostname": hostname,
@@ -263,8 +261,7 @@ def get_libvirt_os_info(vm):
 
 
 def get_virtctl_fs_info(vm):
-    """
-    Returns FS data dict in format:
+    """Returns FS data dict in format:
     {
         "name": name,
         "mount": mount,
@@ -297,8 +294,7 @@ def get_virtctl_fs_info(vm):
 
 
 def get_cnv_fs_info(vm):
-    """
-    Returns FS data dict in format:
+    """Returns FS data dict in format:
     {
         "name": name,
         "mount": mount,
@@ -311,8 +307,7 @@ def get_cnv_fs_info(vm):
 
 
 def get_libvirt_fs_info(vm):
-    """
-    Returns FS data dict in format:
+    """Returns FS data dict in format:
     {
         "name": name,
         "mount": mount,
@@ -468,7 +463,6 @@ def check_guest_agent_sampler_data(sampler):
 
 def check_machine_type(vm):
     """VM and VMI should have machine type; machine type cannot be empty"""
-
     vm_machine_type = vm.instance.spec.template.spec.domain.machine.type
     vmi_machine_type = vm.vmi.instance.spec.domain.machine.type
 
@@ -481,7 +475,6 @@ def check_machine_type(vm):
 
 def check_vm_xml_hyperv(vm):
     """Verify HyperV values in VMI"""
-
     hyperv_features = vm.privileged_vmi.xml_dict["domain"]["features"]["hyperv"]
     failed_hyperv_features = [
         hyperv_features[feature]
@@ -504,7 +497,6 @@ def check_vm_xml_hyperv(vm):
 
 def check_vm_xml_clock(vm):
     """Verify clock values in VMI"""
-
     clock_timer_list = vm.privileged_vmi.xml_dict["domain"]["clock"]["timer"]
     assert [i for i in clock_timer_list if i["@name"] == "hpet"][0]["@present"] == "no"
     assert [i for i in clock_timer_list if i["@name"] == "hypervclock"][0]["@present"] == "yes"
@@ -581,7 +573,6 @@ def check_windows_vm_hvinfo(vm):
 
 def set_vm_tablet_device_dict(tablet_params):
     """Generates VM tablet device dict"""
-
     return {"spec": {"template": {"spec": {"domain": {"devices": {"inputs": [tablet_params]}}}}}}
 
 
@@ -589,7 +580,6 @@ def check_vm_xml_tablet_device(vm):
     """Verifies vm tablet device info in VM XML vs VM instance attributes
     values.
     """
-
     LOGGER.info("Verify VM XML - tablet device values.")
 
     vm_instance_tablet_device_dict = vm.instance["spec"]["template"]["spec"]["domain"]["devices"]["inputs"][0]
@@ -607,9 +597,7 @@ def check_vm_xml_tablet_device(vm):
 
 
 def assert_windows_efi(vm):
-    """
-    Verify guest OS is using EFI.
-    """
+    """Verify guest OS is using EFI."""
     out = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split("bcdedit | findstr EFI"),
@@ -631,7 +619,6 @@ def get_matrix_os_golden_image_data_source(
     Yields:
         DataSource: DataSource object.
     """
-
     os_dict = os_matrix[[*os_matrix][0]]
     data_source_name = os_dict[DATA_SOURCE_STR]
 
@@ -654,8 +641,7 @@ def get_matrix_os_golden_image_data_source(
 
 
 def get_data_volume_template_dict_with_default_storage_class(data_source: DataSource) -> dict[str, dict]:
-    """
-    Generates a dataVolumeTemplate dict with the py_config based storage class.
+    """Generates a dataVolumeTemplate dict with the py_config based storage class.
 
     Args:
         data_source (DataSource): The data source object used to create the data volume template.

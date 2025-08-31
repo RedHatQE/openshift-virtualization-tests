@@ -95,8 +95,7 @@ def get_mutation_component_value_from_prometheus(prometheus: Prometheus, compone
 
 
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
-    """
-    This function will wait for the expected metrics core cpu to show up in Prometheus query output
+    """This function will wait for the expected metrics core cpu to show up in Prometheus query output
     and return if results equal to the expected total requested cpu for all total vm's
     Args:
         prometheus (Prometheus): Prometheus object
@@ -124,8 +123,7 @@ def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expecte
 
 
 def get_prometheus_vmi_request_cpu_sum_query_value(prometheus: Prometheus) -> float:
-    """
-    This function will perform Prometheus query cluster:vmi_request_cpu_cores:sum and return query cpu output result
+    """This function will perform Prometheus query cluster:vmi_request_cpu_cores:sum and return query cpu output result
 
     Args:
         prometheus (Prometheus): Prometheus object.
@@ -139,8 +137,7 @@ def get_prometheus_vmi_request_cpu_sum_query_value(prometheus: Prometheus) -> fl
 
 
 def get_vm_metrics(prometheus: Prometheus, query: str, vm_name: str, timeout: int = TIMEOUT_5MIN) -> list[dict] | None:
-    """
-    Performs Prometheus query, waits for the expected vm related metrics to show up in results,
+    """Performs Prometheus query, waits for the expected vm related metrics to show up in results,
     returns the query results
 
     Args:
@@ -265,8 +262,7 @@ def wait_for_summary_count_to_be_expected(
 
 
 def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
-    """
-    Parse metrics received from virt-handler pod
+    """Parse metrics received from virt-handler pod
 
     Args:
         raw_output (str): raw metric output received from virt-handler pods
@@ -301,8 +297,7 @@ def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
 
 
 def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
-    """
-    Get vm metric information from virt-handler pod
+    """Get vm metric information from virt-handler pod
 
     Args:
         query (str): Prometheus query string
@@ -327,8 +322,7 @@ def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
 
 
 def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dict[str, str]]) -> None:
-    """
-    Validate vm metric information fetched from virt-handler pod
+    """Validate vm metric information fetched from virt-handler pod
 
     Args:
         vm (VirtualMachineForTests): A VirtualMachineForTests
@@ -354,8 +348,7 @@ def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dic
 
 
 def get_topk_query(metric_names: list[str], time_period: str = "5m") -> str:
-    """
-    Creates a topk query string based on metric_name
+    """Creates a topk query string based on metric_name
 
     Args:
         metric_names (list): list of strings
@@ -370,8 +363,7 @@ def get_topk_query(metric_names: list[str], time_period: str = "5m") -> str:
 
 
 def assert_topk_vms(prometheus: Prometheus, query: str, vm_list: list, timeout: int = TIMEOUT_8MIN) -> list | None:
-    """
-    Performs a topk query against prometheus api, waits until it has expected result entries and returns the
+    """Performs a topk query against prometheus api, waits until it has expected result entries and returns the
     results
 
     Args:
@@ -411,8 +403,8 @@ def assert_topk_vms(prometheus: Prometheus, query: str, vm_list: list, timeout: 
 
 
 def run_vm_commands(vms: list, commands: list) -> None:
-    """
-    This helper function, runs commands on vms to generate metrics.
+    """This helper function, runs commands on vms to generate metrics.
+
     Args:
         vms (list): List of VirtualMachineForTests
         commands (list): Used to execute commands against nodes (where created vms are scheduled)
@@ -428,8 +420,7 @@ def run_vm_commands(vms: list, commands: list) -> None:
 
 
 def run_node_command(vms: list, command: str, utility_pods: list) -> None:
-    """
-    This is a helper function to run a command against a node associated with a given virtual machine, to prepare
+    """This is a helper function to run a command against a node associated with a given virtual machine, to prepare
     it for metric generation commands.
 
     Args:
@@ -456,8 +447,7 @@ def run_node_command(vms: list, command: str, utility_pods: list) -> None:
 def assert_prometheus_metric_values(
     prometheus: Prometheus, query: str, vm: VirtualMachineForTests, timeout: int = TIMEOUT_5MIN
 ) -> None:
-    """
-    Compares metric query result with expected values
+    """Compares metric query result with expected values
 
     Args:
         prometheus (Prometheus Object): Prometheus object.
@@ -504,8 +494,7 @@ def is_swap_enabled(vm: VirtualMachineForTests, swap_name: str = r"\/dev\/zram0"
 
 
 def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
-    """
-    Enable swap on on fedora vms
+    """Enable swap on on fedora vms
 
     Args:
        vm (VirtualMachineForTests): a VirtualMachineForTests, on which swap is to be enabled
@@ -528,8 +517,7 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
 
 
 def get_vmi_phase_count(prometheus: Prometheus, os_name: str, flavor: str, workload: str, query: str) -> int:
-    """
-    Get the metric from the defined Prometheus query
+    """Get the metric from the defined Prometheus query
 
     Args:
         prometheus (Prometheus object): Prometheus object to interact with the query
@@ -582,8 +570,7 @@ def wait_until_kubevirt_vmi_phase_count_is_expected(
 
 
 def get_prometheus_monitoring_pods(admin_client: DynamicClient) -> list:
-    """
-    Get all Prometheus pods within the openshift-monitoring namespace
+    """Get all Prometheus pods within the openshift-monitoring namespace
 
     Args:
         admin_client (DynamicClient): DynamicClient object
@@ -605,8 +592,7 @@ def get_prometheus_monitoring_pods(admin_client: DynamicClient) -> list:
 
 
 def get_not_running_prometheus_pods(admin_client) -> dict[str, str]:
-    """
-    Get all Prometheus pods that are not in Running status
+    """Get all Prometheus pods that are not in Running status
 
     Args:
         admin_client (DynamicClient): DynamicClient object
@@ -736,8 +722,8 @@ def get_resource_object(
 
 
 def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
-    """
-    This function is waiting for Prometheus query node label value to be update.
+    """This function is waiting for Prometheus query node label value to be update.
+
     Args:
         prometheus (Prometheus): Prometheus object
         query (str): Prometheus query string
@@ -766,8 +752,7 @@ def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, q
 
 
 def assert_instancetype_labels(prometheus: Prometheus, metric_name: str, expected_labels: dict[str, str]) -> None:
-    """
-    This function will assert prometheus query output labels against expected labels.
+    """This function will assert prometheus query output labels against expected labels.
 
     Args:
         prometheus (Prometheus): Prometheus client object to query metrics
@@ -1075,8 +1060,7 @@ def metric_result_output_dict_by_mountpoint(
 def compare_kubevirt_vmi_info_metric_with_vm_info(
     prometheus: Prometheus, query: str, expected_value: str, values_to_compare: dict
 ) -> None:
-    """
-    This function waiting of Prometheus query output to match expected value
+    """This function waiting of Prometheus query output to match expected value
     Args:
         prometheus (Prometheus): Prometheus object
         query (str): Prometheus query string
@@ -1313,9 +1297,9 @@ def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_pr
 
 
 def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
-    """
-    This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
-        Args:
+    """This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
+
+    Args:
         hco_namespace: Hco namespacem
     Returns:
         tuple: containing the name of the virt-api pod with the highest memory usage and value of the memory.
@@ -1337,8 +1321,7 @@ def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str
 
 
 def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
-    """
-    Get the requested memory for a pod.
+    """Get the requested memory for a pod.
 
     Args:
         hco_namespace: Hco namespace
@@ -1364,8 +1347,7 @@ def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, po
 def expected_kubevirt_memory_delta_from_requested_bytes(
     hco_namespace: str, admin_client: DynamicClient, rss: bool
 ) -> int:
-    """
-    Calculate the expected memory delta between actual and requested memory.
+    """Calculate the expected memory delta between actual and requested memory.
 
     Args:
         hco_namespace: The namespace where virt-api pods are running

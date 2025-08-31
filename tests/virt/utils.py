@@ -141,8 +141,8 @@ def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
 
 
 def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
-    """
-    Verifies that WSL2 is functioning on windows vm.
+    """Verifies that WSL2 is functioning on windows vm.
+
     Args:
         vm: An instance of `VirtualMachineForTests`
     Raises:
@@ -436,8 +436,7 @@ def verify_gpu_device_exists_in_vm(vm, supported_gpu_device):
 
 
 def get_allocatable_memory_per_node(schedulable_nodes):
-    """
-    Gets allocatable memory for each schedulable node.
+    """Gets allocatable memory for each schedulable node.
 
     A node's allocatable memory is preferred, but if it's not set,
     the capacity value is used as a fallback.

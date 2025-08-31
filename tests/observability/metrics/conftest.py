@@ -171,8 +171,7 @@ def wait_for_component_value_to_be_expected(prometheus, component_name, expected
 def updated_resource_multiple_times_with_invalid_label(
     request, prometheus, admin_client, hco_namespace, hco_status_related_objects
 ):
-    """
-    This fixture will repeatedly modify the given resource with invalid metadata labels.
+    """This fixture will repeatedly modify the given resource with invalid metadata labels.
 
     Args:
         admin_client (DynamicClient): OCP client with Admin permissions
@@ -232,8 +231,7 @@ def mutation_count_before_change(request, prometheus):
 
 @pytest.fixture(scope="module")
 def unique_namespace(admin_client, unprivileged_client):
-    """
-    Creates a namespace to be used by key metrics test cases.
+    """Creates a namespace to be used by key metrics test cases.
 
     Yields:
         Namespace object to be used by the tests
@@ -282,8 +280,7 @@ def error_state_vm(unique_namespace, unprivileged_client):
 
 @pytest.fixture(scope="module")
 def vm_list(unique_namespace):
-    """
-    Creates n vms, waits for them all to go to running state and cleans them up at the end
+    """Creates n vms, waits for them all to go to running state and cleans them up at the end
 
     Args:
         unique_namespace (Namespace): Creates namespaces to be used by the test
@@ -302,8 +299,7 @@ def vm_list(unique_namespace):
 
 @pytest.fixture()
 def node_setup(request, vm_list, workers_utility_pods):
-    """
-    This fixture runs commands on nodes hosting vms and reverses the changes at the end.
+    """This fixture runs commands on nodes hosting vms and reverses the changes at the end.
 
     Args:
         vm_list (list): Gets the list of vms created as a part of suite level set up.
@@ -332,8 +328,7 @@ def node_setup(request, vm_list, workers_utility_pods):
 
 @pytest.fixture()
 def vm_metrics_setup(request, vm_list):
-    """
-    This fixture runs commands against the vms to generate metrics
+    """This fixture runs commands against the vms to generate metrics
 
     Args:
         vm_list (list): Gets the list of vms created as a part of suite level set up
@@ -351,8 +346,7 @@ def vm_metrics_setup(request, vm_list):
 
 @pytest.fixture(scope="class")
 def vmi_phase_count_before(request, prometheus):
-    """
-    This fixture queries Prometheus with the query in the get_vmi_phase_count before a VM is created
+    """This fixture queries Prometheus with the query in the get_vmi_phase_count before a VM is created
     and keeps the value for verification
     """
     return get_vmi_phase_count(
@@ -366,9 +360,7 @@ def vmi_phase_count_before(request, prometheus):
 
 @pytest.fixture(scope="module", autouse=True)
 def metrics_sanity(admin_client):
-    """
-    Perform verification in order to ensure that the cluster is ready for metrics-related tests
-    """
+    """Perform verification in order to ensure that the cluster is ready for metrics-related tests"""
     LOGGER.info("Verify that Prometheus pods exist and running as expected")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,

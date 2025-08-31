@@ -1,6 +1,4 @@
-"""
-Pytest conftest file for CNV tests
-"""
+"""Pytest conftest file for CNV tests"""
 
 import copy
 import ipaddress
@@ -234,8 +232,7 @@ RWX_FS_STORAGE_CLASS_NAMES_LIST = [
 
 @pytest.fixture(scope="session")
 def junitxml_polarion(record_testsuite_property):
-    """
-    Add polarion needed attributes to junit xml
+    """Add polarion needed attributes to junit xml
 
     export as os environment:
     POLARION_CUSTOM_PLANNEDIN
@@ -300,9 +297,7 @@ def exported_kubeconfig(unprivileged_secret, kubeconfig_export_path):
 
 @pytest.fixture(scope="session")
 def admin_client():
-    """
-    Get DynamicClient
-    """
+    """Get DynamicClient"""
     return get_client()
 
 
@@ -394,9 +389,7 @@ def unprivileged_client(
     identity_provider_with_htpasswd,
     exported_kubeconfig,
 ):
-    """
-    Provides none privilege API client
-    """
+    """Provides none privilege API client"""
     if skip_unprivileged_client:
         yield
 
@@ -489,8 +482,7 @@ def utility_daemonset(
     cnv_tests_utilities_namespace,
     cnv_tests_utilities_service_account,
 ):
-    """
-    Deploy utility daemonset into the cnv-tests-utilities namespace.
+    """Deploy utility daemonset into the cnv-tests-utilities namespace.
 
     This daemonset deploys a pod on every node with hostNetwork and the main usage is to run commands on the hosts.
     For example to create linux bridge and other components related to the host configuration.
@@ -525,8 +517,7 @@ def generated_pulled_secret(
 
 @pytest.fixture(scope="session")
 def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cnv):
-    """
-    Get utility pods from worker nodes.
+    """Get utility pods from worker nodes.
     When the tests start we deploy a pod on every worker node in the cluster using a daemonset.
     These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
     """
@@ -541,8 +532,7 @@ def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cn
 
 @pytest.fixture(scope="session")
 def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
-    """
-    Get utility pods from control plane nodes.
+    """Get utility pods from control plane nodes.
     When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
     These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
     """
@@ -647,8 +637,7 @@ def nodes_available_nics(nodes_active_nics):
 
 @pytest.fixture(scope="module")
 def namespace(request, admin_client, unprivileged_client):
-    """
-    To create namespace using admin client, pass {"use_unprivileged_client": False} to request.param
+    """To create namespace using admin client, pass {"use_unprivileged_client": False} to request.param
     (default for "use_unprivileged_client" is True)
     """
     use_unprivileged_client = getattr(request, "param", {}).get("use_unprivileged_client", True)
@@ -908,7 +897,6 @@ def vm_instance_from_template_multi_storage_scope_function(
 
     Creates a VM from template and starts it (if requested).
     """
-
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
@@ -931,7 +919,6 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
 
     Creates a VM from template and starts it (if requested).
     """
-
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
@@ -954,7 +941,6 @@ def golden_image_vm_instance_from_template_multi_storage_scope_class(
 
     Creates a VM from template and starts it (if requested).
     """
-
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
@@ -994,9 +980,7 @@ def started_windows_vm(
 
 @pytest.fixture(scope="session")
 def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nodes):
-    """
-    Function removes ipv4 from secondary nics.
-    """
+    """Function removes ipv4 from secondary nics."""
     for worker_node in schedulable_nodes:
         worker_nics = nodes_available_nics[worker_node.name]
         with EthernetNetworkConfigurationPolicy(
@@ -1174,9 +1158,7 @@ def host_cpu_model(schedulable_nodes, nodes_cpu_architecture):
 
 @pytest.fixture(scope="session")
 def cpu_for_migration(cluster_common_node_cpu, host_cpu_model, nodes_cpu_architecture):
-    """
-    Get a CPU model that is common for all nodes
-    """
+    """Get a CPU model that is common for all nodes"""
     return (
         None
         if nodes_cpu_architecture == ARM_64
@@ -1188,9 +1170,7 @@ def cpu_for_migration(cluster_common_node_cpu, host_cpu_model, nodes_cpu_archite
 
 @pytest.fixture(scope="session")
 def modern_cpu_for_migration(cluster_common_modern_node_cpu, host_cpu_model, nodes_cpu_architecture):
-    """
-    Get a modern CPU model that is common for all nodes
-    """
+    """Get a modern CPU model that is common for all nodes"""
     return (
         None
         if nodes_cpu_architecture == ARM_64
@@ -1253,8 +1233,7 @@ def golden_images_edit_rolebinding(
 
 @pytest.fixture(scope="session")
 def hosts_common_available_ports(nodes_available_nics):
-    """
-    Get list of common ports from nodes_available_nics.
+    """Get list of common ports from nodes_available_nics.
 
     nodes_available_nics like
     [['ens3', 'ens4', 'ens6', 'ens5'],
@@ -1271,9 +1250,7 @@ def hosts_common_available_ports(nodes_available_nics):
 
 @pytest.fixture(scope="session")
 def default_sc(admin_client):
-    """
-    Get default Storage Class defined
-    """
+    """Get default Storage Class defined"""
     try:
         yield get_default_storage_class()
     except ValueError:
@@ -1358,9 +1335,7 @@ def network_addons_config_scope_session(admin_client):
 
 @pytest.fixture(scope="session")
 def ocs_storage_class(cluster_storage_classes):
-    """
-    Get the OCS storage class if configured
-    """
+    """Get the OCS storage class if configured"""
     for sc in cluster_storage_classes:
         if sc.name == StorageClassNames.CEPH_RBD_VIRTUALIZATION:
             return sc
@@ -1368,18 +1343,14 @@ def ocs_storage_class(cluster_storage_classes):
 
 @pytest.fixture(scope="session")
 def skip_test_if_no_ocs_sc(ocs_storage_class):
-    """
-    Skip test if no OCS storage class available
-    """
+    """Skip test if no OCS storage class available"""
     if not ocs_storage_class:
         pytest.skip("Skipping test, OCS storage class is not deployed")
 
 
 @pytest.fixture(scope="session")
 def fail_test_if_no_ocs_sc(ocs_storage_class):
-    """
-    Fail test if no OCS storage class available
-    """
+    """Fail test if no OCS storage class available"""
     if not ocs_storage_class:
         pytest.fail("Failing test, OCS storage class is not deployed")
 
@@ -1421,9 +1392,7 @@ def cluster_storage_classes_names(cluster_storage_classes):
 
 @pytest.fixture(scope="class")
 def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyperconverged_resource_scope_class):
-    """
-    Update HCO CR with infrastructure and workloads spec.
-    """
+    """Update HCO CR with infrastructure and workloads spec."""
     infra_placement = request.param["infra"]
     workloads_placement = request.param["workloads"]
 
@@ -1473,8 +1442,7 @@ def cluster_sanity_scope_session(
     hyperconverged_resource_scope_session,
     installing_cnv,
 ):
-    """
-    Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
+    """Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
     check to ensure all are in 'Running' state, to determine current state of cluster
     """
     if not installing_cnv:
@@ -1501,8 +1469,7 @@ def cluster_sanity_scope_module(
     hyperconverged_resource_scope_session,
     installing_cnv,
 ):
-    """
-    Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
+    """Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
     check to ensure all are in 'Running' state, to determine current state of cluster
     """
     if not installing_cnv:
@@ -1829,8 +1796,7 @@ def upgrade_br1test_nad(upgrade_namespace_scope_session, upgrade_bridge_on_all_n
 
 @pytest.fixture(scope="session")
 def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_target_version):
-    """
-    Verify if the upgrade can be performed by comparing the current and target versions.
+    """Verify if the upgrade can be performed by comparing the current and target versions.
 
     Args:
         admin_client: The admin client instance.
@@ -2087,7 +2053,7 @@ def autouse_fixtures(
     cluster_sanity_scope_module,
     generated_ssh_key_for_vm_access,
 ):
-    """call all autouse fixtures"""
+    """Call all autouse fixtures"""
 
 
 @pytest.fixture(scope="session")
@@ -2171,9 +2137,7 @@ def cnv_source(pytestconfig):
 
 @pytest.fixture(scope="session")
 def fips_enabled_cluster(workers_utility_pods):
-    """
-    Check if FIPS is enabled on cluster
-    """
+    """Check if FIPS is enabled on cluster"""
     for pod in workers_utility_pods:
         # command output: 0 == fips disabled
         #                 1 == fips enabled
@@ -2299,7 +2263,7 @@ def vm_from_template_with_existing_dv(
     namespace,
     data_volume_scope_function,
 ):
-    """create VM from template using an existing DV (and not a golden image)"""
+    """Create VM from template using an existing DV (and not a golden image)"""
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
@@ -2321,9 +2285,7 @@ def scaled_deployment(request, hco_namespace):
 
 @pytest.fixture(scope="module")
 def hco_status_related_objects(hyperconverged_resource_scope_module):
-    """
-    Gets HCO.status.relatedObjects list
-    """
+    """Gets HCO.status.relatedObjects list"""
     return hyperconverged_resource_scope_module.instance.status.relatedObjects
 
 
@@ -2711,9 +2673,7 @@ def ssp_resource_scope_class(admin_client, hco_namespace):
 
 @pytest.fixture(scope="session")
 def skip_test_if_no_odf_cephfs_sc(cluster_storage_classes_names):
-    """
-    Skip test if no odf cephfs storage class available
-    """
+    """Skip test if no odf cephfs storage class available"""
     if StorageClassNames.CEPHFS not in cluster_storage_classes_names:
         pytest.skip(
             f"Skipping test, {StorageClassNames.CEPHFS} storage class is not deployed,"
@@ -2723,8 +2683,7 @@ def skip_test_if_no_odf_cephfs_sc(cluster_storage_classes_names):
 
 @pytest.fixture(scope="session")
 def sriov_unused_ifaces(sriov_ifaces):
-    """
-    This fixture returns SRIOV interfaces which are not used. If an interface has
+    """This fixture returns SRIOV interfaces which are not used. If an interface has
     some VFs in use but still have available VFs, it will be seen as used and will
     not be included in the returned list.
     """

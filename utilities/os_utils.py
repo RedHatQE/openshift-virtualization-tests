@@ -138,8 +138,7 @@ CENTOS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
 
 
 def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]) -> list[dict[str, Any]]:
-    """
-    Generate a dictionary of OS matrix for the given OS name and supported operating systems.
+    """Generate a dictionary of OS matrix for the given OS name and supported operating systems.
 
     Args:
         os_name (str): The name of the OS.
@@ -148,7 +147,7 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
     Returns:
         list[dict[str, Any]]: A list of dictionaries representing the OS matrix.
 
-            Example:
+    Example:
                 [
                     {
                     "rhel-7-9": {
@@ -242,8 +241,7 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
 
 
 def generate_linux_instance_type_os_matrix(os_name: str, preferences: list[str]) -> list[dict[str, dict[str, Any]]]:
-    """
-    Generate a list of dictionaries representing the instance type matrix for a Linux OS type.
+    """Generate a list of dictionaries representing the instance type matrix for a Linux OS type.
     Each dictionary represents a specific instance type and its configuration.
 
     Args:

@@ -59,8 +59,7 @@ global_config = pytest_testconfig.load_python(py_file=f"tests/global_config_{arc
 
 
 def _get_default_storage_class(sc_list):
-    """
-    Args:
+    """Args:
         sc_list (list): storage class dict - a list of dicts
 
     Returns:

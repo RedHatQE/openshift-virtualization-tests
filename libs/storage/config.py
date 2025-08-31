@@ -152,8 +152,7 @@ class StorageClassConfig:
         return None
 
     def construct_storage_class_matrix(self, storage_config: str | None = None) -> list[dict[str, Any]]:
-        """
-        Constructs a storage class matrix from the storage class config
+        """Constructs a storage class matrix from the storage class config
 
         Args:
             storage_config (str | None): Storage class config.

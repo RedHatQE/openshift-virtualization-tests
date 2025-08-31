@@ -25,8 +25,7 @@ def create_vnc_console_token(
     duration: int,
     runtime_headers: dict[str, str] | None,
 ) -> str:
-    """
-    Requests a VNC console token for a virtual machine
+    """Requests a VNC console token for a virtual machine
 
     Args:
         url (str): The base URL of API server.

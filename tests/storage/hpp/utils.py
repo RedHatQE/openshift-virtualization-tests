@@ -1,6 +1,4 @@
-"""
-Utilities for Hostpath Provisioner CSI Custom Resource permutations tests
-"""
+"""Utilities for Hostpath Provisioner CSI Custom Resource permutations tests"""
 
 import logging
 from contextlib import contextmanager

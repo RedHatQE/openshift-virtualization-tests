@@ -100,9 +100,7 @@ def updated_image_content_source_policy(
     is_disconnected_cluster,
     is_idms_cluster,
 ):
-    """
-    Creates a new ImageContentSourcePolicy file with a given CNV image and applies it to the cluster.
-    """
+    """Creates a new ImageContentSourcePolicy file with a given CNV image and applies it to the cluster."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying ICSP/IDMS in a disconnected setup.")
         return

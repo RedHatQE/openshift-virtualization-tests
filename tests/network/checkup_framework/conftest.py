@@ -188,9 +188,7 @@ def checkup_sriov_network(
     checkup_ns,
     sriov_namespace,
 ):
-    """
-    Create a SR-IOV network linked to SR-IOV policy.
-    """
+    """Create a SR-IOV network linked to SR-IOV policy."""
     with network_nad(
         nad_type=SRIOV,
         nad_name=SRIOV_CHECKUP_NAD,
@@ -208,9 +206,7 @@ def checkup_sriov_disconnected_network(
     checkup_ns,
     sriov_namespace,
 ):
-    """
-    Create a SR-IOV disconnected network linked to a SR-IOV policy. This is created using a non-configured VLAN tag.
-    """
+    """Create a SR-IOV disconnected network linked to a SR-IOV policy. This is created using a non-configured VLAN tag."""
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-checkup-disconnected-nad",

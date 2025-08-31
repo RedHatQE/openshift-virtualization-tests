@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Pytest conftest file for CNV network tests
-"""
+"""Pytest conftest file for CNV network tests"""
 
 import logging
 
@@ -103,17 +101,13 @@ def istio_system_namespace(admin_client):
 
 @pytest.fixture(scope="module")
 def sriov_workers_node1(sriov_workers):
-    """
-    Get first worker nodes with SR-IOV capabilities
-    """
+    """Get first worker nodes with SR-IOV capabilities"""
     return sriov_workers[0]
 
 
 @pytest.fixture(scope="class")
 def sriov_workers_node2(sriov_workers):
-    """
-    Get second worker nodes with SR-IOV capabilities
-    """
+    """Get second worker nodes with SR-IOV capabilities"""
     return sriov_workers[1]
 
 
@@ -210,8 +204,7 @@ def network_sanity(
     sriov_workers,
     ipv4_supported_cluster,
 ):
-    """
-    Ensures the test cluster meets network requirements before executing tests.
+    """Ensures the test cluster meets network requirements before executing tests.
     A failure in these checks results in pytest exiting with a predefined
     return code and a message recorded in JUnit XML.
     """

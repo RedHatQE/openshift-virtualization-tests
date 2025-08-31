@@ -1,6 +1,4 @@
-"""
-SR-IOV Tests
-"""
+"""SR-IOV Tests"""
 
 import logging
 import re
@@ -111,9 +109,7 @@ def sriov_with_vlan_node_policy(sriov_nodes_states, sriov_iface_with_vlan, sriov
 
 @pytest.fixture(scope="module")
 def sriov_network(sriov_node_policy, namespace, sriov_namespace):
-    """
-    Create a SR-IOV network linked to SR-IOV policy.
-    """
+    """Create a SR-IOV network linked to SR-IOV policy."""
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-test-network",
@@ -126,9 +122,7 @@ def sriov_network(sriov_node_policy, namespace, sriov_namespace):
 
 @pytest.fixture(scope="class")
 def sriov_network_vlan(sriov_with_vlan_node_policy, namespace, sriov_namespace, vlan_index_number):
-    """
-    Create a SR-IOV VLAN network linked to SR-IOV policy.
-    """
+    """Create a SR-IOV VLAN network linked to SR-IOV policy."""
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-test-network-vlan",
