@@ -234,7 +234,7 @@ jobs:
             echo "Cherry-pick successful - changes ready for PR creation"
             echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Cherry-pick failed with conflicts - leaving in working tree for peter-evans"
+            echo "Cherry-pick failed with conflicts - staging for peter-evans"
 
             # Get list of conflicted files
             CONFLICTED_FILES=$(git diff --name-only --diff-filter=U | tr '\n' ' ' || echo "Unable to determine conflicted files")
@@ -250,8 +250,12 @@ jobs:
 
             echo "has_conflicts=true" >> "$GITHUB_OUTPUT"
 
-            # Don't commit conflicts - let peter-evans handle the working tree state
-            # The action will detect the conflicts and create appropriate commit
+            # Refresh index and stage all changes (including conflicts) for peter-evans to handle
+            # This resolves the "you need to resolve your current index first" error
+
+            git add -A :/
+
+            git update-index --refresh -q || true
           fi
 
       - name: Create PR for successful cherry-pick
