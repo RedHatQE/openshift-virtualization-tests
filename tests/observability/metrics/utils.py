@@ -641,24 +641,6 @@ def assert_instancetype_labels(prometheus: Prometheus, metric_name: str, expecte
         raise
 
 
-def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: prometheus.query_sampler(query=metric_name),
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                return
-            else:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, waiting for metric to reset")
-    except TimeoutExpiredError:
-        LOGGER.info(f"Operator metrics value: {sample}, expected is None")
-        raise
-
-
 def restart_cdi_worker_pod(unprivileged_client: DynamicClient, dv: DataVolume, pod_prefix: str) -> None:
     initial_dv_restartcount = dv.instance.get("status", {}).get("restartCount", 0)
     for iteration in range(TOTAL_4_ITERATIONS - initial_dv_restartcount):
