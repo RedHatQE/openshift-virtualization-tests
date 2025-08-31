@@ -4,7 +4,7 @@ import pytest
 from ocp_resources.prometheus_rule import PrometheusRule
 
 from tests.utils import validate_runbook_url_exists
-from utilities.constants import CNV_PROMETHEUS_RULES
+from utilities.constants import CNV_PROMETHEUS_RULES, QUARANTINED
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +63,10 @@ def test_runbook_upstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
         raise AssertionError("CNV alerts with unreachable runbook urls found.")
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: New alerts runbooks added to upstream and not merged yet for downstream, CNV-67890",
+    run=False,
+)
 @pytest.mark.polarion("CNV-10084")
 def test_runbook_downstream_urls(cnv_prometheus_rules_unique_alert_names_runbook):
     error_messages = []

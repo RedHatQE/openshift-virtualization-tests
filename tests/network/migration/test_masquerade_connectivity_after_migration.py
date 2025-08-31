@@ -14,37 +14,10 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
     vm_console_run_commands,
+    wait_for_console,
 )
 
 LOGGER = logging.getLogger(__name__)
-
-
-def ping_via_console(src_vm, dst_vm):
-    """
-    Ping the destination VM from the source VM via the VM console.
-
-    Executes `ping` with `-c 10 -w 10` so the command succeeds only if all
-    10 ICMP echo requests complete within 10 seconds (or a non-zero exit
-    status will be returned). Using the serial console avoids SSH-related
-    masking issues in connectivity tests.
-
-    Args:
-        src_vm (VirtualMachineForTests | BaseVirtualMachine): Virtual machine to
-            execute the ping from.
-        dst_vm (VirtualMachineForTests | BaseVirtualMachine): Target virtual
-            machine; its primary interface IP is used.
-
-    Raises:
-        CommandExecFailed: If the ping command exits non-zero, times out, or the
-            console session ends unexpectedly.
-    """
-    dst_ip = dst_vm.vmi.interfaces[0]["ipAddress"]
-
-    vm_console_run_commands(
-        vm=src_vm,
-        commands=[f"ping {dst_ip} -c 10 -w 10"],
-        timeout=10,
-    )
 
 
 @pytest.fixture(scope="module")
@@ -88,7 +61,13 @@ def inter_vm_connectivity_exists(
     running_vm_static,
     running_vm_for_migration,
 ):
-    ping_via_console(src_vm=running_vm_for_migration, dst_vm=running_vm_static)
+    static_vm_ip = running_vm_static.vmi.interfaces[0]["ipAddress"]
+
+    vm_console_run_commands(
+        vm=running_vm_for_migration,
+        commands=[f"ping {static_vm_ip} -c 10 -w 10"],
+        timeout=10,
+    )
 
 
 @pytest.fixture()
@@ -113,6 +92,13 @@ def migrated_vmi(
     migrated_vmi.clean_up()
 
 
+@pytest.fixture(scope="module")
+def vm_console_connection_ready(running_vm_for_migration):
+    wait_for_console(
+        vm=running_vm_for_migration,
+    )
+
+
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-6733")
 @pytest.mark.s390x
@@ -122,13 +108,23 @@ def test_connectivity_after_migration(
     running_vm_static,
     running_vm_for_migration,
     migrated_vmi,
+    vm_console_connection_ready,
 ):
     """
-    Validate connectivity after migrating a VM that uses masquerade.
-
-    - Uses the VM console (not SSH) to ping from the migrated VM to a static VM to avoid masking issues.
-    - Once the VM IP changes and console connectivity is available, run ping immediately to catch
-      short‑lived post‑migration connectivity gaps.
+    test for connectivity of a migrated vm with masquerade.
+    using console to ping from migrated_vmi to running_vm_static.
+    It is important to connect using console and not ssh because connecting
+    through ssh hides the bug.
+    The ping should take place right after running_vm_for_migration is migrated to
+    the new node.
+    the ping command include '-c 10 -w 10' so that in case there is a packet
+    loss the exit code will be 1 and not 0.
     """
-    LOGGER.info(f"Pinging from migrated {running_vm_for_migration.name} to {running_vm_static.name}")
-    ping_via_console(src_vm=running_vm_for_migration, dst_vm=running_vm_static)
+    LOGGER.info(f"pinging from migrated {running_vm_for_migration.name} to {running_vm_static.name}")
+    static_vm_ip = running_vm_static.vmi.interfaces[0]["ipAddress"]
+
+    vm_console_run_commands(
+        vm=running_vm_for_migration,
+        commands=[f"ping {static_vm_ip} -c 10 -w 10"],
+        timeout=10,
+    )
