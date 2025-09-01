@@ -20,19 +20,20 @@ LOGGER = logging.getLogger(__name__)
 
 
 def ping_via_console(src_vm, dst_vm):
-    """
-    Ping the destination VM from the source VM via the VM console.
-    Executes `ping` with `-c 10 -w 10` so the command succeeds only if all
-    10 ICMP echo requests complete within 10 seconds (or a non-zero exit
-    status will be returned). Using the serial console avoids SSH-related
-    masking issues in connectivity tests.
+    """Ping between VMs via console.
+
+    Pings from a source VM to a destination VM over the primary interface's IP.
+    This method verifies console-based network connectivity by checking for a
+    successful (zero) exit status of the ping command, avoiding SSH-related masking issues.
+
     Args:
-        src_vm (VirtualMachineForTests | BaseVirtualMachine): Virtual machine to
-            execute the ping from.
-        dst_vm (VirtualMachineForTests | BaseVirtualMachine): Target virtual
-            machine; its primary interface IP is used.
+        src_vm (VirtualMachineForTests | BaseVirtualMachine): Source virtual machine
+            used to execute the ping.
+        dst_vm (VirtualMachineForTests | BaseVirtualMachine): Destination virtual machine
+            whose primary interface IP is pinged.
+
     Raises:
-        CommandExecFailed: If the ping command exits non-zero, times out, or the
+        CommandExecFailed: If the ping command fails, times out, or the
             console session ends unexpectedly.
     """
     dst_ip = dst_vm.vmi.interfaces[0]["ipAddress"]
