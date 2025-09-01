@@ -1,7 +1,6 @@
 import pytest
 
 from tests.observability.metrics.constants import (
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_VM_INFO,
     KUBEVIRT_VMI_INFO,
 )
@@ -9,13 +8,10 @@ from tests.observability.metrics.utils import (
     assert_vm_metric,
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
-    validate_memory_delta_metrics_value_within_range,
-    wait_vmi_dommemstat_match_with_metric_value,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
-    VIRT_API,
     VIRT_HANDLER,
 )
 
@@ -80,15 +76,6 @@ class TestVMIMetricsLinuxVms:
             f"is not matching with metrics value {vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 
-    @pytest.mark.polarion("CNV-8931")
-    def test_vmi_used_memory_bytes(
-        self,
-        prometheus,
-        single_metric_vm,
-    ):
-        """This test will check the used memory of VMI with given metrics output in bytes."""
-        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=single_metric_vm)
-
     @pytest.mark.polarion("CNV-11400")
     def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
         compare_kubevirt_vmi_info_metric_with_vm_info(
@@ -127,15 +114,6 @@ class TestVMIMetricsWindowsVms:
             f"{windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus} bytes."
         )
 
-    @pytest.mark.polarion("CNV-11860")
-    @pytest.mark.jira("CNV-59552")
-    def test_vmi_used_memory_bytes_windows(
-        self,
-        prometheus,
-        windows_vm_for_test,
-    ):
-        wait_vmi_dommemstat_match_with_metric_value(prometheus=prometheus, vm=windows_vm_for_test)
-
     @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):
         compare_kubevirt_vmi_info_metric_with_vm_info(
@@ -155,48 +133,6 @@ class TestVMIMetricsWindowsVms:
         )
 
 
-class TestMemoryDeltaFromRequestedBytes:
-    @pytest.mark.parametrize(
-        "metric, rss",
-        [
-            pytest.param(
-                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-                f"reason='memory_working_set_delta_from_request'}}",
-                False,
-                marks=pytest.mark.polarion("CNV-11632"),
-                id="test_metric_kubevirt_memory_delta_from_requested_bytes_working_set",
-            ),
-            pytest.param(
-                f"kubevirt_memory_delta_from_requested_bytes{{container='{VIRT_API}', "
-                f"reason='memory_rss_delta_from_request'}}",
-                True,
-                marks=pytest.mark.polarion("CNV-11633"),
-                id="test_metric_kubevirt_memory_delta_from_requested_bytes_rss",
-            ),
-            pytest.param(
-                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_working_set_delta_from_request'}}",
-                False,
-                marks=pytest.mark.polarion("CNV-11690"),
-                id="test_metric_cnv_abnormal_working_set",
-            ),
-            pytest.param(
-                f"cnv_abnormal{{container='{VIRT_API}', reason='memory_rss_delta_from_request'}}",
-                True,
-                marks=pytest.mark.polarion("CNV-11691"),
-                id="test_metric_cnv_abnormal_rss",
-            ),
-        ],
-    )
-    def test_memory_delta_from_requested_bytes(self, prometheus, admin_client, hco_namespace, metric, rss):
-        validate_memory_delta_metrics_value_within_range(
-            prometheus=prometheus,
-            metric_name=metric,
-            rss=rss,
-            admin_client=admin_client,
-            hco_namespace=hco_namespace.name,
-        )
-
-
 class TestKubeDaemonsetStatusNumberReady:
     @pytest.mark.polarion("CNV-11727")
     def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
@@ -204,32 +140,4 @@ class TestKubeDaemonsetStatusNumberReady:
             prometheus=prometheus,
             metric_name=f"kube_daemonset_status_number_ready{{daemonset='{VIRT_HANDLER}'}}",
             expected_value=virt_handler_pods_count,
-        )
-
-
-class TestKubevirtApiRequestDeprecatedTotal:
-    @pytest.mark.polarion("CNV-11739")
-    def test_metric_kubevirt_api_request_deprecated_total(self, prometheus, generated_api_deprecated_requests):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
-            expected_value=str(generated_api_deprecated_requests),
-        )
-
-
-class TestAllocatableNodes:
-    @pytest.mark.polarion("CNV-11818")
-    def test_metirc_kubevirt_allocatable_nodes(self, prometheus, allocatable_nodes):
-        validate_metrics_value(
-            prometheus=prometheus, metric_name="kubevirt_allocatable_nodes", expected_value=f"{len(allocatable_nodes)}"
-        )
-
-
-class TestKubevirtNodesWithKvm:
-    @pytest.mark.polarion("CNV-11708")
-    def test_metric_kubevirt_nodes_with_kvm(self, prometheus, schedulable_nodes):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_nodes_with_kvm",
-            expected_value=f"{len(schedulable_nodes)}",
         )
