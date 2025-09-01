@@ -2,29 +2,24 @@ import logging
 import shlex
 
 import pytest
-from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    CNV_VMI_STATUS_RUNNING_COUNT,
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
-    KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -42,19 +37,18 @@ from tests.observability.metrics.utils import (
     get_resource_object,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
-    get_vmi_phase_count,
+    get_vmi_memory_domain_metric_value_from_prometheus,
     metric_result_output_dict_by_mountpoint,
     restart_cdi_worker_pod,
     vnic_info_from_vm_or_vmi,
     wait_for_metric_vmi_request_cpu_cores_output,
-    wait_for_no_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
+from tests.utils import create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
-    COUNT_FIVE,
+    CLUSTER_NETWORK_ADDONS_OPERATOR,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -106,7 +100,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    target_vm_from_cloning_job,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -289,19 +282,53 @@ def vm_list(unique_namespace):
         vm.clean_up()
 
 
-@pytest.fixture(scope="class")
-def vmi_phase_count_before(request, prometheus):
+@pytest.fixture()
+def node_setup(request, vm_list, workers_utility_pods):
     """
-    This fixture queries Prometheus with the query in the get_vmi_phase_count before a VM is created
-    and keeps the value for verification
+    This fixture runs commands on nodes hosting vms and reverses the changes at the end.
+
+    Args:
+        vm_list (list): Gets the list of vms created as a part of suite level set up.
+        workers_utility_pods (list): Utility pods from worker nodes.
+
     """
-    return get_vmi_phase_count(
-        prometheus=prometheus,
-        os_name=request.param["labels"]["os"],
-        flavor=request.param["labels"]["flavor"],
-        workload=request.param["labels"]["workload"],
-        query=request.param["query"],
-    )
+    node_command = request.param.get("node_command")
+
+    if node_command:
+        vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
+        run_node_command(
+            vms=vms,
+            utility_pods=workers_utility_pods,
+            command=node_command["setup"],
+        )
+
+        yield
+        run_node_command(
+            vms=vms,
+            utility_pods=workers_utility_pods,
+            command=node_command["cleanup"],
+        )
+    else:
+        yield
+
+
+@pytest.fixture()
+def vm_metrics_setup(request, vm_list):
+    """
+    This fixture runs commands against the vms to generate metrics
+
+    Args:
+        vm_list (list): Gets the list of vms created as a part of suite level set up
+
+    Yields:
+        list: list of vm objects against which commands to generate metric has been issued
+    """
+    vm_commands = request.param.get("vm_commands")
+    vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
+    if vm_commands:
+        run_vm_commands(vms=vms, commands=vm_commands)
+
+    yield vms
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -324,12 +351,6 @@ def metrics_sanity(admin_client):
     except TimeoutExpiredError:
         LOGGER.error(f"timeout awaiting all Prometheus pods to be in Running status: violating_pods={sample}")
         raise
-
-
-@pytest.fixture(scope="class")
-def stopped_vm(vm_from_template_scope_class):
-    vm_from_template_scope_class.stop(wait=True)
-    return vm_from_template_scope_class
 
 
 @pytest.fixture()
@@ -482,33 +503,6 @@ def zero_upload_dv_restart_count(ready_uploaded_dv):
     fail_if_not_zero_restartcount(dv=ready_uploaded_dv)
 
 
-@pytest.fixture(scope="class")
-def kubevirt_vmi_phase_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR)
-
-
-@pytest.fixture(scope="class")
-def cnv_vmi_status_running_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=CNV_VMI_STATUS_RUNNING_COUNT)
-
-
-@pytest.fixture(scope="class")
-def validated_preference_instance_type_of_target_vm(
-    rhel_vm_with_instancetype_and_preference_for_cloning, cloning_job_scope_class
-):
-    with target_vm_from_cloning_job(cloning_job=cloning_job_scope_class) as target_vm:
-        target_vm_instance_spec = target_vm.instance.spec
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name
-            == target_vm_instance_spec.instancetype.name
-        )
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_preference.name
-            == target_vm_instance_spec.preference.name
-        )
-        yield target_vm
-
-
 @pytest.fixture()
 def connected_vm_console_successfully(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
@@ -561,11 +555,16 @@ def windows_vm_for_test_interface_name(windows_vm_for_test):
     return get_interface_name_from_vm(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="class")
-def initial_total_created_vms(prometheus, namespace):
-    return get_metric_sum_value(
-        prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
-    )
+@pytest.fixture()
+def vmi_memory_available_memory(vm_for_test):
+    memory_available_bytes = run_ssh_commands(
+        host=vm_for_test.ssh_exec,
+        commands=shlex.split("free -b"),
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+    )[0]
+    memory_available = re.search(r"Mem:\s+(\d+)", memory_available_bytes)
+    assert memory_available, f"No information available for vm memory: {memory_available_bytes}"
+    return float(memory_available.group(1))
 
 
 @pytest.fixture(scope="class")
@@ -695,29 +694,6 @@ def virt_handler_pods_count(hco_namespace):
 
 
 @pytest.fixture()
-def vm_instance_with_deprecated_api_version(namespace):
-    vm_instance = VirtualMachine(name="vm-deprecated-api", namespace=namespace.name, client=get_client())
-    vm_instance.api_version = f"{Resource.ApiGroup.KUBEVIRT_IO}/{Resource.ApiVersion.V1ALPHA3}"
-    return vm_instance
-
-
-@pytest.fixture()
-def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_api_version):
-    initial_metric_value = int(
-        get_metrics_value(
-            prometheus=prometheus,
-            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
-        )
-    )
-    for _ in range(COUNT_FIVE):
-        try:
-            vm_instance_with_deprecated_api_version.deploy()
-        except UnprocessibleEntityError:
-            continue
-    return initial_metric_value + COUNT_FIVE
-
-
-@pytest.fixture()
 def storage_class_labels_for_testing(admin_client):
     chosen_sc_name = py_config["default_storage_class"]
     return {
@@ -729,60 +705,6 @@ def storage_class_labels_for_testing(admin_client):
         ]
         == "true"
         else "false",
-    }
-
-
-@pytest.fixture()
-def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
-    with create_cirros_vm(
-        storage_class=storage_class_for_snapshot,
-        namespace=namespace.name,
-        client=admin_client,
-        dv_name="dv-for-snapshot",
-        vm_name="vm-for-snapshot",
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture()
-def vm_snapshot_for_metric_test(vm_for_snapshot_for_metrics_test):
-    with vm_snapshot(
-        vm=vm_for_snapshot_for_metrics_test, name=f"{vm_for_snapshot_for_metrics_test.name}-snapshot"
-    ) as snapshot:
-        yield snapshot
-
-
-@pytest.fixture()
-def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for_metric_test):
-    vm_name = vm_for_snapshot_for_metrics_test.name
-    vm_for_snapshot_for_metrics_test.stop(wait=True)
-    with VirtualMachineRestore(
-        name=f"restore-snapshot-{vm_name}",
-        namespace=vm_snapshot_for_metric_test.namespace,
-        vm_name=vm_name,
-        snapshot_name=vm_snapshot_for_metric_test.name,
-    ) as vm_restore:
-        vm_restore.wait_restore_done()
-        vm_for_snapshot_for_metrics_test.start(wait=True)
-        yield vm_restore
-
-
-@pytest.fixture()
-def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
-    for pvc in PersistentVolumeClaim.get(
-        dyn_client=admin_client,
-        namespace=vm_for_snapshot_for_metrics_test.namespace,
-        label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
-    ):
-        return pvc.name
-
-
-@pytest.fixture()
-def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for_metrics_test, restored_pvc_name):
-    return {
-        "label_restore_kubevirt_io_source_vm_name": vm_for_snapshot_for_metrics_test.name,
-        "persistentvolumeclaim": restored_pvc_name,
-        "namespace": vm_snapshot_for_metric_test.namespace,
     }
 
 
@@ -838,8 +760,20 @@ def vnic_info_from_vmi_windows(windows_vm_for_test):
 
 
 @pytest.fixture()
-def allocatable_nodes(nodes):
-    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
+def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
+    return get_vmi_memory_domain_metric_value_from_prometheus(
+        prometheus=prometheus,
+        vmi_name=windows_vm_for_test.vmi.name,
+        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
+    )
+
+
+@pytest.fixture()
+def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
+    return get_vmi_dommemstat_from_vm(
+        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
+        domain_memory_string="actual",
+    )
 
 
 @pytest.fixture()
