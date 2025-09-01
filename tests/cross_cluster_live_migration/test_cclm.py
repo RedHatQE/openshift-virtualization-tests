@@ -1,6 +1,4 @@
 import pytest
-from pytest_testconfig import config as py_config
-
 
 # Create VM in the remote cluster, write some data
 # Migrate the VM to the local cluster
@@ -20,6 +18,7 @@ pytestmark = [
         "configured_hco_live_migration_network_local_cluster",
     ),
 ]
+
 
 @pytest.mark.parametrize(
     "",
