@@ -23,7 +23,6 @@ from tests.observability.metrics.utils import (
     get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_greater_than_initial_value,
-    validate_metric_value_within_range,
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value

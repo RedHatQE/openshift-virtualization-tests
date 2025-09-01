@@ -12,7 +12,6 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
@@ -39,8 +38,6 @@ from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_8MIN,
-    TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
@@ -72,12 +69,6 @@ ZERO_CPU_CORES = 0
 COUNT_TWO = 2
 COUNT_THREE = 3
 TOTAL_4_ITERATIONS = 4
-
-
-def get_mutation_component_value_from_prometheus(prometheus: Prometheus, component_name: str) -> int:
-    query = f'kubevirt_hco_out_of_band_modifications_total{{component_name="{component_name}"}}'
-    metric_results = prometheus.query_sampler(query=query)
-    return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
@@ -164,90 +155,6 @@ def assert_vm_metric(prometheus: Prometheus, query: str, vm_name: str):
     assert get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm_name), (
         f"query: {query} has no result for vm: {vm_name}"
     )
-
-
-def get_hco_cr_modification_alert_summary_with_count(prometheus: Prometheus, component_name: str) -> str | None:
-    """This function will check the 'KubeVirtCRModified'
-    an alert summary generated after the 'kubevirt_hco_out_of_band_modifications_total' metrics triggered.
-
-    Args:
-        prometheus (:obj:`Prometheus`): Prometheus object.
-
-    Returns:
-        String: Summary of the 'KubeVirtCRModified' alert contains count.
-
-        example:
-        Alert summary for single change:
-        "1 out-of-band CR modifications were detected in the last 10 minutes."
-    """
-
-    # Find an alert "KubeVirtCRModified" and return it's summary.
-    def _get_summary():
-        alerts = prometheus.get_all_alerts_by_alert_name(alert_name=KUBEVIRT_CR_ALERT_NAME)
-        for alert in alerts:
-            if component_name == alert["labels"]["component_name"]:
-                return alert.get("annotations", {}).get("summary")
-
-    # Alert is not updated immediately. Wait for 300 seconds.
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=2,
-        func=_get_summary,
-    )
-    try:
-        for alert_summary in samples:
-            if alert_summary is not None:
-                return alert_summary
-    except TimeoutError:
-        LOGGER.error(f"Summary is not present for Alert {KUBEVIRT_CR_ALERT_NAME}")
-    return None
-
-
-def wait_for_summary_count_to_be_expected(
-    prometheus: Prometheus, component_name: str, expected_summary_value: int
-) -> None:
-    """This function will wait for the expected summary to match with
-    the summary message from component specific alert.
-
-    Args:
-        prometheus (:obj:`Prometheus`): Prometheus object.
-        component_name (String): Name of the component.
-        expected_summary_value (Integer): Expected value of the component after update.
-
-        example:
-        Alert summary for 3 times change in component:
-        "3 out-of-band CR modifications were detected in the last 10 minutes."
-    """
-
-    def extract_value_from_message(message):
-        mo = re.search(
-            pattern=r"(?P<count>\d+) out-of-band CR modifications were detected in the last (?P<time>\d+) minutes.",
-            string=message,
-        )
-        if mo:
-            match_dict = mo.groupdict()
-            return int(match_dict["count"])
-
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=5,
-        func=get_hco_cr_modification_alert_summary_with_count,
-        prometheus=prometheus,
-        component_name=component_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                value = extract_value_from_message(message=sample)
-                if value == expected_summary_value:
-                    return
-    except TimeoutError:
-        LOGGER.error(
-            f"Summary count did not update for component {component_name}: "
-            f"current={sample} expected={expected_summary_value}"
-        )
-        raise
 
 
 def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
@@ -371,45 +278,6 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
     vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
 
 
-def get_prometheus_monitoring_pods(admin_client: DynamicClient) -> list:
-    """
-    Get all Prometheus pods within the openshift-monitoring namespace
-
-    Args:
-        admin_client (DynamicClient): DynamicClient object
-
-    Returns:
-        list: list of all prometheus pods within the openshift-monitoring namespace
-    """
-    prometheus_pods_monitoring_namespace_list = list(
-        Pod.get(
-            dyn_client=admin_client,
-            namespace="openshift-monitoring",
-            label_selector=(
-                f"{Resource.ApiGroup.APP_KUBERNETES_IO}/name in (prometheus-operator, prometheus, prometheus-adapter)"
-            ),
-        )
-    )
-    assert prometheus_pods_monitoring_namespace_list, "no matching pods found on the cluster"
-    return prometheus_pods_monitoring_namespace_list
-
-
-def get_not_running_prometheus_pods(admin_client) -> dict[str, str]:
-    """
-    Get all Prometheus pods that are not in Running status
-
-    Args:
-        admin_client (DynamicClient): DynamicClient object
-
-    Returns:
-        dict: dict of prometheus pods' name (key) and status (value) that are not in Running status
-    """
-    prometheus_pods_monitoring_namespace_list = get_prometheus_monitoring_pods(admin_client=admin_client)
-    return {
-        pod.name: pod.status for pod in prometheus_pods_monitoring_namespace_list if pod.status != Pod.Status.RUNNING
-    }
-
-
 def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
     query = urllib.parse.quote_plus(
         f'kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain="{vm_name}"}}'
@@ -449,16 +317,6 @@ def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: V
     )
 
 
-def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
-    # Find string from list in the dommemstat and convert to bytes from KiB.
-    vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
-    assert vmi_domain_memory_match, (
-        f"No match '{domain_memory_string}' found for VM's domain memory in VMI's dommemstat {vmi_dommemstat}"
-    )
-    matched_vmi_domain_memory_bytes = bitmath.KiB(int(vmi_domain_memory_match.group(1))).to_Byte()
-    return matched_vmi_domain_memory_bytes
-
-
 def get_resource_object(
     admin_client: DynamicClient, related_objects: list, resource_kind, resource_name: str
 ) -> Resource | None:
@@ -477,25 +335,6 @@ def get_resource_object(
             )
 
     return None
-
-
-
-def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: prometheus.query_sampler(query=metric_name),
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                return
-            else:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, waiting for metric to reset")
-    except TimeoutExpiredError:
-        LOGGER.info(f"Operator metrics value: {sample}, expected is None")
-        raise
 
 
 def restart_cdi_worker_pod(unprivileged_client: DynamicClient, dv: DataVolume, pod_prefix: str) -> None:
