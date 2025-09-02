@@ -15,12 +15,14 @@ MTV_VOLUME_POPULATOR_CRDS = [
 ]
 
 
+# Tests not marked as `conformance` because they rely on access to Jira
 pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.fixture()
 def crds(admin_client):
     crds_to_check = []
+    # TODO: once bug is removed, test should be marked as `conformance`
     bug_status = is_jira_open(jira_id="CNV-64424")
     for crd in CustomResourceDefinition.get(dyn_client=admin_client):
         if bug_status and crd.name in MTV_VOLUME_POPULATOR_CRDS:

@@ -105,11 +105,12 @@ def test_auto_limits_set_one_resource(
                 "cpu_limits": "2",
                 "memory_limits": "2Gi",
             },
-            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating()),
+            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating),
         ),
     ],
     indirect=True,
 )
+# Not marked as `conformance`; may face scheduling issues due to insufficient resources on the nodes
 def test_vm_with_limits_overrides_global_vlaues(
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,

@@ -218,6 +218,7 @@ def net_add_op_bridge_attached_vm(namespace, net_add_op_br1test_nad):
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-2520")
 @pytest.mark.s390x
+# Not marked as `conformance`; requires NMState
 def test_component_installed_by_operator(network_addons_config_scope_session):
     """
     Verify that the network addons operator is supposed to install linuxBridge and kubeMacPool
