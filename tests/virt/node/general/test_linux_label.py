@@ -16,6 +16,7 @@ def assert_linux_label_was_added_in_nodes(nodes):
 
 @pytest.mark.s390x
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-5758")
 def test_linux_label_was_added(schedulable_nodes):
     assert_linux_label_was_added_in_nodes(nodes=schedulable_nodes)

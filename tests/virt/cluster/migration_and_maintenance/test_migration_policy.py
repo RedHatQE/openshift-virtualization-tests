@@ -113,6 +113,7 @@ def vm_re_migrated_after_updating_migration_policy(vm_for_migration_policy_test,
 @pytest.mark.rwx_default_storage
 @pytest.mark.arm64
 class TestMigrationPolicies:
+    @pytest.mark.conformance
     @pytest.mark.gating
     @pytest.mark.parametrize(
         "migration_policy_a, vm_for_migration_policy_test, labeled_namespace",

@@ -259,3 +259,34 @@ Check containers/utility/README.md
 pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
 out = pod_exec.exec(command=cmd, ignore_rc=True)
 ```
+
+
+### Run basic tests on standard cluster
+To run tests on a standard cluster configuration (more than 1 node is required), use the following command:
+
+```bash
+uv run pytest -m "conformance" --conformance-storage-class=<storage class name> --skip-artifactory-check
+```
+
+To run on single-node cluster, use the following command:
+```bash
+uv run pytest -m "conformance and sno" --conformance-storage-class <storage class name> --skip-artifactory-check
+```
+
+#### Running on a cluster with an unsupported storage_class:
+Supported storage classes are mapped in [StorageClassConfig](../libs/storage/config.py).
+An unsupported storage class can be used as well, and its configuration can be controlled via `--conformance-storage-class-config`.
+If an attribute's value is not provided, the default value is used.
+
+Supported storage class configuration:
+```
+     `access_mode` - allowed values: RWX, RWO, ROX. Default: RWO
+     `volume_mode` - allowed values: Block, Filesystem. Default: Filesystem
+     `online_resize` - allowed values: False, True. Default: False
+     'snapshot' - allowed values: False, True. Default: False
+     `wffc` - allowed values: False, True. Default: False
+```
+
+```bash
+uv run pytest -m "conformance" --conformance-storage-class=<unsupported storage class name> --conformance-storage-class-config='volume_mode=Block,access_mode=RWO,snapshot=True,online_resize=True,wffc=False' --skip-artifactory-check
+```

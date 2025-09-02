@@ -298,6 +298,7 @@ class TestConnectivityAfterNmstateChanged:
     @pytest.mark.gating
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5839")
+    # Not marked as `conformance`; requires NMState
     def test_connectivity_after_nncp_change(
         self,
         nmstate_linux_bridge_attached_vma,

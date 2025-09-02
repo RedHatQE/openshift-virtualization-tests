@@ -2918,3 +2918,12 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+@pytest.fixture(scope="session")
+def conformance_tests(request):
+    return (
+        (marker_args := request.config.getoption("-m"))
+        and "conformance" in marker_args
+        and "not conformance" not in marker_args
+    )

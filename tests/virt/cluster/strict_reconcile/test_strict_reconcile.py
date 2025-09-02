@@ -177,6 +177,7 @@ def verify_reconciled_secret_resource(resource, resource_dict):
 
 @pytest.mark.s390x
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.parametrize(
     ("resource_type", "managed_resource_name"),
     [
