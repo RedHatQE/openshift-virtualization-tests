@@ -106,6 +106,7 @@ def migrated_vmi(running_masquerade_source_vm):
 @pytest.mark.polarion("CNV-6733")
 @pytest.mark.s390x
 @pytest.mark.single_nic
+# Not marked as `conformance`; requires NMState
 def test_connectivity_after_migration(
     namespace,
     running_masquerade_destination_vm,
