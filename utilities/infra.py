@@ -1512,8 +1512,3 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
     assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
     return next(iter(nodes_cpu_arch))
-
-
-@cache
-def cache_admin_client():
-    return get_client()
