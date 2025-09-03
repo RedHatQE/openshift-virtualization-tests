@@ -5,9 +5,11 @@ def foo_matrix(matrix):
     return matrix
 """
 
-from ocp_resources.storage_class import StorageClass
+from functools import cache
 
-from utilities.infra import cache_admin_client
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.resource import get_client
+from ocp_resources.storage_class import StorageClass
 
 
 def snapshot_matrix(matrix):
@@ -46,8 +48,10 @@ def hpp_matrix(matrix):
     ]
 
     for storage_class in matrix:
+        # Using `get_client` explicitly as this function is dynamically called (like other functions in the module).
+        # The other functions do not need a client.
         if (
-            StorageClass(client=cache_admin_client(), name=[*storage_class][0]).instance.provisioner
+            StorageClass(client=_cache_admin_client(), name=[*storage_class][0]).instance.provisioner
             in hpp_sc_provisioners
         ):
             matrix_to_return.append(storage_class)
@@ -62,3 +66,17 @@ def wffc_matrix(matrix):
         if storage_class[storage_class_name]["wffc"] is True:
             matrix_to_return.append(storage_class)
     return matrix_to_return
+
+
+@cache
+def _cache_admin_client() -> DynamicClient:
+    """Get admin_client once and reuse it
+
+    This usage of this function is limited to places where `client` cannot be passed as an argument.
+
+    Returns:
+        DynamicClient: admin_client
+
+    """
+
+    return get_client()
