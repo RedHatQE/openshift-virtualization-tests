@@ -13,7 +13,6 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
-from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_command, run_ssh_commands
@@ -22,21 +21,16 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
     GO_VERSION_STR,
-    INSTANCE_TYPE_LABELS,
     KUBE_VERSION_STR,
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
-    METRIC_SUM_QUERY,
-    RSS_MEMORY_COMMAND,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
-    RHEL9_PREFERENCE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_8MIN,
@@ -45,8 +39,6 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
-    TIMEOUT_40SEC,
-    U1_SMALL,
     USED,
     VIRT_HANDLER,
 )
@@ -523,60 +515,6 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
     vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
 
 
-def get_vmi_phase_count(prometheus: Prometheus, os_name: str, flavor: str, workload: str, query: str) -> int:
-    """
-    Get the metric from the defined Prometheus query
-
-    Args:
-        prometheus (Prometheus object): Prometheus object to interact with the query
-        os_name (str): the OS name as it appears on Prometheus, e.g. windows19
-        flavor (str): the flavor as it appears on Prometheus, e.g. tiny
-        workload (str): the type of the workload on the VM, e.g. server
-        query (str): query str to use according to the query_dict
-
-    Returns:
-        the metric value
-    """
-    query = query.format(os_name=os_name, flavor=flavor, workload=workload)
-    LOGGER.debug(f"query for prometheus: query={query}")
-    response = prometheus.query_sampler(query=query)
-    if not response:
-        return 0
-
-    return int(response[0]["value"][1])
-
-
-def wait_until_kubevirt_vmi_phase_count_is_expected(
-    prometheus: Prometheus, vmi_annotations: dict[str, str], expected: str, query: str
-) -> None:
-    os_name = vmi_annotations[Template.VMAnnotations.OS]
-    flavor = vmi_annotations[Template.VMAnnotations.FLAVOR]
-    workload = vmi_annotations[Template.VMAnnotations.WORKLOAD]
-    LOGGER.info(
-        f"Waiting for kubevirt_vmi_phase_count: expected={expected} os={os_name} flavor={flavor} workload={workload}"
-    )
-    query_sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=3,
-        func=get_vmi_phase_count,
-        prometheus=prometheus,
-        os_name=os_name,
-        flavor=flavor,
-        workload=workload,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in query_sampler:
-            if sample == expected:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Timeout exception while waiting for a specific value from query: current={sample} expected={expected}"
-        )
-        raise
-
-
 def get_prometheus_monitoring_pods(admin_client: DynamicClient) -> list:
     """
     Get all Prometheus pods within the openshift-monitoring namespace
@@ -667,16 +605,6 @@ def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, v
     return value[0]
 
 
-def wait_for_metrics_match(prometheus: Prometheus, vm: VirtualMachine, expected_value: int) -> bool:
-    metric_value = get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=vm.vmi.name,
-        query="kubevirt_vmi_memory_used_bytes",
-    )
-    LOGGER.info(f"Matching current metric value '{metric_value}' with expected value '{expected_value}'")
-    return expected_value == metric_value
-
-
 def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
     # Find string from list in the dommemstat and convert to bytes from KiB.
     vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
@@ -686,35 +614,6 @@ def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -
     )
     matched_vmi_domain_memory_bytes = bitmath.KiB(int(vmi_domain_memory_match.group(1))).to_Byte()
     return matched_vmi_domain_memory_bytes
-
-
-def get_used_memory_vmi_dommemstat(vm: VirtualMachine) -> int:
-    vmi_dommemstat = vm.vmi.get_dommemstat()
-    available_memory = get_vmi_dommemstat_from_vm(vmi_dommemstat=vmi_dommemstat, domain_memory_string="available")
-    usable_memory = get_vmi_dommemstat_from_vm(vmi_dommemstat=vmi_dommemstat, domain_memory_string="usable")
-
-    LOGGER.info(f"Available Memory: {available_memory}. Usable Memory: {usable_memory}")
-    return int(available_memory - usable_memory)
-
-
-def pause_unpause_dommemstat(vm: VirtualMachineForTests, period: int = 0) -> None:
-    vm.privileged_vmi.execute_virsh_command(command=f"dommemstat --period {period}")
-
-
-def assert_vmi_dommemstat_with_metric_value(prometheus: Prometheus, vm: VirtualMachine) -> None:
-    vmi_used_memory_dommemstat = get_used_memory_vmi_dommemstat(vm=vm)
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=15,
-        func=wait_for_metrics_match,
-        prometheus=prometheus,
-        vm=vm,
-        expected_value=vmi_used_memory_dommemstat,
-    )
-
-    for sample in samples:
-        if sample:
-            return
 
 
 def get_resource_object(
@@ -733,82 +632,6 @@ def get_resource_object(
                 client=admin_client,
                 name=resource_name,
             )
-
-
-def wait_for_prometheus_query_result_matches_expected_value(prometheus: Prometheus, query: str, expected_value: str):
-    """
-    This function waiting of Prometheus query output to match expected value
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        expected_value (str): expected_value
-
-    Returns:
-        dict: Dictionary of prometheus query output.
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    try:
-        for sample in sampler:
-            if sample and sample[0].get("value") and sample[0]["value"][1] == expected_value:
-                return sample[0]
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting Prometheus query to match expected value: {expected_value}"
-            f"query: {query}, results: {sample}"
-        )
-        raise
-
-
-def wait_for_prometheus_query_result_node_value_update(prometheus: Prometheus, query: str, node: str) -> None:
-    """
-    This function is waiting for Prometheus query node label value to be update.
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        node (str): previous vmi node name
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if (
-                sample
-                and sample[0].get("metric")
-                and sample[0].get("metric").get("node")
-                and sample[0]["metric"]["node"] != node
-            ):
-                return
-
-    except TimeoutExpiredError:
-        LOGGER.error(f"timeout exception waiting  query: {query} Node: {node} to change, results: {sample}")
-        raise
-
-
-def assert_instancetype_labels(prometheus_output: dict[str, dict[str, str]], expected_labels: dict[str, str]) -> None:
-    """
-    This function will assert prometheus query output labels against expected labels.
-
-    Args:
-        prometheus_output (dict): Prometheus query output.
-        expected_labels (dict): expected instancetype labels
-    """
-    data_mismatch = []
-    for label in INSTANCE_TYPE_LABELS:
-        if prometheus_output["metric"][label] != expected_labels[label]:
-            data_mismatch.append(prometheus_output["metric"][label])
-    assert not data_mismatch, (
-        f"Data mismatch: {data_mismatch}!expected labels: {expected_labels}, actual labels: {prometheus_output}"
-    )
 
 
 def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
@@ -850,32 +673,6 @@ def fail_if_not_zero_restartcount(dv: DataVolume) -> None:
 
     if restartcount != 0:
         pytest.fail(f"dv {dv.name} restartcount is not zero,\n actual restartcount: {restartcount}")
-
-
-def wait_for_no_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_3MIN,
-        sleep=TIMEOUT_40SEC,
-        func=prometheus.query,
-        query=METRIC_SUM_QUERY.format(
-            metric_name=metric_name,
-            instance_type_name=U1_SMALL,
-            preference=RHEL9_PREFERENCE,
-        ),
-    )
-    counter = 0
-    sample = None
-    try:
-        for sample in samples:
-            if not sample.get("data").get("result"):
-                counter += 1
-                if counter >= 3:
-                    return
-            else:
-                counter = 0
-    except TimeoutExpiredError:
-        LOGGER.error(f"There is another vms on the cluster: {sample}")
-        raise
 
 
 def assert_virtctl_version_equal_metric_output(
@@ -1027,32 +824,6 @@ def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
     if metrics_result:
         return sum(int(metric_metrics_result["value"][1]) for metric_metrics_result in metrics_result)
     return 0
-
-
-def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
-) -> None:
-    sampler = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metric_sum_value,
-        prometheus=prometheus,
-        metric=metric_name,
-    )
-    sample = None
-    current_check = 0
-    try:
-        for sample in sampler:
-            if sample and sample == expected_value:
-                current_check += 1
-                if current_check >= 3:
-                    return
-            else:
-                current_check = 0
-
-    except TimeoutExpiredError:
-        LOGGER.info(f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}")
-        raise
 
 
 def metric_result_output_dict_by_mountpoint(
@@ -1234,132 +1005,4 @@ def validate_metric_value_with_round_down(
                 return
     except TimeoutExpiredError:
         LOGGER.info(f"Metric int value of: {metric_name} is: {sample}, expected value:{expected_value}")
-        raise
-
-
-def get_pod_memory_stats(admin_client: DynamicClient, hco_namespace: str, pod_prefix: str) -> float:
-    return float(
-        bitmath.Byte(
-            float(
-                get_pod_by_name_prefix(
-                    dyn_client=admin_client,
-                    pod_prefix=pod_prefix,
-                    namespace=hco_namespace,
-                )
-                .execute(command=RSS_MEMORY_COMMAND)
-                .strip()
-            )
-        )
-    )
-
-
-def get_highest_memory_usage_virt_api_pod_tuple(hco_namespace: str) -> tuple[str, int]:
-    """
-    This function returns pod name and memory value tuple of virt-api pod with the highest memory usage.
-        Args:
-        hco_namespace: Hco namespacem
-    Returns:
-        tuple: containing the name of the virt-api pod with the highest memory usage and value of the memory.
-    """
-    virt_api_with_highest_memory_usage = (
-        run_command(
-            command=shlex.split(
-                f"bash -c 'oc adm top pod -n {hco_namespace} --sort-by memory "
-                f"--no-headers -l kubevirt.io=virt-api | head -n 1'"
-            ),
-        )[1]
-        .strip()
-        .split()
-    )
-    return (
-        virt_api_with_highest_memory_usage[0],
-        int(bitmath.parse_string_unsafe(virt_api_with_highest_memory_usage[2]).Byte),
-    )
-
-
-def get_pod_requested_memory(hco_namespace: str, admin_client: DynamicClient, pod_prefix: str) -> float:
-    """
-    Get the requested memory for a pod.
-
-    Args:
-        hco_namespace: Hco namespace
-        admin_client: The Kubernetes admin client
-        pod_prefix: Prefix of the pod name to get requested memory from
-
-    Returns:
-        float: Requested memory in bytes
-    """
-    return float(
-        bitmath.parse_string_unsafe(
-            get_pod_by_name_prefix(
-                dyn_client=admin_client,
-                pod_prefix=pod_prefix,
-                namespace=hco_namespace,
-            )
-            .instance.spec.containers[0]
-            .resources.requests.memory
-        ).Byte
-    )
-
-
-def expected_kubevirt_memory_delta_from_requested_bytes(
-    hco_namespace: str, admin_client: DynamicClient, rss: bool
-) -> int:
-    """
-    Calculate the expected memory delta between actual and requested memory.
-
-    Args:
-        hco_namespace: The namespace where virt-api pods are running
-        admin_client: The Kubernetes admin client
-        rss: If True, use RSS memory, otherwise use total memory usage
-
-    Returns:
-        int: The memory delta in bytes
-    """
-    pod_name, pod_memory = get_highest_memory_usage_virt_api_pod_tuple(hco_namespace=hco_namespace)
-    virt_api_requested_memory = get_pod_requested_memory(
-        hco_namespace=hco_namespace,
-        admin_client=admin_client,
-        pod_prefix=pod_name,
-    )
-    if rss:
-        virt_api_rss_memory = get_pod_memory_stats(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
-            pod_prefix=pod_name,
-        )
-        return int(virt_api_rss_memory - virt_api_requested_memory)
-    return int(pod_memory - virt_api_requested_memory)
-
-
-def validate_memory_delta_metrics_value_within_range(
-    prometheus: Prometheus,
-    metric_name: str,
-    rss: bool,
-    admin_client: DynamicClient,
-    hco_namespace: str,
-    timeout: int = TIMEOUT_4MIN,
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample: int | float = 0
-    expected_value = None
-    try:
-        for sample in samples:
-            if sample:
-                sample = abs(float(sample))
-                expected_value = abs(
-                    expected_kubevirt_memory_delta_from_requested_bytes(
-                        admin_client=admin_client, hco_namespace=hco_namespace, rss=rss
-                    )
-                )
-                if math.isclose(sample, expected_value, rel_tol=0.05):
-                    return
-    except TimeoutExpiredError:
-        LOGGER.error(f"{sample} should be within 5% of {expected_value}")
         raise
