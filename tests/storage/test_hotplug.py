@@ -160,6 +160,7 @@ def blank_disk_dv_multi_storage_scope_class(namespace, param_substring_scope_cla
     ],
     indirect=True,
 )
+@pytest.mark.conformance
 @pytest.mark.gating
 class TestHotPlugWithSerial:
     @pytest.mark.sno
@@ -194,6 +195,7 @@ class TestHotPlugWithSerial:
     ],
     indirect=True,
 )
+@pytest.mark.conformance
 @pytest.mark.gating
 class TestHotPlugWithPersist:
     @pytest.mark.sno
@@ -229,6 +231,7 @@ class TestHotPlugWithPersist:
     ],
     indirect=True,
 )
+@pytest.mark.conformance
 @pytest.mark.gating
 class TestHotPlugWithSerialPersist:
     @pytest.mark.sno
