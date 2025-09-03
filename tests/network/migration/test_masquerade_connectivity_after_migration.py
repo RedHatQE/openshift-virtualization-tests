@@ -46,7 +46,7 @@ def ping_via_console(src_vm, dst_vm):
 
 
 @pytest.fixture(scope="module")
-def running_vm_static(
+def running_masquerade_destination_vm(
     unprivileged_client,
     namespace,
 ):
@@ -63,7 +63,7 @@ def running_vm_static(
 
 
 @pytest.fixture(scope="module")
-def running_vm_for_migration(
+def running_masquerade_source_vm(
     unprivileged_client,
     cpu_for_migration,
     namespace,
@@ -82,16 +82,18 @@ def running_vm_for_migration(
 
 
 @pytest.fixture()
-def migrated_vmi(running_vm_for_migration):
-    LOGGER.info(f"Migrating {running_vm_for_migration.name}. Current node: {running_vm_for_migration.vmi.node.name}")
+def migrated_vmi(running_masquerade_source_vm):
+    LOGGER.info(
+        f"Migrating {running_masquerade_source_vm.name}. Current node: {running_masquerade_source_vm.vmi.node.name}"
+    )
 
-    ip_before = running_vm_for_migration.vmi.interfaces[0]["ipAddress"]
-    migrated_vmi = migrate_vm_and_verify(vm=running_vm_for_migration, wait_for_migration_success=False)
+    ip_before = running_masquerade_source_vm.vmi.interfaces[0]["ipAddress"]
+    migrated_vmi = migrate_vm_and_verify(vm=running_masquerade_source_vm, wait_for_migration_success=False)
 
     for sample in TimeoutSampler(
         wait_timeout=60,
         sleep=1,
-        func=lambda: ip_before != running_vm_for_migration.vmi.interfaces[0]["ipAddress"],
+        func=lambda: ip_before != running_masquerade_source_vm.vmi.interfaces[0]["ipAddress"],
     ):
         if sample:
             break
@@ -106,8 +108,8 @@ def migrated_vmi(running_vm_for_migration):
 @pytest.mark.single_nic
 def test_connectivity_after_migration(
     namespace,
-    running_vm_static,
-    running_vm_for_migration,
+    running_masquerade_destination_vm,
+    running_masquerade_source_vm,
     migrated_vmi,
 ):
     """
@@ -116,6 +118,8 @@ def test_connectivity_after_migration(
     - Once the VM IP changes and console connectivity is available, run ping immediately to catch
       short‑lived post‑migration connectivity gaps.
     """
-    LOGGER.info(f"Pinging from migrated {running_vm_for_migration.name} to {running_vm_static.name}")
+    LOGGER.info(
+        f"Pinging from migrated {running_masquerade_source_vm.name} to {running_masquerade_destination_vm.name}"
+    )
 
-    ping_via_console(src_vm=running_vm_for_migration, dst_vm=running_vm_static)
+    ping_via_console(src_vm=running_masquerade_source_vm, dst_vm=running_masquerade_destination_vm)
