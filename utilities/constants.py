@@ -250,7 +250,6 @@ CDI_CONFIGMAPS = [
 # Miscellaneous constants
 UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
-FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 QUARANTINED = "quarantined"
 SETUP_ERROR = "setup_error"
 
