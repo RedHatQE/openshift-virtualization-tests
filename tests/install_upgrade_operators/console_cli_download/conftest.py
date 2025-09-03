@@ -1,10 +1,15 @@
 import logging
 
 import pytest
+from ocp_resources.ingress_config_openshift_io import Ingress
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
     VIRTCTL_CLI_DOWNLOADS,
 )
 from utilities.infra import (
@@ -18,6 +23,17 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def virtctl_console_cli_downloads_spec_links(admin_client):
+    """
+    Get console cli downloads spec links
+
+    Returns:
+        ConsoleCLIDownload instance.spec.links
+    """
+    return get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
+
+
+@pytest.fixture(scope="class")
+def virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
     """
     Get console cli downloads spec links
 
@@ -66,3 +82,56 @@ def downloaded_and_extracted_virtctl_binary_for_os(request, all_virtctl_urls, tm
         dest_dir=tmpdir,
         machine_type=request.param.get("machine_type"),
     )
+
+
+@pytest.fixture(scope="class")
+def ingress_resource(admin_client):
+    return Ingress(client=admin_client, name="cluster")
+
+
+@pytest.fixture(scope="class")
+def updated_cluster_ingress_downloads_spec_links(
+    request, admin_client, hco_namespace, ingress_resource, virtctl_console_cli_downloads_spec_links_scope_class
+):
+    ingress_resource_instance = Ingress(client=admin_client, name="cluster").instance
+    component_routes_cnv = None
+    for component_route in ingress_resource.instance.status.componentRoutes:
+        if component_route.namespace == hco_namespace.name:
+            component_routes_cnv = component_route
+            break
+    assert component_routes_cnv, (
+        f"No CNV componentRoute found under ingress.status.componentRoutes for namespace '{hco_namespace.name}', "
+        f"Cannot patch cluster ingress for console CLI downloads."
+    )
+    component_routes_to_update = {
+        "componentRoutes": [
+            {
+                "hostname": f"{request.param['new_hostname']}.{ingress_resource_instance.spec.domain}",
+                "name": component_routes_cnv["name"],
+                "namespace": hco_namespace.name,
+            }
+        ],
+    }
+
+    with ResourceEditor(patches={ingress_resource: {"spec": component_routes_to_update}}):
+        yield
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_console_spec_links,
+        admin_client=admin_client,
+        name=VIRTCTL_CLI_DOWNLOADS,
+    )
+    original_cli_spec_links = [url.href for url in virtctl_console_cli_downloads_spec_links_scope_class]
+    current_cli_spec_links = None
+    try:
+        for sample in samples:
+            current_cli_spec_links = [url.href for url in sample]
+            if sorted(current_cli_spec_links) == sorted(original_cli_spec_links):
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Failed to update cluster ingress downloads spec links to the original links: original_cli_spec_links: "
+            f"{original_cli_spec_links}, current_cli_spec_links: {current_cli_spec_links}"
+        )
+        raise
