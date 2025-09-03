@@ -5,7 +5,6 @@ from tests.infrastructure.instance_types.supported_os.utils import golden_image_
 from utilities.constants import (
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
-    OS_FLAVOR_WINDOWS,
     RHEL8_PREFERENCE,
     TIMEOUT_15MIN,
     Images,
@@ -110,7 +109,6 @@ def golden_image_windows_data_source(
 def golden_image_windows_vm(
     unprivileged_client,
     namespace,
-    golden_images_namespace,
     modern_cpu_for_migration,
     golden_image_windows_data_source,
     windows_os_matrix__module__,
@@ -127,11 +125,9 @@ def golden_image_windows_vm(
             data_source=golden_image_windows_data_source,
             storage_class=[*storage_class_matrix__module__][0],
         ),
-        os_flavor=OS_FLAVOR_WINDOWS,
+        os_flavor="win-container-disk",
         disk_type=None,
         cpu_model=modern_cpu_for_migration,
-        password="Administrator",
-        username="Administrator",
     )
 
 
