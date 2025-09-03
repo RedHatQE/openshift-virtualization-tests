@@ -16,12 +16,10 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
-    expected_metric_labels_and_values,
     timestamp_to_seconds,
     validate_metric_value_within_range,
 )
@@ -411,31 +409,6 @@ class TestVmResourceLimits:
         )
 
 
-@pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
-class TestVmFreeMemoryBytes:
-    @pytest.mark.polarion("CNV-11692")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_working_set_bytes
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes"
-            f"{{pod='{vm_for_test.vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_working_set_bytes,
-        )
-
-    @pytest.mark.polarion("CNV-11693")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
-        self, prometheus, vm_for_test, vm_virt_launcher_pod_requested_memory, vm_memory_rss_bytes
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_rss"
-            f"{{pod='{vm_for_test.privileged_vmi.virt_launcher_pod.name}'}}",
-            expected_value=vm_virt_launcher_pod_requested_memory - vm_memory_rss_bytes,
-        )
-
-
 class TestKubevirtVmiNonEvictable:
     @pytest.mark.parametrize(
         "data_volume_scope_function, vm_from_template_with_existing_dv",
@@ -470,25 +443,6 @@ class TestKubevirtVmiNonEvictable:
             prometheus=prometheus,
             metric_name="kubevirt_vmi_non_evictable",
             expected_value="1",
-        )
-
-
-class TestVmSnapshotPersistentVolumeClaimLabels:
-    @pytest.mark.polarion("CNV-11762")
-    def test_metric_kubevirt_vmsnapshot_persistentvolumeclaim_labels(
-        self,
-        prometheus,
-        vm_for_snapshot_for_metrics_test,
-        restored_vm_using_snapshot,
-        snapshot_labels_for_testing,
-        kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value,
-    ):
-        expected_metric_labels_and_values(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-                vm_name=vm_for_snapshot_for_metrics_test.name
-            ),
-            expected_labels_and_values=snapshot_labels_for_testing,
         )
 
 
