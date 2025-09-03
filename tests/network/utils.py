@@ -27,28 +27,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-DHCP_SERVICE_RESTART = "sudo systemctl restart dhcpd"
-DHCP_SERVER_CONF_FILE = """
-cat <<EOF >> /etc/dhcp/dhcpd.conf
-default-lease-time 3600;
-max-lease-time 7200;
-authoritative;
-subnet {DHCP_IP_SUBNET}.0 netmask 255.255.255.0 {{
-  option subnet-mask 255.255.255.0;
-  option routers {DHCP_IP_SUBNET}.1;
-  option domain-name-servers {DHCP_IP_SUBNET}.1;
-
-  pool {{
-    range {DHCP_IP_RANGE_START} {DHCP_IP_RANGE_END};
-    allow known-clients;
-    deny  unknown-clients;
-  }}
-}}
-host intended_client_vm {{
-  hardware ethernet {CLIENT_MAC_ADDRESS};
-}}
-EOF
-"""
 SERVICE_MESH_INJECT_ANNOTATION = "sidecar.istio.io/inject"
 
 
