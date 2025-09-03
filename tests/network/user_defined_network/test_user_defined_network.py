@@ -123,10 +123,6 @@ class TestPrimaryUdn:
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
     @pytest.mark.gating
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Flaky test, fails on connecting to VM console; tracked in CNV-67470",
-        run=False,
-    )
     def test_connectivity_is_preserved_during_client_live_migration(self, server, client):
         migrate_vm_and_verify(vm=client.vm)
         assert is_tcp_connection(server=server, client=client)
