@@ -5,7 +5,7 @@ from pytest_testconfig import config as py_config
 
 from tests.infrastructure.golden_images.constants import PVC_NOT_FOUND_ERROR
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import OS_FLAVOR_FEDORA, U1_SMALL, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, U1_SMALL, Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -146,6 +146,10 @@ def test_vm_dv_with_different_sc(
     running_vm(vm=fedora_vm_from_data_source)
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: VM is going into running state which it shouldn't, CNV-68779",
+    run=False,
+)
 @pytest.mark.parametrize(
     "fedora_vm_from_data_source",
     [
