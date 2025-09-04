@@ -6,7 +6,6 @@ import pytest
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import Resource
 
-
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x, pytest.mark.conformance]
