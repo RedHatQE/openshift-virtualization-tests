@@ -25,8 +25,17 @@ from utilities.constants import (
     OVS_BRIDGE,
     VIRT_HANDLER,
 )
-from utilities.infra import ExecCommandOnPod, exit_pytest_execution, get_deployment_by_name, get_node_selector_dict
-from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
+from utilities.infra import (
+    ExecCommandOnPod,
+    exit_pytest_execution,
+    get_deployment_by_name,
+    get_node_selector_dict,
+)
+from utilities.network import (
+    get_cluster_cni_type,
+    ip_version_data_from_matrix,
+    network_nad,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -209,6 +218,7 @@ def network_sanity(
     network_overhead,
     sriov_workers,
     ipv4_supported_cluster,
+    conformance_tests,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -223,6 +233,14 @@ def network_sanity(
         if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
             LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
             return
+
+        # TODO: network tests should be marked with multi_nic to allow explicit checks based on markers
+        if conformance_tests:
+            LOGGER.info(
+                "Running conformance tests which run only single-nic tests, no need to verify multi NIC support"
+            )
+            return
+
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
         if len(hosts_common_available_ports) <= 1:
             failure_msgs.append(

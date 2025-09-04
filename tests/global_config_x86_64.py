@@ -37,7 +37,7 @@ windows_os_matrix = generate_os_matrix_dict(
     ],
 )
 
-fedora_os_matrix = generate_os_matrix_dict(os_name="fedora", supported_operating_systems=["fedora-41"])
+fedora_os_matrix = generate_os_matrix_dict(os_name="fedora", supported_operating_systems=["fedora-42"])
 centos_os_matrix = generate_os_matrix_dict(os_name="centos", supported_operating_systems=["centos-stream-9"])
 instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(
     os_name="rhel", preferences=[RHEL8_PREFERENCE, RHEL9_PREFERENCE, RHEL10_PREFERENCE]

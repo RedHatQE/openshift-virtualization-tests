@@ -20,7 +20,7 @@ from tests.storage.storage_migration.constants import (
     WINDOWS_FILE_WITH_PATH,
     WINDOWS_TEST_DIRECTORY_PATH,
 )
-from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
+from tests.storage.storage_migration.utils import get_storage_class_for_storage_migration
 from tests.storage.utils import create_windows_directory
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
@@ -287,17 +287,7 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 
 
 @pytest.fixture(scope="class")
-def deleted_completed_virt_launcher_source_pod(unprivileged_client, online_vms_for_storage_class_migration):
-    for vm in online_vms_for_storage_class_migration:
-        source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
-        source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
-        source_pod.delete(wait=True)
-
-
-@pytest.fixture(scope="class")
-def deleted_old_dvs_of_online_vms(
-    unprivileged_client, online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod
-):
+def deleted_old_dvs_of_online_vms(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
         dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)

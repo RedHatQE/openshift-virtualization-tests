@@ -16,6 +16,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
+from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -85,6 +86,10 @@ class TestStorageClassMigrationAtoB:
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Bug: can't Storage migrate a Stopped VM; fixed in MTC 1.8.10; MIG-1762",
+    run=False,
+)
 @pytest.mark.parametrize(
     "source_storage_class, target_storage_class, data_volume_scope_class, "
     "vm_for_storage_class_migration_from_template_with_existing_dv, "

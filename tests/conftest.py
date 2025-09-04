@@ -2190,13 +2190,6 @@ def instance_type_for_test_scope_class(namespace, common_instance_type_param_dic
     return VirtualMachineInstancetype(**instance_type_param_dict)
 
 
-@pytest.fixture()
-def instance_type_for_test_scope_function(namespace, common_instance_type_param_dict):
-    instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
-    instance_type_param_dict["namespace"] = namespace.name
-    return VirtualMachineInstancetype(**instance_type_param_dict)
-
-
 @pytest.fixture(scope="class")
 def common_instance_type_param_dict(request):
     common_instance_dict = {
@@ -2555,19 +2548,6 @@ def cloning_job_scope_function(request, namespace):
         name=f"clone-job-{request.param['source_name']}",
         namespace=namespace.name,
         source_name=request.param["source_name"],
-        label_filters=request.param.get("label_filters"),
-        annotation_filters=request.param.get("annotation_filters"),
-    ) as vmc:
-        yield vmc
-
-
-@pytest.fixture(scope="class")
-def cloning_job_scope_class(request, namespace):
-    source_name = request.param["source_name"]
-    with create_vm_cloning_job(
-        name=f"clone-job-{source_name}",
-        namespace=namespace.name,
-        source_name=source_name,
         label_filters=request.param.get("label_filters"),
         annotation_filters=request.param.get("annotation_filters"),
     ) as vmc:
@@ -2938,3 +2918,12 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+@pytest.fixture(scope="session")
+def conformance_tests(request):
+    return (
+        (marker_args := request.config.getoption("-m"))
+        and "conformance" in marker_args
+        and "not conformance" not in marker_args
+    )

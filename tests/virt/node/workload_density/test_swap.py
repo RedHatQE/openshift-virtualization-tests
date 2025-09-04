@@ -85,8 +85,8 @@ def node_affinity_for_swap_label():
 
 
 @pytest.fixture(scope="package")
-def wasp_agent_daemonset():
-    yield DaemonSet(name="wasp-agent", namespace="wasp")
+def wasp_agent_daemonset(hco_namespace):
+    yield DaemonSet(name="wasp-agent", namespace=hco_namespace.name)
 
 
 @pytest.fixture(scope="package")
