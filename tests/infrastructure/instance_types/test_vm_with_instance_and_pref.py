@@ -7,10 +7,13 @@ from tests.infrastructure.instance_types.utils import (
     assert_instance_revision_and_memory_update,
     get_controller_revision,
 )
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import Images
 from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+
+arch = get_cluster_architecture()
 
 CLOCK_TIMEZONE = "America/New_York"
 CLOCK_UTC_OFFSET = 600
@@ -21,6 +24,12 @@ CLOCK_TIMER = {
     "pit": {"present": True, "tickPolicy": "delay"},
     "rtc": {"present": True, "tickPolicy": "catchup", "track": "guest"},
 }
+
+# Modify CLOCK_TIMER for s390x architecture
+if arch == "s390x":
+    CLOCK_TIMER["hyperv"]["present"] = False
+    if "kvm" in CLOCK_TIMER:
+        del CLOCK_TIMER["kvm"]
 
 
 @pytest.fixture()
