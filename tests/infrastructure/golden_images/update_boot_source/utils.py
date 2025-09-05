@@ -59,7 +59,7 @@ def get_all_dic_volume_names(client, namespace):
                 namespace=namespace,
                 label_selector=RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL,
             )
-            if volume.exists
+            if volume.exists and not volume.name.startswith("prime-")
         ]
 
     return _fetch_volume_names(PersistentVolumeClaim) + _fetch_volume_names(VolumeSnapshot)
