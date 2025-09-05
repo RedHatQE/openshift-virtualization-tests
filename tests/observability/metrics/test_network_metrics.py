@@ -38,6 +38,7 @@ class TestVmiNetworkMetricsLinux:
         ],
         indirect=False,
     )
+    @pytest.mark.s390x
     def test_kubevirt_vmi_network_receive_and_transmit_packets_total(
         self, prometheus, metric_dict, vm_for_test, linux_vm_for_test_interface_name, generated_network_traffic
     ):
@@ -49,6 +50,7 @@ class TestVmiNetworkMetricsLinux:
         )
 
     @pytest.mark.polarion("CNV-11177")
+    @pytest.mark.s390x
     def test_kubevirt_vmi_network_traffic_bytes_total(
         self, prometheus, vm_for_test, linux_vm_for_test_interface_name, generated_network_traffic
     ):

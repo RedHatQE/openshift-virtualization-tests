@@ -24,6 +24,7 @@ class TestSSPMetrics:
         ],
         indirect=["cluster_network_addons_operator_scaled_down_and_up"],
     )
+    @pytest.mark.s390x
     def test_kubevirt_cnao_cr_ready(
         self,
         prometheus,
