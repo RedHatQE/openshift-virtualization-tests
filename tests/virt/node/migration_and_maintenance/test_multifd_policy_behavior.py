@@ -2,12 +2,14 @@ import logging
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
+from ocp_resources.resource import ResourceEditor
 
 from utilities.constants import MIGRATION_POLICY_VM_LABEL
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -34,26 +36,6 @@ def vm_for_multifd_test(
 
 
 @pytest.fixture()
-def vm_for_multifd_test_with_cpu_limit(
-    namespace,
-    admin_client,
-    unprivileged_client,
-    cpu_for_migration,
-):
-    name = "vm-for-multifd-test-cpu-limit"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        additional_labels=MIGRATION_POLICY_VM_LABEL,
-        cpu_model=cpu_for_migration,
-        cpu_limits="1",
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture()
 def migration_policy_postcopy():
     with MigrationPolicy(
         name="multifd-postcopy-policy",
@@ -63,27 +45,37 @@ def migration_policy_postcopy():
         yield mp
 
 
-# Sets cluster-wide log verbosity to level 6 for all VMs in this test class
+@pytest.fixture()
+def migrated_vm_baseline(vm_for_multifd_test):
+    source_pod = vm_for_multifd_test.vmi.virt_launcher_pod
+    migrate_vm_and_verify(vm=vm_for_multifd_test, wait_for_migration_success=True)
+    return source_pod
+
+
+@pytest.fixture()
+def migrated_vm_with_cpu_limit(vm_for_multifd_test):
+    ResourceEditor({vm_for_multifd_test: {"spec": {"domain": {"resources": {"limits": {"cpu": "1"}}}}}}).update()
+
+    restart_vm_wait_for_running_vm(vm=vm_for_multifd_test, wait_for_interfaces=True)
+    source_pod = vm_for_multifd_test.vmi.virt_launcher_pod
+    migrate_vm_and_verify(vm=vm_for_multifd_test, wait_for_migration_success=True)
+    return source_pod
+
+
 @pytest.mark.parametrize(
     "updated_log_verbosity_config",
     [
-        pytest.param("component"),
+        pytest.param("virt-launcher"),
     ],
     indirect=True,
 )
 class TestMultifdBehavior:
     @pytest.mark.polarion("CNV-12266")
     def test_multifd_disabled_with_postcopy_policy(
-        self,
-        updated_log_verbosity_config,
-        vm_for_multifd_test,
-        migration_policy_postcopy,
+        self, updated_log_verbosity_config, vm_for_multifd_test, migration_policy_postcopy, migrated_vm_baseline
     ):
-        # Perform migration with postcopy policy and wait for completion
-        migrate_vm_and_verify(vm=vm_for_multifd_test, wait_for_migration_success=True)
-
         # Check logs do NOT contain multifd capability
-        log_content = vm_for_multifd_test.vmi.virt_launcher_pod.log(container="compute")
+        log_content = migrated_vm_baseline.log(container="compute")
         assert "Enabling migration capability 'multifd'" not in log_content, (
             "multifd should be disabled with postcopy policy"
         )
@@ -93,25 +85,21 @@ class TestMultifdBehavior:
         self,
         updated_log_verbosity_config,
         vm_for_multifd_test,
+        migrated_vm_baseline,
     ):
-        # Perform migration without restrictions (baseline) and wait for completion
-        migrate_vm_and_verify(vm=vm_for_multifd_test, wait_for_migration_success=True)
-
         # Check logs DO contain multifd capability
-        log_content = vm_for_multifd_test.vmi.virt_launcher_pod.log(container="compute")
+        log_content = migrated_vm_baseline.log(container="compute")
         assert "Enabling migration capability 'multifd'" in log_content, (
             "multifd should be enabled in baseline scenario"
         )
 
-
-@pytest.mark.polarion("CNV-12265")
-def test_multifd_disabled_with_cpu_limit(
-    updated_log_verbosity_config,
-    vm_for_multifd_test_with_cpu_limit,
-):
-    # Perform migration and wait for completion
-    migrate_vm_and_verify(vm=vm_for_multifd_test_with_cpu_limit, wait_for_migration_success=True)
-
-    # Check logs do NOT contain multifd capability
-    log_content = vm_for_multifd_test_with_cpu_limit.vmi.virt_launcher_pod.log(container="compute")
-    assert "Enabling migration capability 'multifd'" not in log_content, "multifd should be disabled with CPU limit"
+    @pytest.mark.polarion("CNV-12265")
+    def test_multifd_disabled_with_cpu_limit(
+        self,
+        updated_log_verbosity_config,
+        vm_for_multifd_test,
+        migrated_vm_with_cpu_limit,
+    ):
+        # Check logs do NOT contain multifd capability
+        log_content = migrated_vm_with_cpu_limit.log(container="compute")
+        assert "Enabling migration capability 'multifd'" not in log_content, "multifd should be disabled with CPU limit"
