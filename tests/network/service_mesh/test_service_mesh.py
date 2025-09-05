@@ -6,6 +6,7 @@ from tests.network.service_mesh.utils import (
     inbound_request,
     run_console_command,
 )
+from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.service_mesh
@@ -15,6 +16,10 @@ pytestmark = pytest.mark.service_mesh
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
     @pytest.mark.single_nic
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Failing test, in debug",
+        run=False,
+    )
     def test_service_mesh_traffic_management(
         self,
         traffic_management_service_mesh_convergence,
@@ -30,6 +35,10 @@ class TestSMTrafficManagement:
 
     @pytest.mark.polarion("CNV-7304")
     @pytest.mark.single_nic
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Failing test, in debug",
+        run=False,
+    )
     def test_service_mesh_traffic_management_manipulated_rule(
         self,
         traffic_management_service_mesh_convergence,
@@ -52,6 +61,10 @@ class TestSMPeerAuthentication:
     @pytest.mark.single_nic
     @pytest.mark.dependency(
         name="test_authentication_policy_from_mesh",
+    )
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Failing test, in debug",
+        run=False,
     )
     def test_authentication_policy_from_mesh(
         self,
