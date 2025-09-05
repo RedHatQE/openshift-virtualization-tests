@@ -22,6 +22,11 @@ def updated_log_verbosity_config(
                 "virtLauncher": VIRT_LOG_VERBOSITY_LEVEL_6,
             }
         },
+        "virt-launcher": {
+            "kubevirt": {
+                "virtLauncher": VIRT_LOG_VERBOSITY_LEVEL_6,
+            }
+        },
         "node": {"kubevirt": {"nodeVerbosity": {worker_node1.name: VIRT_LOG_VERBOSITY_LEVEL_6}}},
     }
     with ResourceEditorValidateHCOReconcile(
