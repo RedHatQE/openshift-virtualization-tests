@@ -364,7 +364,7 @@ def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
         artifactory_config_map.clean_up()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
     required_instancetype = get_instance_type(name=U1_SMALL)
 
@@ -377,8 +377,11 @@ def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
             vm_instance_type=required_instancetype,
         )
+        vm.deploy(wait=True)
         vms_list.append(vm)
+
     yield vms_list
+
     for vm in vms_list:
         if vm.exists:
             vm.clean_up()
