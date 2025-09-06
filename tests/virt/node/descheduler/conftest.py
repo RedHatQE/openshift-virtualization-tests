@@ -5,25 +5,30 @@ from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.infra import get_pods_by_name_prefix
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_LABEL_KEY,
     DESCHEDULER_LABEL_VALUE,
     DESCHEDULER_TEST_LABEL,
-    RUNNING_PING_PROCESS_NAME_IN_VM,
 )
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     create_kube_descheduler,
     deploy_vms,
-    start_vms_with_process,
     vm_nodes,
     vms_per_nodes,
     wait_vmi_failover,
 )
-from tests.virt.utils import build_node_affinity_dict, get_non_terminated_pods, start_stress_on_vm
-from utilities.constants import TIMEOUT_5SEC
+from tests.virt.utils import (
+    build_node_affinity_dict,
+    get_boot_time_for_multiple_vms,
+    get_non_terminated_pods,
+    start_stress_on_vm,
+)
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
     node_mgmt_console,
@@ -57,7 +62,7 @@ def descheduler_kubevirt_relieve_and_migrate_profile(
 ):
     with create_kube_descheduler(
         admin_client=admin_client,
-        profiles=["DevKubeVirtRelieveAndMigrate"],
+        profiles=["KubeVirtRelieveAndMigrate"],
         profile_customizations={
             "devActualUtilizationProfile": "PrometheusCPUCombined",
         },
@@ -124,14 +129,10 @@ def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
 
 
 @pytest.fixture(scope="class")
-def vms_started_process_for_node_drain(
+def vms_boot_time_before_node_drain(
     deployed_vms_for_descheduler_test,
 ):
-    return start_vms_with_process(
-        vms=deployed_vms_for_descheduler_test,
-        process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
-        args=LOCALHOST,
-    )
+    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
 
 
 @pytest.fixture(scope="class")
@@ -159,6 +160,26 @@ def drain_uncordon_node(
         for vm in deployed_vms_for_descheduler_test:
             if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
                 wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
+
+
+@pytest.fixture()
+def all_existing_migrations_completed(admin_client, namespace):
+    # Descheduler may trigger multiple migrations, need to wait when all succeeded
+    def _wait_for_migration_succeeded(migration, timeout=TIMEOUT_5MIN):
+        sleep = TIMEOUT_10SEC
+        samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
+        sample = None
+        try:
+            for sample in samples:
+                if sample == migration.Status.SUCCEEDED:
+                    break
+        except TimeoutExpiredError:
+            if sample:
+                LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
+            raise
+
+    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=admin_client, namespace=namespace):
+        _wait_for_migration_succeeded(migration=migration_job)
 
 
 @pytest.fixture(scope="class")
@@ -237,14 +258,10 @@ def deployed_vms_on_labeled_node(
 
 
 @pytest.fixture(scope="class")
-def vms_started_process_for_utilization_imbalance(
+def vms_boot_time_before_utilization_imbalance(
     deployed_vms_for_utilization_imbalance,
 ):
-    return start_vms_with_process(
-        vms=deployed_vms_for_utilization_imbalance,
-        process_name=RUNNING_PING_PROCESS_NAME_IN_VM,
-        args=LOCALHOST,
-    )
+    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_utilization_imbalance)
 
 
 @pytest.fixture(scope="class")
