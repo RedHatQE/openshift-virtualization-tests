@@ -1,26 +1,29 @@
 import logging
 import os
-import shlex
 from copy import deepcopy
 
 import pytest
+import requests
+from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
 from ocp_resources.provider import Provider
 from ocp_resources.resource import ResourceEditor, get_client
+from ocp_resources.route import Route
 from ocp_resources.secret import Secret
-from pyhelper_utils.shell import run_command
+from ocp_resources.service_account import ServiceAccount
 from pytest_testconfig import config as py_config
 
-from utilities.constants import REMOTE_KUBECONFIG
+from tests.cross_cluster_live_migration.utils import wait_for_service_account_token
+from utilities.constants import REMOTE_KUBECONFIG, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import base64_encode_str, get_hyperconverged_resource
 
 LOGGER = logging.getLogger(__name__)
 
-LIVE_MIGRATION_NETWORK_NAME = "live-migration-network"
+LIVE_MIGRATION_NETWORK_NAME = "lm-network"
 
 
 @pytest.fixture(scope="session")
@@ -65,20 +68,61 @@ def remote_cluster_api_url(remote_admin_client):
 
 
 @pytest.fixture(scope="session")
-def remote_cluster_auth_token(remote_kubeconfig_export_path):
+def remote_cluster_service_account(remote_admin_client):
+    with ServiceAccount(
+        client=remote_admin_client,
+        name="remote-cluster-service-account",
+        namespace="default",
+    ) as sa:
+        yield sa
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_cluster_role_binding(remote_admin_client, remote_cluster_service_account):
+    with ClusterRoleBinding(
+        name="remote-cluster-cluster-role-binding",
+        cluster_role="cluster-admin",
+        client=remote_admin_client,
+        subjects=[
+            {
+                "kind": ServiceAccount.kind,
+                "name": remote_cluster_service_account.name,
+                "namespace": remote_cluster_service_account.namespace,
+            }
+        ],
+    ) as crb:
+        yield crb
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_service_account_token_secret(
+    remote_admin_client, remote_cluster_service_account, remote_cluster_cluster_role_binding
+):
+    """
+    Create a secret to hold the service account token.
+    The secret depends on the cluster role binding to ensure proper permissions.
+    """
+    with Secret(
+        client=remote_admin_client,
+        name="remote-cluster-sa-token-secret",
+        namespace=remote_cluster_service_account.namespace,
+        annotations={
+            "kubernetes.io/service-account.name": remote_cluster_service_account.name,
+        },
+        type="kubernetes.io/service-account-token",
+    ) as secret:
+        yield secret
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_auth_token(remote_admin_client, remote_cluster_service_account_token_secret):
     """
     Get the authentication token for the remote cluster.
 
     Returns:
         str: The authentication token for the current user session
     """
-    token_command = f"oc whoami -t --kubeconfig={remote_kubeconfig_export_path}"
-    token = run_command(command=shlex.split(token_command), verify_stderr=False)[1]
-
-    # Strip any whitespace from the token
-    token = token.strip()
-    LOGGER.info("Successfully retrieved authentication token for remote cluster")
-    return token
+    return wait_for_service_account_token(secret=remote_cluster_service_account_token_secret)
 
 
 @pytest.fixture(scope="session")
@@ -202,56 +246,112 @@ def forklift_controller_resource_scope_package(admin_client, mtv_namespace):
 def enabled_mtv_feature_gate_ocp_live_migration(forklift_controller_resource_scope_package):
     forklift_spec_dict = deepcopy(forklift_controller_resource_scope_package.instance.to_dict()["spec"])
     forklift_spec_dict["feature_ocp_live_migration"] = "true"
-    ResourceEditor(patches={forklift_controller_resource_scope_package: forklift_spec_dict}).update()
+    ResourceEditor(patches={forklift_controller_resource_scope_package: {"spec": forklift_spec_dict}}).update()
 
 
-@pytest.fixture(scope="package")
-def remote_cluster_secret(admin_client, mtv_namespace, remote_cluster_auth_token, remote_cluster_api_url):
+@pytest.fixture(scope="module")
+def mtv_forklift_services_route_host(admin_client, mtv_namespace):
     """
-    Create a Secret for remote cluster access from the local cluster.
+    Get the forklift-services route host.
+    """
+    forklift_services_route_instance = Route(
+        client=admin_client,
+        name="forklift-services",
+        namespace=mtv_namespace.name,
+    ).exists
+
+    route_host = forklift_services_route_instance.spec.host
+    assert route_host
+    return route_host
+
+
+@pytest.fixture(scope="module")
+def remote_cluster_ca_cert(mtv_forklift_services_route_host, remote_cluster_api_url):
+    """
+    Fetch the CA certificate for the remote cluster using Forklift services.
+
+    Returns:
+        str: The CA certificate content
+    """
+    cert_url = f"https://{mtv_forklift_services_route_host}/tls-certificate?URL={remote_cluster_api_url}"
+    LOGGER.info(f"Fetching remote cluster CA certificate from: {cert_url}")
+    try:
+        response = requests.get(cert_url, verify=False, timeout=30)
+        response.raise_for_status()
+
+        # The response should contain the certificate
+        ca_cert = response.text.strip()
+
+        if not ca_cert:
+            raise ValueError("Empty certificate received from Forklift services")
+        LOGGER.info("Successfully fetched remote cluster CA certificate")
+        return ca_cert
+    except requests.exceptions.RequestException as e:
+        LOGGER.error(f"Failed to fetch CA certificate from {cert_url}: {e}")
+        raise
+    except Exception as e:
+        LOGGER.error(f"Unexpected error fetching CA certificate: {e}")
+        raise
+
+
+@pytest.fixture(scope="module")
+def remote_cluster_secret(
+    admin_client, namespace, remote_cluster_auth_token, remote_cluster_api_url, remote_cluster_ca_cert
+):
+    """
+    Create a Secret for access to the remote cluster from the local cluster.
 
     The secret contains:
     - insecureSkipVerify: false (base64 encoded)
     - token: authentication token (base64 encoded)
     - url: cluster API URL (base64 encoded)
+    - cacert: CA certificate (base64 encoded)
     """
     with Secret(
         client=admin_client,
         name="source-cluster-secret",
-        namespace=mtv_namespace.name,
+        namespace=namespace.name,
         data_dict={
             "insecureSkipVerify": base64_encode_str("false"),
-            "token": base64_encode_str(remote_cluster_auth_token),
+            "token": remote_cluster_auth_token,
             "url": base64_encode_str(remote_cluster_api_url),
+            "cacert": base64_encode_str(remote_cluster_ca_cert),
         },
         type="Opaque",
     ) as secret:
         yield secret
 
 
-@pytest.fixture(scope="package")
-def remote_cluster_provider(admin_client, mtv_namespace, remote_cluster_secret, remote_cluster_api_url):
+@pytest.fixture(scope="module")
+def mtv_provider_remote_cluster(admin_client, mtv_namespace, remote_cluster_secret, remote_cluster_api_url):
     """
     Create a Provider resource for the remote cluster in the local cluster.
-
     Used by MTV to connect to the remote OpenShift cluster for migration operations.
     """
     with Provider(
         client=admin_client,
         name="mtv-source-provider",
-        namespace=mtv_namespace.name,
+        namespace=mtv_namespace.name,  # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
         provider_type=Provider.ProviderType.OPENSHIFT,
         url=remote_cluster_api_url,
         secret_name=remote_cluster_secret.name,
         secret_namespace=remote_cluster_secret.namespace,
     ) as provider:
+        provider.wait_for_condition(
+            condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
+        )
         yield provider
 
 
-@pytest.fixture(scope="package")
-def local_cluster_provider(admin_client, mtv_namespace):
+@pytest.fixture(scope="module")
+def mtv_provider_local_cluster(admin_client, mtv_namespace):
     """
     Get a Provider resource for the local cluster.
     "host" Provider is created by default by MTV.
     """
-    return Provider(client=admin_client, name="host", namespace=mtv_namespace.name, ensure_exists=True)
+    # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
+    provider = Provider(client=admin_client, name="host", namespace=mtv_namespace.name, ensure_exists=True)
+    provider.wait_for_condition(
+        condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
+    )
+    return provider
