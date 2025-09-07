@@ -21,16 +21,13 @@ pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 @pytest.fixture()
 def crds(admin_client):
     crds_to_check = []
-    bug_status = is_jira_open(jira_id="CNV-58119")
+    target_suffixes = (Resource.ApiGroup.KUBEVIRT_IO, Resource.ApiGroup.NMSTATE_IO)
     for crd in CustomResourceDefinition.get(dyn_client=admin_client):
-        if bug_status and crd.name in MTV_VOLUME_POPULATOR_CRDS:
+        if crd.name in MTV_VOLUME_POPULATOR_CRDS:
             continue
         if any([
             crd.name.endswith(suffix)
-            for suffix in [
-                Resource.ApiGroup.KUBEVIRT_IO,
-                Resource.ApiGroup.NMSTATE_IO,
-            ]
+            for suffix in target_suffixes
         ]):
             crds_to_check.append(crd)
     return crds_to_check
@@ -38,14 +35,11 @@ def crds(admin_client):
 
 @pytest.mark.polarion("CNV-8263")
 def test_crds_cluster_readers_role(crds):
-    LOGGER.info(f"CRds: {crds}")
     cluster_readers = "system:cluster-readers"
-    cannot_read = []
+    unreadable_crds = []
     for crd in crds:
         can_read = check_output(shlex.split(f"oc adm policy who-can get {crd.name}"))
         if cluster_readers not in str(can_read):
-            cannot_read.append(crd.name)
+            unreadable_crds.append(crd.name)
 
-    if cannot_read:
-        cannot_read_str = "\n".join(cannot_read)
-        pytest.fail(reason=f"The following crds are missing {cluster_readers} role:\n{cannot_read_str}")
+    assert not unreadable_crds, f"The following crds are missing {cluster_readers} role: {unreadable_crds}"
