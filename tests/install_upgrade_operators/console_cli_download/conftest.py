@@ -33,14 +33,14 @@ def virtctl_console_cli_downloads_spec_links(admin_client):
 
 
 @pytest.fixture(scope="class")
-def virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
+def original_virtctl_console_cli_downloads_spec_links(admin_client):
     """
     Get console cli downloads spec links
 
     Returns:
         ConsoleCLIDownload instance.spec.links
     """
-    return get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
+    return [url.href for url in get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)]
 
 
 @pytest.fixture()
@@ -91,17 +91,17 @@ def ingress_resource(admin_client):
 
 @pytest.fixture(scope="class")
 def updated_cluster_ingress_downloads_spec_links(
-    request, admin_client, hco_namespace, ingress_resource, virtctl_console_cli_downloads_spec_links_scope_class
+    request, admin_client, hco_namespace, ingress_resource, original_virtctl_console_cli_downloads_spec_links
 ):
-    ingress_resource_instance = Ingress(client=admin_client, name="cluster").instance
+    ingress_resource_instance = ingress_resource.instance
     component_routes_cnv = None
-    for component_route in ingress_resource.instance.status.componentRoutes:
+    for component_route in ingress_resource_instance.status.componentRoutes:
         if component_route.namespace == hco_namespace.name:
             component_routes_cnv = component_route
             break
     assert component_routes_cnv, (
         f"No CNV componentRoute found under ingress.status.componentRoutes for namespace '{hco_namespace.name}', "
-        f"Cannot patch cluster ingress for console CLI downloads."
+        "Cannot patch cluster ingress for console CLI downloads."
     )
     component_routes_to_update = {
         "componentRoutes": [
@@ -122,16 +122,15 @@ def updated_cluster_ingress_downloads_spec_links(
         admin_client=admin_client,
         name=VIRTCTL_CLI_DOWNLOADS,
     )
-    original_cli_spec_links = [url.href for url in virtctl_console_cli_downloads_spec_links_scope_class]
     current_cli_spec_links = None
     try:
         for sample in samples:
             current_cli_spec_links = [url.href for url in sample]
-            if sorted(current_cli_spec_links) == sorted(original_cli_spec_links):
+            if sorted(current_cli_spec_links) == sorted(original_virtctl_console_cli_downloads_spec_links):
                 return
     except TimeoutExpiredError:
         LOGGER.error(
-            f"Failed to update cluster ingress downloads spec links to the original links: original_cli_spec_links: "
-            f"{original_cli_spec_links}, current_cli_spec_links: {current_cli_spec_links}"
+            "Failed to update cluster ingress downloads spec links to the original links: original_cli_spec_links: "
+            f"{original_virtctl_console_cli_downloads_spec_links}, current_cli_spec_links: {current_cli_spec_links}"
         )
         raise
