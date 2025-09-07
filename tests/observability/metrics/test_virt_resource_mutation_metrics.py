@@ -226,6 +226,7 @@ COMPONENT_CONFIG = {
     ],
 )
 @pytest.mark.dependency(name="test_metric_multiple_invalid_change")
+@pytest.mark.s390x
 def test_metric_multiple_invalid_change(
     prometheus,
     mutation_count_before_change,

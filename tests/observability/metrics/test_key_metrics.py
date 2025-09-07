@@ -97,6 +97,7 @@ class TestKeyMetrics:
         ],
         indirect=["vm_metrics_setup", "node_setup"],
     )
+    @pytest.mark.s390x
     def test_key_metric_active(self, node_setup, vm_metrics_setup, query, prometheus):
         """
         Tests that validates various metrics are present and our ability to make prometheus cli queries for them. These
