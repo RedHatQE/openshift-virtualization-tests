@@ -1,19 +1,17 @@
 import pytest
 
-from utilities.constants import KUBEVIRT_WORKQUEUE_QUEUE_DURATION_SECONDS, KUBEVIRT_WORKQUEUE_WORK_DURATION_SECONDS
-
 CNV_WORKQUEUE_METRICS = [
     "kubevirt_workqueue_adds_total",
     "kubevirt_workqueue_depth",
     "kubevirt_workqueue_longest_running_processor_seconds",
-    f"{KUBEVIRT_WORKQUEUE_QUEUE_DURATION_SECONDS}_bucket",
-    f"{KUBEVIRT_WORKQUEUE_QUEUE_DURATION_SECONDS}_sum",
-    f"{KUBEVIRT_WORKQUEUE_QUEUE_DURATION_SECONDS}_count",
+    "kubevirt_workqueue_queue_duration_seconds_bucket",
+    "kubevirt_workqueue_queue_duration_seconds_sum",
+    "kubevirt_workqueue_queue_duration_seconds_count",
     "kubevirt_workqueue_retries_total",
     "kubevirt_workqueue_unfinished_work_seconds",
-    f"{KUBEVIRT_WORKQUEUE_WORK_DURATION_SECONDS}_bucket",
-    f"{KUBEVIRT_WORKQUEUE_WORK_DURATION_SECONDS}_sum",
-    f"{KUBEVIRT_WORKQUEUE_WORK_DURATION_SECONDS}_count",
+    "kubevirt_workqueue_work_duration_seconds_bucket",
+    "kubevirt_workqueue_work_duration_seconds_sum",
+    "kubevirt_workqueue_work_duration_seconds_count",
 ]
 
 
