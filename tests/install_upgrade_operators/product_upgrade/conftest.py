@@ -31,7 +31,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
+from utilities.constants import BREW_REGISTERY_SOURCE, HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
@@ -319,15 +319,19 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 @pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     # Get the shortest path to the target (EUS) version
-    upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
+    #upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
     # Get the shortest path to the intermediate (non-EUS) version
-    upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
-        target_version=upgrade_path_to_target_version["startVersion"]
-    )
+    #upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
+    #    target_version=upgrade_path_to_target_version["startVersion"]
+    #)
     # Return a dictionary with the versions and images for the EUS-to-EUS upgrade
-    upgrade_path = {
-        "non-eus": get_iib_images_of_cnv_versions(versions=upgrade_path_to_intermediate_version["versions"]),
-        EUS: get_iib_images_of_cnv_versions(versions=upgrade_path_to_target_version["versions"], errata_status="false"),
+    #upgrade_path = {
+    #    "non-eus": get_iib_images_of_cnv_versions(versions=upgrade_path_to_intermediate_version["versions"]),
+    #    EUS: get_iib_images_of_cnv_versions(versions=upgrade_path_to_target_version["versions"], errata_status="false"),
+    #}
+    upgrade_path= {
+        "non-eus": {'4.19.3': f'{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1026377'},
+        EUS: {'4.20.0': f'{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1040461'},
     }
     LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
     return upgrade_path
@@ -488,7 +492,7 @@ def triggered_non_eus_to_target_eus_ocp_upgrade(eus_ocp_image_urls):
 @pytest.fixture()
 def source_eus_to_non_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_eus_to_non_eus_from_image_url,
     triggered_source_eus_to_non_eus_ocp_upgrade,
@@ -498,14 +502,14 @@ def source_eus_to_non_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_eus_to_non_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
 @pytest.fixture()
 def non_eus_to_target_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_non_eus_to_eus_from_image_url,
     triggered_non_eus_to_target_eus_ocp_upgrade,
@@ -515,7 +519,7 @@ def non_eus_to_target_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_non_eus_to_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
@@ -538,6 +542,10 @@ def source_eus_to_non_eus_cnv_upgraded(
         )
     LOGGER.info("Successfully performed cnv upgrades from source EUS to non-EUS version.")
 
+@pytest.fixture()
+def updated_sub_channel():
+    py_config["cnv_subscription_channel"] = "candidate"
+
 
 @pytest.fixture()
 def non_eus_to_target_eus_cnv_upgraded(
@@ -545,6 +553,7 @@ def non_eus_to_target_eus_cnv_upgraded(
     hco_namespace,
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
+    updated_sub_channel,
     updated_cnv_subscription_source,
 ):
     version, cnv_image = next(iter(eus_cnv_upgrade_path[EUS].items()))
