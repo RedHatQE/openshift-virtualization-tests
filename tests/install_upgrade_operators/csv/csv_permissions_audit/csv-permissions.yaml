@@ -3518,6 +3518,17 @@ ssp-operator:
     - update
     - watch
   - apiGroups:
+    - policy
+    resources:
+    - poddisruptionbudgets
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+  - apiGroups:
     - rbac.authorization.k8s.io
     resources:
     - clusterrolebindings
