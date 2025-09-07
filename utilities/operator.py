@@ -235,8 +235,8 @@ def consecutive_checks_for_mcp_condition(mcp_sampler, machine_config_pools_list)
         raise
 
 
-def wait_for_mcp_update_end(machine_config_pools_list):
-    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list)
+def wait_for_mcp_update_end(machine_config_pools_list, timeout=TIMEOUT_75MIN):
+    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list, timeout=timeout)
     wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list)
 
 
@@ -498,7 +498,7 @@ def wait_for_csv_successful_state(admin_client, namespace_name, subscription_nam
     raise ResourceNotFoundError(f"Subscription {subscription_name} not found in namespace: {namespace_name}")
 
 
-def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes):
+def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes, timeout=TIMEOUT_75MIN):
     initial_updating_transition_times = get_mcp_updating_transition_times(mcp_conditions=initial_mcp_conditions)
 
     wait_for_mcp_update_start(
@@ -507,6 +507,7 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
     )
     wait_for_mcp_update_end(
         machine_config_pools_list=machine_config_pools_list,
+        timeout=timeout,
     )
     wait_for_nodes_to_have_same_kubelet_version(nodes=nodes)
     wait_for_all_nodes_ready(nodes=nodes)
@@ -614,12 +615,14 @@ def update_image_in_catalog_source(dyn_client, image, catalog_source_name, cr_na
     if catalog:
         LOGGER.info(f"Updating {catalog_source_name} image to {image}")
         ResourceEditor(patches={catalog: {"spec": {"image": image}}}).update()
+        wait_for_catalogsource_ready(admin_client=dyn_client, catalog_name=catalog_source_name)
     else:
         LOGGER.info(f"Creating CatalogSource {catalog_source_name} with image {image}.")
         create_catalog_source(
             catalog_name=catalog_source_name,
             image=image,
         )
+        wait_for_catalogsource_ready(admin_client=dyn_client, catalog_name=catalog_source_name)
         LOGGER.info(f"Waiting for {cr_name} packagemanifest associated with {catalog_source_name} to appear")
         wait_for_package_manifest_to_exist(dyn_client=dyn_client, catalog_name=catalog_source_name, cr_name=cr_name)
 

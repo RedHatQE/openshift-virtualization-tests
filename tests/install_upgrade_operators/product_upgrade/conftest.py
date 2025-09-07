@@ -1,10 +1,12 @@
 import logging
 import os
 import re
+import time
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
@@ -15,10 +17,8 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
     get_all_cnv_alerts,
-    get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
-    get_shortest_upgrade_path,
     perform_cnv_upgrade,
     run_ocp_upgrade_command,
     set_workload_update_methods_hco,
@@ -31,7 +31,15 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
+from utilities.constants import (
+    BREW_REGISTERY_SOURCE,
+    HCO_CATALOG_SOURCE,
+    HOTFIX_STR,
+    TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+    TIMEOUT_180MIN,
+    NamespacesNames,
+)
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
@@ -319,15 +327,19 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 @pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     # Get the shortest path to the target (EUS) version
-    upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
+    # upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
     # Get the shortest path to the intermediate (non-EUS) version
-    upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
-        target_version=upgrade_path_to_target_version["startVersion"]
-    )
+    # upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
+    #    target_version=upgrade_path_to_target_version["startVersion"]
+    # )
     # Return a dictionary with the versions and images for the EUS-to-EUS upgrade
+    # upgrade_path = {
+    #  "non-eus": get_iib_images_of_cnv_versions(versions=upgrade_path_to_intermediate_version["versions"]),
+    #  EUS: get_iib_images_of_cnv_versions(versions=upgrade_path_to_target_version["versions"], errata_status="false"),
+    # }
     upgrade_path = {
-        "non-eus": get_iib_images_of_cnv_versions(versions=upgrade_path_to_intermediate_version["versions"]),
-        EUS: get_iib_images_of_cnv_versions(versions=upgrade_path_to_target_version["versions"], errata_status="false"),
+        "non-eus": {"4.19.7": f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1039492"},
+        EUS: {"4.20.0": f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1047014"},
     }
     LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
     return upgrade_path
@@ -362,6 +374,7 @@ def eus_unpaused_worker_mcp(
         machine_config_pools_list=worker_machine_config_pools,
         initial_mcp_conditions=worker_machine_config_pools_conditions,
         nodes=workers,
+        timeout=TIMEOUT_180MIN,
     )
 
 
@@ -379,6 +392,7 @@ def eus_paused_workload_update(
 
 @pytest.fixture()
 def eus_unpaused_workload_update(
+    admin_client,
     hyperconverged_resource_scope_module,
     default_workload_update_strategy,
 ):
@@ -387,6 +401,9 @@ def eus_unpaused_workload_update(
         hyperconverged_resource=hyperconverged_resource_scope_module,
         workload_update_method=default_workload_update_strategy[WORKLOADUPDATEMETHODS],
     )
+    time.sleep(TIMEOUT_5MIN)
+    vmim = VirtualMachineInstanceMigration.get(dyn_client=admin_client)
+    LOGGER.info(f"VMIM: {[vmim.name for vmim in vmim]}")
 
 
 @pytest.fixture(scope="module")
@@ -488,7 +505,7 @@ def triggered_non_eus_to_target_eus_ocp_upgrade(eus_ocp_image_urls):
 @pytest.fixture()
 def source_eus_to_non_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_eus_to_non_eus_from_image_url,
     triggered_source_eus_to_non_eus_ocp_upgrade,
@@ -498,14 +515,14 @@ def source_eus_to_non_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_eus_to_non_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
 @pytest.fixture()
 def non_eus_to_target_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_non_eus_to_eus_from_image_url,
     triggered_non_eus_to_target_eus_ocp_upgrade,
@@ -515,7 +532,7 @@ def non_eus_to_target_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_non_eus_to_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
@@ -545,7 +562,8 @@ def non_eus_to_target_eus_cnv_upgraded(
     hco_namespace,
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
-    updated_cnv_subscription_source,
+    cnv_subscription_scope_session,
+    cnv_registry_source,
 ):
     version, cnv_image = next(iter(eus_cnv_upgrade_path[EUS].items()))
     LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
@@ -555,6 +573,8 @@ def non_eus_to_target_eus_cnv_upgraded(
         cr_name=hyperconverged_resource_scope_function.name,
         hco_namespace=hco_namespace,
         cnv_target_version=version.lstrip("v"),
+        subscription=cnv_subscription_scope_session,
+        subscription_source=cnv_registry_source["cnv_subscription_source"],
     )
 
 

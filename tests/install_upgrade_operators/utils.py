@@ -108,7 +108,8 @@ def wait_for_install_plan(
                         return ip
                     LOGGER.info(
                         f"Subscription: {subscription.name}, is associated with install plan:"
-                        f" {install_plan_name_in_subscription}"
+                        f" {install_plan_name_in_subscription} "
+                        f"with {ip_instance.spec.clusterServiceVersionNames[0]} version"
                     )
 
     except TimeoutExpiredError:
