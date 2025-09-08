@@ -36,7 +36,7 @@ def jumbo_frame_bridge_device_worker_1(
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     worker_node1,
-    nodes_available_nics,
+    hosts_common_available_ports,
     jumbo_frame_bridge_device_name,
 ):
     with network_device(
@@ -44,7 +44,7 @@ def jumbo_frame_bridge_device_worker_1(
         nncp_name="jumbo-frame-bridge-nncp-1",
         interface_name=jumbo_frame_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
         mtu=cluster_hardware_mtu,
     ) as br:
         yield br
@@ -55,7 +55,7 @@ def jumbo_frame_bridge_device_worker_2(
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     worker_node2,
-    nodes_available_nics,
+    hosts_common_available_ports,
     jumbo_frame_bridge_device_name,
 ):
     with network_device(
@@ -63,7 +63,7 @@ def jumbo_frame_bridge_device_worker_2(
         nncp_name="jumbo-frame-bridge-nncp-2",
         interface_name=jumbo_frame_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
         mtu=cluster_hardware_mtu,
     ) as br:
         yield br
