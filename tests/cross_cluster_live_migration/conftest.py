@@ -14,6 +14,7 @@ from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
+from ocp_resources.storage_map import StorageMap
 from pytest_testconfig import config as py_config
 
 from tests.cross_cluster_live_migration.utils import wait_for_service_account_token
@@ -355,3 +356,31 @@ def mtv_provider_local_cluster(admin_client, mtv_namespace):
         condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
     )
     return provider
+
+
+@pytest.fixture(scope="module")
+def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv_provider_remote_cluster):
+    """
+    Create a StorageMap resource for MTV migration.
+    Maps storage classes between source and destination clusters.
+    """
+    # Define the storage mapping
+    mapping = [
+        {
+            "source": {"name": py_config["default_storage_class"]},
+            "destination": {
+                "storageClass": py_config["default_storage_class"]  # TODO Decide on the destination storage class
+            },
+        }
+    ]
+    with StorageMap(
+        client=admin_client,
+        name="storage-map",
+        namespace=mtv_namespace.name,
+        source_provider_name=mtv_provider_remote_cluster.name,
+        source_provider_namespace=mtv_provider_remote_cluster.namespace,
+        destination_provider_name=mtv_provider_local_cluster.name,
+        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        mapping=mapping,
+    ) as storage_map:
+        yield storage_map

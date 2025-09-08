@@ -1,6 +1,7 @@
 import logging
 
-from timeout_sampler import TimeoutSampler, TimeoutExpiredError
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC
 
 LOGGER = logging.getLogger(__name__)
@@ -17,18 +18,18 @@ def get_token_from_secret(secret):
 def wait_for_service_account_token(secret):
     """
     Wait for a service account token to be populated in a secret.
-    
+
     Args:
         secret: The Secret resource object
-        
+
     Returns:
         str: The token value
-        
+
     Raises:
         TimeoutExpiredError: If token is not populated within timeout
     """
     LOGGER.info(f"Waiting for service account token to be populated in secret {secret.name}")
-    
+
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
