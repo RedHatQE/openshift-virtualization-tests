@@ -6,8 +6,6 @@ import pytest
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import Resource
 
-from utilities.infra import is_jira_open
-
 LOGGER = logging.getLogger(__name__)
 MTV_VOLUME_POPULATOR_CRDS = [
     f"openstackvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
@@ -25,10 +23,7 @@ def crds(admin_client):
     for crd in CustomResourceDefinition.get(dyn_client=admin_client):
         if crd.name in MTV_VOLUME_POPULATOR_CRDS:
             continue
-        if any([
-            crd.name.endswith(suffix)
-            for suffix in target_suffixes
-        ]):
+        if any([crd.name.endswith(suffix) for suffix in target_suffixes]):
             crds_to_check.append(crd)
     return crds_to_check
 
