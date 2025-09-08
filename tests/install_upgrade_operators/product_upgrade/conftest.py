@@ -15,10 +15,8 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
     get_all_cnv_alerts,
-    get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
-    get_shortest_upgrade_path,
     perform_cnv_upgrade,
     run_ocp_upgrade_command,
     set_workload_update_methods_hco,
@@ -319,19 +317,19 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 @pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     # Get the shortest path to the target (EUS) version
-    #upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
+    # upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
     # Get the shortest path to the intermediate (non-EUS) version
-    #upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
+    # upgrade_path_to_intermediate_version = get_shortest_upgrade_path(
     #    target_version=upgrade_path_to_target_version["startVersion"]
-    #)
+    # )
     # Return a dictionary with the versions and images for the EUS-to-EUS upgrade
-    #upgrade_path = {
+    # upgrade_path = {
     #    "non-eus": get_iib_images_of_cnv_versions(versions=upgrade_path_to_intermediate_version["versions"]),
     #    EUS: get_iib_images_of_cnv_versions(versions=upgrade_path_to_target_version["versions"], errata_status="false"),
-    #}
-    upgrade_path= {
-        "non-eus": {'4.19.3': f'{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1026377'},
-        EUS: {'4.20.0': f'{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1040461'},
+    # }
+    upgrade_path = {
+        "non-eus": {"4.19.3": f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1026377"},
+        EUS: {"4.20.0": f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:1040461"},
     }
     LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
     return upgrade_path
@@ -541,6 +539,7 @@ def source_eus_to_non_eus_cnv_upgraded(
             cnv_target_version=version.lstrip("v"),
         )
     LOGGER.info("Successfully performed cnv upgrades from source EUS to non-EUS version.")
+
 
 @pytest.fixture()
 def updated_sub_channel():
