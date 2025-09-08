@@ -30,7 +30,7 @@ from tests.infrastructure.vm_console_proxy.utils import (
     create_vnc_console_token,
     get_vm_console_proxy_resource,
 )
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_10MIN, Images
+from utilities.constants import OS_FLAVOR_RHEL, RHEL10_PREFERENCE, TIMEOUT_10MIN, U1_SMALL, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import login_with_token, login_with_user_password
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
@@ -94,8 +94,8 @@ def vm_for_console_proxy(namespace, unprivileged_client):
         image=Images.Rhel.RHEL10_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.small"),
-        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE),
         os_flavor=OS_FLAVOR_RHEL,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
