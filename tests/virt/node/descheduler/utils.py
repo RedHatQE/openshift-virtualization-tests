@@ -13,6 +13,7 @@ from tests.virt.node.descheduler.constants import (
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
 )
+from tests.virt.utils import is_jira_67515_open
 from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
@@ -22,7 +23,6 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     NamespacesNames,
 )
-from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -234,7 +234,7 @@ def deploy_vms(
 
     for vm in vms:
         # Due to the bug - VM may hang in terminating state, need to remove the finalizer from VMI
-        if not vm.wait_deleted() and is_jira_open(jira_id="CNV-67515"):
+        if not vm.wait_deleted() and is_jira_67515_open():
             ResourceEditor(patches={vm.vmi: {"metadata": {"finalizers": []}}}).update()
 
 
@@ -270,10 +270,10 @@ def create_kube_descheduler(admin_client, profiles, profile_customizations):
         yield kd
 
 
-def wait_for_overutilized_soft_taint(node, taint_expected):
+def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_10MIN):
     taint_key = f"{DESCHEDULER_SOFT_TAINT_KEY}/overutilized"
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
+        wait_timeout=wait_timeout,
         sleep=TIMEOUT_5SEC,
         func=lambda: any(taint_key in taint.values() for taint in node.instance.spec.taints),
     )

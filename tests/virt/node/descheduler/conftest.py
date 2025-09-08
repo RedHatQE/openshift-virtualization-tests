@@ -7,7 +7,6 @@ from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.infra import get_pods_by_name_prefix
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_LABEL_KEY,
@@ -28,10 +27,11 @@ from tests.virt.utils import (
     get_non_terminated_pods,
     start_stress_on_vm,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import (
     node_mgmt_console,
+    wait_for_migration_finished,
     wait_for_node_schedulable_status,
 )
 
@@ -165,21 +165,8 @@ def drain_uncordon_node(
 @pytest.fixture()
 def all_existing_migrations_completed(admin_client, namespace):
     # Descheduler may trigger multiple migrations, need to wait when all succeeded
-    def _wait_for_migration_succeeded(migration, timeout=TIMEOUT_5MIN):
-        sleep = TIMEOUT_10SEC
-        samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
-        sample = None
-        try:
-            for sample in samples:
-                if sample == migration.Status.SUCCEEDED:
-                    break
-        except TimeoutExpiredError:
-            if sample:
-                LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
-            raise
-
-    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=admin_client, namespace=namespace):
-        _wait_for_migration_succeeded(migration=migration_job)
+    for migration in VirtualMachineInstanceMigration.get(dyn_client=admin_client, namespace=namespace):
+        wait_for_migration_finished(namespace=namespace.name, migration=migration, timeout=TIMEOUT_5MIN)
 
 
 @pytest.fixture(scope="class")
@@ -334,6 +321,7 @@ def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
     vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
     for node in schedulable_nodes:
         if vm_per_node_counters[node.name] > 0:
+            LOGGER.info(f"Node to run stress: {node.name}")
             return node
 
     raise ValueError("No suitable node to run stress")
