@@ -35,6 +35,7 @@ from utilities import console
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_12MIN,
@@ -144,7 +145,7 @@ def test_delete_pvc_after_successful_import(
     storage_class = data_volume_multi_storage_scope_function.storage_class
     if sc_volume_binding_mode_is_wffc(sc=storage_class):
         create_dummy_first_consumer_pod(pvc=pvc)
-    data_volume_multi_storage_scope_function.wait_for_dv_success()
+    data_volume_multi_storage_scope_function.wait_for_dv_success(pvc_wait_for_bound_timeout=TIMEOUT_2MIN)
     with create_pod_for_pvc(
         pvc=data_volume_multi_storage_scope_function.pvc,
         volume_mode=StorageProfile(name=storage_class).instance.status["claimPropertySets"][0]["volumeMode"],
