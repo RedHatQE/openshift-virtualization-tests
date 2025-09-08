@@ -282,7 +282,6 @@ CDI_CONFIGMAPS = [
 # Miscellaneous constants
 UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
-FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 QUARANTINED = "quarantined"
 SETUP_ERROR = "setup_error"
 
@@ -447,6 +446,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
     {HCO_BEARER_AUTH: SECRET_STR},
+    {"kubevirt-console-plugin-np": "NetworkPolicy"},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -892,7 +892,6 @@ KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
 KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
 KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
 KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
-
 # Common templates matrix constants
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"

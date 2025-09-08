@@ -2554,19 +2554,6 @@ def cloning_job_scope_function(request, namespace):
         yield vmc
 
 
-@pytest.fixture(scope="class")
-def cloning_job_scope_class(request, namespace):
-    source_name = request.param["source_name"]
-    with create_vm_cloning_job(
-        name=f"clone-job-{source_name}",
-        namespace=namespace.name,
-        source_name=source_name,
-        label_filters=request.param.get("label_filters"),
-        annotation_filters=request.param.get("annotation_filters"),
-    ) as vmc:
-        yield vmc
-
-
 @pytest.fixture()
 def target_vm_scope_function(cloning_job_scope_function):
     with target_vm_from_cloning_job(cloning_job=cloning_job_scope_function) as target_vm:
@@ -2931,3 +2918,12 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+@pytest.fixture(scope="session")
+def conformance_tests(request):
+    return (
+        (marker_args := request.config.getoption("-m"))
+        and "conformance" in marker_args
+        and "not conformance" not in marker_args
+    )
