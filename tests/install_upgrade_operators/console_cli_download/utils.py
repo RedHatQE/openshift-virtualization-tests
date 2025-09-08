@@ -28,12 +28,13 @@ def validate_custom_cli_downloads_urls_updated(admin_client: DynamicClient, new_
             if not urls_not_updated_with_new_hostname:
                 return
     except TimeoutExpiredError:
-        LOGGER.error(f"Failed to get console spec links: {current_cli_spec_links}")
-        LOGGER.error(f"There are urls that are not updated with new hostname: {urls_not_updated_with_new_hostname}")
+        LOGGER.error(
+            f"Failed to get console spec links: {current_cli_spec_links}, "
+            f"There are urls that are not updated with new hostname: {urls_not_updated_with_new_hostname}"
+        )
         raise
 
 
 def validate_custom_cli_urls_downloaded(urls: list[str], dest_dir: LocalPath) -> None:
-    for url in urls:
-        extracted_files = download_and_extract_file_from_cluster(tmpdir=dest_dir, url=url)
-        assert extracted_files, f"url {url} is not valid."
+    not_valid_urls = [url for url in urls if not download_and_extract_file_from_cluster(tmpdir=dest_dir, url=url)]
+    assert not not_valid_urls, f"Some urls is not valid, {not_valid_urls}"

@@ -33,7 +33,6 @@ class TestCustomConsoleCliDownload:
     def test_custom_console_cli_download(
         self,
         admin_client,
-        updated_cluster_ingress_downloads_spec_links,
         new_hostname,
     ):
         validate_custom_cli_downloads_urls_updated(
@@ -47,7 +46,6 @@ class TestCustomConsoleCliDownload:
         self,
         admin_client,
         tmpdir,
-        updated_cluster_ingress_downloads_spec_links,
         virtctl_console_cli_downloads_spec_links,
     ):
         validate_custom_cli_urls_downloaded(
