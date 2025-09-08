@@ -156,14 +156,14 @@ def framework_resources(
 
 
 @pytest.fixture(scope="module")
-def checkup_linux_bridge_device(nodes_available_nics, label_checkup_nodes):
+def checkup_linux_bridge_device(hosts_common_available_ports, label_checkup_nodes):
     bridge_name = "checkup-br"
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"{bridge_name}-nncp",
         interface_name=bridge_name,
         node_selector_labels=CHECKUP_NODE_LABEL,
-        ports=[list(nodes_available_nics.values())[0][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br_dev:
         yield br_dev
 
