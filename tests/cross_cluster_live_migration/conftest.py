@@ -324,7 +324,7 @@ def remote_cluster_secret(
 
 
 @pytest.fixture(scope="module")
-def mtv_provider_remote_cluster(admin_client, mtv_namespace, remote_cluster_secret, remote_cluster_api_url):
+def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_cluster_secret, remote_cluster_api_url):
     """
     Create a Provider resource for the remote cluster in the local cluster.
     Used by MTV to connect to the remote OpenShift cluster for migration operations.
@@ -332,7 +332,9 @@ def mtv_provider_remote_cluster(admin_client, mtv_namespace, remote_cluster_secr
     with Provider(
         client=admin_client,
         name="mtv-source-provider",
-        namespace=mtv_namespace.name,  # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
+        namespace=namespace.name,
+        # namespace=mtv_namespace.name,
+        # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
         provider_type=Provider.ProviderType.OPENSHIFT,
         url=remote_cluster_api_url,
         secret_name=remote_cluster_secret.name,
@@ -376,7 +378,7 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
     with StorageMap(
         client=admin_client,
         name="storage-map",
-        namespace=mtv_namespace.name,
+        namespace=mtv_provider_local_cluster.namespace,
         source_provider_name=mtv_provider_remote_cluster.name,
         source_provider_namespace=mtv_provider_remote_cluster.namespace,
         destination_provider_name=mtv_provider_local_cluster.name,
