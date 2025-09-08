@@ -51,16 +51,18 @@ def l2_bridge_device_name(index_number):
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_1(
     bridge_device_matrix__class__,
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node1,
     l2_bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers for L2 bridge")
     with network_device(
         interface_type=bridge_device_matrix__class__,
         nncp_name=f"l2-bridge-{name_prefix(worker_node1.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 
@@ -68,16 +70,18 @@ def l2_bridge_device_worker_1(
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_2(
     bridge_device_matrix__class__,
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node2,
     l2_bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers for L2 bridge")
     with network_device(
         interface_type=bridge_device_matrix__class__,
         nncp_name=f"l2-bridge-{name_prefix(worker_node2.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 

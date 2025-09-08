@@ -47,6 +47,8 @@ def running_vm_for_nic_hot_plug(namespace, unprivileged_client):
 
 @pytest.fixture(scope="module")
 def bridge_interface_for_hot_plug(hosts_common_available_ports):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers for bridge interface for hotplug")
     yield from create_bridge_interface_for_hot_plug(
         bridge_name=f"{HOT_PLUG_STR}-br",
         bridge_port=hosts_common_available_ports[-1],
@@ -177,6 +179,8 @@ def running_vm_for_jumbo_nic_hot_plug(namespace, unprivileged_client):
 
 @pytest.fixture()
 def bridge_jumbo_interface_for_hot_plug(hosts_common_available_ports, cluster_hardware_mtu):
+    if len(hosts_common_available_ports) < 2:
+        pytest.skip("Not enough common NICs available to create jumbo bridge for hot-plug")
     yield from create_bridge_interface_for_hot_plug(
         bridge_name=f"{HOT_PLUG_STR}-jumbo",
         # hosts_common_available_ports[-1] is already used for another tests bridge.

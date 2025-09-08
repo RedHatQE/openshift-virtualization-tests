@@ -56,25 +56,29 @@ def set_vm_interface_network_mac(vm, mac):
 
 
 @pytest.fixture(scope="class")
-def linux_bridge_device_worker_1(nodes_available_nics, worker_node1):
+def linux_bridge_device_worker_1(hosts_common_available_ports, worker_node1):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"bridge-{name_prefix(worker_node1.hostname)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.hostname][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br_dev:
         yield br_dev
 
 
 @pytest.fixture(scope="class")
-def linux_bridge_device_worker_2(nodes_available_nics, worker_node2):
+def linux_bridge_device_worker_2(hosts_common_available_ports, worker_node2):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"bridge-{name_prefix(worker_node2.hostname)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.hostname][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br_dev:
         yield br_dev
 
