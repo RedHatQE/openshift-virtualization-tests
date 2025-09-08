@@ -39,7 +39,7 @@ def jumbo_frame_bond1_worker_1(
     cluster_hardware_mtu,
     index_number,
     worker_node1,
-    nodes_available_nics,
+    hosts_common_available_ports,
 ):
     """
     Create BOND if setup support BOND
@@ -48,7 +48,7 @@ def jumbo_frame_bond1_worker_1(
         client=admin_client,
         name=f"jumbo-frame-bond{next(index_number)}-nncp",
         bond_name=BOND_NAME,
-        bond_ports=nodes_available_nics[worker_node1.name][-2:],
+        bond_ports=hosts_common_available_ports[-2:],
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         mtu=cluster_hardware_mtu,
     ) as bond:
@@ -61,7 +61,7 @@ def jumbo_frame_bond1_worker_2(
     cluster_hardware_mtu,
     index_number,
     worker_node2,
-    nodes_available_nics,
+    hosts_common_available_ports,
 ):
     """
     Create BOND if setup support BOND
@@ -70,7 +70,7 @@ def jumbo_frame_bond1_worker_2(
         client=admin_client,
         name=f"jumbo-frame-bond{next(index_number)}-nncp",
         bond_name=BOND_NAME,
-        bond_ports=nodes_available_nics[worker_node2.name][-2:],
+        bond_ports=hosts_common_available_ports[-2:],
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         mtu=cluster_hardware_mtu,
     ) as bond:
