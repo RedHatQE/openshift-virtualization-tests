@@ -5,7 +5,6 @@ import shlex
 import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
-from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
@@ -80,7 +79,6 @@ from utilities.constants import (
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
     VERSION_LABEL_KEY,
-    VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
@@ -885,16 +883,6 @@ def vm_virt_launcher_pod_requested_memory(vm_for_test):
         bitmath.parse_string_unsafe(
             vm_for_test.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
         ).bytes
-    )
-
-
-@pytest.fixture()
-def virt_handler_pods_count(hco_namespace):
-    return str(
-        DaemonSet(
-            name=VIRT_HANDLER,
-            namespace=hco_namespace.name,
-        ).instance.status.numberReady
     )
 
 

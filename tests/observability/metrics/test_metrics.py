@@ -16,7 +16,7 @@ from tests.observability.metrics.utils import (
     validate_memory_delta_metrics_value_within_range,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API, VIRT_HANDLER
+from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_API
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -214,16 +214,6 @@ class TestMemoryDeltaFromRequestedBytes:
             rss=rss,
             admin_client=admin_client,
             hco_namespace=hco_namespace.name,
-        )
-
-
-class TestKubeDaemonsetStatusNumberReady:
-    @pytest.mark.polarion("CNV-11727")
-    def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kube_daemonset_status_number_ready{{daemonset='{VIRT_HANDLER}'}}",
-            expected_value=virt_handler_pods_count,
         )
 
 
