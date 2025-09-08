@@ -95,3 +95,7 @@ class MissingResourceException(Exception):
 
 class UnsupportedGPUDeviceError(Exception):
     """Exception raised when a GPU device ID is not supported."""
+
+
+class NoCommonNICsError(Exception):
+    """Raised when no common NICs are available across nodes."""
