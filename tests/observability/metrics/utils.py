@@ -60,9 +60,6 @@ from utilities.virt import VirtualMachineForTests, running_vm
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
 CURL_QUERY = "curl -k https://localhost:8443/metrics"
-PING = "ping"
-JOB_NAME = "kubevirt-prometheus-metrics"
-TOPK_VMS = 3
 SINGLE_VM = 1
 ONE_CPU_CORES = 1
 ZERO_CPU_CORES = 0

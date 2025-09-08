@@ -1,9 +1,5 @@
 KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE = "kubevirt_ssp_template_validator_rejected_increase"
 
-KUBEVIRT_CNAO_OPERATOR_UP = "kubevirt_cnao_operator_up"
-KUBEVIRT_CNAO_CR_READY = "kubevirt_cnao_cr_ready"
-KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED = "kubevirt_cnao_cr_kubemacpool_deployed"
-
 KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI = "kubevirt_console_active_connections{{vmi='{vm_name}'}}"
 KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI = "kubevirt_vnc_active_connections{{vmi='{vm_name}'}}"
 
