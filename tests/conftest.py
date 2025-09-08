@@ -1262,8 +1262,14 @@ def hosts_common_available_ports(nodes_available_nics):
 
     will return ['ens3', 'ens6']
     """
-    nics_list = list(set.intersection(*[set(_list) for _list in nodes_available_nics.values()]))
-    nics_list.sort()
+    nic_sets = [set(lst) for lst in nodes_available_nics.values()]
+    if not nic_sets:
+        raise RuntimeError("No common NICs across workers: nodes_available_nics is empty.")
+
+    nics_list = sorted(set.intersection(*nic_sets))
+    if not nics_list:
+        raise RuntimeError("No common NICs found across all nodes.")
+
     LOGGER.info(f"Hosts common available NICs: {nics_list}")
     return nics_list
 
