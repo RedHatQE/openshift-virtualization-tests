@@ -58,26 +58,26 @@ def set_vm_interface_network_mac(vm, mac):
 
 
 @pytest.fixture(scope="class")
-def linux_bridge_device_worker_1(admin_client, nodes_available_nics, worker_node1):
+def linux_bridge_device_worker_1(admin_client, hosts_common_available_ports, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"bridge-{name_prefix(worker_node1.hostname)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.hostname][-1]],
+        ports=[hosts_common_available_ports[-1]],
         client=admin_client,
     ) as br_dev:
         yield br_dev
 
 
 @pytest.fixture(scope="class")
-def linux_bridge_device_worker_2(admin_client, nodes_available_nics, worker_node2):
+def linux_bridge_device_worker_2(admin_client, hosts_common_available_ports, worker_node2):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"bridge-{name_prefix(worker_node2.hostname)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.hostname][-1]],
+        ports=[hosts_common_available_ports[-1]],
         client=admin_client,
     ) as br_dev:
         yield br_dev
