@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.resource import Resource
 from ocp_resources.template import Template
@@ -20,7 +19,6 @@ from utilities.constants import (
     ONE_CPU_THREAD,
     TEN_GI_MEMORY,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     running_vm,
@@ -28,38 +26,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="class")
-def updated_log_verbosity_config(
-    request,
-    hyperconverged_resource_scope_class,
-    worker_node1,
-):
-    from tests.virt.node.log_verbosity.constants import VIRT_LOG_VERBOSITY_LEVEL_6
-
-    log_verbosity_configs = {
-        "component": {
-            "kubevirt": {
-                "virtHandler": VIRT_LOG_VERBOSITY_LEVEL_6,
-                "virtController": VIRT_LOG_VERBOSITY_LEVEL_6,
-                "virtAPI": VIRT_LOG_VERBOSITY_LEVEL_6,
-                "virtLauncher": VIRT_LOG_VERBOSITY_LEVEL_6,
-            }
-        },
-        "node": {"kubevirt": {"nodeVerbosity": {worker_node1.name: VIRT_LOG_VERBOSITY_LEVEL_6}}},
-        "virtLauncher": {"component": {"kubevirt": {"virtLauncher": VIRT_LOG_VERBOSITY_LEVEL_6}}},
-    }
-
-    config_key = request.param
-    log_verbosity_config = log_verbosity_configs[config_key]
-
-    with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_class: {"spec": {"logVerbosityConfig": log_verbosity_config}}},
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
 
 
 @pytest.fixture()
