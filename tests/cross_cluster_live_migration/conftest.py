@@ -9,6 +9,7 @@ from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
+from ocp_resources.network_map import NetworkMap
 from ocp_resources.provider import Provider
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
@@ -332,8 +333,8 @@ def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_c
     with Provider(
         client=admin_client,
         name="mtv-source-provider",
-        namespace=namespace.name,
-        # namespace=mtv_namespace.name,
+        # namespace=namespace.name,
+        namespace=mtv_namespace.name,
         # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
         provider_type=Provider.ProviderType.OPENSHIFT,
         url=remote_cluster_api_url,
@@ -366,7 +367,6 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
     Create a StorageMap resource for MTV migration.
     Maps storage classes between source and destination clusters.
     """
-    # Define the storage mapping
     mapping = [
         {
             "source": {"name": py_config["default_storage_class"]},
@@ -386,3 +386,36 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
         mapping=mapping,
     ) as storage_map:
         yield storage_map
+
+
+@pytest.fixture(scope="module")
+def mtv_network_map(
+    admin_client,
+    mtv_namespace,
+    mtv_provider_local_cluster,
+    mtv_provider_remote_cluster,
+    network_for_live_migration_local_cluster,
+    hco_namespace,
+):
+    """
+    Create a NetworkMap resource for MTV migration.
+    Maps networks between source and destination clusters.
+    """
+    mapping = [
+        {
+            "source": {"type": "pod"},
+            "destination": {"type": "pod"},
+        }
+    ]
+    with NetworkMap(
+        client=admin_client,
+        name="network-map",
+        namespace=mtv_provider_local_cluster.namespace,
+        source_provider_name=mtv_provider_remote_cluster.name,
+        source_provider_namespace=mtv_provider_remote_cluster.namespace,
+        destination_provider_name=mtv_provider_local_cluster.name,
+        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        mapping=mapping,
+    ) as network_map:
+        yield network_map
+
