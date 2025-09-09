@@ -76,6 +76,7 @@ def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_clus
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-10798")
 def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_preferences)

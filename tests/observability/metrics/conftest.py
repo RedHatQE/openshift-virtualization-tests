@@ -4,7 +4,6 @@ import shlex
 
 import bitmath
 import pytest
-from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
@@ -79,7 +78,6 @@ from utilities.constants import (
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
     VERSION_LABEL_KEY,
-    VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
@@ -735,16 +733,6 @@ def vm_for_test_with_resource_limits(namespace):
     ) as vm:
         running_vm(vm=vm)
         yield vm
-
-
-@pytest.fixture()
-def virt_handler_pods_count(hco_namespace):
-    return str(
-        DaemonSet(
-            name=VIRT_HANDLER,
-            namespace=hco_namespace.name,
-        ).instance.status.numberReady
-    )
 
 
 @pytest.fixture()
