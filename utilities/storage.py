@@ -607,8 +607,8 @@ def get_test_artifact_server_url(schema="https"):
     """
     artifactory_connection_url = py_config["servers"]["https_server"]
     LOGGER.info(f"Testing connectivity to {artifactory_connection_url} {schema.upper()} server")
+    sample = None
     try:
-        sample = None
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
             sleep=TIMEOUT_5SEC,
