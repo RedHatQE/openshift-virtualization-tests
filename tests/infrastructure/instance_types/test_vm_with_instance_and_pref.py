@@ -2,7 +2,6 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.resource import ResourceEditor
 
-from tests.infrastructure.instance_types.constants import UPDATED_MEMORY_3Gi
 from tests.infrastructure.instance_types.utils import (
     assert_instance_revision_and_memory_update,
     get_controller_revision,
@@ -75,7 +74,7 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
         pytest.param(
             {
                 "name": "basic",
-                "memory_requests": "1.5Gi",
+                "memory_requests": Images.Rhel.DEFAULT_MEMORY_SIZE,
             },
             {
                 "name": "basic-vm-preference",
@@ -118,7 +117,7 @@ class TestNegativeVmWithInstanceTypeAndPref:
             {
                 "name": "basic",
                 "preferred_cpu_topology_value": 2,
-                "memory_requests": "1.5Gi",
+                "memory_requests": Images.Rhel.DEFAULT_MEMORY_SIZE,
             },
             {
                 "name": "basic-vm-preference",
@@ -171,7 +170,7 @@ class TestVmWithInstanceTypeAndPref:
         "updated_memory",
         [
             pytest.param(
-                {"updated_memory": UPDATED_MEMORY_3Gi},
+                {"updated_memory": "3Gi"},
                 marks=pytest.mark.polarion("CNV-9911"),
             )
         ],
