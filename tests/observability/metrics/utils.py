@@ -52,7 +52,6 @@ from utilities.infra import (
     get_http_image_url,
 )
 from utilities.monitoring import get_metrics_value
-from utilities.network import assert_ping_successful
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
