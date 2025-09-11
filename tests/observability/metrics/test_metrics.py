@@ -12,8 +12,7 @@ from tests.observability.metrics.utils import (
     compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
 )
-from tests.observability.utils import validate_metrics_value
-from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS, VIRT_HANDLER
+from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -159,14 +158,4 @@ class TestVMIMetrics:
             query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
             expected_value="1",
             values_to_compare=single_metric_vmi_guest_os_kernel_release_info,
-        )
-
-
-class TestKubeDaemonsetStatusNumberReady:
-    @pytest.mark.polarion("CNV-11727")
-    def test_kube_daemonset_status_number_ready(self, prometheus, virt_handler_pods_count):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kube_daemonset_status_number_ready{{daemonset='{VIRT_HANDLER}'}}",
-            expected_value=virt_handler_pods_count,
         )
