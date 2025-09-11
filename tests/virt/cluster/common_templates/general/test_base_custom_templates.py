@@ -77,7 +77,7 @@ def custom_template_from_base_template(request, namespace):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_scope_class",
+    "golden_image_data_source_for_test_scope_class",
     [pytest.param({"os_dict": FEDORA_LATEST})],
     indirect=True,
 )
