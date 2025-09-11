@@ -12,7 +12,8 @@ from tests.install_upgrade_operators.relationship_labels.constants import (
 from tests.install_upgrade_operators.relationship_labels.utils import (
     verify_component_labels_by_resource,
 )
-from utilities.constants import VERSION_LABEL_KEY
+from utilities.constants import KUBEVIRT_APISERVER_PROXY_NP, VERSION_LABEL_KEY
+from utilities.infra import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 LOGGER = logging.getLogger(__name__)
@@ -99,6 +100,9 @@ class TestRelationshipLabels:
         expected_label_dictionary,
         ocp_resource_by_name,
     ):
+        if ocp_resource_by_name.name == KUBEVIRT_APISERVER_PROXY_NP and is_jira_open(jira_id="CNV-68999"):
+            pytest.skip(f"Currently {KUBEVIRT_APISERVER_PROXY_NP} resource have the wrong relationship labels")
+
         verify_component_labels_by_resource(
             component=ocp_resource_by_name,
             expected_component_labels=expected_label_dictionary,

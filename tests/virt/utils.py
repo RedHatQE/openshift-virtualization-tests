@@ -4,6 +4,7 @@ import logging
 import re
 import shlex
 from contextlib import contextmanager
+from functools import cache
 
 import bitmath
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
@@ -40,11 +41,12 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix
+from utilities.infra import get_pod_by_name_prefix, is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
+    get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
     pause_optional_migrate_unpause_and_check_connectivity,
@@ -193,7 +195,7 @@ def migrate_and_verify_multi_vms(vm_list):
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(vm=vm, migration=migration)
+        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
         migration.clean_up()
 
     for vm in vm_list:
@@ -502,3 +504,21 @@ def get_non_terminated_pods(client, node):
             field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
         )
     )
+
+
+def get_boot_time_for_multiple_vms(vm_list):
+    return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
+
+
+def verify_linux_boot_time(vm_list, initial_boot_time):
+    rebooted_vms = {}
+    for vm in vm_list:
+        current_boot_time = get_vm_boot_time(vm=vm)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+@cache
+def is_jira_67515_open():
+    return is_jira_open(jira_id="CNV-67515")

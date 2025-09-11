@@ -385,6 +385,8 @@ KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
+KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
+KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -407,6 +409,7 @@ CDI_STR = "CDI"
 SSP_STR = "SSP"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
+NETWORKPOLICY_STR = "NetworkPolicy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 # All hco relate objects with kind
@@ -446,7 +449,8 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
     {HCO_BEARER_AUTH: SECRET_STR},
-    {"kubevirt-console-plugin-np": "NetworkPolicy"},
+    {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
+    {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -885,13 +889,6 @@ MONITORING_METRICS = [
     KUBEVIRT_VMI_STORAGE_WRITE_TRAFFIC_BYTES_TOTAL,
     KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL,
 ]
-
-KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
-    "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"
-)
-KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
 # Common templates matrix constants
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"
