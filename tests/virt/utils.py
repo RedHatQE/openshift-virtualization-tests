@@ -39,7 +39,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix, is_jira_open
+from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
