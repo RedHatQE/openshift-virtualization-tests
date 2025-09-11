@@ -46,7 +46,7 @@ def check_windows_vm_tablet_device(vm, driver_state):
 
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
-    [[pytest.param({"os_dict": WINDOWS_LATEST})]],
+    [pytest.param({"os_dict": WINDOWS_LATEST})],
     indirect=True,
 )
 class TestWindowsTabletDevice:

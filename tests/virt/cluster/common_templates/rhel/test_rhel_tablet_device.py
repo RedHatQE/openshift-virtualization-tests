@@ -34,7 +34,7 @@ def check_vm_system_tablet_device(vm, expected_device):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_class,",
+    "golden_image_data_source_for_test_scope_class",
     [pytest.param({"os_dict": RHEL_LATEST})],
     indirect=True,
 )
