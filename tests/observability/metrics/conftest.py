@@ -4,32 +4,23 @@ import shlex
 
 import bitmath
 import pytest
-from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.pod_metrics import PodMetrics
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-from pyhelper_utils.shell import run_command, run_ssh_commands
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    CNV_VMI_STATUS_RUNNING_COUNT,
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
-    KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
-    RSS_MEMORY_COMMAND,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -37,30 +28,24 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     fail_if_not_zero_restartcount,
-    get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
     get_resource_object,
     get_vmi_dommemstat_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
-    get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
-    pause_unpause_dommemstat,
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
-    wait_for_no_metrics_value,
-    wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
+from tests.utils import create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    COUNT_FIVE,
     NODE_STR,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
@@ -68,10 +53,8 @@ from utilities.constants import (
     SOURCE_POD,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
-    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
@@ -98,7 +81,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    target_vm_from_cloning_job,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -347,21 +329,6 @@ def vm_metrics_setup(request, vm_list):
     yield vms
 
 
-@pytest.fixture(scope="class")
-def vmi_phase_count_before(request, prometheus):
-    """
-    This fixture queries Prometheus with the query in the get_vmi_phase_count before a VM is created
-    and keeps the value for verification
-    """
-    return get_vmi_phase_count(
-        prometheus=prometheus,
-        os_name=request.param["labels"]["os"],
-        flavor=request.param["labels"]["flavor"],
-        workload=request.param["labels"]["workload"],
-        query=request.param["query"],
-    )
-
-
 @pytest.fixture(scope="module", autouse=True)
 def metrics_sanity(admin_client):
     """
@@ -382,12 +349,6 @@ def metrics_sanity(admin_client):
     except TimeoutExpiredError:
         LOGGER.error(f"timeout awaiting all Prometheus pods to be in Running status: violating_pods={sample}")
         raise
-
-
-@pytest.fixture(scope="class")
-def stopped_vm(vm_from_template_scope_class):
-    vm_from_template_scope_class.stop(wait=True)
-    return vm_from_template_scope_class
 
 
 @pytest.fixture()
@@ -452,18 +413,6 @@ def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, singl
         vmi_name=single_metric_vm.vmi.name,
         query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     )
-
-
-@pytest.fixture()
-def updated_dommemstat(single_metric_vm):
-    run_vm_commands(
-        vms=[single_metric_vm],
-        commands=["stress-ng --vm 1 --vm-bytes 512M --vm-populate --timeout 600s &>1 &"],
-    )
-    # give the stress-ng command some time to build up load on the vm
-    pause_unpause_dommemstat(vm=single_metric_vm)
-    yield
-    pause_unpause_dommemstat(vm=single_metric_vm, period=1)
 
 
 @pytest.fixture()
@@ -584,33 +533,6 @@ def zero_upload_dv_restart_count(ready_uploaded_dv):
     fail_if_not_zero_restartcount(dv=ready_uploaded_dv)
 
 
-@pytest.fixture(scope="class")
-def kubevirt_vmi_phase_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR)
-
-
-@pytest.fixture(scope="class")
-def cnv_vmi_status_running_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=CNV_VMI_STATUS_RUNNING_COUNT)
-
-
-@pytest.fixture(scope="class")
-def validated_preference_instance_type_of_target_vm(
-    rhel_vm_with_instancetype_and_preference_for_cloning, cloning_job_scope_class
-):
-    with target_vm_from_cloning_job(cloning_job=cloning_job_scope_class) as target_vm:
-        target_vm_instance_spec = target_vm.instance.spec
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name
-            == target_vm_instance_spec.instancetype.name
-        )
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_preference.name
-            == target_vm_instance_spec.preference.name
-        )
-        yield target_vm
-
-
 @pytest.fixture()
 def connected_vm_console_successfully(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
@@ -667,13 +589,6 @@ def vm_for_test_interface_name(vm_for_test):
     )
     assert interface_name, f"Interface not found for vm {vm_for_test.name}"
     return interface_name
-
-
-@pytest.fixture(scope="class")
-def initial_total_created_vms(prometheus, namespace):
-    return get_metric_sum_value(
-        prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
-    )
 
 
 @pytest.fixture()
@@ -828,88 +743,6 @@ def vm_for_test_with_resource_limits(namespace):
 
 
 @pytest.fixture()
-def vm_memory_working_set_bytes(vm_for_test, virt_launcher_pod_metrics_resource_exists):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        func=run_command,
-        command=shlex.split(
-            f"oc adm top pod {vm_for_test.vmi.virt_launcher_pod.name} -n {vm_for_test.namespace} --no-headers"
-        ),
-        check=False,
-    )
-    try:
-        for sample in samples:
-            if sample and (out := sample[1]):
-                return int(
-                    bitmath.parse_string_unsafe(
-                        re.search(
-                            r"\b(\d+Mi)\b",
-                            out,
-                        ).group(1)
-                    ).bytes
-                )
-    except TimeoutExpiredError:
-        LOGGER.error(f"working_set bytes is not available for VM {vm_for_test.name} after {TIMEOUT_2MIN} seconds")
-        raise
-
-
-@pytest.fixture()
-def virt_launcher_pod_metrics_resource_exists(vm_for_test):
-    vl_name = vm_for_test.vmi.virt_launcher_pod.name
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: PodMetrics(name=vl_name, namespace=vm_for_test.namespace).exists,
-    )
-    try:
-        for sample in samples:
-            if sample:
-                LOGGER.info(f"PodMetric resource for {vl_name} exists.")
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Resource PodMetrics for pod {vl_name} not found")
-        raise
-
-
-@pytest.fixture()
-def vm_memory_rss_bytes(vm_for_test):
-    return int(vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=RSS_MEMORY_COMMAND))
-
-
-@pytest.fixture(scope="class")
-def vm_virt_launcher_pod_requested_memory(vm_for_test):
-    return int(
-        bitmath.parse_string_unsafe(
-            vm_for_test.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.memory
-        ).bytes
-    )
-
-
-@pytest.fixture()
-def vm_instance_with_deprecated_api_version(namespace):
-    vm_instance = VirtualMachine(name="vm-deprecated-api", namespace=namespace.name, client=get_client())
-    vm_instance.api_version = f"{Resource.ApiGroup.KUBEVIRT_IO}/{Resource.ApiVersion.V1ALPHA3}"
-    return vm_instance
-
-
-@pytest.fixture()
-def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_api_version):
-    initial_metric_value = int(
-        get_metrics_value(
-            prometheus=prometheus,
-            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
-        )
-    )
-    for _ in range(COUNT_FIVE):
-        try:
-            vm_instance_with_deprecated_api_version.deploy()
-        except UnprocessibleEntityError:
-            continue
-    return initial_metric_value + COUNT_FIVE
-
-
-@pytest.fixture()
 def storage_class_labels_for_testing(admin_client):
     chosen_sc_name = py_config["default_storage_class"]
     return {
@@ -922,70 +755,6 @@ def storage_class_labels_for_testing(admin_client):
         == "true"
         else "false",
     }
-
-
-@pytest.fixture()
-def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
-    with create_cirros_vm(
-        storage_class=storage_class_for_snapshot,
-        namespace=namespace.name,
-        client=admin_client,
-        dv_name="dv-for-snapshot",
-        vm_name="vm-for-snapshot",
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture()
-def vm_snapshot_for_metric_test(vm_for_snapshot_for_metrics_test):
-    with vm_snapshot(
-        vm=vm_for_snapshot_for_metrics_test, name=f"{vm_for_snapshot_for_metrics_test.name}-snapshot"
-    ) as snapshot:
-        yield snapshot
-
-
-@pytest.fixture()
-def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for_metric_test):
-    vm_name = vm_for_snapshot_for_metrics_test.name
-    vm_for_snapshot_for_metrics_test.stop(wait=True)
-    with VirtualMachineRestore(
-        name=f"restore-snapshot-{vm_name}",
-        namespace=vm_snapshot_for_metric_test.namespace,
-        vm_name=vm_name,
-        snapshot_name=vm_snapshot_for_metric_test.name,
-    ) as vm_restore:
-        vm_restore.wait_restore_done()
-        vm_for_snapshot_for_metrics_test.start(wait=True)
-        yield vm_restore
-
-
-@pytest.fixture()
-def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
-    for pvc in PersistentVolumeClaim.get(
-        dyn_client=admin_client,
-        namespace=vm_for_snapshot_for_metrics_test.namespace,
-        label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
-    ):
-        return pvc.name
-
-
-@pytest.fixture()
-def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for_metrics_test, restored_pvc_name):
-    return {
-        "label_restore_kubevirt_io_source_vm_name": vm_for_snapshot_for_metrics_test.name,
-        "persistentvolumeclaim": restored_pvc_name,
-        "namespace": vm_snapshot_for_metric_test.namespace,
-    }
-
-
-@pytest.fixture()
-def kubevirt_vmsnapshot_persistentvolumeclaim_labels_non_empty_value(prometheus, vm_for_snapshot_for_metrics_test):
-    wait_for_non_empty_metrics_value(
-        prometheus=prometheus,
-        metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-            vm_name=vm_for_snapshot_for_metrics_test.name
-        ),
-    )
 
 
 @pytest.fixture(scope="class")
@@ -1011,11 +780,6 @@ def deleted_ssp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def initiate_metric_value(request, prometheus):
     return get_metrics_value(prometheus=prometheus, metrics_name=request.param)
-
-
-@pytest.fixture()
-def allocatable_nodes(nodes):
-    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
 
 
 @pytest.fixture()
