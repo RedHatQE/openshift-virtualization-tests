@@ -13,6 +13,7 @@ from tests.os_params import (
     WINDOWS_2019,
     WINDOWS_2019_OS,
 )
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import LINUX_BRIDGE, TCP_TIMEOUT_30SEC, TIMEOUT_12MIN, VIRTIO, Images
 from utilities.network import network_device, network_nad
 from utilities.storage import get_storage_class_dict_from_matrix
@@ -151,10 +152,9 @@ def windows_custom_drive_d(unprivileged_client, namespace):
 
 @pytest.fixture(scope="class")
 def custom_windows_vm(
-    request,
     windows_custom_bridge_nad,
     windows_custom_drive_d,
-    golden_image_data_source_scope_class,
+    golden_image_data_source_for_test_scope_class,
     unprivileged_client,
     modern_cpu_for_migration,
 ):
@@ -162,8 +162,11 @@ def custom_windows_vm(
         name="custom-windows-vm",
         namespace=windows_custom_bridge_nad.namespace,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
-        os_dict=request.param,
+        data_source=golden_image_data_source_for_test_scope_class,
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            data_source=golden_image_data_source_for_test_scope_class
+        ),
+        os_dict=WINDOWS_2019,
         nad=windows_custom_bridge_nad,
         drive_d_pvc=windows_custom_drive_d,
         cpu_model=modern_cpu_for_migration,
@@ -173,16 +176,16 @@ def custom_windows_vm(
 
 @pytest.mark.ibm_bare_metal
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, custom_windows_vm",
+    "golden_image_data_source_for_test_scope_class",
     [
         pytest.param(
             {
-                "dv_name": WINDOWS_2019_OS,
-                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
-                "dv_size": "100Gi",
-                "storage_class": py_config["default_storage_class"],
+                "os_dict": {
+                    "dv_name": WINDOWS_2019_OS,
+                    "image_path": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
+                    "dv_size": "100Gi",
+                }
             },
-            WINDOWS_2019,
             id=WINDOWS_2019_OS,
             marks=pytest.mark.polarion("CNV-7496"),
         ),

@@ -22,13 +22,15 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.s390x
 @pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_function",
+    "golden_image_data_source_for_test_scope_function",
     [
         pytest.param(
             {
-                "dv_name": "cirros-dv",
-                "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",  # Negative tests require a dummy DV.
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
+                "os_dict": {
+                    "dv_name": "cirros-dv",
+                    "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",  # Negative test needs a dummy DV.
+                    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
+                }
             },
             marks=pytest.mark.polarion("CNV-2960"),
         ),
@@ -36,7 +38,7 @@ LOGGER = logging.getLogger(__name__)
     indirect=True,
 )
 def test_template_validation_min_memory(
-    unprivileged_client, namespace, golden_image_data_source_multi_storage_scope_function
+    unprivileged_client, namespace, golden_image_data_source_for_test_scope_function
 ):
     LOGGER.info("Test template validator - minimum required memory")
 
@@ -45,7 +47,7 @@ def test_template_validation_min_memory(
             name="rhel-min-memory-validation",
             namespace=namespace.name,
             client=unprivileged_client,
-            data_source=golden_image_data_source_multi_storage_scope_function,
+            data_source=golden_image_data_source_for_test_scope_function,
             labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
             memory_guest="0.5G",
         ):

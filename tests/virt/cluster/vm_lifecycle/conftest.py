@@ -3,8 +3,8 @@ from contextlib import contextmanager
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import Images
-from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 default_run_strategy = VirtualMachine.RunStrategy.MANUAL
@@ -32,7 +32,7 @@ def data_volume_vm(unprivileged_client, namespace, data_source):
         client=unprivileged_client,
         memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
         run_strategy=default_run_strategy,
-        data_volume_template=data_volume_template_with_source_ref_dict(data_source=data_source),
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(data_source=data_source),
     ) as vm:
         yield vm
 
@@ -43,7 +43,7 @@ def lifecycle_vm(
     unprivileged_client,
     namespace,
     vm_volumes_matrix__class__,
-    golden_image_data_source_scope_module,
+    golden_image_data_source_for_test_scope_module,
 ):
     """Wrapper fixture to generate the desired VM
     vm_volumes_matrix returns a string.
@@ -53,6 +53,6 @@ def lifecycle_vm(
     with globals()[vm_volumes_matrix__class__](
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_module,
+        data_source=golden_image_data_source_for_test_scope_module,
     ) as vm:
         yield vm
