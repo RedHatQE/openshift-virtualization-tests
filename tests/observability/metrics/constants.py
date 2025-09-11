@@ -15,10 +15,6 @@ KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
 KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
 KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
 
-KUBEVIRT_CNAO_OPERATOR_UP = "kubevirt_cnao_operator_up"
-KUBEVIRT_CNAO_CR_READY = "kubevirt_cnao_cr_ready"
-KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED = "kubevirt_cnao_cr_kubemacpool_deployed"
-
 OTHER_STR = "<other>"
 
 INSTANCE_TYPE_LABELS = [INSTANCE_TYPE_STR, PREFERENCE_STR, FLAVOR_STR, OS_STR]
@@ -44,9 +40,6 @@ KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT = (
     "mount_point='{mountpoint}'}}"
 )
 KUBEVIRT_VMI_INFO = "kubevirt_vmi_info{{name='{vm_name}'}}"
-KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES = (
-    "kubevirt_vmi_memory_available_bytes{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
-)
 KUBEVIRT_VMI_STATUS_ADDRESSES = "kubevirt_vmi_status_addresses{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES = "kubevirt_vmi_migration_data_processed_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES = "kubevirt_vmi_migration_data_remaining_bytes{{name='{vm_name}'}}"
