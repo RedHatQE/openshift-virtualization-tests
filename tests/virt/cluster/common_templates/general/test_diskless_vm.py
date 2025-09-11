@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
         pytest.param(
             {
                 "os_dict": {
-                    "dv_name": "cirros-dv",
+                    "data_source": "cirros-dv",
                     "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
                     "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
                 },
