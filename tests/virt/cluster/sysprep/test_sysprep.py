@@ -11,10 +11,9 @@ from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutSampler
 
-from tests.os_params import WINDOWS_2019, WINDOWS_2019_OS
+from tests.os_params import WINDOWS_2019
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, TIMEOUT_5MIN
 from utilities.ssp import get_windows_timezone
@@ -122,7 +121,7 @@ def sysprep_resource(sysprep_source_matrix__class__, unprivileged_client, namesp
 @pytest.fixture(scope="class")
 def sysprep_vm(
     sysprep_source_matrix__class__,
-    golden_image_data_source_scope_class,
+    golden_image_data_source_for_test_scope_class,
     modern_cpu_for_migration,
     unprivileged_client,
     namespace,
@@ -136,7 +135,7 @@ def sysprep_vm(
             vm_instance_type=vm_instance_type,
             vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
             data_volume_template=data_volume_template_with_source_ref_dict(
-                data_source=golden_image_data_source_scope_class
+                data_source=golden_image_data_source_for_test_scope_class
             ),
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,
@@ -248,19 +247,11 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, common_instance_type_param_dict",
+    "golden_image_data_source_for_test_scope_class, common_instance_type_param_dict",
     [
         pytest.param(
-            {
-                "dv_name": WINDOWS_2019_OS,
-                "image": WINDOWS_2019.get("image_path"),
-                "dv_size": WINDOWS_2019.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-            {
-                "name": "basic",
-                "memory_requests": "8Gi",
-            },
+            {"os_dict": WINDOWS_2019},
+            {"name": "basic", "memory_requests": "8Gi"},
         )
     ],
     indirect=True,

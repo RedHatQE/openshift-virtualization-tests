@@ -6,7 +6,6 @@ import string
 
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 
 from tests.os_params import (
     RHEL_LATEST,
@@ -14,6 +13,7 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
+from tests.virt.utils import data_volume_template_with_source_ref_dict
 from utilities.constants import (
     LINUX_STR,
     OS_FLAVOR_RHEL,
@@ -49,12 +49,15 @@ def vm_generated_new_password():
 
 
 @pytest.fixture(scope="class")
-def persistence_vm(request, golden_image_data_source_scope_class, unprivileged_client, namespace):
+def persistence_vm(request, golden_image_data_source_for_test_scope_class, unprivileged_client, namespace):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+        data_source=golden_image_data_source_for_test_scope_class,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=golden_image_data_source_for_test_scope_class
+        ),
     ) as vm:
         yield vm
 
@@ -183,19 +186,11 @@ def verify_changes(vm, os):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, persistence_vm",
+    "golden_image_data_source_for_test_scope_class, persistence_vm",
     [
         [
-            {
-                "dv_name": "persistence-rhel-dv",
-                "image": RHEL_LATEST["image_path"],
-                "dv_size": RHEL_LATEST["dv_size"],
-                "storage_class": py_config["default_storage_class"],
-            },
-            {
-                "vm_name": "persistence-rhel-vm",
-                "template_labels": RHEL_LATEST_LABELS,
-            },
+            {"os_dict": RHEL_LATEST},
+            {"vm_name": "persistence-rhel-vm", "template_labels": RHEL_LATEST_LABELS},
         ]
     ],
     indirect=True,
@@ -224,19 +219,11 @@ class TestRestartPersistenceLinux:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, persistence_vm",
+    "golden_image_data_source_for_test_scope_class, persistence_vm",
     [
         [
-            {
-                "dv_name": "persistence-windows-dv",
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-            {
-                "vm_name": "persistence-windows-vm",
-                "template_labels": WINDOWS_LATEST_LABELS,
-            },
+            {"os_dict": WINDOWS_LATEST},
+            {"vm_name": "persistence-windows-vm", "template_labels": WINDOWS_LATEST_LABELS},
         ]
     ],
     indirect=True,
