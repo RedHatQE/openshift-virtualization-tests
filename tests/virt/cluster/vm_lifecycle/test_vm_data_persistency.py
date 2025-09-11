@@ -13,7 +13,7 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from tests.virt.utils import data_volume_template_with_source_ref_dict
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import (
     LINUX_STR,
     OS_FLAVOR_RHEL,
@@ -55,7 +55,7 @@ def persistence_vm(request, golden_image_data_source_for_test_scope_class, unpri
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_for_test_scope_class,
-        data_volume_template=data_volume_template_with_source_ref_dict(
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
             data_source=golden_image_data_source_for_test_scope_class
         ),
     ) as vm:

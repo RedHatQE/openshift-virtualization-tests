@@ -14,10 +14,11 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import WINDOWS_2019
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, TIMEOUT_5MIN
 from utilities.ssp import get_windows_timezone
-from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact
+from utilities.storage import get_downloaded_artifact
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ def sysprep_vm(
             client=unprivileged_client,
             vm_instance_type=vm_instance_type,
             vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
-            data_volume_template=data_volume_template_with_source_ref_dict(
+            data_volume_template=get_data_volume_template_dict_with_default_storage_class(
                 data_source=golden_image_data_source_for_test_scope_class
             ),
             os_flavor=OS_FLAVOR_WINDOWS,
