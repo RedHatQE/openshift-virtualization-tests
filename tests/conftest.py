@@ -46,7 +46,6 @@ from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
@@ -2394,25 +2393,6 @@ def migration_policy_with_bandwidth_scope_class():
 @pytest.fixture(scope="session")
 def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
-
-
-@pytest.fixture()
-def cnv_prometheus_rule_by_name(cnv_prometheus_rules_matrix__function__):
-    prometheus_rule = PrometheusRule(
-        namespace=py_config["hco_namespace"],
-        name=cnv_prometheus_rules_matrix__function__,
-    )
-    assert prometheus_rule.exists
-    return prometheus_rule
-
-
-@pytest.fixture()
-def cnv_alerts_from_prometheus_rule(cnv_prometheus_rule_by_name):
-    alerts = []
-    LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
-    for group in cnv_prometheus_rule_by_name.instance.spec.groups:
-        alerts.extend([rule for rule in group["rules"] if rule.get("alert")])
-    return alerts
 
 
 @pytest.fixture(scope="session")
