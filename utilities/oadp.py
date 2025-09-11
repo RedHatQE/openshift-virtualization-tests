@@ -91,7 +91,7 @@ def create_rhel_vm(
     dv_name: str,
     vm_name: str,
     rhel_image: str,
-    client: DynamicClient = None,
+    client: DynamicClient,
     wait_running: bool = True,
     volume_mode: str | None = None,
 ) -> Generator["VirtualMachineForTests", None, None]:
