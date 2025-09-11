@@ -17,6 +17,7 @@ from tests.virt.upgrade.utils import (
     vm_from_template,
     wait_for_automatic_vm_migrations,
 )
+from tests.virt.utils import get_boot_time_for_multiple_vms
 from utilities.constants import (
     ES_LIVE_MIGRATE_IF_POSSIBLE,
     OS_FLAVOR_RHEL,
@@ -311,11 +312,8 @@ def virt_migratable_vms(vms_for_upgrade):
 
 
 @pytest.fixture(scope="session")
-def linux_boot_time_before_upgrade(virt_migratable_vms):
-    boot_time_dict = {}
-    for vm in virt_migratable_vms:
-        boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
-    yield boot_time_dict
+def linux_boot_time_before_upgrade(vms_for_upgrade):
+    return get_boot_time_for_multiple_vms(vm_list=vms_for_upgrade)
 
 
 @pytest.fixture(scope="session")

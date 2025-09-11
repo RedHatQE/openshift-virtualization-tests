@@ -183,7 +183,9 @@ def hotplug_instance_type_vm_and_verify(vm, client, instance_type):
 
 def verify_hotplug(vm, client, sockets=None, memory_guest=None):
     vmim = get_created_migration_job(vm=vm, client=client)
-    wait_for_migration_finished(vm=vm, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
+    wait_for_migration_finished(
+        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
+    )
     wait_for_ssh_connectivity(vm=vm)
     vmi_spec_domain = vm.vmi.instance.spec.domain
     if sockets:

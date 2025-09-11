@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from ocp_resources.deployment import Deployment
 from ocp_resources.kube_descheduler import KubeDescheduler
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -11,8 +12,8 @@ from tests.virt.node.descheduler.constants import (
     DESCHEDULER_DEPLOYMENT_NAME,
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
-    RUNNING_PING_PROCESS_NAME_IN_VM,
 )
+from tests.virt.utils import is_jira_67515_open
 from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
@@ -25,9 +26,7 @@ from utilities.constants import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    fetch_pid_from_linux_vm,
     running_vm,
-    start_and_fetch_processid_on_linux_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -106,23 +105,6 @@ def wait_vmi_failover(vm, orig_node):
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to deploy on new node")
         raise
-
-
-def assert_running_process_after_failover(vms_list, process_dict):
-    LOGGER.info(f"Verify {RUNNING_PING_PROCESS_NAME_IN_VM} is running after migrations.")
-    failed_vms = []
-    for vm in vms_list:
-        vm_name = vm.name
-        new_pid = None
-        try:
-            new_pid = fetch_pid_from_linux_vm(vm=vm, process_name=RUNNING_PING_PROCESS_NAME_IN_VM)
-        except (ValueError, AssertionError):
-            failed_vms.append(vm_name)
-            continue
-        if new_pid != process_dict[vm_name]:
-            failed_vms.append(vm_name)
-
-    assert not failed_vms, f"The following VMs process ID has changed after migration: {failed_vms}"
 
 
 def assert_vms_distribution_after_failover(vms, nodes, all_nodes=True):
@@ -212,16 +194,6 @@ def assert_vms_consistent_virt_launcher_pods(running_vms):
         LOGGER.info("No VMs were migrated.")
 
 
-def start_vms_with_process(vms, process_name, args):
-    vms_process_id_dict = {}
-    for vm in vms:
-        vms_process_id_dict[vm.name] = start_and_fetch_processid_on_linux_vm(
-            vm=vm, process_name=process_name, args=args
-        )
-
-    return vms_process_id_dict
-
-
 def deploy_vms(
     vm_prefix,
     client,
@@ -261,7 +233,9 @@ def deploy_vms(
         vm.delete()
 
     for vm in vms:
-        vm.wait_deleted()
+        # Due to the bug - VM may hang in terminating state, need to remove the finalizer from VMI
+        if not vm.wait_deleted() and is_jira_67515_open():
+            ResourceEditor(patches={vm.vmi: {"metadata": {"finalizers": []}}}).update()
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):
@@ -296,10 +270,10 @@ def create_kube_descheduler(admin_client, profiles, profile_customizations):
         yield kd
 
 
-def wait_for_overutilized_soft_taint(node, taint_expected):
+def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_10MIN):
     taint_key = f"{DESCHEDULER_SOFT_TAINT_KEY}/overutilized"
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
+        wait_timeout=wait_timeout,
         sleep=TIMEOUT_5SEC,
         func=lambda: any(taint_key in taint.values() for taint in node.instance.spec.taints),
     )

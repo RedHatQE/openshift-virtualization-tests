@@ -7,8 +7,8 @@ from tests.utils import clean_up_migration_jobs
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
+from tests.virt.utils import is_jira_67515_open
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_1MIN, TIMEOUT_5SEC
-from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -82,7 +82,7 @@ def vm_for_migration_progress_test(
         running_vm(vm=vm)
         yield vm
         # Due to the bug - migration job should be removed before stopping the VM
-        if is_jira_open(jira_id="CNV-67515"):
+        if is_jira_67515_open():
             clean_up_migration_jobs(client=admin_client, vm=vm)
 
 
