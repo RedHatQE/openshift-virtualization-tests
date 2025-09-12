@@ -4,11 +4,11 @@ import pytest
 from packaging import version
 
 from tests.virt.cluster.common_templates.utils import (
-    get_data_volume_template_dict_with_default_storage_class,
     get_matrix_os_golden_image_data_source,
     matrix_os_vm_from_template,
     xfail_old_guest_agent_version,
 )
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import REGEDIT_PROC_NAME
 from utilities.infra import is_jira_open
 from utilities.virt import (
@@ -132,14 +132,17 @@ def tablet_device_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_multi_storage_scope_class,
+    golden_image_data_source_for_test_scope_class,
     cpu_for_migration,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_multi_storage_scope_class,
+        data_source=golden_image_data_source_for_test_scope_class,
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            data_source=golden_image_data_source_for_test_scope_class
+        ),
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
     ) as vm:
         yield vm
