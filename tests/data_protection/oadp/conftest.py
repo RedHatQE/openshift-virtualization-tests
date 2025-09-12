@@ -103,6 +103,7 @@ def velero_restore_multiple_namespaces(velero_backup_multiple_namespaces):
 @pytest.fixture()
 def rhel_vm_with_data_volume_template(
     request,
+    admin_client,
     namespace_for_backup,
     snapshot_storage_class_name_scope_module,
 ):
@@ -122,6 +123,7 @@ def rhel_vm_with_data_volume_template(
         wait_running=True,
         volume_mode=volume_mode,
         rhel_image=request.param.get("rhel_image"),
+        client=admin_client,
     ) as vm:
         write_file(
             vm=vm,
