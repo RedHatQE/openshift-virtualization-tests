@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from functools import cache
 
 import bitmath
-from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
@@ -30,7 +29,6 @@ from utilities.constants import (
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30SEC,
@@ -41,7 +39,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix, is_jira_open
+from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
@@ -266,42 +264,6 @@ def flatten_dict(dictionary, parent_key=""):
         else:
             items.append((new_key, value))
     return dict(items)
-
-
-@contextmanager
-def enable_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
-    if enable_acrq_support:
-        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True
-        }
-
-    with ResourceEditorValidateHCOReconcile(
-        patches=patches,
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
-    # need to wait when all AAQ system pods removed
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_5SEC,
-        func=get_pod_by_name_prefix,
-        dyn_client=client,
-        pod_prefix="aaq-(controller|server)",
-        namespace=hco_namespace.name,
-        get_all=True,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"Some AAQ pods still present: {sample}")
-        raise
-    except (NotFoundError, ResourceNotFoundError):
-        LOGGER.info("AAQ system PODs removed.")
 
 
 def kill_processes_by_name_windows(vm, process_name):
