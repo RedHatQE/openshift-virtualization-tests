@@ -633,6 +633,9 @@ def get_matrix_os_golden_image_data_source(
     """
 
     os_dict = os_matrix[[*os_matrix][0]]
+    if os_dict["os_version"] == "2016":
+        os_dict["image_name"] = "win_2016_test_uefi.qcow2"
+        os_dict["image_path"] = "cnv-tests/windows-images/win_2016_test_uefi.qcow2"
     data_source_name = os_dict[DATA_SOURCE_STR]
 
     data_source = DataSource(client=admin_client, name=data_source_name, namespace=golden_images_namespace.name)
