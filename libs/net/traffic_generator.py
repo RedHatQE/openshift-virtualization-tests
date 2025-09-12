@@ -1,8 +1,10 @@
 import logging
+from abc import ABC, abstractmethod
 from typing import Final
 
+from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.vm.vm import BaseVirtualMachine
 
@@ -11,6 +13,27 @@ _IPERF_BIN: Final[str] = "iperf3"
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class BaseClient(ABC):
+    """Base abstract class for network traffic generator client."""
+
+    def __init__(self, server_ip: str, server_port: int):
+        self._server_ip = server_ip
+        self.server_port = server_port
+        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+
+    @abstractmethod
+    def __enter__(self) -> "BaseClient":
+        pass
+
+    @abstractmethod
+    def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
+        pass
+
+    @abstractmethod
+    def is_running(self) -> bool:
+        pass
 
 
 class Server:
@@ -50,7 +73,7 @@ class Server:
         return _is_process_running(vm=self._vm, cmd=self._cmd)
 
 
-class Client:
+class Client(BaseClient):
     """
     Represents a client that connects to a server to test network performance.
     Implemented with iperf3
@@ -67,10 +90,8 @@ class Client:
         server_ip: str,
         server_port: int,
     ):
+        super().__init__(server_ip=server_ip, server_port=server_port)
         self._vm = vm
-        self._server_ip = server_ip
-        self._server_port = server_port
-        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self._server_port}"
 
     def __enter__(self) -> "Client":
         self._vm.console(
@@ -115,5 +136,47 @@ def _is_process_running(  # type: ignore[return]
         return False
 
 
-def is_tcp_connection(server: Server, client: Client) -> bool:
+class PodClient(BaseClient):
+    """Represents a TCP client that connects to a server to test network performance.
+
+    Expects pod to have iperf3 container.
+
+    Args:
+        pod (Pod): The pod where the client runs.
+        server_ip (str): The destination IP address of the server the client connects to.
+        server_port (int): The port on which the server listens for connections.
+        bind_interface (str): The interface or IP address to bind the client to (optional).
+            If not specified, the client will use the default interface.
+    """
+
+    def __init__(self, pod: Pod, server_ip: str, server_port: int, bind_interface: str | None = None):
+        super().__init__(server_ip=server_ip, server_port=server_port)
+        self._pod = pod
+        self._container = _IPERF_BIN
+        self._cmd += f" --bind {bind_interface}" if bind_interface else ""
+
+    def __enter__(self) -> "PodClient":
+        # run the command in the background using nohup to ensure it keeps running after the exec session ends
+        self._pod.execute(
+            command=["sh", "-c", f"nohup {self._cmd} >/tmp/{_IPERF_BIN}.log 2>&1 &"], container=self._container
+        )
+        self._ensure_is_running()
+
+        return self
+
+    def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
+        self._pod.execute(
+            command=["pkill", "-f", self._cmd],
+        )
+
+    def is_running(self) -> bool:
+        out = self._pod.execute(command=["pgrep", "-f", self._cmd], ignore_rc=True)
+        return bool(out.strip())
+
+    @retry(wait_timeout=30, sleep=2, exceptions_dict={})
+    def _ensure_is_running(self) -> bool:
+        return self.is_running()
+
+
+def is_tcp_connection(server: Server, client: Client | PodClient) -> bool:
     return server.is_running() and client.is_running()
