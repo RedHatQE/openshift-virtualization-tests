@@ -3,10 +3,18 @@ import logging
 
 import pytest
 
-from utilities.constants import BACKUP_STORAGE_LOCATION, FILE_NAME_FOR_BACKUP, TEXT_TO_TEST, TIMEOUT_3MIN, TIMEOUT_10MIN
+from utilities.constants import (
+    BACKUP_STORAGE_LOCATION,
+    FILE_NAME_FOR_BACKUP,
+    TEXT_TO_TEST,
+    TIMEOUT_3MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+)
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.oadp import VeleroBackup, create_rhel_vm
 from utilities.storage import write_file
+from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,3 +72,11 @@ def rebooted_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress, wo
     LOGGER.info(f"Waiting for node {vm_node.name} to come back online")
     wait_for_node_status(node=vm_node, status=True, wait_timeout=TIMEOUT_10MIN)
     return
+
+
+@pytest.fixture()
+def cordon_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
+    vm_node = rhel_vm_with_dv_running.vmi.node
+    with node_mgmt_console(node=vm_node, node_mgmt="cordon"):
+        wait_for_node_schedulable_status(node=vm_node, status=False, timeout=TIMEOUT_5MIN)
+        yield
