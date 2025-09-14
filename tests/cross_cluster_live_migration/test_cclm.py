@@ -1,5 +1,7 @@
 import pytest
 
+from utilities.constants import TIMEOUT_10MIN
+
 # Create VM in the remote cluster, write some data
 # Migrate the VM to the local cluster
 # Verify the data is present in the local cluster
@@ -39,7 +41,16 @@ class TestCCLM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_migrate_vm_from_remote_to_local_cluster")
     def test_migrate_vm_from_remote_to_local_cluster(
         self,
+        mtv_migration,
     ):
         import ipdb
+
+        ipdb.set_trace()
+
+        mtv_migration.wait_for_condition(
+            condition=mtv_migration.Condition.Type.SUCCEEDED,
+            status=mtv_migration.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
+        )
 
         ipdb.set_trace()

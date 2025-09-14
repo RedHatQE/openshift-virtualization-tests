@@ -656,7 +656,7 @@ class VirtualMachineForTests(VirtualMachine):
     def set_instance_type(self):
         if self.vm_instance_type:
             self.res["spec"]["instancetype"] = {
-                "kind": self.vm_instance_type.kind,
+                "kind": self.vm_instance_type.kind.lower(),  # bug https://issues.redhat.com/browse/MTV-3417
                 "name": self.vm_instance_type.name,
             }
         if self.vm_instance_type_infer:
@@ -665,7 +665,7 @@ class VirtualMachineForTests(VirtualMachine):
     def set_vm_preference(self):
         if self.vm_preference:
             self.res["spec"]["preference"] = {
-                "kind": self.vm_preference.kind,
+                "kind": self.vm_preference.kind.lower(),  # bug https://issues.redhat.com/browse/MTV-3417
                 "name": self.vm_preference.name,
             }
         if self.vm_preference_infer:
@@ -1752,7 +1752,9 @@ def running_vm(
         LOGGER.info(f"VM {_vm.name} status before dv check: {_vm.printable_status}")
         LOGGER.info(f"Volume(s) in VM spec: {_vm_dv_volumes_names_list} ")
         for dv_name in _vm_dv_volumes_names_list:
-            DataVolume(name=dv_name, namespace=_vm.namespace).wait_for_dv_success(timeout=_dv_wait_timeout)
+            DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client).wait_for_dv_success(
+                timeout=_dv_wait_timeout
+            )
 
     # To support all use cases of: 'runStrategy', container/VM from template, VM started outside this function
     allowed_vm_start_exceptions_list = [

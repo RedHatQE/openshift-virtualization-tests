@@ -5,23 +5,30 @@ from copy import deepcopy
 import pytest
 import requests
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
+from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.migration import Migration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
 from ocp_resources.network_map import NetworkMap
+from ocp_resources.plan import Plan
 from ocp_resources.provider import Provider
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.storage_map import StorageMap
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.cross_cluster_live_migration.utils import wait_for_service_account_token
-from utilities.constants import REMOTE_KUBECONFIG, TIMEOUT_30SEC
+from utilities.constants import OS_FLAVOR_FEDORA, REMOTE_KUBECONFIG, TIMEOUT_1MIN, TIMEOUT_30SEC, U1_SMALL
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import base64_encode_str, get_hyperconverged_resource
+from utilities.infra import base64_encode_str, create_ns, get_hyperconverged_resource
+from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -385,6 +392,9 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
         destination_provider_namespace=mtv_provider_local_cluster.namespace,
         mapping=mapping,
     ) as storage_map:
+        storage_map.wait_for_condition(
+            condition=storage_map.Condition.READY, status=storage_map.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
+        )
         yield storage_map
 
 
@@ -417,5 +427,127 @@ def mtv_network_map(
         destination_provider_namespace=mtv_provider_local_cluster.namespace,
         mapping=mapping,
     ) as network_map:
+        network_map.wait_for_condition(
+            condition=network_map.Condition.READY, status=network_map.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
+        )
         yield network_map
 
+
+@pytest.fixture(scope="session")
+def remote_golden_images_namespace(
+    remote_admin_client,
+):
+    return Namespace(name=py_config["golden_images_namespace"], client=remote_admin_client, ensure_exists=True)
+
+
+@pytest.fixture(scope="session")
+def remote_test_namespace(
+    request,
+    remote_admin_client,
+):
+    yield from create_ns(
+        admin_client=remote_admin_client,
+        name="test-cclm-remote-namespace",
+        teardown=True,
+    )
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_with_instance_type(
+    remote_admin_client,
+    remote_test_namespace,
+    remote_golden_images_namespace,
+    #   cpu_for_migration,
+):
+    golden_images_fedora_data_source = DataSource(
+        namespace=remote_golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=remote_admin_client,
+        ensure_exists=True,
+    )
+    with VirtualMachineForTests(
+        name="vm-with-instance-type",
+        namespace=remote_test_namespace.name,
+        client=remote_admin_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=golden_images_fedora_data_source,
+            storage_class=py_config["default_storage_class"],
+        ),
+        #   cpu_model=cpu_for_migration,
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we need to change it for the remote cluster
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def mtv_migration_plan(
+    admin_client,
+    mtv_namespace,
+    mtv_provider_local_cluster,
+    mtv_provider_remote_cluster,
+    mtv_storage_map,
+    mtv_network_map,
+    namespace,
+    vm_for_cclm_with_instance_type,
+):
+    """
+    Create a Plan resource for MTV cross-cluster live migration.
+    This plan configures a live migration from the remote cluster to the local cluster.
+    """
+    vms = [
+        {
+            "id": vm_for_cclm_with_instance_type.instance.metadata.uid,
+            "name": vm_for_cclm_with_instance_type.name,
+            "namespace": vm_for_cclm_with_instance_type.namespace,
+        }
+    ]
+    with Plan(
+        client=admin_client,
+        name="cclm-migration-plan",
+        namespace=mtv_namespace.name,
+        network_map_name=mtv_network_map.name,
+        network_map_namespace=mtv_network_map.namespace,
+        storage_map_name=mtv_storage_map.name,
+        storage_map_namespace=mtv_storage_map.namespace,
+        source_provider_name=mtv_provider_remote_cluster.name,
+        source_provider_namespace=mtv_provider_remote_cluster.namespace,
+        destination_provider_name=mtv_provider_local_cluster.name,
+        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        target_namespace=namespace.name,
+        virtual_machines_list=vms,
+        type="live",  # Set to "live" for cross-cluster live migration
+        warm_migration=False,
+        target_power_state="auto",
+    ) as plan:
+        plan.wait_for_condition(condition=plan.Condition.READY, status=plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN)
+        yield plan
+
+
+@pytest.fixture(scope="class")
+def mtv_migration(
+    admin_client,
+    mtv_namespace,
+    mtv_migration_plan,
+):
+    """
+    Create a Migration resource to execute the MTV migration plan.
+    This triggers the actual migration process for all VMs in the plan.
+
+    Note: This uses a unique name pattern. If you need generateName behavior,
+    you may need to create the resource differently or use a timestamp suffix.
+    """
+    import time
+
+    timestamp = str(int(time.time()))[-5:]  # Last 5 digits of timestamp
+
+    with Migration(
+        client=admin_client,
+        name=f"{mtv_migration_plan.name}-{timestamp}",  # Create unique name with timestamp
+        namespace=mtv_namespace.name,
+        plan_name=mtv_migration_plan.name,
+        plan_namespace=mtv_migration_plan.namespace,
+    ) as migration:
+        yield migration
