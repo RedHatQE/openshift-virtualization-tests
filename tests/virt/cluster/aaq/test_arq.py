@@ -6,25 +6,25 @@ from ocp_resources.pod import Pod
 from tests.virt.cluster.aaq.constants import (
     CPU_MAX_SOCKETS,
     MEMORY_MAX_GUEST,
+    QUOTA_FOR_TWO_VMI,
+)
+from tests.virt.cluster.aaq.utils import restart_vm_wait_for_gated_state
+from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
+from utilities.constants import (
+    LIMITS_CPU_STR,
+    LIMITS_MEMORY_STR,
     POD_LIMITS_CPU,
     POD_LIMITS_MEMORY,
     POD_REQUESTS_CPU,
     POD_REQUESTS_MEMORY,
-    QUOTA_FOR_ONE_VMI,
-    QUOTA_FOR_TWO_VMI,
-)
-from tests.virt.cluster.aaq.utils import restart_vm_wait_for_gated_state
-from tests.virt.constants import (
-    LIMITS_CPU_STR,
-    LIMITS_MEMORY_STR,
     PODS_STR,
+    QUOTA_FOR_ONE_VMI,
     REQUESTS_CPU_STR,
     REQUESTS_CPU_VMI_STR,
     REQUESTS_INSTANCES_VMI_STR,
     REQUESTS_MEMORY_STR,
     REQUESTS_MEMORY_VMI_STR,
 )
-from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
 from utilities.virt import migrate_vm_and_verify, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
