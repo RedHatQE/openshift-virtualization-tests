@@ -21,7 +21,7 @@ from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutSampler, TimeoutExpiredError
 
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
@@ -44,7 +44,7 @@ from utilities.constants import (
     CNV_TESTS_CONTAINER,
     OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
-    Images,
+    Images, TIMEOUT_1MIN, TIMEOUT_5SEC,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -115,18 +115,29 @@ def hpp_resources(request, admin_client):
 @pytest.fixture(scope="module")
 def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1):
     svc_ip = internal_http_service.instance.to_dict()["spec"]["clusterIP"]
-    cert = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
-        command=(
-            f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null|"
-            "sed -n '/-----BEGIN/,/-----END/p'"
-        )
-    )
-    with ConfigMap(
-        name=INTERNAL_HTTP_CONFIGMAP_NAME,
-        namespace=namespace.name,
-        data={"tlsregistry.crt": cert},
-    ) as configmap:
-        yield configmap
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
+                command=(
+                    f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null|"
+                    "sed -n '/-----BEGIN/,/-----END/p'"
+                )
+            ),
+        ):
+            if sample:
+                with ConfigMap(
+                    name=INTERNAL_HTTP_CONFIGMAP_NAME,
+                    namespace=namespace.name,
+                    data={"tlsregistry.crt": sample},
+                ) as configmap:
+                    yield configmap
+                break
+
+    except TimeoutExpiredError:
+        LOGGER.error(f"Unexpected error while fetching cert from {svc_ip}")
+        raise
 
 
 @pytest.fixture(scope="module")
