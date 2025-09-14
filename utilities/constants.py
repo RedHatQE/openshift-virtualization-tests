@@ -34,16 +34,12 @@ from libs.infra.images import (
 )
 from utilities.architecture import get_cluster_architecture
 
-# Images
-NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
-
+# Architecture constants
+KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
-
-# Architecture constants
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 
 
 class ArchImages:
