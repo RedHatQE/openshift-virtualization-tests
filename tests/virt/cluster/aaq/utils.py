@@ -5,11 +5,11 @@ from ocp_resources.application_aware_applied_cluster_resource_quota import Appli
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.constants import PODS_STR
 from tests.virt.utils import check_arq_status_values, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     AAQ_VIRTUAL_RESOURCES,
     AAQ_VMI_POD_USAGE,
+    PODS_STR,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
 )

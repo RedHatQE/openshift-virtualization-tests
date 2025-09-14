@@ -23,6 +23,7 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
@@ -72,8 +73,10 @@ import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AAQ_NAMESPACE_LABEL,
     AMD,
     ARM_64,
+    ARQ_QUOTA_HARD_SPEC,
     AUDIT_LOGS_PATH,
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
@@ -152,6 +155,7 @@ from utilities.infra import (
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
+    label_project,
     login_with_user_password,
     name_prefix,
     run_virtctl_command,
@@ -2907,3 +2911,19 @@ def conformance_tests(request):
         and "conformance" in marker_args
         and "not conformance" not in marker_args
     )
+
+
+@pytest.fixture(scope="module")
+def updated_namespace_with_aaq_label(admin_client, namespace):
+    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
+
+
+@pytest.fixture(scope="class")
+def application_aware_resource_quota(admin_client, namespace):
+    with ApplicationAwareResourceQuota(
+        client=admin_client,
+        name="application-aware-resource-quota-for-aaq-test",
+        namespace=namespace.name,
+        hard=ARQ_QUOTA_HARD_SPEC,
+    ) as arq:
+        yield arq

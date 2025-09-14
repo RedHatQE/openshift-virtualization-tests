@@ -846,3 +846,43 @@ def vnic_info_from_vm_or_vmi(vm_or_vmi: str, vm: VirtualMachineForTests) -> dict
         BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
         "model": vm_interface.model,
     }
+
+
+def validate_values_from_kube_application_aware_resourcequota_metric(
+    prometheus,
+    aaq_resource_hard_limit_and_used,
+):
+    expected_hard_limit, expected_used = aaq_resource_hard_limit_and_used
+
+    def _get_metric_values():
+        result = {}
+        for item in prometheus.query_sampler(query="kube_application_aware_resourcequota"):
+            if "value" in item:
+                metric = item["metric"]
+                resource = metric["resource"]
+                metric_type = metric["type"]
+                value = item["value"][1]
+                value = int(value) if metric["unit"] == "bytes" else float(value)
+                result.setdefault(resource, {})[metric_type] = value
+        return result
+
+    for metric_sample in TimeoutSampler(
+        sleep=2,
+        func=_get_metric_values,
+        wait_timeout=TIMEOUT_1MIN,
+    ):
+        all_match = True
+
+        for resource, expected_hard_value in expected_hard_limit.items():
+            expected_used_value = expected_used.get(resource)
+            actual_resource_metrics = metric_sample.get(resource, {})
+            actual_hard_value = actual_resource_metrics.get("hard")
+            actual_used_value = actual_resource_metrics.get("used")
+            if actual_hard_value != expected_hard_value or actual_used_value != expected_used_value:
+                all_match = False
+                break
+
+        if all_match:
+            return metric_sample
+
+    raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
