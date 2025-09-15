@@ -283,7 +283,6 @@ def test_successful_snapshot_clone(
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5607")
 def test_clone_from_fs_to_block_using_dv_template(
-    skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
     unprivileged_client,
     namespace,
@@ -304,7 +303,6 @@ def test_clone_from_fs_to_block_using_dv_template(
 @pytest.mark.polarion("CNV-5608")
 @pytest.mark.smoke()
 def test_clone_from_block_to_fs_using_dv_template(
-    skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
     unprivileged_client,
     namespace,
