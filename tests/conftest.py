@@ -2416,12 +2416,6 @@ def is_idms_cluster():
 
 
 @pytest.fixture(scope="session")
-def skip_test_if_no_filesystem_sc(storage_class_with_filesystem_volume_mode):
-    if not storage_class_with_filesystem_volume_mode:
-        pytest.skip("Skip the test: no Storage class with Filesystem volume mode")
-
-
-@pytest.fixture(scope="session")
 def available_storage_classes_names():
     return [[*sc][0] for sc in py_config["storage_class_matrix"]]
 

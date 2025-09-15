@@ -8,7 +8,6 @@ from utilities.constants import CDI_OPERATOR
 
 @pytest.mark.polarion("CNV-10557")
 def test_kubevirt_cdi_clone_pods_high_restart(
-    skip_test_if_no_filesystem_sc,
     skip_test_if_no_block_sc,
     prometheus,
     zero_clone_dv_restart_count,
