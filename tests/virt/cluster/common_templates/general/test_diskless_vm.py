@@ -8,7 +8,7 @@ import pytest
 from ocp_resources.template import Template
 
 from tests.os_params import RHEL_LATEST_LABELS, WINDOWS_LATEST_LABELS
-from utilities.constants import Images
+from tests.virt.constants import CIRROS_OS
 from utilities.virt import VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
@@ -17,17 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
-    [
-        pytest.param(
-            {
-                "os_dict": {
-                    "data_source": "cirros-dv",
-                    "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-                    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-                },
-            },
-        ),
-    ],
+    [pytest.param({"os_dict": CIRROS_OS})],
     indirect=True,
 )
 class TestDisklessVM:

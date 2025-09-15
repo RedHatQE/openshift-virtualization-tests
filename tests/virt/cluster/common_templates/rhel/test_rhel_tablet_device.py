@@ -15,7 +15,8 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants import VIRTIO, Images
+from tests.virt.constants import CIRROS_OS
+from utilities.constants import VIRTIO
 from utilities.virt import VirtualMachineForTestsFromTemplate, migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
@@ -121,17 +122,7 @@ class TestRHELTabletDevice:
 @pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
-    [
-        pytest.param(
-            {
-                "os_dict": {
-                    "data_source": "cirros-dv",
-                    "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",  # Negative tests needs a dummy DV.
-                    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-                },
-            },
-        ),
-    ],
+    [pytest.param({"os_dict": CIRROS_OS})],
     indirect=True,
 )
 class TestRHELTabletDeviceNegative:

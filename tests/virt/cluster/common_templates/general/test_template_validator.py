@@ -11,7 +11,7 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.template import Template
 
 from tests.os_params import RHEL_LATEST_LABELS
-from utilities.constants import Images
+from tests.virt.constants import CIRROS_OS
 from utilities.virt import VirtualMachineForTestsFromTemplate
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -25,13 +25,7 @@ LOGGER = logging.getLogger(__name__)
     "golden_image_data_source_for_test_scope_function",
     [
         pytest.param(
-            {
-                "os_dict": {
-                    "data_source": "cirros-dv",
-                    "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",  # Negative test needs a dummy DV.
-                    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-                }
-            },
+            {"os_dict": CIRROS_OS},
             marks=pytest.mark.polarion("CNV-2960"),
         ),
     ],
