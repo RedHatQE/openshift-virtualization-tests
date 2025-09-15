@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import pytest
+from utilities.oadp import VeleroBackup, create_rhel_vm
 
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
@@ -11,7 +12,6 @@ from utilities.constants import (
     TIMEOUT_10MIN,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
-from utilities.oadp import VeleroBackup, create_rhel_vm
 from utilities.storage import write_file
 from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
 
