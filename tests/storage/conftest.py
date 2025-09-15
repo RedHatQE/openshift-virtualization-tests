@@ -21,7 +21,7 @@ from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutSampler, TimeoutExpiredError
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
@@ -44,7 +44,9 @@ from utilities.constants import (
     CNV_TESTS_CONTAINER,
     OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
-    Images, TIMEOUT_1MIN, TIMEOUT_5SEC,
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+    Images,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -115,16 +117,24 @@ def hpp_resources(request, admin_client):
 @pytest.fixture(scope="module")
 def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1):
     svc_ip = internal_http_service.instance.to_dict()["spec"]["clusterIP"]
+
+    def _fetch_cert():
+        try:
+            return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
+                command=(
+                    f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null | "
+                    "sed -n '/-----BEGIN/,/-----END/p'"
+                )
+            )
+        except workers_utility_pods.ExecOnPodError as e:
+            LOGGER.warning(f"Transient error fetching cert from {svc_ip}: {e}")
+            return None
+
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
             sleep=TIMEOUT_5SEC,
-            func=lambda: ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
-                command=(
-                    f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null|"
-                    "sed -n '/-----BEGIN/,/-----END/p'"
-                )
-            ),
+            func=_fetch_cert,
         ):
             if sample:
                 with ConfigMap(
@@ -136,7 +146,7 @@ def internal_http_configmap(namespace, internal_http_service, workers_utility_po
                 break
 
     except TimeoutExpiredError:
-        LOGGER.error(f"Unexpected error while fetching cert from {svc_ip}")
+        LOGGER.error(f"Timeout while fetching cert from {svc_ip}")
         raise
 
 
