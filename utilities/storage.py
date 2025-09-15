@@ -997,6 +997,7 @@ def create_vm_from_dv(
     cpu_model=None,
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
+    wait_for_interfaces=False,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,
@@ -1011,7 +1012,7 @@ def create_vm_from_dv(
         if start:
             virt_util.running_vm(
                 vm=vm,
-                wait_for_interfaces=False,
+                wait_for_interfaces=wait_for_interfaces,
                 wait_for_cloud_init=wait_for_cloud_init,
             )
         yield vm
