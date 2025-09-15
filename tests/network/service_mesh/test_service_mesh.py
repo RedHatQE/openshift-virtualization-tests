@@ -6,17 +6,12 @@ from tests.network.service_mesh.utils import (
     inbound_request,
     run_console_command,
 )
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.service_mesh
 
 
 @pytest.mark.s390x
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Failing tests, in debug; tracked in CNV-67824",
-    run=False,
-)
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
     @pytest.mark.single_nic
@@ -51,10 +46,6 @@ class TestSMTrafficManagement:
 
 
 @pytest.mark.s390x
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Failing test, in debug; tracked in CNV-67824",
-    run=False,
-)
 class TestSMPeerAuthentication:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5784")
