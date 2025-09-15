@@ -132,10 +132,7 @@ def fedora_target_vm_instance(fedora_target_vm):
                 "extra_dv": True,
             },
             {"source_name": RHEL_VM_WITH_TWO_PVC},
-            marks=(
-                pytest.mark.polarion("CNV-10295"),
-                # pytest.mark.gating(),
-            ),
+            marks=(pytest.mark.polarion("CNV-10295"), pytest.mark.gating()),
         )
     ],
     indirect=True,
@@ -182,7 +179,7 @@ def test_clone_vm_with_instance_type_and_preference(
             },
             {
                 "vm_name": WINDOWS_VM_FOR_CLONING,
-                "memory_requests": Images.Windows.DEFAULT_MEMORY_SIZE,
+                "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE,
                 "cpu_cores": Images.Windows.DEFAULT_CPU_CORES,
             },
             {"source_name": WINDOWS_VM_FOR_CLONING},

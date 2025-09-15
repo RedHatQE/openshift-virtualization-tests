@@ -67,9 +67,8 @@ class TestWindowsTabletDevice:
     def test_tablet_usb_tablet_device(self, tablet_device_vm):
         LOGGER.info("Test tablet device - USB bus.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -92,9 +91,8 @@ class TestWindowsTabletDevice:
 
         LOGGER.info("Test tablet device - virtio bus.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Stopped")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Stopped")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -116,9 +114,8 @@ class TestWindowsTabletDevice:
 
         LOGGER.info("Test Windows Server tablet device - default table device.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -140,6 +137,5 @@ class TestWindowsTabletDevice:
 
         LOGGER.info("Test Windows Desktop tablet device - default table device.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)

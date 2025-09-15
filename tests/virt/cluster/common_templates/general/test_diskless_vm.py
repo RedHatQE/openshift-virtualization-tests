@@ -35,23 +35,14 @@ class TestDisklessVM:
         "vm_params",
         [
             pytest.param(
-                {
-                    "vm_name": "rhel-diskless-vm",
-                    "template_labels": RHEL_LATEST_LABELS,
-                    "diskless_vm": True,
-                },
+                {"vm_name": "rhel-diskless-vm", "template_labels": RHEL_LATEST_LABELS},
                 marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating(), pytest.mark.s390x),
             ),
             pytest.param(
-                {
-                    "vm_name": "windows-diskless-vm",
-                    "template_labels": WINDOWS_LATEST_LABELS,
-                    "diskless_vm": True,
-                },
-                marks=(pytest.mark.polarion("CNV-4697"),),
+                {"vm_name": "windows-diskless-vm", "template_labels": WINDOWS_LATEST_LABELS},
+                marks=pytest.mark.polarion("CNV-4697"),
             ),
         ],
-        indirect=False,
     )
     def test_diskless_vm_creation(
         self,
@@ -67,6 +58,6 @@ class TestDisklessVM:
             client=unprivileged_client,
             labels=Template.generate_template_labels(**vm_params["template_labels"]),
             data_source=golden_image_data_source_for_test_scope_class,
-            diskless_vm=vm_params["diskless_vm"],
+            diskless_vm=True,
         ) as vm_from_template:
             assert vm_from_template.exists, f"{vm_from_template.name} VM was not created."

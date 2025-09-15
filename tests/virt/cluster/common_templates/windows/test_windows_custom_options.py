@@ -90,9 +90,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
 
 def assert_firmware_uuid_in_domxml(vm, uuid):
     xml_domain = vm.privileged_vmi.xml_dict["domain"]
-    assert xml_domain.get("uuid", "").lower() == uuid.lower(), (
-        f"Firmware UUID not found in domxml for {custom_windows_vm.name}"
-    )
+    assert xml_domain.get("uuid", "").lower() == uuid.lower(), f"Firmware UUID not found in domxml for {vm.name}"
 
 
 def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive_letter):
