@@ -34,16 +34,12 @@ from libs.infra.images import (
 )
 from utilities.architecture import get_cluster_architecture
 
-# Images
-NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
-
+# Architecture constants
+KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
-
-# Architecture constants
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 
 
 class ArchImages:
@@ -385,6 +381,8 @@ KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
+KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
+KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -407,6 +405,7 @@ CDI_STR = "CDI"
 SSP_STR = "SSP"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
+NETWORKPOLICY_STR = "NetworkPolicy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 # All hco relate objects with kind
@@ -446,7 +445,8 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
     {HCO_BEARER_AUTH: SECRET_STR},
-    {"kubevirt-console-plugin-np": "NetworkPolicy"},
+    {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
+    {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -901,3 +901,35 @@ ADP_NAMESPACE = "openshift-adp"
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
 BACKUP_STORAGE_LOCATION = "dpa-1"
+
+# AAQ
+AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
+VM_CPU_CORES = 2
+REQUESTS_INSTANCES_VMI_STR = "requests.instances/vmi"
+REQUESTS_CPU_VMI_STR = "requests.cpu/vmi"
+REQUESTS_MEMORY_VMI_STR = "requests.memory/vmi"
+PODS_STR = "pods"
+LIMITS_CPU_STR = "limits.cpu"
+LIMITS_MEMORY_STR = "limits.memory"
+REQUESTS_CPU_STR = "requests.cpu"
+REQUESTS_MEMORY_STR = "requests.memory"
+POD_REQUESTS_CPU = 2
+POD_REQUESTS_MEMORY = "2.5Gi"
+POD_LIMITS_CPU = POD_REQUESTS_CPU * 2
+POD_LIMITS_MEMORY = f"{float(POD_REQUESTS_MEMORY[:-2]) * 2}Gi"
+VM_MEMORY_GUEST = "2Gi"
+QUOTA_FOR_POD = {
+    PODS_STR: "1",
+    LIMITS_CPU_STR: POD_LIMITS_CPU,
+    LIMITS_MEMORY_STR: POD_LIMITS_MEMORY,
+    REQUESTS_CPU_STR: POD_REQUESTS_CPU,
+    REQUESTS_MEMORY_STR: POD_LIMITS_MEMORY,
+}
+
+QUOTA_FOR_ONE_VMI = {
+    REQUESTS_INSTANCES_VMI_STR: "1",
+    REQUESTS_CPU_VMI_STR: VM_CPU_CORES,
+    REQUESTS_MEMORY_VMI_STR: VM_MEMORY_GUEST,
+}
+
+ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}

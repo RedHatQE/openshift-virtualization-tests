@@ -62,7 +62,6 @@ ONE_CPU_CORES = 1
 ZERO_CPU_CORES = 0
 COUNT_TWO = 2
 COUNT_THREE = 3
-TOTAL_4_ITERATIONS = 4
 
 
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
@@ -329,24 +328,6 @@ def get_resource_object(
             )
 
     return None
-
-
-def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: prometheus.query_sampler(query=metric_name),
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                return
-            else:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, waiting for metric to reset")
-    except TimeoutExpiredError:
-        LOGGER.info(f"Operator metrics value: {sample}, expected is None")
-        raise
 
 
 def assert_virtctl_version_equal_metric_output(
@@ -838,3 +819,43 @@ def vnic_info_from_vm_or_vmi(vm_or_vmi: str, vm: VirtualMachineForTests) -> dict
         BINDING_TYPE: binding_name_and_type[BINDING_TYPE],
         "model": vm_interface.model,
     }
+
+
+def validate_values_from_kube_application_aware_resourcequota_metric(
+    prometheus,
+    aaq_resource_hard_limit_and_used,
+):
+    expected_hard_limit, expected_used = aaq_resource_hard_limit_and_used
+
+    def _get_metric_values():
+        result = {}
+        for item in prometheus.query_sampler(query="kube_application_aware_resourcequota"):
+            if "value" in item:
+                metric = item["metric"]
+                resource = metric["resource"]
+                metric_type = metric["type"]
+                value = item["value"][1]
+                value = int(value) if metric["unit"] == "bytes" else float(value)
+                result.setdefault(resource, {})[metric_type] = value
+        return result
+
+    for metric_sample in TimeoutSampler(
+        sleep=2,
+        func=_get_metric_values,
+        wait_timeout=TIMEOUT_1MIN,
+    ):
+        all_match = True
+
+        for resource, expected_hard_value in expected_hard_limit.items():
+            expected_used_value = expected_used.get(resource)
+            actual_resource_metrics = metric_sample.get(resource, {})
+            actual_hard_value = actual_resource_metrics.get("hard")
+            actual_used_value = actual_resource_metrics.get("used")
+            if actual_hard_value != expected_hard_value or actual_used_value != expected_used_value:
+                all_match = False
+                break
+
+        if all_match:
+            return metric_sample
+
+    raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
