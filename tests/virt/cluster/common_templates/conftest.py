@@ -10,7 +10,6 @@ from tests.virt.cluster.common_templates.utils import (
     xfail_old_guest_agent_version,
 )
 from utilities.constants import REGEDIT_PROC_NAME
-from utilities.infra import is_jira_open
 from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
@@ -176,9 +175,3 @@ def regedit_process_in_windows_os(matrix_windows_os_vm_from_template):
     return start_and_fetch_processid_on_windows_vm(
         vm=matrix_windows_os_vm_from_template, process_name=REGEDIT_PROC_NAME
     )
-
-
-@pytest.fixture()
-def xfail_guest_agent_on_win2016(windows_os_matrix__class__):
-    if "win-2016" in [*windows_os_matrix__class__][0] and is_jira_open(jira_id="CNV-66366"):
-        pytest.xfail(reason="Windows 2016 VM guest agent is running inside the VM but not visible from libvirt/VMI")
