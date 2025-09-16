@@ -126,8 +126,7 @@ def internal_http_configmap(namespace, internal_http_service, workers_utility_po
                     "sed -n '/-----BEGIN/,/-----END/p'"
                 )
             )
-        except workers_utility_pods.ExecOnPodError as e:
-            LOGGER.warning(f"Transient error fetching cert from {svc_ip}: {e}")
+        except workers_utility_pods.ExecOnPodError:
             return None
 
     try:
