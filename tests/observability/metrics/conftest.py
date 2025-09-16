@@ -6,7 +6,6 @@ import bitmath
 import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -30,7 +29,6 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    fail_if_not_zero_restartcount,
     get_interface_name_from_vm,
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
@@ -41,9 +39,12 @@ from tests.observability.metrics.utils import (
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     get_vmi_memory_domain_metric_value_from_prometheus,
     metric_result_output_dict_by_mountpoint,
+<<<<<<< HEAD
     restart_cdi_worker_pod,
     run_node_command,
     run_vm_commands,
+=======
+>>>>>>> b0bd1b6 (Remove cdi metrics recording rules tests (#2025))
     vnic_info_from_vm_or_vmi,
     wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
@@ -52,8 +53,11 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, wait_for_cr_labels_change
 from utilities import console
 from utilities.constants import (
+<<<<<<< HEAD
     CDI_UPLOAD_TMP_PVC,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
+=======
+>>>>>>> b0bd1b6 (Remove cdi metrics recording rules tests (#2025))
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
@@ -65,8 +69,6 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
-    PVC,
-    SOURCE_POD,
     SSP_OPERATOR,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
@@ -75,7 +77,6 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
@@ -87,7 +88,6 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
-    get_http_image_url,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     is_jira_open,
@@ -97,11 +97,9 @@ from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
-    create_dv,
     data_volume_template_with_source_ref_dict,
     is_snapshot_supported_by_sc,
     vm_snapshot,
-    wait_for_cdi_worker_pod,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -110,7 +108,6 @@ from utilities.virt import (
 )
 from utilities.vnc_utils import VNCConnection
 
-UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
@@ -416,6 +413,7 @@ def virt_up_metrics_values(request, prometheus):
 
 
 @pytest.fixture()
+<<<<<<< HEAD
 def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, single_metric_vm):
     return get_vmi_memory_domain_metric_value_from_prometheus(
         prometheus=prometheus,
@@ -543,6 +541,8 @@ def zero_upload_dv_restart_count(ready_uploaded_dv):
 
 
 @pytest.fixture()
+=======
+>>>>>>> b0bd1b6 (Remove cdi metrics recording rules tests (#2025))
 def connected_vm_console_successfully(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
         vmc.sendline("ls")
@@ -949,22 +949,6 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
         status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
-
-
-@pytest.fixture()
-def created_fake_data_volume_resource(namespace, admin_client):
-    with DataVolume(
-        name="fake-dv",
-        namespace=namespace.name,
-        url="http://broken-link.test",
-        source="http",
-        size=Images.Rhel.DEFAULT_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-        bind_immediate_annotation=True,
-        api_name="storage",
-        client=admin_client,
-    ) as dv:
-        yield dv
 
 
 @pytest.fixture()

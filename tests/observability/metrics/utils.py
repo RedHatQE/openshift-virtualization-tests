@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from typing import Any, Generator, Optional
 
 import bitmath
-import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -18,7 +17,7 @@ from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
-from pyhelper_utils.shell import run_command, run_ssh_commands
+from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -56,11 +55,13 @@ from utilities.infra import (
     get_artifactory_config_map,
     get_artifactory_secret,
     get_http_image_url,
-    get_pod_by_name_prefix,
 )
 from utilities.monitoring import get_metrics_value
+<<<<<<< HEAD
 from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
+=======
+>>>>>>> b0bd1b6 (Remove cdi metrics recording rules tests (#2025))
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -74,7 +75,6 @@ ONE_CPU_CORES = 1
 ZERO_CPU_CORES = 0
 COUNT_TWO = 2
 COUNT_THREE = 3
-TOTAL_4_ITERATIONS = 4
 
 
 def get_mutation_component_value_from_prometheus(prometheus: Prometheus, component_name: str) -> int:
@@ -636,6 +636,7 @@ def get_resource_object(
     return None
 
 
+<<<<<<< HEAD
 def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
@@ -677,6 +678,8 @@ def fail_if_not_zero_restartcount(dv: DataVolume) -> None:
         pytest.fail(f"dv {dv.name} restartcount is not zero,\n actual restartcount: {restartcount}")
 
 
+=======
+>>>>>>> b0bd1b6 (Remove cdi metrics recording rules tests (#2025))
 def assert_virtctl_version_equal_metric_output(
     virtctl_server_version: dict[str, str], metric_output: list[dict[str, dict[str, str]]]
 ) -> None:

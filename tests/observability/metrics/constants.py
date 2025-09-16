@@ -32,7 +32,6 @@ KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL = "kubevirt_vmi_network_transmit_pac
 KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_scheduling_phase"
 KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE = "kubevirt_vmi_migrations_in_running_phase"
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"
-KUBEVIRT_CDI_IMPORT_PODS_HIGH_RESTART = "kubevirt_cdi_import_pods_high_restart"
 KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED = (
     "kubevirt_vmi_phase_transition_time_from_deletion_seconds_sum{phase='Succeeded'}"
 )
