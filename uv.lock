@@ -976,7 +976,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5b/8b/824ae9292bbaa548d
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.91"
+version = "11.0.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloup" },
@@ -996,7 +996,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/2c/d25fbf592d5ff96c631a12f96eb196ab2f6569784fb944a86802bc13d491/openshift_python_wrapper-11.0.91.tar.gz", hash = "sha256:8e4bcd4ac1864f56e5830727c3ca063c65266a07b76b6b493fdd247f9d652294", size = 6591187 }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/fa93d7dc7da9574f321932bd9496ef135139fa5aea703fba90dff4d1d09a/openshift_python_wrapper-11.0.93.tar.gz", hash = "sha256:ad43371cbc852755251f7210fcd4ed04d010b6e3b8df55c90d0fb1659ad139a9", size = 7056063 }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
