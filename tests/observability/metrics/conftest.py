@@ -1,9 +1,9 @@
 import logging
 import shlex
 
+import bitmath
 import pytest
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -31,7 +31,6 @@ from tests.observability.metrics.utils import (
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     metric_result_output_dict_by_mountpoint,
-    restart_cdi_worker_pod,
     vnic_info_from_vm_or_vmi,
     wait_for_metric_vmi_request_cpu_cores_output,
 )
@@ -39,7 +38,6 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms
 from utilities import console
 from utilities.constants import (
-    CDI_UPLOAD_TMP_PVC,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -50,25 +48,21 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
-    PVC,
-    SOURCE_POD,
     SSP_OPERATOR,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
-    get_http_image_url,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     is_jira_open,
@@ -78,11 +72,9 @@ from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
-    create_dv,
     data_volume_template_with_source_ref_dict,
     is_snapshot_supported_by_sc,
     vm_snapshot,
-    wait_for_cdi_worker_pod,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -91,7 +83,6 @@ from utilities.virt import (
 )
 from utilities.vnc_utils import VNCConnection
 
-UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
@@ -229,101 +220,6 @@ def virt_up_metrics_values(request, prometheus):
         query=request.param,
     )
     return int(query_response[0]["value"][1])
-
-
-@pytest.fixture()
-def windows_dv_with_block_volume_mode(
-    namespace,
-    unprivileged_client,
-    storage_class_with_block_volume_mode,
-):
-    with create_dv(
-        dv_name="test-dv-windows-image",
-        namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        storage_class=storage_class_with_block_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.BLOCK,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
-        yield dv
-
-
-@pytest.fixture()
-def cloned_dv_from_block_to_fs(
-    unprivileged_client,
-    windows_dv_with_block_volume_mode,
-    storage_class_with_filesystem_volume_mode,
-):
-    with create_dv(
-        source=PVC,
-        dv_name="cloned-test-dv-windows-image",
-        namespace=windows_dv_with_block_volume_mode.namespace,
-        source_pvc=windows_dv_with_block_volume_mode.name,
-        source_namespace=windows_dv_with_block_volume_mode.namespace,
-        size=windows_dv_with_block_volume_mode.size,
-        storage_class=storage_class_with_filesystem_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.FILE,
-    ) as cdv:
-        cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_2MIN)
-        yield cdv
-
-
-@pytest.fixture()
-def running_cdi_worker_pod(cloned_dv_from_block_to_fs):
-    for pod_name in [CDI_UPLOAD_TMP_PVC, SOURCE_POD]:
-        wait_for_cdi_worker_pod(
-            pod_name=pod_name,
-            storage_ns_name=cloned_dv_from_block_to_fs.namespace,
-        ).wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def restarted_cdi_dv_clone(
-    unprivileged_client,
-    cloned_dv_from_block_to_fs,
-    running_cdi_worker_pod,
-):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=cloned_dv_from_block_to_fs,
-        pod_prefix=CDI_UPLOAD_TMP_PVC,
-    )
-
-
-@pytest.fixture()
-def ready_uploaded_dv(unprivileged_client, namespace):
-    with create_dv(
-        source=UPLOAD_STR,
-        dv_name=f"{UPLOAD_STR}-dv",
-        namespace=namespace.name,
-        storage_class=py_config["default_storage_class"],
-        client=unprivileged_client,
-    ) as dv:
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-        yield dv
-
-
-@pytest.fixture()
-def restarted_cdi_dv_upload(unprivileged_client, ready_uploaded_dv):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=ready_uploaded_dv,
-        pod_prefix=CDI_UPLOAD_PRIME,
-    )
-    ready_uploaded_dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def zero_clone_dv_restart_count(cloned_dv_from_block_to_fs):
-    fail_if_not_zero_restartcount(dv=cloned_dv_from_block_to_fs)
-
-
-@pytest.fixture()
-def zero_upload_dv_restart_count(ready_uploaded_dv):
-    fail_if_not_zero_restartcount(dv=ready_uploaded_dv)
 
 
 @pytest.fixture()
@@ -681,22 +577,6 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
 
 
 @pytest.fixture()
-def created_fake_data_volume_resource(namespace, admin_client):
-    with DataVolume(
-        name="fake-dv",
-        namespace=namespace.name,
-        url="http://broken-link.test",
-        source="http",
-        size=Images.Rhel.DEFAULT_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-        bind_immediate_annotation=True,
-        api_name="storage",
-        client=admin_client,
-    ) as dv:
-        yield dv
-
-
-@pytest.fixture()
 def initial_metric_value(request, prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
 
@@ -709,3 +589,34 @@ def deleted_vmi(running_metric_vm):
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
+
+
+@pytest.fixture(scope="module")
+def enabled_aaq_in_hco_scope_module(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+    with enabled_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_module,
+    ):
+        yield
+
+
+@pytest.fixture()
+def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota):
+    return application_aware_resource_quota.instance.metadata.creationTimestamp
+
+
+@pytest.fixture()
+def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
+    application_aware_resource_quota_instance = application_aware_resource_quota.instance
+    resource_hard_limit = application_aware_resource_quota_instance.spec.hard
+    resource_used = application_aware_resource_quota_instance.status.used
+    formatted_hard_limit = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_hard_limit.items()
+    }
+    formatted_used_value = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_used.items()
+    }
+    return formatted_hard_limit, formatted_used_value
