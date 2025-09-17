@@ -25,6 +25,7 @@ from urllib3.exceptions import (
 
 from libs.infra.images import (
     BASE_IMAGES_DIR,
+    Alpine,
     Cdi,
     Centos,
     Cirros,
@@ -45,6 +46,7 @@ X86_64 = "x86_64"
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
+        BASE_ALPINE_NAME = "alpine-3.20.1-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -53,6 +55,10 @@ class ArchImages:
             QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
             QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
             DISK_DEMO="cirros-registry-disk-demo",
+        )
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
         Rhel = Rhel(
@@ -97,7 +103,12 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG="cirros-qcow2.img")
 
     class ARM64:
+        BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
         Cirros = Cirros(RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz")
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+        )
 
         Rhel = Rhel(
             RHEL9_5_IMG="rhel-95-aarch64.qcow2",
@@ -111,6 +122,7 @@ class ArchImages:
         Cdi = Cdi()
 
     class S390X:
+        BASE_ALPINE_NAME = "alpine-3.20.1-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -123,6 +135,10 @@ class ArchImages:
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
             DEFAULT_MEMORY_SIZE="1Gi",
+        )
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
         Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
