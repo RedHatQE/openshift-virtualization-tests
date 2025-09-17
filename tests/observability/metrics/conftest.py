@@ -26,7 +26,6 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    fail_if_not_zero_restartcount,
     get_metric_sum_value,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
