@@ -15,6 +15,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
@@ -126,7 +127,7 @@ def internal_http_configmap(namespace, internal_http_service, workers_utility_po
                     "sed -n '/-----BEGIN/,/-----END/p'"
                 )
             )
-        except workers_utility_pods.ExecOnPodError:
+        except ExecOnPodError:
             return None
 
     try:
