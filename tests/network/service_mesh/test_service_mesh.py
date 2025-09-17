@@ -92,7 +92,6 @@ class TestSMPeerAuthentication:
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,
         httpbin_service_service_mesh,
-        outside_mesh_console_ready_vm,
     ):
         # We must specify the full service DNS name since the VM is outside the mesh in a different namespace
         # Format: http://<service_name>.<service_namespace>.svc.cluster.local
@@ -114,7 +113,6 @@ class TestSMPeerAuthentication:
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,
         vm_fedora_with_service_mesh_annotation,
-        outside_mesh_console_ready_vm,
         vmi_http_server,
     ):
         destination_service_spec = vm_fedora_with_service_mesh_annotation.custom_service.instance.spec
