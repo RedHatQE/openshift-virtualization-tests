@@ -904,6 +904,7 @@ MONITORING_METRICS = [
 # Common templates matrix constants
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"
+CONTAINER_DISK_IMAGE_PATH_STR = "container_disk_image_path"
 DV_SIZE_STR = "dv_size"
 TEMPLATE_LABELS_STR = "template_labels"
 OS_STR = "os"
