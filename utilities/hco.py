@@ -2,7 +2,7 @@ import json
 import logging
 from contextlib import contextmanager
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.data_source import DataSource
 from ocp_resources.hyperconverged import HyperConverged
@@ -24,6 +24,8 @@ from utilities.constants import (
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_30MIN,
     StorageClassNames,
@@ -520,3 +522,39 @@ def update_hco_templates_spec(
             name=custom_datasource_name,
             namespace=golden_images_namespace.name,
         ).clean_up()
+
+
+@contextmanager
+def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
+    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
+    if enable_acrq_support:
+        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
+            "allowApplicationAwareClusterResourceQuota": True
+        }
+
+    with ResourceEditorValidateHCOReconcile(
+        patches=patches,
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+    # need to wait when all AAQ system pods removed
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=utilities.infra.get_pod_by_name_prefix,
+        dyn_client=client,
+        pod_prefix="aaq-(controller|server)",
+        namespace=hco_namespace.name,
+        get_all=True,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample:
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Some AAQ pods still present: {sample}")
+        raise
+    except (NotFoundError, ResourceNotFoundError):
+        LOGGER.info("AAQ system PODs removed.")
