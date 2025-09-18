@@ -656,7 +656,7 @@ class VirtualMachineForTests(VirtualMachine):
     def set_instance_type(self):
         if self.vm_instance_type:
             self.res["spec"]["instancetype"] = {
-                "kind": self.vm_instance_type.kind.lower(),  # bug https://issues.redhat.com/browse/MTV-3417
+                "kind": self.vm_instance_type.kind,
                 "name": self.vm_instance_type.name,
             }
         if self.vm_instance_type_infer:
@@ -665,7 +665,7 @@ class VirtualMachineForTests(VirtualMachine):
     def set_vm_preference(self):
         if self.vm_preference:
             self.res["spec"]["preference"] = {
-                "kind": self.vm_preference.kind.lower(),  # bug https://issues.redhat.com/browse/MTV-3417
+                "kind": self.vm_preference.kind,
                 "name": self.vm_preference.name,
             }
         if self.vm_preference_infer:

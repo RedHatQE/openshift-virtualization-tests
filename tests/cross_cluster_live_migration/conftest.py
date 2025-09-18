@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from copy import deepcopy
 
 import pytest
@@ -19,12 +20,17 @@ from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.storage_map import StorageMap
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.cross_cluster_live_migration.utils import wait_for_service_account_token
-from utilities.constants import OS_FLAVOR_FEDORA, REMOTE_KUBECONFIG, TIMEOUT_1MIN, TIMEOUT_30SEC, U1_SMALL
+from utilities.constants import (
+    DATA_SOURCE_STR,
+    OS_FLAVOR_RHEL,
+    REMOTE_KUBECONFIG,
+    TIMEOUT_1MIN,
+    TIMEOUT_30SEC,
+    Images,
+)
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import base64_encode_str, create_ns, get_hyperconverged_resource
 from utilities.storage import data_volume_template_with_source_ref_dict
@@ -263,13 +269,13 @@ def mtv_forklift_services_route_host(admin_client, mtv_namespace):
     """
     Get the forklift-services route host.
     """
-    forklift_services_route_instance = Route(
+    forklift_services_route = Route(
         client=admin_client,
         name="forklift-services",
         namespace=mtv_namespace.name,
-    ).exists
-
-    route_host = forklift_services_route_instance.spec.host
+        ensure_exists=True,
+    )
+    route_host = forklift_services_route.instance.spec.host
     assert route_host
     return route_host
 
@@ -340,9 +346,7 @@ def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_c
     with Provider(
         client=admin_client,
         name="mtv-source-provider",
-        # namespace=namespace.name,
         namespace=mtv_namespace.name,
-        # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
         provider_type=Provider.ProviderType.OPENSHIFT,
         url=remote_cluster_api_url,
         secret_name=remote_cluster_secret.name,
@@ -360,7 +364,6 @@ def mtv_provider_local_cluster(admin_client, mtv_namespace):
     Get a Provider resource for the local cluster.
     "host" Provider is created by default by MTV.
     """
-    # TODO Use custom namespace after https://issues.redhat.com/browse/MTV-3293 fixed
     provider = Provider(client=admin_client, name="host", namespace=mtv_namespace.name, ensure_exists=True)
     provider.wait_for_condition(
         condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
@@ -377,9 +380,7 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
     mapping = [
         {
             "source": {"name": py_config["default_storage_class"]},
-            "destination": {
-                "storageClass": py_config["default_storage_class"]  # TODO Decide on the destination storage class
-            },
+            "destination": {"storageClass": py_config["default_storage_class"]},
         }
     ]
     with StorageMap(
@@ -434,51 +435,49 @@ def mtv_network_map(
 
 
 @pytest.fixture(scope="session")
-def remote_golden_images_namespace(
-    remote_admin_client,
-):
+def remote_golden_images_namespace(remote_admin_client):
     return Namespace(name=py_config["golden_images_namespace"], client=remote_admin_client, ensure_exists=True)
 
 
-@pytest.fixture(scope="session")
-def remote_test_namespace(
-    request,
-    remote_admin_client,
-):
+@pytest.fixture(scope="class")
+def unique_suffix():
+    """
+    Returns last 5 digits of timestamp in string format
+    """
+    return str(int(time.time()))[-5:]
+
+
+@pytest.fixture(scope="class")
+def remote_test_namespace(request, remote_admin_client, unique_suffix):
     yield from create_ns(
         admin_client=remote_admin_client,
-        name="test-cclm-remote-namespace",
+        name=f"test-cclm-remote-namespace-{unique_suffix}",
         teardown=True,
     )
 
 
 @pytest.fixture(scope="class")
-def vm_for_cclm_with_instance_type(
-    remote_admin_client,
-    remote_test_namespace,
-    remote_golden_images_namespace,
-    #   cpu_for_migration,
+def vm_for_cclm_from_template_with_data_source(
+    remote_admin_client, remote_test_namespace, remote_golden_images_namespace
 ):
-    golden_images_fedora_data_source = DataSource(
+    rhel_data_source = DataSource(
         namespace=remote_golden_images_namespace.name,
-        name=OS_FLAVOR_FEDORA,
+        name=py_config["latest_rhel_os_dict"][DATA_SOURCE_STR],
         client=remote_admin_client,
         ensure_exists=True,
     )
     with VirtualMachineForTests(
-        name="vm-with-instance-type",
+        name="vm-from-template-and-data-source",
         namespace=remote_test_namespace.name,
         client=remote_admin_client,
-        os_flavor=OS_FLAVOR_FEDORA,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=golden_images_fedora_data_source,
+            data_source=rhel_data_source,
             storage_class=py_config["default_storage_class"],
         ),
-        #   cpu_model=cpu_for_migration,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we need to change it for the remote cluster
+        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
         yield vm
 
 
@@ -491,7 +490,8 @@ def mtv_migration_plan(
     mtv_storage_map,
     mtv_network_map,
     namespace,
-    vm_for_cclm_with_instance_type,
+    vm_for_cclm_from_template_with_data_source,
+    unique_suffix,
 ):
     """
     Create a Plan resource for MTV cross-cluster live migration.
@@ -499,14 +499,14 @@ def mtv_migration_plan(
     """
     vms = [
         {
-            "id": vm_for_cclm_with_instance_type.instance.metadata.uid,
-            "name": vm_for_cclm_with_instance_type.name,
-            "namespace": vm_for_cclm_with_instance_type.namespace,
+            "id": vm_for_cclm_from_template_with_data_source.instance.metadata.uid,
+            "name": vm_for_cclm_from_template_with_data_source.name,
+            "namespace": vm_for_cclm_from_template_with_data_source.namespace,
         }
     ]
     with Plan(
         client=admin_client,
-        name="cclm-migration-plan",
+        name=f"cclm-migration-plan-{unique_suffix}",
         namespace=mtv_namespace.name,
         network_map_name=mtv_network_map.name,
         network_map_namespace=mtv_network_map.namespace,
@@ -518,7 +518,7 @@ def mtv_migration_plan(
         destination_provider_namespace=mtv_provider_local_cluster.namespace,
         target_namespace=namespace.name,
         virtual_machines_list=vms,
-        type="live",  # Set to "live" for cross-cluster live migration
+        type="live",
         warm_migration=False,
         target_power_state="auto",
     ) as plan:
@@ -531,21 +531,15 @@ def mtv_migration(
     admin_client,
     mtv_namespace,
     mtv_migration_plan,
+    unique_suffix,
 ):
     """
     Create a Migration resource to execute the MTV migration plan.
     This triggers the actual migration process for all VMs in the plan.
-
-    Note: This uses a unique name pattern. If you need generateName behavior,
-    you may need to create the resource differently or use a timestamp suffix.
     """
-    import time
-
-    timestamp = str(int(time.time()))[-5:]  # Last 5 digits of timestamp
-
     with Migration(
         client=admin_client,
-        name=f"{mtv_migration_plan.name}-{timestamp}",  # Create unique name with timestamp
+        name=f"{mtv_migration_plan.name}-{unique_suffix}",
         namespace=mtv_namespace.name,
         plan_name=mtv_migration_plan.name,
         plan_namespace=mtv_migration_plan.namespace,
