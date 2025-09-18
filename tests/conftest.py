@@ -1379,15 +1379,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
 
 
 @pytest.fixture(scope="session")
-def fail_test_if_no_ocs_sc(ocs_storage_class):
-    """
-    Fail test if no OCS storage class available
-    """
-    if not ocs_storage_class:
-        pytest.fail("Failing test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
 def hyperconverged_ovs_annotations_enabled_scope_session(
     admin_client,
     hco_namespace,
@@ -2413,12 +2404,6 @@ def worker_machine1(worker_node1):
 @pytest.fixture(scope="session")
 def is_idms_cluster():
     return not cluster_with_icsp()
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_filesystem_sc(storage_class_with_filesystem_volume_mode):
-    if not storage_class_with_filesystem_volume_mode:
-        pytest.skip("Skip the test: no Storage class with Filesystem volume mode")
 
 
 @pytest.fixture(scope="session")

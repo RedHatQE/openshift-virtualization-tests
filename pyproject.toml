@@ -9,18 +9,19 @@ exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
 
 [tool.ruff.lint.isort]
 order-by-type = true
-known-third-party = ["ocp_resources", "ocp_utilities", "timeout_sampler", "pyhelper_utils"]
+known-third-party = [
+  "ocp_resources",
+  "ocp_utilities",
+  "timeout_sampler",
+  "pyhelper_utils",
+]
 
 [tool.mypy]
 warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = [
-  "libs.*",
-  "tests.network.libs.*",
-  "tests.network.localnet.*"
-]
+module = ["libs.*", "tests.network.libs.*", "tests.network.localnet.*"]
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
@@ -78,17 +79,18 @@ dependencies = [
   "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
+  "openshift-python-wrapper>=11.0.93",
 ]
 
 [project.optional-dependencies]
 # Dependencies for utilities unit testing
 utilities-test = [
-    "pytest>=8.3.3",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.12.0",
-    "pytest-xdist>=3.5.0",
-    "pytest-timeout>=2.2.0",
-    "pytest-watch>=4.2.0",
+  "pytest>=8.3.3",
+  "pytest-cov>=4.1.0",
+  "pytest-mock>=3.12.0",
+  "pytest-xdist>=3.5.0",
+  "pytest-timeout>=2.2.0",
+  "pytest-watch>=4.2.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -123,33 +125,33 @@ addopts = """
 [tool.coverage.run]
 source = ["utilities"]
 omit = [
-    "*/tests/*",
-    "*/__pycache__/*",
-    "*/manifests/*",
-    "*.pyc",
-    "*/test_*.py",
-    "__init__.py",
-    "utilities/unittests/conftest.py",
-    # TODO: Add coverage to these large modules when individual fixes are needed
-    "utilities/hco.py",
-    "utilities/infra.py",
-    "utilities/network.py",
-    "utilities/operator.py",
-    "utilities/storage.py",
-    "utilities/virt.py",
+  "*/tests/*",
+  "*/__pycache__/*",
+  "*/manifests/*",
+  "*.pyc",
+  "*/test_*.py",
+  "__init__.py",
+  "utilities/unittests/conftest.py",
+  # TODO: Add coverage to these large modules when individual fixes are needed
+  "utilities/hco.py",
+  "utilities/infra.py",
+  "utilities/network.py",
+  "utilities/operator.py",
+  "utilities/storage.py",
+  "utilities/virt.py",
 ]
 
 [tool.coverage.report]
 precision = 2
 exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if TYPE_CHECKING:",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "pass",
-    "except ImportError:",
+  "pragma: no cover",
+  "def __repr__",
+  "if TYPE_CHECKING:",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "pass",
+  "except ImportError:",
 ]
 show_missing = true
 skip_covered = false

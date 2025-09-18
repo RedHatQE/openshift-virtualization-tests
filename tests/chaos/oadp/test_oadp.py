@@ -39,3 +39,32 @@ def test_reboot_vm_node_during_backup(
     oadp_backup_in_progress.wait_for_status(
         status=oadp_backup_in_progress.Backup.Status.PARTIALLYFAILED, timeout=TIMEOUT_10MIN
     )
+
+
+@pytest.mark.destructive
+@pytest.mark.chaos
+@pytest.mark.parametrize(
+    "rhel_vm_with_dv_running",
+    [
+        pytest.param(
+            {
+                "vm_name": "vm-node-drain-12020",
+                "rhel_image": RHEL_LATEST["image_name"],
+            },
+            marks=pytest.mark.polarion("CNV-12020"),
+        ),
+    ],
+    indirect=True,
+)
+def test_drain_vm_node_during_backup(
+    oadp_backup_in_progress,
+    drain_vm_source_node,
+):
+    """
+    Drain the worker node where the VM is located during OADP backup using DataMover.
+    Validate that backup eventually Completed.
+    """
+    LOGGER.info(f"Waiting for backup to reach '{oadp_backup_in_progress.Backup.Status.COMPLETED}' during node drain.")
+    oadp_backup_in_progress.wait_for_status(
+        status=oadp_backup_in_progress.Backup.Status.COMPLETED, timeout=TIMEOUT_10MIN
+    )

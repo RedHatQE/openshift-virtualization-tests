@@ -981,23 +981,6 @@ def get_storage_class_with_specified_volume_mode(volume_mode, sc_names):
     LOGGER.error(f"No {sc_with_volume_mode} among {sc_names}")
 
 
-def wait_for_dv_expected_restart_count(dv, expected_result):
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_3MIN,
-            sleep=TIMEOUT_20SEC,
-            func=lambda: dv.instance.get("status", {}).get("restartCount"),
-        ):
-            if sample and sample >= expected_result:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"error while restarting dv: {dv.name} ,expected restartCount: {expected_result}, "
-            f"actual restartCount: {sample}"
-        )
-        raise
-
-
 @contextmanager
 def create_vm_from_dv(
     dv,
@@ -1009,6 +992,7 @@ def create_vm_from_dv(
     cpu_model=None,
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
+    wait_for_interfaces=False,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,
@@ -1023,7 +1007,7 @@ def create_vm_from_dv(
         if start:
             virt_util.running_vm(
                 vm=vm,
-                wait_for_interfaces=False,
+                wait_for_interfaces=wait_for_interfaces,
                 wait_for_cloud_init=wait_for_cloud_init,
             )
         yield vm

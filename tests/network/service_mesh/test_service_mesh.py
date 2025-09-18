@@ -6,17 +6,12 @@ from tests.network.service_mesh.utils import (
     inbound_request,
     run_console_command,
 )
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = pytest.mark.service_mesh
 
 
 @pytest.mark.s390x
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Failing tests, in debug; tracked in CNV-67824",
-    run=False,
-)
 class TestSMTrafficManagement:
     @pytest.mark.polarion("CNV-5782")
     @pytest.mark.single_nic
@@ -51,10 +46,6 @@ class TestSMTrafficManagement:
 
 
 @pytest.mark.s390x
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Failing test, in debug; tracked in CNV-67824",
-    run=False,
-)
 class TestSMPeerAuthentication:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-5784")
@@ -101,7 +92,6 @@ class TestSMPeerAuthentication:
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,
         httpbin_service_service_mesh,
-        outside_mesh_console_ready_vm,
     ):
         # We must specify the full service DNS name since the VM is outside the mesh in a different namespace
         # Format: http://<service_name>.<service_namespace>.svc.cluster.local
@@ -123,7 +113,6 @@ class TestSMPeerAuthentication:
         outside_mesh_vm_fedora_with_service_mesh_annotation,
         peer_authentication_service_mesh_deployment,
         vm_fedora_with_service_mesh_annotation,
-        outside_mesh_console_ready_vm,
         vmi_http_server,
     ):
         destination_service_spec = vm_fedora_with_service_mesh_annotation.custom_service.instance.spec
