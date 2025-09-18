@@ -58,6 +58,12 @@ class Bridge:
 
 
 @dataclass
+class Vlan:
+    id: int
+    base_iface: str
+
+
+@dataclass
 class Interface:
     name: str
     type: str
@@ -65,6 +71,7 @@ class Interface:
     ipv4: IPv4 | None = None
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None
+    vlan: Vlan | None = None
 
 
 @dataclass
