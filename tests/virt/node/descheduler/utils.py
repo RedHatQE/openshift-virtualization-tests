@@ -284,3 +284,14 @@ def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_
     except TimeoutExpiredError:
         LOGGER.error(f"Soft taint was not {'added' if taint_expected else 'removed'} in time")
         raise
+
+
+def assert_psi_values_within_threshold(prometheus):
+    metric_output = prometheus.query_sampler(query="descheduler:combined_utilization_and_pressure:avg1m")
+    psi_values_dict = {item["metric"]["instance"]: float(item["value"][1]) * 100 for item in metric_output}
+
+    # Default deviation threshold is AsymmetricLow, i.e. "average + 10"
+    threshold = sum(psi_values_dict.values()) / len(psi_values_dict) + 10
+    assert all(percentage < threshold for percentage in psi_values_dict.values()), (
+        f"One or more nodes exceeded the threshold '{threshold}': {psi_values_dict}"
+    )
