@@ -298,6 +298,18 @@ def _upload_image(dv_name, namespace, storage_class, local_name, size=None):
 @pytest.mark.sno
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-2015")
+@pytest.mark.parametrize(
+    "upload_file_path",
+    [
+        pytest.param(
+            {
+                "remote_image_dir": Images.Alpine.DIR,
+                "remote_image_name": Images.Alpine.QCOW2_IMG,
+            },
+        ),
+    ],
+    indirect=True,
+)
 def test_successful_concurrent_uploads(
     upload_file_path,
     namespace,
