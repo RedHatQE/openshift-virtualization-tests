@@ -2,9 +2,7 @@ import logging
 import random
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.multi_network_policy import MultiNetworkPolicy
-from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.resource import ResourceEditor
 
 from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
@@ -23,7 +21,7 @@ from tests.network.flat_overlay.utils import (
     start_nc_response_on_vm,
     wait_for_multi_network_policy_resources,
 )
-from utilities.constants import CLUSTER, FLAT_OVERLAY_STR
+from utilities.constants import FLAT_OVERLAY_STR
 from utilities.infra import create_ns
 from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, network_nad
 from utilities.virt import migrate_vm_and_verify
@@ -42,14 +40,6 @@ UDP_HEADER = 8
 IPV4_HEADER = 20
 ETHERNET_HEADER = 14
 SPECIFIC_HOST_MASK = "32"
-
-
-@pytest.fixture(scope="module")
-def network_operator():
-    network_resource = Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO)
-    if network_resource.exists:
-        return network_resource
-    raise ResourceNotFoundError("Network operator wasn't found in the cluster")
 
 
 @pytest.fixture(scope="module")
