@@ -261,7 +261,8 @@ def forklift_controller_resource_scope_package(admin_client, mtv_namespace):
 def enabled_mtv_feature_gate_ocp_live_migration(forklift_controller_resource_scope_package):
     forklift_spec_dict = deepcopy(forklift_controller_resource_scope_package.instance.to_dict()["spec"])
     forklift_spec_dict["feature_ocp_live_migration"] = "true"
-    ResourceEditor(patches={forklift_controller_resource_scope_package: {"spec": forklift_spec_dict}}).update()
+    with ResourceEditor(patches={forklift_controller_resource_scope_package: {"spec": forklift_spec_dict}}):
+        yield
 
 
 @pytest.fixture(scope="module")
