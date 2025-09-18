@@ -26,7 +26,6 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    get_interface_name_from_vm,
     get_metric_sum_value,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
@@ -266,12 +265,12 @@ def generated_network_traffic_windows_vm(windows_vm_for_test):
 
 @pytest.fixture(scope="class")
 def linux_vm_for_test_interface_name(vm_for_test):
-    return get_interface_name_from_vm(vm=vm_for_test)
+    return vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test_interface_name(windows_vm_for_test):
-    return get_interface_name_from_vm(vm=windows_vm_for_test)
+    return windows_vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
