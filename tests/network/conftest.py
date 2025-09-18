@@ -5,6 +5,7 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
+import os
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -208,6 +209,11 @@ def ovn_kubernetes_cluster(admin_client):
     return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
 
 
+@pytest.fixture(scope="session")
+def network_operator():
+    return Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     hosts_common_available_ports,
@@ -312,12 +318,33 @@ def network_sanity(
             else:
                 LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
 
+    def _verify_bgp_env_vars():
+        """Verify if the cluster supports running BGP tests.
+
+        Requires the following environment variables to be set:
+        PRIMARY_NODE_NETWORK_VLAN_TAG: expected VLAN number on the node br-ex interface.
+        EXTERNAL_FRR_STATIC_IPV4: reserved IP in CIDR format for the external FRR pod inside
+                                  PRIMARY_NODE_NETWORK_VLAN_TAG network.
+        """
+        if any(test.get_closest_marker("bgp") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running BGP tests...")
+            required_env_vars = [
+                "PRIMARY_NODE_NETWORK_VLAN_TAG",
+                "EXTERNAL_FRR_STATIC_IPV4",
+            ]
+            missing_env_vars = [var for var in required_env_vars if not os.getenv(var)]
+
+            if missing_env_vars:
+                failure_msgs.append(f"BGP tests require the following environment variables: {missing_env_vars}")
+                return
+
     _verify_multi_nic(request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
     _verify_ipv4()
+    _verify_bgp_env_vars()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
