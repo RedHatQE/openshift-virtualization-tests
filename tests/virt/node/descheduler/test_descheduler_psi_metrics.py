@@ -2,7 +2,11 @@ import logging
 
 import pytest
 
-from tests.virt.node.descheduler.utils import verify_at_least_one_vm_migrated, wait_for_overutilized_soft_taint
+from tests.virt.node.descheduler.utils import (
+    assert_psi_values_within_threshold,
+    verify_at_least_one_vm_migrated,
+    wait_for_overutilized_soft_taint,
+)
 from utilities.constants import TIMEOUT_15MIN
 
 LOGGER = logging.getLogger(__name__)
@@ -49,3 +53,10 @@ class TestDeschedulerLoadAwareRebalancing:
         all_existing_migrations_completed,
     ):
         wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False, wait_timeout=TIMEOUT_15MIN)
+
+    @pytest.mark.polarion("CNV-12346")
+    def test_psi_values_within_threshold(
+        self,
+        prometheus,
+    ):
+        assert_psi_values_within_threshold(prometheus=prometheus)
