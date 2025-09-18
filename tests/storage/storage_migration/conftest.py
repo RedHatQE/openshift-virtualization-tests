@@ -76,7 +76,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
         live_migrate=True,
         namespaces=[namespace.name],
         refresh=False,
-        teardown=False,
     ) as mig_plan:
         mig_plan.wait_for_condition(
             condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -92,7 +91,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
                 pvc_dict["selection"]["action"] = "skip"
         ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
-        mig_plan.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -105,7 +103,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
-        teardown=False,
     ) as mig_migration:
         mig_migration.wait_for_condition(
             condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -117,7 +114,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
             sleep_time=TIMEOUT_5SEC,
         )
         yield mig_migration
-        mig_migration.clean_up()
 
 
 @pytest.fixture(scope="class")
