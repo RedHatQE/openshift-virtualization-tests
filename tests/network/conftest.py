@@ -30,6 +30,7 @@ from utilities.infra import (
     exit_pytest_execution,
     get_deployment_by_name,
     get_node_selector_dict,
+    wait_for_pods_running,
 )
 from utilities.network import (
     get_cluster_cni_type,
@@ -210,6 +211,7 @@ def ovn_kubernetes_cluster(admin_client):
 
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
+    admin_client,
     hosts_common_available_ports,
     junitxml_plugin,
     request,
@@ -219,6 +221,8 @@ def network_sanity(
     sriov_workers,
     ipv4_supported_cluster,
     conformance_tests,
+    is_baremetal_or_psi_cluster,
+    nmstate_namespace,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -228,8 +232,8 @@ def network_sanity(
     failure_msgs = []
     collected_tests = request.session.items
 
-    def _verify_multi_nic(request=request):
-        marker_args = request.config.getoption("-m")
+    def _verify_multi_nic(_request):
+        marker_args = _request.config.getoption("-m")
         if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
             LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
             return
@@ -312,12 +316,22 @@ def network_sanity(
             else:
                 LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
 
-    _verify_multi_nic(request=request)
+    def _verify_nmstate_running_pods(_admin_client, namespace):
+        LOGGER.info("Verifying all pods in nmstate namespace are running")
+        if not_running_pods := wait_for_pods_running(
+            admin_client=_admin_client, namespace=namespace, raise_exception=False
+        ):
+            failure_msgs.append(f"The {not_running_pods} pods are not running in nmstate namespace '{namespace.name}'")
+
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
     _verify_ipv4()
+
+    if is_baremetal_or_psi_cluster:
+        _verify_multi_nic(_request=request)
+        _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
