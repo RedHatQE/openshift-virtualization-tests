@@ -91,7 +91,6 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
             marks=[
                 pytest.mark.polarion("CNV-11845"),
                 pytest.mark.ipv6,
-                pytest.mark.jira("CNV-58529", run=True),
             ],
         ),
     ],
