@@ -4,7 +4,6 @@ import shlex
 
 import pytest
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
@@ -25,26 +24,20 @@ from tests.observability.metrics.utils import (
     ZERO_CPU_CORES,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    fail_if_not_zero_restartcount,
     metric_result_output_dict_by_mountpoint,
-    restart_cdi_worker_pod,
     wait_for_metric_vmi_request_cpu_cores_output,
 )
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms
 from utilities import console
 from utilities.constants import (
-    CDI_UPLOAD_TMP_PVC,
     NODE_STR,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
-    PVC,
-    SOURCE_POD,
     SSP_OPERATOR,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
@@ -52,16 +45,14 @@ from utilities.constants import (
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import create_ns, get_http_image_url, get_node_selector_dict, get_pod_by_name_prefix, unique_name
+from utilities.infra import create_ns, get_node_selector_dict, get_pod_by_name_prefix, unique_name
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
-    create_dv,
     data_volume_template_with_source_ref_dict,
     is_snapshot_supported_by_sc,
     vm_snapshot,
-    wait_for_cdi_worker_pod,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -200,101 +191,6 @@ def virt_up_metrics_values(request, prometheus):
         query=request.param,
     )
     return int(query_response[0]["value"][1])
-
-
-@pytest.fixture()
-def windows_dv_with_block_volume_mode(
-    namespace,
-    unprivileged_client,
-    storage_class_with_block_volume_mode,
-):
-    with create_dv(
-        dv_name="test-dv-windows-image",
-        namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        storage_class=storage_class_with_block_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.BLOCK,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
-        yield dv
-
-
-@pytest.fixture()
-def cloned_dv_from_block_to_fs(
-    unprivileged_client,
-    windows_dv_with_block_volume_mode,
-    storage_class_with_filesystem_volume_mode,
-):
-    with create_dv(
-        source=PVC,
-        dv_name="cloned-test-dv-windows-image",
-        namespace=windows_dv_with_block_volume_mode.namespace,
-        source_pvc=windows_dv_with_block_volume_mode.name,
-        source_namespace=windows_dv_with_block_volume_mode.namespace,
-        size=windows_dv_with_block_volume_mode.size,
-        storage_class=storage_class_with_filesystem_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.FILE,
-    ) as cdv:
-        cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_2MIN)
-        yield cdv
-
-
-@pytest.fixture()
-def running_cdi_worker_pod(cloned_dv_from_block_to_fs):
-    for pod_name in [CDI_UPLOAD_TMP_PVC, SOURCE_POD]:
-        wait_for_cdi_worker_pod(
-            pod_name=pod_name,
-            storage_ns_name=cloned_dv_from_block_to_fs.namespace,
-        ).wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def restarted_cdi_dv_clone(
-    unprivileged_client,
-    cloned_dv_from_block_to_fs,
-    running_cdi_worker_pod,
-):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=cloned_dv_from_block_to_fs,
-        pod_prefix=CDI_UPLOAD_TMP_PVC,
-    )
-
-
-@pytest.fixture()
-def ready_uploaded_dv(unprivileged_client, namespace):
-    with create_dv(
-        source=UPLOAD_STR,
-        dv_name=f"{UPLOAD_STR}-dv",
-        namespace=namespace.name,
-        storage_class=py_config["default_storage_class"],
-        client=unprivileged_client,
-    ) as dv:
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-        yield dv
-
-
-@pytest.fixture()
-def restarted_cdi_dv_upload(unprivileged_client, ready_uploaded_dv):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=ready_uploaded_dv,
-        pod_prefix=CDI_UPLOAD_PRIME,
-    )
-    ready_uploaded_dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def zero_clone_dv_restart_count(cloned_dv_from_block_to_fs):
-    fail_if_not_zero_restartcount(dv=cloned_dv_from_block_to_fs)
-
-
-@pytest.fixture()
-def zero_upload_dv_restart_count(ready_uploaded_dv):
-    fail_if_not_zero_restartcount(dv=ready_uploaded_dv)
 
 
 @pytest.fixture()
