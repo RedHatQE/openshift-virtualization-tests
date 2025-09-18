@@ -372,7 +372,7 @@ def mtv_provider_local_cluster(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
-def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv_provider_remote_cluster):
+def mtv_storage_map(admin_client, mtv_provider_local_cluster, mtv_provider_remote_cluster):
     """
     Create a StorageMap resource for MTV migration.
     Maps storage classes between source and destination clusters.
@@ -400,14 +400,7 @@ def mtv_storage_map(admin_client, mtv_namespace, mtv_provider_local_cluster, mtv
 
 
 @pytest.fixture(scope="module")
-def mtv_network_map(
-    admin_client,
-    mtv_namespace,
-    mtv_provider_local_cluster,
-    mtv_provider_remote_cluster,
-    network_for_live_migration_local_cluster,
-    hco_namespace,
-):
+def mtv_network_map(admin_client, mtv_provider_local_cluster, mtv_provider_remote_cluster):
     """
     Create a NetworkMap resource for MTV migration.
     Maps networks between source and destination clusters.
