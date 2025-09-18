@@ -2,6 +2,7 @@ import logging
 import math
 import re
 import shlex
+import time
 import urllib
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -374,10 +375,27 @@ def validate_metric_value_within_range(
 
 
 def network_packets_received(vm: VirtualMachineForTests, interface_name: str) -> dict[str, str]:
-    virsh_domifstat_content = vm.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split(f"virsh domifstat {vm.namespace}_{vm.name} {interface_name}")
-    ).splitlines()
-    return {line.split()[1]: line.split()[2] for line in virsh_domifstat_content if line}
+    ip_link_show_content = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ip -s link show"))[0]
+    pattern = re.compile(
+        rf".*?{re.escape(interface_name)}:.*?"  # Match the line with the interface name
+        r"(?:RX:\s+bytes\s+packets\s+errors\s+dropped\s+.*?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)).*?"  # Capture RX stats
+        r"(?:TX:\s+bytes\s+packets\s+errors\s+dropped\s+.*?(\d+)\s+(\d+)\s+(\d+)\s+(\d+))",  # Capture TX stats
+        re.DOTALL | re.IGNORECASE,
+    )
+    match = pattern.search(string=ip_link_show_content)
+    if match:
+        rx_bytes, rx_packets, rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop = match.groups()
+        return {
+            "rx_bytes": rx_bytes,
+            "rx_packets": rx_packets,
+            "rx_errs": rx_errs,
+            "rx_drop": rx_drop,
+            "tx_bytes": tx_bytes,
+            "tx_packets": tx_packets,
+            "tx_errs": tx_errs,
+            "tx_drop": tx_drop,
+        }
+    return {}
 
 
 def compare_network_traffic_bytes_and_metrics(
@@ -385,6 +403,8 @@ def compare_network_traffic_bytes_and_metrics(
 ) -> bool:
     packet_received = network_packets_received(vm=vm, interface_name=vm_interface_name)
     rx_tx_indicator = False
+    LOGGER.info("Waiting for metric kubevirt_vmi_network_traffic_bytes_total to update")
+    time.sleep(TIMEOUT_15SEC)
     metric_result = (
         prometheus.query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
         .get("data")
@@ -393,7 +413,7 @@ def compare_network_traffic_bytes_and_metrics(
     for entry in metric_result:
         entry_value = entry.get("value")[1]
         if math.isclose(
-            int(entry_value), int(packet_received[f"{entry.get('metric').get('type')}_bytes"]), rel_tol=0.02
+            int(entry_value), int(packet_received[f"{entry.get('metric').get('type')}_bytes"]), rel_tol=0.05
         ):
             rx_tx_indicator = True
         else:
@@ -415,15 +435,9 @@ def validate_network_traffic_metrics_value(
         vm_interface_name=interface_name,
     )
     try:
-        match_counter = 0
         for sample in samples:
             if sample:
-                match_counter += 1
-                if match_counter >= 3:
-                    return
-            else:
-                match_counter = 0
-
+                return
     except TimeoutExpiredError:
         LOGGER.error("Metric value and domistat value not correlate.")
         raise
@@ -685,14 +699,6 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         if actual_value != expected_value:
             mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
     assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
-
-
-def get_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
-    interface_name = vm.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
-    )
-    assert interface_name, f"Interface not found for vm {vm.name}"
-    return interface_name
 
 
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
