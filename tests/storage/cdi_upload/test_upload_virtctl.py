@@ -157,20 +157,20 @@ def test_virtctl_image_upload_with_ca(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3724")
 def test_virtctl_image_upload_dv(
-    storage_class_matrix_immediate_matrix__module__,
-    download_image,
     namespace,
+    storage_class_name_immediate_binding_scope_module,
+    download_image,
 ):
     """
     Check that upload a local disk image to a newly created DataVolume
     """
-    dv_name = f"cnv-3724-{[*storage_class_matrix_immediate_matrix__module__][0]}"
+    dv_name = f"cnv-3724-{storage_class_name_immediate_binding_scope_module}"
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
-        storage_class=[*storage_class_matrix_immediate_matrix__module__][0],
+        storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
@@ -436,10 +436,10 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     indirect=["uploaded_dv_with_immediate_binding"],
 )
 def test_successful_vm_from_uploaded_dv_windows(
-    uploaded_dv_with_immediate_binding,
     unprivileged_client,
-    vm_params,
     namespace,
+    uploaded_dv_with_immediate_binding,
+    vm_params,
 ):
     storage_utils.create_windows_vm_validate_guest_agent_info(
         dv=uploaded_dv_with_immediate_binding,
