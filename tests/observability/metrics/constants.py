@@ -1,9 +1,5 @@
 KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE = "kubevirt_ssp_template_validator_rejected_increase"
 
-KUBEVIRT_CNAO_OPERATOR_UP = "kubevirt_cnao_operator_up"
-KUBEVIRT_CNAO_CR_READY = "kubevirt_cnao_cr_ready"
-KUBEVIRT_CNAO_CR_KUBEMACPOOL_DEPLOYED = "kubevirt_cnao_cr_kubemacpool_deployed"
-
 KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI = "kubevirt_console_active_connections{{vmi='{vm_name}'}}"
 KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI = "kubevirt_vnc_active_connections{{vmi='{vm_name}'}}"
 
@@ -18,17 +14,12 @@ KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT = (
 )
 KUBEVIRT_VMI_INFO = "kubevirt_vmi_info{{name='{vm_name}'}}"
 KUBEVIRT_VM_INFO = "kubevirt_vm_info{{name='{vm_name}'}}"
-KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES = (
-    "kubevirt_vmi_memory_available_bytes{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
-)
 KUBEVIRT_VMI_STATUS_ADDRESSES = "kubevirt_vmi_status_addresses{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES = "kubevirt_vmi_migration_data_processed_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES = "kubevirt_vmi_migration_data_remaining_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES = "kubevirt_vmi_migration_disk_transfer_rate_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES = "kubevirt_vmi_migration_dirty_memory_rate_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES = "kubevirt_vm_disk_allocated_size_bytes{{name='{vm_name}'}}"
-KUBEVIRT_VMI_NETWORK_RECEIVE_PACKETS_TOTAL = "kubevirt_vmi_network_receive_packets_total"
-KUBEVIRT_VMI_NETWORK_TRANSMIT_PACKETS_TOTAL = "kubevirt_vmi_network_transmit_packets_total"
 KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_scheduling_phase"
 KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE = "kubevirt_vmi_migrations_in_running_phase"
 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_bytes{{name='{vm_name}'}}"

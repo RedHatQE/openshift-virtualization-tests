@@ -3,7 +3,6 @@ import math
 import re
 import shlex
 import urllib
-from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Generator, Optional
@@ -13,7 +12,6 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
@@ -40,8 +38,6 @@ from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_8MIN,
-    TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
@@ -51,7 +47,6 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import (
-    ExecCommandOnPod,
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
@@ -59,28 +54,18 @@ from utilities.infra import (
     get_pod_by_name_prefix,
 )
 from utilities.monitoring import get_metrics_value
-from utilities.network import assert_ping_successful
 from utilities.storage import wait_for_dv_expected_restart_count
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
 CURL_QUERY = "curl -k https://localhost:8443/metrics"
-PING = "ping"
-JOB_NAME = "kubevirt-prometheus-metrics"
-TOPK_VMS = 3
 SINGLE_VM = 1
 ONE_CPU_CORES = 1
 ZERO_CPU_CORES = 0
 COUNT_TWO = 2
 COUNT_THREE = 3
 TOTAL_4_ITERATIONS = 4
-
-
-def get_mutation_component_value_from_prometheus(prometheus: Prometheus, component_name: str) -> int:
-    query = f'kubevirt_hco_out_of_band_modifications_total{{component_name="{component_name}"}}'
-    metric_results = prometheus.query_sampler(query=query)
-    return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
 def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
@@ -167,90 +152,6 @@ def assert_vm_metric(prometheus: Prometheus, query: str, vm_name: str):
     assert get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm_name), (
         f"query: {query} has no result for vm: {vm_name}"
     )
-
-
-def get_hco_cr_modification_alert_summary_with_count(prometheus: Prometheus, component_name: str) -> str | None:
-    """This function will check the 'KubeVirtCRModified'
-    an alert summary generated after the 'kubevirt_hco_out_of_band_modifications_total' metrics triggered.
-
-    Args:
-        prometheus (:obj:`Prometheus`): Prometheus object.
-
-    Returns:
-        String: Summary of the 'KubeVirtCRModified' alert contains count.
-
-        example:
-        Alert summary for single change:
-        "1 out-of-band CR modifications were detected in the last 10 minutes."
-    """
-
-    # Find an alert "KubeVirtCRModified" and return it's summary.
-    def _get_summary():
-        alerts = prometheus.get_all_alerts_by_alert_name(alert_name=KUBEVIRT_CR_ALERT_NAME)
-        for alert in alerts:
-            if component_name == alert["labels"]["component_name"]:
-                return alert.get("annotations", {}).get("summary")
-
-    # Alert is not updated immediately. Wait for 300 seconds.
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=2,
-        func=_get_summary,
-    )
-    try:
-        for alert_summary in samples:
-            if alert_summary is not None:
-                return alert_summary
-    except TimeoutError:
-        LOGGER.error(f"Summary is not present for Alert {KUBEVIRT_CR_ALERT_NAME}")
-    return None
-
-
-def wait_for_summary_count_to_be_expected(
-    prometheus: Prometheus, component_name: str, expected_summary_value: int
-) -> None:
-    """This function will wait for the expected summary to match with
-    the summary message from component specific alert.
-
-    Args:
-        prometheus (:obj:`Prometheus`): Prometheus object.
-        component_name (String): Name of the component.
-        expected_summary_value (Integer): Expected value of the component after update.
-
-        example:
-        Alert summary for 3 times change in component:
-        "3 out-of-band CR modifications were detected in the last 10 minutes."
-    """
-
-    def extract_value_from_message(message):
-        mo = re.search(
-            pattern=r"(?P<count>\d+) out-of-band CR modifications were detected in the last (?P<time>\d+) minutes.",
-            string=message,
-        )
-        if mo:
-            match_dict = mo.groupdict()
-            return int(match_dict["count"])
-
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=5,
-        func=get_hco_cr_modification_alert_summary_with_count,
-        prometheus=prometheus,
-        component_name=component_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                value = extract_value_from_message(message=sample)
-                if value == expected_summary_value:
-                    return
-    except TimeoutError:
-        LOGGER.error(
-            f"Summary count did not update for component {component_name}: "
-            f"current={sample} expected={expected_summary_value}"
-        )
-        raise
 
 
 def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
@@ -342,148 +243,6 @@ def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dic
     )
 
 
-def get_topk_query(metric_names: list[str], time_period: str = "5m") -> str:
-    """
-    Creates a topk query string based on metric_name
-
-    Args:
-        metric_names (list): list of strings
-
-        time_period (str): indicates the time period over which top resources would be considered
-
-    Returns:
-        str: query string to be used for the topk query
-    """
-    query_parts = [f" sum by (name, namespace) (rate({metric}[{time_period}]))" for metric in metric_names]
-    return f"topk(3, {(' + ').join(query_parts)})"
-
-
-def assert_topk_vms(prometheus: Prometheus, query: str, vm_list: list, timeout: int = TIMEOUT_8MIN) -> list | None:
-    """
-    Performs a topk query against prometheus api, waits until it has expected result entries and returns the
-    results
-
-    Args:
-        prometheus (Prometheus Object): Prometheus object.
-        query (str): Prometheus query string
-        vm_list (list): list of vms to show up in topk results
-        timeout (int): Timeout value in seconds
-
-    Returns:
-        list: List of results
-
-    Raises:
-        TimeoutExpiredError: on mismatch between number of vms founds in topk query results vs expected number of vms
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=5,
-        func=prometheus.query_sampler,
-        query=urllib.parse.quote_plus(query),
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if len(sample) == len(vm_list):
-                vms_found = [
-                    entry["metric"]["name"] for entry in sample if entry.get("metric", {}).get("name") in vm_list
-                ]
-                if Counter(vms_found) == Counter(vm_list):
-                    return sample
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f'Expected vms: "{vm_list}" for prometheus query:'
-            f' "{query}" does not match with actual results: {sample} after {timeout} seconds.'
-        )
-        raise
-    return None
-
-
-def run_vm_commands(vms: list, commands: list) -> None:
-    """
-    This helper function, runs commands on vms to generate metrics.
-    Args:
-        vms (list): List of VirtualMachineForTests
-        commands (list): Used to execute commands against nodes (where created vms are scheduled)
-
-    """
-    commands = [shlex.split(command) for command in commands]
-    LOGGER.info(f"Commands: {commands}")
-    for vm in vms:
-        if any(command[0].startswith("ping") for command in commands):
-            assert_ping_successful(src_vm=vm, dst_ip="localhost", packet_size=10000, count=20)
-        else:
-            run_ssh_commands(host=vm.ssh_exec, commands=commands)
-
-
-def run_node_command(vms: list, command: str, utility_pods: list) -> None:
-    """
-    This is a helper function to run a command against a node associated with a given virtual machine, to prepare
-    it for metric generation commands.
-
-    Args:
-        vms: (List): List of VirtualMachineForTests objects
-        utility_pods (list): Utility pods
-        command (str): Command to be run against a given node
-
-    Raise:
-        Asserts on command execution failure
-    """
-    # If multiple vms are placed on the same node, we only want to run command against the node once.
-    # So we need to collect the node names first
-    node_names = []
-    for vm in vms:
-        node_name = vm.vmi.node.name
-        LOGGER.info(f"For vm {vm.name} is placed on node: {node_name}")
-        if node_name not in node_names:
-            node_names.append(node_name)
-    for node_name in node_names:
-        LOGGER.info(f'Running command "{command}" on node {node_name}')
-        ExecCommandOnPod(utility_pods=utility_pods, node=node_name).exec(command=command)
-
-
-def assert_prometheus_metric_values(
-    prometheus: Prometheus, query: str, vm: VirtualMachineForTests, timeout: int = TIMEOUT_5MIN
-) -> None:
-    """
-    Compares metric query result with expected values
-
-    Args:
-        prometheus (Prometheus Object): Prometheus object.
-        query (str): Prometheus query string
-        vm (VirtualMachineForTests): Vm that is expected to show up in Prometheus query results
-        timeout (int): Timeout value in seconds
-
-    Raise:
-        Asserts on premetheus results not matching expected result
-    """
-    results = get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm.name, timeout=timeout)
-    result_entry = []
-    if results:
-        result_entry = [
-            result["metric"] for result in results if result.get("metric") and result["metric"]["name"] == vm.name
-        ]
-
-    assert result_entry, f'Prometheus query: "{query}" result: {results} does not include expected vm: {vm.name}'
-
-    expected_result = {
-        "job": JOB_NAME,
-        "service": JOB_NAME,
-        "container": VIRT_HANDLER,
-        "kubernetes_vmi_label_kubevirt_io_vm": vm.name,
-        "kubernetes_vmi_label_kubevirt_io_nodeName": vm.vmi.node.name,
-        "namespace": vm.namespace,
-        "pod": vm.vmi.virt_handler_pod,
-    }
-    metric_value_mismatch = [
-        {key: result.get(key, "")}
-        for result in result_entry
-        for key in expected_result
-        if not result.get(key, "") or result[key] != expected_result[key]
-    ]
-    assert metric_value_mismatch, f"For Prometheus query {query} data validation failed for: {metric_value_mismatch}"
-
-
 def is_swap_enabled(vm: VirtualMachineForTests, swap_name: str = r"\/dev\/zram0") -> bool:
     out = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("swapon --raw"))
     LOGGER.info(f"Swap: {out}")
@@ -514,45 +273,6 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
 
         assert is_swap_enabled(vm=vm, swap_name=swap_name), f"Failed to enable swap memory {swap_name} on {vm.name}"
     vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
-
-
-def get_prometheus_monitoring_pods(admin_client: DynamicClient) -> list:
-    """
-    Get all Prometheus pods within the openshift-monitoring namespace
-
-    Args:
-        admin_client (DynamicClient): DynamicClient object
-
-    Returns:
-        list: list of all prometheus pods within the openshift-monitoring namespace
-    """
-    prometheus_pods_monitoring_namespace_list = list(
-        Pod.get(
-            dyn_client=admin_client,
-            namespace="openshift-monitoring",
-            label_selector=(
-                f"{Resource.ApiGroup.APP_KUBERNETES_IO}/name in (prometheus-operator, prometheus, prometheus-adapter)"
-            ),
-        )
-    )
-    assert prometheus_pods_monitoring_namespace_list, "no matching pods found on the cluster"
-    return prometheus_pods_monitoring_namespace_list
-
-
-def get_not_running_prometheus_pods(admin_client) -> dict[str, str]:
-    """
-    Get all Prometheus pods that are not in Running status
-
-    Args:
-        admin_client (DynamicClient): DynamicClient object
-
-    Returns:
-        dict: dict of prometheus pods' name (key) and status (value) that are not in Running status
-    """
-    prometheus_pods_monitoring_namespace_list = get_prometheus_monitoring_pods(admin_client=admin_client)
-    return {
-        pod.name: pod.status for pod in prometheus_pods_monitoring_namespace_list if pod.status != Pod.Status.RUNNING
-    }
 
 
 def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
@@ -594,28 +314,6 @@ def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: V
     )
 
 
-def get_vmi_memory_domain_metric_value_from_prometheus(prometheus: Prometheus, vmi_name: str, query: str) -> int:
-    metric_query_output = prometheus.query(query=query)["data"]["result"]
-    LOGGER.info(f"Query {query} Output: {metric_query_output}")
-    value = [
-        int(query_ouput["value"][1])
-        for query_ouput in metric_query_output
-        if query_ouput["metric"].get("name") == vmi_name
-    ]
-    assert value, f"Metrics: '{query}' did not return any value, Current Metrics data: {metric_query_output}"
-    return value[0]
-
-
-def get_vmi_dommemstat_from_vm(vmi_dommemstat: str, domain_memory_string: str) -> int:
-    # Find string from list in the dommemstat and convert to bytes from KiB.
-    vmi_domain_memory_match = re.match(rf".*(?:^|\n|){domain_memory_string} (\d+).*", vmi_dommemstat, re.DOTALL)
-    assert vmi_domain_memory_match, (
-        f"No match '{domain_memory_string}' found for VM's domain memory in VMI's dommemstat {vmi_dommemstat}"
-    )
-    matched_vmi_domain_memory_bytes = bitmath.KiB(int(vmi_domain_memory_match.group(1))).to_Byte()
-    return matched_vmi_domain_memory_bytes
-
-
 def get_resource_object(
     admin_client: DynamicClient, related_objects: list, resource_kind, resource_name: str
 ) -> Resource | None:
@@ -634,24 +332,6 @@ def get_resource_object(
             )
 
     return None
-
-
-def wait_for_metric_reset(prometheus: Prometheus, metric_name: str, timeout: int = TIMEOUT_4MIN) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=lambda: prometheus.query_sampler(query=metric_name),
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                return
-            else:
-                LOGGER.info(f"metric: {metric_name} value is: {sample}, waiting for metric to reset")
-    except TimeoutExpiredError:
-        LOGGER.info(f"Operator metrics value: {sample}, expected is None")
-        raise
 
 
 def restart_cdi_worker_pod(unprivileged_client: DynamicClient, dv: DataVolume, pod_prefix: str) -> None:
@@ -773,53 +453,6 @@ def validate_network_traffic_metrics_value(
 
     except TimeoutExpiredError:
         LOGGER.error("Metric value and domistat value not correlate.")
-        raise
-
-
-def validate_vmi_network_receive_and_transmit_packets_total(
-    metric_dict: dict[str, str],
-    vm: VirtualMachineForTests,
-    vm_interface_name: str,
-    prometheus: Prometheus,
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_4MIN,
-        sleep=TIMEOUT_10SEC,
-        func=network_packets_received,
-        vm=vm,
-        interface_name=vm_interface_name,
-    )
-    sample_value = None
-    packets_kind = metric_dict["packets_kind"]
-    metric_packets_value = None
-    values_comparing_history = {}
-    try:
-        match_counter = 0
-        for sample in samples:
-            if sample:
-                metric_packets_value = get_metrics_value(
-                    prometheus=prometheus, metrics_name=f"{metric_dict['metric_name']}{{name='{vm.name}'}}"
-                )
-                sample_value = sample[packets_kind]
-                values_comparing_history[datetime.now()] = (
-                    f"Packet kind {packets_kind} value from vm: {sample_value}, "
-                    f"metric value for packet kind: {metric_packets_value}"
-                )
-                if math.isclose(int(sample_value), int(metric_packets_value), rel_tol=0.02):
-                    match_counter += 1
-                    LOGGER.info(
-                        f"Packet kind {packets_kind} and metric value for packet kind match for {match_counter} times"
-                    )
-                    if match_counter >= 3:
-                        LOGGER.info(f"Packet kind {packets_kind} and metric value for packet kind match!")
-                        return
-                else:
-                    match_counter = 0
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Expected metric packets value for {packets_kind}: {sample_value}, actual: {metric_packets_value} \n "
-            f"History : {values_comparing_history}"
-        )
         raise
 
 
