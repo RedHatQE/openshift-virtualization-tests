@@ -422,12 +422,6 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 
 
 @pytest.fixture()
-def skip_if_sc_volume_binding_mode_is_wffc(storage_class_name_scope_module):
-    if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
-        pytest.skip("Test does not support storage class with WaitForFirstConsumer binding mode")
-
-
-@pytest.fixture()
 def cirros_vm_name(request):
     return request.param["vm_name"]
 
@@ -602,6 +596,11 @@ def storage_class_name_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="module")
 def storage_class_name_scope_module(storage_class_matrix__module__):
     return [*storage_class_matrix__module__][0]
+
+
+@pytest.fixture(scope="module")
+def storage_class_name_immediate_binding_scope_module(storage_class_matrix_immediate_matrix__module__):
+    return [*storage_class_matrix_immediate_matrix__module__][0]
 
 
 @pytest.fixture(scope="session")
