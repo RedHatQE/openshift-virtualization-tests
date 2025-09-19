@@ -62,3 +62,12 @@ def wffc_matrix(matrix):
         if storage_class[storage_class_name]["wffc"] is True:
             matrix_to_return.append(storage_class)
     return matrix_to_return
+
+
+def immediate_matrix(matrix):
+    matrix_to_return = []
+    for storage_class in matrix:
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["wffc"] is False:
+            matrix_to_return.append(storage_class)
+    return matrix_to_return
