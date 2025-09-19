@@ -16,6 +16,7 @@ from utilities.virt import check_migration_process_after_node_drain, node_mgmt_c
 LOGGER = logging.getLogger(__name__)
 WHEREABOUTS_NETWORK = "10.200.5.0/24"
 TCPDUMP_LOG_FILE = "/tmp/mig_tcpdump.log"
+MULTIFD_LOG_MESSAGE = "Enabling migration capability 'multifd'"
 
 
 class MACVLANNetworkAttachmentDefinition(NetworkAttachmentDefinition):
@@ -188,3 +189,8 @@ def update_hco_migration_config(client, hco_ns_name, param, value):
     editor.update(backup_resources=True)
     yield
     _wait_restore(_resource_editor=editor)
+
+
+def assert_multifd_capability_in_logs(source_pod, expected_in_log):
+    message_in_log = MULTIFD_LOG_MESSAGE in source_pod.log(container="compute")
+    assert message_in_log == expected_in_log, f"multifd should be {'enabled' if expected_in_log else 'disabled'}"

@@ -2,14 +2,9 @@ import logging
 
 import pytest
 
+from tests.virt.node.migration_and_maintenance.utils import assert_multifd_capability_in_logs
+
 LOGGER = logging.getLogger(__name__)
-
-MULTIFD_LOG_MESSAGE = "Enabling migration capability 'multifd'"
-
-
-def assert_multifd_capability_in_logs(source_pod, expected_in_log):
-    message_in_log = MULTIFD_LOG_MESSAGE in source_pod.log(container="compute")
-    assert message_in_log == expected_in_log, f"multifd should be {'enabled' if expected_in_log else 'disabled'}"
 
 
 @pytest.mark.usefixtures("updated_multifd_vm_log_verbosity_config")
