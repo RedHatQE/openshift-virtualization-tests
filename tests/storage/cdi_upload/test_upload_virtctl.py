@@ -157,21 +157,20 @@ def test_virtctl_image_upload_with_ca(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3724")
 def test_virtctl_image_upload_dv(
-    skip_if_sc_volume_binding_mode_is_wffc,
-    download_image,
     namespace,
-    storage_class_name_scope_module,
+    storage_class_name_immediate_binding_scope_module,
+    download_image,
 ):
     """
     Check that upload a local disk image to a newly created DataVolume
     """
-    dv_name = f"cnv-3724-{storage_class_name_scope_module}"
+    dv_name = f"cnv-3724-{storage_class_name_immediate_binding_scope_module}"
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
-        storage_class=storage_class_name_scope_module,
+        storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
@@ -417,7 +416,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    ("uploaded_dv", "vm_params"),
+    ("uploaded_dv_with_immediate_binding", "vm_params"),
     [
         pytest.param(
             {
@@ -434,17 +433,16 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
             marks=(pytest.mark.polarion("CNV-3410")),
         ),
     ],
-    indirect=["uploaded_dv"],
+    indirect=["uploaded_dv_with_immediate_binding"],
 )
 def test_successful_vm_from_uploaded_dv_windows(
-    skip_if_sc_volume_binding_mode_is_wffc,
-    uploaded_dv,
     unprivileged_client,
-    vm_params,
     namespace,
+    uploaded_dv_with_immediate_binding,
+    vm_params,
 ):
     storage_utils.create_windows_vm_validate_guest_agent_info(
-        dv=uploaded_dv,
+        dv=uploaded_dv_with_immediate_binding,
         namespace=namespace,
         unprivileged_client=unprivileged_client,
         vm_params=vm_params,
