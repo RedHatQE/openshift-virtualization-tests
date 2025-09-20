@@ -1,6 +1,10 @@
 name: "Component Builder Check"
 on:
-  pull_request:
+  # Wait for event on pull_request_target so that this action
+  # can access repo secrets: QUAY_USER & QUAY_TOKEN
+  pull_request_target:
+    permissions:
+      contents: read
     paths:
       - 'containers/fedora/**'
 
@@ -8,55 +12,119 @@ on:
   workflow_dispatch:
 
 jobs:
-  guest-fedora-amd64:
+  build-guest-fedora:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./containers/fedora
+    strategy:
+      matrix:
+        CPU_ARCH: [x86_64, aarch64, s390x]
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
-      FEDORA_VERSION: 41
-      CPU_ARCH: amd64
+      CPU_ARCH: ${{ matrix.CPU_ARCH }}
+      FEDORA_VARS_FILE: "fedora-vars"
+      PR_NUMBER: ${{ github.event.number }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Check out code
+      - name: Check out PR code safely (merge ref)
         uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ env.PR_NUMBER }}/merge
       - name: Install dependencies for VM build
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qemu-system-x86 \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
-            libguestfs-tools
+            libguestfs-tools \
+            podman
+          case "${{ matrix.CPU_ARCH }}" in
+            x86_64)
+              sudo apt-get install -y qemu-system-x86
+              ;;
+            aarch64)
+              sudo apt-get install -y qemu-system-arm qemu-efi-aarch64
+              ;;
+            s390x)
+              sudo apt-get install -y qemu-system-s390x
+              ;;
+          esac
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
+      - name: Add the current user to group kvm
+        run: |
+          sudo usermod -a -G kvm $(whoami)
+          sudo chmod 0666 /dev/kvm
       - name: Fetch base Fedora image
-        working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: |
+          set -euo pipefail
+          source "${{ env.FEDORA_VARS_FILE }}"
+          [ -n "${FEDORA_VERSION:-}" ] || { echo "FEDORA_VERSION not set"; exit 1; }
+          echo "FEDORA_VERSION=${FEDORA_VERSION}" >> "${GITHUB_ENV}"
+          IMAGE=FEDORA_${{ matrix.CPU_ARCH }}_IMAGE
+          URL=FEDORA_${{ matrix.CPU_ARCH }}_DOWNLOAD_DIR
+          [ -n "${!URL:-}" ] && [ -n "${!IMAGE:-}" ] || { echo "Missing URL/IMAGE for ${{ matrix.CPU_ARCH }}"; exit 1; }
+          wget -q "${!URL}/${!IMAGE}"
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: "0.6.11"
       - name: Create VM
-        working-directory: ./containers/fedora
         env:
           PYTHONPATH: ${{ github.workspace }}
           NO_SECRETS: "true"
         run: ./build.sh
-      - name: Save container image as tarball
-        env:
-          local_repository: "localhost/fedora"
-          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
-          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
-        run: |
-          mkdir -p artifacts
-          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
-          echo "Saved image to artifacts/fedora-image.tar"
-      - name: Upload container image artifact
-        uses: actions/upload-artifact@v4
+      - name: Login in to quay.io
+        uses: redhat-actions/podman-login@v1
         with:
-          name: fedora-container-image
-          path: artifacts/fedora-image.tar
-          retention-days: 5
-          compression-level: 0
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Push the container image to stage
+        run: |
+          QUAY_STAGE=quay.io/openshift-cnv/qe-cnv-tests-fedora-staging
+          TAG=${{ env.FEDORA_VERSION}}-${{ matrix.CPU_ARCH }}-pr-${{ env.PR_NUMBER }}
+          podman push "${QUAY_STAGE}:${TAG}"
+
+  push_multiarch_image_manifest_stage:
+    needs: build-guest-fedora
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - name: Check out PR code safely (merge ref)
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ env.PR_NUMBER }}/merge
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Login in to quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+      - name: Create image manifest and push the image to stage
+        run: |
+          set -euo pipefail
+          source containers/fedora/fedora-vars
+          PR_TAG=pr-${{ github.event.number }}
+          QUAY_STAGE=quay.io/sasundar/qe-cnv-tests-fedora-staging
+          X86_64_IMG=${QUAY_STAGE}:${FEDORA_VERSION}-x86_64-${PR_TAG}
+          AARCH64_IMG=${QUAY_STAGE}:${FEDORA_VERSION}-aarch64-${PR_TAG}
+          S390_IMG=${QUAY_STAGE}:${FEDORA_VERSION}-s390x-${PR_TAG}
+          MANIFEST="${QUAY_STAGE}:${FEDORA_VERSION}-${PR_TAG}"
+
+          podman pull ${X86_64_IMG}
+          podman pull ${AARCH64_IMG}
+          podman pull ${S390_IMG}
+
+          podman manifest create "${MANIFEST}"
+          podman manifest add "${MANIFEST}" "${X86_64_IMG}"
+          podman manifest add "${MANIFEST}" "${AARCH64_IMG}"
+          podman manifest add "${MANIFEST}" "${S390_IMG}"
+          podman manifest push "${MANIFEST}"
