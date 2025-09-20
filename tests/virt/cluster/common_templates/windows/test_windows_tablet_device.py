@@ -11,10 +11,9 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS, WINDOWS_LATEST_OS
+from tests.os_params import WINDOWS_10, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
 from utilities.constants import TCP_TIMEOUT_30SEC, VIRTIO
-from utilities.virt import get_windows_os_dict
 
 pytestmark = [
     pytest.mark.special_infra,
@@ -24,7 +23,6 @@ pytestmark = [
 
 
 LOGGER = logging.getLogger(__name__)
-WINDOWS_DESKTOP_VERSION = get_windows_os_dict(windows_version="win-10")
 
 
 def check_windows_vm_tablet_device(vm, driver_state):
@@ -47,16 +45,8 @@ def check_windows_vm_tablet_device(vm, driver_state):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": WINDOWS_LATEST})],
     indirect=True,
 )
 class TestWindowsTabletDevice:
@@ -77,9 +67,8 @@ class TestWindowsTabletDevice:
     def test_tablet_usb_tablet_device(self, tablet_device_vm):
         LOGGER.info("Test tablet device - USB bus.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -102,9 +91,8 @@ class TestWindowsTabletDevice:
 
         LOGGER.info("Test tablet device - virtio bus.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Stopped")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Stopped")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -126,37 +114,28 @@ class TestWindowsTabletDevice:
 
         LOGGER.info("Test Windows Server tablet device - default table device.")
 
-        vm = tablet_device_vm
-        check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-        check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)
 
+    @pytest.mark.parametrize(
+        "tablet_device_vm",
+        [
+            pytest.param(
+                {
+                    "vm_name": "windows-desktop-default-tablet-device",
+                    "template_labels": WINDOWS_10.get("template_labels"),
+                },
+                marks=pytest.mark.polarion("CNV-4150"),
+            ),
+        ],
+        indirect=True,
+    )
+    def test_windows_desktop_default_tablet_device(self, tablet_device_vm):
+        """Verify that when a Desktop Windows VM is configured by default with
+        tablet device
+        """
 
-@pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_function,"
-    "golden_image_vm_instance_from_template_multi_storage_scope_function,",
-    [
-        pytest.param(
-            {
-                "dv_name": WINDOWS_DESKTOP_VERSION.get("template_labels", {}).get("os"),
-                "image": WINDOWS_DESKTOP_VERSION.get("image_path"),
-                "dv_size": WINDOWS_DESKTOP_VERSION.get("dv_size"),
-            },
-            {
-                "vm_name": "windows-desktop-default-tablet-device",
-                "template_labels": WINDOWS_DESKTOP_VERSION.get("template_labels"),
-            },
-            marks=pytest.mark.polarion("CNV-4150"),
-        ),
-    ],
-    indirect=True,
-)
-def test_windows_desktop_default_tablet_device(golden_image_vm_instance_from_template_multi_storage_scope_function):
-    """Verify that when a Desktop Windows VM is configured by default with
-    tablet device
-    """
+        LOGGER.info("Test Windows Desktop tablet device - default table device.")
 
-    LOGGER.info("Test Windows Desktop tablet device - default table device.")
-
-    vm = golden_image_vm_instance_from_template_multi_storage_scope_function
-    check_windows_vm_tablet_device(vm=vm, driver_state="Running")
-    check_vm_xml_tablet_device(vm=vm)
+        check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
+        check_vm_xml_tablet_device(vm=tablet_device_vm)

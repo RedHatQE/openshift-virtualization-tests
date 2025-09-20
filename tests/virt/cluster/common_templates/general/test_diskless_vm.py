@@ -5,57 +5,49 @@ Test diskless VM creation.
 import logging
 
 import pytest
-from pytest_testconfig import config as py_config
+from ocp_resources.template import Template
 
 from tests.os_params import RHEL_LATEST_LABELS, WINDOWS_LATEST_LABELS
-from utilities.constants import Images
+from tests.virt.constants import CIRROS_OS
+from utilities.virt import VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
 # Image is not relevant - needed for VM creation with a template but will not be used
-SMALL_VM_IMAGE = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, vm_from_template_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cirros-dv",
-                "image": SMALL_VM_IMAGE,
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-            },
-            {
-                "vm_name": "rhel-diskless-vm",
-                "template_labels": RHEL_LATEST_LABELS,
-                "diskless_vm": True,
-                "start_vm": False,
-            },
-            marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating(), pytest.mark.s390x),
-        ),
-        pytest.param(
-            {
-                "dv_name": "cirros-dv",
-                "image": SMALL_VM_IMAGE,
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-            },
-            {
-                "vm_name": "windows-diskless-vm",
-                "template_labels": WINDOWS_LATEST_LABELS,
-                "diskless_vm": True,
-                "start_vm": False,
-            },
-            marks=(pytest.mark.polarion("CNV-4697"),),
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": CIRROS_OS})],
     indirect=True,
 )
-def test_diskless_vm_creation(
-    unprivileged_client,
-    namespace,
-    golden_image_data_volume_scope_function,
-    vm_from_template_scope_function,
-):
-    LOGGER.info("Verify diskless VM is created.")
-    assert vm_from_template_scope_function.exists, f"{vm_from_template_scope_function.name} VM was not created."
+class TestDisklessVM:
+    @pytest.mark.parametrize(
+        "vm_params",
+        [
+            pytest.param(
+                {"vm_name": "rhel-diskless-vm", "template_labels": RHEL_LATEST_LABELS},
+                marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating(), pytest.mark.s390x),
+            ),
+            pytest.param(
+                {"vm_name": "windows-diskless-vm", "template_labels": WINDOWS_LATEST_LABELS},
+                marks=pytest.mark.polarion("CNV-4697"),
+            ),
+        ],
+    )
+    def test_diskless_vm_creation(
+        self,
+        vm_params,
+        unprivileged_client,
+        namespace,
+        golden_image_data_source_for_test_scope_class,
+    ):
+        LOGGER.info("Verify diskless VM is created.")
+        with VirtualMachineForTestsFromTemplate(
+            name=vm_params["vm_name"],
+            namespace=namespace.name,
+            client=unprivileged_client,
+            labels=Template.generate_template_labels(**vm_params["template_labels"]),
+            data_source=golden_image_data_source_for_test_scope_class,
+            diskless_vm=True,
+        ) as vm_from_template:
+            assert vm_from_template.exists, f"{vm_from_template.name} VM was not created."
