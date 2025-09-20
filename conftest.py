@@ -77,6 +77,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "node_remediation",
     "swap",
     "numa",
+    "cclm",
 ]
 
 TEAM_MARKERS = {
