@@ -205,7 +205,12 @@ def deploy_external_frr_pod(
             "image": _EXTERNAL_FRR_IMAGE,
             "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
             "volumeMounts": [{"name": frr_configmap_name, "mountPath": "/etc/frr"}],
-        }
+        },
+        {
+            "name": "iperf3",
+            "image": "networkstatic/iperf3",
+            "command": ["sleep", "infinity"],
+        },
     ]
     volumes = [{"name": frr_configmap_name, "configMap": {"name": frr_configmap_name}}]
 
@@ -217,6 +222,7 @@ def deploy_external_frr_pod(
         containers=containers,
         volumes=volumes,
         client=client,
+        share_process_namespace=True,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod

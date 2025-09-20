@@ -1,4 +1,5 @@
 import os
+import shlex
 from collections.abc import Generator
 from pathlib import Path
 from typing import Final
@@ -12,7 +13,11 @@ from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 
 from libs.net import netattachdef as libnad
-from libs.net.udn import create_udn_namespace
+from libs.net.traffic_generator import PodClient as TcpClient
+from libs.net.traffic_generator import Server as TcpServer
+from libs.net.udn import create_udn_namespace, udn_vm
+from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.bgp import (
@@ -32,6 +37,8 @@ BGP_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "frr-con
 CUDN_BGP_LABEL: Final[dict] = {"cudn-bgp": "blue"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
 EXTERNAL_SUBNET_IPV4: Final[str] = "172.100.0.0/16"
+EXTERNAL_IP_V4: Final[str] = "172.100.0.150/16"
+IPERF3_SERVER_PORT: Final[int] = 2354
 
 
 @pytest.fixture(scope="session")
@@ -179,6 +186,8 @@ def frr_external_pod(
         default_route=br_ex_gateway_v4,
         client=admin_client,
     ) as pod:
+        # Assign a secondary IP to emulate the external subnet
+        pod.execute(command=shlex.split(f"ip addr add {EXTERNAL_IP_V4} dev net1"), container="frr")
         yield pod
 
 
@@ -191,3 +200,35 @@ def bgp_setup_ready(
 ) -> None:
     node_names = [worker.name for worker in workers]
     wait_for_bgp_connection_established(node_names=node_names)
+
+
+@pytest.fixture(scope="module")
+def vm_cudn(
+    namespace_cudn: Namespace,
+    cudn_layer2: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp") as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def tcp_server_cudn_vm(vm_cudn: BaseVirtualMachine) -> Generator[TcpServer]:
+    with TcpServer(vm=vm_cudn, port=IPERF3_SERVER_PORT) as server:
+        if server.is_running():
+            yield server
+        raise ProcessLookupError("Iperf3 server process is not running in the VM")
+
+
+@pytest.fixture(scope="module")
+def tcp_client_external_network(
+    frr_external_pod: Pod, vm_cudn: BaseVirtualMachine, tcp_server_cudn_vm: TcpServer
+) -> Generator[TcpClient]:
+    with TcpClient(
+        pod=frr_external_pod,
+        server_ip=lookup_iface_status(vm=vm_cudn, iface_name=lookup_primary_network(vm=vm_cudn).name)[IP_ADDRESS],
+        server_port=IPERF3_SERVER_PORT,
+        bind_interface=EXTERNAL_IP_V4.split("/")[0],
+    ) as client:
+        yield client
