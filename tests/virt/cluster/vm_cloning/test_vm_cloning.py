@@ -75,7 +75,15 @@ def dv_template_for_vm_cloning(
 
 
 @pytest.fixture()
-def vm_with_dv_for_cloning(request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot):
+def vm_with_dv_for_cloning(
+    request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot, is_s390x_cluster
+):
+    if is_s390x_cluster:
+        smm_enabled = False
+        efi_params = None
+    else:
+        smm_enabled = True
+        efi_params = {"secureBoot": True}
     with VirtualMachineForCloning(
         name=request.param["vm_name"],
         namespace=namespace.name,
@@ -83,8 +91,8 @@ def vm_with_dv_for_cloning(request, namespace, dv_template_for_vm_cloning, stora
         memory_requests=request.param["memory_requests"],
         cpu_cores=request.param.get("cpu_cores", 1),
         os_flavor=request.param["vm_name"].split("-")[0],
-        smm_enabled=True,
-        efi_params={"secureBoot": True},
+        smm_enabled=smm_enabled,
+        efi_params=efi_params,
     ) as vm:
         # Add second DV when needed
         if request.param.get("dv_extra"):
