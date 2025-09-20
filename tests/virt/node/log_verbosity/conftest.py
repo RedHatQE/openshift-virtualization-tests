@@ -1,10 +1,9 @@
 import pytest
-from ocp_resources.kubevirt import KubeVirt
 
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from tests.virt.node.utils import update_log_verbosity_in_hco
 
 
 @pytest.fixture(scope="class")
@@ -24,13 +23,8 @@ def updated_log_verbosity_config(
         },
         "node": {"kubevirt": {"nodeVerbosity": {worker_node1.name: VIRT_LOG_VERBOSITY_LEVEL_6}}},
     }
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {"logVerbosityConfig": log_verbosity_level_six_config_dict[request.param]}
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
+
+    with update_log_verbosity_in_hco(
+        hyperconverged_resource_scope_class, log_verbosity_level_six_config_dict[request.param]
     ):
         yield
