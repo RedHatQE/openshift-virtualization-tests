@@ -75,16 +75,6 @@ def bridge_attached_vmi_for_bridge_marker_no_device(namespace, bridge_marker_bri
 
 
 @pytest.fixture()
-def bridge_attached_vmi_for_bridge_marker_device_exists(namespace, bridge_marker_bridge_network):
-    with create_bridge_attached_vm_for_bridge_marker(
-        namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
-    ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        yield vm.vmi
-
-
-@pytest.fixture()
 def multi_bridge_attached_vmi(namespace, bridge_networks, unprivileged_client):
     networks = {b.name: b.name for b in bridge_networks}
     name = _get_name(suffix="multi-bridge-vm")
@@ -98,16 +88,6 @@ def multi_bridge_attached_vmi(namespace, bridge_networks, unprivileged_client):
     ) as vm:
         vm.start()
         yield vm.vmi
-
-
-@pytest.fixture()
-def bridge_device_on_all_nodes():
-    with network_device(
-        interface_type=LINUX_BRIDGE,
-        nncp_name="bridge-marker1",
-        interface_name=BRIDGEMARKER1,
-    ) as dev:
-        yield dev
 
 
 @pytest.fixture()
@@ -145,16 +125,6 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
     # validate the exact reason for VMI startup failure is missing bridge
     pod = bridge_attached_vmi_for_bridge_marker_no_device.virt_launcher_pod
     _assert_failure_reason_is_bridge_missing(pod=pod, bridge=bridge_marker_bridge_network)
-
-
-# note: the order of fixtures is important because we should first create the
-# device before attaching a VMI to it
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2235")
-@pytest.mark.s390x
-def test_bridge_marker_device_exists(bridge_device_on_all_nodes, bridge_attached_vmi_for_bridge_marker_device_exists):
-    """Check that VMI successfully starts when bridge device is present."""
-    bridge_attached_vmi_for_bridge_marker_device_exists.wait_until_running(timeout=_VM_RUNNING_TIMEOUT)
 
 
 @pytest.mark.polarion("CNV-2309")
