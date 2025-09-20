@@ -40,6 +40,7 @@ def running_vm_static(
 @pytest.fixture(scope="module")
 def running_vm_for_migration(
     unprivileged_client,
+    running_vm_static,
     cpu_for_migration,
     namespace,
 ):
@@ -53,11 +54,22 @@ def running_vm_for_migration(
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
+
+        static_vm_ip = running_vm_static.vmi.interfaces[0]["ipAddress"]
+
+        vm_console_run_commands(
+            vm=vm,
+            commands=[f"ping {static_vm_ip} -c 10 -w 10"],
+            timeout=10,
+        )
+
         yield vm
 
 
 @pytest.fixture()
-def migrated_vmi(running_vm_for_migration):
+def migrated_vmi(
+    running_vm_for_migration,
+):
     LOGGER.info(f"Migrating {running_vm_for_migration.name}. Current node: {running_vm_for_migration.vmi.node.name}")
 
     ip_before = running_vm_for_migration.vmi.interfaces[0]["ipAddress"]
