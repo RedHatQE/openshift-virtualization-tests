@@ -539,7 +539,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
                 "dv_name": "cnv-3065",
                 "file_name": Images.Cdi.QCOW2_IMG,
                 "source": HTTPS,
-                "size": "100Mi",
+                "size": DEFAULT_DV_SIZE,
                 "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
             },
             marks=pytest.mark.polarion("CNV-3065"),
@@ -553,8 +553,8 @@ def test_disk_falloc(internal_http_configmap, dv_from_http_import):
     with create_vm_from_dv(dv=dv_from_http_import) as vm_dv:
         with console.Console(vm=vm_dv) as vm_console:
             LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/zero of=file bs=1M")
-            vm_console.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
+            vm_console.sendline("dd if=/dev/urandom of=file bs=1M")
+            vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.destructive
