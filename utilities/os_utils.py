@@ -6,7 +6,6 @@ from typing import Any
 from ocp_resources.template import Template
 
 from utilities.constants import (
-    CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
     DV_SIZE_STR,
@@ -219,8 +218,6 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
                 OS_VERSION_STR: base_version_dict[OS_VERSION_STR],
                 IMAGE_NAME_STR: image_name,
                 IMAGE_PATH_STR: os.path.join(image_path_str, image_name),
-                CONTAINER_DISK_IMAGE_PATH_STR: f"{Images.Windows.DOCKER_IMAGE_DIR}/windows"
-                f"{base_dict[version][OS_STR].removeprefix('win')}-container-disk:4.99",
                 DV_SIZE_STR: dv_size,
                 TEMPLATE_LABELS_STR: {
                     OS_STR: base_version_dict[OS_STR],

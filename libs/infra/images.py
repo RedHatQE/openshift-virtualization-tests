@@ -63,7 +63,6 @@ class Windows:
     WIN2022_ISO_IMG: str | None = None
     WIN2025_ISO_IMG: str | None = None
     DIR: str = f"{BASE_IMAGES_DIR}/windows-images"
-    DOCKER_IMAGE_DIR = "docker/kubevirt-common-instancetypes"
     UEFI_WIN_DIR: str = f"{DIR}/uefi"
     HA_DIR: str = f"{DIR}/HA-images"
     ISO_BASE_DIR = f"{DIR}/install_iso"
@@ -71,7 +70,6 @@ class Windows:
     ISO_WIN11_DIR: str = f"{ISO_BASE_DIR}/win11"
     ISO_WIN2022_DIR: str = f"{ISO_BASE_DIR}/win2022"
     ISO_WIN2025_DIR: str = f"{ISO_BASE_DIR}/win2025"
-    CONTAINER_DISK_DV_SIZE = "40Gi"
     DEFAULT_DV_SIZE: str = "70Gi"
     DEFAULT_MEMORY_SIZE: str = "8Gi"
     DEFAULT_MEMORY_SIZE_WSL: str = "12Gi"

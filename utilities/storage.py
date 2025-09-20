@@ -126,8 +126,8 @@ def create_dv(
 ):
     artifactory_secret = None
     cert_created = None
-    if source in ("http", "https", "registry"):
-        if source != "registry" and not utilities.infra.url_excluded_from_validation(url):
+    if source in ("http", "https"):
+        if not utilities.infra.url_excluded_from_validation(url):
             # Make sure URL exists
             validate_file_exists_in_url(url=url)
         if not secret:
