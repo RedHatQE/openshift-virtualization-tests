@@ -1,6 +1,8 @@
 import contextlib
 from typing import Generator
 
+from ocp_resources.node import Node
+
 from libs.net.traffic_generator import Client, Server
 from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
@@ -9,13 +11,16 @@ from libs.vm.spec import CloudInitNoCloud, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
+from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.label_selector import LabelSelector
+from utilities.constants import WORKER_NODE_LABEL_KEY
 
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
+NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 _IPERF_SERVER_PORT = 5201
 
 
@@ -146,3 +151,43 @@ def client_server_active_connection(
             server_port=port,
         ) as client:
             yield client, server
+
+
+def create_nncp_localnet_on_secondary_node_nic(
+    worker_node: Node, nodes_available_nics: dict[str, list[str]], mtu: int | None = None
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy, None, None]:
+    bridge_name = "localnet-ovs-br"
+    desired_state = libnncp.DesiredState(
+        interfaces=[
+            libnncp.Interface(
+                name=bridge_name,
+                type=NNCP_INTERFACE_TYPE_OVS_BRIDGE,
+                mtu=mtu,
+                ipv4=libnncp.IPv4(enabled=False),
+                ipv6=libnncp.IPv6(enabled=False),
+                state=libnncp.Resource.Interface.State.UP,
+                bridge=libnncp.Bridge(
+                    options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
+                    port=[
+                        libnncp.Port(
+                            name=nodes_available_nics[worker_node.name][-1],
+                        )
+                    ],
+                ),
+            )
+        ],
+        ovn=libnncp.OVN([
+            libnncp.BridgeMappings(
+                localnet=LOCALNET_OVS_BRIDGE_NETWORK,
+                bridge=bridge_name,
+                state=libnncp.BridgeMappings.State.PRESENT.value,
+            )
+        ]),
+    )
+    with libnncp.NodeNetworkConfigurationPolicy(
+        name=bridge_name,
+        desired_state=desired_state,
+        node_selector={WORKER_NODE_LABEL_KEY: ""},
+    ) as nncp:
+        nncp.wait_for_status_success()
+        yield nncp
