@@ -25,6 +25,7 @@ from urllib3.exceptions import (
 
 from libs.infra.images import (
     BASE_IMAGES_DIR,
+    Alpine,
     Cdi,
     Centos,
     Cirros,
@@ -34,21 +35,18 @@ from libs.infra.images import (
 )
 from utilities.architecture import get_cluster_architecture
 
-# Images
-NON_EXISTS_IMAGE = "non-exists-image-test-cnao-alerts"
-
+# Architecture constants
+KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
 
-# Architecture constants
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
-
 
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
+        BASE_ALPINE_NAME = "alpine-3.20.1-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -57,6 +55,10 @@ class ArchImages:
             QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
             QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
             DISK_DEMO="cirros-registry-disk-demo",
+        )
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
         Rhel = Rhel(
@@ -89,11 +91,11 @@ class ArchImages:
         Windows.LATEST_RELEASE_STR = Windows.WIN2k19_IMG
 
         Fedora = Fedora(
-            FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2",
+            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
@@ -101,7 +103,12 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG="cirros-qcow2.img")
 
     class ARM64:
+        BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
         Cirros = Cirros(RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz")
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+        )
 
         Rhel = Rhel(
             RHEL9_5_IMG="rhel-95-aarch64.qcow2",
@@ -115,6 +122,7 @@ class ArchImages:
         Cdi = Cdi()
 
     class S390X:
+        BASE_ALPINE_NAME = "alpine-3.20.1-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -127,6 +135,10 @@ class ArchImages:
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
             DEFAULT_MEMORY_SIZE="1Gi",
+        )
+
+        Alpine = Alpine(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
         Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
@@ -144,7 +156,7 @@ class ArchImages:
 
         Cdi = Cdi(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
-            QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            QCOW2_IMG="Fedora-qcow2.img",
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
         )
@@ -282,7 +294,6 @@ CDI_CONFIGMAPS = [
 # Miscellaneous constants
 UTILITY = "utility"
 WORKERS_TYPE = "WORKERS_TYPE"
-FILTER_BY_OS_OPTION = f"filter-by-os=linux/{AMD_64}"
 QUARANTINED = "quarantined"
 SETUP_ERROR = "setup_error"
 
@@ -386,6 +397,8 @@ KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
 KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
 KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
+KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
+KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -408,6 +421,7 @@ CDI_STR = "CDI"
 SSP_STR = "SSP"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
+NETWORKPOLICY_STR = "NetworkPolicy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 # All hco relate objects with kind
@@ -447,6 +461,8 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_UI_CONFIG_READER: ROLE_STR},
     {KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING: ROLEBINDING_STR},
     {HCO_BEARER_AUTH: SECRET_STR},
+    {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
+    {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -885,14 +901,6 @@ MONITORING_METRICS = [
     KUBEVIRT_VMI_STORAGE_WRITE_TRAFFIC_BYTES_TOTAL,
     KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL,
 ]
-
-KUBEVIRT_VMI_CPU_SYSTEM_USAGE_SECONDS_TOTAL_QUERY_STR = (
-    "kubevirt_vmi_cpu_system_usage_seconds_total{{name='{vm_name}'}}"
-)
-KUBEVIRT_VMI_VCPU_DELAY_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_vcpu_delay_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_CPU_USER_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_user_usage_seconds_total{{name='{vm_name}'}}"
-KUBEVIRT_VMI_CPU_USAGE_SECONDS_TOTAL_QUERY_STR = "kubevirt_vmi_cpu_usage_seconds_total{{name='{vm_name}'}}"
-
 # Common templates matrix constants
 IMAGE_NAME_STR = "image_name"
 IMAGE_PATH_STR = "image_path"
@@ -903,3 +911,41 @@ WORKLOAD_STR = "workload"
 LATEST_RELEASE_STR = "latest_released"
 OS_VERSION_STR = "os_version"
 DATA_SOURCE_STR = "data_source"
+
+# OADP
+ADP_NAMESPACE = "openshift-adp"
+FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
+TEXT_TO_TEST = "text"
+BACKUP_STORAGE_LOCATION = "dpa-1"
+
+# AAQ
+AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
+VM_CPU_CORES = 2
+REQUESTS_INSTANCES_VMI_STR = "requests.instances/vmi"
+REQUESTS_CPU_VMI_STR = "requests.cpu/vmi"
+REQUESTS_MEMORY_VMI_STR = "requests.memory/vmi"
+PODS_STR = "pods"
+LIMITS_CPU_STR = "limits.cpu"
+LIMITS_MEMORY_STR = "limits.memory"
+REQUESTS_CPU_STR = "requests.cpu"
+REQUESTS_MEMORY_STR = "requests.memory"
+POD_REQUESTS_CPU = 2
+POD_REQUESTS_MEMORY = "2.5Gi"
+POD_LIMITS_CPU = POD_REQUESTS_CPU * 2
+POD_LIMITS_MEMORY = f"{float(POD_REQUESTS_MEMORY[:-2]) * 2}Gi"
+VM_MEMORY_GUEST = "2Gi"
+QUOTA_FOR_POD = {
+    PODS_STR: "1",
+    LIMITS_CPU_STR: POD_LIMITS_CPU,
+    LIMITS_MEMORY_STR: POD_LIMITS_MEMORY,
+    REQUESTS_CPU_STR: POD_REQUESTS_CPU,
+    REQUESTS_MEMORY_STR: POD_LIMITS_MEMORY,
+}
+
+QUOTA_FOR_ONE_VMI = {
+    REQUESTS_INSTANCES_VMI_STR: "1",
+    REQUESTS_CPU_VMI_STR: VM_CPU_CORES,
+    REQUESTS_MEMORY_VMI_STR: VM_MEMORY_GUEST,
+}
+
+ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}

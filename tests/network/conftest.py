@@ -5,6 +5,7 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
+import os
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -25,8 +26,17 @@ from utilities.constants import (
     OVS_BRIDGE,
     VIRT_HANDLER,
 )
-from utilities.infra import ExecCommandOnPod, exit_pytest_execution, get_deployment_by_name, get_node_selector_dict
-from utilities.network import get_cluster_cni_type, ip_version_data_from_matrix, network_nad
+from utilities.infra import (
+    ExecCommandOnPod,
+    exit_pytest_execution,
+    get_deployment_by_name,
+    get_node_selector_dict,
+)
+from utilities.network import (
+    get_cluster_cni_type,
+    ip_version_data_from_matrix,
+    network_nad,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -199,6 +209,11 @@ def ovn_kubernetes_cluster(admin_client):
     return get_cluster_cni_type(admin_client=admin_client) == "OVNKubernetes"
 
 
+@pytest.fixture(scope="session")
+def network_operator():
+    return Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     hosts_common_available_ports,
@@ -209,6 +224,7 @@ def network_sanity(
     network_overhead,
     sriov_workers,
     ipv4_supported_cluster,
+    conformance_tests,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -223,6 +239,14 @@ def network_sanity(
         if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
             LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
             return
+
+        # TODO: network tests should be marked with multi_nic to allow explicit checks based on markers
+        if conformance_tests:
+            LOGGER.info(
+                "Running conformance tests which run only single-nic tests, no need to verify multi NIC support"
+            )
+            return
+
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
         if len(hosts_common_available_ports) <= 1:
             failure_msgs.append(
@@ -294,12 +318,33 @@ def network_sanity(
             else:
                 LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
 
+    def _verify_bgp_env_vars():
+        """Verify if the cluster supports running BGP tests.
+
+        Requires the following environment variables to be set:
+        PRIMARY_NODE_NETWORK_VLAN_TAG: expected VLAN number on the node br-ex interface.
+        EXTERNAL_FRR_STATIC_IPV4: reserved IP in CIDR format for the external FRR pod inside
+                                  PRIMARY_NODE_NETWORK_VLAN_TAG network.
+        """
+        if any(test.get_closest_marker("bgp") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running BGP tests...")
+            required_env_vars = [
+                "PRIMARY_NODE_NETWORK_VLAN_TAG",
+                "EXTERNAL_FRR_STATIC_IPV4",
+            ]
+            missing_env_vars = [var for var in required_env_vars if not os.getenv(var)]
+
+            if missing_env_vars:
+                failure_msgs.append(f"BGP tests require the following environment variables: {missing_env_vars}")
+                return
+
     _verify_multi_nic(request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
     _verify_ipv4()
+    _verify_bgp_env_vars()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)

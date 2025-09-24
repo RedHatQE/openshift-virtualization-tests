@@ -27,8 +27,15 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.infra
+from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, X86_64, NamespacesNames
+from utilities.constants import (
+    QUARANTINED,
+    SETUP_ERROR,
+    TIMEOUT_5MIN,
+    X86_64,
+    NamespacesNames,
+)
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
@@ -201,6 +208,27 @@ def pytest_addoption(parser):
         "--default-storage-class",
         help="Overwrite default storage class in storage_class_matrix",
     )
+    storage_group.addoption(
+        "--conformance-storage-class",
+        help="""
+             Storage class to use when running conformance tests. Overwrites storage_class_matrix and
+             `--default-storage-class`.
+             If the storage class does not exist in libs/storage/mapping.py,
+             --conformance-storage-class-config must be specified.
+             """,
+    )
+    storage_group.addoption(
+        "--conformance-storage-class-config",
+        help="""
+             Comma separated list of storage class config to use.
+             Example:
+                'volume_mode=Block,access_mode=RWO,snapshot=True,online_resize=True,wffc=False'
+             Storage class is passed via `--conformance-storage-class`
+             `access_mode` allowed values: RWX, RWO, ROX. Default: RWO
+             `volume_mode` allowed values: Block, Filesystem. Default: Filesystem
+             `online_resize`, 'snapshot' and `wffc` allowed values: False, True. Default: False
+             """,
+    )
 
     # Cluster sanity addoption
     cluster_sanity_group.addoption(
@@ -325,6 +353,13 @@ def pytest_cmdline_main(config):
 
     if upgrade_option == "cnv" and config.getoption("cnv_source") and not config.getoption("cnv_version"):
         raise ValueError("Running with --cnv-source: Missing --cnv-version")
+
+    if conformance_storage_class := config.getoption("conformance_storage_class"):
+        if config.getoption("storage_class_matrix"):
+            raise ValueError("`--storage-class-matrix` and `--conformance-storage-class` are mutually exclusive.")
+
+        if config.getoption("default_storage_class"):
+            LOGGER.warning(f"Using default storage class {conformance_storage_class}")
 
 
 def add_polarion_parameters_to_user_properties(item: Item, matrix_name: str) -> None:
@@ -457,6 +492,13 @@ def pytest_configure(config):
     file_or_dir = config.option.file_or_dir
     if file_or_dir and deprecation_tests_dir_path not in file_or_dir and file_or_dir != ["tests"]:
         config.option.file_or_dir.append(deprecation_tests_dir_path)
+
+    if conformance_storage_class := config.getoption("conformance_storage_class"):
+        py_config["storage_class_matrix"] = StorageClassConfig(
+            name=conformance_storage_class
+        ).construct_storage_class_matrix(storage_config=config.getoption("conformance_storage_class_config"))
+
+        py_config["default_storage_class"] = conformance_storage_class
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -775,8 +817,6 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
             all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
-            if "swap" in all_markers:
-                namespaces_to_collect.append(NamespacesNames.WASP)
             if "descheduler" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
@@ -832,7 +872,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_header(cells):
     cells.pop()  # Remove the `Links` column
 
@@ -841,7 +881,7 @@ def pytest_html_results_table_header(cells):
     cells.append(f"<th>{QUARANTINED.title()} Reason</th>")
 
 
-@pytest.mark.optionalhook
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(report, cells):
     cells.pop()  # Remove the `Links` entry
 

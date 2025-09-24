@@ -91,7 +91,6 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
             marks=[
                 pytest.mark.polarion("CNV-11845"),
                 pytest.mark.ipv6,
-                pytest.mark.jira("CNV-58529", run=True),
             ],
         ),
     ],
@@ -100,6 +99,7 @@ def cloud_init_ipv6_network_data(dual_stack_network_data):
 @pytest.mark.gating
 @pytest.mark.single_nic
 @pytest.mark.s390x
+# Not marked as `conformance`; requires NMState
 def test_connectivity_over_pod_network(
     ip_family,
     pod_net_vma,

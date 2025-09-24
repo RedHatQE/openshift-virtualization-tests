@@ -4,16 +4,15 @@ import logging
 import re
 import shlex
 from contextlib import contextmanager
+from functools import cache
 
 import bitmath
-from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.constants import VIRT_PROCESS_MEMORY_LIMITS
 from tests.virt.node.gpu.constants import (
     GPU_PRETTY_NAME_STR,
     MDEV_NAME_STR,
@@ -30,7 +29,6 @@ from utilities.constants import (
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30SEC,
@@ -41,11 +39,12 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import get_pod_by_name_prefix
+from utilities.infra import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
+    get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
     pause_optional_migrate_unpause_and_check_connectivity,
@@ -96,25 +95,6 @@ def running_sleep_in_linux(vm):
     pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
     kill_processes_by_name_linux(vm=vm, process_name=process)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
-
-
-def get_virt_launcher_processes_memory_overuse(pod):
-    memory_overuse = {}
-    for process in VIRT_PROCESS_MEMORY_LIMITS.keys():
-        memory_usage = bitmath.KiB(
-            value=int(
-                pod.execute(
-                    command=shlex.split(f"bash -c 'ps -o rss --no-headers -p $(pidof {process})'"),
-                    container="compute",
-                )
-            )
-        )
-        if memory_usage > VIRT_PROCESS_MEMORY_LIMITS[process]:
-            memory_overuse[process] = {
-                "memory usage": memory_usage,
-                "memory limit": VIRT_PROCESS_MEMORY_LIMITS[process],
-            }
-    return memory_overuse
 
 
 def get_stress_ng_pid(ssh_exec, windows=False):
@@ -213,7 +193,7 @@ def migrate_and_verify_multi_vms(vm_list):
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(vm=vm, migration=migration)
+        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
         migration.clean_up()
 
     for vm in vm_list:
@@ -284,42 +264,6 @@ def flatten_dict(dictionary, parent_key=""):
         else:
             items.append((new_key, value))
     return dict(items)
-
-
-@contextmanager
-def enable_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
-    if enable_acrq_support:
-        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True
-        }
-
-    with ResourceEditorValidateHCOReconcile(
-        patches=patches,
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
-    # need to wait when all AAQ system pods removed
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_5SEC,
-        func=get_pod_by_name_prefix,
-        dyn_client=client,
-        pod_prefix="aaq-(controller|server)",
-        namespace=hco_namespace.name,
-        get_all=True,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"Some AAQ pods still present: {sample}")
-        raise
-    except (NotFoundError, ResourceNotFoundError):
-        LOGGER.info("AAQ system PODs removed.")
 
 
 def kill_processes_by_name_windows(vm, process_name):
@@ -522,3 +466,21 @@ def get_non_terminated_pods(client, node):
             field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
         )
     )
+
+
+def get_boot_time_for_multiple_vms(vm_list):
+    return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
+
+
+def verify_linux_boot_time(vm_list, initial_boot_time):
+    rebooted_vms = {}
+    for vm in vm_list:
+        current_boot_time = get_vm_boot_time(vm=vm)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+@cache
+def is_jira_67515_open():
+    return is_jira_open(jira_id="CNV-67515")

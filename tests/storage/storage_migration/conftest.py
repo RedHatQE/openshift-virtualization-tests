@@ -20,7 +20,7 @@ from tests.storage.storage_migration.constants import (
     WINDOWS_FILE_WITH_PATH,
     WINDOWS_TEST_DIRECTORY_PATH,
 )
-from tests.storage.storage_migration.utils import get_source_virt_launcher_pod, get_storage_class_for_storage_migration
+from tests.storage.storage_migration.utils import get_storage_class_for_storage_migration
 from tests.storage.utils import create_windows_directory
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
@@ -29,6 +29,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -76,7 +77,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
         live_migrate=True,
         namespaces=[namespace.name],
         refresh=False,
-        teardown=False,
     ) as mig_plan:
         mig_plan.wait_for_condition(
             condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -92,7 +92,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
                 pvc_dict["selection"]["action"] = "skip"
         ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
-        mig_plan.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -105,7 +104,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
-        teardown=False,
     ) as mig_migration:
         mig_migration.wait_for_condition(
             condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -117,7 +115,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
             sleep_time=TIMEOUT_5SEC,
         )
         yield mig_migration
-        mig_migration.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -251,9 +248,14 @@ def vms_for_storage_class_migration(request):
 
 
 @pytest.fixture(scope="class")
-def booted_vms_for_storage_class_migration(vms_for_storage_class_migration):
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="class")
+def booted_vms_for_storage_class_migration(vms_for_storage_class_migration, dv_wait_timeout):
     for vm in vms_for_storage_class_migration:
-        running_vm(vm=vm)
+        running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
     yield vms_for_storage_class_migration
 
 
@@ -287,17 +289,7 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 
 
 @pytest.fixture(scope="class")
-def deleted_completed_virt_launcher_source_pod(unprivileged_client, online_vms_for_storage_class_migration):
-    for vm in online_vms_for_storage_class_migration:
-        source_pod = get_source_virt_launcher_pod(client=unprivileged_client, vm=vm)
-        source_pod.wait_for_status(status=source_pod.Status.SUCCEEDED)
-        source_pod.delete(wait=True)
-
-
-@pytest.fixture(scope="class")
-def deleted_old_dvs_of_online_vms(
-    unprivileged_client, online_vms_for_storage_class_migration, deleted_completed_virt_launcher_source_pod
-):
+def deleted_old_dvs_of_online_vms(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
         dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)

@@ -6,18 +6,21 @@ from ipaddress import ip_interface
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.network.constants import DHCP_IP_RANGE_END, DHCP_IP_RANGE_START
-from tests.network.utils import (
+from tests.network.libs.dhcpd import (
+    DHCP_IP_RANGE_END,
+    DHCP_IP_RANGE_START,
+    DHCP_IP_SUBNET,
     DHCP_SERVER_CONF_FILE,
     DHCP_SERVICE_RESTART,
-    update_cloud_init_extra_user_data,
+    verify_dhcpd_activated,
 )
+from tests.network.utils import update_cloud_init_extra_user_data
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (
     cloud_init_network_data,
+    get_vmi_mac_address_by_iface_name,
     network_device,
     network_nad,
-    verify_dhcpd_activated,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -26,8 +29,8 @@ from utilities.virt import (
 )
 
 #: Test setup
-#       .........                                                                                      ..........
-#       |       |---eth1:10.200.0.1:                                              10.200.0.2:---eth1:|        |
+#       .........                                                                                    ..........
+#       |       |---eth1:10.200.0.1:                                               10.200.0.2:eth1---|        |
 #       | VM-A  |---eth2:10.200.2.1    : multicast(ICMP), custom eth type test:    10.200.2.2:eth2---|  VM-B  |
 #       |       |---eth3:10.200.3.1    : DHCP test :                               10.200.3.2:eth3---|        |
 #       |.......|---eth4:10.200.4.1    : mpls test :                               10.200.4.2:eth4---|........|
@@ -37,6 +40,7 @@ VMA_MPLS_LOOPBACK_IP = "10.200.100.1/32"
 VMA_MPLS_ROUTE_TAG = 100
 VMB_MPLS_LOOPBACK_IP = "10.200.200.1/32"
 VMB_MPLS_ROUTE_TAG = 200
+DHCP_INTERFACE_NAME = "eth3"
 
 
 @pytest.fixture(scope="class")
@@ -85,12 +89,15 @@ def dhcp_nad(
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
     l2_bridge_device_name,
+    vlan_index_number,
 ):
+    vlan_tag = next(vlan_index_number)
     with network_nad(
         namespace=namespace,
         nad_type=bridge_device_matrix__class__,
-        nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad",
+        nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad-vlan-{vlan_tag}",
         interface_name=l2_bridge_device_name,
+        vlan=vlan_tag,
     ) as nad:
         yield nad
 
@@ -170,11 +177,11 @@ def _cloud_init_data(
     }
     # Only DHCP server VM (vm-fedora-1) should have IP on eth3 interface
     if vm_name == "vm-fedora-1":
-        network_data_data["ethernets"]["eth3"] = {"addresses": [f"{ip_addresses[2]}/24"]}
+        network_data_data["ethernets"][DHCP_INTERFACE_NAME] = {"addresses": [f"{ip_addresses[2]}/24"]}
 
     # DHCP client VM (vm-fedora-2) should be with dhcp=false, will be activated in test 'test_dhcp_broadcast'.
     if vm_name == "vm-fedora-2":
-        network_data_data["ethernets"]["eth3"] = {"dhcp4": False}
+        network_data_data["ethernets"][DHCP_INTERFACE_NAME] = {"dhcp4": False}
 
     runcmd = [
         "modprobe mpls_router",  # In order to test mpls we need to load driver
@@ -288,11 +295,14 @@ def bridge_attached_vm(
 
 
 @pytest.fixture(scope="class")
-def l2_bridge_running_vm_a(namespace, worker_node1, l2_bridge_all_nads, unprivileged_client):
+def l2_bridge_running_vm_a(
+    namespace, worker_node1, l2_bridge_all_nads, dhcp_nad, unprivileged_client, l2_bridge_running_vm_b
+):
     dhcpd_data = DHCP_SERVER_CONF_FILE.format(
-        DHCP_IP_SUBNET="10.200.3",
+        DHCP_IP_SUBNET=DHCP_IP_SUBNET,
         DHCP_IP_RANGE_START=DHCP_IP_RANGE_START,
         DHCP_IP_RANGE_END=DHCP_IP_RANGE_END,
+        CLIENT_MAC_ADDRESS=get_vmi_mac_address_by_iface_name(vmi=l2_bridge_running_vm_b.vmi, iface_name=dhcp_nad.name),
     )
     cloud_init_extra_user_data = {
         "runcmd": [
@@ -355,7 +365,7 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
 @pytest.fixture(scope="class")
 def eth3_nmcli_connection_uuid(l2_bridge_running_vm_b):
     rc, out, _ = l2_bridge_running_vm_b.ssh_exec.run_command(
-        command=shlex.split("nmcli -g GENERAL.CON-UUID device show eth3")
+        command=shlex.split(f"nmcli -g GENERAL.CON-UUID device show {DHCP_INTERFACE_NAME}")
     )
     assert not rc, "Could not extract connection uuid by device name"
     return out.strip()
@@ -365,7 +375,13 @@ def eth3_nmcli_connection_uuid(l2_bridge_running_vm_b):
 def configured_l2_bridge_vm_a(l2_bridge_running_vm_a):
     run_ssh_commands(
         host=l2_bridge_running_vm_a.ssh_exec,
-        commands=[shlex.split(DHCP_SERVICE_RESTART)],
+        commands=[
+            shlex.split(
+                "sudo bash -c "
+                + shlex.quote(f"cat > /etc/sysconfig/dhcpd <<'EOF'\nDHCPDARGS=\"{DHCP_INTERFACE_NAME}\"\nEOF")
+            ),
+            shlex.split(DHCP_SERVICE_RESTART),
+        ],
     )
     verify_dhcpd_activated(vm=l2_bridge_running_vm_a)
     return l2_bridge_running_vm_a

@@ -20,6 +20,14 @@ class Cirros:
 
 
 @dataclass
+class Alpine:
+    QCOW2_IMG: str | None = None
+    DIR: str = f"{BASE_IMAGES_DIR}/alpine-images"
+    DEFAULT_DV_SIZE: str = "1Gi"
+    DEFAULT_MEMORY_SIZE: str = "128M"
+
+
+@dataclass
 class Rhel:
     RHEL7_9_IMG: str | None = None
     RHEL8_0_IMG: str | None = None
@@ -73,6 +81,7 @@ class Windows:
 @dataclass
 class Fedora:
     FEDORA41_IMG: str | None = None
+    FEDORA42_IMG: str | None = None
     FEDORA_CONTAINER_IMAGE: str | None = None
     DISK_DEMO: str | None = None
     DIR: str = f"{BASE_IMAGES_DIR}/fedora-images"

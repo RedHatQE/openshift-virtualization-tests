@@ -6,7 +6,6 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
@@ -16,20 +15,14 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
-    KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-    KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
-    expected_metric_labels_and_values,
-    get_metric_labels_non_empty_value,
     get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_greater_than_initial_value,
-    validate_metric_value_within_range,
-    validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes,
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
@@ -150,66 +143,6 @@ def vm_metric_1_vmim(vm_metric_1):
         yield
 
 
-@pytest.fixture(scope="class")
-def vm_metric_2(namespace, unprivileged_client):
-    vm_name = "vm-metrics-2"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def number_of_running_vmis(admin_client):
-    return len(list(VirtualMachineInstance.get(dyn_client=admin_client)))
-
-
-def check_vmi_metric(prometheus):
-    response = prometheus.query(query="cnv:vmi_status_running:count")
-    assert response["status"] == "success"
-    return sum(int(node["value"][1]) for node in response["data"]["result"])
-
-
-def check_vmi_count_metric(expected_vmi_count, prometheus):
-    LOGGER.info(f"Check VMI metric expected: {expected_vmi_count}")
-    samples = TimeoutSampler(
-        wait_timeout=100,
-        sleep=5,
-        func=check_vmi_metric,
-        prometheus=prometheus,
-    )
-    for sample in samples:
-        if sample == expected_vmi_count:
-            return True
-
-
-class TestVMICountMetric:
-    @pytest.mark.polarion("CNV-3048")
-    def test_vmi_count_metric_increase(
-        self,
-        prometheus,
-        number_of_running_vmis,
-        vm_metric_1,
-        vm_metric_2,
-    ):
-        assert check_vmi_count_metric(number_of_running_vmis + 2, prometheus)
-
-    @pytest.mark.polarion("CNV-3589")
-    def test_vmi_count_metric_decrease(
-        self,
-        prometheus,
-        number_of_running_vmis,
-        vm_metric_1,
-        vm_metric_2,
-    ):
-        vm_metric_2.stop(wait=True)
-        assert check_vmi_count_metric(number_of_running_vmis + 1, prometheus)
-
-
 class TestVMStatusLastTransitionMetrics:
     @pytest.mark.polarion("CNV-9661")
     def test_vm_running_status_metrics(self, prometheus, vm_metric_1):
@@ -286,25 +219,6 @@ class TestVmConsolesAndVmCreateDateTimestampMetrics:
         )
 
 
-class TestVmiMemoryCachedBytes:
-    @pytest.mark.parametrize(
-        "vm_for_test",
-        [pytest.param("test-vm-memory-cached", marks=pytest.mark.polarion("CNV-11031"))],
-        indirect=True,
-    )
-    def test_kubevirt_vmi_memory_cached_bytes(
-        self,
-        prometheus,
-        vm_for_test,
-        memory_cached_sum_from_vm_console,
-    ):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            expected_value=memory_cached_sum_from_vm_console,
-            metric_name=f"kubevirt_vmi_memory_cached_bytes{{name='{vm_for_test.name}'}}",
-        )
-
-
 @pytest.mark.parametrize("vm_for_test", [pytest.param("file-system-metrics")], indirect=True)
 class TestVmiFileSystemMetricsLinux:
     @pytest.mark.parametrize(
@@ -373,20 +287,6 @@ class TestVmiFileSystemMetricsWindows:
         )
 
 
-class TestVmiMemoryAvailableBytes:
-    @pytest.mark.parametrize(
-        "vm_for_test",
-        [pytest.param("available-mem-test", marks=pytest.mark.polarion("CNV-11497"))],
-        indirect=True,
-    )
-    def test_kubevirt_vmi_memory_available_bytes(self, prometheus, vm_for_test, vmi_memory_available_memory):
-        validate_metric_value_within_range(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_MEMORY_AVAILABLE_BYTES.format(vm_name=vm_for_test.name),
-            expected_value=vmi_memory_available_memory,
-        )
-
-
 @pytest.mark.usefixtures("vm_with_cpu_spec")
 class TestVmResourceRequests:
     @pytest.mark.polarion("CNV-11521")
@@ -413,12 +313,12 @@ class TestVmiStatusAddresses:
         self,
         prometheus,
         vm_for_test,
-        metric_validate_metric_labels_values_ip_labels,
+        kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
-        vm_ip_address,
     ):
-        instance_value = metric_validate_metric_labels_values_ip_labels.get("instance").split(":")[0]
-        address_value = metric_validate_metric_labels_values_ip_labels.get("address")
+        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
+        vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (
             f"Expected value: {vm_virt_controller_ip_address}, Actual: {instance_value}"
         )
@@ -457,32 +357,6 @@ class TestVmResourceLimits:
         )
 
 
-@pytest.mark.parametrize("vm_for_test", [pytest.param("memory-working-set-vm")], indirect=True)
-class TestVmFreeMemoryBytes:
-    @pytest.mark.polarion("CNV-11692")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes(self, prometheus, vm_for_test):
-        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_working_set_bytes"
-            f"{{pod='{vm_for_test.vmi.virt_launcher_pod.name}'}}",
-            vm=vm_for_test,
-            working_set=True,
-        )
-
-    @pytest.mark.polarion("CNV-11693")
-    def test_metric_kubevirt_vm_container_free_memory_bytes_based_on_rss(
-        self,
-        prometheus,
-        vm_for_test,
-    ):
-        validate_metric_vm_container_free_memory_bytes_based_on_working_set_rss_bytes(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vm_container_free_memory_bytes_based_on_rss"
-            f"{{pod='{vm_for_test.privileged_vmi.virt_launcher_pod.name}'}}",
-            vm=vm_for_test,
-        )
-
-
 class TestKubevirtVmiNonEvictable:
     @pytest.mark.parametrize(
         "data_volume_scope_function, vm_from_template_with_existing_dv",
@@ -517,26 +391,6 @@ class TestKubevirtVmiNonEvictable:
             prometheus=prometheus,
             metric_name="kubevirt_vmi_non_evictable",
             expected_value="1",
-        )
-
-
-class TestVmSnapshotPersistentVolumeClaimLabels:
-    @pytest.mark.polarion("CNV-11762")
-    def test_metric_kubevirt_vmsnapshot_persistentvolumeclaim_labels(
-        self,
-        prometheus,
-        vm_for_snapshot_for_metrics_test,
-        restored_vm_using_snapshot,
-        snapshot_labels_for_testing,
-    ):
-        expected_metric_labels_and_values(
-            expected_labels_and_values=snapshot_labels_for_testing,
-            values_from_prometheus=get_metric_labels_non_empty_value(
-                prometheus=prometheus,
-                metric_name=KUBEVIRT_VMSNAPSHOT_PERSISTENTVOLUMECLAIM_LABELS.format(
-                    vm_name=vm_for_snapshot_for_metrics_test.name
-                ),
-            ),
         )
 
 

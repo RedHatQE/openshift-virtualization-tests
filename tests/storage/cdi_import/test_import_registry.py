@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
     [
         pytest.param(
             "cnv-2198",
-            "docker://quay.io/openshift-cnv/qe-cnv-tests-registry-official-cirros",
+            "docker://quay.io/openshift-cnv/qe-cnv-tests-alpine-no-disk",
             marks=pytest.mark.polarion("CNV-2198"),
             id="image-registry-not-conform-registrydisk",
         ),

@@ -12,7 +12,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import bitmath
 import jinja2
@@ -36,6 +36,7 @@ from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
 from ocp_utilities.exceptions import CommandExecFailed
+from paramiko import ProxyCommandFailure
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
@@ -54,6 +55,7 @@ from utilities.constants import (
     EVICTIONSTRATEGY,
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
+    LINUX_STR,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
@@ -1838,7 +1840,7 @@ def migrate_vm_and_verify(
     ) as migration:
         if not wait_for_migration_success:
             return migration
-        wait_for_migration_finished(vm=vm, migration=migration, timeout=timeout)
+        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
 
     verify_vm_migrated(
         vm=vm,
@@ -1849,7 +1851,7 @@ def migrate_vm_and_verify(
     return None
 
 
-def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
+def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
     counter = 0
@@ -1867,7 +1869,7 @@ def wait_for_migration_finished(vm, migration, timeout=TIMEOUT_12MIN):
                     for pod in utilities.infra.get_pod_by_name_prefix(
                         dyn_client=get_client(),
                         pod_prefix=VIRT_LAUNCHER,
-                        namespace=vm.namespace,
+                        namespace=namespace,
                         get_all=True,
                     ):
                         if pod.status not in (Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED):
@@ -2218,7 +2220,9 @@ def check_migration_process_after_node_drain(dyn_client, vm):
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=dyn_client, timeout=TIMEOUT_5MIN)
-    wait_for_migration_finished(vm=vm, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
+    wait_for_migration_finished(
+        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
+    )
 
     target_pod = vm.privileged_vmi.virt_launcher_pod
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
@@ -2638,3 +2642,58 @@ def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple
             return _match["user"], _match["password"]
 
     return "", ""
+
+
+def validate_virtctl_guest_agent_after_guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
+    guest_reboot(vm=vm, os_type=os_type)
+    wait_for_running_vm(vm=vm, ssh_timeout=TIMEOUT_30MIN if os_type == OS_FLAVOR_WINDOWS else TIMEOUT_5MIN)
+    assert validate_virtctl_guest_agent_data_over_time(vm=vm), "Guest agent stopped responding after guest reboot"
+
+
+def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
+    commands = {
+        "stop-user-agent": {
+            LINUX_STR: "sudo systemctl stop qemu-guest-agent",
+            OS_FLAVOR_WINDOWS: "powershell -command \"Stop-Service -Name 'QEMU-GA'\"",
+        },
+        "reboot": {
+            LINUX_STR: "sudo reboot",
+            OS_FLAVOR_WINDOWS: 'powershell -command "Restart-Computer -Force"',
+        },
+    }
+
+    LOGGER.info("Stopping user agent")
+    run_os_command(vm=vm, command=commands["stop-user-agent"][os_type])
+    wait_for_user_agent_down(vm=vm, timeout=TIMEOUT_2MIN)
+
+    LOGGER.info(f"Rebooting {vm.name} from guest")
+    run_os_command(vm=vm, command=commands["reboot"][os_type])
+
+
+def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
+    try:
+        return run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(command),
+            timeout=5,
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+        )[0]
+    except ProxyCommandFailure:
+        # On RHEL on successful reboot command execution ssh gets stuck
+        if "reboot" not in command:
+            raise
+        return None
+
+
+def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
+    LOGGER.info(f"Waiting up to {round(timeout / 60)} minutes for user agent to go down on {vm.name}")
+    for sample in TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=2,
+        func=lambda: [
+            condition for condition in vm.vmi.instance.status.conditions if condition["type"] == "AgentConnected"
+        ],
+    ):
+        # Consider agent "down" when condition is absent OR explicitly not True
+        if not sample or all(condition.get("status") != "True" for condition in sample):
+            break

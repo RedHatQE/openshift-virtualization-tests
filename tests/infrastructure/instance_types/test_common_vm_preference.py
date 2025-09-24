@@ -76,6 +76,7 @@ def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_clus
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-10798")
 def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_preferences)
@@ -87,7 +88,10 @@ class TestCommonVmPreference:
     @pytest.mark.polarion("CNV-9894")
     def test_common_vm_preference_windows(self, unprivileged_client, namespace):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["windows"]
+            client=unprivileged_client,
+            namespace=namespace,
+            # drop legacy preferences with pcihole
+            preferences=[pref for pref in VM_PREFERENCES_LIST["windows"] if pref not in {"windows.2k3", "windows.xp"}],
         )
 
     @pytest.mark.parametrize(

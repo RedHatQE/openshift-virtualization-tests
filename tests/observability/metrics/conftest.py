@@ -1,33 +1,22 @@
 import logging
-import re
 import shlex
 
 import bitmath
 import pytest
-from kubernetes.dynamic.exceptions import UnprocessibleEntityError
-from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
-from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
-    CNV_VMI_STATUS_RUNNING_COUNT,
-    KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VM_CREATED_TOTAL_STR,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
-    KUBEVIRT_VMI_PHASE_COUNT_STR,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -37,35 +26,18 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    fail_if_not_zero_restartcount,
-    get_interface_name_from_vm,
     get_metric_sum_value,
-    get_mutation_component_value_from_prometheus,
-    get_not_running_prometheus_pods,
-    get_resource_object,
     get_vm_comparison_info_dict,
-    get_vmi_dommemstat_from_vm,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
-    get_vmi_memory_domain_metric_value_from_prometheus,
-    get_vmi_phase_count,
     metric_result_output_dict_by_mountpoint,
-    restart_cdi_worker_pod,
-    run_node_command,
-    run_vm_commands,
     vnic_info_from_vm_or_vmi,
-    wait_for_metric_reset,
     wait_for_metric_vmi_request_cpu_cores_output,
-    wait_for_no_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_cirros_vm, create_vms, wait_for_cr_labels_change
+from tests.utils import create_vms
 from utilities import console
 from utilities.constants import (
-    CDI_UPLOAD_TMP_PVC,
-    CLUSTER_NETWORK_ADDONS_OPERATOR,
-    COUNT_FIVE,
     IPV4_STR,
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
@@ -75,29 +47,21 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
-    PVC,
-    SOURCE_POD,
     SSP_OPERATOR,
-    TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_10MIN,
     TIMEOUT_15SEC,
-    TIMEOUT_30MIN,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
-    VERSION_LABEL_KEY,
-    VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
-    get_http_image_url,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     is_jira_open,
@@ -107,21 +71,17 @@ from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
-    create_dv,
     data_volume_template_with_source_ref_dict,
     is_snapshot_supported_by_sc,
     vm_snapshot,
-    wait_for_cdi_worker_pod,
 )
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    target_vm_from_cloning_job,
 )
 from utilities.vnc_utils import VNCConnection
 
-UPLOAD_STR = "upload"
 CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
@@ -134,100 +94,6 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
-
-
-def wait_for_component_value_to_be_expected(prometheus, component_name, expected_count):
-    """This function will wait till the expected value is greater than or equal to
-    the value from Prometheus for the specific component_name.
-
-    Args:
-        prometheus (:obj:`Prometheus`): Prometheus object.
-        component_name (String): Name of the component.
-        expected_count (int): Expected value of the component after update.
-
-    Returns:
-        int: It will return the value of the component once it matches to the expected_count.
-    """
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=50,
-        func=get_mutation_component_value_from_prometheus,
-        prometheus=prometheus,
-        component_name=component_name,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample >= expected_count:
-                return sample
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"{component_name} value did not update. Current value {sample} and expected value {expected_count}"
-        )
-        raise
-
-
-@pytest.fixture()
-def updated_resource_multiple_times_with_invalid_label(
-    request, prometheus, admin_client, hco_namespace, hco_status_related_objects
-):
-    """
-    This fixture will repeatedly modify the given resource with invalid metadata labels.
-
-    Args:
-        admin_client (DynamicClient): OCP client with Admin permissions
-        hco_namespace (Namespace): HCO namespace
-
-    Returns:
-        int: Returns latest metrics value of a given component once it matches to the expected_count
-    """
-    count = request.param["count"]
-    comp_name = request.param["comp_name"]
-    resource_name = request.param["name"]
-    resource_version = None
-    resource = get_resource_object(
-        related_objects=hco_status_related_objects,
-        admin_client=admin_client,
-        resource_kind=request.param["resource"],
-        resource_name=resource_name,
-    )
-    assert resource.exists, f"Resource: {comp_name} does not exist"
-    labels = resource.instance.metadata.labels
-    # Create the ResourceEditor once and then re-use it to make sure we are modifying
-    # the resource exactly X times. Since the resource would be reconciled by HCO, there is no need to restore.
-    increasing_value = get_mutation_component_value_from_prometheus(prometheus=prometheus, component_name=comp_name)
-    LOGGER.warning(f"For {resource.name} starting value:{increasing_value}, resource version: {resource_version}")
-    updated_value = 0
-    for index in range(count):
-        increasing_value += 1
-        resource_editor = ResourceEditor(
-            patches={
-                resource: {
-                    "metadata": {
-                        "labels": {VERSION_LABEL_KEY: None},
-                    },
-                }
-            }
-        )
-        resource_editor.update()
-        wait_for_cr_labels_change(component=resource, expected_value=labels)
-        updated_value = wait_for_component_value_to_be_expected(
-            prometheus=prometheus,
-            component_name=comp_name,
-            expected_count=increasing_value,
-        )
-    yield updated_value
-    wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture()
-def mutation_count_before_change(request, prometheus):
-    component_name = request.param
-    LOGGER.info(f"Getting component '{component_name}' mutation count before change.")
-    return get_mutation_component_value_from_prometheus(
-        prometheus=prometheus,
-        component_name=component_name,
-    )
 
 
 @pytest.fixture(scope="module")
@@ -301,98 +167,6 @@ def vm_list(unique_namespace):
 
 
 @pytest.fixture()
-def node_setup(request, vm_list, workers_utility_pods):
-    """
-    This fixture runs commands on nodes hosting vms and reverses the changes at the end.
-
-    Args:
-        vm_list (list): Gets the list of vms created as a part of suite level set up.
-        workers_utility_pods (list): Utility pods from worker nodes.
-
-    """
-    node_command = request.param.get("node_command")
-
-    if node_command:
-        vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
-        run_node_command(
-            vms=vms,
-            utility_pods=workers_utility_pods,
-            command=node_command["setup"],
-        )
-
-        yield
-        run_node_command(
-            vms=vms,
-            utility_pods=workers_utility_pods,
-            command=node_command["cleanup"],
-        )
-    else:
-        yield
-
-
-@pytest.fixture()
-def vm_metrics_setup(request, vm_list):
-    """
-    This fixture runs commands against the vms to generate metrics
-
-    Args:
-        vm_list (list): Gets the list of vms created as a part of suite level set up
-
-    Yields:
-        list: list of vm objects against which commands to generate metric has been issued
-    """
-    vm_commands = request.param.get("vm_commands")
-    vms = vm_list[: request.param.get("num_vms", SINGLE_VM)]
-    if vm_commands:
-        run_vm_commands(vms=vms, commands=vm_commands)
-
-    yield vms
-
-
-@pytest.fixture(scope="class")
-def vmi_phase_count_before(request, prometheus):
-    """
-    This fixture queries Prometheus with the query in the get_vmi_phase_count before a VM is created
-    and keeps the value for verification
-    """
-    return get_vmi_phase_count(
-        prometheus=prometheus,
-        os_name=request.param["labels"]["os"],
-        flavor=request.param["labels"]["flavor"],
-        workload=request.param["labels"]["workload"],
-        query=request.param["query"],
-    )
-
-
-@pytest.fixture(scope="module", autouse=True)
-def metrics_sanity(admin_client):
-    """
-    Perform verification in order to ensure that the cluster is ready for metrics-related tests
-    """
-    LOGGER.info("Verify that Prometheus pods exist and running as expected")
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=1,
-        func=get_not_running_prometheus_pods,
-        admin_client=admin_client,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if not sample:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"timeout awaiting all Prometheus pods to be in Running status: violating_pods={sample}")
-        raise
-
-
-@pytest.fixture(scope="class")
-def stopped_vm(vm_from_template_scope_class):
-    vm_from_template_scope_class.stop(wait=True)
-    return vm_from_template_scope_class
-
-
-@pytest.fixture()
 def virt_pod_info_from_prometheus(request, prometheus):
     """Get Virt Pod information from the recording rules (query) in the form of query_response dictionary.
     Extract Virt Pod name and it's values from the query_response dictionary and
@@ -448,160 +222,6 @@ def virt_up_metrics_values(request, prometheus):
 
 
 @pytest.fixture()
-def vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, single_metric_vm):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=single_metric_vm.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_vm(single_metric_vm):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=single_metric_vm.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
-
-
-@pytest.fixture()
-def cluster_network_addons_operator_scaled_down_and_up(request, prometheus, hco_namespace):
-    metric_name = request.param
-    deployment = Deployment(name=CLUSTER_NETWORK_ADDONS_OPERATOR, namespace=hco_namespace.name)
-    initial_replicas = deployment.instance.spec.replicas
-    deployment.scale_replicas(replica_count=0)
-    deployment.wait_for_replicas(deployed=False)
-    wait_for_metric_reset(
-        prometheus=prometheus,
-        metric_name=metric_name,
-    )
-    deployment.scale_replicas(replica_count=initial_replicas)
-    deployment.wait_for_replicas(deployed=initial_replicas > 0)
-
-
-@pytest.fixture()
-def windows_dv_with_block_volume_mode(
-    namespace,
-    unprivileged_client,
-    storage_class_with_block_volume_mode,
-):
-    with create_dv(
-        dv_name="test-dv-windows-image",
-        namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        storage_class=storage_class_with_block_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.BLOCK,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
-        yield dv
-
-
-@pytest.fixture()
-def cloned_dv_from_block_to_fs(
-    unprivileged_client,
-    windows_dv_with_block_volume_mode,
-    storage_class_with_filesystem_volume_mode,
-):
-    with create_dv(
-        source=PVC,
-        dv_name="cloned-test-dv-windows-image",
-        namespace=windows_dv_with_block_volume_mode.namespace,
-        source_pvc=windows_dv_with_block_volume_mode.name,
-        source_namespace=windows_dv_with_block_volume_mode.namespace,
-        size=windows_dv_with_block_volume_mode.size,
-        storage_class=storage_class_with_filesystem_volume_mode,
-        client=unprivileged_client,
-        volume_mode=DataVolume.VolumeMode.FILE,
-    ) as cdv:
-        cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_2MIN)
-        yield cdv
-
-
-@pytest.fixture()
-def running_cdi_worker_pod(cloned_dv_from_block_to_fs):
-    for pod_name in [CDI_UPLOAD_TMP_PVC, SOURCE_POD]:
-        wait_for_cdi_worker_pod(
-            pod_name=pod_name,
-            storage_ns_name=cloned_dv_from_block_to_fs.namespace,
-        ).wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def restarted_cdi_dv_clone(
-    unprivileged_client,
-    cloned_dv_from_block_to_fs,
-    running_cdi_worker_pod,
-):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=cloned_dv_from_block_to_fs,
-        pod_prefix=CDI_UPLOAD_TMP_PVC,
-    )
-
-
-@pytest.fixture()
-def ready_uploaded_dv(unprivileged_client, namespace):
-    with create_dv(
-        source=UPLOAD_STR,
-        dv_name=f"{UPLOAD_STR}-dv",
-        namespace=namespace.name,
-        storage_class=py_config["default_storage_class"],
-        client=unprivileged_client,
-    ) as dv:
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-        yield dv
-
-
-@pytest.fixture()
-def restarted_cdi_dv_upload(unprivileged_client, ready_uploaded_dv):
-    restart_cdi_worker_pod(
-        unprivileged_client=unprivileged_client,
-        dv=ready_uploaded_dv,
-        pod_prefix=CDI_UPLOAD_PRIME,
-    )
-    ready_uploaded_dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
-
-
-@pytest.fixture()
-def zero_clone_dv_restart_count(cloned_dv_from_block_to_fs):
-    fail_if_not_zero_restartcount(dv=cloned_dv_from_block_to_fs)
-
-
-@pytest.fixture()
-def zero_upload_dv_restart_count(ready_uploaded_dv):
-    fail_if_not_zero_restartcount(dv=ready_uploaded_dv)
-
-
-@pytest.fixture(scope="class")
-def kubevirt_vmi_phase_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=KUBEVIRT_VMI_PHASE_COUNT_STR)
-
-
-@pytest.fixture(scope="class")
-def cnv_vmi_status_running_count_metric_no_value(prometheus):
-    wait_for_no_metrics_value(prometheus=prometheus, metric_name=CNV_VMI_STATUS_RUNNING_COUNT)
-
-
-@pytest.fixture(scope="class")
-def validated_preference_instance_type_of_target_vm(
-    rhel_vm_with_instancetype_and_preference_for_cloning, cloning_job_scope_class
-):
-    with target_vm_from_cloning_job(cloning_job=cloning_job_scope_class) as target_vm:
-        target_vm_instance_spec = target_vm.instance.spec
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_instance_type.name
-            == target_vm_instance_spec.instancetype.name
-        )
-        assert (
-            rhel_vm_with_instancetype_and_preference_for_cloning.vm_preference.name
-            == target_vm_instance_spec.preference.name
-        )
-        yield target_vm
-
-
-@pytest.fixture()
 def connected_vm_console_successfully(vm_for_test, prometheus):
     with console.Console(vm=vm_for_test) as vmc:
         vmc.sendline("ls")
@@ -626,22 +246,6 @@ def connected_vnc_console(prometheus, vm_for_test):
 
 
 @pytest.fixture()
-def memory_cached_sum_from_vm_console(vm_for_test):
-    info_to_sum = ["Buffers", "Cached", "SwapCached"]
-    proc_meminfo_content = run_ssh_commands(
-        host=vm_for_test.ssh_exec,
-        commands=shlex.split("cat /proc/meminfo"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-    matches = re.findall(rf"({'|'.join(info_to_sum)}):\s+(\d+)\s+\S+", proc_meminfo_content)
-    assert matches, f"/proc/meminfo content: {proc_meminfo_content}"
-    assert sorted(list(dict(matches).keys())) == sorted(info_to_sum), (
-        f"Expected info to collect: {info_to_sum}, Actual: {matches}"
-    )
-    return bitmath.kB(value=sum(list(map(int, dict(matches).values())))).bytes
-
-
-@pytest.fixture()
 def generated_network_traffic(vm_for_test):
     assert_ping_successful(
         src_vm=vm_for_test,
@@ -661,31 +265,12 @@ def generated_network_traffic_windows_vm(windows_vm_for_test):
 
 @pytest.fixture(scope="class")
 def linux_vm_for_test_interface_name(vm_for_test):
-    return get_interface_name_from_vm(vm=vm_for_test)
+    return vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test_interface_name(windows_vm_for_test):
-    return get_interface_name_from_vm(vm=windows_vm_for_test)
-
-
-@pytest.fixture(scope="class")
-def initial_total_created_vms(prometheus, namespace):
-    return get_metric_sum_value(
-        prometheus=prometheus, metric=KUBEVIRT_VM_CREATED_TOTAL_STR.format(namespace=namespace.name)
-    )
-
-
-@pytest.fixture()
-def vmi_memory_available_memory(vm_for_test):
-    memory_available_bytes = run_ssh_commands(
-        host=vm_for_test.ssh_exec,
-        commands=shlex.split("free -b"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-    memory_available = re.search(r"Mem:\s+(\d+)", memory_available_bytes)
-    assert memory_available, f"No information available for vm memory: {memory_available_bytes}"
-    return float(memory_available.group(1))
+    return windows_vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture(scope="class")
@@ -714,18 +299,7 @@ def modified_vm_cpu_requests(vm_with_cpu_spec):
 
 
 @pytest.fixture()
-def vm_ip_address(vm_for_test):
-    vm_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        vm_for_test.privileged_vmi.virt_launcher_pod.execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
-    assert vm_ip, f"Failed to find {vm_for_test.name} vm ip."
-    return vm_ip.group(1)
-
-
-@pytest.fixture()
-def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_test):
+def kubevirt_vmi_status_addresses_ip_labels_values(prometheus, vm_for_test):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_15SEC,
@@ -746,22 +320,16 @@ def metric_validate_metric_labels_values_ip_labels(request, prometheus, vm_for_t
 
 
 @pytest.fixture()
-def vm_virt_controller_ip_address(
-    prometheus, admin_client, hco_namespace, metric_validate_metric_labels_values_ip_labels
-):
-    virt_controller_pod_name = metric_validate_metric_labels_values_ip_labels.get("pod")
+def vm_virt_controller_ip_address(admin_client, hco_namespace, kubevirt_vmi_status_addresses_ip_labels_values):
+    virt_controller_pod_name = kubevirt_vmi_status_addresses_ip_labels_values.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
-    virt_controller_pod_ip = re.search(
-        IP_RE_PATTERN_FROM_INTERFACE,
-        get_pod_by_name_prefix(
-            dyn_client=admin_client,
-            pod_prefix=virt_controller_pod_name,
-            namespace=hco_namespace.name,
-        ).execute(command=IP_ADDR_SHOW_COMMAND),
-        re.DOTALL,
-    )
+    virt_controller_pod_ip = get_pod_by_name_prefix(
+        dyn_client=admin_client,
+        pod_prefix=virt_controller_pod_name,
+        namespace=hco_namespace.name,
+    ).ip
     assert virt_controller_pod_ip, f"virt-controller: {virt_controller_pod_name} ip not found."
-    return virt_controller_pod_ip.group(1)
+    return virt_controller_pod_ip
 
 
 @pytest.fixture()
@@ -822,39 +390,6 @@ def vm_for_test_with_resource_limits(namespace):
 
 
 @pytest.fixture()
-def virt_handler_pods_count(hco_namespace):
-    return str(
-        DaemonSet(
-            name=VIRT_HANDLER,
-            namespace=hco_namespace.name,
-        ).instance.status.numberReady
-    )
-
-
-@pytest.fixture()
-def vm_instance_with_deprecated_api_version(namespace):
-    vm_instance = VirtualMachine(name="vm-deprecated-api", namespace=namespace.name, client=get_client())
-    vm_instance.api_version = f"{Resource.ApiGroup.KUBEVIRT_IO}/{Resource.ApiVersion.V1ALPHA3}"
-    return vm_instance
-
-
-@pytest.fixture()
-def generated_api_deprecated_requests(prometheus, vm_instance_with_deprecated_api_version):
-    initial_metric_value = int(
-        get_metrics_value(
-            prometheus=prometheus,
-            metrics_name=KUBEVIRT_API_REQUEST_DEPRECATED_TOTAL_WITH_VERSION_VERB_AND_RESOURCE,
-        )
-    )
-    for _ in range(COUNT_FIVE):
-        try:
-            vm_instance_with_deprecated_api_version.deploy()
-        except UnprocessibleEntityError:
-            continue
-    return initial_metric_value + COUNT_FIVE
-
-
-@pytest.fixture()
 def storage_class_labels_for_testing(admin_client):
     chosen_sc_name = py_config["default_storage_class"]
     return {
@@ -866,60 +401,6 @@ def storage_class_labels_for_testing(admin_client):
         ]
         == "true"
         else "false",
-    }
-
-
-@pytest.fixture()
-def vm_for_snapshot_for_metrics_test(admin_client, storage_class_for_snapshot, namespace):
-    with create_cirros_vm(
-        storage_class=storage_class_for_snapshot,
-        namespace=namespace.name,
-        client=admin_client,
-        dv_name="dv-for-snapshot",
-        vm_name="vm-for-snapshot",
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture()
-def vm_snapshot_for_metric_test(vm_for_snapshot_for_metrics_test):
-    with vm_snapshot(
-        vm=vm_for_snapshot_for_metrics_test, name=f"{vm_for_snapshot_for_metrics_test.name}-snapshot"
-    ) as snapshot:
-        yield snapshot
-
-
-@pytest.fixture()
-def restored_vm_using_snapshot(vm_for_snapshot_for_metrics_test, vm_snapshot_for_metric_test):
-    vm_name = vm_for_snapshot_for_metrics_test.name
-    vm_for_snapshot_for_metrics_test.stop(wait=True)
-    with VirtualMachineRestore(
-        name=f"restore-snapshot-{vm_name}",
-        namespace=vm_snapshot_for_metric_test.namespace,
-        vm_name=vm_name,
-        snapshot_name=vm_snapshot_for_metric_test.name,
-    ) as vm_restore:
-        vm_restore.wait_restore_done()
-        vm_for_snapshot_for_metrics_test.start(wait=True)
-        yield vm_restore
-
-
-@pytest.fixture()
-def restored_pvc_name(admin_client, vm_for_snapshot_for_metrics_test):
-    for pvc in PersistentVolumeClaim.get(
-        dyn_client=admin_client,
-        namespace=vm_for_snapshot_for_metrics_test.namespace,
-        label_selector=f"restore.kubevirt.io/source-vm-name={vm_for_snapshot_for_metrics_test.name}",
-    ):
-        return pvc.name
-
-
-@pytest.fixture()
-def snapshot_labels_for_testing(vm_snapshot_for_metric_test, vm_for_snapshot_for_metrics_test, restored_pvc_name):
-    return {
-        "label_restore_kubevirt_io_source_vm_name": vm_for_snapshot_for_metrics_test.name,
-        "persistentvolumeclaim": restored_pvc_name,
-        "namespace": vm_snapshot_for_metric_test.namespace,
     }
 
 
@@ -972,28 +453,6 @@ def vnic_info_from_vm_or_vmi_linux(request, running_metric_vm):
 @pytest.fixture()
 def vnic_info_from_vmi_windows(windows_vm_for_test):
     return vnic_info_from_vm_or_vmi(vm_or_vmi="vmi", vm=windows_vm_for_test)
-
-
-@pytest.fixture()
-def allocatable_nodes(nodes):
-    return [node for node in nodes if node.instance.status.allocatable.memory != "0"]
-
-
-@pytest.fixture()
-def windows_vmi_domain_total_memory_bytes_metric_value_from_prometheus(prometheus, windows_vm_for_test):
-    return get_vmi_memory_domain_metric_value_from_prometheus(
-        prometheus=prometheus,
-        vmi_name=windows_vm_for_test.vmi.name,
-        query=KUBEVIRT_VMI_MEMORY_DOMAIN_BYTES,
-    )
-
-
-@pytest.fixture()
-def vmi_domain_total_memory_in_bytes_from_windows_vm(windows_vm_for_test):
-    return get_vmi_dommemstat_from_vm(
-        vmi_dommemstat=windows_vm_for_test.privileged_vmi.get_dommemstat(),
-        domain_memory_string="actual",
-    )
 
 
 @pytest.fixture()
@@ -1117,22 +576,6 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
 
 
 @pytest.fixture()
-def created_fake_data_volume_resource(namespace, admin_client):
-    with DataVolume(
-        name="fake-dv",
-        namespace=namespace.name,
-        url="http://broken-link.test",
-        source="http",
-        size=Images.Rhel.DEFAULT_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-        bind_immediate_annotation=True,
-        api_name="storage",
-        client=admin_client,
-    ) as dv:
-        yield dv
-
-
-@pytest.fixture()
 def initial_metric_value(request, prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
 
@@ -1145,3 +588,34 @@ def deleted_vmi(running_metric_vm):
 @pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
+
+
+@pytest.fixture(scope="module")
+def enabled_aaq_in_hco_scope_module(admin_client, hco_namespace, hyperconverged_resource_scope_module):
+    with enabled_aaq_in_hco(
+        client=admin_client,
+        hco_namespace=hco_namespace,
+        hyperconverged_resource=hyperconverged_resource_scope_module,
+    ):
+        yield
+
+
+@pytest.fixture()
+def application_aware_resource_quota_creation_timestamp(application_aware_resource_quota):
+    return application_aware_resource_quota.instance.metadata.creationTimestamp
+
+
+@pytest.fixture()
+def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
+    application_aware_resource_quota_instance = application_aware_resource_quota.instance
+    resource_hard_limit = application_aware_resource_quota_instance.spec.hard
+    resource_used = application_aware_resource_quota_instance.status.used
+    formatted_hard_limit = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_hard_limit.items()
+    }
+    formatted_used_value = {
+        key: int(bitmath.parse_string_unsafe(value).to_Byte().value) if isinstance(value, str) else int(value)
+        for key, value in resource_used.items()
+    }
+    return formatted_hard_limit, formatted_used_value

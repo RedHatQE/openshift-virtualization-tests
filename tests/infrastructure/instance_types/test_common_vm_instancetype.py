@@ -22,6 +22,7 @@ def xfail_if_no_huge_pages(workers):
 @pytest.mark.sno
 @pytest.mark.post_upgrade
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-10358")
 def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)

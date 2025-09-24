@@ -23,6 +23,7 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
@@ -46,7 +47,6 @@ from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
@@ -73,8 +73,10 @@ import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AAQ_NAMESPACE_LABEL,
     AMD,
     ARM_64,
+    ARQ_QUOTA_HARD_SPEC,
     AUDIT_LOGS_PATH,
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
@@ -153,6 +155,7 @@ from utilities.infra import (
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
+    label_project,
     login_with_user_password,
     name_prefix,
     run_virtctl_command,
@@ -1376,15 +1379,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
 
 
 @pytest.fixture(scope="session")
-def fail_test_if_no_ocs_sc(ocs_storage_class):
-    """
-    Fail test if no OCS storage class available
-    """
-    if not ocs_storage_class:
-        pytest.fail("Failing test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
 def hyperconverged_ovs_annotations_enabled_scope_session(
     admin_client,
     hco_namespace,
@@ -2190,13 +2184,6 @@ def instance_type_for_test_scope_class(namespace, common_instance_type_param_dic
     return VirtualMachineInstancetype(**instance_type_param_dict)
 
 
-@pytest.fixture()
-def instance_type_for_test_scope_function(namespace, common_instance_type_param_dict):
-    instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
-    instance_type_param_dict["namespace"] = namespace.name
-    return VirtualMachineInstancetype(**instance_type_param_dict)
-
-
 @pytest.fixture(scope="class")
 def common_instance_type_param_dict(request):
     common_instance_dict = {
@@ -2403,25 +2390,6 @@ def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
 
 
-@pytest.fixture()
-def cnv_prometheus_rule_by_name(cnv_prometheus_rules_matrix__function__):
-    prometheus_rule = PrometheusRule(
-        namespace=py_config["hco_namespace"],
-        name=cnv_prometheus_rules_matrix__function__,
-    )
-    assert prometheus_rule.exists
-    return prometheus_rule
-
-
-@pytest.fixture()
-def cnv_alerts_from_prometheus_rule(cnv_prometheus_rule_by_name):
-    alerts = []
-    LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
-    for group in cnv_prometheus_rule_by_name.instance.spec.groups:
-        alerts.extend([rule for rule in group["rules"] if rule.get("alert")])
-    return alerts
-
-
 @pytest.fixture(scope="session")
 def worker_machine1(worker_node1):
     machine = Machine(
@@ -2436,12 +2404,6 @@ def worker_machine1(worker_node1):
 @pytest.fixture(scope="session")
 def is_idms_cluster():
     return not cluster_with_icsp()
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_filesystem_sc(storage_class_with_filesystem_volume_mode):
-    if not storage_class_with_filesystem_volume_mode:
-        pytest.skip("Skip the test: no Storage class with Filesystem volume mode")
 
 
 @pytest.fixture(scope="session")
@@ -2555,19 +2517,6 @@ def cloning_job_scope_function(request, namespace):
         name=f"clone-job-{request.param['source_name']}",
         namespace=namespace.name,
         source_name=request.param["source_name"],
-        label_filters=request.param.get("label_filters"),
-        annotation_filters=request.param.get("annotation_filters"),
-    ) as vmc:
-        yield vmc
-
-
-@pytest.fixture(scope="class")
-def cloning_job_scope_class(request, namespace):
-    source_name = request.param["source_name"]
-    with create_vm_cloning_job(
-        name=f"clone-job-{source_name}",
-        namespace=namespace.name,
-        source_name=source_name,
         label_filters=request.param.get("label_filters"),
         annotation_filters=request.param.get("annotation_filters"),
     ) as vmc:
@@ -2938,3 +2887,28 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
 @pytest.fixture(scope="session")
 def nmstate_required(admin_client):
     return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+@pytest.fixture(scope="session")
+def conformance_tests(request):
+    return (
+        (marker_args := request.config.getoption("-m"))
+        and "conformance" in marker_args
+        and "not conformance" not in marker_args
+    )
+
+
+@pytest.fixture(scope="module")
+def updated_namespace_with_aaq_label(admin_client, namespace):
+    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
+
+
+@pytest.fixture(scope="class")
+def application_aware_resource_quota(admin_client, namespace):
+    with ApplicationAwareResourceQuota(
+        client=admin_client,
+        name="application-aware-resource-quota-for-aaq-test",
+        namespace=namespace.name,
+        hard=ARQ_QUOTA_HARD_SPEC,
+    ) as arq:
+        yield arq
