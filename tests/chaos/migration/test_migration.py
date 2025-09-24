@@ -84,6 +84,7 @@ def test_pod_delete_migration(
         filter_pods_by_name=pod_deleting_process["pod_prefix"],
     )
 
+
 @pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
@@ -196,6 +197,7 @@ def test_pod_delete_storage_migration(
         vm=chaos_vm_rhel9_with_dv_started,
         initial_node=tainted_node_for_vm_chaos_rhel9_with_dv_migration,
     ), "The VMI has not been migrated to a different node."
+
 
 @pytest.mark.s390x
 @pytest.mark.gpfs
