@@ -902,8 +902,6 @@ WORKLOAD_STR = "workload"
 LATEST_RELEASE_STR = "latest_released"
 OS_VERSION_STR = "os_version"
 DATA_SOURCE_STR = "data_source"
-<<<<<<< HEAD
-=======
 
 # OADP
 ADP_NAMESPACE = "openshift-adp"
@@ -942,4 +940,3 @@ QUOTA_FOR_ONE_VMI = {
 }
 
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
->>>>>>> e90f123 ( tests for aaq operator metrics (#1594))

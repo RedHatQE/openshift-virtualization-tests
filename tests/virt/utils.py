@@ -38,11 +38,6 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-<<<<<<< HEAD
-from utilities.infra import get_pod_by_name_prefix
-=======
-from utilities.infra import is_jira_open
->>>>>>> e90f123 ( tests for aaq operator metrics (#1594))
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,

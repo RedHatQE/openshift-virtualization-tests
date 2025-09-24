@@ -84,11 +84,7 @@ from utilities.constants import (
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
-<<<<<<< HEAD
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
-=======
-from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
->>>>>>> e90f123 ( tests for aaq operator metrics (#1594))
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco, wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
     get_http_image_url,
