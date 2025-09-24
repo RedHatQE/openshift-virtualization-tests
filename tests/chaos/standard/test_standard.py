@@ -118,7 +118,7 @@ def test_odf_storage_outage(
     chaos_vm_rhel9_with_dv.start(wait=True, timeout=TIMEOUT_2MIN)
     chaos_vm_rhel9_with_dv.wait_for_specific_status(status=VirtualMachine.Status.RUNNING, timeout=TIMEOUT_2MIN)
 
-
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_worker_background_process",
