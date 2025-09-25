@@ -5,6 +5,7 @@ import pexpect
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     VIRTCTL,
 )
@@ -56,16 +57,22 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt, timeout=TIMEOUT_5MIN)
-            LOGGER.info(f"{self.vm.name}: Using username {self.username}")
-            self.child.sendline(self.username)
-            if self.password:
-                self.child.expect("Password:")
-                LOGGER.info(f"{self.vm.name}: Using password {self.password}")
-                self.child.sendline(self.password)
-
-        self.child.expect(self.prompt, timeout=150)
-        LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
+            while True:
+                pattern_matched = self.child.expect(
+                    ["login:", "Password:", self.prompt, pexpect.EOF, pexpect.TIMEOUT], timeout=TIMEOUT_2MIN
+                )
+                if pattern_matched == 0:
+                    LOGGER.info(f"{self.vm.name}: Using username {self.username}")
+                    self.child.sendline(self.username)
+                elif pattern_matched == 1:
+                    if self.password:
+                        LOGGER.info(f"{self.vm.name}: Using password {self.password}")
+                        self.child.sendline(self.password)
+                    else:
+                        raise ValueError("Password prompt received but no password provided.")
+                elif pattern_matched == 2:
+                    LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
+                    break
 
     def disconnect(self):
         if self.child.terminated:
