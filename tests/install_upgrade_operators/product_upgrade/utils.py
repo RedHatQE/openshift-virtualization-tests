@@ -17,6 +17,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.subscription import Subscription
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -54,6 +55,7 @@ from utilities.operator import (
     approve_install_plan,
     get_hco_csv_name_by_version,
     update_image_in_catalog_source,
+    update_subscription_source,
     wait_for_mcp_update_completion,
 )
 
@@ -389,7 +391,7 @@ def wait_for_cluster_version_state_and_version(cluster_version, target_ocp_versi
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_180MIN,
-            sleep=10,
+            sleep=TIMEOUT_10MIN,
             func=_cluster_version_state_and_version,
             _cluster_version=cluster_version,
             _target_ocp_version=target_ocp_version,
@@ -631,6 +633,8 @@ def perform_cnv_upgrade(
     cr_name: str,
     hco_namespace: Namespace,
     cnv_target_version: str,
+    subscription: Subscription | None = None,
+    subscription_source: str | None = None,
 ) -> None:
     hco_target_csv_name = get_hco_csv_name_by_version(cnv_target_version=cnv_target_version)
 
@@ -641,6 +645,12 @@ def perform_cnv_upgrade(
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=cr_name,
     )
+    if subscription and subscription_source:
+        update_subscription_source(
+            subscription=subscription,
+            subscription_source=subscription_source,
+            subscription_channel="candidate",
+        )
     LOGGER.info("Approving CNV InstallPlan")
     approve_cnv_upgrade_install_plan(
         dyn_client=admin_client,
