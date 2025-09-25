@@ -165,6 +165,7 @@ def verify_run_strategy_vmi_status(run_strategy_vmi_list):
     return run_strategy_vmi_list
 
 
+<<<<<<< HEAD
 def vm_is_migrateable(vm):
     vm_spec = vm.instance.spec
     vm_access_modes = (
@@ -188,6 +189,8 @@ def verify_linux_boot_time(vm_list, initial_boot_time):
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
 
 
+=======
+>>>>>>> 50800dd ([VIRT] Fix descheduler tests (#1987))
 def verify_windows_boot_time(windows_vm, initial_boot_time):
     if vm_is_migrateable(vm=windows_vm):
         current_boot_time = get_vm_boot_time(vm=windows_vm)

@@ -17,6 +17,7 @@ from tests.virt.upgrade.utils import (
     vm_from_template,
     wait_for_automatic_vm_migrations,
 )
+from tests.virt.utils import get_boot_time_for_multiple_vms
 from utilities.constants import (
     ES_LIVE_MIGRATE_IF_POSSIBLE,
     OS_FLAVOR_RHEL,
@@ -292,11 +293,35 @@ def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_imag
 
 
 @pytest.fixture(scope="session")
+<<<<<<< HEAD
 def linux_boot_time_before_upgrade(vms_for_upgrade):
     boot_time_dict = {}
     for vm in vms_for_upgrade:
         boot_time_dict[vm.name] = get_vm_boot_time(vm=vm)
     yield boot_time_dict
+=======
+def virt_migratable_vms(vms_for_upgrade):
+    def _vm_is_migrateable(vm):
+        vm_spec = vm.instance.spec
+        vm_access_modes = (
+            vm.get_storage_configuration()
+            if (vm_spec.get("instancetype") or vm_spec.get("preference"))
+            else vm.access_modes
+        )
+        if DataVolume.AccessMode.RWO in vm_access_modes:
+            return False
+        return True
+
+    migratable_vms = [vm for vm in vms_for_upgrade if _vm_is_migrateable(vm=vm)]
+
+    LOGGER.info(f"VIRT migratable vms: {[vm.name for vm in migratable_vms]}")
+    return migratable_vms
+
+
+@pytest.fixture(scope="session")
+def linux_boot_time_before_upgrade(vms_for_upgrade):
+    return get_boot_time_for_multiple_vms(vm_list=vms_for_upgrade)
+>>>>>>> 50800dd ([VIRT] Fix descheduler tests (#1987))
 
 
 @pytest.fixture(scope="session")
