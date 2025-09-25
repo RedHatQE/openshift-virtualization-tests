@@ -30,7 +30,6 @@ from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
     indirect=True,
 )
 def test_windows_memory_dump(
-    skip_test_if_no_filesystem_sc,
     namespace,
     windows_vm_for_memory_dump,
     pvc_for_windows_memory_dump,
