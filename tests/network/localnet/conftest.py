@@ -16,6 +16,7 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
     client_server_active_connection,
+    create_nncp_localnet_on_secondary_node_nic,
     create_traffic_client,
     create_traffic_server,
     localnet_cudn,
@@ -27,8 +28,6 @@ from utilities.constants import (
 )
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
-
-NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 
 
 @pytest.fixture(scope="module")
@@ -144,46 +143,6 @@ def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualM
     ) as client:
         assert client.is_running()
         yield client
-
-
-@pytest.fixture(scope="module")
-def nncp_localnet_on_secondary_node_nic(
-    worker_node1: Node, nodes_available_nics: dict[str, list[str]]
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    bridge_name = "localnet-ovs-br"
-    desired_state = libnncp.DesiredState(
-        interfaces=[
-            libnncp.Interface(
-                name=bridge_name,
-                type=NNCP_INTERFACE_TYPE_OVS_BRIDGE,
-                ipv4=libnncp.IPv4(enabled=False),
-                ipv6=libnncp.IPv6(enabled=False),
-                state=libnncp.Resource.Interface.State.UP,
-                bridge=libnncp.Bridge(
-                    options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
-                    port=[
-                        libnncp.Port(
-                            name=nodes_available_nics[worker_node1.name][-1],
-                        )
-                    ],
-                ),
-            )
-        ],
-        ovn=libnncp.OVN([
-            libnncp.BridgeMappings(
-                localnet=LOCALNET_OVS_BRIDGE_NETWORK,
-                bridge=bridge_name,
-                state=libnncp.BridgeMappings.State.PRESENT.value,
-            )
-        ]),
-    )
-    with libnncp.NodeNetworkConfigurationPolicy(
-        name=bridge_name,
-        desired_state=desired_state,
-        node_selector={WORKER_NODE_LABEL_KEY: ""},
-    ) as nncp:
-        nncp.wait_for_status_success()
-        yield nncp
 
 
 @pytest.fixture(scope="module")
@@ -310,3 +269,21 @@ def migrated_localnet_vm(localnet_running_vms: tuple[BaseVirtualMachine, BaseVir
     vm, _ = localnet_running_vms
     migrate_vm_and_verify(vm=vm)
     return vm
+
+
+@pytest.fixture(scope="module")
+def nncp_localnet_on_secondary_node_nic(
+    worker_node1: Node, nodes_available_nics: dict[str, list[str]]
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    yield from create_nncp_localnet_on_secondary_node_nic(
+        worker_node=worker_node1, nodes_available_nics=nodes_available_nics
+    )
+
+
+@pytest.fixture(scope="module")
+def nncp_localnet_on_secondary_node_nic_config_mtu(
+    worker_node1: Node, nodes_available_nics: dict[str, list[str]], cluster_hardware_mtu: int
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    yield from create_nncp_localnet_on_secondary_node_nic(
+        worker_node=worker_node1, nodes_available_nics=nodes_available_nics, mtu=cluster_hardware_mtu
+    )
