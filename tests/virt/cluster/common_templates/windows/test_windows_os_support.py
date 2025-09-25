@@ -47,7 +47,6 @@ class TestCommonTemplatesWindows:
 
     @pytest.mark.sno
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.usefixtures("xfail_guest_agent_on_win2016")
     @pytest.mark.polarion("CNV-3785")
     def test_start_vm(self, matrix_windows_os_vm_from_template):
         """Test CNV common templates VM initiation"""
