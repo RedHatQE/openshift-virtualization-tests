@@ -31,7 +31,7 @@ CNV_INSTALLATION_TEST = "test_cnv_installation"
 CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.install]
+pytestmark = [pytest.mark.install, pytest.mark.s390x]
 
 
 @pytest.mark.polarion("CNV-10072")
