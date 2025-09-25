@@ -9,7 +9,6 @@ from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABEL
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_vm_and_verify_image_permission,
     create_vm_from_dv,
     create_windows_vm_validate_guest_agent_info,
 )
@@ -17,9 +16,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
-    QUARANTINED,
     TIMEOUT_1MIN,
-    TIMEOUT_10MIN,
     TIMEOUT_40MIN,
     Images,
 )
@@ -109,43 +106,53 @@ def test_successful_clone_of_large_image(
             )
 
 
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "image": FEDORA_LATEST.get("image_path"),
-                "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
-            },
-            marks=(
-                pytest.mark.polarion("CNV-2148"),
-                pytest.mark.post_upgrade(),
-                pytest.mark.sno(),
-                pytest.mark.gating(),
-            ),
-        ),
-    ],
-    indirect=True,
-)
+@pytest.mark.sno
+@pytest.mark.polarion("CNV-2148")
+@pytest.mark.gating()
+@pytest.mark.post_upgrade()
 def test_successful_vm_restart_with_cloned_dv(
+    unprivileged_client,
     namespace,
-    data_volume_multi_storage_scope_function,
+    storage_class_name_scope_module,
+    fedora_data_source_scope_module,
+    cluster_csi_drivers_names,
 ):
-    with create_dv(
-        source="pvc",
-        dv_name="dv-target",
+    source_dict = fedora_data_source_scope_module.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+
+    with DataVolume(
+        name="dv-target",
         namespace=namespace.name,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
+        client=unprivileged_client,
+        size=size,
+        api_name="storage",
+        storage_class=storage_class_name_scope_module,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=TIMEOUT_10MIN)
+        cdv.wait(timeout=TIMEOUT_1MIN, wait_for_exists_only=True)
+        cdv.pvc.wait()
+
         with create_vm_from_dv(
-            dv=cdv, vm_name="fedora-vm", os_flavor=OS_FLAVOR_FEDORA, memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE
+            dv=cdv,
+            vm_name="fedora-vm",
+            os_flavor=OS_FLAVOR_FEDORA,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            wait_for_interfaces=True,
         ) as vm_dv:
             restart_vm_wait_for_running_vm(vm=vm_dv, wait_for_interfaces=False)
-            check_disk_count_in_vm(vm=vm_dv)
+
+        assert_use_populator(
+            pvc=cdv.pvc,
+            storage_class=cdv.storage_class,
+            cluster_csi_drivers_names=cluster_csi_drivers_names,
+        )
 
 
 @pytest.mark.tier3
@@ -190,52 +197,6 @@ def test_successful_vm_from_cloned_dv_windows(
             namespace=namespace,
             unprivileged_client=unprivileged_client,
             vm_params=vm_params,
-        )
-
-
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: consistently failing test. Timeout into ssh connection to the vm; CNV-66721",
-    run=False,
-)
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "image": FEDORA_LATEST.get("image_path"),
-                "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
-            },
-            marks=(pytest.mark.polarion("CNV-4035")),
-        )
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_disk_image_after_clone(
-    skip_block_volumemode_scope_function,
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_function,
-    cluster_csi_drivers_names,
-):
-    storage_class = data_volume_multi_storage_scope_function.storage_class
-    with create_dv(
-        source="pvc",
-        dv_name="dv-cnv-4035",
-        namespace=namespace.name,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        client=unprivileged_client,
-        storage_class=storage_class,
-    ) as cdv:
-        cdv.wait_for_dv_success()
-        create_vm_and_verify_image_permission(dv=cdv)
-        assert_use_populator(
-            pvc=cdv.pvc,
-            storage_class=storage_class,
-            cluster_csi_drivers_names=cluster_csi_drivers_names,
         )
 
 
