@@ -44,7 +44,6 @@ class TestCustomConsoleCliDownload:
     @pytest.mark.polarion("CNV-12278")
     def test_custom_console_cli_download_links_downloadable(
         self,
-        admin_client,
         tmpdir,
         all_virtctl_urls_scope_function,
     ):
