@@ -13,7 +13,6 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import (
     LINUX_STR,
     OS_FLAVOR_RHEL,
@@ -49,15 +48,12 @@ def vm_generated_new_password():
 
 
 @pytest.fixture(scope="class")
-def persistence_vm(request, golden_image_data_source_for_test_scope_class, unprivileged_client, namespace):
+def persistence_vm(request, golden_image_data_volume_template_for_test_scope_class, unprivileged_client, namespace):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_for_test_scope_class,
-        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-            data_source=golden_image_data_source_for_test_scope_class
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm
 

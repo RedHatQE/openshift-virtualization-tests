@@ -14,7 +14,6 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import WINDOWS_2019
-from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, TIMEOUT_5MIN
 from utilities.ssp import get_windows_timezone
@@ -122,7 +121,7 @@ def sysprep_resource(sysprep_source_matrix__class__, unprivileged_client, namesp
 @pytest.fixture(scope="class")
 def sysprep_vm(
     sysprep_source_matrix__class__,
-    golden_image_data_source_for_test_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
     unprivileged_client,
     namespace,
@@ -135,9 +134,7 @@ def sysprep_vm(
             client=unprivileged_client,
             vm_instance_type=vm_instance_type,
             vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
-            data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-                data_source=golden_image_data_source_for_test_scope_class
-            ),
+            data_volume_template=golden_image_data_volume_template_for_test_scope_class,
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,
             cpu_model=modern_cpu_for_migration,

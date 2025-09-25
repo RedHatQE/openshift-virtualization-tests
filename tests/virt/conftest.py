@@ -328,10 +328,24 @@ def golden_image_data_source_for_test_scope_module(request, admin_client, golden
     )
 
 
+@pytest.fixture(scope="module")
+def golden_image_data_volume_template_for_test_scope_module(golden_image_data_source_for_test_scope_module):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_module
+    )
+
+
 @pytest.fixture(scope="class")
 def golden_image_data_source_for_test_scope_class(request, admin_client, golden_images_namespace):
     yield from get_or_create_golden_image_data_source(
         admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+    )
+
+
+@pytest.fixture(scope="class")
+def golden_image_data_volume_template_for_test_scope_class(golden_image_data_source_for_test_scope_class):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_class
     )
 
 
@@ -342,20 +356,24 @@ def golden_image_data_source_for_test_scope_function(request, admin_client, gold
     )
 
 
+@pytest.fixture()
+def golden_image_data_volume_template_for_test_scope_function(golden_image_data_source_for_test_scope_function):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_function
+    )
+
+
 @pytest.fixture(scope="class")
 def vm_for_test_from_template_scope_class(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_for_test_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_for_test_scope_class,
-        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-            data_source=golden_image_data_source_for_test_scope_class
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm

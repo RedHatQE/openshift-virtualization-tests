@@ -132,17 +132,14 @@ def tablet_device_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_for_test_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     cpu_for_migration,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_for_test_scope_class,
-        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-            data_source=golden_image_data_source_for_test_scope_class
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
     ) as vm:
         yield vm

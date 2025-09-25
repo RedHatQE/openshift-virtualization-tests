@@ -15,7 +15,6 @@ from tests.virt.cluster.vm_cloning.utils import (
     assert_target_vm_has_new_pvc_disks,
     check_if_files_present_after_cloning,
 )
-from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
 from utilities.storage import (
     add_dv_to_vm,
@@ -57,14 +56,12 @@ def dummy_dv_dict_for_vm_cloning(namespace):
 
 @pytest.fixture()
 def vm_with_dv_for_cloning(
-    skip_if_no_storage_class_for_snapshot, request, namespace, golden_image_data_source_for_test_scope_function
+    skip_if_no_storage_class_for_snapshot, request, namespace, golden_image_data_volume_template_for_test_scope_function
 ):
     with VirtualMachineForCloning(
         name=request.param["vm_name"],
         namespace=namespace.name,
-        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-            data_source=golden_image_data_source_for_test_scope_function
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         memory_guest=request.param["memory_guest"],
         cpu_cores=request.param.get("cpu_cores", 1),
         os_flavor=request.param["vm_name"].split("-")[0],

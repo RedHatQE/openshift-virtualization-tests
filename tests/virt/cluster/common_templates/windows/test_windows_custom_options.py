@@ -13,7 +13,6 @@ from tests.os_params import (
     WINDOWS_2019,
     WINDOWS_2019_OS,
 )
-from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
 from utilities.constants import LINUX_BRIDGE, TCP_TIMEOUT_30SEC, TIMEOUT_12MIN, VIRTIO, Images
 from utilities.network import network_device, network_nad
 from utilities.storage import get_storage_class_dict_from_matrix
@@ -34,7 +33,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
         name,
         namespace,
         client,
-        data_source,
+        data_volume_template,
         os_dict,
         nad,
         drive_d_pvc,
@@ -44,7 +43,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
             name=name,
             namespace=namespace,
             client=client,
-            data_source=data_source,
+            data_volume_template=data_volume_template,
             labels=Template.generate_template_labels(**os_dict["template_labels"]),
             cpu_cores=1,
             cpu_sockets=2,
@@ -152,7 +151,7 @@ def windows_custom_drive_d(unprivileged_client, namespace):
 def custom_windows_vm(
     windows_custom_bridge_nad,
     windows_custom_drive_d,
-    golden_image_data_source_for_test_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     unprivileged_client,
     modern_cpu_for_migration,
 ):
@@ -160,10 +159,7 @@ def custom_windows_vm(
         name="custom-windows-vm",
         namespace=windows_custom_bridge_nad.namespace,
         client=unprivileged_client,
-        data_source=golden_image_data_source_for_test_scope_class,
-        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
-            data_source=golden_image_data_source_for_test_scope_class
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         os_dict=WINDOWS_2019,
         nad=windows_custom_bridge_nad,
         drive_d_pvc=windows_custom_drive_d,
