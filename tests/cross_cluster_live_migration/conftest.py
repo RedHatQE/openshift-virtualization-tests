@@ -1,10 +1,11 @@
 import logging
 import os
-import time
 from copy import deepcopy
 
 import pytest
 import requests
+import shortuuid
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
@@ -15,7 +16,7 @@ from ocp_resources.network_attachment_definition import NetworkAttachmentDefinit
 from ocp_resources.network_map import NetworkMap
 from ocp_resources.plan import Plan
 from ocp_resources.provider import Provider
-from ocp_resources.resource import ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
@@ -83,11 +84,19 @@ def remote_cluster_api_url(remote_admin_client):
 
 
 @pytest.fixture(scope="session")
-def remote_cluster_service_account(remote_admin_client):
+def remote_cluster_resources_namespace(remote_admin_client):
+    yield from create_ns(
+        admin_client=remote_admin_client,
+        name="remote-cluster-resources-namespace",
+    )
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_service_account(remote_admin_client, remote_cluster_resources_namespace):
     with ServiceAccount(
         client=remote_admin_client,
         name="remote-cluster-service-account",
-        namespace="default",
+        namespace=remote_cluster_resources_namespace.name,
     ) as sa:
         yield sa
 
@@ -122,42 +131,36 @@ def remote_cluster_service_account_token_secret(
         name="remote-cluster-sa-token-secret",
         namespace=remote_cluster_service_account.namespace,
         annotations={
-            "kubernetes.io/service-account.name": remote_cluster_service_account.name,
+            f"{Resource.ApiGroup.KUBERNETES_IO}/service-account.name": remote_cluster_service_account.name,
         },
-        type="kubernetes.io/service-account-token",
+        type=f"{Resource.ApiGroup.KUBERNETES_IO}/service-account-token",
     ) as secret:
         yield secret
 
 
 @pytest.fixture(scope="session")
 def remote_cluster_auth_token(remote_admin_client, remote_cluster_service_account_token_secret):
-    """
-    Get the authentication token for the remote cluster.
-
-    Returns:
-        str: The authentication token for the current user session
-    """
     return wait_for_service_account_token(secret=remote_cluster_service_account_token_secret)
 
 
 @pytest.fixture(scope="session")
-def remote_hco_namespace(remote_admin_client):
+def remote_cluster_hco_namespace(remote_admin_client):
     return Namespace(client=remote_admin_client, name=py_config["hco_namespace"], ensure_exists=True)
 
 
 @pytest.fixture(scope="package")
-def hyperconverged_resource_scope_package_remote_cluster(remote_admin_client, remote_hco_namespace):
-    return get_hyperconverged_resource(client=remote_admin_client, hco_ns_name=remote_hco_namespace.name)
+def remote_cluster_hyperconverged_resource_scope_package(remote_admin_client, remote_cluster_hco_namespace):
+    return get_hyperconverged_resource(client=remote_admin_client, hco_ns_name=remote_cluster_hco_namespace.name)
 
 
 @pytest.fixture(scope="package")
-def enabled_feature_gate_for_decentralized_live_migration_remote_cluster(
-    hyperconverged_resource_scope_package_remote_cluster,
+def remote_cluster_enabled_feature_gate_for_decentralized_live_migration(
+    remote_cluster_hyperconverged_resource_scope_package,
     remote_admin_client,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_package_remote_cluster: {
+            remote_cluster_hyperconverged_resource_scope_package: {
                 "spec": {"featureGates": {"decentralizedLiveMigration": True}}
             }
         },
@@ -169,7 +172,7 @@ def enabled_feature_gate_for_decentralized_live_migration_remote_cluster(
 
 
 @pytest.fixture(scope="package")
-def enabled_feature_gate_for_decentralized_live_migration_local_cluster(
+def local_cluster_enabled_feature_gate_for_decentralized_live_migration(
     hyperconverged_resource_scope_package,
     admin_client,
 ):
@@ -185,27 +188,30 @@ def enabled_feature_gate_for_decentralized_live_migration_local_cluster(
 
 
 @pytest.fixture(scope="package")
-def network_for_live_migration_local_cluster(admin_client, hco_namespace):
+def local_cluster_network_for_live_migration(admin_client, hco_namespace):
     return NetworkAttachmentDefinition(
-        name=LIVE_MIGRATION_NETWORK_NAME, namespace=hco_namespace.name, client=admin_client, ensure_exists=True
+        name=LIVE_MIGRATION_NETWORK_NAME,
+        namespace=hco_namespace.name,
+        client=admin_client,
+        ensure_exists=True,
     )
 
 
 @pytest.fixture(scope="package")
-def network_for_live_migration_remote_cluster(remote_admin_client, remote_hco_namespace):
+def remote_cluster_network_for_live_migration(remote_admin_client, remote_cluster_hco_namespace):
     return NetworkAttachmentDefinition(
         name=LIVE_MIGRATION_NETWORK_NAME,
-        namespace=remote_hco_namespace.name,
+        namespace=remote_cluster_hco_namespace.name,
         client=remote_admin_client,
         ensure_exists=True,
     )
 
 
 @pytest.fixture(scope="package")
-def configured_hco_live_migration_network_local_cluster(
+def local_cluster_configured_hco_live_migration_network(
     hyperconverged_resource_scope_package,
     admin_client,
-    network_for_live_migration_local_cluster,
+    local_cluster_network_for_live_migration,
 ):
     """
     Configure the live migration network for HyperConverged resource.
@@ -213,7 +219,7 @@ def configured_hco_live_migration_network_local_cluster(
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_package: {
-                "spec": {"liveMigrationConfig": {"network": network_for_live_migration_local_cluster.name}}
+                "spec": {"liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name}}
             }
         },
         list_resource_reconcile=[KubeVirt],
@@ -224,18 +230,18 @@ def configured_hco_live_migration_network_local_cluster(
 
 
 @pytest.fixture(scope="package")
-def configured_hco_live_migration_network_remote_cluster(
-    hyperconverged_resource_scope_package_remote_cluster,
+def remote_cluster_configured_hco_live_migration_network(
+    remote_cluster_hyperconverged_resource_scope_package,
     remote_admin_client,
-    network_for_live_migration_remote_cluster,
+    remote_cluster_network_for_live_migration,
 ):
     """
     Configure the live migration network for HyperConverged resource on the remote cluster.
     """
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_package_remote_cluster: {
-                "spec": {"liveMigrationConfig": {"network": network_for_live_migration_remote_cluster.name}}
+            remote_cluster_hyperconverged_resource_scope_package: {
+                "spec": {"liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name}}
             }
         },
         list_resource_reconcile=[KubeVirt],
@@ -258,7 +264,7 @@ def forklift_controller_resource_scope_package(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="package")
-def enabled_mtv_feature_gate_ocp_live_migration(forklift_controller_resource_scope_package):
+def local_cluster_enabled_mtv_feature_gate_ocp_live_migration(forklift_controller_resource_scope_package):
     forklift_spec_dict = deepcopy(forklift_controller_resource_scope_package.instance.to_dict()["spec"])
     forklift_spec_dict["feature_ocp_live_migration"] = "true"
     with ResourceEditor(patches={forklift_controller_resource_scope_package: {"spec": forklift_spec_dict}}):
@@ -282,7 +288,7 @@ def mtv_forklift_services_route_host(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
-def remote_cluster_ca_cert(mtv_forklift_services_route_host, remote_cluster_api_url):
+def local_cluster_ca_cert_for_remote_cluster(mtv_forklift_services_route_host, remote_cluster_api_url):
     """
     Fetch the CA certificate for the remote cluster using Forklift services.
 
@@ -292,27 +298,26 @@ def remote_cluster_ca_cert(mtv_forklift_services_route_host, remote_cluster_api_
     cert_url = f"https://{mtv_forklift_services_route_host}/tls-certificate?URL={remote_cluster_api_url}"
     LOGGER.info(f"Fetching remote cluster CA certificate from: {cert_url}")
     try:
-        response = requests.get(cert_url, verify=False, timeout=30)
+        response = requests.get(cert_url, verify=False, timeout=TIMEOUT_30SEC)
         response.raise_for_status()
 
         # The response should contain the certificate
         ca_cert = response.text.strip()
 
         if not ca_cert:
-            raise ValueError("Empty certificate received from Forklift services")
+            raise NotFoundError(f"Empty certificate received from {cert_url}")
+
         LOGGER.info("Successfully fetched remote cluster CA certificate")
         return ca_cert
-    except requests.exceptions.RequestException as e:
-        LOGGER.error(f"Failed to fetch CA certificate from {cert_url}: {e}")
-        raise
+
     except Exception as e:
-        LOGGER.error(f"Unexpected error fetching CA certificate: {e}")
+        LOGGER.error(f"Failed to fetch CA certificate from {cert_url}: {e}")
         raise
 
 
 @pytest.fixture(scope="module")
-def remote_cluster_secret(
-    admin_client, namespace, remote_cluster_auth_token, remote_cluster_api_url, remote_cluster_ca_cert
+def local_cluster_secret_for_remote_cluster(
+    admin_client, namespace, remote_cluster_auth_token, remote_cluster_api_url, local_cluster_ca_cert_for_remote_cluster
 ):
     """
     Create a Secret for access to the remote cluster from the local cluster.
@@ -331,7 +336,7 @@ def remote_cluster_secret(
             "insecureSkipVerify": base64_encode_str("false"),
             "token": remote_cluster_auth_token,
             "url": base64_encode_str(remote_cluster_api_url),
-            "cacert": base64_encode_str(remote_cluster_ca_cert),
+            "cacert": base64_encode_str(local_cluster_ca_cert_for_remote_cluster),
         },
         type="Opaque",
     ) as secret:
@@ -339,7 +344,9 @@ def remote_cluster_secret(
 
 
 @pytest.fixture(scope="module")
-def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_cluster_secret, remote_cluster_api_url):
+def local_cluster_mtv_provider_for_remote_cluster(
+    admin_client, mtv_namespace, namespace, local_cluster_secret_for_remote_cluster, remote_cluster_api_url
+):
     """
     Create a Provider resource for the remote cluster in the local cluster.
     Used by MTV to connect to the remote OpenShift cluster for migration operations.
@@ -350,8 +357,8 @@ def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_c
         namespace=mtv_namespace.name,
         provider_type=Provider.ProviderType.OPENSHIFT,
         url=remote_cluster_api_url,
-        secret_name=remote_cluster_secret.name,
-        secret_namespace=remote_cluster_secret.namespace,
+        secret_name=local_cluster_secret_for_remote_cluster.name,
+        secret_namespace=local_cluster_secret_for_remote_cluster.namespace,
     ) as provider:
         provider.wait_for_condition(
             condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
@@ -360,7 +367,7 @@ def mtv_provider_remote_cluster(admin_client, mtv_namespace, namespace, remote_c
 
 
 @pytest.fixture(scope="module")
-def mtv_provider_local_cluster(admin_client, mtv_namespace):
+def local_cluster_mtv_provider_for_local_cluster(admin_client, mtv_namespace):
     """
     Get a Provider resource for the local cluster.
     "host" Provider is created by default by MTV.
@@ -373,7 +380,9 @@ def mtv_provider_local_cluster(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
-def mtv_storage_map(admin_client, mtv_provider_local_cluster, mtv_provider_remote_cluster):
+def local_cluster_mtv_storage_map(
+    admin_client, local_cluster_mtv_provider_for_local_cluster, local_cluster_mtv_provider_for_remote_cluster
+):
     """
     Create a StorageMap resource for MTV migration.
     Maps storage classes between source and destination clusters.
@@ -387,11 +396,11 @@ def mtv_storage_map(admin_client, mtv_provider_local_cluster, mtv_provider_remot
     with StorageMap(
         client=admin_client,
         name="storage-map",
-        namespace=mtv_provider_local_cluster.namespace,
-        source_provider_name=mtv_provider_remote_cluster.name,
-        source_provider_namespace=mtv_provider_remote_cluster.namespace,
-        destination_provider_name=mtv_provider_local_cluster.name,
-        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
+        source_provider_name=local_cluster_mtv_provider_for_remote_cluster.name,
+        source_provider_namespace=local_cluster_mtv_provider_for_remote_cluster.namespace,
+        destination_provider_name=local_cluster_mtv_provider_for_local_cluster.name,
+        destination_provider_namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
         mapping=mapping,
     ) as storage_map:
         storage_map.wait_for_condition(
@@ -401,7 +410,9 @@ def mtv_storage_map(admin_client, mtv_provider_local_cluster, mtv_provider_remot
 
 
 @pytest.fixture(scope="module")
-def mtv_network_map(admin_client, mtv_provider_local_cluster, mtv_provider_remote_cluster):
+def local_cluster_mtv_network_map(
+    admin_client, local_cluster_mtv_provider_for_local_cluster, local_cluster_mtv_provider_for_remote_cluster
+):
     """
     Create a NetworkMap resource for MTV migration.
     Maps networks between source and destination clusters.
@@ -415,11 +426,11 @@ def mtv_network_map(admin_client, mtv_provider_local_cluster, mtv_provider_remot
     with NetworkMap(
         client=admin_client,
         name="network-map",
-        namespace=mtv_provider_local_cluster.namespace,
-        source_provider_name=mtv_provider_remote_cluster.name,
-        source_provider_namespace=mtv_provider_remote_cluster.namespace,
-        destination_provider_name=mtv_provider_local_cluster.name,
-        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
+        source_provider_name=local_cluster_mtv_provider_for_remote_cluster.name,
+        source_provider_namespace=local_cluster_mtv_provider_for_remote_cluster.namespace,
+        destination_provider_name=local_cluster_mtv_provider_for_local_cluster.name,
+        destination_provider_namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
         mapping=mapping,
     ) as network_map:
         network_map.wait_for_condition(
@@ -429,40 +440,36 @@ def mtv_network_map(admin_client, mtv_provider_local_cluster, mtv_provider_remot
 
 
 @pytest.fixture(scope="session")
-def remote_golden_images_namespace(remote_admin_client):
+def remote_cluster_golden_images_namespace(remote_admin_client):
     return Namespace(name=py_config["golden_images_namespace"], client=remote_admin_client, ensure_exists=True)
 
 
 @pytest.fixture(scope="class")
 def unique_suffix():
-    """
-    Returns last 5 digits of timestamp in string format
-    """
-    return str(int(time.time()))[-5:]
+    return shortuuid.ShortUUID().random(length=4).lower()
 
 
 @pytest.fixture(scope="class")
-def remote_test_namespace(request, remote_admin_client, unique_suffix):
+def remote_cluster_source_test_namespace(remote_admin_client, unique_suffix):
     yield from create_ns(
         admin_client=remote_admin_client,
-        name=f"test-cclm-remote-namespace-{unique_suffix}",
-        teardown=True,
+        name=f"test-cclm-source-namespace-{unique_suffix}",
     )
 
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client, remote_test_namespace, remote_golden_images_namespace
+    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_golden_images_namespace
 ):
     rhel_data_source = DataSource(
-        namespace=remote_golden_images_namespace.name,
+        namespace=remote_cluster_golden_images_namespace.name,
         name=py_config["latest_rhel_os_dict"][DATA_SOURCE_STR],
         client=remote_admin_client,
         ensure_exists=True,
     )
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
-        namespace=remote_test_namespace.name,
+        namespace=remote_cluster_source_test_namespace.name,
         client=remote_admin_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
@@ -479,10 +486,10 @@ def vm_for_cclm_from_template_with_data_source(
 def mtv_migration_plan(
     admin_client,
     mtv_namespace,
-    mtv_provider_local_cluster,
-    mtv_provider_remote_cluster,
-    mtv_storage_map,
-    mtv_network_map,
+    local_cluster_mtv_provider_for_local_cluster,
+    local_cluster_mtv_provider_for_remote_cluster,
+    local_cluster_mtv_storage_map,
+    local_cluster_mtv_network_map,
     namespace,
     vm_for_cclm_from_template_with_data_source,
     unique_suffix,
@@ -502,14 +509,14 @@ def mtv_migration_plan(
         client=admin_client,
         name=f"cclm-migration-plan-{unique_suffix}",
         namespace=mtv_namespace.name,
-        network_map_name=mtv_network_map.name,
-        network_map_namespace=mtv_network_map.namespace,
-        storage_map_name=mtv_storage_map.name,
-        storage_map_namespace=mtv_storage_map.namespace,
-        source_provider_name=mtv_provider_remote_cluster.name,
-        source_provider_namespace=mtv_provider_remote_cluster.namespace,
-        destination_provider_name=mtv_provider_local_cluster.name,
-        destination_provider_namespace=mtv_provider_local_cluster.namespace,
+        network_map_name=local_cluster_mtv_network_map.name,
+        network_map_namespace=local_cluster_mtv_network_map.namespace,
+        storage_map_name=local_cluster_mtv_storage_map.name,
+        storage_map_namespace=local_cluster_mtv_storage_map.namespace,
+        source_provider_name=local_cluster_mtv_provider_for_remote_cluster.name,
+        source_provider_namespace=local_cluster_mtv_provider_for_remote_cluster.namespace,
+        destination_provider_name=local_cluster_mtv_provider_for_local_cluster.name,
+        destination_provider_namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
         target_namespace=namespace.name,
         virtual_machines_list=vms,
         type="live",

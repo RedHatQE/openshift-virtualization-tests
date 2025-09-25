@@ -8,13 +8,11 @@ pytestmark = [
     pytest.mark.cclm,
     pytest.mark.remote_cluster,
     pytest.mark.usefixtures(
-        "enabled_feature_gate_for_decentralized_live_migration_remote_cluster",
-        "enabled_feature_gate_for_decentralized_live_migration_local_cluster",
-        "enabled_mtv_feature_gate_ocp_live_migration",
-        "configured_hco_live_migration_network_remote_cluster",
-        "configured_hco_live_migration_network_local_cluster",
-        "mtv_provider_remote_cluster",
-        "mtv_provider_local_cluster",
+        "remote_cluster_enabled_feature_gate_for_decentralized_live_migration",
+        "local_cluster_enabled_feature_gate_for_decentralized_live_migration",
+        "local_cluster_enabled_mtv_feature_gate_ocp_live_migration",
+        "remote_cluster_configured_hco_live_migration_network",
+        "local_cluster_configured_hco_live_migration_network",
     ),
 ]
 
