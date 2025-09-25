@@ -13,7 +13,11 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
+<<<<<<< HEAD
     rev: v0.12.11
+=======
+    rev: v0.13.1
+>>>>>>> e42c6c8 ([pre-commit.ci] pre-commit autoupdate (#2138))
     hooks:
       - id: ruff
         stages: [pre-commit]
@@ -65,7 +69,11 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/mirrors-mypy
+<<<<<<< HEAD
     rev: v1.17.1
+=======
+    rev: v1.18.2
+>>>>>>> e42c6c8 ([pre-commit.ci] pre-commit autoupdate (#2138))
     hooks:
       - id: mypy
         exclude: "test_(.*).py$"
