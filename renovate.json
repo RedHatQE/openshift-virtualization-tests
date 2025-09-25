@@ -14,7 +14,7 @@
   "lockFileMaintenance": {
     "enabled": true
   },
-  "schedule": ["every Friday after 6pm"],
+  "schedule": ["after 18:00 on Friday"],
   "packageRules": [
     {
       "matchPackagePatterns": ["*"],
