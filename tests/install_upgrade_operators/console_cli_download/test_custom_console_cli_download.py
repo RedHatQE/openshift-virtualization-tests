@@ -3,8 +3,8 @@ import pytest
 from tests.install_upgrade_operators.console_cli_download.utils import (
     CUSTOMIZED_VIRT_DL,
     validate_custom_cli_downloads_urls_updated,
-    validate_custom_cli_urls_downloaded,
 )
+from utilities.infra import download_and_extract_file_from_cluster
 
 
 @pytest.mark.parametrize(
@@ -44,11 +44,12 @@ class TestCustomConsoleCliDownload:
     @pytest.mark.polarion("CNV-12278")
     def test_custom_console_cli_download_links_downloadable(
         self,
-        admin_client,
         tmpdir,
         all_virtctl_urls_scope_function,
     ):
-        validate_custom_cli_urls_downloaded(
-            urls=all_virtctl_urls_scope_function,
-            dest_dir=tmpdir,
-        )
+        not_valid_urls = [
+            url
+            for url in all_virtctl_urls_scope_function
+            if not download_and_extract_file_from_cluster(tmpdir=tmpdir, url=url)
+        ]
+        assert not not_valid_urls, f"Some urls is not valid, {not_valid_urls}"

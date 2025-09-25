@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def virtctl_console_cli_downloads_spec_links(admin_client):
+def virtctl_console_cli_downloads_spec_links_scope_function(admin_client):
     """
     Get console cli downloads spec links
 
@@ -31,7 +31,7 @@ def virtctl_console_cli_downloads_spec_links(admin_client):
 
 
 @pytest.fixture(scope="class")
-def virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
+def original_virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
     """
     Get console cli downloads spec links
 
@@ -42,15 +42,19 @@ def virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
 
 
 @pytest.fixture()
-def all_virtctl_urls_scope_function(virtctl_console_cli_downloads_spec_links):
+def all_virtctl_urls_scope_function(virtctl_console_cli_downloads_spec_links_scope_function):
     """This fixture returns URLs for the various OSs to download virtctl"""
-    return get_all_console_links(console_cli_downloads_spec_links=virtctl_console_cli_downloads_spec_links)
+    return get_all_console_links(
+        console_cli_downloads_spec_links=virtctl_console_cli_downloads_spec_links_scope_function
+    )
 
 
 @pytest.fixture(scope="class")
-def all_virtctl_urls_scope_class(virtctl_console_cli_downloads_spec_links_scope_class):
+def all_virtctl_urls_scope_class(original_virtctl_console_cli_downloads_spec_links_scope_class):
     """This fixture returns URLs for the various OSs to download virtctl"""
-    return get_all_console_links(console_cli_downloads_spec_links=virtctl_console_cli_downloads_spec_links_scope_class)
+    return get_all_console_links(
+        console_cli_downloads_spec_links=original_virtctl_console_cli_downloads_spec_links_scope_class
+    )
 
 
 @pytest.fixture()

@@ -1,11 +1,10 @@
 import logging
 
-from _pytest._py.path import LocalPath
 from kubernetes.dynamic import DynamicClient
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC, VIRTCTL_CLI_DOWNLOADS
-from utilities.infra import download_and_extract_file_from_cluster, get_console_spec_links
+from utilities.infra import get_console_spec_links
 
 LOGGER = logging.getLogger(__name__)
 CUSTOMIZED_VIRT_DL = "customized-virt-dl"
@@ -27,23 +26,26 @@ def validate_custom_cli_downloads_urls_updated(
         admin_client (DynamicClient): Kubernetes dynamic client for API operations
         new_hostname (str, optional): New hostname that should be present in all URLs.
             If provided, validates that all URLs contain this hostname.
+            Mutually exclusive with original_virtctl_console_cli_downloads_spec_links.
         original_virtctl_console_cli_downloads_spec_links (list[str], optional):
             Original list of CLI download URLs. If provided, validates that current
             URLs match these original URLs.
-
-    Returns:
-        None: Function returns when validation succeeds
+            Mutually exclusive with new_hostname.
 
     Raises:
         TimeoutExpiredError: If validation fails within the timeout period (1 minute).
             This can occur when:
             - URLs don't revert to original state within timeout
             - URLs don't get updated with new hostname within timeout
-
-    Note:
-        - Exactly one of new_hostname or original_virtctl_console_cli_downloads_spec_links
-          should be provided, not both
+        ValueError: If both new_hostname and original_virtctl_console_cli_downloads_spec_links
+            are provided, or if neither is provided.
     """
+    if (new_hostname is None) == (original_virtctl_console_cli_downloads_spec_links is None):
+        raise ValueError(
+            "Exactly one of 'new_hostname' or 'original_virtctl_console_cli_downloads_spec_links' "
+            "must be provided, not both or neither."
+        )
+
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
@@ -64,17 +66,15 @@ def validate_custom_cli_downloads_urls_updated(
                 if not urls_not_updated_with_new_hostname:
                     return
     except TimeoutExpiredError:
-        LOGGER.error(
-            f"Failed to update cluster ingress downloads spec links to the original links: "
-            f"original_cli_spec_links: {original_virtctl_console_cli_downloads_spec_links}, "
-            f"current_cli_spec_links: {current_cli_spec_links}"
-        ) if original_virtctl_console_cli_downloads_spec_links else (
-            f"Failed to get console spec links: {current_cli_spec_links}, "
-            f"There are urls that are not updated with new hostname: {urls_not_updated_with_new_hostname}"
-        )
+        if original_virtctl_console_cli_downloads_spec_links:
+            LOGGER.error(
+                f"Failed to update cluster ingress downloads spec links to the original links: "
+                f"original_cli_spec_links: {original_virtctl_console_cli_downloads_spec_links}, "
+                f"current_cli_spec_links: {current_cli_spec_links}"
+            )
+        else:
+            LOGGER.error(
+                f"Failed to get console spec links: {current_cli_spec_links}, "
+                f"There are urls that are not updated with new hostname: {urls_not_updated_with_new_hostname}"
+            )
         raise
-
-
-def validate_custom_cli_urls_downloaded(urls: list[str], dest_dir: LocalPath) -> None:
-    not_valid_urls = [url for url in urls if not download_and_extract_file_from_cluster(tmpdir=dest_dir, url=url)]
-    assert not not_valid_urls, f"Some urls is not valid, {not_valid_urls}"
