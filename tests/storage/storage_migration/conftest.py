@@ -29,6 +29,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -247,9 +248,14 @@ def vms_for_storage_class_migration(request):
 
 
 @pytest.fixture(scope="class")
-def booted_vms_for_storage_class_migration(vms_for_storage_class_migration):
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="class")
+def booted_vms_for_storage_class_migration(vms_for_storage_class_migration, dv_wait_timeout):
     for vm in vms_for_storage_class_migration:
-        running_vm(vm=vm)
+        running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
     yield vms_for_storage_class_migration
 
 

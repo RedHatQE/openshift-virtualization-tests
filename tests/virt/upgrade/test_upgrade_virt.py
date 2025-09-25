@@ -16,13 +16,11 @@ from tests.upgrade_params import (
 )
 from tests.virt.upgrade.utils import (
     mismatching_src_pvc_names,
-    verify_linux_boot_time,
     verify_run_strategy_vmi_status,
     verify_vms_ssh_connectivity,
     verify_windows_boot_time,
-    vm_is_migrateable,
 )
-from tests.virt.utils import assert_migration_post_copy_mode
+from tests.virt.utils import assert_migration_post_copy_mode, verify_linux_boot_time
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
 from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
@@ -102,10 +100,9 @@ class TestUpgradeVirt:
         depends=[VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_before_upgrade(self, vms_for_upgrade):
-        for vm in vms_for_upgrade:
-            if vm_is_migrateable(vm=vm):
-                migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+    def test_migration_before_upgrade(self, virt_migratable_vms):
+        for vm in virt_migratable_vms:
+            migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
@@ -180,10 +177,10 @@ class TestUpgradeVirt:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_is_vm_running_after_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
+    def test_is_vm_running_after_upgrade(self, vms_for_upgrade, virt_migratable_vms, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
-        verify_linux_boot_time(vm_list=vms_for_upgrade, initial_boot_time=linux_boot_time_before_upgrade)
+        verify_linux_boot_time(vm_list=virt_migratable_vms, initial_boot_time=linux_boot_time_before_upgrade)
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
@@ -280,11 +277,10 @@ class TestUpgradeVirt:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_after_upgrade(self, vms_for_upgrade):
-        for vm in vms_for_upgrade:
-            if vm_is_migrateable(vm=vm):
-                migrate_vm_and_verify(vm=vm)
-                vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
+    def test_migration_after_upgrade(self, virt_migratable_vms):
+        for vm in virt_migratable_vms:
+            migrate_vm_and_verify(vm=vm)
+            vm_console_run_commands(vm=vm, commands=["ls"], timeout=1100)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno

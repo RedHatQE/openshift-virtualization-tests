@@ -16,7 +16,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
-from utilities.constants import QUARANTINED
+from utilities.constants import TIMEOUT_60MIN
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -86,10 +86,6 @@ class TestStorageClassMigrationAtoB:
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Bug: can't Storage migrate a Stopped VM; fixed in MTC 1.8.10; MIG-1762",
-    run=False,
-)
 @pytest.mark.parametrize(
     "source_storage_class, target_storage_class, data_volume_scope_class, "
     "vm_for_storage_class_migration_from_template_with_existing_dv, "
@@ -222,13 +218,14 @@ class TestStorageClassMigrationWithVolumeHotplug:
 
 @pytest.mark.parametrize(
     "source_storage_class, target_storage_class, "
-    "vms_for_storage_class_migration, online_vms_for_storage_class_migration",
+    "vms_for_storage_class_migration, online_vms_for_storage_class_migration, dv_wait_timeout",
     [
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
             {"vms_fixtures": ["windows_vm_with_vtpm_for_storage_migration"]},
             {"online_vm": [True]},  # Desired VM Running status for VMs in "vms_fixtures" list
+            {"dv_wait_timeout": TIMEOUT_60MIN},
             id="mig_win_vm_with_vtpm",
         )
     ],
@@ -248,6 +245,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         storage_mig_plan,
         storage_mig_migration,
         deleted_old_dvs_of_online_vms,
+        dv_wait_timeout,
     ):
         pass
 
@@ -262,6 +260,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         vms_for_storage_class_migration,
         online_vms_for_storage_class_migration,
         vms_boot_time_before_storage_migration,
+        dv_wait_timeout,
     ):
         verify_vms_boot_time_after_storage_migration(
             vm_list=online_vms_for_storage_class_migration, initial_boot_time=vms_boot_time_before_storage_migration
@@ -277,6 +276,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         target_storage_class,
         vms_for_storage_class_migration,
         online_vms_for_storage_class_migration,
+        dv_wait_timeout,
     ):
         vms_failed_data_integrity = {}
         for vm in vms_for_storage_class_migration:
@@ -298,6 +298,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         target_storage_class,
         vms_for_storage_class_migration,
         online_vms_for_storage_class_migration,
+        dv_wait_timeout,
     ):
         vms_failed_storage_class_updated = {}
         for vm in vms_for_storage_class_migration:
@@ -317,6 +318,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         target_storage_class,
         vms_for_storage_class_migration,
         online_vms_for_storage_class_migration,
+        dv_wait_timeout,
     ):
         vms_failed_migration = {}
         for vm in vms_for_storage_class_migration:

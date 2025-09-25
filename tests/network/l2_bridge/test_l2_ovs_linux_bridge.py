@@ -6,7 +6,7 @@ from netaddr import IPNetwork
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
-from tests.network.constants import DHCP_IP_RANGE_START
+from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
 from utilities.constants import TIMEOUT_2MIN
 from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, ping
 

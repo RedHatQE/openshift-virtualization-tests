@@ -2718,6 +2718,8 @@ kubevirt-operator:
     - get
     - list
     - watch
+    - patch
+    - delete
   - apiGroups:
     - kubevirt.io
     resources:
@@ -3514,6 +3516,17 @@ ssp-operator:
     verbs:
     - create
     - delete
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - policy
+    resources:
+    - poddisruptionbudgets
+    verbs:
+    - create
+    - delete
+    - get
     - list
     - update
     - watch

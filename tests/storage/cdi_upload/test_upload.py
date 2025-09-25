@@ -24,7 +24,6 @@ import utilities.storage
 from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -182,10 +181,6 @@ def test_successful_upload_with_supported_formats(
             check_disk_count_in_vm(vm=vm_dv)
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Flaky test, timeout failure; CNV-67422",
-    run=False,
-)
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function",
     [
@@ -298,6 +293,18 @@ def _upload_image(dv_name, namespace, storage_class, local_name, size=None):
 @pytest.mark.sno
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-2015")
+@pytest.mark.parametrize(
+    "upload_file_path",
+    [
+        pytest.param(
+            {
+                "remote_image_dir": Images.Alpine.DIR,
+                "remote_image_name": Images.Alpine.QCOW2_IMG,
+            },
+        ),
+    ],
+    indirect=True,
+)
 def test_successful_concurrent_uploads(
     upload_file_path,
     namespace,

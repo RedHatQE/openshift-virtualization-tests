@@ -186,11 +186,10 @@ def test_dv_delete_from_vm(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3667")
 def test_upload_after_certs_renewal(
-    skip_if_sc_volume_binding_mode_is_wffc,
+    namespace,
+    storage_class_name_immediate_binding_scope_module,
     refresh_cdi_certificates,
     download_image,
-    namespace,
-    storage_class_name_scope_module,
 ):
     """
     Check that CDI can do upload operation after certs get refreshed
@@ -201,7 +200,7 @@ def test_upload_after_certs_renewal(
         name=dv_name,
         size="1Gi",
         image_path=LOCAL_QCOW2_IMG_PATH,
-        storage_class=storage_class_name_scope_module,
+        storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
@@ -251,10 +250,9 @@ def test_import_clone_after_certs_renewal(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3977")
 def test_upload_after_validate_aggregated_api_cert(
-    skip_if_sc_volume_binding_mode_is_wffc,
-    valid_aggregated_api_client_cert,
     namespace,
-    storage_class_name_scope_module,
+    storage_class_name_immediate_binding_scope_module,
+    valid_aggregated_api_client_cert,
     download_image,
 ):
     """
@@ -266,7 +264,7 @@ def test_upload_after_validate_aggregated_api_cert(
         name=dv_name,
         size="1Gi",
         image_path=LOCAL_QCOW2_IMG_PATH,
-        storage_class=storage_class_name_scope_module,
+        storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
