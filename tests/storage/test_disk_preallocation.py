@@ -20,6 +20,8 @@ from utilities.hco import (
 
 pytestmark = pytest.mark.post_upgrade
 
+DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -114,7 +116,7 @@ def test_preallocation_dv(
                 "dv_name": "cnv-5513",
                 "source": "http",
                 "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-                "dv_size": "100Mi",
+                "dv_size": DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-5513"),
         ),
@@ -142,7 +144,7 @@ def test_preallocation_globally_dv_spec_without_preallocation(
                 "dv_name": "cnv-5741",
                 "source": "http",
                 "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-                "dv_size": "200Mi",
+                "dv_size": DEFAULT_DV_SIZE,
                 "preallocation": False,
             },
             marks=pytest.mark.polarion("CNV-5741"),
