@@ -43,6 +43,11 @@ S390X = "s390x"
 X86_64 = "x86_64"
 
 
+def _get_rhel_preference(version):
+    arch = get_cluster_architecture()
+    return f"rhel.{version}.{arch}" if arch in ["arm64", "s390x"] else f"rhel.{version}"
+
+
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
@@ -736,8 +741,8 @@ RHEL_WITH_INSTANCETYPE_AND_PREFERENCE = "rhel-with-instancetype-and-preference"
 CENTOS_STREAM9_PREFERENCE = "centos.stream9"
 CENTOS_STREAM10_PREFERENCE = "centos.stream10"
 RHEL8_PREFERENCE = "rhel.8"
-RHEL9_PREFERENCE = "rhel.9"
-RHEL10_PREFERENCE = "rhel.10"
+RHEL9_PREFERENCE = _get_rhel_preference(version=9)
+RHEL10_PREFERENCE = _get_rhel_preference(version=10)
 U1_SMALL = "u1.small"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"
