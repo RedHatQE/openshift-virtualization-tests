@@ -35,6 +35,7 @@ from utilities.constants import (
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -606,12 +607,23 @@ def get_test_artifact_server_url(schema="https"):
     """
     artifactory_connection_url = py_config["servers"]["https_server"]
     LOGGER.info(f"Testing connectivity to {artifactory_connection_url} {schema.upper()} server")
-    resp = requests.get(artifactory_connection_url, headers=utilities.infra.get_artifactory_header(), verify=False)
-    assert resp.status_code == requests.codes.ok, (
-        f"Unable to connect to test image server: {artifactory_connection_url} "
-        f"{schema.upper()}, with error code: {resp.status_code}, error: {resp.text}"
-    )
-    return py_config["servers"][f"{schema}_server"]
+    sample = None
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: requests.get(
+                artifactory_connection_url, headers=utilities.infra.get_artifactory_header(), verify=False
+            ),
+        ):
+            if sample.status_code == requests.codes.ok:
+                return py_config["servers"][f"{schema}_server"]
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Unable to connect to test image server: {artifactory_connection_url} "
+            f"{schema.upper()}, with error code: {sample.status_code}, error: {sample.text}"
+        )
+        raise
 
 
 def overhead_size_for_dv(image_size, overhead_value):
@@ -969,23 +981,6 @@ def get_storage_class_with_specified_volume_mode(volume_mode, sc_names):
     LOGGER.error(f"No {sc_with_volume_mode} among {sc_names}")
 
 
-def wait_for_dv_expected_restart_count(dv, expected_result):
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_3MIN,
-            sleep=TIMEOUT_20SEC,
-            func=lambda: dv.instance.get("status", {}).get("restartCount"),
-        ):
-            if sample and sample >= expected_result:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"error while restarting dv: {dv.name} ,expected restartCount: {expected_result}, "
-            f"actual restartCount: {sample}"
-        )
-        raise
-
-
 @contextmanager
 def create_vm_from_dv(
     dv,
@@ -997,6 +992,7 @@ def create_vm_from_dv(
     cpu_model=None,
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
+    wait_for_interfaces=False,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,
@@ -1011,7 +1007,7 @@ def create_vm_from_dv(
         if start:
             virt_util.running_vm(
                 vm=vm,
-                wait_for_interfaces=False,
+                wait_for_interfaces=wait_for_interfaces,
                 wait_for_cloud_init=wait_for_cloud_init,
             )
         yield vm

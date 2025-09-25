@@ -46,9 +46,9 @@ class TestCustomConsoleCliDownload:
         self,
         admin_client,
         tmpdir,
-        virtctl_console_cli_downloads_spec_links,
+        all_virtctl_urls_scope_function,
     ):
         validate_custom_cli_urls_downloaded(
-            urls=[url.href for url in virtctl_console_cli_downloads_spec_links],
+            urls=all_virtctl_urls_scope_function,
             dest_dir=tmpdir,
         )

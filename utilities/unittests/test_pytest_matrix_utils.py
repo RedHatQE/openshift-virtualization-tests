@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from utilities.pytest_matrix_utils import (  # noqa: E402
     hpp_matrix,
+    immediate_matrix,
     online_resize_matrix,
     snapshot_matrix,
     wffc_matrix,
@@ -200,6 +201,44 @@ class TestWffcMatrix:
         ]
 
         result = wffc_matrix(matrix)
+
+        assert result == []
+
+
+class TestImmediateMatrix:
+    """Test cases for immediate_matrix function"""
+
+    def test_immediate_matrix_with_immediate_enabled(self):
+        """Test immediate_matrix filters storage classes with immediate enabled (WFFC disabled)"""
+        matrix = [
+            {"sc-with-immediate": {"wffc": False, "other": "value"}},
+            {"sc-without-immediate": {"wffc": True, "other": "value"}},
+            {"sc-with-immediate-2": {"wffc": False, "other": "value"}},
+        ]
+
+        result = immediate_matrix(matrix)
+
+        assert len(result) == 2
+        assert {"sc-with-immediate": {"wffc": False, "other": "value"}} in result
+        assert {"sc-with-immediate-2": {"wffc": False, "other": "value"}} in result
+        assert {"sc-without-immediate": {"wffc": True, "other": "value"}} not in result
+
+    def test_immediate_matrix_empty_matrix(self):
+        """Test immediate_matrix with empty matrix"""
+        matrix = []
+
+        result = immediate_matrix(matrix)
+
+        assert result == []
+
+    def test_immediate_matrix_no_immediate_enabled(self):
+        """Test immediate_matrix with no WFFC enabled storage classes"""
+        matrix = [
+            {"sc-without-immediate-1": {"wffc": True, "other": "value"}},
+            {"sc-without-immediate-2": {"wffc": True, "other": "value"}},
+        ]
+
+        result = immediate_matrix(matrix)
 
         assert result == []
 

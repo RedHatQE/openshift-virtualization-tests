@@ -68,6 +68,15 @@ def wffc_matrix(matrix):
     return matrix_to_return
 
 
+def immediate_matrix(matrix):
+    matrix_to_return = []
+    for storage_class in matrix:
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["wffc"] is False:
+            matrix_to_return.append(storage_class)
+    return matrix_to_return
+
+
 @cache
 def _cache_admin_client() -> DynamicClient:
     """Get admin_client once and reuse it
