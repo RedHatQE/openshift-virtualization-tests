@@ -2,37 +2,47 @@ import datetime
 import logging
 
 import pytest
+from ocp_resources.data_source import DataSource
+from pytest_testconfig import py_config
 
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
+    DATA_SOURCE_STR,
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
-from utilities.oadp import VeleroBackup, create_rhel_vm
-from utilities.storage import write_file
-from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
+from utilities.oadp import VeleroBackup
+from utilities.storage import data_volume_template_with_source_ref_dict, write_file
+from utilities.virt import VirtualMachineForTests, node_mgmt_console, wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-def rhel_vm_with_dv_running(request, admin_client, chaos_namespace, snapshot_storage_class_name_scope_module):
+@pytest.fixture(scope="class")
+def rhel_vm_with_dv_running(
+    admin_client, chaos_namespace, golden_images_namespace, snapshot_storage_class_name_scope_module
+):
     """
-    Create a RHEL VM with a DataVolume.
+    Create a RHEL VM with a DataVolume for the whole test class.
     """
-    vm_name = request.param["vm_name"]
 
-    with create_rhel_vm(
-        storage_class=snapshot_storage_class_name_scope_module,
-        namespace=chaos_namespace.name,
-        vm_name=vm_name,
-        dv_name=f"dv-{vm_name}",
+    with VirtualMachineForTests(
         client=admin_client,
-        wait_running=True,
-        rhel_image=request.param["rhel_image"],
+        name="vm-oadp-chaos",
+        namespace=chaos_namespace.name,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(
+                name=py_config["latest_rhel_os_dict"][DATA_SOURCE_STR],
+                namespace=golden_images_namespace.name,
+                ensure_exists=True,
+            ),
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
     ) as vm:
         write_file(
             vm=vm,
@@ -41,6 +51,10 @@ def rhel_vm_with_dv_running(request, admin_client, chaos_namespace, snapshot_sto
             stop_vm=False,
         )
         yield vm
+
+        # Ensure that VM is running after node reboot so that won't impact the next test
+        if not vm.ready:
+            vm.restart(wait=True)
 
 
 @pytest.fixture()
@@ -74,8 +88,16 @@ def rebooted_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress, wo
 
 
 @pytest.fixture()
-def drain_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
+def drained_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
     vm_node = rhel_vm_with_dv_running.vmi.node
     with node_mgmt_console(node=vm_node, node_mgmt="drain"):
+        wait_for_node_schedulable_status(node=vm_node, status=False)
+        yield vm_node
+
+
+@pytest.fixture()
+def cordoned_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
+    vm_node = rhel_vm_with_dv_running.vmi.node
+    with node_mgmt_console(node=vm_node, node_mgmt="cordon"):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
