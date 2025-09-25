@@ -30,11 +30,7 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-<<<<<<< HEAD
     fail_if_not_zero_restartcount,
-    get_interface_name_from_vm,
-=======
->>>>>>> bf4ca52 (Changed virt-launcher usage in network metrics (#1822))
     get_metric_sum_value,
     get_mutation_component_value_from_prometheus,
     get_not_running_prometheus_pods,
