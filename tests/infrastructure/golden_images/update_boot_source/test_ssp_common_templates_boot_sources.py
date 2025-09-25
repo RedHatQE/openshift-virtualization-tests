@@ -140,6 +140,7 @@ def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source, rhel9_htt
 
 
 @pytest.mark.polarion("CNV-7586")
+@pytest.mark.s390x
 def test_vm_from_auto_update_boot_source(
     auto_update_boot_source_vm,
     boot_source_os_from_data_source_dict,
@@ -156,6 +157,7 @@ def test_vm_from_auto_update_boot_source(
 
 
 @pytest.mark.polarion("CNV-7565")
+@pytest.mark.s390x
 def test_common_templates_boot_source_reference(base_templates):
     source_ref_str = "sourceRef"
     LOGGER.info(f"Verify all common templates use {source_ref_str} in dataVolumeTemplates")
@@ -168,6 +170,7 @@ def test_common_templates_boot_source_reference(base_templates):
 
 
 @pytest.mark.polarion("CNV-7535")
+@pytest.mark.s390x
 def test_vm_with_uploaded_golden_image_opt_out(
     admin_client,
     golden_images_namespace,

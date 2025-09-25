@@ -88,6 +88,7 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestNegativeVmWithInstanceTypeAndPref:
     @pytest.mark.polarion("CNV-11525")
     def test_vm_start_fails_with_insufficient_cpu_for_spread_option(
@@ -131,6 +132,7 @@ class TestNegativeVmWithInstanceTypeAndPref:
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 class TestVmWithInstanceTypeAndPref:
     @pytest.mark.dependency(name="start_vm_with_instance_type_and_preference")
     @pytest.mark.polarion("CNV-9087")
