@@ -2,7 +2,16 @@ import logging
 
 import pytest
 
+<<<<<<< HEAD
 from tests.virt.node.descheduler.utils import verify_at_least_one_vm_migrated, wait_for_overutilized_soft_taint
+=======
+from tests.virt.node.descheduler.utils import (
+    assert_psi_values_within_threshold,
+    verify_at_least_one_vm_migrated,
+    wait_for_overutilized_soft_taint,
+)
+from utilities.constants import TIMEOUT_15MIN
+>>>>>>> 4a53659 ([VIRT] add descheduler test to validate psi values on nodes (#2086))
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,4 +55,15 @@ class TestDeschedulerLoadAwareRebalancing:
         self,
         node_to_run_stress,
     ):
+<<<<<<< HEAD
         wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False)
+=======
+        wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False, wait_timeout=TIMEOUT_15MIN)
+
+    @pytest.mark.polarion("CNV-12346")
+    def test_psi_values_within_threshold(
+        self,
+        prometheus,
+    ):
+        assert_psi_values_within_threshold(prometheus=prometheus)
+>>>>>>> 4a53659 ([VIRT] add descheduler test to validate psi values on nodes (#2086))
