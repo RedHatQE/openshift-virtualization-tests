@@ -326,7 +326,7 @@ def network_sanity(
         EXTERNAL_FRR_STATIC_IPV4: reserved IP in CIDR format for the external FRR pod inside
                                   PRIMARY_NODE_NETWORK_VLAN_TAG network.
         """
-        if any(test.get_closest_marker("bgp") for test in collected_tests):
+        if any(test.get_closest_marker("bgp") and not test.get_closest_marker("xfail") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running BGP tests...")
             required_env_vars = [
                 "PRIMARY_NODE_NETWORK_VLAN_TAG",
