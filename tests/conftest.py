@@ -871,11 +871,6 @@ def golden_image_data_volume_scope_module(request, admin_client, golden_images_n
     )
 
 
-@pytest.fixture(scope="module")
-def golden_image_data_source_scope_module(admin_client, golden_image_data_volume_scope_module):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_module)
-
-
 @pytest.fixture()
 def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
@@ -966,17 +961,6 @@ def golden_image_vm_instance_from_template_multi_storage_scope_class(
         vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
     ) as vm:
         yield vm
-
-
-@pytest.fixture()
-def vm_from_template_scope_function(request, unprivileged_client, namespace, golden_image_data_source_scope_function):
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
-    ) as vm_from_template:
-        yield vm_from_template
 
 
 """
