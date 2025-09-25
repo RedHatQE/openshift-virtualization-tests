@@ -6,19 +6,21 @@ from ipaddress import ip_interface
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.network.constants import DHCP_IP_RANGE_END, DHCP_IP_RANGE_START
-from tests.network.utils import (
+from tests.network.libs.dhcpd import (
+    DHCP_IP_RANGE_END,
+    DHCP_IP_RANGE_START,
+    DHCP_IP_SUBNET,
     DHCP_SERVER_CONF_FILE,
     DHCP_SERVICE_RESTART,
-    update_cloud_init_extra_user_data,
+    verify_dhcpd_activated,
 )
+from tests.network.utils import update_cloud_init_extra_user_data
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (
     cloud_init_network_data,
     get_vmi_mac_address_by_iface_name,
     network_device,
     network_nad,
-    verify_dhcpd_activated,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -27,8 +29,8 @@ from utilities.virt import (
 )
 
 #: Test setup
-#       .........                                                                                      ..........
-#       |       |---eth1:10.200.0.1:                                              10.200.0.2:---eth1:|        |
+#       .........                                                                                    ..........
+#       |       |---eth1:10.200.0.1:                                               10.200.0.2:eth1---|        |
 #       | VM-A  |---eth2:10.200.2.1    : multicast(ICMP), custom eth type test:    10.200.2.2:eth2---|  VM-B  |
 #       |       |---eth3:10.200.3.1    : DHCP test :                               10.200.3.2:eth3---|        |
 #       |.......|---eth4:10.200.4.1    : mpls test :                               10.200.4.2:eth4---|........|
@@ -297,7 +299,7 @@ def l2_bridge_running_vm_a(
     namespace, worker_node1, l2_bridge_all_nads, dhcp_nad, unprivileged_client, l2_bridge_running_vm_b
 ):
     dhcpd_data = DHCP_SERVER_CONF_FILE.format(
-        DHCP_IP_SUBNET="10.200.3",
+        DHCP_IP_SUBNET=DHCP_IP_SUBNET,
         DHCP_IP_RANGE_START=DHCP_IP_RANGE_START,
         DHCP_IP_RANGE_END=DHCP_IP_RANGE_END,
         CLIENT_MAC_ADDRESS=get_vmi_mac_address_by_iface_name(vmi=l2_bridge_running_vm_b.vmi, iface_name=dhcp_nad.name),
