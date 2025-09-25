@@ -101,9 +101,10 @@ def virt_operator_deployment(hco_namespace):
 
 @pytest.fixture(scope="module")
 def initial_virt_operator_replicas(prometheus, virt_operator_deployment, hco_namespace):
-    virt_operator_deployment_initial_replicas = str(virt_operator_deployment.instance.status.replicas)
+    virt_operator_deployment.wait_for_replicas()
+    virt_operator_deployment_initial_replicas = virt_operator_deployment.instance.status.replicas
     assert virt_operator_deployment_initial_replicas, f"Not replicas found for {VIRT_OPERATOR}"
-    return virt_operator_deployment_initial_replicas
+    return str(virt_operator_deployment_initial_replicas)
 
 
 @pytest.fixture(scope="class")
