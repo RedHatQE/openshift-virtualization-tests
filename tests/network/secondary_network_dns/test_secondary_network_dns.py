@@ -231,14 +231,14 @@ def exposed_kubernetes_secondary_dns_service(
 @pytest.fixture(scope="module")
 def kubernetes_secondary_dns_bridge_worker_1(
     worker_node1,
-    nodes_available_nics,
+    hosts_common_available_ports,
 ):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="ksd-nncp",
         interface_name="ksd-br",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 
