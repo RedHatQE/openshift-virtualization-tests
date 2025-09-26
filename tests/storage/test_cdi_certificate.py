@@ -7,7 +7,6 @@ Automatic refresh of CDI certificates test suite
 import datetime
 import logging
 import subprocess
-import time
 
 import pytest
 from ocp_resources.cdi import CDI
@@ -83,14 +82,11 @@ def valid_cdi_certificates(secrets):
                 LOGGER.info(f"Checking {cdi_secret}...")
 
                 start = secret.certificate_not_before
-                start_timestamp = time.mktime(time.strptime(start, RFC3339_FORMAT))
-
                 end = secret.certificate_not_after
-                end_timestamp = time.mktime(time.strptime(end, RFC3339_FORMAT))
-
-                current_time = datetime.datetime.now().strftime(RFC3339_FORMAT)
-                current_timestamp = time.mktime(time.strptime(current_time, RFC3339_FORMAT))
-                assert start_timestamp <= current_timestamp <= end_timestamp, f"Certificate of {cdi_secret} expired"
+                start_dt = datetime.datetime.strptime(start, RFC3339_FORMAT).replace(tzinfo=datetime.timezone.utc)
+                end_dt = datetime.datetime.strptime(end, RFC3339_FORMAT).replace(tzinfo=datetime.timezone.utc)
+                now_dt = datetime.datetime.now(datetime.timezone.utc)
+                assert start_dt <= now_dt <= end_dt, f"Certificate of {cdi_secret} not valid at current time"
 
 
 @pytest.fixture()
