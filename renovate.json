@@ -19,6 +19,12 @@
     {
       "matchPackagePatterns": ["*"],
       "groupName": "python-deps"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["python"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
