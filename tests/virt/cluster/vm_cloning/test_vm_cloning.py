@@ -3,7 +3,9 @@ import shlex
 import pytest
 from ocp_resources.datavolume import DataVolume
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 
+from tests.os_params import RHEL_LATEST
 from tests.virt.cluster.vm_cloning.constants import (
     ROOT_DISK_TEST_FILE_STR,
     SECOND_DISK_PATH,
@@ -14,11 +16,9 @@ from tests.virt.cluster.vm_cloning.utils import (
     check_if_files_present_after_cloning,
 )
 from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
-from utilities.infra import get_artifactory_config_map, get_artifactory_secret
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
-    get_test_artifact_server_url,
 )
 from utilities.virt import (
     VirtualMachineForCloning,
@@ -41,61 +41,36 @@ WINDOWS_VM_FOR_CLONING = "win-vm-for-cloning"
 FEDORA_VM_FOR_CLONING = "fedora-vm-with-labels-annotations-mac-smbios"
 
 
-def dv_dict_for_vm_cloning(namespace, storage_class, dv_template):
+def dummy_dv_dict_for_vm_cloning(namespace):
     dv = DataVolume(
-        name=dv_template["name"],
+        name="dummy-dv-for-clone",
         namespace=namespace.name,
-        source=dv_template["source"],
-        url=dv_template.get("url"),
-        size=dv_template["size"],
-        storage_class=storage_class,
+        source="blank",
+        size="10Gi",
+        storage_class=py_config["default_storage_class"],
         api_name="storage",
-        secret=get_artifactory_secret(namespace=namespace.name),
-        cert_configmap=get_artifactory_config_map(namespace=namespace.name).name,
     )
     dv.to_dict()
     return dv.res
 
 
 @pytest.fixture()
-def dv_template_for_vm_cloning(
-    skip_if_no_storage_class_for_snapshot,
-    request,
-    namespace,
-    storage_class_for_snapshot,
+def vm_with_dv_for_cloning(
+    skip_if_no_storage_class_for_snapshot, request, namespace, golden_image_data_volume_template_for_test_scope_function
 ):
-    source = request.param["source"]
-    request.param["url"] = f"{get_test_artifact_server_url()}{request.param['image']}" if source == "http" else None
-
-    return dv_dict_for_vm_cloning(
-        namespace=namespace,
-        storage_class=storage_class_for_snapshot,
-        dv_template=request.param,
-    )
-
-
-@pytest.fixture()
-def vm_with_dv_for_cloning(request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot):
     with VirtualMachineForCloning(
         name=request.param["vm_name"],
         namespace=namespace.name,
-        data_volume_template=dv_template_for_vm_cloning,
-        memory_requests=request.param["memory_requests"],
+        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
+        memory_guest=request.param["memory_guest"],
         cpu_cores=request.param.get("cpu_cores", 1),
         os_flavor=request.param["vm_name"].split("-")[0],
         smm_enabled=True,
         efi_params={"secureBoot": True},
     ) as vm:
         # Add second DV when needed
-        if request.param.get("dv_extra"):
-            add_dv_to_vm(
-                vm=vm,
-                template_dv=dv_dict_for_vm_cloning(
-                    namespace=namespace,
-                    storage_class=storage_class_for_snapshot,
-                    dv_template=request.param["dv_extra"],
-                ),
-            )
+        if request.param.get("extra_dv"):
+            add_dv_to_vm(vm=vm, template_dv=dummy_dv_dict_for_vm_cloning(namespace=namespace))
         running_vm(vm=vm)
         yield vm
 
@@ -144,25 +119,17 @@ def fedora_target_vm_instance(fedora_target_vm):
 
 
 @pytest.mark.parametrize(
-    "dv_template_for_vm_cloning, vm_with_dv_for_cloning, cloning_job_scope_function",
+    "golden_image_data_source_for_test_scope_function, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
         pytest.param(
-            {
-                "name": "rhel-dv-root-disk",
-                "source": "http",
-                "image": f"{Images.Rhel.DIR}/{Images.Rhel.RHEL9_4_IMG}",
-                "size": Images.Rhel.DEFAULT_DV_SIZE,
-            },
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": RHEL_VM_WITH_TWO_PVC,
-                "memory_requests": Images.Rhel.DEFAULT_MEMORY_SIZE,
-                "dv_extra": {"name": "dv-extra", "source": "blank", "size": "10Gi"},
+                "memory_guest": Images.Rhel.DEFAULT_MEMORY_SIZE,
+                "extra_dv": True,
             },
             {"source_name": RHEL_VM_WITH_TWO_PVC},
-            marks=(
-                pytest.mark.polarion("CNV-10295"),
-                pytest.mark.gating(),
-            ),
+            marks=(pytest.mark.polarion("CNV-10295"), pytest.mark.gating()),
         )
     ],
     indirect=True,
@@ -197,18 +164,19 @@ def test_clone_vm_with_instance_type_and_preference(
 
 
 @pytest.mark.parametrize(
-    "dv_template_for_vm_cloning, vm_with_dv_for_cloning, cloning_job_scope_function",
+    "golden_image_data_source_for_test_scope_function, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
         pytest.param(
             {
-                "name": "windows-dv-root-disk",
-                "source": "http",
-                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
-                "size": Images.Windows.DEFAULT_DV_SIZE,
+                "os_dict": {
+                    "data_source": "windows-dv-root-disk",
+                    "image_path": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
+                    "dv_size": Images.Windows.DEFAULT_DV_SIZE,
+                },
             },
             {
                 "vm_name": WINDOWS_VM_FOR_CLONING,
-                "memory_requests": Images.Windows.DEFAULT_MEMORY_SIZE,
+                "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE,
                 "cpu_cores": Images.Windows.DEFAULT_CPU_CORES,
             },
             {"source_name": WINDOWS_VM_FOR_CLONING},

@@ -13,9 +13,10 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants import VIRTIO, Images
+from tests.virt.constants import CIRROS_OS
+from utilities.constants import VIRTIO
 from utilities.virt import VirtualMachineForTestsFromTemplate, migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
@@ -34,16 +35,8 @@ def check_vm_system_tablet_device(vm, expected_device):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": RHEL_LATEST})],
     indirect=True,
 )
 class TestRHELTabletDevice:
@@ -128,16 +121,8 @@ class TestRHELTabletDevice:
 
 @pytest.mark.s390x
 @pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": "cirros-dv",
-                "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",  # Negative tests require a dummy DV.
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": CIRROS_OS})],
     indirect=True,
 )
 class TestRHELTabletDeviceNegative:
@@ -163,7 +148,7 @@ class TestRHELTabletDeviceNegative:
         indirect=False,
     )
     def test_tablet_invalid_usb_tablet_device(
-        self, vm_name, vm_dict, unprivileged_client, namespace, golden_image_data_source_multi_storage_scope_class
+        self, vm_name, vm_dict, unprivileged_client, namespace, golden_image_data_source_for_test_scope_class
     ):
         LOGGER.info("Test tablet device - wrong device bus.")
 
@@ -172,7 +157,7 @@ class TestRHELTabletDeviceNegative:
                 name=vm_name,
                 namespace=namespace.name,
                 client=unprivileged_client,
-                data_source=golden_image_data_source_multi_storage_scope_class,
+                data_source=golden_image_data_source_for_test_scope_class,
                 labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
                 vm_dict=vm_dict,
             ):
@@ -189,7 +174,7 @@ class TestRHELTabletDeviceNegative:
         indirect=False,
     )
     def test_tablet_invalid_type_tablet_device(
-        self, vm_dict, unprivileged_client, namespace, golden_image_data_source_multi_storage_scope_class
+        self, vm_dict, unprivileged_client, namespace, golden_image_data_source_for_test_scope_class
     ):
         LOGGER.info("Test tablet device - wrong device type.")
 
@@ -198,7 +183,7 @@ class TestRHELTabletDeviceNegative:
                 name="rhel-keyboard-tablet-device-vm",
                 namespace=namespace.name,
                 client=unprivileged_client,
-                data_source=golden_image_data_source_multi_storage_scope_class,
+                data_source=golden_image_data_source_for_test_scope_class,
                 labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
                 vm_dict=vm_dict,
             ):
