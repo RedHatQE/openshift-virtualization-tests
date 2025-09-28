@@ -21,14 +21,16 @@ from tests.virt.node.gpu.utils import (
 )
 from tests.virt.utils import (
     get_allocatable_memory_per_node,
+    get_data_volume_template_dict_with_default_storage_class,
     get_non_terminated_pods,
+    get_or_create_golden_image_data_source,
     get_pod_memory_requests,
     patch_hco_cr_with_mdev_permitted_hostdevices,
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
 from utilities.infra import ExecCommandOnPod, exit_pytest_execution, label_nodes
-from utilities.virt import get_nodes_gpu_info
+from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)
 
@@ -317,3 +319,61 @@ def node_with_most_available_memory(available_memory_per_node):
 @pytest.fixture(scope="class")
 def node_with_least_available_memory(available_memory_per_node):
     return min(available_memory_per_node, key=available_memory_per_node.get)
+
+
+@pytest.fixture(scope="module")
+def golden_image_data_source_for_test_scope_module(request, admin_client, golden_images_namespace):
+    yield from get_or_create_golden_image_data_source(
+        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+    )
+
+
+@pytest.fixture(scope="module")
+def golden_image_data_volume_template_for_test_scope_module(golden_image_data_source_for_test_scope_module):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_module
+    )
+
+
+@pytest.fixture(scope="class")
+def golden_image_data_source_for_test_scope_class(request, admin_client, golden_images_namespace):
+    yield from get_or_create_golden_image_data_source(
+        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+    )
+
+
+@pytest.fixture(scope="class")
+def golden_image_data_volume_template_for_test_scope_class(golden_image_data_source_for_test_scope_class):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_class
+    )
+
+
+@pytest.fixture()
+def golden_image_data_source_for_test_scope_function(request, admin_client, golden_images_namespace):
+    yield from get_or_create_golden_image_data_source(
+        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+    )
+
+
+@pytest.fixture()
+def golden_image_data_volume_template_for_test_scope_function(golden_image_data_source_for_test_scope_function):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_function
+    )
+
+
+@pytest.fixture(scope="class")
+def vm_for_test_from_template_scope_class(
+    request,
+    unprivileged_client,
+    namespace,
+    golden_image_data_volume_template_for_test_scope_class,
+):
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
+    ) as vm:
+        yield vm

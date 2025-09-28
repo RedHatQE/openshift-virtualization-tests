@@ -4,14 +4,13 @@ import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.constants import Images
-from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 default_run_strategy = VirtualMachine.RunStrategy.MANUAL
 
 
 @contextmanager
-def container_disk_vm(namespace, unprivileged_client, data_source=None):
+def container_disk_vm(namespace, unprivileged_client, data_volume_template=None):
     """lifecycle_vm is used to call this fixture and data_volume_vm; data_source is not needed in this use cases"""
     name = "fedora-vm-lifecycle"
     with VirtualMachineForTests(
@@ -25,14 +24,14 @@ def container_disk_vm(namespace, unprivileged_client, data_source=None):
 
 
 @contextmanager
-def data_volume_vm(unprivileged_client, namespace, data_source):
+def data_volume_vm(unprivileged_client, namespace, data_volume_template):
     with VirtualMachineForTests(
         name="rhel-vm-lifecycle",
         namespace=namespace.name,
         client=unprivileged_client,
         memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
         run_strategy=default_run_strategy,
-        data_volume_template=data_volume_template_with_source_ref_dict(data_source=data_source),
+        data_volume_template=data_volume_template,
     ) as vm:
         yield vm
 
@@ -43,7 +42,7 @@ def lifecycle_vm(
     unprivileged_client,
     namespace,
     vm_volumes_matrix__class__,
-    golden_image_data_source_scope_module,
+    golden_image_data_volume_template_for_test_scope_module,
 ):
     """Wrapper fixture to generate the desired VM
     vm_volumes_matrix returns a string.
@@ -53,6 +52,6 @@ def lifecycle_vm(
     with globals()[vm_volumes_matrix__class__](
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_module,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_module,
     ) as vm:
         yield vm

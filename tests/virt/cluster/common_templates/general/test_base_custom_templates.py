@@ -3,9 +3,8 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.template import Template
-from pytest_testconfig import py_config
 
-from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_OS
+from tests.os_params import FEDORA_LATEST
 from utilities.constants import NamespacesNames
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -77,17 +76,8 @@ def custom_template_from_base_template(request, namespace):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST.get("image_path"),
-                "dv_size": FEDORA_LATEST.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": FEDORA_LATEST})],
     indirect=True,
 )
 class TestBaseCustomTemplates:
@@ -124,7 +114,7 @@ class TestBaseCustomTemplates:
         self,
         unprivileged_client,
         namespace,
-        golden_image_data_source_scope_class,
+        golden_image_data_volume_template_for_test_scope_class,
         custom_template_from_base_template,
         vm_name,
     ):
@@ -133,7 +123,7 @@ class TestBaseCustomTemplates:
             namespace=namespace.name,
             client=unprivileged_client,
             template_object=custom_template_from_base_template,
-            data_source=golden_image_data_source_scope_class,
+            data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         ) as custom_vm:
             running_vm(vm=custom_vm)
 
@@ -160,8 +150,7 @@ class TestBaseCustomTemplates:
     def test_custom_template_vm_validation(
         self,
         unprivileged_client,
-        namespace,
-        golden_image_data_source_scope_class,
+        golden_image_data_volume_template_for_test_scope_class,
         custom_template_from_base_template,
     ):
         with pytest.raises(UnprocessibleEntityError, match=r".*This VM has too many cores.*"):
@@ -170,7 +159,7 @@ class TestBaseCustomTemplates:
                 namespace=custom_template_from_base_template.namespace,
                 client=unprivileged_client,
                 template_object=custom_template_from_base_template,
-                data_source=golden_image_data_source_scope_class,
+                data_volume_template=golden_image_data_volume_template_for_test_scope_class,
                 cpu_cores=3,
             ) as vm_from_template:
                 pytest.fail(f"VM validation failed on {vm_from_template.name}")

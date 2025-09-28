@@ -10,11 +10,10 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
-from pytest_testconfig import py_config
 from rrmngmnt import power_manager
 from timeout_sampler import TimeoutSampler
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST
 from utilities.constants import TIMEOUT_10MIN
 from utilities.virt import migrate_vm_and_verify, running_vm
 
@@ -197,15 +196,8 @@ def shutdown_vm_guest_os(vm):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module",
-    [
-        {
-            "dv_name": RHEL_LATEST_OS,
-            "image": RHEL_LATEST["image_path"],
-            "dv_size": RHEL_LATEST["dv_size"],
-            "storage_class": py_config["default_storage_class"],
-        },
-    ],
+    "golden_image_data_source_for_test_scope_module",
+    [{"os_dict": RHEL_LATEST}],
     indirect=True,
 )
 @pytest.mark.arm64
@@ -234,15 +226,8 @@ class TestRunStrategyBaseActions:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module",
-    [
-        {
-            "dv_name": RHEL_LATEST_OS,
-            "image": RHEL_LATEST["image_path"],
-            "dv_size": RHEL_LATEST["dv_size"],
-            "storage_class": py_config["default_storage_class"],
-        },
-    ],
+    "golden_image_data_source_for_test_scope_module",
+    [{"os_dict": RHEL_LATEST}],
     indirect=True,
 )
 class TestRunStrategyAdvancedActions:

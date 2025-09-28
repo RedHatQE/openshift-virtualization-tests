@@ -33,7 +33,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
         name,
         namespace,
         client,
-        data_source,
+        data_volume_template,
         os_dict,
         nad,
         drive_d_pvc,
@@ -43,7 +43,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
             name=name,
             namespace=namespace,
             client=client,
-            data_source=data_source,
+            data_volume_template=data_volume_template,
             labels=Template.generate_template_labels(**os_dict["template_labels"]),
             cpu_cores=1,
             cpu_sockets=2,
@@ -89,9 +89,7 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
 
 def assert_firmware_uuid_in_domxml(vm, uuid):
     xml_domain = vm.privileged_vmi.xml_dict["domain"]
-    assert xml_domain.get("uuid", "").lower() == uuid.lower(), (
-        f"Firmware UUID not found in domxml for {custom_windows_vm.name}"
-    )
+    assert xml_domain.get("uuid", "").lower() == uuid.lower(), f"Firmware UUID not found in domxml for {vm.name}"
 
 
 def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive_letter):
@@ -151,10 +149,9 @@ def windows_custom_drive_d(unprivileged_client, namespace):
 
 @pytest.fixture(scope="class")
 def custom_windows_vm(
-    request,
     windows_custom_bridge_nad,
     windows_custom_drive_d,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     unprivileged_client,
     modern_cpu_for_migration,
 ):
@@ -162,8 +159,8 @@ def custom_windows_vm(
         name="custom-windows-vm",
         namespace=windows_custom_bridge_nad.namespace,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
-        os_dict=request.param,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
+        os_dict=WINDOWS_2019,
         nad=windows_custom_bridge_nad,
         drive_d_pvc=windows_custom_drive_d,
         cpu_model=modern_cpu_for_migration,
@@ -173,16 +170,16 @@ def custom_windows_vm(
 
 @pytest.mark.ibm_bare_metal
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, custom_windows_vm",
+    "golden_image_data_source_for_test_scope_class",
     [
         pytest.param(
             {
-                "dv_name": WINDOWS_2019_OS,
-                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
-                "dv_size": "100Gi",
-                "storage_class": py_config["default_storage_class"],
+                "os_dict": {
+                    "data_source": WINDOWS_2019_OS,
+                    "image_path": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
+                    "dv_size": "100Gi",
+                }
             },
-            WINDOWS_2019,
             id=WINDOWS_2019_OS,
             marks=pytest.mark.polarion("CNV-7496"),
         ),
