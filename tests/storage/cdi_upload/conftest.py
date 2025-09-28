@@ -38,10 +38,10 @@ def download_specified_image(request, tmpdir_factory):
 
 
 @pytest.fixture()
-def uploaded_dv(
+def uploaded_dv_with_immediate_binding(
     request,
     namespace,
-    storage_class_name_scope_module,
+    storage_class_name_immediate_binding_scope_module,
     tmpdir,
 ):
     image_file = request.param.get("image_file")
@@ -52,7 +52,7 @@ def uploaded_dv(
         namespace=namespace.name,
         name=dv_name,
         size=request.param.get("dv_size"),
-        storage_class=storage_class_name_scope_module,
+        storage_class=storage_class_name_immediate_binding_scope_module,
         image_path=local_path,
         insecure=True,
     ) as res:
