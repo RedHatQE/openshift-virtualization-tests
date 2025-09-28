@@ -340,10 +340,7 @@ def default_workload_update_strategy(hyperconverged_resource_scope_session):
 
 @pytest.fixture()
 def eus_paused_worker_mcp(
-    workers,
     worker_machine_config_pools,
-    worker_machine_config_pools_conditions,
-    eus_applied_all_icsp,
 ):
     LOGGER.info("Pausing worker MCP updates before starting EUS upgrade.")
     update_mcp_paused_spec(mcp=worker_machine_config_pools)
@@ -488,7 +485,7 @@ def triggered_non_eus_to_target_eus_ocp_upgrade(eus_ocp_image_urls):
 @pytest.fixture()
 def source_eus_to_non_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_eus_to_non_eus_from_image_url,
     triggered_source_eus_to_non_eus_ocp_upgrade,
@@ -498,14 +495,14 @@ def source_eus_to_non_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_eus_to_non_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
 @pytest.fixture()
 def non_eus_to_target_eus_ocp_upgraded(
     admin_client,
-    masters,
+    control_plane_nodes,
     master_machine_config_pools,
     ocp_version_non_eus_to_eus_from_image_url,
     triggered_non_eus_to_target_eus_ocp_upgrade,
@@ -515,7 +512,7 @@ def non_eus_to_target_eus_ocp_upgraded(
         machine_config_pools_list=master_machine_config_pools,
         target_ocp_version=ocp_version_non_eus_to_eus_from_image_url,
         initial_mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=master_machine_config_pools),
-        nodes=masters,
+        nodes=control_plane_nodes,
     )
 
 
