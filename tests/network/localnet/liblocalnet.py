@@ -48,12 +48,19 @@ def create_traffic_server(vm: BaseVirtualMachine) -> Server:
 
 
 def create_traffic_client(
-    server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, spec_logical_network: str
+    server_vm: BaseVirtualMachine,
+    client_vm: BaseVirtualMachine,
+    spec_logical_network: str,
+    maximum_segment_size: int | None = None,
 ) -> Client:
+    """
+    Maximum Segment Size = MTU - network headers (ip,tcp) size in bytes
+    """
     return Client(
         vm=client_vm,
         server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
         server_port=_IPERF_SERVER_PORT,
+        jumbo_frame_param=f" --set-mss {maximum_segment_size}" if maximum_segment_size else "",
     )
 
 
@@ -115,7 +122,7 @@ def localnet_vm(
 
 
 def localnet_cudn(
-    name: str, match_labels: dict[str, str], vlan_id: int, physical_network_name: str
+    name: str, match_labels: dict[str, str], vlan_id: int, physical_network_name: str, mtu: int | None = None
 ) -> libcudn.ClusterUserDefinedNetwork:
     """
     Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
@@ -131,6 +138,7 @@ def localnet_cudn(
         match_labels (dict[str, str]): Labels for namespace selection.
         vlan_id (int): The VLAN ID to configure for the network.
         physical_network_name (str): The name of the physical network to associate with the localnet configuration.
+        mtu (int): Optional customized MTU of the network.
 
     Returns:
         ClusterUserDefinedNetwork: The configured CUDN object ready for creation.
@@ -138,7 +146,11 @@ def localnet_cudn(
     ipam = libcudn.Ipam(mode=libcudn.Ipam.Mode.DISABLED.value)
     vlan = libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
     localnet = libcudn.Localnet(
-        role=libcudn.Localnet.Role.SECONDARY.value, physicalNetworkName=physical_network_name, vlan=vlan, ipam=ipam
+        role=libcudn.Localnet.Role.SECONDARY.value,
+        physicalNetworkName=physical_network_name,
+        vlan=vlan,
+        ipam=ipam,
+        mtu=mtu,
     )
     network = libcudn.Network(topology=libcudn.Network.Topology.LOCALNET.value, localnet=localnet)
 
