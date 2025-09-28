@@ -14,11 +14,17 @@
   "lockFileMaintenance": {
     "enabled": true
   },
-  "schedule": ["every Friday after 6pm"],
+  "schedule": ["after 18:00 on Friday"],
   "packageRules": [
     {
       "matchPackagePatterns": ["*"],
       "groupName": "python-deps"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["python"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
