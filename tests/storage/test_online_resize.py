@@ -106,7 +106,10 @@ def expand_pvc(dv, size_change):
 
 
 def get_resize_count(vm):
-    commands = shlex.split("dmesg | grep -c 'new size' || true")
+    cmd = "dmesg | grep -c 'new size' || true"
+    if Images.Cirros.OS_FLAVOR == "fedora":
+        cmd = "sudo " + cmd
+    commands = shlex.split(cmd)
     return int(run_ssh_commands(host=vm.ssh_exec, commands=commands)[0])
 
 
