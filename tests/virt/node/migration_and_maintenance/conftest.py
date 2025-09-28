@@ -68,3 +68,4 @@ def added_vm_cpu_limit(vm_for_multifd_test):
     }).update()
 
     restart_vm_wait_for_running_vm(vm=vm_for_multifd_test, wait_for_interfaces=False, check_ssh_connectivity=False)
+    yield vm_for_multifd_test
