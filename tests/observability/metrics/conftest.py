@@ -228,11 +228,7 @@ def generated_network_traffic(vm_for_test):
 
 @pytest.fixture(scope="class")
 def vm_for_test_interface_name(vm_for_test):
-    interface_name = vm_for_test.privileged_vmi.virt_launcher_pod.execute(
-        command=shlex.split("bash -c \"virsh domiflist 1 | grep ethernet | awk '{print $1}'\"")
-    )
-    assert interface_name, f"Interface not found for vm {vm_for_test.name}"
-    return interface_name
+    return vm_for_test.vmi.interfaces[0].interfaceName
 
 
 @pytest.fixture()
