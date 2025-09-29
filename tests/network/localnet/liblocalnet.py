@@ -54,13 +54,25 @@ def create_traffic_client(
     maximum_segment_size: int | None = None,
 ) -> Client:
     """
-    Maximum Segment Size = MTU - network headers (ip,tcp) size in bytes
+    Create an iperf3 traffic client for testing connectivity.
+
+    Maximum Segment Size (MSS) is typically calculated as:
+    MTU - network headers size (IP + TCP) in bytes
+
+    Args:
+        server_vm (BaseVirtualMachine): The virtual machine acting as the iperf3 server.
+        client_vm (BaseVirtualMachine): The virtual machine that will run the iperf3 client.
+        spec_logical_network (str): The logical network interface name used for traffic.
+        maximum_segment_size (int): Optional mtu customization (by customizing mss) in bytes.
+
+    Returns:
+        Client: A configured traffic client ready to run iperf3 tests.
     """
     return Client(
         vm=client_vm,
         server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
         server_port=_IPERF_SERVER_PORT,
-        jumbo_frame_param=f" --set-mss {maximum_segment_size}" if maximum_segment_size else "",
+        maximum_segment_size=maximum_segment_size,
     )
 
 
