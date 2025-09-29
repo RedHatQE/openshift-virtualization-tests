@@ -112,7 +112,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 def label_project(name, label, admin_client):
-    ns = Namespace(client=admin_client, name=name)
+    ns = Namespace(client=admin_client, name=name, ensure_exists=True)
+    ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
     ResourceEditor({ns: {"metadata": {"labels": label}}}).update()
 
 
@@ -138,15 +139,15 @@ def create_ns(
             ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield ns
     else:
-        project = ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
+        ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
         label_project(name=name, label=labels, admin_client=admin_client)
+        ns = Namespace(client=unprivileged_client, name=name, ensure_exists=True)
 
-        yield project
+        yield ns
 
-        # cleanup must be done with admin client
-        project.client = admin_client
-        if not project.clean_up():
-            raise ResourceTeardownError(resource=project)
+        ns.client = admin_client
+        if teardown and not ns.clean_up():
+            raise ResourceTeardownError(resource=ns)
 
 
 class ClusterHosts:
@@ -1072,6 +1073,9 @@ def get_node_audit_log_entries(log, node, log_entry):
     ).splitlines()
     has_errors = any(line.startswith("error:") for line in lines)
     if has_errors:
+        if any(line.startswith("404 page not found") for line in lines):
+            LOGGER.warning(f"Skipping {log} check as it was rotated:\n{lines}")
+            return True, []
         LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
         raise RuntimeError
     return True, lines
