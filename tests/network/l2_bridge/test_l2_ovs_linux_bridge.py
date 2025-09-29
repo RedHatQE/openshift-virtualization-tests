@@ -7,7 +7,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
-from utilities.constants import TIMEOUT_2MIN
+from utilities.constants import QUARANTINED, TIMEOUT_2MIN
 from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, ping
 
 LOGGER = logging.getLogger(__name__)
@@ -73,10 +73,13 @@ class TestL2LinuxBridge:
         l2_bridge_running_vm_b,
         configured_l2_bridge_vm_a,
         started_vmb_dhcp_client,
+        request,
     ):
         """
         Test broadcast traffic via L2 linux bridge. VM_A has dhcp server installed. VM_B dhcp client.
         """
+        if "ovs-bridge" in request.node.name:
+            pytest.xfail(reason=f"{QUARANTINED}: Test is flaky over OVS bridge, tracked in CNV-70028")
         current_ip = TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
             sleep=2,
