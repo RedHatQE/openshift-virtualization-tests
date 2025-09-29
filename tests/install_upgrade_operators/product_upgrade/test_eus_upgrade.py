@@ -22,7 +22,7 @@ class TestEUSToEUSUpgrade:
         hco_namespace,
         eus_target_cnv_version,
         eus_cnv_upgrade_path,
-        workers_machine_config_pools_conditions,
+        worker_machine_config_pools_conditions,
         eus_applied_all_icsp,
         eus_paused_worker_mcp,
         eus_paused_workload_update,
