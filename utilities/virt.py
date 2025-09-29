@@ -488,7 +488,7 @@ class VirtualMachineForTests(VirtualMachine):
 
             # VMs do not necessarily have self.cloud_init_data
             # cloud-init will not be set for OS in FLAVORS_EXCLUDED_FROM_CLOUD_INIT
-            if self.ssh and self.os_flavor not in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
+            if self.ssh and not any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
                 if self.ssh_secret is None:
                     template_spec = self.enable_ssh_in_cloud_init_data(template_spec=template_spec)
                 if self.ssh_secret:
@@ -696,7 +696,7 @@ class VirtualMachineForTests(VirtualMachine):
     def update_vm_memory_configuration(self, template_spec):
         # Faster VMI start time
         if (
-            self.os_flavor == OS_FLAVOR_WINDOWS
+            OS_FLAVOR_WINDOWS in self.os_flavor
             and not self.memory_guest
             and not self.memory_requests
             and not self.vm_instance_type
@@ -865,7 +865,7 @@ class VirtualMachineForTests(VirtualMachine):
 
         # Faster VMI start time
         if (
-            self.os_flavor == OS_FLAVOR_WINDOWS
+            OS_FLAVOR_WINDOWS in self.os_flavor
             and not self.cpu_threads
             and not self.vm_instance_type
             and not self.vm_instance_type_infer
@@ -1043,7 +1043,7 @@ class VirtualMachineForTests(VirtualMachine):
                 return
 
             # Do not modify the defaults to OS like Windows where the password is already defined in the image
-            if self.os_flavor not in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
+            if not any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
                 if self.exists:
                     self.username, self.password = username_password_from_cloud_init(
                         vm_volumes=self.instance.spec.template.spec.volumes
@@ -1066,7 +1066,7 @@ class VirtualMachineForTests(VirtualMachine):
         host = Host(hostname=self.name)
         # For SSH using a key, the public key needs to reside on the server.
         # As the tests use a given set of credentials, this cannot be done in Windows/Cirros.
-        if self.os_flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT:
+        if any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
             host_user = user.User(name=self.username, password=self.password)
         else:
             host_user = user.UserWithPKey(name=self.username, private_key=os.environ[CNV_VM_SSH_KEY_PATH])
