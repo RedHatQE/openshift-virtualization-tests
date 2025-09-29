@@ -45,11 +45,12 @@ def vm_for_multifd_test(
 
 
 @pytest.fixture()
-def migration_policy_postcopy():
+def migration_policy_postcopy(admin_client):
     with MigrationPolicy(
         name="multifd-postcopy-policy",
         allow_post_copy=True,
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
+        client=admin_client,
     ) as mp:
         yield mp
 
