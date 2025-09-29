@@ -36,7 +36,7 @@ CLUSTER_RESOURCE_ALLOWLIST = {
         "kubevirt-hyperconverged-",
         "olm.og.openshift-cnv-",
         "kubevirt-ipam-controller-manager-role",
-        "kubevirt-synchronization-controller"
+        "kubevirt-synchronization-controller",
     ],
     "ClusterRoleBinding": [
         "hostpath-provisioner-operator-service-system:auth-delegator",
