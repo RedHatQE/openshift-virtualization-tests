@@ -141,15 +141,22 @@ class ArchImages:
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
-        Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_5_IMG
+        Rhel = Rhel(
+            RHEL8_0_IMG="rhel-82-s390x.qcow2",
+            RHEL8_9_IMG="rhel-89-s390x.qcow2",
+            RHEL8_10_IMG="rhel-810-s390x.qcow2",
+            RHEL9_3_IMG="rhel-93-s390x.qcow2",
+            RHEL9_4_IMG="rhel-94-s390x.qcow2",
+            RHEL9_6_IMG="rhel-96-s390x.qcow2",
+        )
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
 
         Fedora = Fedora(
-            FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
