@@ -1073,6 +1073,9 @@ def get_node_audit_log_entries(log, node, log_entry):
     ).splitlines()
     has_errors = any(line.startswith("error:") for line in lines)
     if has_errors:
+        if any(line.startswith("404 page not found") for line in lines):
+            LOGGER.warning(f"Skipping {log} check as it was rotated:\n{lines}")
+            return True, []
         LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
         raise RuntimeError
     return True, lines
