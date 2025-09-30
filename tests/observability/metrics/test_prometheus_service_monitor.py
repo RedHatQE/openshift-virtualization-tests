@@ -21,10 +21,12 @@ def kubevirt_service_monitor_namespace(kubevirt_hyperconverged_spec_scope_functi
 
 class TestPrometheusServiceMonitor:
     @pytest.mark.polarion("CNV-9287")
+    @pytest.mark.s390x
     def test_kubevirt_service_monitor_namespace(self, kubevirt_service_monitor_namespace, hco_namespace):
         assert kubevirt_service_monitor_namespace == hco_namespace.name
 
     @pytest.mark.polarion("CNV-9264")
+    @pytest.mark.s390x
     def test_prometheus_service_monitor_in_our_namespace(
         self,
         kubevirt_prometheus_service_monitor_list,

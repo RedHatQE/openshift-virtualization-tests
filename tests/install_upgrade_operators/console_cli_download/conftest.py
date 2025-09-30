@@ -32,7 +32,6 @@ def original_virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
 
 @pytest.fixture()
 def all_virtctl_urls_scope_function(admin_client):
-    """This fixture returns URLs for the various OSs to download virtctl"""
     return get_all_console_links(
         console_cli_downloads_spec_links=get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
     )
@@ -40,7 +39,6 @@ def all_virtctl_urls_scope_function(admin_client):
 
 @pytest.fixture(scope="class")
 def all_virtctl_urls_scope_class(original_virtctl_console_cli_downloads_spec_links_scope_class):
-    """This fixture returns URLs for the various OSs to download virtctl"""
     return get_all_console_links(
         console_cli_downloads_spec_links=original_virtctl_console_cli_downloads_spec_links_scope_class
     )

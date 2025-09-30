@@ -16,5 +16,6 @@ class TestVirtControllerReady:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_metric_kubevirt_virt_controller_ready(self, prometheus, scaled_deployment):
         validate_metrics_value(prometheus=prometheus, metric_name="kubevirt_virt_controller_ready", expected_value="0")
