@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestMigrationMetrics:
     @pytest.mark.polarion("CNV-8480")
+    @pytest.mark.s390x
     def test_migration_metrics_scheduling(
         self,
         admin_client,
@@ -41,6 +42,7 @@ class TestMigrationMetrics:
         )
 
     @pytest.mark.polarion("CNV-8481")
+    @pytest.mark.s390x
     def test_migration_metrics_running(
         self,
         prometheus,
@@ -81,6 +83,7 @@ class TestKubevirtVmiMigrationMetrics:
         ],
     )
     @pytest.mark.jira("CNV-57777", run=False)
+    @pytest.mark.s390x
     def test_kubevirt_vmi_migration_metrics(
         self,
         prometheus,
@@ -106,6 +109,7 @@ class TestKubevirtVmiMigrationMetrics:
 
 class TestKubevirtVmiMigrationStartAndEnd:
     @pytest.mark.polarion("CNV-11809")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmi_migration_start_time_seconds(
         self,
         prometheus,
@@ -123,6 +127,7 @@ class TestKubevirtVmiMigrationStartAndEnd:
         )
 
     @pytest.mark.polarion("CNV-11810")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vmi_migration_end_time_seconds(
         self,
         prometheus,

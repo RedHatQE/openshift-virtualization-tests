@@ -67,6 +67,7 @@ class TestVmiNodeCpuAffinityLinux:
         indirect=True,
     )
     @pytest.mark.polarion("CNV-7295")
+    @pytest.mark.s390x
     def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, vm_from_template_scope_class):
         validate_vmi_node_cpu_affinity_with_prometheus(
             vm=vm_from_template_scope_class,
@@ -86,6 +87,7 @@ class TestVmiNodeCpuAffinityWindows:
 
 class TestVmNameInLabel:
     @pytest.mark.polarion("CNV-8582")
+    @pytest.mark.s390x
     def test_vm_name_in_virt_launcher_label(self, fedora_vm_without_name_in_label):
         """
         when VM created from vm.yaml,for the kind=VirtualMachine, doesn't have
@@ -104,6 +106,7 @@ class TestVmNameInLabel:
 class TestVirtHCOSingleStackIpv6:
     @pytest.mark.ipv6
     @pytest.mark.polarion("CNV-11740")
+    @pytest.mark.s390x
     def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_single_stack_cluster):
         validate_metrics_value(
             prometheus=prometheus,

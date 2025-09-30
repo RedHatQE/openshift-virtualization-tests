@@ -4,6 +4,7 @@ from tests.observability.metrics.utils import expected_metric_labels_and_values,
 
 
 @pytest.mark.polarion("CNV-11744")
+@pytest.mark.s390x
 def test_metric_kubevirt_cdi_storageprofile_info(prometheus, storage_class_labels_for_testing):
     expected_metric_labels_and_values(
         values_from_prometheus=get_metric_labels_non_empty_value(

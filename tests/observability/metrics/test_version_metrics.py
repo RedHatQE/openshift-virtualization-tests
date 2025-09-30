@@ -23,6 +23,7 @@ def virtctl_go_kube_server_version():
 
 
 @pytest.mark.polarion("CNV-11017")
+@pytest.mark.s390x
 def test_kubevirt_info_version(prometheus, virtctl_go_kube_server_version):
     metric_result_output = prometheus.query_sampler(query="kubevirt_info")
     assert_virtctl_version_equal_metric_output(

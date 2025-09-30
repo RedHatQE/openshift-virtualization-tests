@@ -50,6 +50,7 @@ KUBEVIRT_VIRT_CONTROLLER_UP = "kubevirt_virt_controller_up"
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_virt_recording_rules(
     prometheus,
     admin_client,
@@ -97,6 +98,7 @@ def test_virt_recording_rules(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_virt_up_recording_rules(
     prometheus,
     admin_client,
