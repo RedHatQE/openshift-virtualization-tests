@@ -19,17 +19,6 @@ from utilities.infra import (
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-def virtctl_console_cli_downloads_spec_links_scope_function(admin_client):
-    """
-    Get console cli downloads spec links
-
-    Returns:
-        ConsoleCLIDownload instance.spec.links
-    """
-    return get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
-
-
 @pytest.fixture(scope="class")
 def original_virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
     """
@@ -42,10 +31,10 @@ def original_virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
 
 
 @pytest.fixture()
-def all_virtctl_urls_scope_function(virtctl_console_cli_downloads_spec_links_scope_function):
+def all_virtctl_urls_scope_function(admin_client):
     """This fixture returns URLs for the various OSs to download virtctl"""
     return get_all_console_links(
-        console_cli_downloads_spec_links=virtctl_console_cli_downloads_spec_links_scope_function
+        console_cli_downloads_spec_links=get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
     )
 
 
@@ -93,14 +82,8 @@ def downloaded_and_extracted_virtctl_binary_for_os(request, all_virtctl_urls_sco
 
 
 @pytest.fixture(scope="class")
-def ingress_resource(admin_client):
-    return Ingress(client=admin_client, name="cluster", ensure_exists=True)
-
-
-@pytest.fixture(scope="class")
-def updated_cluster_ingress_downloads_spec_links(
-    request, admin_client, hco_namespace, ingress_resource, all_virtctl_urls_scope_class
-):
+def updated_cluster_ingress_downloads_spec_links(request, admin_client, hco_namespace, all_virtctl_urls_scope_class):
+    ingress_resource = Ingress(client=admin_client, name="cluster", ensure_exists=True)
     ingress_resource_instance = ingress_resource.instance
     component_routes_cnv = None
     for component_route in ingress_resource_instance.status.componentRoutes:

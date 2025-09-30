@@ -16,7 +16,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import create_cirros_dv
-from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -193,7 +193,7 @@ def cirros_vm_for_online_resize(
         namespace=namespace.name,
         data_volume=cirros_dv_for_online_resize,
         memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
     ) as vm:
         yield vm
 

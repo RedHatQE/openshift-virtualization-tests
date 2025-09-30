@@ -42,6 +42,12 @@ ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
 
+#  OS constants
+OS_FLAVOR_CIRROS = "cirros"
+OS_FLAVOR_WINDOWS = "win"
+OS_FLAVOR_RHEL = "rhel"
+OS_FLAVOR_FEDORA = "fedora"
+
 
 class ArchImages:
     class X86_64:  # noqa: N801
@@ -104,7 +110,9 @@ class ArchImages:
 
     class ARM64:
         BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
-        Cirros = Cirros(RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz")
+        Cirros = Cirros(
+            RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz",
+        )
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
@@ -135,21 +143,29 @@ class ArchImages:
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
             DEFAULT_MEMORY_SIZE="1Gi",
+            OS_FLAVOR=OS_FLAVOR_FEDORA,
         )
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
         )
 
-        Rhel = Rhel(RHEL9_5_IMG="rhel-95-s390x.qcow2")
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_5_IMG
+        Rhel = Rhel(
+            RHEL8_0_IMG="rhel-82-s390x.qcow2",
+            RHEL8_9_IMG="rhel-89-s390x.qcow2",
+            RHEL8_10_IMG="rhel-810-s390x.qcow2",
+            RHEL9_3_IMG="rhel-93-s390x.qcow2",
+            RHEL9_4_IMG="rhel-94-s390x.qcow2",
+            RHEL9_6_IMG="rhel-96-s390x.qcow2",
+        )
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
 
         Fedora = Fedora(
-            FEDORA41_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
+            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA41_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
@@ -228,11 +244,6 @@ TIMEOUT_12HRS = 12 * 60 * 60
 
 TCP_TIMEOUT_30SEC = 30.0
 
-#  OS constants
-OS_FLAVOR_CIRROS = "cirros"
-OS_FLAVOR_WINDOWS = "win"
-OS_FLAVOR_RHEL = "rhel"
-OS_FLAVOR_FEDORA = "fedora"
 
 # OpenShift Virtualization components constants
 VIRT_OPERATOR = "virt-operator"

@@ -460,11 +460,21 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
-        yield from create_ns(
-            admin_client=admin_client,
-            labels=POD_SECURITY_NAMESPACE_LABELS,
-            name="cnv-tests-utilities",
-        )
+        name = "cnv-tests-utilities"
+        if Namespace(client=admin_client, name=name).exists:
+            exit_pytest_execution(
+                message=f"{name} namespace already exists."
+                f"\nAfter verifying no one else is performing tests against the cluster, run:"
+                f"\n'oc delete namespace {name}'",
+                return_code=100,
+            )
+
+        else:
+            yield from create_ns(
+                admin_client=admin_client,
+                labels=POD_SECURITY_NAMESPACE_LABELS,
+                name=name,
+            )
 
 
 @pytest.fixture(scope="session")
