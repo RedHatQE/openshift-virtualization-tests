@@ -5,14 +5,13 @@ import pytest
 from benedict import benedict
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.volume_snapshot import VolumeSnapshot
 
 from tests.os_params import RHEL_LATEST_LABELS
-from utilities.constants import DATA_IMPORT_CRON_ENABLE, TIMEOUT_3MIN
+from utilities.constants import DATA_IMPORT_CRON_ENABLE, RHEL9_STR, TIMEOUT_3MIN
 from utilities.hco import (
     disable_common_boot_image_import_hco_spec,
     update_hco_templates_spec,
@@ -32,7 +31,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.usefixtures(
     "skip_if_no_storage_profile_with_snapshot_import_cron_format",
 )
-RHEL9_STR = "rhel9"
 
 
 def get_rhel9_data_import_cron_template(common_templates):
@@ -119,17 +117,6 @@ def updated_rhel9_boot_source(
             name=rhel9_boot_source_name,
             namespace=golden_images_namespace.name,
         ).clean_up()
-
-
-@pytest.fixture(scope="module")
-def rhel9_data_source_scope_module(golden_images_namespace):
-    data_source = DataSource(
-        name=RHEL9_STR,
-        namespace=golden_images_namespace.name,
-    )
-    if data_source.exists:
-        return data_source
-    raise ResourceNotFoundError(f"{RHEL9_STR} DataImportCron should exist in the cluster")
 
 
 @pytest.fixture(scope="module")
