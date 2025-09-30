@@ -13,7 +13,6 @@ from tests.storage.utils import (
     create_windows_vm_validate_guest_agent_info,
 )
 from utilities.constants import (
-    OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
@@ -48,7 +47,7 @@ def create_vm_from_clone_dv_template(
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         client=client,
         memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_template_dict(

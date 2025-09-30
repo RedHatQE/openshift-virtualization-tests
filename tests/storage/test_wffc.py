@@ -15,7 +15,6 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from tests.storage.constants import CIRROS_QCOW2_IMG
 from tests.storage.utils import create_vm_from_dv, upload_image_to_dv, upload_token_request
 from utilities.constants import (
-    OS_FLAVOR_CIRROS,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_10SEC,
@@ -349,7 +348,7 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
     with VirtualMachineForTests(
         name="cnv-4742-vm",
         namespace=namespace.name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         data_volume_template=get_dv_template_dict(
             namespace=namespace.name,
             dv_name="template-dv",
@@ -376,7 +375,7 @@ def test_wffc_vm_with_two_data_volume_templates(
     with VirtualMachineForTests(
         name="cnv-4743-vm",
         namespace=namespace.name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         data_volume_template=get_dv_template_dict(
             namespace=namespace.name,
             dv_name="template-dv-1",

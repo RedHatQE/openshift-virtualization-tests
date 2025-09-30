@@ -14,7 +14,7 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import py_config
 
 from tests.storage.vm_export.utils import get_manifest_from_vmexport, get_manifest_url
-from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns, login_with_user_password
 from utilities.storage import create_dv
 from utilities.virt import VirtualMachineForTests
@@ -136,7 +136,7 @@ def vm_from_vmexport(
     with VirtualMachineForTests(
         name="target-vm",
         namespace=namespace_vmexport_target.name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         yaml_file=vm_yaml_file,
     ) as target_vm:
         yield target_vm
