@@ -18,7 +18,6 @@ from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.subscription import Subscription
-from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -562,41 +561,6 @@ def get_upgrade_path(target_version: str, channel: str = "stable") -> list[dict[
         query_string=f"targetVersion={target_version}&channel={channel}",
     )
     return paths["path"]
-
-
-def get_shortest_upgrade_path_info(target_version: str, cnv_current_version: str) -> dict[str, Any]:
-    """
-    Get the shortest upgrade path to a given CNV target version(latest z stream)
-
-    Args:
-        target_version (str): The target version of the upgrade path.
-        cnv_current_version (str): The current version of the upgrade path.
-
-    Returns:
-        dict[str, Any]: The shortest upgrade path to the target version.
-    """
-    # if cant get from stable - try candidate
-    if upgrade_paths_target_version := get_upgrade_path(target_version=target_version):
-        target_channel = "stable"
-    else:
-        target_channel = "candidate"
-        upgrade_paths_target_version = get_upgrade_path(target_version=target_version, channel=target_channel)
-    assert upgrade_paths_target_version, f"Couldn't find upgrade path for {target_version} version"
-
-    sorted_upgrade_paths = sorted(
-        upgrade_paths_target_version, key=lambda path: Version(version=str(path["startVersion"])), reverse=True
-    )
-    for path in sorted_upgrade_paths:
-        if intermediate_upgrade_paths := get_upgrade_path(target_version=path["startVersion"]):
-            if intermediate_path_dict := next(
-                (item for item in intermediate_upgrade_paths if item["startVersion"] == f"v{cnv_current_version}"), None
-            ):
-                return {
-                    "target_versions": path["versions"],
-                    "intermediate_versions": intermediate_path_dict["versions"],
-                    "target_channel": target_channel,
-                }
-    raise AssertionError(f"Couldn't find upgrade path for {target_version} version from {cnv_current_version}")
 
 
 def get_iib_images_of_cnv_versions(

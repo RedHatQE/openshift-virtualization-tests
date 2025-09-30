@@ -18,7 +18,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
-    get_shortest_upgrade_path_info,
+    get_upgrade_path,
     perform_cnv_upgrade,
     run_ocp_upgrade_command,
     set_workload_update_methods_hco,
@@ -318,11 +318,28 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 
 @pytest.fixture(scope="session")
 def eus_shortest_upgrade_path_info(eus_target_cnv_version, cnv_current_version):
-    LOGGER.info(f"Getting shortest upgrade path info between target version: {eus_target_cnv_version} and current version: {cnv_current_version}")
-    return get_shortest_upgrade_path_info(
-        target_version=eus_target_cnv_version,
-        cnv_current_version=cnv_current_version,
+    # if cant get from stable - try candidate
+    if upgrade_paths_target_version := get_upgrade_path(target_version=eus_target_cnv_version):
+        target_channel = "stable"
+    else:
+        target_channel = "candidate"
+        upgrade_paths_target_version = get_upgrade_path(target_version=eus_target_cnv_version, channel=target_channel)
+    assert upgrade_paths_target_version, f"Couldn't find upgrade path for {eus_target_cnv_version} version"
+
+    sorted_upgrade_paths = sorted(
+        upgrade_paths_target_version, key=lambda path: Version(version=str(path["startVersion"])), reverse=True
     )
+    for path in sorted_upgrade_paths:
+        if intermediate_upgrade_paths := get_upgrade_path(target_version=path["startVersion"]):
+            if intermediate_path_dict := next(
+                (item for item in intermediate_upgrade_paths if item["startVersion"] == f"v{cnv_current_version}"), None
+            ):
+                return {
+                    "target_versions": path["versions"],
+                    "intermediate_versions": intermediate_path_dict["versions"],
+                    "target_channel": target_channel,
+                }
+    raise AssertionError(f"Couldn't find upgrade path for {eus_target_cnv_version} version from {cnv_current_version}")
 
 
 @pytest.fixture(scope="session")
