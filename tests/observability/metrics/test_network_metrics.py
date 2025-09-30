@@ -15,6 +15,7 @@ from tests.observability.metrics.utils import validate_network_traffic_metrics_v
 @pytest.mark.usefixtures("vm_for_test", "linux_vm_for_test_interface_name")
 class TestVmiNetworkMetricsLinux:
     @pytest.mark.polarion("CNV-11177")
+    @pytest.mark.s390x
     def test_kubevirt_vmi_network_traffic_bytes_total(
         self, prometheus, vm_for_test, linux_vm_for_test_interface_name, generated_network_traffic
     ):

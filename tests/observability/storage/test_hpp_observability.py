@@ -14,6 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TestKubevirtHPPPoolPathSharedWithOS:
     @pytest.mark.polarion("CNV-11221")
+    @pytest.mark.s390x
     def test_kubevirt_hpp_pool_path_shared_path_metric(self, prometheus, hpp_pod_sharing_pool_path):
         validate_metrics_value(
             prometheus=prometheus,
@@ -30,6 +31,7 @@ class TestKubevirtHPPPoolPathSharedWithOS:
 @pytest.mark.usefixtures("disabled_virt_operator", "scaled_deployment_scope_class")
 class TestHPPOperatorUpMetric:
     @pytest.mark.polarion("CNV-10435")
+    @pytest.mark.s390x
     def test_kubevirt_hpp_operator_up_metric(
         self,
         prometheus,
@@ -43,6 +45,7 @@ class TestHPPOperatorUpMetric:
 
 class TestHPPCrReady:
     @pytest.mark.polarion("CNV-11022")
+    @pytest.mark.s390x
     def test_kubevirt_hpp_cr_ready_metric(self, prometheus, modified_hpp_non_exist_node_selector):
         validate_metrics_value(
             prometheus=prometheus,
