@@ -19,7 +19,7 @@ from tests.storage.utils import (
     assert_use_populator,
     create_vm_and_verify_image_permission,
 )
-from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_CIRROS, TIMEOUT_1MIN, Images
+from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_disk_count_in_vm,
@@ -335,7 +335,7 @@ def test_virtctl_image_upload_with_exist_pvc(
             with VirtualMachineForTests(
                 name="cnv-3727-vm",
                 namespace=empty_pvc.namespace,
-                os_flavor=OS_FLAVOR_CIRROS,
+                os_flavor=Images.Cirros.OS_FLAVOR,
                 memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
                 pvc=empty_pvc,
             ) as vm:

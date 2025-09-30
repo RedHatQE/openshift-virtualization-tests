@@ -43,7 +43,6 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
-    OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
@@ -499,7 +498,7 @@ def cirros_vm_for_snapshot(
         client=admin_client,
         name=cirros_vm_name,
         namespace=dv_metadata["namespace"],
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template={
             "metadata": dv_metadata,

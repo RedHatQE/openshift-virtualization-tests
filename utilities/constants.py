@@ -42,6 +42,12 @@ ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
 
+#  OS constants
+OS_FLAVOR_CIRROS = "cirros"
+OS_FLAVOR_WINDOWS = "win"
+OS_FLAVOR_RHEL = "rhel"
+OS_FLAVOR_FEDORA = "fedora"
+
 
 class ArchImages:
     class X86_64:  # noqa: N801
@@ -104,7 +110,9 @@ class ArchImages:
 
     class ARM64:
         BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
-        Cirros = Cirros(RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz")
+        Cirros = Cirros(
+            RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz",
+        )
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
@@ -135,6 +143,7 @@ class ArchImages:
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
             DEFAULT_MEMORY_SIZE="1Gi",
+            OS_FLAVOR=OS_FLAVOR_FEDORA,
         )
 
         Alpine = Alpine(
@@ -235,11 +244,6 @@ TIMEOUT_12HRS = 12 * 60 * 60
 
 TCP_TIMEOUT_30SEC = 30.0
 
-#  OS constants
-OS_FLAVOR_CIRROS = "cirros"
-OS_FLAVOR_WINDOWS = "win"
-OS_FLAVOR_RHEL = "rhel"
-OS_FLAVOR_FEDORA = "fedora"
 
 # OpenShift Virtualization components constants
 VIRT_OPERATOR = "virt-operator"

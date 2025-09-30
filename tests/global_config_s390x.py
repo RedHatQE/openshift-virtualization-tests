@@ -11,8 +11,7 @@ from utilities.os_utils import generate_linux_instance_type_os_matrix, generate_
 
 global config
 
-# TODO: remove once CIRROS is replaced
-utilities.constants.OS_FLAVOR_CIRROS = "fedora"
+
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{S390X}"
 
 rhel_os_matrix = generate_os_matrix_dict(

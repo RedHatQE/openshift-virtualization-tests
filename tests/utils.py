@@ -24,7 +24,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
-    OS_FLAVOR_CIRROS,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
@@ -554,7 +553,7 @@ def create_cirros_vm(
         client=client,
         name=vm_name,
         namespace=dv_metadata["namespace"],
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=Images.Cirros.OS_FLAVOR,
         memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
         node_selector=node,
