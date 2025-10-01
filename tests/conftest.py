@@ -31,6 +31,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
@@ -105,6 +106,7 @@ from utilities.constants import (
     POD_SECURITY_NAMESPACE_LABELS,
     PREFERENCE_STR,
     RHEL9_PREFERENCE,
+    RHEL9_STR,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
@@ -897,6 +899,16 @@ def golden_image_data_volume_scope_function(request, admin_client, golden_images
 @pytest.fixture()
 def golden_image_data_source_scope_function(admin_client, golden_image_data_volume_scope_function):
     yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
+
+
+@pytest.fixture(scope="module")
+def rhel9_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        client=golden_images_namespace.client,
+        name=RHEL9_STR,
+        namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
 
 
 """

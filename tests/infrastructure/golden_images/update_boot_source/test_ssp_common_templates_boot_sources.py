@@ -11,7 +11,7 @@ from tests.infrastructure.golden_images.utils import (
     assert_missing_golden_image_pvc,
     assert_os_version_mismatch_in_vm,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, Images
+from utilities.constants import RHEL9_STR, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -21,7 +21,6 @@ from utilities.infra import (
 from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
 
 LOGGER = logging.getLogger(__name__)
-RHEL9_NAME = "rhel9"
 
 
 @pytest.fixture()
@@ -33,14 +32,6 @@ def boot_source_os_from_data_source_dict(auto_update_data_source_matrix__functio
 def matrix_data_source(auto_update_data_source_matrix__function__, golden_images_namespace):
     return DataSource(
         name=[*auto_update_data_source_matrix__function__][0],
-        namespace=golden_images_namespace.name,
-    )
-
-
-@pytest.fixture()
-def rhel9_data_source(golden_images_namespace):
-    return DataSource(
-        name=RHEL9_NAME,
         namespace=golden_images_namespace.name,
     )
 
@@ -85,13 +76,13 @@ def auto_update_boot_source_vm(
 
 
 @pytest.fixture()
-def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source):
+def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source_scope_module):
     with VirtualMachineForTestsFromTemplate(
-        name=f"{rhel9_data_source.name}-vm",
+        name=f"{rhel9_data_source_scope_module.name}-vm",
         namespace=namespace.name,
         client=unprivileged_client,
         labels=template_labels(os="rhel9.0"),
-        data_source=rhel9_data_source,
+        data_source=rhel9_data_source_scope_module,
         non_existing_pvc=True,
     ) as vm:
         vm.start()
@@ -100,28 +91,28 @@ def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source):
 
 
 @pytest.fixture()
-def opted_out_rhel9_data_source(rhel9_data_source):
-    LOGGER.info(f"Wait for DataSource {rhel9_data_source.name} to opt out")
+def opted_out_rhel9_data_source(rhel9_data_source_scope_module):
+    LOGGER.info(f"Wait for DataSource {rhel9_data_source_scope_module.name} to opt out")
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=TIMEOUT_5SEC,
-            func=lambda: rhel9_data_source.source.name == RHEL9_NAME,
+            func=lambda: rhel9_data_source_scope_module.source.name == RHEL9_STR,
         ):
             if sample:
                 return
     except TimeoutExpiredError:
-        LOGGER.error(f"{rhel9_data_source.name} DataSource source was not updated.")
+        LOGGER.error(f"{rhel9_data_source_scope_module.name} DataSource source was not updated.")
         raise
 
 
 @pytest.fixture()
-def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source, rhel9_http_image_url):
+def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source_scope_module, rhel9_http_image_url):
     artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace.name)
     artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace.name)
     with DataVolume(
         client=admin_client,
-        name=rhel9_data_source.source.name,
+        name=rhel9_data_source_scope_module.source.name,
         namespace=golden_images_namespace.name,
         url=rhel9_http_image_url,
         secret=artifactory_secret,
