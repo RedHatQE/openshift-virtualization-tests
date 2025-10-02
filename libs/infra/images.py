@@ -17,6 +17,7 @@ class Cirros:
     DIR: str = f"{BASE_IMAGES_DIR}/cirros-images"
     DEFAULT_DV_SIZE: str = "1Gi"
     DEFAULT_MEMORY_SIZE: str = "64M"
+    OS_FLAVOR: str = "cirros"
 
 
 @dataclass

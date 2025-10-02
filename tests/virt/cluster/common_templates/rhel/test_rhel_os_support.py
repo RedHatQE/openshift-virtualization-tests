@@ -15,7 +15,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
-from utilities.constants import LINUX_STR
+from utilities.constants import LINUX_STR, QUARANTINED
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
@@ -174,6 +174,7 @@ class TestCommonTemplatesRhel:
     def test_vm_smbios_default(self, smbios_from_kubevirt_config, matrix_rhel_os_vm_from_template):
         check_vm_xml_smbios(vm=matrix_rhel_os_vm_from_template, cm_values=smbios_from_kubevirt_config)
 
+    @pytest.mark.xfail(reason=f"{QUARANTINED}: Flake in pause VM checks; CNV-70033", run=False)
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])

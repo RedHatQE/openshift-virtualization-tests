@@ -18,6 +18,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 class TestMetricsLinux:
     @pytest.mark.polarion("CNV-11906")
+    @pytest.mark.s390x
     def test_cnv_vmi_monitoring_metrics_linux_vm(
         self, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
     ):
@@ -51,6 +52,7 @@ class TestMetricsWindows:
 
 
 @pytest.mark.polarion("CNV-10438")
+@pytest.mark.s390x
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
@@ -62,6 +64,7 @@ def test_cnv_installation_with_hco_cr_metrics(
 
 class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-11400")
+    @pytest.mark.s390x
     def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
@@ -71,6 +74,7 @@ class TestVMIMetricsLinuxVms:
         )
 
     @pytest.mark.polarion("CNV-11862")
+    @pytest.mark.s390x
     def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, linux_vm_info_to_compare):
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
