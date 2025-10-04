@@ -3,7 +3,6 @@ from collections.abc import Generator
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
-from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.traffic_generator import Client, Server
@@ -148,8 +147,10 @@ def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualM
 
 @pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic(
-    worker_node1: Node, nodes_available_nics: dict[str, list[str]]
+    hosts_common_available_ports: list[str],
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers for localnet OVS bridge")
     bridge_name = "localnet-ovs-br"
     desired_state = libnncp.DesiredState(
         interfaces=[
@@ -163,7 +164,7 @@ def nncp_localnet_on_secondary_node_nic(
                     options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
                     port=[
                         libnncp.Port(
-                            name=nodes_available_nics[worker_node1.name][-1],
+                            name=hosts_common_available_ports[-1],
                         )
                     ],
                 ),

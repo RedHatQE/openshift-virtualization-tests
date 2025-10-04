@@ -34,64 +34,72 @@ def fail_if_not_ipv6_supported_cluster(ipv6_supported_cluster):
 
 @pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_1_source(
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node1,
     bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"linux-bridge-{name_prefix(worker_node1.name)}",
         interface_name=bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def nncp_ovs_bridge_device_worker_1_source(
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node1,
     bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=OVS_BRIDGE,
         nncp_name=f"ovs-bridge-{name_prefix(worker_node1.name)}",
         interface_name=bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_2_destination(
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node2,
     bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"linux-bridge-{name_prefix(worker_node2.name)}",
         interface_name=bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def nncp_ovs_bridge_device_worker_2_destination(
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node2,
     bridge_device_name,
 ):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=OVS_BRIDGE,
         nncp_name=f"ovs-bridge-{name_prefix(worker_node2.name)}",
         interface_name=bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
     ) as br:
         yield br
 

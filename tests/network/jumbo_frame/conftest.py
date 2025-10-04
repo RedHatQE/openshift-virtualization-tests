@@ -121,6 +121,8 @@ def secondary_linux_bridge_nad(namespace, linux_bridge_interface):
 
 @pytest.fixture(scope="module")
 def linux_bridge_interface(hosts_common_available_ports):
+    if not hosts_common_available_ports:
+        pytest.skip("No common NICs available across workers")
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="sec-br",
