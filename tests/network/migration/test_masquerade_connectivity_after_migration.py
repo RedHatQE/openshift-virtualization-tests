@@ -9,19 +9,18 @@ import logging
 import pytest
 from timeout_sampler import TimeoutSampler
 
+from tests.network.libs.utils import ping_via_console
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
-    vm_console_run_commands,
-    wait_for_console,
 )
 
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def running_vm_static(
+def running_masquerade_destination_vm(
     unprivileged_client,
     namespace,
 ):
@@ -38,7 +37,7 @@ def running_vm_static(
 
 
 @pytest.fixture(scope="module")
-def running_vm_for_migration(
+def running_masquerade_source_vm(
     unprivileged_client,
     cpu_for_migration,
     namespace,
@@ -57,29 +56,24 @@ def running_vm_for_migration(
 
 
 @pytest.fixture()
-def migrated_vmi(running_vm_for_migration):
-    LOGGER.info(f"Migrating {running_vm_for_migration.name}. Current node: {running_vm_for_migration.vmi.node.name}")
+def migrated_vmi(running_masquerade_source_vm):
+    LOGGER.info(
+        f"Migrating {running_masquerade_source_vm.name}. Current node: {running_masquerade_source_vm.vmi.node.name}"
+    )
 
-    ip_before = running_vm_for_migration.vmi.interfaces[0]["ipAddress"]
-    migrated_vmi = migrate_vm_and_verify(vm=running_vm_for_migration, wait_for_migration_success=False)
+    ip_before = running_masquerade_source_vm.vmi.interfaces[0]["ipAddress"]
+    migrated_vmi = migrate_vm_and_verify(vm=running_masquerade_source_vm, wait_for_migration_success=False)
 
     for sample in TimeoutSampler(
         wait_timeout=60,
         sleep=1,
-        func=lambda: ip_before != running_vm_for_migration.vmi.interfaces[0]["ipAddress"],
+        func=lambda: ip_before != running_masquerade_source_vm.vmi.interfaces[0]["ipAddress"],
     ):
         if sample:
             break
 
     yield
     migrated_vmi.clean_up()
-
-
-@pytest.fixture(scope="module")
-def vm_console_connection_ready(running_vm_for_migration):
-    wait_for_console(
-        vm=running_vm_for_migration,
-    )
 
 
 @pytest.mark.gating
@@ -89,26 +83,18 @@ def vm_console_connection_ready(running_vm_for_migration):
 # Not marked as `conformance`; requires NMState
 def test_connectivity_after_migration(
     namespace,
-    running_vm_static,
-    running_vm_for_migration,
+    running_masquerade_destination_vm,
+    running_masquerade_source_vm,
     migrated_vmi,
-    vm_console_connection_ready,
 ):
     """
-    test for connectivity of a migrated vm with masquerade.
-    using console to ping from migrated_vmi to running_vm_static.
-    It is important to connect using console and not ssh because connecting
-    through ssh hides the bug.
-    The ping should take place right after running_vm_for_migration is migrated to
-    the new node.
-    the ping command include '-c 10 -w 10' so that in case there is a packet
-    loss the exit code will be 1 and not 0.
+    Validate connectivity after migrating a VM that uses masquerade.
+    - Uses the VM console (not SSH) to ping from the migrated VM to a static VM to avoid masking issues.
+    - Once the VM IP changes and console connectivity is available, run ping immediately to catch
+      short‑lived post‑migration connectivity gaps.
     """
-    LOGGER.info(f"pinging from migrated {running_vm_for_migration.name} to {running_vm_static.name}")
-    static_vm_ip = running_vm_static.vmi.interfaces[0]["ipAddress"]
-
-    vm_console_run_commands(
-        vm=running_vm_for_migration,
-        commands=[f"ping {static_vm_ip} -c 10 -w 10"],
-        timeout=10,
+    LOGGER.info(
+        f"Pinging from migrated {running_masquerade_source_vm.name} to {running_masquerade_destination_vm.name}"
     )
+
+    ping_via_console(src_vm=running_masquerade_source_vm, dst_vm=running_masquerade_destination_vm)
