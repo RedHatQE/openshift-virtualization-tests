@@ -14,7 +14,7 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import py_config
 
 from tests.storage.vm_export.utils import get_manifest_from_vmexport, get_manifest_url
-from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER, Images
+from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
 from utilities.storage import create_dv
 from utilities.virt import VirtualMachineForTests
@@ -23,17 +23,16 @@ from utilities.virt import VirtualMachineForTests
 @pytest.fixture()
 def vmexport_from_vmsnapshot(
     unprivileged_client,
-    snapshots_with_content,
+    rhel_vm_snapshot_with_content,
 ):
-    snapshot = snapshots_with_content[0]
     with VirtualMachineExport(
         name="vmexport-from-snapshot",
-        namespace=snapshot.namespace,
+        namespace=rhel_vm_snapshot_with_content.namespace,
         client=unprivileged_client,
         source={
             "apiGroup": VirtualMachineSnapshot.api_group,
             "kind": VirtualMachineSnapshot.kind,
-            "name": snapshot.name,
+            "name": rhel_vm_snapshot_with_content.name,
         },
     ) as vmexport:
         vmexport.wait_for_status(status=VirtualMachineExport.Status.READY)
@@ -136,7 +135,7 @@ def vm_from_vmexport(
     with VirtualMachineForTests(
         name="target-vm",
         namespace=namespace_vmexport_target.name,
-        os_flavor=Images.Cirros.OS_FLAVOR,
+        os_flavor=OS_FLAVOR_RHEL,
         yaml_file=vm_yaml_file,
     ) as target_vm:
         yield target_vm

@@ -7,6 +7,7 @@ Pytest conftest file for CNV CDI tests
 import base64
 import logging
 import os
+import shlex
 import ssl
 
 import pytest
@@ -14,13 +15,21 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
+from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -43,9 +52,11 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
+    OS_FLAVOR_RHEL,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    U1_SMALL,
     Images,
 )
 from utilities.hco import (
@@ -62,11 +73,12 @@ from utilities.infra import (
 from utilities.storage import (
     create_cirros_dv_for_snapshot_dict,
     data_volume,
+    data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
     sc_volume_binding_mode_is_wffc,
     write_file,
 )
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
@@ -506,6 +518,65 @@ def cirros_vm_for_snapshot(
         },
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="module")
+def rhel10_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture()
+def rhel_vm_for_snapshot_with_content(
+    admin_client,
+    namespace,
+    rhel10_data_source_scope_module,
+    snapshot_storage_class_name_scope_module,
+):
+    with VirtualMachineForTests(
+        name="rhel-vm-for-snapshot",
+        namespace=namespace.name,
+        client=admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+    ) as vm:
+        running_vm(vm=vm)
+
+        test_file_name = "/tmp/test_file.txt"
+        test_file_content = "Test content for VMExport"
+
+        cmd = shlex.split(f"echo '{test_file_content}' > {test_file_name}")
+        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+
+        vm.test_file_name = test_file_name
+        vm.test_file_content = test_file_content
+
+        yield vm
+
+
+@pytest.fixture()
+def rhel_vm_snapshot_with_content(
+    namespace,
+    admin_client,
+    rhel_vm_for_snapshot_with_content,
+):
+    with VirtualMachineSnapshot(
+        name=f"snapshot-{rhel_vm_for_snapshot_with_content.name}",
+        namespace=rhel_vm_for_snapshot_with_content.namespace,
+        vm_name=rhel_vm_for_snapshot_with_content.name,
+        client=admin_client,
+    ) as vm_snapshot:
+        vm_snapshot.wait_snapshot_done()
+        yield vm_snapshot
 
 
 @pytest.fixture()
