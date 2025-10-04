@@ -154,6 +154,7 @@ class TestVMMigrationAndState:
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno

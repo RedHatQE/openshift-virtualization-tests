@@ -10,6 +10,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("enabled_vm_console_proxy_spec")
+@pytest.mark.s390x
 class TestVmConsoleProxyEnablement:
     @pytest.mark.dependency(name="test_vm_proxy_cluster_resources_available")
     @pytest.mark.polarion("CNV-10416")

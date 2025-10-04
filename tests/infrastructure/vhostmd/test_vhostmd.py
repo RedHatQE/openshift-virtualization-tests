@@ -153,6 +153,7 @@ def run_vm_dump_metrics(vm):
     indirect=True,
 )
 @pytest.mark.polarion("CNV-6547")
+@pytest.mark.s390x
 def test_vhostmd_disk(
     vhostmd_vm1,
     vhostmd_vm2,
