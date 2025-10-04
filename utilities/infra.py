@@ -1018,7 +1018,7 @@ def get_daemonset_yaml_file_with_image_hash(generated_pulled_secret=None, servic
         image=NET_UTIL_CONTAINER_IMAGE,
         pull_secret=generated_pulled_secret,
     )
-    with open(ds_yaml_file, "r") as fd:
+    with open(ds_yaml_file) as fd:
         ds_yaml = yaml.safe_load(fd.read())
 
     template_spec = ds_yaml["spec"]["template"]["spec"]
@@ -1289,15 +1289,13 @@ def get_resources_by_name_prefix(prefix, namespace, api_resource_name):
     ]
 
 
-def get_infrastructure():
-    infrastructure = Infrastructure(name=CLUSTER)
-    if infrastructure.exists:
-        return infrastructure
-    raise ResourceNotFoundError(f"Infrastructure {CLUSTER} not found")
+@cache
+def get_infrastructure(admin_client: DynamicClient) -> Infrastructure:
+    return Infrastructure(client=admin_client, name=CLUSTER, ensure_exists=True)
 
 
-def get_cluster_platform():
-    return get_infrastructure().instance.status.platform
+def get_cluster_platform(admin_client: DynamicClient) -> str:
+    return get_infrastructure(admin_client=admin_client).instance.status.platform
 
 
 def query_version_explorer(api_end_point: str, query_string: str) -> Any:
