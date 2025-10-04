@@ -31,7 +31,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     validate_no_empty_files_collected_must_gather_vm,
 )
 from tests.os_params import FEDORA_LATEST
-from utilities.constants import ARM_64, COUNT_FIVE
+from utilities.constants import ARM_64, COUNT_FIVE, S390X
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -43,15 +43,24 @@ def kubevirt_architecture_configuration_scope_session(
     kubevirt_resource_scope_session,
     nodes_cpu_architecture,
 ):
-    kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
-        "architectureConfiguration"
-    ][nodes_cpu_architecture]
+    kubevirt_architecture_config = {}
 
-    # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
-    # '/usr/share/AAVMF' but the files in this location are symlinked to
-    # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
-    if nodes_cpu_architecture == ARM_64:
-        kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
+    # TODO: This block for s390x to be removed once we move to kubevirt version 1.7 as this is
+    # fixed in https://github.com/kubevirt/kubevirt/issues/14953
+    if nodes_cpu_architecture == S390X:
+        kubevirt_architecture_config["ovmfPath"] = ""
+        kubevirt_architecture_config["machineType"] = "s390-ccw-virtio"
+        kubevirt_architecture_config["emulatedMachines"] = "s390-ccw-virtio*"
+    else:
+        kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
+            "architectureConfiguration"
+        ][nodes_cpu_architecture]
+
+        # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
+        # '/usr/share/AAVMF' but the files in this location are symlinked to
+        # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
+        if nodes_cpu_architecture == ARM_64:
+            kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
     return kubevirt_architecture_config
 
 
@@ -170,7 +179,7 @@ class TestMustGatherVmDetails:
             ),
             pytest.param(
                 {FILE_SUFFIX: DOMCAPABILITIES_XML, SECTION_TITLE: None},
-                "<value>{ovmfpath}",
+                "<machine>{machine_type}",
                 marks=(pytest.mark.polarion("CNV-10519")),
                 id="test_domcapabilities",
             ),
@@ -207,7 +216,7 @@ class TestMustGatherVmDetails:
             format_regex = format_regex.format(
                 # TODO: directly use the object.machineType when the bug CNV-45481 is resolved
                 # and the fixture was updated to return the kubevirt architectureConfiguration object directly
-                machine_type=kubevirt_architecture_configuration_scope_session["machineType"]
+                machine_type=re.escape(kubevirt_architecture_configuration_scope_session["machineType"])
             )
         elif "ovmfpath" in format_regex:
             # TODO: directly use the object.ovmfPath when the bug CNV-45481 is resolved
