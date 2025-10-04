@@ -79,8 +79,9 @@ dependencies = [
   "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
-  "openshift-python-wrapper>=11.0.93",
+  "openshift-python-wrapper>=11.0.97",
 ]
+
 
 [project.optional-dependencies]
 # Dependencies for utilities unit testing
