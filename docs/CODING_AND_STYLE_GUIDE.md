@@ -50,7 +50,7 @@ Only add comments when necessary. For example, when using complex regex.
   - Keep focus on current requirements; do not prepare code for the future just because it may be useful.
   - Reason well for code structure when it is not obvious
 - Every function, variable, fixture, etc. written in the code - must be used, or else removed.
-- Log enough to make you debug and understand the flow easy, but do not spam the log with unuseful info.
+- Log enough to make you debug and understand the flow easy, but do not spam the log with unhelpful info.
     Error logs should be detailed with what failed, status and so on.
 
 ## Directory structure
