@@ -209,7 +209,7 @@ def vm_ovs_bridge_localnet_link_down(
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
-        name="localnet-ovs-vm1",
+        name="localnet-ovs-link-down-vm",
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
