@@ -46,7 +46,7 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
-    TIMEOUT_60MIN,
+    TIMEOUT_90MIN,
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
@@ -287,7 +287,7 @@ def data_volume(
                     # It will be in a status 'PendingPopulation' (for csi storage)
                     dv.wait_for_status(status="PendingPopulation", timeout=TIMEOUT_10SEC)
                 else:
-                    dv.wait_for_dv_success(timeout=TIMEOUT_60MIN if OS_FLAVOR_WINDOWS in image else TIMEOUT_30MIN)
+                    dv.wait_for_dv_success(timeout=TIMEOUT_90MIN if OS_FLAVOR_WINDOWS in image else TIMEOUT_30MIN)
         yield dv
 
 

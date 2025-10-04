@@ -1708,7 +1708,7 @@ def wait_for_running_vm(
     """
     assert_vm_not_error_status(vm=vm)
     try:
-        vm.vmi.wait_until_running(timeout=wait_until_running_timeout)
+        vm.vmi.wait_until_running(timeout=TIMEOUT_10MIN if "win" in vm.name else wait_until_running_timeout)
 
         if wait_for_interfaces:
             wait_for_vm_interfaces(vmi=vm.vmi)
