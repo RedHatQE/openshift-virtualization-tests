@@ -6,7 +6,9 @@ import re
 import shutil
 import socket
 import sys
+from typing import Any
 
+from _pytest.main import Session
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
@@ -238,3 +240,11 @@ def get_cnv_version_explorer_url(pytest_config):
         if not version_explorer_url:
             raise MissingEnvironmentVariableError("Please set CNV_VERSION_EXPLORER_URL environment variable")
         return version_explorer_url
+
+
+def get_fixture_return_values(fixture_name: str, session: Session) -> tuple[Any, ...] | None:
+    fixturemanager = session._fixturemanager
+    if fixture_def := fixturemanager._arg2fixturedefs[fixture_name]:
+        return fixture_def[0].cached_result
+
+    return None
