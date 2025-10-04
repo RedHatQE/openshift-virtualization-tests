@@ -36,6 +36,7 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms
 from utilities import console
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import (
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
@@ -46,6 +47,7 @@ from utilities.constants import (
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
+    ONE_CPU_THREAD,
     OS_FLAVOR_FEDORA,
     SSP_OPERATOR,
     TIMEOUT_2MIN,
@@ -94,6 +96,11 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
+
+
+def get_cpu_threads_arch():
+    arch = get_cluster_architecture()
+    return ONE_CPU_THREAD if arch == "s390x" else TWO_CPU_THREADS
 
 
 @pytest.fixture(scope="module")
@@ -276,12 +283,14 @@ def windows_vm_for_test_interface_name(windows_vm_for_test):
 @pytest.fixture(scope="class")
 def vm_with_cpu_spec(namespace, unprivileged_client):
     name = "vm-resource-test"
+    cpu_threads = get_cpu_threads_arch()  # dynamically set based on arch
+
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         cpu_cores=TWO_CPU_CORES,
         cpu_sockets=TWO_CPU_SOCKETS,
-        cpu_threads=TWO_CPU_THREADS,
+        cpu_threads=cpu_threads,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
