@@ -19,7 +19,7 @@ from tests.storage.utils import (
     assert_use_populator,
     create_vm_and_verify_image_permission,
 )
-from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_CIRROS, TIMEOUT_1MIN, Images
+from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_CIRROS, QUARANTINED, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_disk_count_in_vm,
@@ -224,6 +224,10 @@ def test_virtctl_image_upload_with_exist_dv_image(
         )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky test, artifactory connection failure; CNV-70271",
+    run=False,
+)
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-3728")
