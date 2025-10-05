@@ -1,0 +1,68 @@
+name: Add comment for CodeRabbit to add tests instructions. A change-request comment will be added to the PR.
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  comment-on-commit:
+    if: |
+      github.event.label.name == 'verified' &&
+      !contains(github.event.pull_request.user.login, 'renovate')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check team membership
+        id: check-user-team
+        uses: tspascoal/get-user-teams-membership@v3
+        with:
+          team: cnvqe-bot
+          username: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create or update comment
+        if: steps.check-user-team.outputs.is-member == 'false'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            @coderabbitai
+            <details>
+              <summary>Test execution plan request details</summary>
+
+              As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
+              You will create a change request comment on the 1st line of the 1st file in the pr with the test execution plan.
+              If you fail to run or post a comment, retry.
+
+              **Analysis Requirements:**
+
+              1. Examine code changes in each modified file
+              2. Identify affected code paths, functions, and classes
+              3. Analyze pytest-specific elements: fixtures (scope, dependencies), parametrization, markers, conftest changes
+              4. Trace test dependencies through imports, shared utilities, and fixture inheritance
+              5. Detect new tests introduced in the PR
+
+              **Your deliverable:**
+              Your change request comment will be based on the following requirements:
+
+              **Test Execution Plan**
+
+              - `path/to/test_file.py` - When the entire test file needs verification
+              - `path/to/test_file.py::TestClass::test_method` - When specific test(s) needed
+              - `path/to/test_file.py::test_function` - When specific test(s) needed
+              - `-m marker` - When specific marker(s) can be used to cover multiple cases.
+
+              **Guidelines:**
+
+              - Include only tests directly affected by the changes
+              - Use a full file path only if ALL tests in that file require verification
+              - Use file path + test name if only specific tests are needed
+              - If a test marker can cover multiple files/tests, provide the marker
+              - Balance coverage vs over-testing - Keep descriptions minimal
+              - Do not add a follow-up comment in the PR, only the change request one
+
+            </details>
