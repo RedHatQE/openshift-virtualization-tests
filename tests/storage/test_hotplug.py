@@ -25,6 +25,7 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
     vm_instance_from_template,
+    wait_for_ssh_connectivity,
     wait_for_windows_vm,
 )
 
@@ -174,6 +175,7 @@ class TestHotPlugWithSerial:
         hotplug_volume_scope_class,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
+        wait_for_ssh_connectivity(vm=fedora_vm_for_hotplug_scope_class)
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
 
     @pytest.mark.polarion("CNV-11389")
