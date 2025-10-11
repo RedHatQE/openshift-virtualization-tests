@@ -147,7 +147,7 @@ def wait_for_spec_change(expected, get_spec_func, base_path):
     samplers = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: benedict(get_spec_func()),
+        func=lambda: benedict(get_spec_func(), keypath_separator=KEY_PATH_SEPARATOR),
     )
     current_value = None
     try:
