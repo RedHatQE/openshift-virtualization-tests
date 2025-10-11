@@ -4,7 +4,6 @@ import logging
 import re
 import shlex
 from contextlib import contextmanager
-from functools import cache
 from typing import Any, Generator
 
 import bitmath
@@ -46,7 +45,6 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
-from utilities.infra import is_jira_open
 from utilities.storage import (
     create_dv,
     create_or_update_data_source,
@@ -492,11 +490,6 @@ def verify_linux_boot_time(vm_list, initial_boot_time):
         if initial_boot_time[vm.name] != current_boot_time:
             rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
-
-
-@cache
-def is_jira_67515_open():
-    return is_jira_open(jira_id="CNV-67515")
 
 
 def get_or_create_golden_image_data_source(
