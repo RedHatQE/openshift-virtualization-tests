@@ -604,9 +604,12 @@ def collected_vm_details_must_gather_from_vm_node(
 ):
     before_fail_count = request.session.testsfailed
     target_path = os.path.join(must_gather_tmpdir_scope_module, "collected_vm_gather_from_vm_node")
+    # Scope collection to only the test VM to avoid OOMKilled.
+    # Ref: https://github.com/kubevirt/must-gather?tab=readme-ov-file#specific-vm
     yield collect_must_gather(
         must_gather_tmpdir=target_path,
         must_gather_image_url=must_gather_image_url,
+        script_name=f"NS={must_gather_vm.namespace} VM={must_gather_vm.name} /usr/bin/gather",
         flag_names="vms_details",
         node_name=must_gather_vm.vmi.node.name,
     )
