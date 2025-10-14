@@ -3,10 +3,12 @@ from typing import Any
 import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import StorageClassNames
+from utilities.constants import Images, StorageClassNames
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
+
+Images.Windows.DEFAULT_DV_SIZE = "100Gi"
 
 storage_class_matrix = [
     {
