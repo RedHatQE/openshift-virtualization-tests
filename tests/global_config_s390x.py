@@ -25,7 +25,7 @@ fedora_os_matrix = generate_os_matrix_dict(os_name="fedora", supported_operating
 centos_os_matrix = generate_os_matrix_dict(os_name="centos", supported_operating_systems=["centos-stream-9"])
 
 instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(
-    os_name="rhel", preferences=[utilities.constants.RHEL9_PREFERENCE]
+    os_name="rhel", preferences=[utilities.constants.RHEL9_PREFERENCE], arch_suffix=S390X
 )
 
 latest_rhel_os_dict, latest_fedora_os_dict, latest_centos_os_dict = get_latest_os_dict_list(

@@ -57,16 +57,16 @@ rhel_os_matrix = generate_os_matrix_dict(os_name="rhel", supported_operating_sys
 latest_rhel_os_dict = get_latest_os_dict_list(os_list=[rhel_os_matrix])[0]
 
 # Modify instance_type_rhel_os_matrix for arm64
-instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(os_name="rhel", preferences=[RHEL10_PREFERENCE])
+instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(
+    os_name="rhel", preferences=[RHEL10_PREFERENCE], arch_suffix=ARM_64
+)
 instance_type_centos_os_matrix = generate_linux_instance_type_os_matrix(
     os_name="centos.stream", preferences=[CENTOS_STREAM10_PREFERENCE]
 )
 instance_type_fedora_os_matrix = generate_linux_instance_type_os_matrix(
-    os_name=OS_FLAVOR_FEDORA, preferences=[OS_FLAVOR_FEDORA]
+    os_name=OS_FLAVOR_FEDORA, preferences=[OS_FLAVOR_FEDORA], arch_suffix=ARM_64
 )
-for os_matrix_dict in instance_type_rhel_os_matrix + instance_type_centos_os_matrix + instance_type_fedora_os_matrix:
-    for os_params in os_matrix_dict.values():
-        os_params[PREFERENCE_STR] += f".{ARM_64}"
+
 
 for _dir in dir():
     if not config:  # noqa: F821
