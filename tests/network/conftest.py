@@ -224,6 +224,7 @@ def network_sanity(
     network_overhead,
     sriov_workers,
     ipv4_supported_cluster,
+    ipv6_supported_cluster,
     conformance_tests,
 ):
     """
@@ -310,13 +311,13 @@ def network_sanity(
                     f"has {len(sriov_workers)} SRIOV-capable worker nodes"
                 )
 
-    def _verify_ipv4():
-        if any(test.get_closest_marker("ipv4") for test in collected_tests):
-            LOGGER.info("Verifying if the cluster supports running IPV4 tests...")
-            if not ipv4_supported_cluster:
-                failure_msgs.append("IPv4 is not supported in this cluster")
+    def _verify_ip_family(family, is_supported_in_cluster):
+        if any(test.get_closest_marker(family) for test in collected_tests):
+            LOGGER.info(f"Verifying if the cluster supports running {family} tests...")
+            if not is_supported_in_cluster:
+                failure_msgs.append(f"{family} is not supported in this cluster")
             else:
-                LOGGER.info("Validated network lane is running against an IPV4 supported cluster")
+                LOGGER.info(f"Validated network lane is running against an {family} supported cluster")
 
     def _verify_bgp_env_vars():
         """Verify if the cluster supports running BGP tests.
@@ -343,7 +344,8 @@ def network_sanity(
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
-    _verify_ipv4()
+    _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster)
+    _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
     _verify_bgp_env_vars()
 
     if failure_msgs:
