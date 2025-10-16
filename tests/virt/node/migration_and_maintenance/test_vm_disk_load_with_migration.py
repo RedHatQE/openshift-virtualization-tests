@@ -37,11 +37,12 @@ def running_fio_in_vm(vm_with_fio):
     # Random write/read -  create a 1G file, and perform 4KB reads and writes using a 75%/25%
     LOGGER.info("Running fio in VM")
     fio_cmd = shlex.split(
-        "sudo nohup /usr/bin/fio --loops=400 --runtime=600 --randrepeat=1 --ioengine=libaio --direct=1 "
+        "sudo nohup /usr/bin/fio --time_based --runtime=600 --randrepeat=1 --ioengine=libaio --direct=1 "
         "--gtod_reduce=1 --name=test --filename=/home/fedora/random_read_write.fio --bs=4k --iodepth=64 "
         "--size=1G --readwrite=randrw --rwmixread=75 --numjobs=8 >& /dev/null &"
     )
     run_ssh_commands(host=vm_with_fio.ssh_exec, commands=fio_cmd)
+    get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)
 
 
 def get_disk_usage(ssh_exec):
