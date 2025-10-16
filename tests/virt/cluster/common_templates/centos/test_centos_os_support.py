@@ -30,8 +30,8 @@ from utilities.virt import (
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesCentos"
 
-
 @pytest.mark.usefixtures("cluster_cpu_model_scope_class")
+@pytest.mark.s390x
 class TestCommonTemplatesCentos:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
     @pytest.mark.polarion("CNV-5337")

@@ -38,6 +38,7 @@ def cpu_flag_vm_positive(cluster_common_node_cpu, namespace, unprivileged_client
     ],
     ids=["CPU-flag: Bad-Skylake-Server", "CPU-flag: commodore64"],
 )
+@pytest.mark.s390x
 def cpu_flag_vm_negative(request, unprivileged_client, namespace):
     name = f"vm-cpu-flags-negative-{request.param[1]}"
     with VirtualMachineForTests(
