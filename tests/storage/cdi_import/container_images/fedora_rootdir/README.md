@@ -9,7 +9,7 @@ The image requires three conditions:
 2. It's qcow2 format.
 3. The name can be anything except disk.img
 
-So it's a invalid image.
+So it's an invalid image.
 
 ## Steps
 
