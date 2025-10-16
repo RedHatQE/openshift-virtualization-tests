@@ -13,7 +13,7 @@ CUSTOMIZED_VIRT_DL = "customized-virt-dl"
 def validate_custom_cli_downloads_urls_updated(
     admin_client: DynamicClient,
     new_hostname: str | None = None,
-    original_virtctl_console_cli_downloads_spec_links: list[str] | None = None,
+    original_links: list[str] | None = None,
 ) -> None:
     """
     Validates that console CLI download URLs have been properly updated.
@@ -27,7 +27,7 @@ def validate_custom_cli_downloads_urls_updated(
         new_hostname (str, optional): New hostname that should be present in all URLs.
             If provided, validates that all URLs contain this hostname.
             Mutually exclusive with original_virtctl_console_cli_downloads_spec_links.
-        original_virtctl_console_cli_downloads_spec_links (list[str], optional):
+        original_links (list[str], optional):
             Original list of CLI download URLs. If provided, validates that current
             URLs match these original URLs.
             Mutually exclusive with new_hostname.
@@ -40,7 +40,7 @@ def validate_custom_cli_downloads_urls_updated(
         ValueError: If both new_hostname and original_virtctl_console_cli_downloads_spec_links
             are provided, or if neither is provided.
     """
-    if (new_hostname is None) == (original_virtctl_console_cli_downloads_spec_links is None):
+    if (new_hostname is None) == (original_links is None):
         raise ValueError(
             "Exactly one of 'new_hostname' or 'original_virtctl_console_cli_downloads_spec_links' "
             "must be provided, not both or neither."
@@ -58,18 +58,18 @@ def validate_custom_cli_downloads_urls_updated(
     try:
         for sample in samples:
             current_cli_spec_links = [url.href for url in sample]
-            if original_virtctl_console_cli_downloads_spec_links:
-                if sorted(current_cli_spec_links) == sorted(original_virtctl_console_cli_downloads_spec_links):
+            if original_links:
+                if sorted(current_cli_spec_links) == sorted(original_links):
                     return
             elif new_hostname:
                 urls_not_updated_with_new_hostname = [url for url in current_cli_spec_links if new_hostname not in url]
                 if not urls_not_updated_with_new_hostname:
                     return
     except TimeoutExpiredError:
-        if original_virtctl_console_cli_downloads_spec_links:
+        if original_links:
             LOGGER.error(
                 f"Failed to update cluster ingress downloads spec links to the original links: "
-                f"original_cli_spec_links: {original_virtctl_console_cli_downloads_spec_links}, "
+                f"original_cli_spec_links: {original_links}, "
                 f"current_cli_spec_links: {current_cli_spec_links}"
             )
         else:

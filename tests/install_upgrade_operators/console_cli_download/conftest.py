@@ -19,17 +19,6 @@ from utilities.infra import (
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="class")
-def original_virtctl_console_cli_downloads_spec_links_scope_class(admin_client):
-    """
-    Get console cli downloads spec links
-
-    Returns:
-        ConsoleCLIDownload instance.spec.links
-    """
-    return get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
-
-
 @pytest.fixture()
 def all_virtctl_urls_scope_function(admin_client):
     return get_all_console_links(
@@ -38,9 +27,9 @@ def all_virtctl_urls_scope_function(admin_client):
 
 
 @pytest.fixture(scope="class")
-def all_virtctl_urls_scope_class(original_virtctl_console_cli_downloads_spec_links_scope_class):
+def all_virtctl_urls_scope_class(admin_client):
     return get_all_console_links(
-        console_cli_downloads_spec_links=original_virtctl_console_cli_downloads_spec_links_scope_class
+        console_cli_downloads_spec_links=get_console_spec_links(admin_client=admin_client, name=VIRTCTL_CLI_DOWNLOADS)
     )
 
 
@@ -106,5 +95,5 @@ def updated_cluster_ingress_downloads_spec_links(request, admin_client, hco_name
         yield
     validate_custom_cli_downloads_urls_updated(
         admin_client=admin_client,
-        original_virtctl_console_cli_downloads_spec_links=all_virtctl_urls_scope_class,
+        original_links=all_virtctl_urls_scope_class,
     )
