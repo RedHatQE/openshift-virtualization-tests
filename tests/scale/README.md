@@ -37,7 +37,7 @@
     "test_namespace" - the name of the project the test resources will be created at.
 
     "test_duration" - number of minutes for the test to keep running
-    "vms_verification_interval" - minutes to wait between each verifcation that all VMIs are in ready state
+    "vms_verification_interval" - minutes to wait between each verification that all VMIs are in ready state
 
 ### Notes
 

@@ -74,7 +74,7 @@ patch is listed in comments to the review request.
 
 ### Check the code
 
-We use checks tools that are defined in .pre-commit-config.yaml file
+We use check tools that are defined in .pre-commit-config.yaml file
 To install pre-commit:
 
 ```bash
