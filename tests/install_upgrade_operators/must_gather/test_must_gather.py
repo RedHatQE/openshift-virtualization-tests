@@ -408,22 +408,37 @@ class TestMustGatherCluster:
                         f"cluster-scoped-resources/{crd_name}/{name}.yaml",
                     )
 
-                with open(resource_file) as resource_file:
-                    file_content = yaml.safe_load(
-                        resource_file.read(),
+                try:
+                    with open(resource_file) as resource_file:
+                        file_content = yaml.safe_load(
+                            resource_file.read(),
+                        )
+                    resource_name_from_file = file_content["metadata"]["name"]
+                    resource_uid_from_file = file_content["metadata"]["uid"]
+                    actual_resource_uid = resource_metadata["uid"]
+                    assert name == resource_name_from_file, (
+                        f"Actual resource name: {name}, must-gather collected resource name: {resource_name_from_file}"
                     )
-                resource_name_from_file = file_content["metadata"]["name"]
-                resource_uid_from_file = file_content["metadata"]["uid"]
-                actual_resource_uid = resource_metadata["uid"]
-                assert name == resource_name_from_file, (
-                    f"Actual resource name: {name}, must-gather collected resource name: {resource_name_from_file}"
-                )
 
-                assert actual_resource_uid == resource_uid_from_file, (
-                    f"Resource uid: {actual_resource_uid} does not "
-                    "match with must-gather data:"
-                    f" {resource_uid_from_file}"
-                )
+                    assert actual_resource_uid == resource_uid_from_file, (
+                        f"Resource uid: {actual_resource_uid} does not "
+                        "match with must-gather data:"
+                        f" {resource_uid_from_file}"
+                    )
+                except FileNotFoundError:
+                    # Skip volatile DataVolumes from openshift-virtualization-os-images (managed by DataImportCron)
+                    if (
+                        crd_name == f"datavolumes.{Resource.ApiGroup.CDI_KUBEVIRT_IO}"
+                        and resource_metadata.get("namespace") == NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
+                    ):
+                        LOGGER.warning(
+                            f"Skipping volatile DataVolume {name} "
+                            f"from {NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES}"
+                        )
+                        continue
+                    # Re-raise for any other missing resource file
+                    LOGGER.error(f"Resource file not found: {resource_file}")
+                    raise
 
     @pytest.mark.polarion("CNV-2939")
     def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
