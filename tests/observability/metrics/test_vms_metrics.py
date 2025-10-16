@@ -14,6 +14,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -508,4 +509,23 @@ class TestVmiPhaseTransitionFromDeletion:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
+        )
+
+
+class TestVmCreatedByPodTotal:
+    @pytest.mark.parametrize(
+        "initial_metric_value_scope_module",
+        [
+            pytest.param(
+                f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
+                marks=pytest.mark.polarion("CNV-99999"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vm_created_by_pod_total(self, prometheus, initial_metric_value_scope_module, vm_list):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
+            expected_value=str(initial_metric_value_scope_module + 3),  # 3 is from utils.py NUM_TEST_VMS
         )
