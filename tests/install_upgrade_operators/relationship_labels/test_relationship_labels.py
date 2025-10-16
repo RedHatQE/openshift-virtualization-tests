@@ -32,6 +32,7 @@ def expected_label_dictionary(hco_version_scope_class, request):
 
 
 class TestRelationshipLabels:
+    @pytest.mark.conformance
     @pytest.mark.parametrize(
         "expected_label_dictionary",
         [
@@ -58,6 +59,7 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    # TODO: mark as conformance - HPP should not be mandatory
     def test_verify_mismatch_relationship_labels_daemonsets(self, expected_label_dictionary, cnv_daemonset_by_name):
         verify_component_labels_by_resource(
             component=cnv_daemonset_by_name,
@@ -74,12 +76,14 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
+    # TODO: mark as conformance - HPP should not be mandatory
     def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pod_by_name):
         verify_component_labels_by_resource(
             component=cnv_pod_by_name,
             expected_component_labels=expected_label_dictionary,
         )
 
+    @pytest.mark.conformance
     @pytest.mark.parametrize(
         "expected_label_dictionary",
         [

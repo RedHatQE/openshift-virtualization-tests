@@ -1,0 +1,1 @@
+# DO NOT DELETE; needed for self-validation packaging

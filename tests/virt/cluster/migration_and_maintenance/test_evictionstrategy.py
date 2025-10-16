@@ -95,6 +95,7 @@ def test_evictionstrategy_not_in_templates(base_templates):
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-10086")
 def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module):
