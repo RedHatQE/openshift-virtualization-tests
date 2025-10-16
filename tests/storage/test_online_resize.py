@@ -15,8 +15,8 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.utils import create_cirros_dv
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
+from tests.storage.utils import create_rhel_dv
+from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -106,8 +106,11 @@ def expand_pvc(dv, size_change):
 
 
 def get_resize_count(vm):
-    commands = shlex.split("dmesg | grep -c 'new size' || true")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=commands)[0])
+    commands = shlex.split("sudo dmesg | grep -c 'new size' || true")
+    result = run_ssh_commands(host=vm.ssh_exec, commands=commands)[0]
+    # Clean up the result - strip whitespace and handle multiple lines
+    cleaned_result = result.strip().split("\n")[-1]  # Take the last line and strip whitespace
+    return int(cleaned_result)
 
 
 def check_file_unchanged(orig_cksum, vm):
@@ -156,63 +159,59 @@ def vm_restore(vm, name):
         yield vm
 
 
+# NEW FOR RHEL
 @pytest.fixture()
-def cirros_dv_for_online_resize(
+def rhel_dv_for_online_resize(
     namespace,
-    cirros_vm_name,
+    rhel_vm_name,
     storage_class_matrix_online_resize_matrix__module__,
+    rhel_data_source_scope_module,
 ):
-    yield from create_cirros_dv(
+    yield from create_rhel_dv(
         namespace=namespace.name,
-        name=cirros_vm_name,
+        name=rhel_vm_name,
         storage_class=[*storage_class_matrix_online_resize_matrix__module__][0],
+        rhel_data_source_scope_module=rhel_data_source_scope_module,
     )
 
 
 @pytest.fixture()
-def second_cirros_dv_for_online_resize(cirros_dv_for_online_resize):
+def second_rhel_dv_for_online_resize(rhel_dv_for_online_resize):
     with clone_dv(
-        dv=cirros_dv_for_online_resize,
-        size=cirros_dv_for_online_resize.size,
-    ) as second_dv:
-        yield second_dv
+        dv=rhel_dv_for_online_resize,
+        size=rhel_dv_for_online_resize.size,
+    ) as rhel_dv:
+        yield rhel_dv
 
 
 @pytest.fixture()
-def cirros_vm_for_online_resize(
-    admin_client,
-    cirros_dv_for_online_resize,
-    namespace,
-    cirros_vm_name,
-):
-    """
-    Create a VM with a DV from the cirros_dv_for_online_resize fixture
-    """
+def rhel_vm_for_online_resize(admin_client, rhel_dv_for_online_resize, namespace, rhel_vm_name):
     with VirtualMachineForTests(
-        name=cirros_vm_name,
+        client=admin_client,
+        name=rhel_vm_name,
         namespace=namespace.name,
-        data_volume=cirros_dv_for_online_resize,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        os_flavor=Images.Cirros.OS_FLAVOR,
+        data_volume=rhel_dv_for_online_resize,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         yield vm
 
 
 @pytest.fixture()
-def cirros_vm_after_expand(cirros_dv_for_online_resize, cirros_vm_for_online_resize, running_cirros_vm):
-    with wait_for_resize(vm=cirros_vm_for_online_resize):
-        expand_pvc(dv=cirros_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
-    return cirros_vm_for_online_resize
+def rhel_vm_after_expand(rhel_dv_for_online_resize, rhel_vm_for_online_resize, running_rhel_vm):
+    with wait_for_resize(vm=rhel_vm_for_online_resize):
+        expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+    return rhel_vm_for_online_resize
 
 
 @pytest.fixture()
-def running_cirros_vm(cirros_vm_for_online_resize):
-    running_vm(vm=cirros_vm_for_online_resize, wait_for_interfaces=False)
+def running_rhel_vm(rhel_vm_for_online_resize):
+    running_vm(vm=rhel_vm_for_online_resize, wait_for_interfaces=False)
 
 
 @pytest.fixture()
-def orig_cksum(cirros_vm_for_online_resize, running_cirros_vm):
-    return cksum_file(vm=cirros_vm_for_online_resize, filename=STORED_FILENAME, create=True)
+def orig_cksum(rhel_vm_for_online_resize, running_rhel_vm):
+    return cksum_file(vm=rhel_vm_for_online_resize, filename=STORED_FILENAME, create=True)
 
 
 @pytest.fixture(scope="module")
@@ -230,7 +229,7 @@ def skip_if_storage_for_online_resize_does_not_support_snapshots(
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-6793")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-6793"},
@@ -239,19 +238,19 @@ def skip_if_storage_for_online_resize_does_not_support_snapshots(
     indirect=True,
 )
 def test_sequential_disk_expand(
-    cirros_dv_for_online_resize,
-    cirros_vm_for_online_resize,
-    running_cirros_vm,
+    rhel_dv_for_online_resize,
+    rhel_vm_for_online_resize,
+    running_rhel_vm,
 ):
     # Expand PVC and wait for resize 6 times
     for _ in range(6):
-        with wait_for_resize(vm=cirros_vm_for_online_resize):
-            expand_pvc(dv=cirros_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+        with wait_for_resize(vm=rhel_vm_for_online_resize):
+            expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
 
 
 @pytest.mark.polarion("CNV-6794")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-6794"},
@@ -261,20 +260,20 @@ def test_sequential_disk_expand(
 )
 @pytest.mark.s390x
 def test_simultaneous_disk_expand(
-    cirros_dv_for_online_resize,
-    second_cirros_dv_for_online_resize,
-    cirros_vm_for_online_resize,
+    rhel_dv_for_online_resize,
+    second_rhel_dv_for_online_resize,
+    rhel_vm_for_online_resize,
 ):
-    add_dv_to_vm(vm=cirros_vm_for_online_resize, dv_name=second_cirros_dv_for_online_resize.name)
-    running_vm(vm=cirros_vm_for_online_resize, wait_for_interfaces=False)
-    with wait_for_resize(vm=cirros_vm_for_online_resize, count=2):
-        expand_pvc(dv=cirros_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
-        expand_pvc(dv=second_cirros_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+    add_dv_to_vm(vm=rhel_vm_for_online_resize, dv_name=second_rhel_dv_for_online_resize.name)
+    running_vm(vm=rhel_vm_for_online_resize, wait_for_interfaces=False)
+    with wait_for_resize(vm=rhel_vm_for_online_resize, count=2):
+        expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+        expand_pvc(dv=second_rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
 
 
 @pytest.mark.polarion("CNV-8257")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-8257"},
@@ -283,13 +282,13 @@ def test_simultaneous_disk_expand(
     indirect=True,
 )
 def test_disk_expand_then_clone_fail(
-    cirros_dv_for_online_resize,
-    cirros_vm_after_expand,
+    rhel_dv_for_online_resize,
+    rhel_vm_after_expand,
 ):
     LOGGER.info("Trying to clone DV with original size - should fail at webhook")
     with clone_dv(
-        dv=cirros_dv_for_online_resize,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        dv=rhel_dv_for_online_resize,
+        size=Images.Rhel.DEFAULT_DV_SIZE,
     ) as dv:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
@@ -307,7 +306,7 @@ def test_disk_expand_then_clone_fail(
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-6578")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-6578"},
@@ -317,16 +316,16 @@ def test_disk_expand_then_clone_fail(
 )
 @pytest.mark.s390x
 def test_disk_expand_then_clone_success(
-    cirros_dv_for_online_resize,
-    cirros_vm_after_expand,
+    rhel_dv_for_online_resize,
+    rhel_vm_after_expand,
 ):
     # Can't clone a running VM
-    cirros_vm_after_expand.stop()
+    rhel_vm_after_expand.stop()
 
     LOGGER.info("Trying to clone DV with new size - should succeed")
     with clone_dv(
-        dv=cirros_dv_for_online_resize,
-        size=cirros_dv_for_online_resize.pvc.instance.spec.resources.requests.storage,
+        dv=rhel_dv_for_online_resize,
+        size=rhel_dv_for_online_resize.pvc.instance.spec.resources.requests.storage,
     ) as cdv:
         cdv.wait_for_condition(
             condition=DataVolume.Condition.Type.READY,
@@ -337,7 +336,7 @@ def test_disk_expand_then_clone_success(
 
 @pytest.mark.polarion("CNV-6580")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-6580"},
@@ -346,18 +345,18 @@ def test_disk_expand_then_clone_success(
     indirect=True,
 )
 @pytest.mark.s390x
-def test_disk_expand_then_migrate(cpu_for_migration, cirros_vm_after_expand, orig_cksum):
+def test_disk_expand_then_migrate(cpu_for_migration, rhel_vm_after_expand, orig_cksum):
     migrate_vm_and_verify(
-        vm=cirros_vm_after_expand,
+        vm=rhel_vm_after_expand,
         wait_for_interfaces=False,
         check_ssh_connectivity=True,
     )
-    check_file_unchanged(orig_cksum=orig_cksum, vm=cirros_vm_after_expand)
+    check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand)
 
 
 @pytest.mark.polarion("CNV-6797")
 @pytest.mark.parametrize(
-    "cirros_vm_name",
+    "rhel_vm_name",
     [
         pytest.param(
             {"vm_name": "cnv-6797"},
@@ -367,16 +366,16 @@ def test_disk_expand_then_migrate(cpu_for_migration, cirros_vm_after_expand, ori
 )
 def test_disk_expand_with_snapshots(
     skip_if_storage_for_online_resize_does_not_support_snapshots,
-    cirros_dv_for_online_resize,
-    cirros_vm_for_online_resize,
+    rhel_dv_for_online_resize,
+    rhel_vm_for_online_resize,
     orig_cksum,
 ):
-    with vm_snapshot(vm=cirros_vm_for_online_resize, name="snapshot-before") as vm_snapshot_before:
-        with wait_for_resize(vm=cirros_vm_for_online_resize):
-            expand_pvc(dv=cirros_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
-        check_file_unchanged(orig_cksum=orig_cksum, vm=cirros_vm_for_online_resize)
-        with vm_snapshot(vm=cirros_vm_for_online_resize, name="snapshot-after") as vm_snapshot_after:
-            with vm_restore(vm=cirros_vm_for_online_resize, name=vm_snapshot_before.name) as vm_restored_before:
+    with vm_snapshot(vm=rhel_vm_for_online_resize, name="snapshot-before") as vm_snapshot_before:
+        with wait_for_resize(vm=rhel_vm_for_online_resize):
+            expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+        check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_for_online_resize)
+        with vm_snapshot(vm=rhel_vm_for_online_resize, name="snapshot-after") as vm_snapshot_after:
+            with vm_restore(vm=rhel_vm_for_online_resize, name=vm_snapshot_before.name) as vm_restored_before:
                 check_file_unchanged(orig_cksum=orig_cksum, vm=vm_restored_before)
-            with vm_restore(vm=cirros_vm_for_online_resize, name=vm_snapshot_after.name) as vm_restored_after:
+            with vm_restore(vm=rhel_vm_for_online_resize, name=vm_snapshot_after.name) as vm_restored_after:
                 check_file_unchanged(orig_cksum=orig_cksum, vm=vm_restored_after)

@@ -42,7 +42,7 @@ class Rhel:
     RHEL9_REGISTRY_GUEST_IMG: str = f"{Resource.ApiGroup.IMAGE_REGISTRY}/rhel9/rhel-guest-image"
     RHEL10_REGISTRY_GUEST_IMG: str = f"{Resource.ApiGroup.IMAGE_REGISTRY}/rhel10/rhel-guest-image"
     DIR: str = f"{BASE_IMAGES_DIR}/rhel-images"
-    DEFAULT_DV_SIZE: str = "20Gi"
+    DEFAULT_DV_SIZE: str = "40Gi"
     DEFAULT_MEMORY_SIZE: str = "1.5Gi"
     LATEST_RELEASE_STR: str | None = None
 

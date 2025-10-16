@@ -393,6 +393,23 @@ def update_scratch_space_sc(cdi_config, new_sc, hco):
         yield edited_cdi_config
 
 
+def create_rhel_dv(namespace, name, storage_class, rhel_data_source_scope_module):
+    with DataVolume(
+        name=f"dv-{name}",
+        namespace=namespace,
+        api_name="storage",
+        size=Images.Rhel.DEFAULT_DV_SIZE,
+        storage_class=storage_class,
+        source_ref={
+            "kind": rhel_data_source_scope_module.kind,
+            "name": rhel_data_source_scope_module.name,
+            "namespace": rhel_data_source_scope_module.namespace,
+        },
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
 def create_cirros_dv(
     namespace,
     name,

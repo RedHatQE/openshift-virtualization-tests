@@ -14,6 +14,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
+from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.resource import ResourceEditor
@@ -423,6 +424,21 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 @pytest.fixture()
 def cirros_vm_name(request):
     return request.param["vm_name"]
+
+
+@pytest.fixture()
+def rhel_vm_name(request):
+    return request.param["vm_name"]
+
+
+@pytest.fixture(scope="module")
+def rhel_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
 
 
 @pytest.fixture(scope="module")
