@@ -534,7 +534,7 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             src_vm=running_vm_for_jumbo_nic_hot_plug,
             dst_ip=get_vmi_ip_v4_by_name(
                 vm=running_utility_vm_for_connectivity_check,
-                name=hot_plugged_jumbo_interface_in_utility_vm,
+                name=hot_plugged_jumbo_interface_in_utility_vm.name,
             ),
             packet_size=cluster_hardware_mtu,
         )
