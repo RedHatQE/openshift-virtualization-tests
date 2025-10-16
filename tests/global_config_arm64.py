@@ -54,7 +54,7 @@ storage_class_b = StorageClassNames.IO2_CSI
 
 rhel_os_matrix = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5", "rhel-9-6"])
 
-latest_rhel_os_dict = get_latest_os_dict_list(os_list=[rhel_os_matrix])[0]
+fedora_os_matrix = generate_os_matrix_dict(os_name="fedora", supported_operating_systems=["fedora-42"])
 
 # Modify instance_type_rhel_os_matrix for arm64
 instance_type_rhel_os_matrix = generate_linux_instance_type_os_matrix(
@@ -67,6 +67,10 @@ instance_type_fedora_os_matrix = generate_linux_instance_type_os_matrix(
     os_name=OS_FLAVOR_FEDORA, preferences=[OS_FLAVOR_FEDORA], arch_suffix=ARM_64
 )
 
+(
+    latest_rhel_os_dict,
+    latest_fedora_os_dict,
+) = get_latest_os_dict_list(os_list=[rhel_os_matrix, fedora_os_matrix])
 
 for _dir in dir():
     if not config:  # noqa: F821
