@@ -518,7 +518,7 @@ class TestVmCreatedByPodTotal:
         [
             pytest.param(
                 f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
-                marks=pytest.mark.polarion("CNV-99999"),
+                marks=pytest.mark.polarion("CNV-12361"),
             )
         ],
         indirect=True,
