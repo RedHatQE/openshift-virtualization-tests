@@ -28,6 +28,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
+from tests.utils import NUM_TEST_VMS
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
@@ -527,5 +528,5 @@ class TestVmCreatedByPodTotal:
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
-            expected_value=str(initial_metric_value_scope_module + 3),  # 3 is from utils.py NUM_TEST_VMS
+            expected_value=str(initial_metric_value_scope_module + NUM_TEST_VMS),
         )
