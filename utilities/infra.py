@@ -312,20 +312,29 @@ def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list
     return pods_not_running
 
 
-def wait_for_pods_running(
+def wait_for_pods_running(  # type: ignore[return]
     admin_client: DynamicClient,
     namespace: Namespace,
     number_of_consecutive_checks: int = 1,
     filter_pods_by_name: str = "",
-) -> None:
+    raise_exception: bool = True,
+) -> None | list[dict[str, str]]:
     """
-    Waits for all pods in a given namespace to reach Running/Completed state. To avoid catching all pods in running
-    state too soon, use number_of_consecutive_checks with appropriate values.
+    Waits for all pods in a given namespace to reach Running/Completed state.
+
+    To avoid catching all pods in running state too soon, use number_of_consecutive_checks with appropriate values.
+
     Args:
          admin_client(DynamicClient): Dynamic client
          namespace(Namespace): A namespace object
          number_of_consecutive_checks(int): Number of times to check for all pods in running state
          filter_pods_by_name(str): string to filter pod names by
+         raise_exception(bool): If True, raises TimeoutExpiredError if any of the pods in the given namespace are not in
+            running state. If False, returns a list of pods that are not in a running state.
+
+    Returns:
+        list[dict[str, str]]: List of pods that are not in running state if raise_exception is False.
+
     Raises:
         TimeoutExpiredError: Raises TimeoutExpiredError if any of the pods in the given namespace are not in Running
          state
@@ -340,6 +349,10 @@ def wait_for_pods_running(
     )
 
     not_running_pods = []
+    error_msg = (
+        "timeout waiting for all pods in namespace {namespace} to reach running state, "
+        "following pods are in not running state: {not_running_pods}"
+    )
     try:
         current_check = 0
         for sample in samples:
@@ -350,14 +363,17 @@ def wait_for_pods_running(
                 else:
                     current_check += 1
                     if current_check >= number_of_consecutive_checks:
-                        return
+                        return None
+
     except TimeoutExpiredError:
         if not_running_pods:
-            LOGGER.error(
-                f"timeout waiting for all pods in namespace {namespace.name} to reach "
-                f"running state, following pods are in not running state: {not_running_pods}"
-            )
-            raise
+            if raise_exception:
+                LOGGER.error(error_msg.format(namespace=namespace.name, not_running_pods=not_running_pods))
+                raise
+
+            else:
+                LOGGER.warning(error_msg.format(namespace=namespace.name, not_running_pods=not_running_pods))
+                return not_running_pods
 
 
 def get_daemonset_by_name(admin_client, daemonset_name, namespace_name):
