@@ -125,7 +125,11 @@ class ArchImages:
         Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
 
         Windows = Windows()
-        Fedora = Fedora()
+        Fedora = Fedora(
+            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64",
+        )
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
         Centos = Centos()
         Cdi = Cdi()
 
