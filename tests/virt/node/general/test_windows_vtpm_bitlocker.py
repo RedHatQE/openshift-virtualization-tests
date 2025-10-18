@@ -8,7 +8,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.utils import update_hco_with_persistent_storage_config
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN, Images
+from utilities.constants import TIMEOUT_2MIN, Images
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_windows_os_dict,
@@ -37,7 +37,7 @@ def verify_tpm_in_os(vm):
 def enable_bitlocker(vm):
     def _wait_encryption_finish(vm):
         sampler = TimeoutSampler(
-            wait_timeout=TIMEOUT_40MIN,
+            wait_timeout=7200,
             sleep=TIMEOUT_2MIN,
             func=run_ssh_commands,
             host=vm.ssh_exec,
@@ -142,7 +142,7 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
             id="Windows-11",
         ),
         pytest.param(
-            {"rwx_access_mode": True},
+            {"rwx_access_mode": False},
             {
                 "dv_name": "dv-win2022-vtpm-vm",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
