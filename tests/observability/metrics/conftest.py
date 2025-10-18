@@ -580,6 +580,11 @@ def initial_metric_value(request, prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
 
 
+@pytest.fixture(scope="module")
+def initial_metric_value_scope_module(request, prometheus):
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
+
+
 @pytest.fixture()
 def deleted_vmi(running_metric_vm):
     running_metric_vm.delete(wait=True)
