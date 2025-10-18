@@ -74,6 +74,9 @@ class TestConnectivityLinuxBridge:
     @pytest.mark.polarion("CNV-11123")
     @pytest.mark.ipv4
     @pytest.mark.s390x
+    @pytest.mark.dependency(
+        name="test_positive_vlan_linux_bridge",
+    )
     def test_positive_vlan_linux_bridge(
         self,
         nad_linux_bridge_vlan_1,
@@ -91,6 +94,7 @@ class TestConnectivityLinuxBridge:
     @pytest.mark.polarion("CNV-11131")
     @pytest.mark.ipv4
     @pytest.mark.s390x
+    @pytest.mark.dependency(depends=["test_positive_vlan_linux_bridge"])
     def test_negative_vlan_linux_bridge(
         self,
         nad_linux_bridge_vlan_3,
