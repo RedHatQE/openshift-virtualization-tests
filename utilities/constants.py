@@ -52,6 +52,7 @@ FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
 CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
+
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
