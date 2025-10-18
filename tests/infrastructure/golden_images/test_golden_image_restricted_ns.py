@@ -22,6 +22,7 @@ def check_pod_creation_failed(pod_name, client, namespace):
 
 
 @pytest.mark.polarion("CNV-4900")
+@pytest.mark.s390x
 def test_regular_user_cant_create_pod_in_ns(
     golden_images_namespace,
     unprivileged_client,
@@ -34,6 +35,7 @@ def test_regular_user_cant_create_pod_in_ns(
 
 
 @pytest.mark.polarion("CNV-5276")
+@pytest.mark.s390x
 def test_regular_user_with_dv_create_rolebinding_cannot_create_pod_in_golden_image_ns(
     golden_images_namespace,
     golden_images_edit_rolebinding,
