@@ -19,3 +19,7 @@ HTTP = "http"
 HTTPS = "https"
 
 QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+
+# VM Export test constants
+VM_EXPORT_TEST_FILE_NAME = "test_file.txt"
+VM_EXPORT_TEST_FILE_CONTENT = "Test content for VMExport"
