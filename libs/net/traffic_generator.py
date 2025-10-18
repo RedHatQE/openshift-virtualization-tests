@@ -54,23 +54,26 @@ class Client:
     """
     Represents a client that connects to a server to test network performance.
     Implemented with iperf3
+    Maximum Segment Size (MSS) is typically calculated as:
+        MTU - network headers size (IP + TCP) in bytes
 
     Args:
         vm (BaseVirtualMachine): The virtual machine where the client runs.
         server_ip (str): The destination IP address of the server the client connects to.
         server_port (int): The port on which the server listens for connections.
+        maximum_segment_size (int): Optional mtu customization (by customizing mss) in bytes.
     """
 
     def __init__(
-        self,
-        vm: BaseVirtualMachine,
-        server_ip: str,
-        server_port: int,
+        self, vm: BaseVirtualMachine, server_ip: str, server_port: int, maximum_segment_size: int | None = None
     ):
         self._vm = vm
         self._server_ip = server_ip
         self._server_port = server_port
-        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self._server_port}"
+        self._cmd = (
+            f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self._server_port}"
+            f"{f' --set-mss {maximum_segment_size}' if maximum_segment_size else ''}"
+        )
 
     def __enter__(self) -> "Client":
         self._vm.console(
