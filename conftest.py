@@ -53,6 +53,7 @@ from utilities.pytest_utils import (
     get_base_matrix_name,
     get_cnv_version_explorer_url,
     get_matrix_params,
+    get_tests_cluster_markers,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -114,7 +115,9 @@ def pytest_addoption(parser):
     scale_group = parser.getgroup(name="Scale")
     session_group = parser.getgroup(name="Session")
     csv_group = parser.getgroup(name="CSV")
+    ci_group = parser.getgroup(name="CI")
     csv_group.addoption("--update-csv", action="store_true")
+
     # Upgrade addoption
     install_upgrade_group.addoption(
         "--upgrade",
@@ -305,6 +308,17 @@ def pytest_addoption(parser):
     session_group.addoption(
         "--remote-kubeconfig",
         help="Path to the remote cluster kubeconfig file for cross-cluster tests",
+    )
+
+    # CI group
+    ci_group.addoption(
+        "--collect-tests-markers",
+        help="Collect test markers and store them in a file. Tests will not be executed if this option is set.",
+        action="store_true",
+    )
+    ci_group.addoption(
+        "--tests-markers-file",
+        help="Full filepath to store collected test markers.",
     )
 
 
@@ -771,6 +785,12 @@ def pytest_sessionstart(session):
         stop_if_run_in_progress()
         deploy_run_in_progress_namespace()
         deploy_run_in_progress_config_map(session=session)
+
+
+def pytest_collection_finish(session):
+    if session.config.getoption("--collect-tests-markers"):
+        get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))
+        pytest.exit(reason="Run with --collect-tests-markers. no tests are executed", returncode=0)
 
 
 def pytest_sessionfinish(session, exitstatus):
