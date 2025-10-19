@@ -60,6 +60,8 @@ HPP_CSI = "hpp-csi"
 
 LOGGER = logging.getLogger(__name__)
 
+artifact_server_url_cache: dict[str, str] = {}
+
 
 def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=None, pvc=None):
     """
@@ -595,6 +597,8 @@ def get_test_artifact_server_url(schema="https"):
     Verify https server server connectivity (regardless of schema).
     Return the requested "registry" or "https" server url.
 
+    Results are cached to avoid repeated connectivity checks.
+
     Args:
         schema (str): registry or https.
 
@@ -604,6 +608,10 @@ def get_test_artifact_server_url(schema="https"):
     Raises:
         URLError: If server is not accessible.
     """
+    if schema in artifact_server_url_cache:
+        LOGGER.info(f"Returning cached URL for schema: {schema}")
+        return artifact_server_url_cache[schema]
+
     artifactory_connection_url = py_config["servers"]["https_server"]
     LOGGER.info(f"Testing connectivity to {artifactory_connection_url} {schema.upper()} server")
     sample = None
@@ -616,7 +624,10 @@ def get_test_artifact_server_url(schema="https"):
             ),
         ):
             if sample.status_code == requests.codes.ok:
-                return py_config["servers"][f"{schema}_server"]
+                url = py_config["servers"][f"{schema}_server"]
+                artifact_server_url_cache[schema] = url
+                LOGGER.debug(f"Cached URL for schema {schema}: {url}")
+                return url
     except TimeoutExpiredError:
         LOGGER.error(
             f"Unable to connect to test image server: {artifactory_connection_url} "
