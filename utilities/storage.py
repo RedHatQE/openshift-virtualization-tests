@@ -3,6 +3,7 @@ import math
 import os
 import shlex
 from contextlib import contextmanager
+from functools import cache
 
 import kubernetes
 import requests
@@ -590,10 +591,13 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     return dv.res
 
 
+@cache
 def get_test_artifact_server_url(schema="https"):
     """
     Verify https server server connectivity (regardless of schema).
     Return the requested "registry" or "https" server url.
+
+    Results are cached to avoid repeated connectivity checks.
 
     Args:
         schema (str): registry or https.
