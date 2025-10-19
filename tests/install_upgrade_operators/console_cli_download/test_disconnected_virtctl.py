@@ -94,8 +94,8 @@ class TestDisconnectedVirtctlDownloadAndExecute:
 @pytest.mark.arm64
 class TestDisconnectedVirtctlAllLinksInternal:
     @pytest.mark.polarion("CNV-6915")
-    def test_all_links_internal(self, all_virtctl_urls, non_internal_fqdns):
+    def test_all_links_internal(self, all_virtctl_urls_scope_class, non_internal_fqdns):
         assert not non_internal_fqdns, (
             "Found virtctl URLs that do not point to the cluster internally: "
-            f"violating_fqdns={non_internal_fqdns} all_virtctl_urls={all_virtctl_urls}"
+            f"violating_fqdns={non_internal_fqdns} all_virtctl_urls={all_virtctl_urls_scope_class}"
         )
