@@ -37,8 +37,8 @@ from utilities.constants import (
     MTU_9000,
     OVS_BRIDGE,
     SRIOV,
-    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_4MIN,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
     WORKERS_TYPE,
@@ -498,7 +498,7 @@ def get_vmi_ip_v4_by_name(vm, name):
         utilities.virt.wait_for_vm_interfaces(vmi=vmi)
         return _extract_interface_ips()
 
-    sampler = TimeoutSampler(wait_timeout=TIMEOUT_2MIN, sleep=1, func=_get_interface_ips)
+    sampler = TimeoutSampler(wait_timeout=TIMEOUT_4MIN, sleep=1, func=_get_interface_ips)
     try:
         for ip_addresses in sampler:
             for ip_address in ip_addresses:
