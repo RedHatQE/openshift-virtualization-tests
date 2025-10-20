@@ -64,6 +64,7 @@ class Windows:
     WIN2022_ISO_IMG: str | None = None
     WIN2025_ISO_IMG: str | None = None
     DIR: str = f"{BASE_IMAGES_DIR}/windows-images"
+    DOCKER_IMAGE_DIR = "docker/kubevirt-common-instancetypes"
     UEFI_WIN_DIR: str = f"{DIR}/uefi"
     HA_DIR: str = f"{DIR}/HA-images"
     ISO_BASE_DIR = f"{DIR}/install_iso"
