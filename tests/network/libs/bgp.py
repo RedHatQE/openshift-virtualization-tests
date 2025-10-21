@@ -17,7 +17,8 @@ from timeout_sampler import retry
 
 from utilities.infra import get_resources_by_name_prefix
 
-_BGP_ASN: Final[int] = 64512
+_CLUSTER_FRR_ASN: Final[int] = 64512
+_EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
@@ -108,11 +109,11 @@ def create_frr_configuration(
     bgp_config = {
         "routers": [
             {
-                "asn": _BGP_ASN,
+                "asn": _CLUSTER_FRR_ASN,
                 "neighbors": [
                     {
                         "address": frr_pod_ipv4,
-                        "asn": _BGP_ASN,
+                        "asn": _EXTERNAL_FRR_ASN,
                         "disableMP": True,
                         "toReceive": {"allowed": {"mode": "filtered", "prefixes": [{"prefix": external_subnet_ipv4}]}},
                     }
@@ -141,13 +142,14 @@ def generate_frr_conf(
         raise ValueError("nodes_ipv4_list cannot be empty")
 
     lines = [
-        f"router bgp {_BGP_ASN}",
+        f"router bgp {_EXTERNAL_FRR_ASN}",
+        " no bgp ebgp-requires-policy",
         " no bgp default ipv4-unicast",
         " no bgp network import-check",
         "",
     ]
 
-    lines.extend([f" neighbor {ip} remote-as {_BGP_ASN}" for ip in nodes_ipv4_list])
+    lines.extend([f" neighbor {ip} remote-as {_CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
     lines.extend([
