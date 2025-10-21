@@ -146,7 +146,7 @@ def error_state_vm(unique_namespace, unprivileged_client):
         yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def vm_list(unique_namespace):
     """
     Creates n vms, waits for them all to go to running state and cleans them up at the end
@@ -577,11 +577,6 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
 
 @pytest.fixture()
 def initial_metric_value(request, prometheus):
-    return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
-
-
-@pytest.fixture(scope="module")
-def initial_metric_value_scope_module(request, prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
 
 

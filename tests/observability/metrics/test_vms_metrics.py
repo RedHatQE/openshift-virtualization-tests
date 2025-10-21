@@ -14,10 +14,10 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
@@ -515,18 +515,18 @@ class TestVmiPhaseTransitionFromDeletion:
 
 class TestVmCreatedByPodTotal:
     @pytest.mark.parametrize(
-        "initial_metric_value_scope_module",
+        "initial_metric_value",
         [
             pytest.param(
-                f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
+                SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
                 marks=pytest.mark.polarion("CNV-12361"),
             )
         ],
         indirect=True,
     )
-    def test_kubevirt_vm_created_by_pod_total(self, prometheus, initial_metric_value_scope_module, vm_list):
+    def test_kubevirt_vm_created_by_pod_total(self, prometheus, initial_metric_value, vm_list):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL})",
-            expected_value=str(initial_metric_value_scope_module + NUM_TEST_VMS),
+            metric_name=SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
+            expected_value=str(initial_metric_value + NUM_TEST_VMS),
         )
