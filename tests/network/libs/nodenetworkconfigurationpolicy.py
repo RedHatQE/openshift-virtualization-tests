@@ -68,6 +68,7 @@ class Interface:
     name: str
     type: str
     state: str
+    mtu: int | None = None
     ipv4: IPv4 | None = None
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None

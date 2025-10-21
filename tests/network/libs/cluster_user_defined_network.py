@@ -51,6 +51,7 @@ class Localnet:
     physicalNetworkName: str  # noqa: N815
     vlan: Vlan
     ipam: Ipam
+    mtu: int | None = None
 
 
 @dataclass
