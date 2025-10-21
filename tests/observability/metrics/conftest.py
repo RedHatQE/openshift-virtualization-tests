@@ -25,7 +25,6 @@ from tests.observability.metrics.utils import (
     ZERO_CPU_CORES,
     create_windows11_wsl2_vm,
     disk_file_system_info,
-    enable_swap_fedora_vm,
     get_metric_sum_value,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
@@ -160,7 +159,6 @@ def vm_list(unique_namespace):
     vms_list = create_vms(name_prefix="key-metric-vm", namespace_name=unique_namespace.name)
     for vm in vms_list:
         running_vm(vm=vm)
-        enable_swap_fedora_vm(vm=vm)
     yield vms_list
     for vm in vms_list:
         vm.clean_up()
