@@ -30,6 +30,7 @@ from utilities.virt import (
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesCentos"
 
+
 @pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 @pytest.mark.s390x
 class TestCommonTemplatesCentos:

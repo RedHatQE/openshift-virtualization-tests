@@ -91,6 +91,7 @@ def test_auto_limits_set_one_resource(
         else:
             assert not getattr(pod_limits, resource), f"{resource} limits should not be set, \n {pod_limits}"
 
+
 @pytest.mark.s390x
 @pytest.mark.parametrize(
     "resource_quota_for_auto_resource_limits_test, vm_auto_resource_limits",
