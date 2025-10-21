@@ -1,5 +1,6 @@
 import ast
 import logging
+import re
 import shlex
 from contextlib import contextmanager
 from typing import Generator
@@ -251,11 +252,17 @@ def create_vm_and_verify_image_permission(dv: DataVolume) -> None:
 
 def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
     v_pod = vm.vmi.virt_launcher_pod
-    LOGGER.debug("Check image exist, permission and ownership")
+    LOGGER.debug("Check image existence, permissions, and ownership")
     output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
-    assert "disk.img" in output
-    assert "-rw-rw----." in output
-    assert "qemu qemu" in output
+
+    assert "disk.img" in output, "disk.img not found in VM disk directory"
+    assert "-rw-rw----." in output, "Permissions do not match expected '-rw-rw----.'"
+
+    # Extract owner and group using regex
+    match = re.search(r"-rw-rw----\.\s+\d+\s+(\S+)\s+(\S+)\s+", output)
+    assert match, "Failed to parse owner/group from ls output"
+    owner, group = match.groups()
+    assert owner == "qemu" and (group == "qemu" or group.isdigit()), "Ownership is not qemu:qemu or qemu:<number>"
 
 
 def get_importer_pod(
