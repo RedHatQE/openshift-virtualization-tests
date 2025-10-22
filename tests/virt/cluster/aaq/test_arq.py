@@ -200,7 +200,6 @@ class TestARQSupportCPUHotplug:
         wait_when_pod_in_gated_state(pod=hotplugged_target_pod)
 
 
-@pytest.mark.arm64
 class TestARQSupportMemoryHotplug:
     @pytest.mark.parametrize(
         "hotplugged_resource",
