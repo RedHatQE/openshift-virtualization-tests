@@ -9,9 +9,10 @@ from kubernetes.client import ApiException
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_export import VirtualMachineExport
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
-from tests.storage.vm_export.utils import get_pvc_sha256sum
+from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
 from utilities.constants import Images
 from utilities.infra import run_virtctl_command
 from utilities.virt import running_vm
@@ -61,36 +62,18 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
             assert not vmexport, "VMExport created by unprivileged client"
 
 
-@pytest.mark.parametrize(
-    "cirros_vm_name, snapshots_with_content",
-    [
-        pytest.param(
-            {"vm_name": "vm-cnv-9903"},
-            {"number_of_snapshots": 1},
-            marks=(
-                pytest.mark.polarion("CNV-9903"),
-                pytest.mark.gating(),
-            ),
-        ),
-    ],
-    indirect=True,
-)
+@pytest.mark.polarion("CNV-9903")
+@pytest.mark.gating()
 @pytest.mark.s390x
 def test_vmexport_snapshot_manifests(
-    namespace,
-    vmexport_from_vmsnapshot,
     vm_from_vmexport,
 ):
-    pvc_name = vm_from_vmexport.instance.to_dict()["spec"]["dataVolumeTemplates"][0]["metadata"]["name"]
-    source_pvc_sha256sum = get_pvc_sha256sum(
-        pvc_name=f"{vmexport_from_vmsnapshot.name}-{pvc_name}",
-        pvc_namespace=namespace.name,
-    )
-    target_pvc_sha256sum = get_pvc_sha256sum(pvc_name=pvc_name, pvc_namespace=vm_from_vmexport.namespace)
-    running_vm(vm=vm_from_vmexport, wait_for_interfaces=False)
-    assert source_pvc_sha256sum == target_pvc_sha256sum, (
-        f"Source sha256sum: '\n'{source_pvc_sha256sum} is not equal to the target: '\n'{target_pvc_sha256sum}"
-    )
+    running_vm(vm=vm_from_vmexport)
+
+    result = run_ssh_commands(host=vm_from_vmexport.ssh_exec, commands=shlex.split(f"cat {VM_EXPORT_TEST_FILE_NAME}"))
+    file_content = result[0].strip()
+
+    assert file_content == VM_EXPORT_TEST_FILE_CONTENT
 
 
 @pytest.mark.s390x
