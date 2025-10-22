@@ -5,32 +5,15 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import Client, Server, is_tcp_connection
-from libs.net.udn import udn_primary_network
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
-from libs.vm.affinity import new_pod_anti_affinity
-from libs.vm.factory import base_vmspec, fedora_vm
+from tests.network.libs.vm_factory import udn_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
-
-
-def udn_vm(namespace_name, name, template_labels=None):
-    spec = base_vmspec()
-    iface, network = udn_primary_network(name="udn-primary")
-    spec.template.spec.domain.devices.interfaces = [iface]
-    spec.template.spec.networks = [network]
-    if template_labels:
-        spec.template.metadata.labels = spec.template.metadata.labels or {}
-        spec.template.metadata.labels.update(template_labels)
-        # Use the first label key and first value as the anti-affinity label to use:
-        label, *_ = template_labels.items()
-        spec.template.spec.affinity = new_pod_anti_affinity(label=label)
-
-    return fedora_vm(namespace=namespace_name, name=name, spec=spec)
 
 
 @pytest.fixture(scope="module")
