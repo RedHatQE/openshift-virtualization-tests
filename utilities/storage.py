@@ -365,6 +365,7 @@ def virtctl_volume(
     # clean up:
     command = [
         "removevolume",
+        "--persist",
         f"{vm_name}",
         f"--volume-name={volume_name}",
     ]
