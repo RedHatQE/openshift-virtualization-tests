@@ -168,7 +168,7 @@ def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network
             hyperconverged_resource_scope_package: {
                 "spec": {
                     "featureGates": {"decentralizedLiveMigration": True},
-                    "liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name}
+                    "liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name},
                 }
             }
         },
@@ -213,7 +213,7 @@ def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_networ
             remote_cluster_hyperconverged_resource_scope_package: {
                 "spec": {
                     "featureGates": {"decentralizedLiveMigration": True},
-                    "liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name}
+                    "liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name},
                 }
             }
         },
