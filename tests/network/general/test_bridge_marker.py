@@ -127,11 +127,19 @@ def non_homogenous_bridges(worker_node1, worker_node2):
             yield bridgemarker2_ncp, bridgemarker3_ncp
 
 
-def _assert_failure_reason_is_bridge_missing(pod, bridge):
-    cond = pod.instance.status.conditions[0]
-    missing_resource = bridge.resource_name
-    assert cond.reason == "Unschedulable"
-    assert f"Insufficient {missing_resource}" in cond.message
+def _assert_failure_reason_is_bridge_missing(vmi, bridge):
+    requested_condition = "PodScheduled"
+
+    # Store the list of conditions, to make sure that if an exception is encountered, it is aligned with the conditions
+    # we check.
+    conditions = vmi.instance.status.conditions
+    for cond in conditions:
+        if cond.type == requested_condition:
+            assert cond.status == "False"
+            assert cond.reason == "Unschedulable"
+            assert f"Insufficient {bridge.resource_name}" in cond.message
+            return
+    pytest.fail(f"VMI {vmi.name} doesn't report {requested_condition}. Reported conditions:{conditions}")
 
 
 @pytest.mark.sno
@@ -143,8 +151,10 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
         bridge_attached_vmi_for_bridge_marker_no_device.wait_until_running(timeout=_VM_NOT_RUNNING_TIMEOUT, logs=False)
 
     # validate the exact reason for VMI startup failure is missing bridge
-    pod = bridge_attached_vmi_for_bridge_marker_no_device.virt_launcher_pod
-    _assert_failure_reason_is_bridge_missing(pod=pod, bridge=bridge_marker_bridge_network)
+    _assert_failure_reason_is_bridge_missing(
+        vmi=bridge_attached_vmi_for_bridge_marker_no_device,
+        bridge=bridge_marker_bridge_network,
+    )
 
 
 # note: the order of fixtures is important because we should first create the
@@ -169,6 +179,5 @@ def test_bridge_marker_devices_exist_on_different_nodes(
         multi_bridge_attached_vmi.wait_until_running(timeout=_VM_NOT_RUNNING_TIMEOUT, logs=False)
 
     # validate the exact reason for VMI startup failure is missing bridge
-    pod = multi_bridge_attached_vmi.virt_launcher_pod
     for bridge in bridge_networks:
-        _assert_failure_reason_is_bridge_missing(pod=pod, bridge=bridge)
+        _assert_failure_reason_is_bridge_missing(vmi=multi_bridge_attached_vmi, bridge=bridge)
