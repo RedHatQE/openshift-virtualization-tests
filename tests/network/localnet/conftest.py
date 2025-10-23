@@ -62,12 +62,12 @@ def namespace_localnet_2(admin_client: DynamicClient) -> Generator[Namespace]:
     yield from create_ns(admin_client=admin_client, name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def vlan_id(vlan_index_number: Generator[int]) -> int:
     return next(vlan_index_number)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def cudn_localnet(
     vlan_id: int,
     namespace_localnet_1: Namespace,
@@ -83,12 +83,12 @@ def cudn_localnet(
         yield cudn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def ipv4_localnet_address_pool() -> Generator[str]:
     return (f"10.0.0.{host_value}/24" for host_value in range(1, 254))
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def vm_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
@@ -104,7 +104,7 @@ def vm_localnet_1(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def vm_localnet_2(
     namespace_localnet_2: Namespace,
     ipv4_localnet_address_pool: Generator[str],
@@ -120,7 +120,7 @@ def vm_localnet_2(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def localnet_running_vms(
     vm_localnet_1: BaseVirtualMachine, vm_localnet_2: BaseVirtualMachine
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
@@ -186,7 +186,7 @@ def nncp_localnet_on_secondary_node_nic(
         yield nncp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def cudn_localnet_ovs_bridge(
     vlan_id: int,
     namespace_localnet_1: Namespace,
@@ -218,7 +218,7 @@ def vm_ovs_bridge_localnet_link_down(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
@@ -234,7 +234,7 @@ def vm_ovs_bridge_localnet_1(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def vm_ovs_bridge_localnet_2(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
@@ -264,7 +264,7 @@ def ovs_bridge_localnet_running_vms_one_with_interface_down(
     yield vm1, vm2
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def ovs_bridge_localnet_running_vms(
     vm_ovs_bridge_localnet_1: BaseVirtualMachine, vm_ovs_bridge_localnet_2: BaseVirtualMachine
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
