@@ -197,7 +197,6 @@ def test_successful_upload_with_supported_formats(
     indirect=True,
 )
 @pytest.mark.sno
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-2018")
 @pytest.mark.s390x
 def test_successful_upload_token_validity(
@@ -221,16 +220,7 @@ def test_successful_upload_token_validity(
     ) as utr:
         token = utr.create().status.token
         wait_for_upload_response_code(token=token, data=upload_file_path, response_code=HTTP_OK)
-        dv.wait_for_condition(
-            condition=DataVolume.Condition.Type.RUNNING,
-            status=DataVolume.Condition.Status.TRUE,
-            timeout=TIMEOUT_5MIN,
-        )
-        dv.wait_for_condition(
-            condition=DataVolume.Condition.Type.READY,
-            status=DataVolume.Condition.Status.TRUE,
-            timeout=TIMEOUT_5MIN,
-        )
+        dv.wait_for_dv_success()
 
 
 @pytest.mark.parametrize(

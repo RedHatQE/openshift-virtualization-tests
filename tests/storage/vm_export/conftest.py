@@ -3,37 +3,46 @@ Pytest conftest file for CNV VMExport tests
 """
 
 import base64
+import shlex
 from subprocess import check_output
 
 import pytest
 from ocp_resources.config_map import ConfigMap
+from ocp_resources.data_source import DataSource
 from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 
+from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
 from tests.storage.vm_export.utils import get_manifest_from_vmexport, get_manifest_url
-from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_1MIN, U1_SMALL, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
-from utilities.storage import create_dv
-from utilities.virt import VirtualMachineForTests
+from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
+from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture()
 def vmexport_from_vmsnapshot(
     unprivileged_client,
-    snapshots_with_content,
+    rhel_vm_snapshot_with_content,
 ):
-    snapshot = snapshots_with_content[0]
     with VirtualMachineExport(
         name="vmexport-from-snapshot",
-        namespace=snapshot.namespace,
+        namespace=rhel_vm_snapshot_with_content.namespace,
         client=unprivileged_client,
         source={
             "apiGroup": VirtualMachineSnapshot.api_group,
             "kind": VirtualMachineSnapshot.kind,
-            "name": snapshot.name,
+            "name": rhel_vm_snapshot_with_content.name,
         },
     ) as vmexport:
         vmexport.wait_for_status(status=VirtualMachineExport.Status.READY)
@@ -136,7 +145,7 @@ def vm_from_vmexport(
     with VirtualMachineForTests(
         name="target-vm",
         namespace=namespace_vmexport_target.name,
-        os_flavor=OS_FLAVOR_CIRROS,
+        os_flavor=OS_FLAVOR_RHEL,
         yaml_file=vm_yaml_file,
     ) as target_vm:
         yield target_vm
@@ -178,3 +187,55 @@ def vmexport_download_path(tmp_path):
     temp_path = tmp_path / "test_virtctl_vmexport_unprivileged"
     temp_path.mkdir()
     yield str(temp_path / "disk.img")
+
+
+@pytest.fixture(scope="module")
+def rhel10_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture()
+def rhel_vm_for_snapshot_with_content(
+    unprivileged_client,
+    namespace,
+    rhel10_data_source_scope_module,
+    snapshot_storage_class_name_scope_module,
+):
+    with VirtualMachineForTests(
+        name="rhel-vm-for-snapshot",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+    ) as vm:
+        running_vm(vm=vm)
+
+        cmd = shlex.split(f"echo '{VM_EXPORT_TEST_FILE_CONTENT}' > {VM_EXPORT_TEST_FILE_NAME} && sync")
+        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+
+        yield vm
+
+
+@pytest.fixture()
+def rhel_vm_snapshot_with_content(
+    unprivileged_client,
+    rhel_vm_for_snapshot_with_content,
+):
+    with VirtualMachineSnapshot(
+        name=f"snapshot-{rhel_vm_for_snapshot_with_content.name}",
+        namespace=rhel_vm_for_snapshot_with_content.namespace,
+        vm_name=rhel_vm_for_snapshot_with_content.name,
+        client=unprivileged_client,
+    ) as vm_snapshot:
+        vm_snapshot.wait_snapshot_done()
+        yield vm_snapshot

@@ -17,6 +17,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "pod_deleting_process, chaos_online_snapshots",
     [

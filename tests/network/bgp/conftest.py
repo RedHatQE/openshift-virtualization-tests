@@ -1,4 +1,5 @@
 import os
+import shlex
 from collections.abc import Generator
 from pathlib import Path
 from typing import Final
@@ -12,10 +13,15 @@ from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 
 from libs.net import netattachdef as libnad
+from libs.net.traffic_generator import PodClient as TcpClient
+from libs.net.traffic_generator import Server as TcpServer
 from libs.net.udn import create_udn_namespace
+from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.bgp import (
+    POD_SECONDARY_IFACE_NAME,
     create_cudn_route_advertisements,
     create_frr_configuration,
     deploy_external_frr_pod,
@@ -25,13 +31,16 @@ from tests.network.libs.bgp import (
 )
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.nodenetworkstate import DEFAULT_ROUTE_V4, lookup_br_ex_gateway_v4
+from tests.network.libs.vm_factory import udn_vm
 from utilities.infra import get_node_selector_dict
 
 APP_CUDN_LABEL: Final[dict] = {"app": "cudn"}
 BGP_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "frr-config"
 CUDN_BGP_LABEL: Final[dict] = {"cudn-bgp": "blue"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
-EXTERNAL_SUBNET_IPV4: Final[str] = "172.100.0.0/16"
+EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = "10.250.100.0/24"
+EXTERNAL_PROVIDER_IP_V4: Final[str] = "10.250.100.150/24"
+IPERF3_SERVER_PORT: Final[int] = 2354
 
 
 @pytest.fixture(scope="session")
@@ -90,7 +99,7 @@ def frr_configmap(
     workers: list[Node], cnv_tests_utilities_namespace: Namespace, admin_client: DynamicClient
 ) -> Generator[ConfigMap]:
     frr_conf = generate_frr_conf(
-        external_subnet_ipv4=EXTERNAL_SUBNET_IPV4,
+        external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
         nodes_ipv4_list=[worker.internal_ip for worker in workers],
     )
 
@@ -156,7 +165,7 @@ def frr_configuration_created(admin_client: DynamicClient) -> Generator[None]:
     with create_frr_configuration(
         name="frr-configuration-bgp",
         frr_pod_ipv4=os.environ["EXTERNAL_FRR_STATIC_IPV4"].split("/")[0],
-        external_subnet_ipv4=EXTERNAL_SUBNET_IPV4,
+        external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
         client=admin_client,
     ):
         yield
@@ -179,6 +188,11 @@ def frr_external_pod(
         default_route=br_ex_gateway_v4,
         client=admin_client,
     ) as pod:
+        # Assign a secondary IP on the secondary interface to emulate the external provider subnet
+        pod.execute(
+            command=shlex.split(f"ip addr add {EXTERNAL_PROVIDER_IP_V4} dev {POD_SECONDARY_IFACE_NAME}"),
+            container="frr",
+        )
         yield pod
 
 
@@ -191,3 +205,35 @@ def bgp_setup_ready(
 ) -> None:
     node_names = [worker.name for worker in workers]
     wait_for_bgp_connection_established(node_names=node_names)
+
+
+@pytest.fixture(scope="module")
+def vm_cudn(
+    namespace_cudn: Namespace,
+    cudn_layer2: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp") as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def tcp_server_cudn_vm(vm_cudn: BaseVirtualMachine) -> Generator[TcpServer]:
+    with TcpServer(vm=vm_cudn, port=IPERF3_SERVER_PORT) as server:
+        if not server.is_running():
+            raise ProcessLookupError("Iperf3 server process is not running in the VM")
+        yield server
+
+
+@pytest.fixture(scope="module")
+def tcp_client_external_network(
+    frr_external_pod: Pod, vm_cudn: BaseVirtualMachine, tcp_server_cudn_vm: TcpServer
+) -> Generator[TcpClient]:
+    with TcpClient(
+        pod=frr_external_pod,
+        server_ip=lookup_iface_status(vm=vm_cudn, iface_name=lookup_primary_network(vm=vm_cudn).name)[IP_ADDRESS],
+        server_port=IPERF3_SERVER_PORT,
+        bind_interface=EXTERNAL_PROVIDER_IP_V4.split("/")[0],
+    ) as client:
+        yield client

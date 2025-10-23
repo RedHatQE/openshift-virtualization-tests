@@ -141,7 +141,7 @@ Otherwise:
 a. New tag is created for the active tag '41' as '41.rev-xxxxxx'
 b. then new tag for uploaded multi-arch image manifest '41.rev-250318' is created as '41'.
 
-This way there will be very minimal impact for test runs that
+This way there will be minimal impact for test runs that
 tried to pull the latest fedora container image with tag '41'
 
 # Test build via GitHub

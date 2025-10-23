@@ -1,5 +1,6 @@
 import getpass
 import importlib
+import json
 import logging
 import os
 import re
@@ -212,6 +213,7 @@ def skip_if_pytest_flags_exists(pytest_config):
         pytest_config.getoption("--collect-only")
         or pytest_config.getoption("--collectonly")
         or pytest_config.getoption("--setup-plan")
+        or pytest_config.getoption("--collect-tests-markers")
     )
 
 
@@ -238,3 +240,32 @@ def get_cnv_version_explorer_url(pytest_config):
         if not version_explorer_url:
             raise MissingEnvironmentVariableError("Please set CNV_VERSION_EXPLORER_URL environment variable")
         return version_explorer_url
+
+
+def get_tests_cluster_markers(items, filepath=None) -> None:
+    test_markers = set([marker.name for item in items for marker in item.iter_markers()])
+
+    pytest_cluster_markers = []
+    is_config_section = False
+    with open("pytest.ini") as fd:
+        for line in fd:
+            # Get markers from configuration and hardware sections only
+            if "## Configuration requirements" in line or "## Hardware requirements" in line:
+                is_config_section = True
+                continue
+
+            if is_config_section:
+                # Skip empty lines and sections which are not configuration or hardware requirements
+                if (_line := line.strip()) and _line.startswith("#") or line == "\n":
+                    is_config_section = False
+                    continue
+                else:
+                    pytest_cluster_markers.append(line.strip().split(":")[0])
+
+    tests_cluster_markers = [marker for marker in test_markers if marker in pytest_cluster_markers]
+    LOGGER.info(f"Cluster-related test markers: {tests_cluster_markers}")
+
+    if filepath:
+        LOGGER.info(f"Write cluster-related test markers in {filepath}")
+        with open(filepath, "w") as fd:
+            fd.write(json.dumps(tests_cluster_markers))

@@ -1,10 +1,12 @@
 approvers:
-  - myakove
+  - rnetser
   - vsibirsk
   - dshchedr
-  - rnetser
+  - myakove
 reviewers:
   - RoniKishner
   - vsibirsk
   - dshchedr
   - rnetser
+emeritus_approvers:
+  - dbasunag  # 2025-03-10

@@ -19,6 +19,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_vms_list_rhel9, pod_deleting_process",
@@ -53,6 +54,7 @@ def test_pod_delete_openshift_apiserver(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "rebooted_control_plane_node",
@@ -85,6 +87,7 @@ def test_control_plane_node_restart(
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "chaos_dv_rhel9, downscaled_storage_provisioner_deployment",
     [
@@ -116,6 +119,7 @@ def test_odf_storage_outage(
     chaos_vm_rhel9_with_dv.wait_for_specific_status(status=VirtualMachine.Status.RUNNING, timeout=TIMEOUT_2MIN)
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.parametrize(
     "chaos_worker_background_process",
@@ -152,6 +156,7 @@ def test_host_io_stress(
     assert chaos_worker_background_process.exitcode == 0, "Background process execution failed"
 
 
+@pytest.mark.s390x
 @pytest.mark.gpfs
 @pytest.mark.usefixtures("deleted_pod_by_name_prefix")
 @pytest.mark.parametrize("chaos_vms_instancetype_list", [pytest.param({"number_of_vms": 3})], indirect=True)
