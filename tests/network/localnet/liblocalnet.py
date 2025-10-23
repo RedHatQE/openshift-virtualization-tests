@@ -10,7 +10,7 @@ from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import IP_ADDRESS, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import CloudInitNoCloud, Interface, Metadata, Network
+from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
 from libs.vm.vm import BaseVirtualMachine, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -19,6 +19,9 @@ from tests.network.libs.label_selector import LabelSelector
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_BR_EX_NETWORK_NO_VLAN = "localnet-br-ex-network-no-vlan"
 LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
+LOCALNET_BR_EX_INTERFACE = "localnet-iface-vlan"
+LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
+LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
@@ -106,6 +109,7 @@ def localnet_vm(
 
     vmi_spec = spec.template.spec
     vmi_spec.networks = networks
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
     vmi_spec.domain.devices.interfaces = interfaces
 
     # Prevents cloud-init from overriding the default OS user credentials
@@ -149,7 +153,11 @@ def localnet_cudn(
         ClusterUserDefinedNetwork: The configured CUDN object ready for creation.
     """
     ipam = libcudn.Ipam(mode=libcudn.Ipam.Mode.DISABLED.value)
-    vlan = libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id)) if vlan_id else None
+    vlan = (
+        libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
+        if vlan_id is not None
+        else None
+    )
     localnet = libcudn.Localnet(
         role=libcudn.Localnet.Role.SECONDARY.value, physicalNetworkName=physical_network_name, vlan=vlan, ipam=ipam
     )
