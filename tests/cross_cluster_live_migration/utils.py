@@ -9,11 +9,13 @@ from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC
 LOGGER = logging.getLogger(__name__)
 
 
-def get_token_from_secret(secret):
-    if secret_instance := secret.exists:
-        if token := secret_instance.get("data", {}).get("token"):
-            return token
-    raise NotFoundError(f"Secret {secret.name} does not exist")
+def get_token_from_secret(secret: Secret) -> str:
+    if not (secret_instance := secret.exists):
+        raise NotFoundError(f"Secret {secret.name} not found")
+    token = secret_instance.get("data", {}).get("token")
+    if not token:
+        raise NotFoundError(f"Token not yet present in Secret {secret.name}")
+    return token
 
 
 def wait_for_service_account_token(secret: Secret) -> str | None:

@@ -30,12 +30,13 @@ from utilities.constants import (
     REMOTE_KUBECONFIG,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
+    VIRT_HANDLER,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import base64_encode_str, create_ns, get_hyperconverged_resource
+from utilities.infra import base64_encode_str, create_ns, get_daemonset_by_name, get_hyperconverged_resource
 from utilities.storage import data_volume_template_with_source_ref_dict
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, running_vm, wait_for_virt_handler_pods_network_updated
 
 LOGGER = logging.getLogger(__name__)
 
@@ -158,11 +159,18 @@ def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network
     hyperconverged_resource_scope_package,
     admin_client,
     local_cluster_network_for_live_migration,
+    hco_namespace,
 ):
     """
     Configure HCO with both decentralized live migration feature gate and live migration network.
     This consolidates two separate HCO patches into a single operation.
     """
+    virt_handler_daemonset = get_daemonset_by_name(
+        admin_client=admin_client,
+        daemonset_name=VIRT_HANDLER,
+        namespace_name=hco_namespace.name,
+    )
+
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_package: {
@@ -176,7 +184,21 @@ def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network
         wait_for_reconcile_post_update=True,
         admin_client=admin_client,
     ):
+        wait_for_virt_handler_pods_network_updated(
+            client=admin_client,
+            namespace=hco_namespace,
+            network_name=local_cluster_network_for_live_migration.name,
+            virt_handler_daemonset=virt_handler_daemonset,
+        )
         yield
+
+    wait_for_virt_handler_pods_network_updated(
+        client=admin_client,
+        namespace=hco_namespace,
+        network_name=local_cluster_network_for_live_migration.name,
+        virt_handler_daemonset=virt_handler_daemonset,
+        migration_network=False,
+    )
 
 
 @pytest.fixture(scope="package")
@@ -204,10 +226,17 @@ def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_networ
     remote_cluster_hyperconverged_resource_scope_package,
     remote_admin_client,
     remote_cluster_network_for_live_migration,
+    remote_cluster_hco_namespace,
 ):
     """
     Configure the live migration network for HyperConverged resource on the remote cluster.
     """
+    virt_handler_daemonset = get_daemonset_by_name(
+        admin_client=remote_admin_client,
+        daemonset_name=VIRT_HANDLER,
+        namespace_name=remote_cluster_hco_namespace.name,
+    )
+
     with ResourceEditorValidateHCOReconcile(
         patches={
             remote_cluster_hyperconverged_resource_scope_package: {
@@ -221,7 +250,21 @@ def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_networ
         wait_for_reconcile_post_update=True,
         admin_client=remote_admin_client,
     ):
+        wait_for_virt_handler_pods_network_updated(
+            client=remote_admin_client,
+            namespace=remote_cluster_hco_namespace,
+            network_name=remote_cluster_network_for_live_migration.name,
+            virt_handler_daemonset=virt_handler_daemonset,
+        )
         yield
+
+    wait_for_virt_handler_pods_network_updated(
+        client=remote_admin_client,
+        namespace=remote_cluster_hco_namespace,
+        network_name=remote_cluster_network_for_live_migration.name,
+        virt_handler_daemonset=virt_handler_daemonset,
+        migration_network=False,
+    )
 
 
 @pytest.fixture(scope="package")
