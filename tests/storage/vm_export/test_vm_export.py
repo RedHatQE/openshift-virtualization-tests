@@ -82,6 +82,8 @@ def test_vmexport_snapshot_manifests(
     vm_from_vmexport,
 ):
     pvc_name = vm_from_vmexport.instance.to_dict()["spec"]["dataVolumeTemplates"][0]["metadata"]["name"]
+    target_pvc = PersistentVolumeClaim(name=pvc_name, namespace=vm_from_vmexport.namespace)
+    target_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=300)
     source_pvc_sha256sum = get_pvc_sha256sum(
         pvc_name=f"{vmexport_from_vmsnapshot.name}-{pvc_name}",
         pvc_namespace=namespace.name,
