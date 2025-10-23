@@ -49,8 +49,8 @@ class Localnet:
 
     role: str
     physicalNetworkName: str  # noqa: N815
-    vlan: Vlan
     ipam: Ipam
+    vlan: Vlan | None = None
 
 
 @dataclass

@@ -100,7 +100,10 @@ def localnet_vm(
 
 
 def localnet_cudn(
-    name: str, match_labels: dict[str, str], vlan_id: int, physical_network_name: str
+    name: str,
+    match_labels: dict[str, str],
+    physical_network_name: str,
+    vlan_id: int | None = None,
 ) -> libcudn.ClusterUserDefinedNetwork:
     """
     Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
@@ -114,14 +117,14 @@ def localnet_cudn(
     Args:
         name (str): The name of the CUDN resource.
         match_labels (dict[str, str]): Labels for namespace selection.
-        vlan_id (int): The VLAN ID to configure for the network.
         physical_network_name (str): The name of the physical network to associate with the localnet configuration.
+        vlan_id (int|None): The VLAN ID to configure for the network. If None, no VLAN is configured.
 
     Returns:
         ClusterUserDefinedNetwork: The configured CUDN object ready for creation.
     """
     ipam = libcudn.Ipam(mode=libcudn.Ipam.Mode.DISABLED.value)
-    vlan = libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
+    vlan = libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id)) if vlan_id else None
     localnet = libcudn.Localnet(
         role=libcudn.Localnet.Role.SECONDARY.value, physicalNetworkName=physical_network_name, vlan=vlan, ipam=ipam
     )
