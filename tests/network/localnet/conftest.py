@@ -84,6 +84,43 @@ def cudn_localnet(
 
 
 @pytest.fixture(scope="class")
+def cudn_localnet_no_vlan(
+    namespace_localnet_1: Namespace,
+) -> Generator[libcudn.ClusterUserDefinedNetwork]:
+    with localnet_cudn(
+        name=LOCALNET_BR_EX_NETWORK,
+        match_labels=LOCALNET_TEST_LABEL,
+        physical_network_name=LOCALNET_BR_EX_NETWORK,
+    ) as cudn:
+        cudn.wait_for_status_success()
+        yield cudn
+
+
+@pytest.fixture(scope="class")
+def vm_localnet_no_vlan_ip_address(ipv4_localnet_address_pool: Generator[str]):
+    return next(ipv4_localnet_address_pool)
+
+
+@pytest.fixture(scope="class")
+def vm_localnet_no_vlan(
+    namespace_localnet_1: Namespace,
+    vm_localnet_no_vlan_ip_address: str,
+    cudn_localnet_no_vlan: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="localnet-no-vlan-vm",
+        physical_network_name=cudn_localnet_no_vlan.name,
+        spec_logical_network=LOCALNET_BR_EX_NETWORK,
+        cidr=vm_localnet_no_vlan_ip_address,
+    ) as vm:
+        vm.start()
+        vm.wait_for_ready_status(status=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def ipv4_localnet_address_pool() -> Generator[str]:
     return (f"10.0.0.{host_value}/24" for host_value in range(1, 254))
 

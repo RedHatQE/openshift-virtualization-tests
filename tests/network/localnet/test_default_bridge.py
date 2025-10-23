@@ -1,7 +1,10 @@
+from ipaddress import ip_interface
+
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
 from tests.network.localnet.liblocalnet import LOCALNET_BR_EX_NETWORK, client_server_active_connection
+from utilities.network import get_vmi_ip_v4_by_name
 from utilities.virt import migrate_vm_and_verify
 
 
@@ -33,3 +36,16 @@ class TestLocalnetVlan:
             port=8888,
         ) as (client, server):
             assert is_tcp_connection(server=server, client=client)
+
+
+class TestLocalnetNoVlan:
+    @pytest.mark.ipv4
+    @pytest.mark.single_nic
+    @pytest.mark.s390x
+    @pytest.mark.usefixtures("nncp_localnet")
+    @pytest.mark.polarion("CNV-12363")
+    def test_vmi_reports_ip_on_localnet_without_vlan(self, vm_localnet_no_vlan, vm_localnet_no_vlan_ip_address):
+        assert (
+            get_vmi_ip_v4_by_name(vm=vm_localnet_no_vlan, name=LOCALNET_BR_EX_NETWORK)
+            == ip_interface(vm_localnet_no_vlan_ip_address).ip
+        )
