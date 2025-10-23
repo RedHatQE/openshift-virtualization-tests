@@ -154,31 +154,23 @@ def remote_cluster_hyperconverged_resource_scope_package(remote_admin_client, re
 
 
 @pytest.fixture(scope="package")
-def remote_cluster_enabled_feature_gate_for_decentralized_live_migration(
-    remote_cluster_hyperconverged_resource_scope_package,
-    remote_admin_client,
-):
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            remote_cluster_hyperconverged_resource_scope_package: {
-                "spec": {"featureGates": {"decentralizedLiveMigration": True}}
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-        admin_client=remote_admin_client,
-    ):
-        yield
-
-
-@pytest.fixture(scope="package")
-def local_cluster_enabled_feature_gate_for_decentralized_live_migration(
+def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network(
     hyperconverged_resource_scope_package,
     admin_client,
+    local_cluster_network_for_live_migration,
 ):
+    """
+    Configure HCO with both decentralized live migration feature gate and live migration network.
+    This consolidates two separate HCO patches into a single operation.
+    """
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_package: {"spec": {"featureGates": {"decentralizedLiveMigration": True}}}
+            hyperconverged_resource_scope_package: {
+                "spec": {
+                    "featureGates": {"decentralizedLiveMigration": True},
+                    "liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name},
+                }
+            }
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -208,29 +200,7 @@ def remote_cluster_network_for_live_migration(remote_admin_client, remote_cluste
 
 
 @pytest.fixture(scope="package")
-def local_cluster_configured_hco_live_migration_network(
-    hyperconverged_resource_scope_package,
-    admin_client,
-    local_cluster_network_for_live_migration,
-):
-    """
-    Configure the live migration network for HyperConverged resource.
-    """
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_package: {
-                "spec": {"liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name}}
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-        admin_client=admin_client,
-    ):
-        yield
-
-
-@pytest.fixture(scope="package")
-def remote_cluster_configured_hco_live_migration_network(
+def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_network(
     remote_cluster_hyperconverged_resource_scope_package,
     remote_admin_client,
     remote_cluster_network_for_live_migration,
@@ -241,7 +211,10 @@ def remote_cluster_configured_hco_live_migration_network(
     with ResourceEditorValidateHCOReconcile(
         patches={
             remote_cluster_hyperconverged_resource_scope_package: {
-                "spec": {"liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name}}
+                "spec": {
+                    "featureGates": {"decentralizedLiveMigration": True},
+                    "liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name},
+                }
             }
         },
         list_resource_reconcile=[KubeVirt],
