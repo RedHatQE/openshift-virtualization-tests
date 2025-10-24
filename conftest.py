@@ -79,6 +79,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "swap",
     "numa",
     "bgp",
+    "cclm",
 ]
 
 TEAM_MARKERS = {
