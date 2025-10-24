@@ -6,6 +6,7 @@ Pytest conftest file for CNV network tests
 
 import logging
 import os
+import random
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -15,7 +16,7 @@ from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
-from tests.network.constants import BRCNV
+from tests.network.constants import BRCNV, MAX_NUM_OF_SECONDARY_ETHERNET_INTERFACES
 from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
 from utilities.constants import (
     CLUSTER,
@@ -357,3 +358,8 @@ def network_sanity(
             filename="network_cluster_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
         )
+
+
+@pytest.fixture(scope="class")
+def random_octet_ipv4_address():
+    return random.sample(range(1, 254), MAX_NUM_OF_SECONDARY_ETHERNET_INTERFACES)

@@ -245,6 +245,7 @@ def vm_linux_bridge_attached_vma_source(
     nad_linux_bridge_vlan_1,
     nad_linux_bridge_vlan_2,
     dual_stack_network_data,
+    random_octet_ipv4_address,
 ):
     network_names = [
         nad_linux_bridge.name,
@@ -260,6 +261,7 @@ def vm_linux_bridge_attached_vma_source(
         dual_stack_network_data=dual_stack_network_data,
         client=unprivileged_client,
         namespace=namespace,
+        random_octet_ipv4_address=random_octet_ipv4_address,
     )
 
 
@@ -272,6 +274,7 @@ def vm_ovs_bridge_attached_vma_source(
     nad_ovs_bridge_vlan_1,
     nad_ovs_bridge_vlan_2,
     dual_stack_network_data,
+    random_octet_ipv4_address,
 ):
     network_names = [
         nad_ovs_bridge.name,
@@ -287,6 +290,7 @@ def vm_ovs_bridge_attached_vma_source(
         dual_stack_network_data=dual_stack_network_data,
         client=unprivileged_client,
         namespace=namespace,
+        random_octet_ipv4_address=random_octet_ipv4_address,
     )
 
 
@@ -299,6 +303,7 @@ def vm_linux_bridge_attached_vmb_destination(
     nad_linux_bridge_vlan_1,
     nad_linux_bridge_vlan_3,
     dual_stack_network_data,
+    random_octet_ipv4_address,
 ):
     network_names = [
         nad_linux_bridge.name,
@@ -314,6 +319,7 @@ def vm_linux_bridge_attached_vmb_destination(
         dual_stack_network_data=dual_stack_network_data,
         client=unprivileged_client,
         namespace=namespace,
+        random_octet_ipv4_address=random_octet_ipv4_address,
     )
 
 
@@ -326,6 +332,7 @@ def vm_ovs_bridge_attached_vmb_destination(
     nad_ovs_bridge_vlan_1,
     nad_ovs_bridge_vlan_3,
     dual_stack_network_data,
+    random_octet_ipv4_address,
 ):
     network_names = [
         nad_ovs_bridge.name,
@@ -341,4 +348,5 @@ def vm_ovs_bridge_attached_vmb_destination(
         dual_stack_network_data=dual_stack_network_data,
         client=unprivileged_client,
         namespace=namespace,
+        random_octet_ipv4_address=random_octet_ipv4_address,
     )

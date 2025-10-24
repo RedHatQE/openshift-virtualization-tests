@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
+from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX_VMI
 from tests.network.utils import (
     assert_nncp_successfully_configured,
     assert_ssh_alive,
@@ -88,13 +89,14 @@ def nmstate_linux_bridge_attached_vma(
     namespace,
     unprivileged_client,
     nmstate_linux_nad,
+    random_octet_ipv4_address,
 ):
     name = "vma"
     networks = OrderedDict()
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": ["10.200.0.1/24"]},
+            "eth1": {"addresses": [f"{IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{random_octet_ipv4_address[0]}.1/24"]},
         }
     }
 
@@ -122,13 +124,14 @@ def nmstate_linux_bridge_attached_vmb(
     namespace,
     unprivileged_client,
     nmstate_linux_nad,
+    random_octet_ipv4_address,
 ):
     name = "vmb"
     networks = OrderedDict()
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": ["10.200.0.2/24"]},
+            "eth1": {"addresses": [f"{IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{random_octet_ipv4_address[0]}.2/24"]},
         }
     }
 
