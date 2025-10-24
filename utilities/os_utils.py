@@ -6,6 +6,7 @@ from typing import Any
 from ocp_resources.template import Template
 
 from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
     DV_SIZE_STR,
@@ -28,6 +29,14 @@ from utilities.constants import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _add_windows_container_disk_paths(win_os_map: dict[str, dict[str, str | Any]]) -> None:
+    for value in win_os_map.values():
+        if isinstance(value, dict) and OS_STR in value:
+            value[CONTAINER_DISK_IMAGE_PATH_STR] = (
+                f"{Images.Windows.DOCKER_IMAGE_DIR}/windows{value[OS_STR].removeprefix('win')}-container-disk:4.99"
+            )
 
 
 RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
@@ -107,6 +116,8 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         DATA_SOURCE_STR: WIN_2K25,
     },
 }
+
+_add_windows_container_disk_paths(win_os_map=WINDOWS_OS_MAPPING)
 
 FEDORA_OS_MAPPING: dict[str, dict[str, str | Any]] = {
     WORKLOAD_STR: Template.Workload.SERVER,
