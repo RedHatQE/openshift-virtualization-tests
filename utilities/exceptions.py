@@ -95,3 +95,7 @@ class MissingResourceException(Exception):
 
 class UnsupportedGPUDeviceError(Exception):
     """Exception raised when a GPU device ID is not supported."""
+
+
+class BitwardenAPIError(Exception):
+    """Exception raised when Bitwarden API requests fail."""

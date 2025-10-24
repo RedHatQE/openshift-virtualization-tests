@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from utilities.exceptions import (
+    BitwardenAPIError,
     ClusterSanityError,
     MissingEnvironmentVariableError,
     MissingResourceException,
@@ -240,3 +241,12 @@ class TestUnsupportedGPUDeviceError:
         """Test UnsupportedGPUDeviceError can be raised"""
         with pytest.raises(UnsupportedGPUDeviceError):
             raise UnsupportedGPUDeviceError("Test error")
+
+
+class TestBitwardenAPIError:
+    """Test cases for BitwardenAPIError exception"""
+
+    def test_bitwarden_api_error(self):
+        """Test BitwardenAPIError can be raised"""
+        with pytest.raises(BitwardenAPIError):
+            raise BitwardenAPIError("Test error")

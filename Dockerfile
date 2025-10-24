@@ -45,6 +45,9 @@ RUN dnf update -y \
   && rm -rf /var/lib/dnf \
   && truncate -s0 /var/log/*.log
 
+# Install Bitwarden Secrets CLI (bws)
+RUN curl -fsSL https://bws.bitwarden.com/install | sh
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/bin/
 COPY --from=builder /usr/bin/which /usr/bin/which
 COPY --from=builder /usr/bin/sshpass /usr/bin/sshpass
