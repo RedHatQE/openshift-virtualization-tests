@@ -17,6 +17,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
@@ -27,6 +28,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
+from tests.utils import NUM_TEST_VMS
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
@@ -508,4 +510,23 @@ class TestVmiPhaseTransitionFromDeletion:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
+        )
+
+
+class TestVmCreatedByPodTotal:
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
+                marks=pytest.mark.polarion("CNV-12361"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vm_created_by_pod_total(self, prometheus, initial_metric_value, vm_list):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
+            expected_value=str(initial_metric_value + NUM_TEST_VMS),
         )
