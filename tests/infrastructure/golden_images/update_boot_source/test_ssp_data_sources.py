@@ -367,6 +367,7 @@ def updated_data_source_with_existing_pvc_scope_function(
 
 
 @pytest.mark.polarion("CNV-7578")
+@pytest.mark.s390x
 def test_opt_in_all_referenced_data_sources_in_templates_exist(
     data_sources_names_from_templates_scope_function,
     golden_images_data_sources_scope_function,
@@ -379,6 +380,7 @@ def test_opt_in_all_referenced_data_sources_in_templates_exist(
 
 
 @pytest.mark.polarion("CNV-8234")
+@pytest.mark.s390x
 def test_opt_out_all_referenced_data_sources_in_templates_exist(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_names_from_templates_scope_function,
@@ -392,6 +394,7 @@ def test_opt_out_all_referenced_data_sources_in_templates_exist(
 
 
 @pytest.mark.polarion("CNV-7667")
+@pytest.mark.s390x
 def test_opt_in_data_source_reconciles_after_deletion(
     golden_images_data_sources_scope_function,
 ):
@@ -401,6 +404,7 @@ def test_opt_in_data_source_reconciles_after_deletion(
 
 
 @pytest.mark.polarion("CNV-8030")
+@pytest.mark.s390x
 def test_opt_in_data_source_reconciles_after_update(
     updated_opted_in_data_source_scope_function,
 ):
@@ -427,6 +431,7 @@ def test_opt_in_data_source_reconciles_after_update(
     ],
     indirect=["data_source_by_name_scope_function"],
 )
+@pytest.mark.s390x
 def test_upload_dv_for_auto_update_dangling_data_sources(
     data_source_by_name_scope_function,
     uploaded_dv_for_dangling_data_source_scope_function,
@@ -443,6 +448,7 @@ def test_upload_dv_for_auto_update_dangling_data_sources(
 
 
 @pytest.mark.polarion("CNV-7668")
+@pytest.mark.s390x
 def test_opt_out_data_source_reconciles_after_deletion(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
@@ -453,6 +459,7 @@ def test_opt_out_data_source_reconciles_after_deletion(
 
 
 @pytest.mark.polarion("CNV-8095")
+@pytest.mark.s390x
 def test_opt_out_data_source_reconciles_after_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     updated_opted_out_data_source_scope_function,
@@ -463,6 +470,7 @@ def test_opt_out_data_source_reconciles_after_update(
 
 
 @pytest.mark.polarion("CNV-8100")
+@pytest.mark.s390x
 def test_opt_out_data_source_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
@@ -489,6 +497,7 @@ def test_opt_out_data_source_update(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_opt_out_custom_data_sources_not_deleted(
     admin_client,
     golden_images_namespace,
@@ -515,6 +524,7 @@ def test_opt_out_custom_data_sources_not_deleted(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_data_source_with_existing_golden_image_pvc(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_source_by_name_scope_function,
@@ -551,6 +561,7 @@ def test_data_source_with_existing_golden_image_pvc(
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
 )
+@pytest.mark.s390x
 class TestDataSourcesOptInLabel:
     @pytest.mark.polarion("CNV-8029")
     @pytest.mark.dependency(name="TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists")
@@ -607,6 +618,7 @@ class TestDataSourcesOptInLabel:
     "opted_in_data_source_scope_class",
     "opted_out_data_source_scope_class",
 )
+@pytest.mark.s390x
 class TestDataSourcesOptOutLabel:
     @pytest.mark.polarion("CNV-8244")
     @pytest.mark.dependency(name="TestDataSourcesOptOutLabel::test_remove_data_source_dic_label_when_pvc_exists")

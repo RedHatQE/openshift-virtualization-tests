@@ -85,6 +85,7 @@ def rhel_vm_minor_ver_num(rhel_vm):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_latest_minor_ver_rhel(libosinfo_rhel_minor_ver_num, rhel_vm_minor_ver_num):
     assert libosinfo_rhel_minor_ver_num == rhel_vm_minor_ver_num, (
         f"os versions mismatch, VM minor version: {rhel_vm_minor_ver_num}, "

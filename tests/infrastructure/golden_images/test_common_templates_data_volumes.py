@@ -96,6 +96,7 @@ def fedora_data_source(unprivileged_client, golden_images_namespace):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_from_golden_image_cluster_default_storage_class(
     updated_default_storage_class_scope_function,
     golden_image_data_volume_multi_storage_scope_function,
@@ -123,6 +124,7 @@ def test_vm_from_golden_image_cluster_default_storage_class(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_existing_dv):
     vm_from_template_with_existing_dv.ssh_exec.executor().is_connective()
 
@@ -139,6 +141,7 @@ def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_e
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_dv_with_different_sc(
     fedora_vm_from_data_source,
 ):
@@ -162,7 +165,8 @@ def test_vm_dv_with_different_sc(
     ],
     indirect=True,
 )
-def test_vm_from_data_source_missing_default_storage_class(
+@pytest.mark.s390x
+def test_vm_from_golden_image_missing_default_storage_class(
     removed_default_storage_classes,
     fedora_vm_from_data_source,
 ):
