@@ -1139,11 +1139,6 @@ def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
 
 
-@pytest.fixture(scope="module")
-def skip_access_mode_rwo_scope_module(storage_class_matrix__module__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__module__)
-
-
 @pytest.fixture(scope="session")
 def nodes_cpu_vendor(schedulable_nodes):
     if schedulable_nodes[0].labels.get(f"cpu-vendor.node.kubevirt.io/{AMD}"):

@@ -226,7 +226,7 @@ def get_os_cpu_count(vm):
     if "windows" in vm.name:
         cmd = shlex.split("echo %NUMBER_OF_PROCESSORS%")
     else:
-        cmd = shlex.split("nproc --all")
+        cmd = shlex.split("nproc")
     return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip())
 
 
