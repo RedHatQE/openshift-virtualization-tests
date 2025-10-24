@@ -7,7 +7,9 @@ import re
 import shutil
 import socket
 import sys
+from typing import Any
 
+from _pytest.main import Session
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
@@ -269,3 +271,11 @@ def get_tests_cluster_markers(items, filepath=None) -> None:
         LOGGER.info(f"Write cluster-related test markers in {filepath}")
         with open(filepath, "w") as fd:
             fd.write(json.dumps(tests_cluster_markers))
+
+
+def get_fixture_return_values(fixture_name: str, session: Session) -> tuple[Any, ...] | None:
+    fixturemanager = session._fixturemanager
+    if fixture_def := fixturemanager._arg2fixturedefs[fixture_name]:
+        return fixture_def[0].cached_result
+
+    return None
