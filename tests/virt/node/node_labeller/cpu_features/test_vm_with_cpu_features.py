@@ -72,6 +72,7 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
         ),
     ],
 )
+@pytest.mark.s390x
 def test_invalid_cpu_feature_policy_negative(unprivileged_client, namespace, features):
     """VM should not be created successfully"""
     vm_name = "invalid-cpu-feature-policy-vm"

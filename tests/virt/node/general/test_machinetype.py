@@ -183,6 +183,7 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
     validate_machine_type(vm=vm, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-3688")
 def test_unsupported_machine_type(namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"

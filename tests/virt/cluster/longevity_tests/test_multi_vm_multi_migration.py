@@ -16,6 +16,7 @@ from tests.virt.cluster.longevity_tests.utils import run_migration_loop
 pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "multi_dv, multi_vms",
     [
