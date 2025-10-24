@@ -13,7 +13,8 @@ from kubernetes.dynamic.client import ResourceField
 from ocp_resources.resource import Resource
 from ocp_resources.service import Service
 
-from utilities.constants import NamespacesNames
+from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
+from utilities.constants import HCO_PART_OF_LABEL_VALUE, NamespacesNames
 from utilities.data_collector import get_data_collector_base_directory
 from utilities.infra import ResourceMismatch
 
@@ -249,6 +250,15 @@ def check_logs(cnv_must_gather, running_hco_containers, namespace, label_selecto
 
 def compare_webhook_svc_contents(webhook_resources, cnv_must_gather, dyn_client, checks):
     for webhook_resource in webhook_resources:
+        if not webhook_resource.instance.webhooks:
+            if webhook_resource.labels.get(PART_OF_LABEL_KEY) == HCO_PART_OF_LABEL_VALUE:
+                raise AssertionError(
+                    f"CNV webhook '{webhook_resource.name}' ({webhook_resource.kind}) has no webhooks configured."
+                )
+            else:
+                LOGGER.warning(f"Non-CNV webhook '{webhook_resource.name}' has no webhooks configured.")
+                continue
+
         if webhook_resource.kind == "MutatingWebhookConfiguration":
             service_file = os.path.join(
                 cnv_must_gather,
