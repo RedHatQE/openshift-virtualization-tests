@@ -142,7 +142,7 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
             id="Windows-11",
         ),
         pytest.param(
-            {"rwx_access_mode": True},
+            {"rwx_access_mode": False},
             {
                 "dv_name": "dv-win2022-vtpm-vm",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
