@@ -44,6 +44,7 @@ X86_64 = "x86_64"
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
+OS_FLAVOR_ALPINE = "alpine"
 OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
@@ -52,7 +53,7 @@ OS_FLAVOR_FEDORA = "fedora"
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
-        BASE_ALPINE_NAME = "alpine-3.20.1-x86_64-disk"
+        BASE_ALPINE_NAME = "alpine-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -109,7 +110,7 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG="cirros-qcow2.img")
 
     class ARM64:
-        BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
+        BASE_ALPINE_NAME = "alpine-aarch64-disk"
         Cirros = Cirros(
             RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz",
         )
@@ -130,7 +131,7 @@ class ArchImages:
         Cdi = Cdi()
 
     class S390X:
-        BASE_ALPINE_NAME = "alpine-3.20.1-s390x-disk"
+        BASE_ALPINE_NAME = "alpine-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
