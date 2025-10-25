@@ -67,7 +67,7 @@ def test_successful_virtctl_upload_no_url(namespace, tmpdir):
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         image_path=local_name,
         insecure=True,
@@ -120,7 +120,7 @@ def test_image_upload_with_overridden_url(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         image_path=local_name,
         insecure=True,
@@ -144,7 +144,7 @@ def test_virtctl_image_upload_with_ca(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=pvc_name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         image_path=local_path,
     ) as res:
@@ -263,7 +263,7 @@ def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_c
         source="upload",
         dv_name=dv_name,
         namespace=namespace.name,
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
     ) as dv:
         dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=120)
@@ -295,7 +295,7 @@ def empty_pvc(
         storage_class=storage_class_name_scope_module,
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size="1Gi",
+        size=DEFAULT_DV_SIZE,
         hostpath_node=worker_node1.name
         if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
         else None,
