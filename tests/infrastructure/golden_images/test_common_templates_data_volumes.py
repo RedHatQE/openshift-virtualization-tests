@@ -42,7 +42,7 @@ def fedora_vm_from_data_source(
     golden_images_namespace,
     namespace,
     fedora_data_source,
-    storage_class_from_config_different_from_data_source,
+    storage_class_from_config_different_from_default,
 ):
     with VirtualMachineForTests(
         name="fedora-vm-from-data-source",
@@ -51,28 +51,12 @@ def fedora_vm_from_data_source(
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=fedora_data_source,
-            storage_class=storage_class_from_config_different_from_data_source
+            storage_class=storage_class_from_config_different_from_default
             if request.param.get("set_storage_class")
             else None,
         ),
     ) as vm:
         yield vm
-
-
-@pytest.fixture(scope="module")
-def storage_class_from_config_different_from_data_source(fedora_data_source):
-    different_storage_class = next(
-        (
-            storage_class_name
-            for storage_class in py_config["storage_class_matrix"]
-            for storage_class_name in storage_class
-            if storage_class_name != fedora_data_source.source.instance.spec.storageClassName
-        ),
-        None,
-    )
-    if different_storage_class is None:
-        pytest.xfail("storage_class_matrix only has 1 storage class defined")
-    return different_storage_class
 
 
 @pytest.fixture(scope="module")

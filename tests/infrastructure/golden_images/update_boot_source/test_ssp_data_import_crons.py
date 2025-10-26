@@ -19,7 +19,6 @@ from tests.infrastructure.golden_images.constants import (
 from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
-    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -34,7 +33,10 @@ from utilities.ssp import (
     wait_for_condition_message_value,
     wait_for_deleted_data_import_crons,
 )
-from utilities.storage import DATA_IMPORT_CRON_SUFFIX, data_volume_template_with_source_ref_dict
+from utilities.storage import (
+    DATA_IMPORT_CRON_SUFFIX,
+    data_volume_template_with_source_ref_dict,
+)
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -328,10 +330,6 @@ class TestDataImportCronDefaultStorageClass:
         )
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: This test still fail in some cases ; tracked in CNV-62615",
-    run=False,
-)
 @pytest.mark.polarion("CNV-7532")
 def test_data_import_cron_deletion_on_opt_out(
     admin_client,

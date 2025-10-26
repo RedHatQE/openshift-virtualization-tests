@@ -4,6 +4,7 @@ import pytest
 import requests
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
+from pytest_testconfig import config as py_config
 
 from utilities.constants import TIMEOUT_30SEC
 
@@ -13,17 +14,16 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def updated_default_storage_class_scope_function(
     admin_client,
-    storage_class_matrix__function__,
+    storage_class_from_config_different_from_default,
     removed_default_storage_classes,
 ):
-    sc_name = [*storage_class_matrix__function__][0]
-    sc = StorageClass(name=sc_name)
+    sc = StorageClass(client=admin_client, name=storage_class_from_config_different_from_default)
     with ResourceEditor(
         patches={
             sc: {
                 "metadata": {
                     "annotations": {StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: "true"},
-                    "name": sc_name,
+                    "name": storage_class_from_config_different_from_default,
                 }
             }
         }
@@ -42,3 +42,18 @@ def latest_fedora_release_version():
     latest_fedora_version = str(max(versions))
     LOGGER.info(f"Latest Fedora release: {latest_fedora_version}")
     return latest_fedora_version
+
+
+@pytest.fixture(scope="module")
+def storage_class_from_config_different_from_default(available_storage_classes_names):
+    different_storage_class = next(
+        (
+            storage_class_name
+            for storage_class_name in available_storage_classes_names
+            if storage_class_name != py_config["default_storage_class"]
+        ),
+        None,
+    )
+    if different_storage_class is None:
+        pytest.xfail("No additional storage class found to run the test")
+    return different_storage_class
