@@ -1811,36 +1811,44 @@ def migrate_vm_and_verify(
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
     """
-    Create a migration instance. You may choose to wait for migration
-    success or not.
+    Migrate a VM with retry logic using TimeoutSampler, then verify migration success.
 
     Args:
-        vm (VirtualMachine): VM to be migrated.
-        client (DynamicClient, default=None): Client to use for migration.
-        timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
-        wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
-        check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
-        wait_for_migration_success (bool, default=True):
-            True = Full teardown will be applied.
-            False = No teardown (responsibility on the programmer), and no
-                    wait for migration process to finish.
+        vm: VM to be migrated.
+        client: Optional Kubernetes client.
+        timeout: Maximum time to wait for migration to finish.
+        wait_for_interfaces: Wait for VM network interfaces after migration.
+        check_ssh_connectivity: Verify SSH connectivity after migration.
+        wait_for_migration_success: True = teardown applied and wait for completion.
 
-    Returns:
-        VirtualMachineInstanceMigration: If wait_for_migration_success == false, else returns None
     """
+
     node_before = vm.vmi.node
 
-    LOGGER.info(f"VMI {vm.vmi.name} is running on {node_before.name} before migration.")
-    with VirtualMachineInstanceMigration(
-        name=vm.name,
-        client=client,
-        namespace=vm.namespace,
-        vmi_name=vm.vmi.name,
-        teardown=wait_for_migration_success,
-    ) as migration:
-        if not wait_for_migration_success:
-            return migration
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+    def _single_migration():
+        try:
+            with VirtualMachineInstanceMigration(
+                name=vm.name,
+                client=client,
+                namespace=vm.namespace,
+                vmi_name=vm.vmi.name,
+                teardown=wait_for_migration_success,
+            ) as migration:
+                if wait_for_migration_success:
+                    wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+                return migration
+        except TimeoutExpiredError:
+            return False
+
+    if not wait_for_migration_success:
+        return _single_migration()
+
+    try:
+        for sample in TimeoutSampler(wait_timeout=timeout * 2, sleep=TIMEOUT_10SEC, func=_single_migration):
+            if sample:
+                break
+    except TimeoutExpiredError:
+        raise RuntimeError(f"Migration for VM {vm.vmi.name} failed after TimeoutSampler wait")
 
     verify_vm_migrated(
         vm=vm,
@@ -1848,6 +1856,7 @@ def migrate_vm_and_verify(
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
     )
+
     return None
 
 
