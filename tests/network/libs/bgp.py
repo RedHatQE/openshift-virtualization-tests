@@ -17,10 +17,13 @@ from timeout_sampler import retry
 
 from utilities.infra import get_resources_by_name_prefix
 
-_BGP_ASN: Final[int] = 64512
+_CLUSTER_FRR_ASN: Final[int] = 64512
+_EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
+_IPERF3_IMAGE: Final[str] = "quay.io/networkstatic/iperf3"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
+POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 
 
 @contextmanager
@@ -108,11 +111,11 @@ def create_frr_configuration(
     bgp_config = {
         "routers": [
             {
-                "asn": _BGP_ASN,
+                "asn": _CLUSTER_FRR_ASN,
                 "neighbors": [
                     {
                         "address": frr_pod_ipv4,
-                        "asn": _BGP_ASN,
+                        "asn": _EXTERNAL_FRR_ASN,
                         "disableMP": True,
                         "toReceive": {"allowed": {"mode": "filtered", "prefixes": [{"prefix": external_subnet_ipv4}]}},
                     }
@@ -141,13 +144,14 @@ def generate_frr_conf(
         raise ValueError("nodes_ipv4_list cannot be empty")
 
     lines = [
-        f"router bgp {_BGP_ASN}",
+        f"router bgp {_EXTERNAL_FRR_ASN}",
+        " no bgp ebgp-requires-policy",
         " no bgp default ipv4-unicast",
         " no bgp network import-check",
         "",
     ]
 
-    lines.extend([f" neighbor {ip} remote-as {_BGP_ASN}" for ip in nodes_ipv4_list])
+    lines.extend([f" neighbor {ip} remote-as {_CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
     lines.extend([
@@ -182,6 +186,10 @@ def deploy_external_frr_pod(
     attaches it to a specified NetworkAttachmentDefinition (NAD), and mounts a ConfigMap for FRR
     configuration. On exiting the context, the pod is automatically deleted.
 
+    Also contains an iperf3 container to be used for connectivity testing. The process namespace
+    of the iperf3 container is shared with the frr container for the sake of process management
+    (due to the minimal capabilities of the iperf3 container).
+
     Args:
         namespace_name (str): The name of the namespace where the pod will be deployed.
         node_name (str): The name of the node where the pod will be scheduled.
@@ -195,7 +203,7 @@ def deploy_external_frr_pod(
     """
     annotations = {
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks": json.dumps([
-            {"name": nad_name, "interface": "net1", "default-route": [default_route]}
+            {"name": nad_name, "interface": POD_SECONDARY_IFACE_NAME, "default-route": [default_route]}
         ]),
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/default-network": "none",
     }
@@ -205,7 +213,12 @@ def deploy_external_frr_pod(
             "image": _EXTERNAL_FRR_IMAGE,
             "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
             "volumeMounts": [{"name": frr_configmap_name, "mountPath": "/etc/frr"}],
-        }
+        },
+        {
+            "name": "iperf3",
+            "image": _IPERF3_IMAGE,
+            "command": ["sleep", "infinity"],
+        },
     ]
     volumes = [{"name": frr_configmap_name, "configMap": {"name": frr_configmap_name}}]
 
@@ -217,6 +230,7 @@ def deploy_external_frr_pod(
         containers=containers,
         volumes=volumes,
         client=client,
+        share_process_namespace=True,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod
