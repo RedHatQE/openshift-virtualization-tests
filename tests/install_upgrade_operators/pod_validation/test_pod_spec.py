@@ -26,9 +26,12 @@ def cnv_jobs(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def cnv_pods_by_type(cnv_pod_matrix__function__, cnv_pods):
-    pod_list = [pod for pod in cnv_pods if pod.name.startswith(cnv_pod_matrix__function__)]
-    assert pod_list, f"Pod {cnv_pod_matrix__function__} not found"
+def cnv_pods_by_type(hpp_cr_installed, cnv_pod_matrix__function__, cnv_pods):
+    pod_prefix = cnv_pod_matrix__function__
+    if pod_prefix.startswith(HOSTPATH_PROVISIONER_CSI) or pod_prefix.startswith(HPP_POOL) and not hpp_cr_installed:
+        pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
+    pod_list = [pod for pod in cnv_pods if pod.name.startswith(pod_prefix)]
+    assert pod_list, f"Pod {pod_prefix} not found"
     return pod_list
 
 

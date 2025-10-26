@@ -13,7 +13,9 @@ def cnv_prometheus_rules_names(hco_namespace):
 
 
 @pytest.fixture()
-def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__):
+def cnv_alerts_runbook_urls_from_prometheus_rule(hpp_cr_installed, hco_namespace, cnv_prometheus_rules_matrix__function__):
+    if cnv_prometheus_rules_matrix__function__ == "prometheus-hpp-rules " and not hpp_cr_installed:
+        pytest.skip("hpp prometheus rule should not be present on the cluster if HPP CR is not installed")
     cnv_prometheus_rule_by_name = PrometheusRule(
         namespace=py_config["hco_namespace"],
         name=cnv_prometheus_rules_matrix__function__,

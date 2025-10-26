@@ -52,23 +52,10 @@ def cnv_deployment_by_name_no_hpp(
 
 
 @pytest.fixture()
-def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_matrix__function__, conformance_tests):
-    if cnv_deployment_matrix__function__ == HPP_POOL:
-        hpp_pool_deployments = list(
-            Deployment.get(
-                dyn_client=admin_client,
-                namespace=hco_namespace.name,
-                label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
-            )
-        )
-        # `conformance` tests can run on clusters without hpp-pool
-        if not hpp_pool_deployments:
-            if conformance_tests:
-                pytest.skip("Running conformance tests, HPP pool is not mandatory")
-            else:
-                pytest.fail("HPP pool deployment not found on this cluster")
-        return hpp_pool_deployments[0]
-
+def cnv_deployment_by_name(hpp_cr_installed, hco_namespace, cnv_deployment_matrix__function__,):
+    if cnv_deployment_matrix__function__ == HPP_POOL and not hpp_cr_installed:
+        pytest.skip("HPP pool deployment should not be present on the cluster if HPP CR is not installed")
+    #TODO: add logic to return hpp-pool deployment if it exists
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
         deployment_name=cnv_deployment_matrix__function__,
@@ -79,8 +66,11 @@ def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_
 def cnv_daemonset_by_name(
     admin_client,
     hco_namespace,
+    hpp_cr_installed,
     cnv_daemonset_matrix__function__,
 ):
+    if cnv_daemonset_matrix__function__ == HOSTPATH_PROVISIONER_CSI and not hpp_cr_installed:
+        pytest.xfail("hostpath-provisioner-csi daemonset shouldn't be present on the cluster if HPP CR is not installed")
     return get_daemonset_by_name(
         admin_client=admin_client,
         namespace_name=hco_namespace.name,
@@ -92,12 +82,16 @@ def cnv_daemonset_by_name(
 def cnv_pod_by_name(
     admin_client,
     hco_namespace,
+    hpp_cr_installed,
     cnv_pod_matrix__function__,
 ):
+    pod_prefix = cnv_pod_matrix__function__
+    if pod_prefix.startswith(HOSTPATH_PROVISIONER_CSI) or pod_prefix.startswith(HPP_POOL) and not hpp_cr_installed:
+        pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
     return get_pod_by_name_prefix(
         dyn_client=admin_client,
         namespace=hco_namespace.name,
-        pod_prefix=cnv_pod_matrix__function__,
+        pod_prefix=pod_prefix,
     )
 
 
@@ -248,3 +242,7 @@ def updated_resource(
 @pytest.fixture(scope="session")
 def is_jira_70251_open():
     return is_jira_open(jira_id="CNV-70251")
+
+@pytest.fixture(scope="package")
+def hpp_cr_installed(hostpath_provisioner_scope_session):
+    return hostpath_provisioner_scope_session.exists

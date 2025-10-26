@@ -206,7 +206,6 @@ cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
 cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
 
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
-cnv_deployment_no_hpp_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]
 cnv_operators_matrix = CNV_OPERATORS
