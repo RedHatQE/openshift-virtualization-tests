@@ -54,13 +54,6 @@ DEFAULT_DV_SIZE = "1Gi"
 
 
 @pytest.fixture(scope="module")
-def golden_images_rhel9_data_source(golden_images_namespace):
-    return DataSource(
-        namespace=golden_images_namespace.name, name="rhel9", client=golden_images_namespace.client, ensure_exists=True
-    )
-
-
-@pytest.fixture(scope="module")
 def mig_cluster(admin_client):
     return MigCluster(name="host", namespace=OPENSHIFT_MIGRATION_NAMESPACE, client=admin_client, ensure_exists=True)
 
@@ -165,7 +158,7 @@ def vm_for_storage_class_migration_with_instance_type(
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_from_template_with_data_source(
-    unprivileged_client, namespace, golden_images_rhel9_data_source, source_storage_class, cpu_for_migration
+    unprivileged_client, namespace, rhel9_data_source_scope_session, source_storage_class, cpu_for_migration
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
@@ -173,7 +166,7 @@ def vm_for_storage_class_migration_from_template_with_data_source(
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=golden_images_rhel9_data_source,
+            data_source=rhel9_data_source_scope_session,
             storage_class=source_storage_class,
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,

@@ -76,13 +76,13 @@ def auto_update_boot_source_vm(
 
 
 @pytest.fixture()
-def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source_scope_module):
+def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source_scope_session):
     with VirtualMachineForTestsFromTemplate(
-        name=f"{rhel9_data_source_scope_module.name}-vm",
+        name=f"{rhel9_data_source_scope_session.name}-vm",
         namespace=namespace.name,
         client=unprivileged_client,
         labels=template_labels(os="rhel9.0"),
-        data_source=rhel9_data_source_scope_module,
+        data_source=rhel9_data_source_scope_session,
         non_existing_pvc=True,
     ) as vm:
         vm.start()
@@ -91,28 +91,28 @@ def vm_without_boot_source(unprivileged_client, namespace, rhel9_data_source_sco
 
 
 @pytest.fixture()
-def opted_out_rhel9_data_source(rhel9_data_source_scope_module):
-    LOGGER.info(f"Wait for DataSource {rhel9_data_source_scope_module.name} to opt out")
+def opted_out_rhel9_data_source(rhel9_data_source_scope_session):
+    LOGGER.info(f"Wait for DataSource {rhel9_data_source_scope_session.name} to opt out")
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=TIMEOUT_5SEC,
-            func=lambda: rhel9_data_source_scope_module.source.name == RHEL9_STR,
+            func=lambda: rhel9_data_source_scope_session.source.name == RHEL9_STR,
         ):
             if sample:
                 return
     except TimeoutExpiredError:
-        LOGGER.error(f"{rhel9_data_source_scope_module.name} DataSource source was not updated.")
+        LOGGER.error(f"{rhel9_data_source_scope_session.name} DataSource source was not updated.")
         raise
 
 
 @pytest.fixture()
-def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source_scope_module, rhel9_http_image_url):
+def rhel9_dv(admin_client, golden_images_namespace, rhel9_data_source_scope_session, rhel9_http_image_url):
     artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace.name)
     artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace.name)
     with DataVolume(
         client=admin_client,
-        name=rhel9_data_source_scope_module.source.name,
+        name=rhel9_data_source_scope_session.source.name,
         namespace=golden_images_namespace.name,
         url=rhel9_http_image_url,
         secret=artifactory_secret,
