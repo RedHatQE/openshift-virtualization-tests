@@ -5,10 +5,8 @@ import pkgutil
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
-from ocp_resources.deployment import Deployment
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
@@ -21,7 +19,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HCO_BEARER_AUTH, HPP_POOL
+from utilities.constants import HCO_BEARER_AUTH, HOSTPATH_PROVISIONER_CSI, HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -52,10 +50,14 @@ def cnv_deployment_by_name_no_hpp(
 
 
 @pytest.fixture()
-def cnv_deployment_by_name(hpp_cr_installed, hco_namespace, cnv_deployment_matrix__function__,):
+def cnv_deployment_by_name(
+    hpp_cr_installed,
+    hco_namespace,
+    cnv_deployment_matrix__function__,
+):
     if cnv_deployment_matrix__function__ == HPP_POOL and not hpp_cr_installed:
         pytest.skip("HPP pool deployment should not be present on the cluster if HPP CR is not installed")
-    #TODO: add logic to return hpp-pool deployment if it exists
+    # TODO: add logic to return hpp-pool deployment if it exists
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
         deployment_name=cnv_deployment_matrix__function__,
@@ -70,7 +72,9 @@ def cnv_daemonset_by_name(
     cnv_daemonset_matrix__function__,
 ):
     if cnv_daemonset_matrix__function__ == HOSTPATH_PROVISIONER_CSI and not hpp_cr_installed:
-        pytest.xfail("hostpath-provisioner-csi daemonset shouldn't be present on the cluster if HPP CR is not installed")
+        pytest.xfail(
+            "hostpath-provisioner-csi daemonset shouldn't be present on the cluster if HPP CR is not installed"
+        )
     return get_daemonset_by_name(
         admin_client=admin_client,
         namespace_name=hco_namespace.name,
@@ -242,6 +246,7 @@ def updated_resource(
 @pytest.fixture(scope="session")
 def is_jira_70251_open():
     return is_jira_open(jira_id="CNV-70251")
+
 
 @pytest.fixture(scope="package")
 def hpp_cr_installed(hostpath_provisioner_scope_session):

@@ -15,7 +15,7 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 @pytest.mark.polarion("CNV-8509")
 # Not marked as `conformance` as this is a "utility" test to match against test matrix
 def test_no_new_cnv_daemonset_added(hpp_cr_installed, cnv_daemonset_names):
-    cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if not hpp_cr_installed else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
+    cnv_daemonsets = ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy() if not hpp_cr_installed else ALL_CNV_DAEMONSETS.copy()
 
     assert sorted(cnv_daemonset_names) == sorted(cnv_daemonsets), (
         f"New cnv daemonsets found: {set(cnv_daemonset_names) - set(cnv_daemonsets)}"

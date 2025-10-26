@@ -12,6 +12,7 @@ from tests.install_upgrade_operators.pod_validation.utils import (
 )
 from utilities.constants import (
     ALL_CNV_PODS,
+    HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
 )
 
