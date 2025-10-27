@@ -55,6 +55,17 @@ class Console(object):
         return self.child
 
     def _connect(self):
+        """
+        Connect to the VM console and authenticate if credentials are provided.
+
+        Implements retry logic that watches for multiple patterns simultaneously (login,
+        password, shell prompts) to handle unpredictable console output where prompts may
+        appear multiple times.
+
+        Raises:
+            ValueError: If password prompt received but no password is given.
+            pexpect.exceptions.EOF: If console connection ends unexpectedly.
+        """
         self.child.send("\n\n")
         prompts = self.prompt if isinstance(self.prompt, list) else [self.prompt]
 
@@ -64,30 +75,30 @@ class Console(object):
 
             while attempts < max_attempts:
                 patterns = [self.login_prompt, "Password:", *prompts, pexpect.EOF, pexpect.TIMEOUT]
-                idx = self.child.expect(patterns, timeout=TIMEOUT_2MIN)
+                index = self.child.expect(patterns, timeout=TIMEOUT_2MIN)
 
                 # Normalize possible non-int (e.g., MagicMock in tests) to avoid TypeError on comparisons
-                try:
-                    idx_int = int(idx)
-                except Exception:
-                    LOGGER.debug(f"{self.vm.name}: Non-integer expect index {idx!r}; treating as TIMEOUT.")
-                    idx_int = len(patterns) - 1  # TIMEOUT index
+                if isinstance(index, int):
+                    index_int = index
+                else:
+                    LOGGER.debug(f"{self.vm.name}: Non-integer expect index {index!r}; treating as TIMEOUT.")
+                    index_int = len(patterns) - 1  # TIMEOUT index
 
-                eof_idx = len(patterns) - 2
+                eof_index = len(patterns) - 2
 
-                if idx_int == 0:
+                if index_int == 0:
                     LOGGER.info(f"{self.vm.name}: Sending username.")
                     self.child.sendline(self.username)
-                elif idx_int == 1:
+                elif index_int == 1:
                     if self.password:
                         LOGGER.info(f"{self.vm.name}: Sending password (masked).")
                         self.child.sendline(self.password)
                     else:
                         raise ValueError("Password prompt received but no password provided.")
-                elif 2 <= idx_int < 2 + len(prompts):
+                elif 2 <= index_int < 2 + len(prompts):
                     LOGGER.info(f"{self.vm.name}: Shell prompt detected.")
                     break
-                elif idx_int == eof_idx:
+                elif index_int == eof_index:
                     raise pexpect.exceptions.EOF(f"{self.vm.name}: EOF while waiting for login/prompt.")
                 else:  # TIMEOUT
                     attempts += 1
