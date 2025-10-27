@@ -358,6 +358,12 @@ def pytest_cmdline_main(config):
     py_config["cnv_source"] = config.getoption("--cnv-source")
     py_config["cnv_subscription_channel"] = config.getoption("--cnv-channel")
 
+    # Store conformance_tests value for access from utilities
+    marker_args = config.getoption("-m")
+    py_config["conformance_tests"] = (
+        marker_args and "conformance" in marker_args and "not conformance" not in marker_args
+    )
+
     # [rhel|fedora|windows|centos]-os-matrix and latest-[rhel|fedora|windows|centos] are mutually exclusive
     rhel_os_violation = config.getoption("rhel_os_matrix") and config.getoption("latest_rhel")
     windows_os_violation = config.getoption("windows_os_matrix") and config.getoption("latest_windows")
