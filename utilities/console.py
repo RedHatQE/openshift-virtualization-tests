@@ -20,8 +20,10 @@ class Console(object):
 
         Args:
             vm (VirtualMachine): VM resource
-            username (str): VM username
-            password (str): VM password
+            username (str, default=None): VM username
+            password (str, default=None): VM password
+            timeout (int, default=30): Connection timeout in seconds
+            prompt (list, default=None): Shell prompt pattern(s) to expect, for example [r"$"]
 
         Examples:
             from utilities import console
