@@ -249,6 +249,16 @@ def authorized_key(private_key_path):
 def get_jira_status(jira):
     env_var = os.environ
     if not (env_var.get("PYTEST_JIRA_TOKEN") and env_var.get("PYTEST_JIRA_URL")):
+        # For conformance tests without JIRA credentials, assume the JIRA is open
+        try:
+            marker_args = pytest.config.option.markexpr if hasattr(pytest, "config") else ""
+            if marker_args and "conformance" in marker_args and "not conformance" not in marker_args:
+                LOGGER.info(f"Conformance tests without JIRA credentials: assuming {jira} is open")
+                return "open"
+        except (AttributeError, RuntimeError):
+            # If we can't access pytest config, fall through to raise exception
+            pass
+
         raise MissingEnvironmentVariableError("Please set PYTEST_JIRA_TOKEN and PYTEST_JIRA_URL environment variables")
 
     jira_connection = JIRA(
