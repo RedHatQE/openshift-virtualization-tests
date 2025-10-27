@@ -14,6 +14,7 @@ from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutExpiredError
 
 from tests.network.constants import BRCNV
 from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
@@ -25,12 +26,14 @@ from utilities.constants import (
     ISTIO_SYSTEM_DEFAULT_NS,
     OVS_BRIDGE,
     VIRT_HANDLER,
+    NamespacesNames,
 )
 from utilities.infra import (
     ExecCommandOnPod,
     exit_pytest_execution,
     get_deployment_by_name,
     get_node_selector_dict,
+    wait_for_pods_running,
 )
 from utilities.network import (
     get_cluster_cni_type,
@@ -216,6 +219,7 @@ def network_operator():
 
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
+    admin_client,
     hosts_common_available_ports,
     junitxml_plugin,
     request,
@@ -226,6 +230,7 @@ def network_sanity(
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     conformance_tests,
+    nmstate_namespace,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -235,8 +240,9 @@ def network_sanity(
     failure_msgs = []
     collected_tests = request.session.items
 
-    def _verify_multi_nic(request=request):
-        marker_args = request.config.getoption("-m")
+    def _verify_multi_nic(_request):
+        marker_args = _request.config.getoption("-m")
+        # TODO: add multi_nic marker to tests that require multiple NICs
         if marker_args and "single_nic" in marker_args and "not single_nic" not in marker_args:
             LOGGER.info("Running only single-NIC network cases, no need to verify multi NIC support")
             return
@@ -339,7 +345,22 @@ def network_sanity(
                 failure_msgs.append(f"BGP tests require the following environment variables: {missing_env_vars}")
                 return
 
-    _verify_multi_nic(request=request)
+    def _verify_nmstate_running_pods(_admin_client, namespace):
+        # TODO: Only test if nmstate is required by the test(s)
+        if not namespace:
+            failure_msgs.append(f"Knmstate namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' does not exist.")
+            return
+
+        LOGGER.info("Verifying all pods in nmstate namespace are running")
+        try:
+            wait_for_pods_running(
+                admin_client=_admin_client,
+                namespace=namespace,
+            )
+        except TimeoutExpiredError:
+            failure_msgs.append(f"Some pods are not running in nmstate namespace '{namespace.name}'")
+
+    _verify_multi_nic(_request=request)
     _verify_dpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
@@ -347,6 +368,7 @@ def network_sanity(
     _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster)
     _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
     _verify_bgp_env_vars()
+    _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
