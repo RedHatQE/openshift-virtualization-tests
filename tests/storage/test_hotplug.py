@@ -10,7 +10,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import HOTPLUG_DISK_SERIAL
+from utilities.constants import HOTPLUG_DISK_SERIAL, QUARANTINED
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
@@ -213,6 +213,11 @@ class TestHotPlugWithPersist:
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class, restart=True)
 
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Per storage gating failures process — quarantined "
+        f"until the failure cause is identified and fixed; CNV-70943",
+        run=False,
+    )
     @pytest.mark.polarion("CNV-11390")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
     @pytest.mark.s390x
