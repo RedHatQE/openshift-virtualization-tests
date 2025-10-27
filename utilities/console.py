@@ -56,23 +56,48 @@ class Console(object):
 
     def _connect(self):
         self.child.send("\n\n")
+        prompts = self.prompt if isinstance(self.prompt, list) else [self.prompt]
+
         if self.username:
-            while True:
-                pattern_matched = self.child.expect(
-                    ["login:", "Password:", self.prompt, pexpect.EOF, pexpect.TIMEOUT], timeout=TIMEOUT_2MIN
-                )
-                if pattern_matched == 0:
-                    LOGGER.info(f"{self.vm.name}: Using username {self.username}")
+            max_attempts = 5
+            attempts = 0
+
+            while attempts < max_attempts:
+                patterns = [self.login_prompt, "Password:", *prompts, pexpect.EOF, pexpect.TIMEOUT]
+                idx = self.child.expect(patterns, timeout=TIMEOUT_2MIN)
+
+                # Normalize possible non-int (e.g., MagicMock in tests) to avoid TypeError on comparisons
+                try:
+                    idx_int = int(idx)
+                except Exception:
+                    LOGGER.debug(f"{self.vm.name}: Non-integer expect index {idx!r}; treating as TIMEOUT.")
+                    idx_int = len(patterns) - 1  # TIMEOUT index
+
+                eof_idx = len(patterns) - 2
+
+                if idx_int == 0:
+                    LOGGER.info(f"{self.vm.name}: Sending username.")
                     self.child.sendline(self.username)
-                elif pattern_matched == 1:
+                elif idx_int == 1:
                     if self.password:
-                        LOGGER.info(f"{self.vm.name}: Using password {self.password}")
+                        LOGGER.info(f"{self.vm.name}: Sending password (masked).")
                         self.child.sendline(self.password)
                     else:
                         raise ValueError("Password prompt received but no password provided.")
-                elif pattern_matched == 2:
-                    LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
+                elif 2 <= idx_int < 2 + len(prompts):
+                    LOGGER.info(f"{self.vm.name}: Shell prompt detected.")
                     break
+                elif idx_int == eof_idx:
+                    raise pexpect.exceptions.EOF(f"{self.vm.name}: EOF while waiting for login/prompt.")
+                else:  # TIMEOUT
+                    attempts += 1
+                    LOGGER.debug(
+                        f"{self.vm.name}: Timeout waiting for login/prompt (attempt {attempts}/{max_attempts})."
+                    )
+                    self.child.send("\n")
+        else:
+            # No username, just wait for prompt
+            self.child.expect(prompts, timeout=TIMEOUT_2MIN)
 
     def disconnect(self):
         if self.child.terminated:
