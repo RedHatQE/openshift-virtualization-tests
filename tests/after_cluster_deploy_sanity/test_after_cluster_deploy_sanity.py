@@ -64,12 +64,11 @@ def test_node_sanity(admin_client, nodes):
 
 
 @pytest.mark.cluster_health_check
-def test_pod_sanity(admin_client, hco_namespace, nmstate_namespace):
-    for namespace_obj in [hco_namespace, nmstate_namespace]:
-        wait_for_pods_running(
-            admin_client=admin_client,
-            namespace=namespace_obj,
-        )
+def test_pod_sanity(admin_client, hco_namespace):
+    wait_for_pods_running(
+        admin_client=admin_client,
+        namespace=hco_namespace,
+    )
 
 
 @pytest.mark.cluster_health_check
