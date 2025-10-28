@@ -7,10 +7,12 @@ import shlex
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from utilities.constants import HOTPLUG_DISK_SERIAL
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
@@ -25,17 +27,33 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
     vm_instance_from_template,
-    wait_for_ssh_connectivity,
     wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [
+    pytest.mark.usefixtures("enabled_feature_gate_for_declarative_hotplug_volumes"),
+    pytest.mark.post_upgrade,
+]
 
 
 def is_dv_migratable(dv):
     return StorageProfile(name=dv.storage_class).first_claim_property_set_access_modes()[0] == DataVolume.AccessMode.RWX
+
+
+@pytest.fixture(scope="module")
+def enabled_feature_gate_for_declarative_hotplug_volumes(
+    hyperconverged_resource_scope_module,
+):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
 
 
 @pytest.fixture(scope="class")
@@ -152,42 +170,6 @@ def blank_disk_dv_multi_storage_scope_class(namespace, param_substring_scope_cla
         consume_wffc=False,
     ) as dv:
         yield dv
-
-
-@pytest.mark.parametrize(
-    "hotplug_volume_scope_class",
-    [
-        pytest.param({"serial": HOTPLUG_DISK_SERIAL}),
-    ],
-    indirect=True,
-)
-@pytest.mark.conformance
-@pytest.mark.gating
-class TestHotPlugWithSerial:
-    @pytest.mark.sno
-    @pytest.mark.polarion("CNV-6013")
-    @pytest.mark.dependency(name="test_hotplug_volume_with_serial")
-    @pytest.mark.s390x
-    def test_hotplug_volume_with_serial(
-        self,
-        blank_disk_dv_multi_storage_scope_class,
-        fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
-    ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
-        wait_for_ssh_connectivity(vm=fedora_vm_for_hotplug_scope_class)
-        assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
-
-    @pytest.mark.polarion("CNV-11389")
-    @pytest.mark.dependency(depends=["test_hotplug_volume_with_serial"])
-    def test_hotplug_volume_with_serial_migrate(
-        self,
-        blank_disk_dv_multi_storage_scope_class,
-        fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
-    ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
-            migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
 
 
 @pytest.mark.parametrize(

@@ -93,7 +93,7 @@ TEAM_MARKERS = {
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
-    "network": ["openshift-nmstate"],
+    "network": [NamespacesNames.OPENSHIFT_NMSTATE],
     "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [
@@ -839,7 +839,7 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
         LOGGER.warning(f"{test_name} does not require special data collection on failure")
     else:
         component = components[0]
-        namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component]
+        namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component].copy()
         if component == "virt":
             all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
@@ -863,7 +863,6 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
         test_name = f"{node.fspath}::{node.name}"
         LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
-        inspect_str = get_inspect_command_namespace_string(test_name=test_name, node=node)
         if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
@@ -882,7 +881,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     since_time=calculate_must_gather_timer(test_start_time=test_start_time),
                     target_dir=collection_dir,
                 )
-                if inspect_str:
+                if inspect_str := get_inspect_command_namespace_string(test_name=test_name, node=node):
                     target_dir = os.path.join(collection_dir, "inspect_collection")
                     inspect_command = (
                         f"{INSPECT_BASE_COMMAND} {inspect_str} "

@@ -700,6 +700,7 @@ class NamespacesNames:
     OPENSHIFT_VIRTUALIZATION_OS_IMAGES = "openshift-virtualization-os-images"
     WASP = "wasp"
     OPENSHIFT_KUBE_DESCHEDULER_OPERATOR = "openshift-kube-descheduler-operator"
+    OPENSHIFT_NMSTATE = "openshift-nmstate"
 
 
 # CNV supplemental-templates
