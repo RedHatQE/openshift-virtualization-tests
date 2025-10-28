@@ -58,9 +58,23 @@ class Console(object):
         """
         Connect to the VM console and authenticate if credentials are provided.
 
-        Implements retry logic that watches for multiple patterns simultaneously (login,
-        password, shell prompts) to handle unpredictable console output where prompts may
-        appear multiple times.
+        Raises:
+            pexpect.exceptions.TIMEOUT: If a shell prompt is not reached after all attempts.
+        """
+        num_attempts = 5
+        for _ in range(num_attempts):
+            if self._wait_for_prompt_once():
+                return
+        raise pexpect.exceptions.TIMEOUT(
+            f"{self.vm.name}: Timed out waiting for login/prompt after {num_attempts} attempts."
+        )
+
+    def _wait_for_prompt_once(self):
+        """
+        Perform a single interaction cycle with the console to reach a shell prompt.
+
+        Returns:
+            bool: True when a shell prompt is detected; False to indicate a retryable state.
 
         Raises:
             ValueError: If password prompt received but no password is given.
@@ -69,50 +83,45 @@ class Console(object):
         self.child.send("\n\n")
         prompts = self.prompt if isinstance(self.prompt, list) else [self.prompt]
 
-        if self.username:
-            max_attempts = 5
-            attempts = 0
-
-            while attempts < max_attempts:
-                patterns = [self.login_prompt, "Password:", *prompts, pexpect.EOF, pexpect.TIMEOUT]
-                index = self.child.expect(patterns, timeout=TIMEOUT_2MIN)
-
-                # Normalize possible non-int (e.g., MagicMock in tests) to avoid TypeError on comparisons
-                if isinstance(index, int):
-                    index_int = index
-                else:
-                    LOGGER.debug(f"{self.vm.name}: Non-integer expect index {index!r}; treating as TIMEOUT.")
-                    index_int = len(patterns) - 1  # TIMEOUT index
-
-                eof_index = len(patterns) - 2
-
-                if index_int == 0:
-                    LOGGER.info(f"{self.vm.name}: Sending username.")
-                    self.child.sendline(self.username)
-                elif index_int == 1:
-                    if self.password:
-                        LOGGER.info(f"{self.vm.name}: Sending password (masked).")
-                        self.child.sendline(self.password)
-                    else:
-                        raise ValueError("Password prompt received but no password provided.")
-                elif 2 <= index_int < 2 + len(prompts):
-                    LOGGER.info(f"{self.vm.name}: Shell prompt detected.")
-                    break
-                elif index_int == eof_index:
-                    raise pexpect.exceptions.EOF(f"{self.vm.name}: EOF while waiting for login/prompt.")
-                else:  # TIMEOUT
-                    attempts += 1
-                    LOGGER.debug(
-                        f"{self.vm.name}: Timeout waiting for login/prompt (attempt {attempts}/{max_attempts})."
-                    )
-                    self.child.send("\n")
-            if attempts >= max_attempts:
-                raise pexpect.exceptions.TIMEOUT(
-                    f"{self.vm.name}: Timed out waiting for login/prompt after {max_attempts} attempts."
-                )
-        else:
+        if not self.username:
             # No username, just wait for prompt
             self.child.expect(prompts, timeout=TIMEOUT_2MIN)
+            return True
+
+        patterns = [self.login_prompt, "Password:", *prompts, pexpect.EOF, pexpect.TIMEOUT]
+        while True:
+            try:
+                index = self.child.expect(patterns, timeout=TIMEOUT_2MIN)
+            except pexpect.exceptions.TIMEOUT:
+                self.child.send("\n")
+                return False
+
+            # Normalize possible non-int (e.g., MagicMock in tests)
+            if isinstance(index, int):
+                index_int = index
+            else:
+                LOGGER.debug(f"{self.vm.name}: Non-integer expect index {index!r}; treating as TIMEOUT.")
+                index_int = len(patterns) - 1  # TIMEOUT index
+
+            eof_index = len(patterns) - 2
+            if index_int == 0:
+                LOGGER.info(f"{self.vm.name}: Sending username.")
+                self.child.sendline(self.username)
+                continue
+            if index_int == 1:
+                if self.password:
+                    LOGGER.info(f"{self.vm.name}: Sending password (masked).")
+                    self.child.sendline(self.password)
+                    continue
+                raise ValueError("Password prompt received but no password provided.")
+            if 2 <= index_int < 2 + len(prompts):
+                LOGGER.info(f"{self.vm.name}: Shell prompt detected.")
+                return True
+            if index_int == eof_index:
+                raise pexpect.exceptions.EOF(f"{self.vm.name}: EOF while waiting for login/prompt.")
+            # TIMEOUT or any other retryable state
+            self.child.send("\n")
+            return False
 
     def disconnect(self):
         if self.child.terminated:
