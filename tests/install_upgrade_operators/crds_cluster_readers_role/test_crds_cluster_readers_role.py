@@ -6,14 +6,7 @@ import pytest
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import Resource
 
-from utilities.infra import is_jira_open
-
 LOGGER = logging.getLogger(__name__)
-MTV_VOLUME_POPULATOR_CRDS = [
-    f"openstackvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
-    f"ovirtvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
-]
-
 
 pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 
@@ -21,10 +14,7 @@ pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
 @pytest.fixture()
 def crds(admin_client):
     crds_to_check = []
-    bug_status = is_jira_open(jira_id="CNV-58119")
     for crd in CustomResourceDefinition.get(dyn_client=admin_client):
-        if bug_status and crd.name in MTV_VOLUME_POPULATOR_CRDS:
-            continue
         if any([
             crd.name.endswith(suffix)
             for suffix in [
