@@ -6,6 +6,7 @@ from typing import Any
 from ocp_resources.template import Template
 
 from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
     DV_SIZE_STR,
@@ -28,6 +29,13 @@ from utilities.constants import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+def get_windows_container_disk_path(os_value: str) -> str:
+    """Generate the full container disk path for Windows OS values."""
+    if not os_value.startswith("win"):
+        raise ValueError(f"os_value must start with 'win', got: {os_value}")
+    return f"{Images.Windows.DOCKER_IMAGE_DIR}/windows{os_value.removeprefix('win')}-container-disk:4.99"
 
 
 RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
@@ -70,6 +78,7 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         FLAVOR_STR: Template.Flavor.MEDIUM,
         "uefi": True,
         DATA_SOURCE_STR: WIN_10,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_10),
     },
     "win-2016": {
         IMAGE_NAME_STR: "WIN2k16_IMG",
@@ -77,6 +86,7 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         OS_STR: WIN_2K16,
         "uefi": True,
         DATA_SOURCE_STR: WIN_2K16,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K16),
     },
     "win-2019": {
         IMAGE_NAME_STR: "WIN2k19_IMG",
@@ -84,6 +94,7 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         OS_STR: WIN_2K19,
         "uefi": True,
         DATA_SOURCE_STR: WIN_2K19,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K19),
     },
     "win-11": {
         IMAGE_NAME_STR: "WIN11_IMG",
@@ -92,12 +103,14 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         WORKLOAD_STR: Template.Workload.DESKTOP,
         FLAVOR_STR: Template.Flavor.MEDIUM,
         DATA_SOURCE_STR: WIN_11,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_11),
     },
     "win-2022": {
         IMAGE_NAME_STR: "WIN2022_IMG",
         OS_VERSION_STR: "2022",
         OS_STR: WIN_2K22,
         DATA_SOURCE_STR: WIN_2K22,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K22),
     },
     "win-2025": {
         IMAGE_NAME_STR: "WIN2k25_IMG",
@@ -105,6 +118,7 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         OS_STR: WIN_2K25,
         "uefi": True,
         DATA_SOURCE_STR: WIN_2K25,
+        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K25),
     },
 }
 
@@ -226,6 +240,9 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
                 },
                 DATA_SOURCE_STR: base_version_dict.get(DATA_SOURCE_STR),
             }
+
+            if CONTAINER_DISK_IMAGE_PATH_STR in base_version_dict:
+                os_base_dict[CONTAINER_DISK_IMAGE_PATH_STR] = base_version_dict[CONTAINER_DISK_IMAGE_PATH_STR]
 
             if image_name == latest_os_release:
                 os_base_dict[LATEST_RELEASE_STR] = True
