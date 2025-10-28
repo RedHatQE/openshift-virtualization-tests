@@ -1848,7 +1848,7 @@ def migrate_vm_and_verify(
             if sample:
                 break
     except TimeoutExpiredError:
-        raise RuntimeError(f"Migration for VM {vm.vmi.name} failed after TimeoutSampler wait")
+        raise RuntimeError(f"Migration for VM {vm.vmi.name} failed")
 
     verify_vm_migrated(
         vm=vm,
