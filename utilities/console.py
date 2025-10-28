@@ -106,6 +106,10 @@ class Console(object):
                         f"{self.vm.name}: Timeout waiting for login/prompt (attempt {attempts}/{max_attempts})."
                     )
                     self.child.send("\n")
+            if attempts >= max_attempts:
+                raise pexpect.exceptions.TIMEOUT(
+                    f"{self.vm.name}: Timed out waiting for login/prompt after {max_attempts} attempts."
+                )
         else:
             # No username, just wait for prompt
             self.child.expect(prompts, timeout=TIMEOUT_2MIN)
