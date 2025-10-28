@@ -23,12 +23,12 @@ class Console(object):
             username (str, default=None): VM username
             password (str, default=None): VM password
             timeout (int, default=30): Connection timeout in seconds
-            prompt (list, default=None): Shell prompt pattern(s) to expect, for example [r"$"]
+            prompt (list, optional): Shell prompt pattern(s) to expect. Defaults to [r"\\$"] when None.
 
         Examples:
             from utilities import console
             with console.Console(vm=vm) as vmc:
-                vmc.sendline('some command)
+                vmc.sendline('some command')
                 vmc.expect('some output')
         """
         self.vm = vm
