@@ -805,10 +805,11 @@ def validate_metric_value_greater_than_initial_value(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
+    sample = None
     try:
         for sample in samples:
             if sample:
-                if int(sample) > initial_value:
+                if float(sample) > initial_value:
                     return
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be greater than {initial_value}")

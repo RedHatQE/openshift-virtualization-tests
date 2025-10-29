@@ -171,6 +171,12 @@ run_strategy_matrix = [
     VirtualMachine.RunStrategy.RERUNONFAILURE,
 ]
 
+guest_load_os_matrix = [
+    "kubevirt_vmi_guest_load_1m",
+    "kubevirt_vmi_guest_load_5m",
+    "kubevirt_vmi_guest_load_15m",
+]
+
 aaq_allocation_methods_matrix = [AAQ_VIRTUAL_RESOURCES, AAQ_VMI_POD_USAGE]
 
 sysprep_source_matrix = ["ConfigMap", "Secret"]
