@@ -28,7 +28,7 @@ def lookup_br_ex_gateway_v4(node_name: str, client: DynamicClient) -> str:
     """
     nns_state = NodeNetworkState(name=node_name, client=client, ensure_exists=True).instance.status.currentState
 
-    for route in nns_state.routes.config:
+    for route in nns_state.routes.running:
         if route.destination == DEFAULT_ROUTE_V4.dst and route["next-hop-interface"] == DEFAULT_OVN_EXTERNAL_BRIDGE:
             return route["next-hop-address"]
 
