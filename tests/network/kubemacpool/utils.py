@@ -2,6 +2,7 @@ import logging
 from collections import namedtuple
 from ipaddress import ip_interface
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
     VirtualMachineForTests,
@@ -26,17 +27,25 @@ def vm_network_config(mac_pool, all_nads, end_ip_octet, mac_uid):
     """
     return {
         "eth1": IfaceTuple(
-            ip_address=f"10.200.1.{end_ip_octet}",
+            ip_address=random_ipv4_address(net_seed=0, host_address=end_ip_octet),
             mac_address=mac_pool.get_mac_from_pool(),
             name=all_nads[0],
         ),
-        "eth2": IfaceTuple(ip_address=f"10.200.2.{end_ip_octet}", mac_address="auto", name=all_nads[1]),
+        "eth2": IfaceTuple(
+            ip_address=random_ipv4_address(net_seed=1, host_address=end_ip_octet),
+            mac_address="auto",
+            name=all_nads[1],
+        ),
         "eth3": IfaceTuple(
-            ip_address=f"10.200.3.{end_ip_octet}",
+            ip_address=random_ipv4_address(net_seed=2, host_address=end_ip_octet),
             mac_address=f"02:0{mac_uid}:00:00:00:00",
             name=all_nads[2],
         ),
-        "eth4": IfaceTuple(ip_address=f"10.200.4.{end_ip_octet}", mac_address="auto", name=all_nads[3]),
+        "eth4": IfaceTuple(
+            ip_address=random_ipv4_address(net_seed=3, host_address=end_ip_octet),
+            mac_address="auto",
+            name=all_nads[3],
+        ),
     }
 
 
