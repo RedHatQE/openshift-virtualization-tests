@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import IPV6_STR
 from utilities.network import (
     compose_cloud_init_data_dict,
@@ -31,7 +32,10 @@ def create_running_vm(
         node_selector=node_selector,
         cloud_init_data=compose_cloud_init_data_dict(
             network_data={
-                "ethernets": {f"eth{i + 1}": {"addresses": [f"10.200.{i}.{end_ip_octet}/24"]} for i in range(0, 3)}
+                "ethernets": {
+                    f"eth{i + 1}": {"addresses": [f"{random_ipv4_address(net_seed=i, host_address=end_ip_octet)}/24"]}
+                    for i in range(0, 3)
+                }
             },
             ipv6_network_data=dual_stack_network_data,
         ),
