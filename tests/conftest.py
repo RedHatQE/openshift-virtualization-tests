@@ -590,6 +590,7 @@ def nodes_active_nics(
     workers_utility_pods,
     node_physical_nics,
 ):
+    # TODO: Add support for environments that do not have KNMstate installed. e.g: clouds
     # TODO: Reduce cognitive complexity
     def _bridge_ports(node_interface):
         ports = set()
@@ -2860,11 +2861,13 @@ def machine_config_pools():
 
 
 @pytest.fixture(scope="session")
-def nmstate_namespace(admin_client, nmstate_required):
-    if nmstate_required:
-        return Namespace(client=admin_client, name="openshift-nmstate", ensure_exists=True)
+def nmstate_namespace(admin_client):
+    try:
+        return Namespace(client=admin_client, name=NamespacesNames.OPENSHIFT_NMSTATE, ensure_exists=True)
 
-    return None
+    except ResourceNotFoundError:
+        LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
+        return None
 
 
 @pytest.fixture()
@@ -2890,11 +2893,7 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["smbios"]
 
 
-@pytest.fixture(scope="session")
-def nmstate_required(admin_client):
-    return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
-
-
+# TODO: Replace this fixture with py_config.get("conformance_tests")
 @pytest.fixture(scope="session")
 def conformance_tests(request):
     return (

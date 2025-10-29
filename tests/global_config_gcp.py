@@ -30,8 +30,8 @@ storage_class_matrix = [
     },
 ]
 
-storage_class_a = StorageClassNames.GCP
-storage_class_b = StorageClassNames.GCP
+storage_class_a = StorageClassNames.GCNV
+storage_class_b = StorageClassNames.GCNV
 
 for _dir in dir():
     if not config:  # noqa: F821

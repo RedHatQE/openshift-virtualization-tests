@@ -250,6 +250,11 @@ def authorized_key(private_key_path):
 def get_jira_status(jira):
     env_var = os.environ
     if not (env_var.get("PYTEST_JIRA_TOKEN") and env_var.get("PYTEST_JIRA_URL")):
+        # For conformance tests without JIRA credentials, assume the JIRA is open
+        if py_config.get("conformance_tests"):
+            LOGGER.info(f"Conformance tests without JIRA credentials: assuming {jira} is open")
+            return "open"
+
         raise MissingEnvironmentVariableError("Please set PYTEST_JIRA_TOKEN and PYTEST_JIRA_URL environment variables")
 
     jira_connection = JIRA(
