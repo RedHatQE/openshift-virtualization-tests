@@ -1216,9 +1216,9 @@ def skip_if_no_common_cpu(cluster_common_node_cpu, nodes_cpu_architecture):
 
 
 @pytest.fixture(scope="module")
-def skip_if_no_common_modern_cpu(cluster_common_modern_node_cpu):
+def xfail_if_no_common_modern_cpu(cluster_common_modern_node_cpu):
     if not cluster_common_modern_node_cpu and nodes_cpu_architecture != ARM_64:
-        pytest.skip("This is a heterogeneous cluster")
+        pytest.xfail("This is a heterogeneous cluster")
 
 
 @pytest.fixture(scope="session")
