@@ -24,7 +24,7 @@ class TestConsole:
         assert console.timeout == 30
         assert console.child is None
         assert console.login_prompt == "login:"
-        assert console.prompt == [r"\$"]
+        assert console.prompt == [r"#", r"\$"]
 
     def test_console_init_with_custom_values(self, mock_vm_no_namespace):
         """Test Console initialization with custom values"""
@@ -206,7 +206,7 @@ class TestConsole:
         console.child.sendline.assert_any_call("testuser")
         console.child.expect.assert_any_call("Password:")
         console.child.sendline.assert_any_call("testpass")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
+        console.child.expect.assert_any_call([r"#", r"\$"], timeout=150)
 
     @patch("console.get_data_collector_base_directory")
     def test_console_connect_username_only(self, mock_get_dir):
@@ -250,7 +250,7 @@ class TestConsole:
 
         # Should only send newlines and expect prompt
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
+        console.child.expect.assert_any_call([r"#", r"\$"], timeout=150)
         # Should not expect login prompt
         login_calls = [call for call in console.child.expect.call_args_list if "login:" in str(call)]
         assert len(login_calls) == 0
@@ -273,7 +273,7 @@ class TestConsole:
         console.disconnect()
 
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call([r"\$"])
+        console.child.expect.assert_any_call([r"#", r"\$"])
         console.child.send.assert_any_call("exit")
         console.child.send.assert_any_call("\n\n")
         console.child.expect.assert_any_call("login:")
@@ -296,7 +296,7 @@ class TestConsole:
         console.disconnect()
 
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call([r"\$"])
+        console.child.expect.assert_any_call([r"#", r"\$"])
         # Should not send exit command
         exit_calls = [call for call in console.child.send.call_args_list if "exit" in str(call)]
         assert len(exit_calls) == 0
