@@ -8,7 +8,6 @@ from subprocess import check_output
 
 import pytest
 from ocp_resources.config_map import ConfigMap
-from ocp_resources.data_source import DataSource
 from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -189,21 +188,11 @@ def vmexport_download_path(tmp_path):
     yield str(temp_path / "disk.img")
 
 
-@pytest.fixture(scope="module")
-def rhel10_data_source_scope_module(golden_images_namespace):
-    return DataSource(
-        namespace=golden_images_namespace.name,
-        name="rhel10",
-        client=golden_images_namespace.client,
-        ensure_exists=True,
-    )
-
-
 @pytest.fixture()
 def rhel_vm_for_snapshot_with_content(
     unprivileged_client,
     namespace,
-    rhel10_data_source_scope_module,
+    rhel10_data_source_scope_session,
     snapshot_storage_class_name_scope_module,
 ):
     with VirtualMachineForTests(
@@ -214,7 +203,7 @@ def rhel_vm_for_snapshot_with_content(
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel10_data_source_scope_module,
+            data_source=rhel10_data_source_scope_session,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
