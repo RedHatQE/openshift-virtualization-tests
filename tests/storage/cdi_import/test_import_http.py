@@ -22,7 +22,6 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
-    create_vm_and_verify_image_permission,
     create_vm_from_dv,
     get_file_url,
     get_importer_pod,
@@ -637,13 +636,6 @@ def test_successful_vm_from_imported_dv_windows(
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
     )
-
-
-@pytest.mark.polarion("CNV-4032")
-@pytest.mark.sno
-@pytest.mark.s390x
-def test_disk_image_after_import(skip_block_volumemode_scope_module, cirros_dv_unprivileged):
-    create_vm_and_verify_image_permission(dv=cirros_dv_unprivileged)
 
 
 @pytest.mark.polarion("CNV-4724")

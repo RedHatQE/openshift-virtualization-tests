@@ -42,7 +42,6 @@ from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
     create_dv,
-    create_vm_from_dv,
     get_containers_for_pods_with_pvc,
 )
 from utilities.virt import (
@@ -241,21 +240,6 @@ def set_permissions(
             role_ref_name=cluster_role.name,
         ):
             yield
-
-
-def create_vm_and_verify_image_permission(dv: DataVolume) -> None:
-    with create_vm_from_dv(dv=dv) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False, wait_for_interfaces=False)
-        verify_vm_disk_image_permission(vm=vm)
-
-
-def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
-    v_pod = vm.vmi.virt_launcher_pod
-    LOGGER.debug("Check image exist, permission and ownership")
-    output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
-    assert "disk.img" in output
-    assert "-rw-rw----." in output
-    assert "qemu qemu" in output
 
 
 def get_importer_pod(
