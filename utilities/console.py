@@ -67,6 +67,7 @@ class Console(object):
                 LOGGER.info(f"{self.vm.name}: Using password {self.password}")
                 self.child.sendline(self.password)
 
+        LOGGER.info(f"{self.vm.name}: waiting for terminal prompt '{self.prompt}'")
         self.child.expect(self.prompt, timeout=150)
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
