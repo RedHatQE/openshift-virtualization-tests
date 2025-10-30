@@ -31,6 +31,7 @@ def vm_to_restart(unprivileged_client, namespace):
         yield vm
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1497")
 def test_vm_restart(vm_to_restart):
     LOGGER.info("VM is running: Restarting VM")
