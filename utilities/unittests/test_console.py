@@ -73,6 +73,7 @@ class TestConsole:
                 "_connect",
             ) as mock_connect,
         ):
+            mock_sampler.side_effect = lambda *args, **kwargs: setattr(console, "child", mock_child)
             result = console.connect()
 
             assert result == console.child
@@ -202,11 +203,11 @@ class TestConsole:
 
         # Verify connection sequence
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:", timeout=300)
+        console.child.expect.assert_any_call("login:")
         console.child.sendline.assert_any_call("testuser")
         console.child.expect.assert_any_call("Password:")
         console.child.sendline.assert_any_call("testpass")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
+        console.child.expect.assert_any_call([r"\$"])
 
     @patch("console.get_data_collector_base_directory")
     def test_console_connect_username_only(self, mock_get_dir):
@@ -226,7 +227,7 @@ class TestConsole:
 
         # Verify connection sequence without password
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:", timeout=300)
+        console.child.expect.assert_any_call("login:")
         console.child.sendline.assert_any_call("testuser")
         # Should not expect or send password
         password_calls = [call for call in console.child.expect.call_args_list if "Password:" in str(call)]
@@ -250,7 +251,7 @@ class TestConsole:
 
         # Should only send newlines and expect prompt
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
+        console.child.expect.assert_any_call([r"\$"])
         # Should not expect login prompt
         login_calls = [call for call in console.child.expect.call_args_list if "login:" in str(call)]
         assert len(login_calls) == 0
