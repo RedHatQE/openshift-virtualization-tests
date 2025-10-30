@@ -108,7 +108,7 @@ def create_dv(
     url=None,
     source="http",
     content_type=DataVolume.ContentType.KUBEVIRT,
-    size="5Gi",
+    size="6Gi",
     secret=None,
     cert_configmap=None,
     hostpath_node=None,
