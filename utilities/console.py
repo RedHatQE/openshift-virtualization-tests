@@ -2,10 +2,12 @@ import logging
 import os
 
 import pexpect
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutSampler, retry
 
 from utilities.constants import (
     TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+    TIMEOUT_10SEC,
     VIRTCTL,
 )
 from utilities.data_collector import get_data_collector_base_directory
@@ -40,6 +42,7 @@ class Console(object):
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
+    @retry(wait_timeout=TIMEOUT_10MIN, sleep=TIMEOUT_10SEC)
     def connect(self):
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
