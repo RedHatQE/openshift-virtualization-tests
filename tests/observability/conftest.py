@@ -14,8 +14,8 @@ from utilities.constants import (
     VIRT_OPERATOR,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
-from utilities.infra import get_deployment_by_name, scale_deployment_replicas
-from utilities.virt import get_all_virt_pods_with_running_status
+from utilities.infra import get_deployment_by_name, get_node_selector_dict, scale_deployment_replicas
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, get_all_virt_pods_with_running_status, running_vm
 
 LOGGER = logging.getLogger(__name__)
 ANNOTATIONS_FOR_VIRT_OPERATOR_ENDPOINT = {
@@ -112,3 +112,16 @@ def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_re
     validate_initial_virt_operator_replicas_reverted(
         prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
     )
+
+
+@pytest.fixture()
+def vm_with_node_selector_for_upgrade(namespace, worker_node1):
+    name = "vm-with-node-selector"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
