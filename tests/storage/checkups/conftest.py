@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
@@ -10,6 +12,7 @@ from ocp_resources.role_binding import RoleBinding
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
+from timeout_sampler import TimeoutExpiredError
 
 from tests.storage.checkups.constants import (
     ACCESS_MODES,
@@ -29,8 +32,10 @@ from utilities.constants import (
     WILDCARD_CRON_EXPRESSION,
     StorageClassNames,
 )
-from utilities.infra import create_ns
+from utilities.infra import create_ns, get_pods
 from utilities.storage import update_default_sc
+
+LOGGER = logging.getLogger(__name__)
 
 KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
 
@@ -114,6 +119,7 @@ def checkup_job(
     checkup_cluster_reader,
     checkup_service_account,
     checkup_configmap,
+    admin_client,
 ):
     containers = [
         {
@@ -136,12 +142,26 @@ def checkup_job(
         restart_policy="Never",
         backoff_limit=0,
         containers=containers,
+        client=admin_client,
     ) as job:
-        job.wait_for_condition(
-            condition=request.param["expected_condition"],
-            status=job.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        try:
+            job.wait_for_condition(
+                condition=request.param["expected_condition"],
+                status=job.Condition.Status.TRUE,
+                timeout=TIMEOUT_10MIN,
+            )
+        except TimeoutExpiredError:
+            for job_pod in get_pods(
+                dyn_client=admin_client,
+                namespace=checkups_namespace,
+                label=f"job-name={job.name}",
+            ):
+                pod_log = job_pod.log()
+
+            msg = f"{job.name} job failed."
+            LOGGER.error(f"{msg} Log of {job_pod.name} pod:\n{pod_log}")
+            raise TimeoutExpiredError(f"{msg} The last line from the checkups pod log:\n{job_pod.log(tail_lines=1)}")
+
         yield job
 
 
