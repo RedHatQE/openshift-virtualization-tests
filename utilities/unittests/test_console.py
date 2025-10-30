@@ -73,6 +73,7 @@ class TestConsole:
                 "_connect",
             ) as mock_connect,
         ):
+            mock_sampler.side_effect = lambda *args, **kwargs: setattr(console, "child", mock_child)
             result = console.connect()
 
             assert result == console.child
