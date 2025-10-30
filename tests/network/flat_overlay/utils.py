@@ -5,10 +5,10 @@ from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import NamespacedResource, Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import IPV4_ADDRESS_SUBNET_PREFIX
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.exceptions import ResourceValueError
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
@@ -34,7 +34,7 @@ def create_flat_overlay_vm(
     networks = {nad_name: nad_name}
     network_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{IPV4_ADDRESS_SUBNET_PREFIX}.{host_ip_suffix}/24"]},
+            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=host_ip_suffix)}/24"]},
         }
     }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
