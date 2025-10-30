@@ -1,5 +1,8 @@
 import contextlib
+import logging
 from typing import Generator
+
+from kubernetes.client import ApiException
 
 from libs.net.traffic_generator import Client, Server
 from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
@@ -17,11 +20,17 @@ LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
 _IPERF_SERVER_PORT = 5201
+LOGGER = logging.getLogger(__name__)
 
 
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
-        vm.start()  # type: ignore[no-untyped-call]
+        try:
+            vm.start()  # type: ignore[no-untyped-call]
+        except ApiException as vm_exception:
+            if "VM is already running" in vm_exception.body:
+                LOGGER.warning(f"VM {vm.name} is already running")
+                continue
     for vm in vms:
         vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
         vm.wait_for_agent_connected()
