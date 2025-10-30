@@ -5,6 +5,7 @@
 import os
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
 from console import Console
 
 
@@ -198,15 +199,17 @@ class TestConsole:
         console = Console(vm=mock_vm)
         console.child = MagicMock()
 
+        # Mock the expect calls to simulate the sequence: login prompt, password prompt, then shell prompt
+        console.child.expect.side_effect = [0, 1, 2]  # login, password, shell prompt
+
         console._connect()
 
         # Verify connection sequence
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:", timeout=300)
+        # Should have been called 3 times: login, password, shell prompt
+        assert console.child.expect.call_count == 3
         console.child.sendline.assert_any_call("testuser")
-        console.child.expect.assert_any_call("Password:")
         console.child.sendline.assert_any_call("testpass")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
 
     @patch("console.get_data_collector_base_directory")
     def test_console_connect_username_only(self, mock_get_dir):
@@ -222,15 +225,11 @@ class TestConsole:
         console = Console(vm=mock_vm)
         console.child = MagicMock()
 
-        console._connect()
+        # Mock the expect calls to simulate: login prompt -> password prompt (should error)
+        console.child.expect.side_effect = [0, 1]  # login, password (raises ValueError)
 
-        # Verify connection sequence without password
-        console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:", timeout=300)
-        console.child.sendline.assert_any_call("testuser")
-        # Should not expect or send password
-        password_calls = [call for call in console.child.expect.call_args_list if "Password:" in str(call)]
-        assert len(password_calls) == 0
+        with pytest.raises(ValueError, match="Password prompt received but no password provided"):
+            console._connect()
 
     @patch("console.get_data_collector_base_directory")
     def test_console_connect_no_username(self, mock_get_dir):
@@ -245,13 +244,17 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
+        # Mock expect to return 0 (first pattern matched)
+        console.child.expect.return_value = 0
 
         console._connect()
 
         # Should only send newlines and expect prompt
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call([r"\$"], timeout=150)
-        # Should not expect login prompt
+        console.child.expect.assert_called_once()
+        # Should not expect login prompt (prompt list doesn't contain login:)
+        call_args = console.child.expect.call_args
+        assert r"\$" in str(call_args)
         login_calls = [call for call in console.child.expect.call_args_list if "login:" in str(call)]
         assert len(login_calls) == 0
 
