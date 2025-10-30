@@ -1091,7 +1091,7 @@ def get_data_sources_managed_by_data_import_cron(namespace):
     )
 
 
-def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) -> bool:
+def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str, verify_source_dv: bool = False) -> bool:
     """
     Verify that the boot sources are re-imported while changing a storage class.
     """
@@ -1107,6 +1107,8 @@ def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) 
                 consecutive_checks_count=6,
                 resource_name=data_source.name,
             )
+            if verify_source_dv:
+                DataVolume(client=admin_client, namespace=namespace, name=data_source.source.name).wait()
         return True
     except (TimeoutExpiredError, Exception) as exception:
         fail_message = (
