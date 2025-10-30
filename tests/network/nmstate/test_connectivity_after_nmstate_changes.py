@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_nncp_successfully_configured,
     assert_ssh_alive,
@@ -94,7 +95,7 @@ def nmstate_linux_bridge_attached_vma(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": ["10.200.0.1/24"]},
+            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]},
         }
     }
 
@@ -128,7 +129,7 @@ def nmstate_linux_bridge_attached_vmb(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": ["10.200.0.2/24"]},
+            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]},
         }
     }
 
