@@ -1,7 +1,5 @@
 import logging
-import re
 import shlex
-import time
 
 import bitmath
 import pytest
@@ -11,6 +9,8 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
@@ -37,11 +37,9 @@ from tests.observability.metrics.utils import (
     wait_for_metric_vmi_request_cpu_cores_output,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms
+from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
-    CENTOS_STREAM10_PREFERENCE,
-    DATA_SOURCE_NAME,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -53,6 +51,7 @@ from utilities.constants import (
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     SSP_OPERATOR,
+    STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -61,12 +60,14 @@ from utilities.constants import (
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
+    U1_MEDIUM_STR,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
+    get_linux_guest_agent_version,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     is_jira_open,
@@ -74,7 +75,6 @@ from utilities.infra import (
 )
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
-from utilities.os_utils import generate_linux_instance_type_os_matrix
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
@@ -629,73 +629,49 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture(scope="class")
-def centos_stream_10_vm(
-    unprivileged_client,
-    namespace,
-    golden_images_namespace,
-    modern_cpu_for_migration,
-):
-    instance_type_centos_os_matrix = generate_linux_instance_type_os_matrix(
-        os_name="centos.stream", preferences=[CENTOS_STREAM10_PREFERENCE]
-    )[0]
-    os_name = next(iter(instance_type_centos_os_matrix))
-    data_source_name = instance_type_centos_os_matrix[os_name][DATA_SOURCE_NAME]
+def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
-        name=f"{data_source_name}-vm-with-instance-type",
+        name="fedora42-vm-test",
         namespace=namespace.name,
-        vm_instance_type_infer=True,
-        vm_preference_infer=True,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
-                name=data_source_name,
+                name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
             ),
             storage_class=py_config["default_storage_class"],
         ),
-        cpu_model=modern_cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
+        LOGGER.info(f"Installing stress-ng on VM: {vm.name}")
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("sudo dnf install stress-ng -y"),
+        )
         yield vm
 
 
 @pytest.fixture(scope="class")
-def qemu_guest_agent_version_updated_centos(centos_stream_10_vm):
-    LOGGER.info(f"Checking qemu-guest-agent package on VM: {centos_stream_10_vm.name}")
-    output = run_ssh_commands(
-        host=centos_stream_10_vm.ssh_exec,
-        commands=shlex.split("rpm -q qemu-guest-agent"),
-    )
-    agent_version = output[0].strip() if output else ""
+def qemu_guest_agent_version_updated_centos(fedora_vm_with_stress_ng):
+    LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
+    agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec).split(".")
     LOGGER.info(f"qemu-guest-agent version: {agent_version}")
-
-    # Parse version to ensure it's at least 9.6
-    version_match = re.search(r"qemu-guest-agent-(\d+)\.(\d+)", agent_version)
-    if version_match:
-        version_num = float(f"{version_match.group(1)}.{version_match.group(2)}")
-
-        LOGGER.info(f"Parsed qemu-guest-agent version: {version_num}")
-        if version_num >= MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS:
-            return
-        raise ValueError(
-            f"qemu-guest-agent version {version_num} is less than required "
-            f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
-        )
-    raise ValueError(f"Unable to parse qemu-guest-agent version from: {agent_version}")
+    version_num = float(f"{agent_version[0]}.{agent_version[1]}")
+    if version_num >= MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS:
+        return
+    raise ValueError(
+        f"qemu-guest-agent version {version_num} is less than required "
+        f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
+    )
 
 
 @pytest.fixture(scope="class")
-def stressed_vm_cpu_centos(centos_stream_10_vm):
-    # Install stress-ng
-    LOGGER.info(f"Installing stress-ng on VM: {centos_stream_10_vm.name}")
-    run_ssh_commands(
-        host=centos_stream_10_vm.ssh_exec,
-        commands=shlex.split("sudo dnf install stress-ng -y"),
-    )
+def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
     # Run stress test in background to allow test to proceed
-    LOGGER.info(f"Starting CPU stress test on VM: {centos_stream_10_vm.name}")
-    run_ssh_commands(
-        host=centos_stream_10_vm.ssh_exec,
-        commands=shlex.split("nohup stress-ng --cpu $(nproc) --timeout 60s &"),
+    LOGGER.info(f"Starting CPU stress test on VM: {fedora_vm_with_stress_ng.name}")
+    start_stress_on_vm(
+        vm=fedora_vm_with_stress_ng,
+        stress_command=STRESS_CPU_MEM_IO_COMMAND.format(workers="2", memory="50%", timeout="30m"),
     )
-    time.sleep(5)

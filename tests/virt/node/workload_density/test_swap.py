@@ -7,8 +7,9 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import start_stress_on_vm
 from tests.virt.constants import REMOVE_NEWLINE
-from tests.virt.utils import build_node_affinity_dict, start_stress_on_vm
+from tests.virt.utils import build_node_affinity_dict
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod

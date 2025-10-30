@@ -36,10 +36,11 @@ ENV UV_NO_SYNC=1
 
 WORKDIR ${TEST_DIR}
 ENV UV_CACHE_DIR=${TEST_DIR}/.cache
+ENV HOME=${TEST_DIR}
 
 ##TODO: We can remove wget, and use curl instead, this will require to change some tests
 RUN dnf update -y \
-  && dnf install -y procps-ng python3 bind-utils jq fwknop parallel wget clang cargo rsync openssl openssl-devel git\
+  && dnf install -y procps-ng python3 bind-utils jq fwknop parallel wget clang cargo rsync openssl openssl-devel git unzip\
   && dnf clean all \
   && rm -rf /var/cache/dnf \
   && rm -rf /var/lib/dnf \
@@ -49,6 +50,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/bin/
 COPY --from=builder /usr/bin/which /usr/bin/which
 COPY --from=builder /usr/bin/sshpass /usr/bin/sshpass
 COPY --from=builder ${TEST_DIR}/ ${TEST_DIR}/
+
+RUN curl -fsSL https://bws.bitwarden.com/install | sh \
+  && mkdir -p ${TEST_DIR}/.config/bws/state
 
 RUN uv sync --locked \
   && uv export --no-hashes \

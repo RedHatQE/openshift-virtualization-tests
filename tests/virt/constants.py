@@ -9,12 +9,6 @@ VIRT_PROCESS_MEMORY_LIMITS = {
     "virtlogd": bitmath.MiB(25),
 }
 
-
-STRESS_CPU_MEM_IO_COMMAND = (
-    "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
-    "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
-)
-
 CIRROS_OS = {
     "data_source": "cirros-dv",
     "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
