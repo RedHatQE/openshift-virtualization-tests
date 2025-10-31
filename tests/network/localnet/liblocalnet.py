@@ -3,7 +3,6 @@ import logging
 from typing import Generator
 
 from kubernetes.client import ApiException
-
 from ocp_resources.node import Node
 
 from libs.net.traffic_generator import Client, Server
