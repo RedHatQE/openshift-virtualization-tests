@@ -47,16 +47,26 @@ def udn_affinity_label():
 
 
 @pytest.fixture(scope="class")
-def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
-    with udn_vm(namespace_name=udn_namespace.name, name="vma-udn", template_labels=dict((udn_affinity_label,))) as vm:
+def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vma-udn",
+        client=admin_client,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
 
 
 @pytest.fixture(scope="class")
-def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
-    with udn_vm(namespace_name=udn_namespace.name, name="vmb-udn", template_labels=dict((udn_affinity_label,))) as vm:
+def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vmb-udn",
+        client=admin_client,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
