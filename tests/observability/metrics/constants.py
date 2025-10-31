@@ -26,6 +26,6 @@ KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_byt
 KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED = (
     "kubevirt_vmi_phase_transition_time_from_deletion_seconds_sum{phase='Succeeded'}"
 )
-SUM_KUBEVIRT_VM_CREATED_BY_POD_TOTAL = "sum(kubevirt_vm_created_by_pod_total)"
+KUBEVIRT_VM_CREATED_BY_POD_TOTAL = "kubevirt_vm_created_by_pod_total"
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
