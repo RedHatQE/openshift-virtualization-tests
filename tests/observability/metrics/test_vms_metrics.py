@@ -14,6 +14,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -35,6 +36,7 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
     USED,
+    VIRT_API,
 )
 from utilities.infra import get_node_selector_dict
 from utilities.monitoring import get_metrics_value
@@ -508,4 +510,32 @@ class TestVmiPhaseTransitionFromDeletion:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
+        )
+
+
+class TestVmCreatedByPodTotal:
+    @pytest.mark.parametrize(
+        "scaled_deployment",
+        [
+            pytest.param(
+                {"deployment_name": VIRT_API, "replicas": 1},
+                marks=pytest.mark.polarion("CNV-12361"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vm_created_by_pod_total(
+        self,
+        prometheus,
+        disabled_virt_operator,
+        scaled_deployment,
+        virt_api_pod,
+        virt_api_initial_metric_value,
+        vm_in_pod,
+    ):
+        metric_query = (
+            f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
+        )
+        validate_metrics_value(
+            prometheus=prometheus, metric_name=metric_query, expected_value=str(virt_api_initial_metric_value + 1)
         )

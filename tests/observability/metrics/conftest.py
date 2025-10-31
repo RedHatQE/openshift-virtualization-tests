@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
@@ -25,7 +26,6 @@ from tests.observability.metrics.utils import (
     ZERO_CPU_CORES,
     create_windows11_wsl2_vm,
     disk_file_system_info,
-    enable_swap_fedora_vm,
     get_metric_sum_value,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
@@ -146,7 +146,7 @@ def error_state_vm(unique_namespace, unprivileged_client):
         yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def vm_list(unique_namespace):
     """
     Creates n vms, waits for them all to go to running state and cleans them up at the end
@@ -160,7 +160,6 @@ def vm_list(unique_namespace):
     vms_list = create_vms(name_prefix="key-metric-vm", namespace_name=unique_namespace.name)
     for vm in vms_list:
         running_vm(vm=vm)
-        enable_swap_fedora_vm(vm=vm)
     yield vms_list
     for vm in vms_list:
         vm.clean_up()
@@ -619,3 +618,51 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
         for key, value in resource_used.items()
     }
     return formatted_hard_limit, formatted_used_value
+
+
+@pytest.fixture()
+def virt_api_pod(admin_client, hco_namespace):
+    pod = None
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_15SEC,
+            func=get_pod_by_name_prefix,
+            dyn_client=admin_client,
+            pod_prefix="virt-api",
+            namespace=hco_namespace.name,
+            get_all=True,
+        ):
+            if sample and len(sample) == 1:
+                pod = sample[0]
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Should only be 1 virt-api pod running: found {[(pod.name, pod.instance.status.phase) for pod in sample]}"
+        )
+        raise
+
+    return pod
+
+
+@pytest.fixture()
+def virt_api_initial_metric_value(prometheus, virt_api_pod):
+    metric_query = (
+        f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
+    )
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
+
+
+@pytest.fixture()
+def vm_in_pod(virt_api_pod):
+    vm_name = "virt-api-vm"
+
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=virt_api_pod.namespace,
+        body=fedora_vm_body(name=vm_name),
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        ssh=False,
+    ) as vm:
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        yield vm
