@@ -447,7 +447,8 @@ def create_subscription(
         return subscription
 
 
-def approve_install_plan(install_plan: InstallPlan) -> None:
+def approve_install_plan(hco_target_csv_name: str, hco_namespace: str) -> None:
+    install_plan = InstallPlan(name=hco_target_csv_name, namespace=hco_namespace)
     ResourceEditor(patches={install_plan: {"spec": {"approved": True}}}).update()
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_20MIN)
 

@@ -23,6 +23,7 @@ from tests.virt.upgrade.utils import (
 from tests.virt.utils import assert_migration_post_copy_mode, verify_linux_boot_time
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
+from utilities.infra import exit_pytest_execution
 from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
@@ -49,6 +50,12 @@ pytestmark = [
     pytest.mark.cnv_upgrade,
     pytest.mark.eus_upgrade,
 ]
+
+
+@pytest.fixture()
+def exit_if_install_plan_creation_failed(request):
+    if request.session.testsfailed > 0:
+        exit_pytest_execution(message="Install plan creation failed", return_code=100)
 
 
 @pytest.mark.usefixtures("base_templates")
