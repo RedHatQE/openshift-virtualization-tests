@@ -17,6 +17,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.subscription import Subscription
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -344,19 +345,6 @@ def verify_upgrade_cnv(dyn_client, hco_namespace, expected_images):
     )
 
 
-def approve_cnv_upgrade_install_plan(dyn_client, hco_namespace, hco_target_csv_name, is_production_source):
-    LOGGER.info("Get the upgrade install plan.")
-    install_plan = wait_for_install_plan(
-        dyn_client=dyn_client,
-        hco_namespace=hco_namespace,
-        hco_target_csv_name=hco_target_csv_name,
-        is_production_source=is_production_source,
-    )
-
-    LOGGER.info(f"Approve the upgrade install plan {install_plan.name} to trigger the upgrade.")
-    approve_install_plan(install_plan=install_plan)
-
-
 def wait_for_cluster_version_stable_conditions(admin_client):
     wait_for_consistent_resource_conditions(
         dynamic_client=admin_client,
@@ -631,6 +619,7 @@ def perform_cnv_upgrade(
     cr_name: str,
     hco_namespace: Namespace,
     cnv_target_version: str,
+    cnv_subscription: Subscription,
 ) -> None:
     hco_target_csv_name = get_hco_csv_name_by_version(cnv_target_version=cnv_target_version)
 
@@ -641,13 +630,16 @@ def perform_cnv_upgrade(
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=cr_name,
     )
-    LOGGER.info("Approving CNV InstallPlan")
-    approve_cnv_upgrade_install_plan(
+
+    install_plan = wait_for_install_plan(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=False,
+        cnv_subscription=cnv_subscription,
     )
+    LOGGER.info("Approving CNV InstallPlan")
+    approve_install_plan(install_plan=install_plan)
     LOGGER.info("Waiting for target CSV")
     target_csv = wait_for_hco_csv_creation(
         admin_client=admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name

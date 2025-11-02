@@ -14,6 +14,7 @@ from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.image_content_source_policy import ImageContentSourcePolicy
 from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
+from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
@@ -446,7 +447,7 @@ def create_subscription(
         return subscription
 
 
-def approve_install_plan(install_plan):
+def approve_install_plan(install_plan: InstallPlan) -> None:
     ResourceEditor(patches={install_plan: {"spec": {"approved": True}}}).update()
     install_plan.wait_for_status(status=install_plan.Status.COMPLETE, timeout=TIMEOUT_20MIN)
 
