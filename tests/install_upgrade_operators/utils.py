@@ -11,11 +11,11 @@ from ocp_resources.installplan import InstallPlan
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.operator_condition import OperatorCondition
 from ocp_resources.resource import Resource
+from ocp_resources.subscription import Subscription
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
 from utilities.constants import (
-    HCO_SUBSCRIPTION,
     PRODUCTION_CATALOG_SOURCE,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
@@ -23,7 +23,6 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
 )
-from utilities.infra import get_subscription
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,7 +60,9 @@ def wait_for_install_plan(
     hco_namespace: str,
     hco_target_csv_name: str,
     is_production_source: bool,
+    cnv_subscription: Subscription,
 ) -> Any:
+    LOGGER.info(f"Waiting for the upgrade install plan. hco_target_csv_name: {hco_target_csv_name}")
     install_plan_sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_40MIN,
         sleep=TIMEOUT_10SEC,
@@ -74,16 +75,11 @@ def wait_for_install_plan(
         hco_namespace=hco_namespace,
         hco_target_version=hco_target_csv_name,
     )
-    subscription = get_subscription(
-        admin_client=dyn_client,
-        namespace=hco_namespace,
-        subscription_name=HCO_SUBSCRIPTION,
-    )
     install_plan_name_in_subscription = None
     try:
         for install_plan_samples in install_plan_sampler:
             # wait for the install plan to be created and updated in the subscription.
-            install_plan_name_in_subscription = getattr(subscription.instance.status.installplan, "name", None)
+            install_plan_name_in_subscription = getattr(cnv_subscription.instance.status.installplan, "name", None)
             for ip in install_plan_samples:
                 # If we find a not-approved install plan that is associated with production catalogsource, we need
                 # to delete it. Deleting the install plan associated with production catalogsource, would cause
@@ -108,7 +104,7 @@ def wait_for_install_plan(
                     ):
                         return ip
                     LOGGER.info(
-                        f"Subscription: {subscription.name}, is associated with install plan:"
+                        f"Subscription: {cnv_subscription.name}, is associated with install plan:"
                         f" {install_plan_name_in_subscription}"
                     )
 

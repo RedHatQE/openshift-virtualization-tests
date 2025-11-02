@@ -59,7 +59,7 @@ class TestUpgradeVirt:
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-2974")
-    @pytest.mark.order("first")
+    @pytest.mark.order("second")
     @pytest.mark.dependency(name=VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID)
     def test_is_vm_running_before_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
         for vm in vms_for_upgrade:

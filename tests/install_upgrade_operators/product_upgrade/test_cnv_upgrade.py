@@ -8,21 +8,38 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
 
 pytestmark = [
-    pytest.mark.usefixtures(
-        "nodes_taints_before_upgrade",
-        "nodes_labels_before_upgrade",
-    ),
     pytest.mark.product_upgrade_test,
     pytest.mark.gating,
     pytest.mark.sno,
     pytest.mark.upgrade,
     pytest.mark.upgrade_custom,
-    pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID),
+    pytest.mark.cnv_upgrade,
 ]
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.cnv_upgrade
+@pytest.mark.order("first")
+@pytest.mark.polarion("CNV-2990")  # TODO: put real one
+def test_upgrade_install_plan_creation(
+    admin_client,
+    hco_namespace,
+    cnv_target_version,
+    cnv_upgrade_stream,
+    disabled_default_sources_in_operatorhub,
+    updated_icsp_idms,
+    updated_custom_hco_catalog_source_image,
+    updated_cnv_subscription_source,
+    created_target_cnv_upgrade_install_plan,
+):
+    assert created_target_cnv_upgrade_install_plan.exists, "Upgrade install plan not found"
+
+
+@pytest.mark.usefixtures(
+    "nodes_taints_before_upgrade",
+    "nodes_labels_before_upgrade",
+    "fired_alerts_before_upgrade",
+)
+@pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
 class TestUpgradeCNV:
     @pytest.mark.polarion("CNV-2991")
     def test_cnv_upgrade_process(
@@ -30,13 +47,6 @@ class TestUpgradeCNV:
         admin_client,
         hco_namespace,
         migratable_vms,
-        cnv_target_version,
-        cnv_upgrade_stream,
-        fired_alerts_before_upgrade,
-        disabled_default_sources_in_operatorhub,
-        updated_image_content_source_policy,
-        updated_custom_hco_catalog_source_image,
-        updated_cnv_subscription_source,
         approved_cnv_upgrade_install_plan,
         started_cnv_upgrade,
         created_target_hco_csv,
@@ -47,7 +57,7 @@ class TestUpgradeCNV:
         Test the CNV upgrade process (using OSBS/fbc sources). The main steps of the test are:
 
         1. Disable the default sources in operatorhub in order to be able to upgrade usg a custom catalog source.
-        2. Generate a new ICSP for the IIB image being used.
+        2. Generate a new ICSP/IDMS for the IIB image being used.
         3. Update HCO CatalogSource with the image being used.
         4. Update the CNV Subscription source.
         5. Wait for the upgrade InstallPlan to be created and approve it.
@@ -69,10 +79,6 @@ class TestUpgradeCNV:
         admin_client,
         hco_namespace,
         migratable_vms,
-        cnv_target_version,
-        cnv_upgrade_stream,
-        fired_alerts_before_upgrade,
-        updated_cnv_subscription_source,
         approved_cnv_upgrade_install_plan,
         started_cnv_upgrade,
         created_target_hco_csv,
