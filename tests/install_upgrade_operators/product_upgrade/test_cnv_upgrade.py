@@ -5,6 +5,7 @@ import pytest
 from tests.install_upgrade_operators.product_upgrade.utils import (
     verify_upgrade_cnv,
 )
+from tests.install_upgrade_operators.utils import wait_for_install_plan
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
 
 pytestmark = [
@@ -19,19 +20,27 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.order("first")
-@pytest.mark.polarion("CNV-2990")  # TODO: put real one
+@pytest.mark.polarion("CNV-2990")  # noqa
 def test_upgrade_install_plan_creation(
     admin_client,
     hco_namespace,
     cnv_target_version,
     cnv_upgrade_stream,
+    hco_target_csv_name,
+    is_production_source,
+    cnv_subscription_scope_session,
     disabled_default_sources_in_operatorhub,
     updated_icsp_idms,
     updated_custom_hco_catalog_source_image,
     updated_cnv_subscription_source,
-    created_target_cnv_upgrade_install_plan,
 ):
-    assert created_target_cnv_upgrade_install_plan.exists, "Upgrade install plan not found"
+    wait_for_install_plan(
+        dyn_client=admin_client,
+        hco_namespace=hco_namespace.name,
+        hco_target_csv_name=hco_target_csv_name,
+        is_production_source=is_production_source,
+        cnv_subscription=cnv_subscription_scope_session,
+    )
 
 
 @pytest.mark.usefixtures(

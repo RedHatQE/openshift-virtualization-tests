@@ -28,7 +28,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     wait_for_odf_update,
     wait_for_pods_replacement_by_type,
 )
-from tests.install_upgrade_operators.utils import wait_for_install_plan, wait_for_operator_condition
+from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
 from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
@@ -157,19 +157,6 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
         subscription=cnv_subscription_scope_session,
         subscription_source=cnv_registry_source["cnv_subscription_source"],
         subscription_channel=py_config["cnv_subscription_channel"],
-    )
-
-
-@pytest.fixture()
-def created_target_cnv_upgrade_install_plan(
-    admin_client, hco_namespace, hco_target_csv_name, is_production_source, cnv_subscription_scope_session
-):
-    return wait_for_install_plan(
-        dyn_client=admin_client,
-        hco_namespace=hco_namespace.name,
-        hco_target_csv_name=hco_target_csv_name,
-        is_production_source=is_production_source,
-        cnv_subscription=cnv_subscription_scope_session,
     )
 
 

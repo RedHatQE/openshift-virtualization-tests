@@ -631,7 +631,7 @@ def perform_cnv_upgrade(
         cr_name=cr_name,
     )
 
-    install_plan = wait_for_install_plan(
+    wait_for_install_plan(
         dyn_client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
@@ -639,7 +639,7 @@ def perform_cnv_upgrade(
         cnv_subscription=cnv_subscription,
     )
     LOGGER.info("Approving CNV InstallPlan")
-    approve_install_plan(install_plan=install_plan)
+    approve_install_plan(hco_target_csv_name=hco_target_csv_name, hco_namespace=hco_namespace.name)
     LOGGER.info("Waiting for target CSV")
     target_csv = wait_for_hco_csv_creation(
         admin_client=admin_client, hco_namespace=hco_namespace.name, hco_target_csv_name=hco_target_csv_name
