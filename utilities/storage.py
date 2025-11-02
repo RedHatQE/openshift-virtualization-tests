@@ -122,9 +122,13 @@ def create_dv(
     bind_immediate=None,
     preallocation=None,
     api_name="storage",
+    source_ref=None,
 ):
     artifactory_secret = None
     cert_created = None
+
+    if source_ref:
+        source = None
     if source in ("http", "https"):
         if not utilities.infra.url_excluded_from_validation(url):
             # Make sure URL exists
@@ -157,6 +161,7 @@ def create_dv(
         teardown=teardown,
         preallocation=preallocation,
         api_name=api_name,
+        source_ref=source_ref,
     ) as dv:
         if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
             create_dummy_first_consumer_pod(dv=dv)
