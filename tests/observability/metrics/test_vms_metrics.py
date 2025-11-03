@@ -33,6 +33,8 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_4MIN,
+    TIMEOUT_15SEC,
     TIMEOUT_30SEC,
     USED,
 )
@@ -506,6 +508,34 @@ class TestVmiPhaseTransitionFromDeletion:
     ):
         validate_metric_value_greater_than_initial_value(
             prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            metric_name="kubevirt_virt_operator_ready_status",
             initial_value=initial_metric_value,
         )
+
+
+class TestVirtOperatorReadyStatus:
+    @pytest.mark.parametrize(
+        "initial_metric_value",
+        [
+            pytest.param(
+                "sum(kubevirt_virt_operator_ready_status)",
+                marks=pytest.mark.polarion("CNV-99999"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_virt_operator_ready_status(
+        self, prometheus, initial_metric_value, initial_virt_operator_ready_status_restored, disabled_virt_operator
+    ):
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_4MIN,
+                sleep=TIMEOUT_15SEC,
+                func=prometheus.query,
+                query="kubevirt_virt_operator_ready_status",
+            ):
+                if not sample:
+                    break
+        except TimeoutExpiredError:
+            LOGGER.info(f"Expected no virt operator pods to be ready, but got {sample}")
+            raise
