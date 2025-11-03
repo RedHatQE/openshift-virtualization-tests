@@ -624,6 +624,22 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 @pytest.fixture()
 def virt_api_pod(admin_client, hco_namespace):
+    """
+    Wait for exactly one virt-api pod to be running.
+
+    Polls for virt-api pods and returns when exactly one pod is found
+    (excluding pods with deletionTimestamp).
+
+    Args:
+        admin_client: DynamicClient for cluster operations
+        hco_namespace: HCO namespace object
+
+    Returns:
+        Pod: The single running virt-api pod
+
+    Raises:
+        TimeoutExpiredError: If exactly one pod is not found within timeout period
+    """
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -646,6 +662,16 @@ def virt_api_pod(admin_client, hco_namespace):
 
 @pytest.fixture()
 def virt_api_initial_metric_value(prometheus, virt_api_pod):
+    """
+    Get the initial value of kubevirt_vm_created_by_pod_total metric for a specific virt-api pod.
+
+    Args:
+        prometheus: Prometheus client fixture
+        virt_api_pod: The virt-api pod to query metrics for
+
+    Returns:
+        int: The current value of the metric for the specified pod
+    """
     metric_query = (
         f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
     )
