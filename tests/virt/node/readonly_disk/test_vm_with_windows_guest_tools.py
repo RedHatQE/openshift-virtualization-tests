@@ -8,11 +8,9 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
-from pytest_testconfig import py_config
 
 from tests.os_params import WINDOWS_10
 from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_3MIN, VIRTIO_WIN
-from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
@@ -80,7 +78,7 @@ def vm_with_guest_tools(
     cluster_modern_cpu_model_scope_class,
     namespace,
     unprivileged_client,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     virtio_win_image,
 ):
     """Create Windows with guest-tools cd-rom"""
@@ -90,9 +88,7 @@ def vm_with_guest_tools(
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(name="windows.10"),
-        data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=golden_image_data_source_scope_class
-        ),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         termination_grace_period=TIMEOUT_3MIN,
         os_flavor=OS_FLAVOR_WINDOWS,
         disk_type=None,
@@ -117,26 +113,14 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-win10",
-                "image": WINDOWS_10.get("image_path"),
-                "dv_size": WINDOWS_10.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": WINDOWS_10})],
     indirect=True,
 )
 class TestWindowsGuestTools:
     @pytest.mark.polarion("CNV-6517")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_with_guest_tools")
-    def test_vm_with_windows_guest_tools(
-        self,
-        vm_with_guest_tools,
-    ):
+    def test_vm_with_windows_guest_tools(self, vm_with_guest_tools):
         LOGGER.info("Test VM with Windows guest tools")
         verify_cdrom_in_xml(vm=vm_with_guest_tools)
 
