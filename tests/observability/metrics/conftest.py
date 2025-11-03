@@ -637,14 +637,10 @@ def virt_api_pod(admin_client, hco_namespace):
             if sample and len(sample) == 1:
                 return sample[0]
     except TimeoutExpiredError:
-        LOGGER.error(
-            f"Should only be 1 virt-api pod running: found {
-                [
-                    (pod.name, pod.instance.status.phase, pod.instance.metadata.get('deletionTimestamp'))
-                    for pod in sample
-                ]
-            }"
-        )
+        pods_info = [
+            (pod.name, pod.instance.status.phase, pod.instance.metadata.get("deletionTimestamp")) for pod in sample
+        ]
+        LOGGER.exception(f"Should only be 1 virt-api pod running: found {pods_info}")
         raise
 
 
