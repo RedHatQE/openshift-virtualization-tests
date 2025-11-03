@@ -240,6 +240,38 @@ def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dic
     )
 
 
+def is_swap_enabled(vm: VirtualMachineForTests, swap_name: str = r"\/dev\/zram0") -> bool:
+    out = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("swapon --raw"))
+    LOGGER.info(f"Swap: {out}")
+    if not out:
+        return False
+    return bool(re.findall(f"{swap_name}", "".join(out)))
+
+
+def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
+    """
+    Enable swap on on fedora vms
+
+    Args:
+       vm (VirtualMachineForTests): a VirtualMachineForTests, on which swap is to be enabled
+
+    Raise:
+        Asserts if swap memory is not enabled on a given vm
+    """
+    if not is_swap_enabled(vm=vm):
+        swap_name = "myswap"
+        for command in [
+            f"dd if=/dev/zero of=/{swap_name} bs=1M count=1000",
+            f"chmod 600 /{swap_name}",
+            f"mkswap /{swap_name}",
+            f"swapon /{swap_name}",
+        ]:
+            vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split(command))
+
+        assert is_swap_enabled(vm=vm, swap_name=swap_name), f"Failed to enable swap memory {swap_name} on {vm.name}"
+    vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
+
+
 def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
     query = urllib.parse.quote_plus(
         f'kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain="{vm_name}"}}'

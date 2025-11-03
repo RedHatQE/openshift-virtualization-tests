@@ -531,7 +531,7 @@ class TestVmCreatedByPodTotal:
         scaled_deployment,
         virt_api_pod,
         virt_api_initial_metric_value,
-        vm_in_pod,
+        vm_in_virt_api_ns,
     ):
         metric_query = (
             f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
