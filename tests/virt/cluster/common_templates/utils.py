@@ -67,7 +67,7 @@ def validate_os_info_virtctl_vs_linux_os(vm):
         cnv_info = get_cnv_os_info(vm=vm)
         libvirt_info = get_libvirt_os_info(vm=vm)
         linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
-        if is_jira_70401_bug_open():
+        if is_jira_67104_bug_open():
             virtctl_info.pop("load", None)
             cnv_info.pop("load", None)
         return virtctl_info, cnv_info, libvirt_info, linux_info
@@ -657,5 +657,5 @@ def matrix_os_vm_from_template(
 
 
 @cache
-def is_jira_70401_bug_open():
-    return is_jira_open(jira_id="CNV-70401")
+def is_jira_67104_bug_open():
+    return is_jira_open(jira_id="CNV-67104")
