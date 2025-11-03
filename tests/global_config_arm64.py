@@ -4,7 +4,6 @@ from ocp_resources.datavolume import DataVolume
 
 from utilities.constants import (
     ARM_64,
-    CENTOS_STREAM10_PREFERENCE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     HPP_CAPABILITIES,
     OS_FLAVOR_FEDORA,
