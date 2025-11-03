@@ -53,13 +53,23 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_1(admin_client: DynamicClient) -> Generator[Namespace]:
-    yield from create_ns(admin_client=admin_client, name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)
+def namespace_localnet_1(admin_client: DynamicClient, unprivileged_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name="test-localnet-ns1",
+        labels=LOCALNET_TEST_LABEL,
+    )
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_2(admin_client: DynamicClient) -> Generator[Namespace]:
-    yield from create_ns(admin_client=admin_client, name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)
+def namespace_localnet_2(admin_client: DynamicClient, unprivileged_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name="test-localnet-ns2",
+        labels=LOCALNET_TEST_LABEL,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -93,6 +103,7 @@ def vm_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -100,6 +111,7 @@ def vm_localnet_1(
         physical_network_name=cudn_localnet.name,
         spec_logical_network=LOCALNET_BR_EX_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -109,6 +121,7 @@ def vm_localnet_2(
     namespace_localnet_2: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_2.name,
@@ -116,6 +129,7 @@ def vm_localnet_2(
         physical_network_name=cudn_localnet.name,
         spec_logical_network=LOCALNET_BR_EX_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -206,6 +220,7 @@ def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -213,6 +228,7 @@ def vm_ovs_bridge_localnet_link_down(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
         interface_state=LINK_STATE_DOWN,
     ) as vm:
         yield vm
@@ -223,6 +239,7 @@ def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -230,6 +247,7 @@ def vm_ovs_bridge_localnet_1(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -239,6 +257,7 @@ def vm_ovs_bridge_localnet_2(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -246,6 +265,7 @@ def vm_ovs_bridge_localnet_2(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 

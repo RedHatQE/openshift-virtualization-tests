@@ -211,8 +211,9 @@ def bgp_setup_ready(
 def vm_cudn(
     namespace_cudn: Namespace,
     cudn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
-    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp") as vm:
+    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp", client=admin_client) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm

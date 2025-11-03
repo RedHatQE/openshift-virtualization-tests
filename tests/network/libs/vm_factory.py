@@ -1,12 +1,16 @@
 """This module provides various virtual machine configurations with a focus on network setups."""
 
+from kubernetes.dynamic import DynamicClient
+
 from libs.net.udn import udn_primary_network
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.vm import BaseVirtualMachine
 
 
-def udn_vm(namespace_name: str, name: str, template_labels: dict | None = None) -> BaseVirtualMachine:
+def udn_vm(
+    namespace_name: str, name: str, client: DynamicClient, template_labels: dict | None = None
+) -> BaseVirtualMachine:
     spec = base_vmspec()
     iface, network = udn_primary_network(name="udn-primary")
     spec.template.spec.domain.devices.interfaces = [iface]  # type: ignore
@@ -18,4 +22,4 @@ def udn_vm(namespace_name: str, name: str, template_labels: dict | None = None) 
         label, *_ = template_labels.items()
         spec.template.spec.affinity = new_pod_anti_affinity(label=label)
 
-    return fedora_vm(namespace=namespace_name, name=name, spec=spec)
+    return fedora_vm(namespace=namespace_name, name=name, client=client, spec=spec)

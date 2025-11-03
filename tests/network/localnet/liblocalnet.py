@@ -3,6 +3,7 @@ import logging
 from typing import Generator
 
 from kubernetes.client import ApiException
+from kubernetes.dynamic import DynamicClient
 
 from libs.net.traffic_generator import Client, Server
 from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
@@ -57,6 +58,7 @@ def localnet_vm(
     physical_network_name: str,
     spec_logical_network: str,
     cidr: str,
+    client: DynamicClient,
     interface_state: str | None = None,
 ) -> BaseVirtualMachine:
     """
@@ -73,6 +75,7 @@ def localnet_vm(
         name (str): The name of the VM.
         physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
+        client (DynamicClient): The Kubernetes dynamic client for resource creation.
         spec_logical_network (str): The name of the localnet network to attach.
         interface_state (str): The state of the interface (optional).
             Possible values are "up" or "down". When not specified, it behaves as "up".
@@ -105,7 +108,7 @@ def localnet_vm(
     vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
     vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
 
-    return fedora_vm(namespace=namespace, name=name, spec=spec)
+    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
 
 def localnet_cudn(
