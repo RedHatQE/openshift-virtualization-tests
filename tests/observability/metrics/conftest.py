@@ -627,8 +627,8 @@ def virt_api_pod(admin_client, hco_namespace):
     """
     Wait for exactly one virt-api pod to be running.
 
-    Polls for virt-api pods and returns when exactly one pod is found
-    (excluding pods with deletionTimestamp).
+    Polls for virt-api pods and waits until exactly one pod remains.
+    Pods marked for deletion will be fully deleted before this condition is met.
 
     Args:
         admin_client: DynamicClient for cluster operations
@@ -640,6 +640,7 @@ def virt_api_pod(admin_client, hco_namespace):
     Raises:
         TimeoutExpiredError: If exactly one pod is not found within timeout period
     """
+    sample = []
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -680,6 +681,15 @@ def virt_api_initial_metric_value(prometheus, virt_api_pod):
 
 @pytest.fixture()
 def vm_in_virt_api_ns(virt_api_pod):
+    """
+    Creates a VM in the virt-api namespace
+
+    Args:
+        virt_api_pod: The virt-api pod to fetch the namespace from
+
+    Yields:
+        VM: The created VM
+    """
     vm_name = "virt-api-vm"
 
     with VirtualMachineForTests(
