@@ -5,10 +5,9 @@ GPU PCI Passthrough with RHEL VM
 import logging
 
 import pytest
-from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR, VGPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
@@ -37,12 +36,6 @@ pytestmark = [
 ALLOCATABLE = "allocatable"
 TESTS_CLASS_RHEL_HOSTDEVICES_NAME = "TestPCIPassthroughRHELHostDevicesSpec"
 TESTS_CLASS_RHEL_GPUS_NAME = "TestPCIPassthroughRHELGPUSSpec"
-DATA_VOLUME_DICT = {
-    "dv_name": RHEL_LATEST_OS,
-    "image": RHEL_LATEST["image_path"],
-    "storage_class": py_config["default_storage_class"],
-    "dv_size": RHEL_LATEST["dv_size"],
-}
 
 
 LOGGER = logging.getLogger(__name__)
@@ -81,10 +74,10 @@ def non_permitted_hostdevices_vm(nodes_with_supported_gpus, unprivileged_client,
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma",
+    "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            DATA_VOLUME_DICT,
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "rhel-passthrough-hostdevices-spec-vm",
                 "template_labels": RHEL_LATEST_LABELS,
@@ -138,10 +131,10 @@ class TestPCIPassthroughRHELHostDevicesSpec:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma",
+    "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            DATA_VOLUME_DICT,
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "rhel-passthrough-gpus-spec-vm",
                 "template_labels": RHEL_LATEST_LABELS,
