@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.12.*"
 
 [[package]]
@@ -723,7 +723,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5b/8b/824ae9292bbaa548d
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "4.18.4"
+version = "4.18.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -745,7 +745,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/39/e0c7465f2623addfc4acb46ad1068e2bbca5e78905e3fdeff4b3db6a7c13/openshift_python_wrapper-4.18.4.tar.gz", hash = "sha256:65b6322623948c2d1d18c7a3e274f2afec80324934b8c5db70f407b76b4b6a58", size = 6654819, upload-time = "2025-03-20T10:16:56.88Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/9d/bf412ad6752279d0b3787734d09230d071b60907ef8da6a70fb46c863df1/openshift_python_wrapper-4.18.7.tar.gz", hash = "sha256:3eb5b29ed4f7a84ace8d95ccb6a8b50ab828daf49633081bcd4d50f11ef66b87", size = 6661140, upload-time = "2025-11-19T18:28:13.838Z" }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
