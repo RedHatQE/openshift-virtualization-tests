@@ -2,10 +2,12 @@ import logging
 import os
 
 import pexpect
+from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
     TIMEOUT_5MIN,
+    TIMEOUT_30SEC,
     VIRTCTL,
 )
 from utilities.data_collector import get_data_collector_base_directory
@@ -14,19 +16,28 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Console(object):
-    def __init__(self, vm, username=None, password=None, timeout=30, prompt=None):
+    def __init__(
+        self,
+        vm: VirtualMachine,
+        username: str | None = None,
+        password: str | None = None,
+        timeout: int = TIMEOUT_30SEC,
+        prompt: str | list[str] | None = None,
+    ) -> None:
         """
         Connect to VM console
 
         Args:
-            vm (VirtualMachine): VM resource
-            username (str): VM username
-            password (str): VM password
+            vm: VM resource
+            username: VM username
+            password: VM password
+            timeout: Connection timeout in seconds
+            prompt: Shell prompt pattern(s) to expect
 
         Examples:
             from utilities import console
             with console.Console(vm=vm) as vmc:
-                vmc.sendline('some command)
+                vmc.sendline('some command')
                 vmc.expect('some output')
         """
         self.vm = vm
