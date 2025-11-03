@@ -3,8 +3,8 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from pytest_testconfig import config as py_config
 
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
@@ -19,7 +19,6 @@ from utilities.constants import (
     SIX_GI_MEMORY,
     TEN_CPU_SOCKETS,
     TWELVE_GI_MEMORY,
-    Images,
 )
 from utilities.virt import (
     migrate_vm_and_verify,
@@ -31,8 +30,6 @@ pytestmark = pytest.mark.rwx_default_storage
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCPUHotPlug"
-
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
 @pytest.fixture()
@@ -53,32 +50,16 @@ def hotplug_vm_snapshot(hotplugged_vm):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, hotplugged_vm",
+    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
     [
         pytest.param(
-            {
-                "dv_name": "dv-rhel-latest-vm",
-                "image": py_config["latest_rhel_os_dict"]["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Rhel.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": py_config["latest_rhel_os_dict"]["template_labels"],
-                "vm_name": "rhel-latest-cpu-hotplug-vm",
-            },
+            {"os_dict": RHEL_LATEST},
+            {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-cpu-hotplug-vm"},
             id="RHEL-VM",
         ),
         pytest.param(
-            {
-                "dv_name": "dv-windows-latest-vm",
-                "image": LATEST_WINDOWS_OS_DICT.get("image_path"),
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
-                "vm_name": "windows-latest-cpu-hotplug-vm",
-            },
+            {"os_dict": WINDOWS_LATEST},
+            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-cpu-hotplug-vm"},
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
@@ -125,32 +106,16 @@ class TestCPUHotPlug:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, hotplugged_vm",
+    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
     [
         pytest.param(
-            {
-                "dv_name": "dv-rhel-latest-vm",
-                "image": py_config["latest_rhel_os_dict"]["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Rhel.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": py_config["latest_rhel_os_dict"]["template_labels"],
-                "vm_name": "rhel-latest-memory-hotplug-vm",
-            },
+            {"os_dict": RHEL_LATEST},
+            {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-memory-hotplug-vm"},
             id="RHEL-VM",
         ),
         pytest.param(
-            {
-                "dv_name": "dv-windows-latest-vm",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": py_config.get("latest_windows_os_dict", {}).get("template_labels"),
-                "vm_name": "windows-latest-cpu-hotplug-vm",
-            },
+            {"os_dict": WINDOWS_LATEST},
+            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-memory-hotplug-vm"},
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),

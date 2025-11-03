@@ -2,7 +2,6 @@ import logging
 
 import pytest
 from ocp_resources.template import Template
-from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.node.migration_and_maintenance.utils import (
@@ -104,14 +103,14 @@ def dedicated_migration_network_hco_config(
 def migration_vm_1(
     namespace,
     unprivileged_client,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     with VirtualMachineForTestsFromTemplate(
         name="migration-vm-1",
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -137,7 +136,7 @@ def tainted_all_nodes_but_one(schedulable_nodes, migration_vm_1):
 def migration_vm_2(
     namespace,
     unprivileged_client,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     tainted_all_nodes_but_one,
 ):
     with VirtualMachineForTestsFromTemplate(
@@ -145,7 +144,7 @@ def migration_vm_2(
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         running_vm(vm=vm)
         for editor in tainted_all_nodes_but_one:
@@ -177,17 +176,8 @@ def vms_deployed_on_same_node(migration_vm_1, migration_vm_2):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-migration-vm-rhel",
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": RHEL_LATEST})],
     indirect=True,
 )
 class TestDedicatedLiveMigrationNetwork:
