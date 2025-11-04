@@ -2157,8 +2157,8 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
         timeout (int): timeout in seconds
 
     Example:
-        path - ['minCPUModel'], value - 'Haswell-noTSX'
-        {"configuration": {"minCPUModel": "Haswell-noTSX"}} will be matched against KV CR spec.
+        path - ['cpuModel'], value - 'Haswell-noTSX'
+        {"configuration": {"cpuModel": "Haswell-noTSX"}} will be matched against KV CR spec.
 
     Raises:
         TimeoutExpiredError: After timeout is reached if the expected key value does not match the actual value
