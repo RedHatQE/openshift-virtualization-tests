@@ -7,8 +7,7 @@ import logging
 import pytest
 from ocp_resources.template import Template
 
-from tests.os_params import RHEL_LATEST_LABELS, WINDOWS_LATEST_LABELS
-from tests.virt.constants import CIRROS_OS
+from tests.os_params import FEDORA_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST_LABELS
 from utilities.virt import VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
@@ -17,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
-    [pytest.param({"os_dict": CIRROS_OS})],
+    [pytest.param({"os_dict": FEDORA_LATEST})],
     indirect=True,
 )
 class TestDisklessVM:
@@ -26,7 +25,7 @@ class TestDisklessVM:
         [
             pytest.param(
                 {"vm_name": "rhel-diskless-vm", "template_labels": RHEL_LATEST_LABELS},
-                marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating(), pytest.mark.s390x),
+                marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating, pytest.mark.s390x),
             ),
             pytest.param(
                 {"vm_name": "windows-diskless-vm", "template_labels": WINDOWS_LATEST_LABELS},
