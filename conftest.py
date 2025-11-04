@@ -94,7 +94,7 @@ TEAM_MARKERS = {
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
-    "network": ["openshift-nmstate"],
+    "network": [NamespacesNames.OPENSHIFT_NMSTATE],
     "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [
@@ -366,6 +366,12 @@ def pytest_cmdline_main(config):
     py_config["upgraded_product"] = upgrade_option or config.getoption("--upgrade_custom") or "cnv"
     py_config["cnv_source"] = config.getoption("--cnv-source")
     py_config["cnv_subscription_channel"] = config.getoption("--cnv-channel")
+
+    # Store conformance_tests value for access from utilities
+    marker_args = config.getoption("-m")
+    py_config["conformance_tests"] = (
+        marker_args and "conformance" in marker_args and "not conformance" not in marker_args
+    )
 
     # [rhel|fedora|windows|centos]-os-matrix and latest-[rhel|fedora|windows|centos] are mutually exclusive
     rhel_os_violation = config.getoption("rhel_os_matrix") and config.getoption("latest_rhel")
@@ -842,7 +848,7 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
         LOGGER.warning(f"{test_name} does not require special data collection on failure")
     else:
         component = components[0]
-        namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component]
+        namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component].copy()
         if component == "virt":
             all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
@@ -866,7 +872,6 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
         test_name = f"{node.fspath}::{node.name}"
         LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
-        inspect_str = get_inspect_command_namespace_string(test_name=test_name, node=node)
         if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
@@ -885,7 +890,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     since_time=calculate_must_gather_timer(test_start_time=test_start_time),
                     target_dir=collection_dir,
                 )
-                if inspect_str:
+                if inspect_str := get_inspect_command_namespace_string(test_name=test_name, node=node):
                     target_dir = os.path.join(collection_dir, "inspect_collection")
                     inspect_command = (
                         f"{INSPECT_BASE_COMMAND} {inspect_str} "

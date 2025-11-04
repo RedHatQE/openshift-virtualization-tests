@@ -238,7 +238,11 @@ def test_successful_snapshot_clone(
         cdv.wait_for_dv_success()
         if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
             with create_vm_from_dv(
-                dv=cdv, vm_name="fedora-vm", os_flavor=OS_FLAVOR_FEDORA, memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE
+                dv=cdv,
+                vm_name="fedora-vm",
+                os_flavor=OS_FLAVOR_FEDORA,
+                memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+                wait_for_interfaces=True,
             ) as vm_dv:
                 check_disk_count_in_vm(vm=vm_dv)
         pvc = cdv.pvc

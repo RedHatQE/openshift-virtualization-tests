@@ -111,6 +111,7 @@ def test_public_registry_data_volume(
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            wait_for_interfaces=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
@@ -149,6 +150,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         namespace=namespace.name,
         url=dv_param["url"],
         storage_class=dv_param["storage_class"],
+        size="6Gi",
     ) as dv:
         dv.wait_for_dv_success()
         with create_vm_from_dv(
@@ -156,6 +158,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            wait_for_interfaces=True,
         ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 

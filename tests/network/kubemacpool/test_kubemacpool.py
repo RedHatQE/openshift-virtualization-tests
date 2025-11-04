@@ -9,13 +9,14 @@ from . import utils as kmp_utils
 
 @pytest.mark.s390x
 class TestKMPConnectivity:
-    #: KMPTestConnectivity setup
-    # .........                                                                    ..........
-    # |       |---eth0:           : POD network                :auto:       eth0---|        |
-    # |       |---eth1:10.200.1.1: Manual MAC          from pool:10.200.1.2:eth1---|        |
-    # | VM-A  |---eth2:10.200.2.1: Automatic MAC       from pool:10.200.2.2:eth2---|  VM-B  |
-    # |       |---eth3:10.200.3.1: Manual MAC not      from pool:10.200.3.2:eth3---|        |
-    # |.......|---eth4:10.200.4.1: Automatic mac tuning network :10.200.4.2:eth4---|........|
+    # KMPTestConnectivity setup example
+    # Third octet is random
+    # .........                                                                       ..........
+    # |       |---eth0:           : POD network                   :auto       :eth0---|        |
+    # |       |---eth1:172.16.37.1: Manual MAC from pool          :172.16.37.2:eth1---|        |
+    # | VM-A  |---eth2:172.16.24.1: Automatic MAC from pool       :172.16.24.2:eth2---|  VM-B  |
+    # |       |---eth3:172.16.51.1: Manual MAC not from pool      :172.16.51.2:eth3---|        |
+    # |.......|---eth4:172.16.65.1: Automatic mac tuning network  :172.16.65.2:eth4---|........|
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-2154")
     def test_manual_mac_from_pool(self, namespace, running_vm_a, running_vm_b):

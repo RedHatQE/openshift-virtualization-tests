@@ -206,7 +206,7 @@ def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_obj
 
 @pytest.fixture()
 def related_object_from_hco_status(
-    is_jira_70251_open,
+    is_jira_71823_open,
     hco_status_related_objects,
     cnv_related_object_matrix__function__,
 ):
@@ -214,8 +214,8 @@ def related_object_from_hco_status(
     kind_name = list(cnv_related_object_matrix__function__.values())[0]
     related_object_name = list(cnv_related_object_matrix__function__.keys())[0]
 
-    if related_object_name == HCO_BEARER_AUTH and is_jira_70251_open:
-        pytest.xfail(f"Skipping related object {related_object_name}, kind {kind_name} because of CNV-70251")
+    if related_object_name == HCO_BEARER_AUTH and is_jira_71823_open:
+        pytest.xfail(f"Skipping related object {related_object_name}, kind {kind_name} because of CNV-71823")
     LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
     for obj in hco_status_related_objects:
         if obj.name == related_object_name and obj.kind == kind_name:
@@ -246,5 +246,5 @@ def updated_resource(
 
 
 @pytest.fixture(scope="session")
-def is_jira_70251_open():
-    return is_jira_open(jira_id="CNV-70251")
+def is_jira_71823_open():
+    return is_jira_open(jira_id="CNV-71823")
