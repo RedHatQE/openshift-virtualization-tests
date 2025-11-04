@@ -56,6 +56,7 @@ def auto_update_boot_source_instance_type_vm(
 
 
 @pytest.mark.polarion("CNV-11774")
+@pytest.mark.s390x
 def test_instance_type_vm_from_auto_update_boot_source(
     auto_update_boot_source_instance_type_vm,
     boot_source_preference_from_data_source_dict,
