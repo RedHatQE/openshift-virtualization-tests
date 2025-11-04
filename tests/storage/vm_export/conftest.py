@@ -192,7 +192,7 @@ def vmexport_download_path(tmp_path):
 def rhel_vm_for_snapshot_with_content(
     unprivileged_client,
     namespace,
-    rhel10_data_source_scope_module,
+    rhel10_data_source_scope_session,
     snapshot_storage_class_name_scope_module,
 ):
     with VirtualMachineForTests(
@@ -203,7 +203,7 @@ def rhel_vm_for_snapshot_with_content(
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel10_data_source_scope_module,
+            data_source=rhel10_data_source_scope_session,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
