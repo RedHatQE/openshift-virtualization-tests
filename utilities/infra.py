@@ -1073,12 +1073,19 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
     exceptions_dict={RuntimeError: []},
 )
 def get_node_audit_log_entries(log, node, log_entry):
+    # Patterns to match errors that should trigger a retry
+    error_patterns_list = [
+        r"^\s*error:",
+        r"Unhandled Error.*couldn't get current server API group list.*i/o timeout",
+    ]
+    error_patterns = re.compile("|".join(f"({pattern})" for pattern in error_patterns_list))
+
     lines = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
     ).splitlines()
-    has_errors = any(line.startswith("error:") for line in lines)
+    has_errors = any(error_patterns.search(line) for line in lines)
     if has_errors:
-        if any(line.startswith("404 page not found") for line in lines):
+        if any(line.strip().startswith("404 page not found") for line in lines):
             LOGGER.warning(f"Skipping {log} check as it was rotated:\n{lines}")
             return True, []
         LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
