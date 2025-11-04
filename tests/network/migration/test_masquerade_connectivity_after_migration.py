@@ -85,6 +85,7 @@ def vm_console_connection_ready(running_vm_for_migration):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-6733")
 @pytest.mark.single_nic
+# Not marked as `conformance`; requires NMState
 def test_connectivity_after_migration(
     namespace,
     running_vm_static,

@@ -29,6 +29,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -76,7 +77,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
         live_migrate=True,
         namespaces=[namespace.name],
         refresh=False,
-        teardown=False,
     ) as mig_plan:
         mig_plan.wait_for_condition(
             condition=mig_plan.Condition.READY, status=mig_plan.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -92,7 +92,6 @@ def storage_mig_plan(admin_client, namespace, mig_cluster, target_storage_class)
                 pvc_dict["selection"]["action"] = "skip"
         ResourceEditor(patches={mig_plan: {"spec": {"persistentVolumes": mig_plan_persistent_volumes_dict}}}).update()
         yield mig_plan
-        mig_plan.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -105,7 +104,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
         migrate_state=True,
         quiesce_pods=True,  # CutOver -> Start migration
         stage=False,
-        teardown=False,
     ) as mig_migration:
         mig_migration.wait_for_condition(
             condition=mig_migration.Condition.READY, status=mig_migration.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
@@ -117,7 +115,6 @@ def storage_mig_migration(admin_client, storage_mig_plan):
             sleep_time=TIMEOUT_5SEC,
         )
         yield mig_migration
-        mig_migration.clean_up()
 
 
 @pytest.fixture(scope="class")
@@ -245,9 +242,14 @@ def vms_for_storage_class_migration(request):
 
 
 @pytest.fixture(scope="class")
-def booted_vms_for_storage_class_migration(vms_for_storage_class_migration):
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="class")
+def booted_vms_for_storage_class_migration(vms_for_storage_class_migration, dv_wait_timeout):
     for vm in vms_for_storage_class_migration:
-        running_vm(vm=vm)
+        running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
     yield vms_for_storage_class_migration
 
 

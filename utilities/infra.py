@@ -249,6 +249,11 @@ def authorized_key(private_key_path):
 def get_jira_status(jira):
     env_var = os.environ
     if not (env_var.get("PYTEST_JIRA_TOKEN") and env_var.get("PYTEST_JIRA_URL")):
+        # For conformance tests without JIRA credentials, assume the JIRA is open
+        if py_config.get("conformance_tests"):
+            LOGGER.info(f"Conformance tests without JIRA credentials: assuming {jira} is open")
+            return "open"
+
         raise MissingEnvironmentVariableError("Please set PYTEST_JIRA_TOKEN and PYTEST_JIRA_URL environment variables")
 
     jira_connection = JIRA(
@@ -1018,7 +1023,7 @@ def get_daemonset_yaml_file_with_image_hash(generated_pulled_secret=None, servic
         image=NET_UTIL_CONTAINER_IMAGE,
         pull_secret=generated_pulled_secret,
     )
-    with open(ds_yaml_file, "r") as fd:
+    with open(ds_yaml_file) as fd:
         ds_yaml = yaml.safe_load(fd.read())
 
     template_spec = ds_yaml["spec"]["template"]["spec"]
@@ -1068,11 +1073,21 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
     exceptions_dict={RuntimeError: []},
 )
 def get_node_audit_log_entries(log, node, log_entry):
+    # Patterns to match errors that should trigger a retry
+    error_patterns_list = [
+        r"^\s*error:",
+        r"Unhandled Error.*couldn't get current server API group list.*i/o timeout",
+    ]
+    error_patterns = re.compile("|".join(f"({pattern})" for pattern in error_patterns_list))
+
     lines = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
     ).splitlines()
-    has_errors = any(line.startswith("error:") for line in lines)
+    has_errors = any(error_patterns.search(line) for line in lines)
     if has_errors:
+        if any(line.strip().startswith("404 page not found") for line in lines):
+            LOGGER.warning(f"Skipping {log} check as it was rotated:\n{lines}")
+            return True, []
         LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")
         raise RuntimeError
     return True, lines
@@ -1286,15 +1301,13 @@ def get_resources_by_name_prefix(prefix, namespace, api_resource_name):
     ]
 
 
-def get_infrastructure():
-    infrastructure = Infrastructure(name=CLUSTER)
-    if infrastructure.exists:
-        return infrastructure
-    raise ResourceNotFoundError(f"Infrastructure {CLUSTER} not found")
+@cache
+def get_infrastructure(admin_client: DynamicClient) -> Infrastructure:
+    return Infrastructure(client=admin_client, name=CLUSTER, ensure_exists=True)
 
 
-def get_cluster_platform():
-    return get_infrastructure().instance.status.platform
+def get_cluster_platform(admin_client: DynamicClient) -> str:
+    return get_infrastructure(admin_client=admin_client).instance.status.platform
 
 
 def query_version_explorer(api_end_point: str, query_string: str) -> Any:

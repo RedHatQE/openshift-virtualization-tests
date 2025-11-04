@@ -47,7 +47,6 @@ from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
@@ -137,6 +136,7 @@ from utilities.infra import (
     generate_namespace_name,
     generate_openshift_pull_secret_file,
     get_artifactory_header,
+    get_cluster_platform,
     get_clusterversion,
     get_common_cpu_from_nodes,
     get_daemonset_yaml_file_with_image_hash,
@@ -455,11 +455,21 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
-        yield from create_ns(
-            admin_client=admin_client,
-            labels=POD_SECURITY_NAMESPACE_LABELS,
-            name="cnv-tests-utilities",
-        )
+        name = "cnv-tests-utilities"
+        if Namespace(client=admin_client, name=name).exists:
+            exit_pytest_execution(
+                message=f"{name} namespace already exists."
+                f"\nAfter verifying no one else is performing tests against the cluster, run:"
+                f"\n'oc delete namespace {name}'",
+                return_code=100,
+            )
+
+        else:
+            yield from create_ns(
+                admin_client=admin_client,
+                labels=POD_SECURITY_NAMESPACE_LABELS,
+                name=name,
+            )
 
 
 @pytest.fixture(scope="session")
@@ -1983,7 +1993,7 @@ def golden_images_data_import_crons_scope_function(admin_client, golden_images_n
 
 @pytest.fixture(scope="session")
 def sno_cluster(admin_client):
-    return get_infrastructure().instance.status.infrastructureTopology == "SingleReplica"
+    return get_infrastructure(admin_client=admin_client).instance.status.infrastructureTopology == "SingleReplica"
 
 
 @pytest.fixture(scope="session")
@@ -2396,25 +2406,6 @@ def gpu_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
 
 
-@pytest.fixture()
-def cnv_prometheus_rule_by_name(cnv_prometheus_rules_matrix__function__):
-    prometheus_rule = PrometheusRule(
-        namespace=py_config["hco_namespace"],
-        name=cnv_prometheus_rules_matrix__function__,
-    )
-    assert prometheus_rule.exists
-    return prometheus_rule
-
-
-@pytest.fixture()
-def cnv_alerts_from_prometheus_rule(cnv_prometheus_rule_by_name):
-    alerts = []
-    LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
-    for group in cnv_prometheus_rule_by_name.instance.spec.groups:
-        alerts.extend([rule for rule in group["rules"] if rule.get("alert")])
-    return alerts
-
-
 @pytest.fixture(scope="session")
 def worker_machine1(worker_node1):
     machine = Machine(
@@ -2429,12 +2420,6 @@ def worker_machine1(worker_node1):
 @pytest.fixture(scope="session")
 def is_idms_cluster():
     return not cluster_with_icsp()
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_filesystem_sc(storage_class_with_filesystem_volume_mode):
-    if not storage_class_with_filesystem_volume_mode:
-        pytest.skip("Skip the test: no Storage class with Filesystem volume mode")
 
 
 @pytest.fixture(scope="session")
@@ -2548,19 +2533,6 @@ def cloning_job_scope_function(request, namespace):
         name=f"clone-job-{request.param['source_name']}",
         namespace=namespace.name,
         source_name=request.param["source_name"],
-        label_filters=request.param.get("label_filters"),
-        annotation_filters=request.param.get("annotation_filters"),
-    ) as vmc:
-        yield vmc
-
-
-@pytest.fixture(scope="class")
-def cloning_job_scope_class(request, namespace):
-    source_name = request.param["source_name"]
-    with create_vm_cloning_job(
-        name=f"clone-job-{source_name}",
-        namespace=namespace.name,
-        source_name=source_name,
         label_filters=request.param.get("label_filters"),
         annotation_filters=request.param.get("annotation_filters"),
     ) as vmc:
@@ -2740,8 +2712,8 @@ def kube_system_namespace():
 
 
 @pytest.fixture(scope="session")
-def is_aws_cluster():
-    return get_infrastructure().instance.status.platform == Infrastructure.Type.AWS
+def is_aws_cluster(admin_client):
+    return get_cluster_platform(admin_client=admin_client) == Infrastructure.Type.AWS
 
 
 @pytest.fixture(scope="session")
@@ -2897,10 +2869,11 @@ def machine_config_pools():
 
 
 @pytest.fixture(scope="session")
-def nmstate_namespace(admin_client):
-    nmstate_ns = Namespace(name="openshift-nmstate")
-    assert nmstate_ns.exists, "Namespace openshift-nmstate doesn't exist"
-    return nmstate_ns
+def nmstate_namespace(admin_client, nmstate_required):
+    if nmstate_required:
+        return Namespace(client=admin_client, name="openshift-nmstate", ensure_exists=True)
+
+    return None
 
 
 @pytest.fixture()
@@ -2933,4 +2906,19 @@ def golden_images_fedora_data_source(golden_images_namespace):
         name=OS_FLAVOR_FEDORA,
         client=golden_images_namespace.client,
         ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def nmstate_required(admin_client):
+    return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
+
+
+# TODO: Replace this fixture with py_config.get("conformance_tests")
+@pytest.fixture(scope="session")
+def conformance_tests(request):
+    return (
+        (marker_args := request.config.getoption("-m"))
+        and "conformance" in marker_args
+        and "not conformance" not in marker_args
     )

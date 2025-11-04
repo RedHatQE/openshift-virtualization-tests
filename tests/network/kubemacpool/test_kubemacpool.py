@@ -8,13 +8,14 @@ from . import utils as kmp_utils
 
 
 class TestKMPConnectivity:
-    #: KMPTestConnectivity setup
-    # .........                                                                    ..........
-    # |       |---eth0:           : POD network                :auto:       eth0---|        |
-    # |       |---eth1:10.200.1.1: Manual MAC          from pool:10.200.1.2:eth1---|        |
-    # | VM-A  |---eth2:10.200.2.1: Automatic MAC       from pool:10.200.2.2:eth2---|  VM-B  |
-    # |       |---eth3:10.200.3.1: Manual MAC not      from pool:10.200.3.2:eth3---|        |
-    # |.......|---eth4:10.200.4.1: Automatic mac tuning network :10.200.4.2:eth4---|........|
+    # KMPTestConnectivity setup example
+    # Third octet is random
+    # .........                                                                       ..........
+    # |       |---eth0:           : POD network                   :auto       :eth0---|        |
+    # |       |---eth1:172.16.37.1: Manual MAC from pool          :172.16.37.2:eth1---|        |
+    # | VM-A  |---eth2:172.16.24.1: Automatic MAC from pool       :172.16.24.2:eth2---|  VM-B  |
+    # |       |---eth3:172.16.51.1: Manual MAC not from pool      :172.16.51.2:eth3---|        |
+    # |.......|---eth4:172.16.65.1: Automatic mac tuning network  :172.16.65.2:eth4---|........|
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-2154")
     def test_manual_mac_from_pool(self, namespace, running_vm_a, running_vm_b):
@@ -35,6 +36,7 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2241")
+    # Not marked as `conformance`; requires NMState
     def test_automatic_mac_from_pool_pod_network(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to POD's masquerade network
         from kubemacpool belongs to range and connectivity is OK"""
@@ -49,6 +51,7 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2155")
+    # Not marked as `conformance`; requires NMState
     def test_automatic_mac_from_pool(self, mac_pool, running_vm_a, running_vm_b):
         """Test that automatic mac address assigned to interface
         from kubemacpool belongs to range and connectivity is OK"""
@@ -73,6 +76,7 @@ class TestKMPConnectivity:
 
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-2157")
+    # Not marked as `conformance`; requires NMState
     def test_mac_preserved_after_shutdown(self, restarted_vmi_a, restarted_vmi_b, running_vm_a, running_vm_b):
         """Test that all macs are preserved even after VM restart"""
         kmp_utils.assert_macs_preseved(vm=running_vm_a)
