@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
@@ -32,6 +33,7 @@ from utilities.constants import (
     WILDCARD_CRON_EXPRESSION,
     StorageClassNames,
 )
+from utilities.exceptions import StorageCheckupConditionTimeoutExpiredError
 from utilities.infra import create_ns, get_pods
 from utilities.storage import update_default_sc
 
@@ -113,13 +115,13 @@ def checkup_configmap(checkups_namespace):
 
 @pytest.fixture(scope="function")
 def checkup_job(
+    unprivileged_client,
     request,
     checkups_namespace,
     checkup_image_url,
     checkup_cluster_reader,
     checkup_service_account,
     checkup_configmap,
-    admin_client,
 ):
     containers = [
         {
@@ -142,7 +144,7 @@ def checkup_job(
         restart_policy="Never",
         backoff_limit=0,
         containers=containers,
-        client=admin_client,
+        client=unprivileged_client,
     ) as job:
         try:
             job.wait_for_condition(
@@ -151,16 +153,22 @@ def checkup_job(
                 timeout=TIMEOUT_10MIN,
             )
         except TimeoutExpiredError:
-            for job_pod in get_pods(
-                dyn_client=admin_client,
+            job_pods = get_pods(
+                dyn_client=unprivileged_client,
                 namespace=checkups_namespace,
                 label=f"job-name={job.name}",
-            ):
-                pod_log = job_pod.log()
+            )
+            if not job_pods:
+                raise ResourceNotFoundError(f"{job.name} job failed. No pod found for the job {job.name}.")
+
+            job_pod = job_pods[0]
+            pod_log = job_pod.log()
 
             msg = f"{job.name} job failed."
             LOGGER.error(f"{msg} Log of {job_pod.name} pod:\n{pod_log}")
-            raise TimeoutExpiredError(f"{msg} The last line from the checkups pod log:\n{job_pod.log(tail_lines=1)}")
+            raise StorageCheckupConditionTimeoutExpiredError(
+                f"{msg} The last line from the checkups pod log:\n{job_pod.log(tail_lines=1)}"
+            )
 
         yield job
 
