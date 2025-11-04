@@ -48,7 +48,7 @@ def run_must_gather(
         base_command += f" --node-name={node_name}"
     if since:
         base_command += f" --since={since}"
-    if timeout:  # Only applies to gathering and not copying stage - https://issues.redhat.com/browse/OCPBUGS-64591
+    if timeout:  # Only applies to gathering and not copying stage - https://issues.redhat.com/browse/OCPBUGS-59774
         base_command += f" --timeout={timeout}"
     if script_name:
         base_command += f" -- {script_name}"
