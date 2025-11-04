@@ -912,6 +912,16 @@ def rhel9_data_source_scope_session(golden_images_namespace):
     )
 
 
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
 """
 VM creation from template
 """
@@ -1138,11 +1148,6 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="class")
 def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
-
-
-@pytest.fixture(scope="module")
-def skip_access_mode_rwo_scope_module(storage_class_matrix__module__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__module__)
 
 
 @pytest.fixture(scope="session")
