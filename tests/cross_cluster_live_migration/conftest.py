@@ -1,12 +1,10 @@
 import logging
-import os
 from copy import deepcopy
 
 import pytest
 import requests
 import shortuuid
 from kubernetes.dynamic.exceptions import NotFoundError
-from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.kubevirt import KubeVirt
@@ -16,18 +14,15 @@ from ocp_resources.network_attachment_definition import NetworkAttachmentDefinit
 from ocp_resources.network_map import NetworkMap
 from ocp_resources.plan import Plan
 from ocp_resources.provider import Provider
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
-from ocp_resources.service_account import ServiceAccount
 from ocp_resources.storage_map import StorageMap
 from pytest_testconfig import config as py_config
 
-from tests.cross_cluster_live_migration.utils import wait_for_service_account_token
 from utilities.constants import (
     DATA_SOURCE_STR,
     OS_FLAVOR_RHEL,
-    REMOTE_KUBECONFIG,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
     VIRT_HANDLER,
@@ -44,33 +39,38 @@ LIVE_MIGRATION_NETWORK_NAME = "lm-network"
 
 
 @pytest.fixture(scope="session")
-def remote_kubeconfig_export_path(request):
+def remote_cluster_credentials(request):
     """
-    Resolve path to the remote cluster kubeconfig.
-    First check for CLI argument, then fall back to environment variable.
-    Fail if neither is provided or file does not exist.
+    Get remote cluster credentials from CLI arguments.
     """
-    path = request.session.config.getoption("--remote-kubeconfig") or os.environ.get(REMOTE_KUBECONFIG)
+    host = request.session.config.getoption("--remote_cluster_host")
+    username = request.session.config.getoption("--remote_cluster_username")
+    password = request.session.config.getoption("--remote_cluster_password")
 
-    if not path:
+    if not all([host, username, password]):
         raise ValueError(
-            f"Remote kubeconfig path not provided. Use --remote-kubeconfig CLI argument "
-            f"or set {REMOTE_KUBECONFIG} environment variable"
+            "Remote cluster credentials not provided. "
+            "Use --remote_cluster_host, --remote_cluster_username, and --remote_cluster_password CLI arguments"
         )
 
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"Remote kubeconfig file not found at '{path}'")
-
-    LOGGER.info(f"Remote kubeconfig path: {path}")
-    return path
+    return {
+        "host": host,
+        "username": username,
+        "password": password,
+    }
 
 
 @pytest.fixture(scope="session")
-def remote_admin_client(remote_kubeconfig_export_path):
+def remote_admin_client(request, remote_cluster_credentials):
     """
-    Get DynamicClient for a remote cluster
+    Get DynamicClient for a remote cluster using username/password authentication.
     """
-    return get_client(config_file=remote_kubeconfig_export_path)
+    return get_client(
+        username=remote_cluster_credentials["username"],
+        password=remote_cluster_credentials["password"],
+        host=remote_cluster_credentials["host"],
+        verify_ssl=False,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -85,63 +85,18 @@ def remote_cluster_api_url(remote_admin_client):
 
 
 @pytest.fixture(scope="session")
-def remote_cluster_resources_namespace(remote_admin_client):
-    yield from create_ns(
-        admin_client=remote_admin_client,
-        name="remote-cluster-resources-namespace",
-    )
-
-
-@pytest.fixture(scope="session")
-def remote_cluster_service_account(remote_admin_client, remote_cluster_resources_namespace):
-    with ServiceAccount(
-        client=remote_admin_client,
-        name="remote-cluster-service-account",
-        namespace=remote_cluster_resources_namespace.name,
-    ) as sa:
-        yield sa
-
-
-@pytest.fixture(scope="session")
-def remote_cluster_cluster_role_binding(remote_admin_client, remote_cluster_service_account):
-    with ClusterRoleBinding(
-        name="remote-cluster-cluster-role-binding",
-        cluster_role="cluster-admin",
-        client=remote_admin_client,
-        subjects=[
-            {
-                "kind": ServiceAccount.kind,
-                "name": remote_cluster_service_account.name,
-                "namespace": remote_cluster_service_account.namespace,
-            }
-        ],
-    ) as crb:
-        yield crb
-
-
-@pytest.fixture(scope="session")
-def remote_cluster_service_account_token_secret(
-    remote_admin_client, remote_cluster_service_account, remote_cluster_cluster_role_binding
-):
+def remote_cluster_auth_token(remote_admin_client):
     """
-    Create a secret to hold the service account token.
-    The secret depends on the cluster role binding to ensure proper permissions.
+    Extract the authentication token from the remote admin client.
+    The kubernetes client stores the bearer token in configuration.api_key['authorization'].
     """
-    with Secret(
-        client=remote_admin_client,
-        name="remote-cluster-sa-token-secret",
-        namespace=remote_cluster_service_account.namespace,
-        annotations={
-            f"{Resource.ApiGroup.KUBERNETES_IO}/service-account.name": remote_cluster_service_account.name,
-        },
-        type=f"{Resource.ApiGroup.KUBERNETES_IO}/service-account-token",
-    ) as secret:
-        yield secret
-
-
-@pytest.fixture(scope="session")
-def remote_cluster_auth_token(remote_admin_client, remote_cluster_service_account_token_secret):
-    return wait_for_service_account_token(secret=remote_cluster_service_account_token_secret)
+    try:
+        auth_header = remote_admin_client.configuration.api_key.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            return auth_header.split(" ", 1)[1]  # Extract token part after "Bearer "
+        raise ValueError("Authorization header does not contain a Bearer token")
+    except (AttributeError, KeyError) as e:
+        raise ValueError(f"Unable to extract authentication token from remote admin client: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -350,7 +305,7 @@ def local_cluster_secret_for_remote_cluster(
         namespace=namespace.name,
         data_dict={
             "insecureSkipVerify": base64_encode_str("false"),
-            "token": remote_cluster_auth_token,
+            "token": base64_encode_str(remote_cluster_auth_token),
             "url": base64_encode_str(remote_cluster_api_url),
             "cacert": base64_encode_str(local_cluster_ca_cert_for_remote_cluster),
         },

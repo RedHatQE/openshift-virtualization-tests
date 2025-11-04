@@ -308,8 +308,16 @@ def pytest_addoption(parser):
         help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
     )
     session_group.addoption(
-        "--remote-kubeconfig",
-        help="Path to the remote cluster kubeconfig file for cross-cluster tests",
+        "--remote_cluster_host",
+        help="Host address of the remote cluster for cross-cluster tests",
+    )
+    session_group.addoption(
+        "--remote_cluster_username",
+        help="Username for the remote cluster for cross-cluster tests",
+    )
+    session_group.addoption(
+        "--remote_cluster_password",
+        help="Password for the remote cluster for cross-cluster tests",
     )
 
     # CI group
