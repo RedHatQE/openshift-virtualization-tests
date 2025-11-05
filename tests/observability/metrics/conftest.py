@@ -619,13 +619,3 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
         for key, value in resource_used.items()
     }
     return formatted_hard_limit, formatted_used_value
-
-
-@pytest.fixture()
-def initial_virt_operator_ready_status_restored(prometheus, initial_metric_value):
-    yield
-    validate_metrics_value(
-        prometheus=prometheus,
-        expected_value=str(initial_metric_value),
-        metric_name="sum(kubevirt_virt_operator_ready_status)",
-    )
