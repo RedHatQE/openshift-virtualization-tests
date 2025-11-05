@@ -1,4 +1,3 @@
-import bitmath
 import pytest
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -7,16 +6,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
 from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
-
-
-@pytest.fixture(scope="session")
-def xfail_if_no_huge_pages(workers):
-    for worker in workers:
-        value = worker.instance.status.allocatable.get("hugepages-1Gi")
-        # all cx1 series require 1Gi hugepages
-        if bitmath.parse_string(f"{value}B") >= bitmath.GiB(1):
-            return
-    pytest.xfail("Only run on a Cluster with node that has enough huge pages")
 
 
 @pytest.mark.sno
