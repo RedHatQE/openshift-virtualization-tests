@@ -37,7 +37,6 @@ from tests.storage.utils import (
 from utilities import console
 from utilities.constants import (
     OS_FLAVOR_RHEL,
-    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
@@ -210,10 +209,6 @@ def test_successful_import_archive(
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: regression, timeout failure; CNV-70094",
-    run=False,
-)
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
@@ -277,10 +272,6 @@ def test_successful_import_secure_archive(
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: regression, timeout failure; CNV-70094",
-    run=False,
-)
 @pytest.mark.parametrize(
     "dv_from_http_import",
     [

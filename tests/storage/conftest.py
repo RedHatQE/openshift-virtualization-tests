@@ -44,6 +44,7 @@ from utilities.constants import (
     CNV_TESTS_CONTAINER,
     OS_FLAVOR_CIRROS,
     SECURITY_CONTEXT,
+    TIMEOUT_20MIN,
     Images,
 )
 from utilities.hco import (
@@ -143,16 +144,18 @@ def internal_http_secret(namespace):
 def internal_http_deployment(cnv_tests_utilities_namespace):
     """
     Deploy internal HTTP server Deployment into the cnv_tests_utilities_namespace namespace.
-    This Deployment deploys a pod that runs an HTTP server
+    This Deployment deploys a pod that runs an HTTP server, Wait for deployment replicas to be ready.
     """
+    internal_hpp_str = "internal-http"
+    LOGGER.info(f"Creating {internal_hpp_str} deployment in {cnv_tests_utilities_namespace.name}")
     with Deployment(
-        name="internal-http",
+        name=internal_hpp_str,
         namespace=cnv_tests_utilities_namespace.name,
         selector=INTERNAL_HTTP_SELECTOR,
         template=INTERNAL_HTTP_TEMPLATE,
         replicas=1,
     ) as dep:
-        dep.wait_for_replicas()
+        dep.wait_for_replicas(timeout=TIMEOUT_20MIN)
         yield dep
 
 
