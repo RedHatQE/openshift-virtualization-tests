@@ -7,8 +7,8 @@ from timeout_sampler import TimeoutSampler, retry
 
 from utilities.constants import (
     TIMEOUT_5MIN,
-    TIMEOUT_30SEC,
     TIMEOUT_10SEC,
+    TIMEOUT_30SEC,
     VIRTCTL,
 )
 from utilities.data_collector import get_data_collector_base_directory
