@@ -28,7 +28,7 @@ from utilities.constants import (
     TIMEOUT_30SEC,
     Images,
 )
-from utilities.infra import base64_encode_str, create_ns, get_hyperconverged_resource
+from utilities.infra import create_ns, get_hyperconverged_resource
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -188,8 +188,9 @@ def mtv_forklift_services_route_host(admin_client, mtv_namespace):
         namespace=mtv_namespace.name,
         ensure_exists=True,
     )
-    route_host = forklift_services_route.instance.spec.get("host")
-    assert route_host, "Forklift services route host not found"
+    forklift_services_route_instance = forklift_services_route.instance
+    route_host = forklift_services_route_instance.spec.get("host")
+    assert route_host, f"forklift-services Route spec.host not found: {forklift_services_route_instance}"
     return route_host
 
 
@@ -202,23 +203,16 @@ def local_cluster_ca_cert_for_remote_cluster(mtv_forklift_services_route_host, r
         str: The CA certificate content
     """
     cert_url = f"https://{mtv_forklift_services_route_host}/tls-certificate?URL={remote_cluster_api_url}"
+
     LOGGER.info(f"Fetching remote cluster CA certificate from: {cert_url}")
-    try:
-        response = requests.get(cert_url, verify=False, timeout=TIMEOUT_30SEC)
-        response.raise_for_status()
+    response = requests.get(cert_url, verify=False, timeout=TIMEOUT_30SEC)
+    response.raise_for_status()
 
-        # The response should contain the certificate
-        ca_cert = response.text.strip()
-
-        if not ca_cert:
-            raise NotFoundError(f"Empty certificate received from {cert_url}")
-
+    # The response should contain the certificate
+    if ca_cert := response.text.strip():
         LOGGER.info("Successfully fetched remote cluster CA certificate")
         return ca_cert
-
-    except Exception as e:
-        LOGGER.error(f"Failed to fetch CA certificate from {cert_url}: {e}")
-        raise
+    raise NotFoundError(f"Empty certificate received from {cert_url}")
 
 
 @pytest.fixture(scope="module")
@@ -238,11 +232,11 @@ def local_cluster_secret_for_remote_cluster(
         client=admin_client,
         name="source-cluster-secret",
         namespace=namespace.name,
-        data_dict={
-            "insecureSkipVerify": base64_encode_str("false"),
-            "token": base64_encode_str(remote_cluster_auth_token),
-            "url": base64_encode_str(remote_cluster_api_url),
-            "cacert": base64_encode_str(local_cluster_ca_cert_for_remote_cluster),
+        string_data={
+            "insecureSkipVerify": "false",
+            "token": remote_cluster_auth_token,
+            "url": remote_cluster_api_url,
+            "cacert": local_cluster_ca_cert_for_remote_cluster,
         },
         type="Opaque",
     ) as secret:
@@ -251,7 +245,7 @@ def local_cluster_secret_for_remote_cluster(
 
 @pytest.fixture(scope="module")
 def local_cluster_mtv_provider_for_remote_cluster(
-    admin_client, mtv_namespace, namespace, local_cluster_secret_for_remote_cluster, remote_cluster_api_url
+    admin_client, mtv_namespace, local_cluster_secret_for_remote_cluster, remote_cluster_api_url
 ):
     """
     Create a Provider resource for the remote cluster in the local cluster.
