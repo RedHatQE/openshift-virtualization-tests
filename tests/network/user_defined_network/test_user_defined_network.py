@@ -8,7 +8,7 @@ from libs.net.traffic_generator import Client, Server, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
 from tests.network.libs.vm_factory import udn_vm
-from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
+from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
@@ -133,10 +133,6 @@ class TestPrimaryUdn:
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
     @pytest.mark.gating
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Flaky test, fails on connecting to VM console; tracked in CNV-67470",
-        run=False,
-    )
     def test_connectivity_is_preserved_during_client_live_migration(self, server, client):
         migrate_vm_and_verify(vm=client.vm)
         assert is_tcp_connection(server=server, client=client)
