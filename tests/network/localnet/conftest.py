@@ -6,7 +6,8 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from libs.net.traffic_generator import Client, Server
+from libs.net.traffic_generator import TcpServer
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -143,14 +144,14 @@ def localnet_running_vms(
 
 
 @pytest.fixture()
-def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Server]:
+def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpServer]:
     with create_traffic_server(vm=localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture()
-def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Client]:
+def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpClient]:
     with create_traffic_client(
         server_vm=localnet_running_vms[0],
         client_vm=localnet_running_vms[1],
@@ -295,7 +296,7 @@ def ovs_bridge_localnet_running_vms(
 @pytest.fixture()
 def localnet_ovs_bridge_server(
     ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[Server]:
+) -> Generator[TcpServer]:
     with create_traffic_server(vm=ovs_bridge_localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
@@ -304,7 +305,7 @@ def localnet_ovs_bridge_server(
 @pytest.fixture()
 def localnet_ovs_bridge_client(
     ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[Client]:
+) -> Generator[TcpClient]:
     with create_traffic_client(
         server_vm=ovs_bridge_localnet_running_vms[0],
         client_vm=ovs_bridge_localnet_running_vms[1],
