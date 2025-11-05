@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
@@ -36,8 +34,6 @@ from utilities.constants import (
 from utilities.exceptions import StorageCheckupConditionTimeoutExpiredError
 from utilities.infra import create_ns, get_pods
 from utilities.storage import update_default_sc
-
-LOGGER = logging.getLogger(__name__)
 
 KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
 
