@@ -1,10 +1,13 @@
-import os
-import re
-from pathlib import Path
+import logging
 
 import pytest
+import requests
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
+
+from utilities.constants import TIMEOUT_30SEC
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
@@ -29,14 +32,13 @@ def updated_default_storage_class_scope_function(
 
 
 @pytest.fixture(scope="module")
-def latest_fedora_release_version(downloaded_latest_libosinfo_db):
-    """
-    Extract the version from file name, if no files found raise KeyError
-    file example: /tmp/pytest-6axFnW3vzouCkjWokhvbDi/osinfodb0/osinfo-db-20221121/os/fedoraproject.org/fedora-42.xml
-    """
-    osinfo_file_folder_path = os.path.join(downloaded_latest_libosinfo_db, "os/fedoraproject.org/")
-    list_of_fedora_os_files = list(sorted(Path(osinfo_file_folder_path).glob("*fedora-[0-9][0-9]*.xml")))
-    if not list_of_fedora_os_files:
-        raise FileNotFoundError("No fedora files were found in osinfo db")
-    latest_fedora_os_file = list_of_fedora_os_files[-1]
-    return re.findall(r"\d+", latest_fedora_os_file.name)[0]
+def latest_fedora_release_version():
+    response = requests.get(url="https://fedoraproject.org/releases.json", verify=False, timeout=TIMEOUT_30SEC)
+    response.raise_for_status()
+    response_json = response.json()
+    versions = {int(item["version"]) for item in response_json if item.get("version", "").isdigit()}
+    if not versions:
+        raise ValueError(f"No Fedora versions found in release json: {response_json}")
+    latest_fedora_version = str(max(versions))
+    LOGGER.info(f"Latest Fedora release: {latest_fedora_version}")
+    return latest_fedora_version
