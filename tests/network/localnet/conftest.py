@@ -6,7 +6,8 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from libs.net.traffic_generator import Client, Server
+from libs.net.traffic_generator import TcpServer
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -53,13 +54,23 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_1(admin_client: DynamicClient) -> Generator[Namespace]:
-    yield from create_ns(admin_client=admin_client, name="test-localnet-ns1", labels=LOCALNET_TEST_LABEL)
+def namespace_localnet_1(admin_client: DynamicClient, unprivileged_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name="test-localnet-ns1",
+        labels=LOCALNET_TEST_LABEL,
+    )
 
 
 @pytest.fixture(scope="module")
-def namespace_localnet_2(admin_client: DynamicClient) -> Generator[Namespace]:
-    yield from create_ns(admin_client=admin_client, name="test-localnet-ns2", labels=LOCALNET_TEST_LABEL)
+def namespace_localnet_2(admin_client: DynamicClient, unprivileged_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name="test-localnet-ns2",
+        labels=LOCALNET_TEST_LABEL,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -93,6 +104,7 @@ def vm_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -100,6 +112,7 @@ def vm_localnet_1(
         physical_network_name=cudn_localnet.name,
         spec_logical_network=LOCALNET_BR_EX_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -109,6 +122,7 @@ def vm_localnet_2(
     namespace_localnet_2: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_2.name,
@@ -116,6 +130,7 @@ def vm_localnet_2(
         physical_network_name=cudn_localnet.name,
         spec_logical_network=LOCALNET_BR_EX_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -129,14 +144,14 @@ def localnet_running_vms(
 
 
 @pytest.fixture()
-def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Server]:
+def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpServer]:
     with create_traffic_server(vm=localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture()
-def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[Client]:
+def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpClient]:
     with create_traffic_client(
         server_vm=localnet_running_vms[0],
         client_vm=localnet_running_vms[1],
@@ -206,6 +221,7 @@ def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -213,6 +229,7 @@ def vm_ovs_bridge_localnet_link_down(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
         interface_state=LINK_STATE_DOWN,
     ) as vm:
         yield vm
@@ -223,6 +240,7 @@ def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -230,6 +248,7 @@ def vm_ovs_bridge_localnet_1(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -239,6 +258,7 @@ def vm_ovs_bridge_localnet_2(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
+    unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -246,6 +266,7 @@ def vm_ovs_bridge_localnet_2(
         physical_network_name=cudn_localnet_ovs_bridge.name,
         spec_logical_network=LOCALNET_OVS_BRIDGE_NETWORK,
         cidr=next(ipv4_localnet_address_pool),
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
@@ -275,7 +296,7 @@ def ovs_bridge_localnet_running_vms(
 @pytest.fixture()
 def localnet_ovs_bridge_server(
     ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[Server]:
+) -> Generator[TcpServer]:
     with create_traffic_server(vm=ovs_bridge_localnet_running_vms[0]) as server:
         assert server.is_running()
         yield server
@@ -284,7 +305,7 @@ def localnet_ovs_bridge_server(
 @pytest.fixture()
 def localnet_ovs_bridge_client(
     ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[Client]:
+) -> Generator[TcpClient]:
     with create_traffic_client(
         server_vm=ovs_bridge_localnet_running_vms[0],
         client_vm=ovs_bridge_localnet_running_vms[1],

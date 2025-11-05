@@ -1098,8 +1098,8 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3b/5d/7d0652c649da05ffbe6e610e8d642fd88f1274a3f16cf8fe06df75a4c17f/openshift_python_wrapper_data_collector-2.0.15.tar.gz", hash = "sha256:f58c353daf3a360cfee9349b79f191180bf66d7b87a5f54301f240d63248f6cc", size = 8212, upload-time = "2025-07-20T08:20:54.645Z" }
 
 [[package]]
-name = "openshift-virtualization-tests-4-20"
-version = "4.20"
+name = "openshift-virtualization-tests-4-21"
+version = "4.21"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },

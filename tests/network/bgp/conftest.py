@@ -13,8 +13,8 @@ from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 
 from libs.net import netattachdef as libnad
-from libs.net.traffic_generator import PodClient as TcpClient
-from libs.net.traffic_generator import Server as TcpServer
+from libs.net.traffic_generator import PodTcpClient as TcpClient
+from libs.net.traffic_generator import TcpServer
 from libs.net.udn import create_udn_namespace
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
@@ -211,8 +211,9 @@ def bgp_setup_ready(
 def vm_cudn(
     namespace_cudn: Namespace,
     cudn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
-    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp") as vm:
+    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp", client=admin_client) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
