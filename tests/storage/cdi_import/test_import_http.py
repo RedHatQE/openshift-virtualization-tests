@@ -515,7 +515,7 @@ def test_successful_concurrent_blank_disk_import(
     vm_list_created_by_multiprocess,
 ):
     for vm in vm_list_created_by_multiprocess:
-        running_vm(vm=vm, wait_for_interfaces=False)
+        running_vm(vm=vm)
         check_disk_count_in_vm(vm=vm)
 
 
