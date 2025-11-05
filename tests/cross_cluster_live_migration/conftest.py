@@ -1,4 +1,5 @@
 import logging
+import re
 from copy import deepcopy
 
 import pytest
@@ -7,7 +8,6 @@ import shortuuid
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.migration import Migration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
@@ -20,18 +20,17 @@ from ocp_resources.secret import Secret
 from ocp_resources.storage_map import StorageMap
 from pytest_testconfig import config as py_config
 
+from tests.cross_cluster_live_migration.utils import enable_feature_gate_and_configure_hco_live_migration_network
 from utilities.constants import (
     DATA_SOURCE_STR,
     OS_FLAVOR_RHEL,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
-    VIRT_HANDLER,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import base64_encode_str, create_ns, get_daemonset_by_name, get_hyperconverged_resource
+from utilities.infra import base64_encode_str, create_ns, get_hyperconverged_resource
 from utilities.storage import data_volume_template_with_source_ref_dict
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_virt_handler_pods_network_updated
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,14 +73,11 @@ def remote_admin_client(request, remote_cluster_credentials):
 
 
 @pytest.fixture(scope="session")
-def remote_cluster_api_url(remote_admin_client):
+def remote_cluster_api_url(remote_cluster_credentials):
     """
-    Get the API URL of the remote cluster.
     Returns the cluster API endpoint URL (e.g., https://api.cluster-name.example.com:6443)
     """
-    api_url = remote_admin_client.configuration.host
-    LOGGER.info(f"Remote cluster API URL: {api_url}")
-    return api_url
+    return remote_cluster_credentials["host"]
 
 
 @pytest.fixture(scope="session")
@@ -90,13 +86,9 @@ def remote_cluster_auth_token(remote_admin_client):
     Extract the authentication token from the remote admin client.
     The kubernetes client stores the bearer token in configuration.api_key['authorization'].
     """
-    try:
-        auth_header = remote_admin_client.configuration.api_key.get("authorization", "")
-        if auth_header.startswith("Bearer "):
-            return auth_header.split(" ", 1)[1]  # Extract token part after "Bearer "
-        raise ValueError("Authorization header does not contain a Bearer token")
-    except (AttributeError, KeyError) as e:
-        raise ValueError(f"Unable to extract authentication token from remote admin client: {e}")
+    if token_match := re.match(r"Bearer (.*)", remote_admin_client.configuration.api_key.get("authorization", "")):
+        return token_match.group(1)
+    raise NotFoundError("Unable to extract authentication token from remote admin client")
 
 
 @pytest.fixture(scope="session")
@@ -118,41 +110,12 @@ def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network
 ):
     """
     Configure HCO with both decentralized live migration feature gate and live migration network.
-    This consolidates two separate HCO patches into a single operation.
     """
-    virt_handler_daemonset = get_daemonset_by_name(
-        admin_client=admin_client,
-        daemonset_name=VIRT_HANDLER,
-        namespace_name=hco_namespace.name,
-    )
-
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_package: {
-                "spec": {
-                    "featureGates": {"decentralizedLiveMigration": True},
-                    "liveMigrationConfig": {"network": local_cluster_network_for_live_migration.name},
-                }
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-        admin_client=admin_client,
-    ):
-        wait_for_virt_handler_pods_network_updated(
-            client=admin_client,
-            namespace=hco_namespace,
-            network_name=local_cluster_network_for_live_migration.name,
-            virt_handler_daemonset=virt_handler_daemonset,
-        )
-        yield
-
-    wait_for_virt_handler_pods_network_updated(
+    yield from enable_feature_gate_and_configure_hco_live_migration_network(
+        hyperconverged_resource=hyperconverged_resource_scope_package,
         client=admin_client,
-        namespace=hco_namespace,
-        network_name=local_cluster_network_for_live_migration.name,
-        virt_handler_daemonset=virt_handler_daemonset,
-        migration_network=False,
+        network_for_live_migration=local_cluster_network_for_live_migration,
+        hco_namespace=hco_namespace,
     )
 
 
@@ -186,39 +149,11 @@ def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_networ
     """
     Configure the live migration network for HyperConverged resource on the remote cluster.
     """
-    virt_handler_daemonset = get_daemonset_by_name(
-        admin_client=remote_admin_client,
-        daemonset_name=VIRT_HANDLER,
-        namespace_name=remote_cluster_hco_namespace.name,
-    )
-
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            remote_cluster_hyperconverged_resource_scope_package: {
-                "spec": {
-                    "featureGates": {"decentralizedLiveMigration": True},
-                    "liveMigrationConfig": {"network": remote_cluster_network_for_live_migration.name},
-                }
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-        admin_client=remote_admin_client,
-    ):
-        wait_for_virt_handler_pods_network_updated(
-            client=remote_admin_client,
-            namespace=remote_cluster_hco_namespace,
-            network_name=remote_cluster_network_for_live_migration.name,
-            virt_handler_daemonset=virt_handler_daemonset,
-        )
-        yield
-
-    wait_for_virt_handler_pods_network_updated(
+    yield from enable_feature_gate_and_configure_hco_live_migration_network(
+        hyperconverged_resource=remote_cluster_hyperconverged_resource_scope_package,
         client=remote_admin_client,
-        namespace=remote_cluster_hco_namespace,
-        network_name=remote_cluster_network_for_live_migration.name,
-        virt_handler_daemonset=virt_handler_daemonset,
-        migration_network=False,
+        network_for_live_migration=remote_cluster_network_for_live_migration,
+        hco_namespace=remote_cluster_hco_namespace,
     )
 
 
@@ -253,8 +188,8 @@ def mtv_forklift_services_route_host(admin_client, mtv_namespace):
         namespace=mtv_namespace.name,
         ensure_exists=True,
     )
-    route_host = forklift_services_route.instance.spec.host
-    assert route_host
+    route_host = forklift_services_route.instance.spec.get("host")
+    assert route_host, "Forklift services route host not found"
     return route_host
 
 
