@@ -3,6 +3,7 @@ from collections import OrderedDict
 import pytest
 
 from tests.network.constants import BRCNV
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import vm_for_brcnv_tests
 from utilities.constants import OVS_BRIDGE
 from utilities.infra import get_node_selector_dict
@@ -15,8 +16,8 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 OVS_BR = "test-ovs-br"
-SEC_IFACE_SUBNET = "10.0.200"
-DST_IP_ADDR = SEC_IFACE_SUBNET + ".2"
+SRC_SEC_IFACE_IP_ADDR = random_ipv4_address(net_seed=0, host_address=1)
+DST_SEC_IFACE_IP_ADDR = random_ipv4_address(net_seed=0, host_address=2)
 
 
 @pytest.fixture()
@@ -102,7 +103,7 @@ def vma_with_ovs_based_l2(
     networks[ovs_bridge_nad.name] = ovs_bridge_nad.name
     network_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{SEC_IFACE_SUBNET}.1/24"]},
+            "eth1": {"addresses": [f"{SRC_SEC_IFACE_IP_ADDR}/24"]},
         }
     }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
@@ -140,7 +141,7 @@ def vmb_with_ovs_based_l2(
     networks[ovs_bridge_nad.name] = ovs_bridge_nad.name
     network_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{DST_IP_ADDR}/24"]},
+            "eth1": {"addresses": [f"{DST_SEC_IFACE_IP_ADDR}/24"]},
         }
     }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
@@ -175,7 +176,7 @@ def test_ovs_bridge_sanity(
     running_vma_with_ovs_based_l2,
     running_vmb_with_ovs_based_l2,
 ):
-    assert_ping_successful(src_vm=running_vma_with_ovs_based_l2, dst_ip=DST_IP_ADDR)
+    assert_ping_successful(src_vm=running_vma_with_ovs_based_l2, dst_ip=DST_SEC_IFACE_IP_ADDR)
 
 
 @pytest.mark.ovs_brcnv
