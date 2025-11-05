@@ -520,6 +520,7 @@ class TestVirtOperatorReadyStatus:
         prometheus,
         disabled_virt_operator,
     ):
+        sample = None
         try:
             for sample in TimeoutSampler(
                 wait_timeout=TIMEOUT_2MIN,
