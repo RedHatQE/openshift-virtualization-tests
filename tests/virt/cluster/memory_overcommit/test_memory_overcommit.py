@@ -24,6 +24,7 @@ def vm_for_memory_overcommit(request, namespace):
         yield vm
 
 
+@pytest.mark.gating
 @pytest.mark.usefixtures("hco_memory_overcommit_increased")
 class TestMemoryOvercommit:
     @pytest.mark.parametrize(

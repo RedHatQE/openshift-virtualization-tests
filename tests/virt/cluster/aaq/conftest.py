@@ -291,6 +291,7 @@ def vm_for_aaq_allocation_methods_test(namespace, cpu_for_migration, aaq_allocat
         namespace=namespace.name,
         cpu_limits=1,
         memory_limits="1Gi",
+        memory_requests="1Gi",
         body=fedora_vm_body(name=vm_name),
         cpu_model=cpu_for_migration,
     ) as vm:
