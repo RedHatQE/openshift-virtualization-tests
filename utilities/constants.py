@@ -98,7 +98,7 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
+            FEDORA_CONTAINER_IMAGE="quay.io/nestor_acuna_blanco/my_fedora_image/fedora:41-amd64-PR-2440",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
