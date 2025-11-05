@@ -35,7 +35,7 @@ from tests.observability.metrics.utils import (
     wait_for_metric_vmi_request_cpu_cores_output,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms
+from tests.utils import create_vms, wait_for_pod_running_by_prefix
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
@@ -623,78 +623,29 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture()
-def virt_api_pod(admin_client, hco_namespace):
-    """
-    Wait for exactly one virt-api pod to be running.
-
-    Polls for virt-api pods and waits until exactly one pod remains.
-    Pods marked for deletion will be fully deleted before this condition is met.
-
-    Args:
-        admin_client: DynamicClient for cluster operations
-        hco_namespace: HCO namespace object
-
-    Returns:
-        Pod: The single running virt-api pod
-
-    Raises:
-        TimeoutExpiredError: If exactly one pod is not found within timeout period
-    """
-    sample = []
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_15SEC,
-            func=get_pod_by_name_prefix,
-            dyn_client=admin_client,
-            pod_prefix="virt-api",
-            namespace=hco_namespace.name,
-            get_all=True,
-        ):
-            if sample and len(sample) == 1:
-                return sample[0]
-    except TimeoutExpiredError:
-        pods_info = [
-            (pod.name, pod.instance.status.phase, pod.instance.metadata.get("deletionTimestamp")) for pod in sample
-        ]
-        LOGGER.exception(f"Should only be 1 virt-api pod running: found {pods_info}")
-        raise
+def virt_api_pod_after_scale_to_one(admin_client, hco_namespace):
+    wait_for_pod_running_by_prefix(
+        admin_client=admin_client, namespace_name=hco_namespace.name, pod_prefix="virt-api", expected_number_of_pods=1
+    )
 
 
 @pytest.fixture()
-def virt_api_initial_metric_value(prometheus, virt_api_pod):
-    """
-    Get the initial value of kubevirt_vm_created_by_pod_total metric for a specific virt-api pod.
-
-    Args:
-        prometheus: Prometheus client fixture
-        virt_api_pod: The virt-api pod to query metrics for
-
-    Returns:
-        int: The current value of the metric for the specified pod
-    """
+def virt_api_initial_metric_value(prometheus, virt_api_pod_after_scale_to_one):
     metric_query = (
-        f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
+        f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}"
+        f"{{pod='{virt_api_pod_after_scale_to_one.name}',"
+        f"namespace='{virt_api_pod_after_scale_to_one.namespace}'}}"
     )
     return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
 
 
 @pytest.fixture()
-def vm_in_virt_api_ns(virt_api_pod):
-    """
-    Creates a VM in the virt-api namespace
-
-    Args:
-        virt_api_pod: The virt-api pod to fetch the namespace from
-
-    Yields:
-        VM: The created VM
-    """
+def vm_in_virt_api_ns(virt_api_pod_after_scale_to_one):
     vm_name = "virt-api-vm"
 
     with VirtualMachineForTests(
         name=vm_name,
-        namespace=virt_api_pod.namespace,
+        namespace=virt_api_pod_after_scale_to_one.namespace,
         body=fedora_vm_body(name=vm_name),
         ssh=False,
     ) as vm:

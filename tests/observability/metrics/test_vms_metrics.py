@@ -529,12 +529,14 @@ class TestVmCreatedByPodTotal:
         prometheus,
         disabled_virt_operator,
         scaled_deployment,
-        virt_api_pod,
+        virt_api_pod_after_scale_to_one,
         virt_api_initial_metric_value,
         vm_in_virt_api_ns,
     ):
         metric_query = (
-            f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{virt_api_pod.name}',namespace='{virt_api_pod.namespace}'}}"
+            f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}"
+            f"{{pod='{virt_api_pod_after_scale_to_one.name}',"
+            f"namespace='{virt_api_pod_after_scale_to_one.namespace}'}}"
         )
         validate_metrics_value(
             prometheus=prometheus, metric_name=metric_query, expected_value=str(virt_api_initial_metric_value + 1)
