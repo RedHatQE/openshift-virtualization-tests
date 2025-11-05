@@ -11,7 +11,7 @@ from tests.infrastructure.golden_images.utils import (
     assert_missing_golden_image_pvc,
     assert_os_version_mismatch_in_vm,
 )
-from utilities.constants import RHEL9_STR, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
+from utilities.constants import OS_FLAVOR_FEDORA, RHEL9_STR, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -137,7 +137,7 @@ def test_vm_from_auto_update_boot_source(
     latest_fedora_release_version,
 ):
     LOGGER.info(f"Verify {auto_update_boot_source_vm.name} OS version and virtctl info")
-    if "fedora" in boot_source_os_from_data_source_dict and latest_fedora_release_version:
+    if OS_FLAVOR_FEDORA in boot_source_os_from_data_source_dict and latest_fedora_release_version:
         boot_source_os_from_data_source_dict = f"fedora{latest_fedora_release_version}"
     assert_os_version_mismatch_in_vm(
         vm=auto_update_boot_source_vm,
