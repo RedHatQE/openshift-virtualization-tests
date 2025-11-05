@@ -3,10 +3,11 @@ import os
 
 import pexpect
 from ocp_resources.virtual_machine import VirtualMachine
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutSampler, retry
 
 from utilities.constants import (
     TIMEOUT_5MIN,
+    TIMEOUT_10SEC,
     TIMEOUT_30SEC,
     VIRTCTL,
 )
@@ -51,6 +52,7 @@ class Console(object):
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
+    @retry(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_10SEC)
     def connect(self):
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
@@ -67,7 +69,7 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt, timeout=TIMEOUT_5MIN)
+            self.child.expect(self.login_prompt)
             LOGGER.info(f"{self.vm.name}: Using username {self.username}")
             self.child.sendline(self.username)
             if self.password:
@@ -75,7 +77,8 @@ class Console(object):
                 LOGGER.info(f"{self.vm.name}: Using password {self.password}")
                 self.child.sendline(self.password)
 
-        self.child.expect(self.prompt, timeout=150)
+        LOGGER.info(f"{self.vm.name}: waiting for terminal prompt '{self.prompt}'")
+        self.child.expect(self.prompt)
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
