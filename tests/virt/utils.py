@@ -541,15 +541,16 @@ def get_data_volume_template_dict_with_default_storage_class(
         dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
     """
     data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-    if not params.get("storage_class"):
-        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [
-            py_config["default_storage_class_configuration"]["access_mode"]
-        ]
+    if storage_class_params := params.get("storage_class"):
+        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class_params["name"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [storage_class_params["access_mode"]]
+        data_volume_template["spec"]["storage"]["volumeMode"] = storage_class_params["volume_mode"]
     else:
-        data_volume_template["spec"]["storage"]["storageClassName"] = params["storage_class"]["name"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [params["storage_class"]["access_mode"]]
-        data_volume_template["spec"]["storage"]["volumeMode"] = params["storage_class"]["volume_mode"]
+        default_sc_config = py_config["default_storage_class_configuration"]
+        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [default_sc_config["access_mode"]]
+        data_volume_template["spec"]["storage"]["volumeMode"] = default_sc_config["volume_mode"]
+
     return data_volume_template
 
 
