@@ -16,6 +16,7 @@ from openstack.exceptions import ResourceNotFound
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import basic_expose_command, get_service
 from utilities.constants import (
     CLUSTER,
@@ -57,11 +58,12 @@ def secondary_network_in_nslookup_output(
     # wildcard.apps.{cluster_base_domain} is the API access from outside the cluster
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_40SEC,
-        sleep=TIMEOUT_5SEC,
+        sleep=TIMEOUT_1SEC,
         check=False,
         func=run_command,
         command=shlex.split(
-            f"nslookup -port={kubernetes_secondary_dns_service_port_number} {secondary_network_fqdn} wildcard.apps."
+            f"nslookup -timeout=3 -retry=3 "
+            f"-port={kubernetes_secondary_dns_service_port_number} {secondary_network_fqdn} wildcard.apps."
             f"{cluster_base_domain}"
         ),
     )
@@ -263,7 +265,7 @@ def kubernetes_secondary_dns_vm(
     name = "ksd-vm"
     networks = {kubernetes_secondary_dns_nad.name: kubernetes_secondary_dns_nad.name}
     cloud_init_data = compose_cloud_init_data_dict(
-        network_data={"ethernets": {"eth1": {"addresses": ["10.200.0.1/24"]}}},
+        network_data={"ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}},
     )
     with VirtualMachineForTests(
         namespace=namespace.name,
