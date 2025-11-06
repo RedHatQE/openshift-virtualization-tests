@@ -7,6 +7,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from libs.net.traffic_generator import Client, Server, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.infra import create_ns
@@ -31,7 +32,7 @@ def namespaced_layer2_user_defined_network(udn_namespace):
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
-        subnets=["10.10.0.0/24"],
+        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
         ipam={"lifecycle": "Persistent"},
     ) as udn:
         udn.wait_for_condition(
