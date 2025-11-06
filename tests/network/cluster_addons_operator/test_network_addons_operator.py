@@ -123,7 +123,7 @@ def filter_resources(resources, network_addons_config, is_post_cnv_upgrade_clust
                             continue
 
                     bad_rcs.append(resource_name)
-        except (KeyError, TypeError):
+        except KeyError | TypeError:
             bad_rcs.append(resource_name)
 
     return bad_rcs

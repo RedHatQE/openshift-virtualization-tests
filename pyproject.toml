@@ -31,7 +31,7 @@ strict_concatenate = true
 
 [project]
 name = "openshift-virtualization-tests-4.21"
-requires-python = "==3.12.*"
+requires-python = ">=3.14"
 version = "4.21"
 description = "Tests for Openshift Virtualization"
 authors = [{ "name" = "openshift-virtualization-tests" }]
@@ -49,7 +49,7 @@ dependencies = [
   "jinja2>=3.1.4",
   "jira>=3.8.0",
   "jsons>=1.6.3",
-  "kubernetes~=31.0.0",
+  "kubernetes>=34.1.0",
   "netaddr>=1.3.0",
   "openshift-python-utilities>=6.0.0",
   "openstacksdk>=4.1.0",
@@ -75,10 +75,10 @@ dependencies = [
   "timeout-sampler>=1.0.1",
   "urllib3>=2.2.3",
   "xmltodict>=0.14.2",
-  "marshmallow~=3.26.1",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
   "openshift-python-wrapper>=11.0.93",
+  "marshmallow==3.26.1",
 ]
 
 [project.optional-dependencies]
@@ -86,7 +86,7 @@ dependencies = [
 utilities-test = [
   "pytest>=8.3.3",
   "pytest-cov>=4.1.0",
-  "pytest-mock>=3.12.0",
+  "pytest-mock>=3.14.0",
   "pytest-xdist>=3.5.0",
   "pytest-timeout>=2.2.0",
   "pytest-watch>=4.2.0",
@@ -95,9 +95,11 @@ utilities-test = [
 [tool.hatch.build.targets.wheel]
 packages = ["*"]
 
-
-[tool.uv]
-dev-dependencies = ["ipdb>=0.13.13", "ipython>=8.12.3"]
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+    "ipython>=8.12.3",
+]
 
 [tool.uv.sources]
 

@@ -72,7 +72,7 @@ def secondary_network_in_nslookup_output(
         for sample in sampler:
             if kubernetes_secondary_dns_vm_secondary_interface_ip in sample[1]:
                 return True
-    except (TimeoutExpiredError, subprocess.CalledProcessError):
+    except TimeoutExpiredError | subprocess.CalledProcessError:
         logging.error(
             f"VM IP address {kubernetes_secondary_dns_vm_secondary_interface_ip} "
             f"was not found in nslookup output:\n{sample}"
