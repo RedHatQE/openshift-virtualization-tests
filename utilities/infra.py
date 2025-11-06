@@ -311,7 +311,7 @@ def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list
                 pods_not_running.append({pod.name: pod.status})
             elif container_status_error := get_pod_container_error_status(pod=pod):
                 pods_not_running.append({pod.name: container_status_error})
-        except (ResourceNotFoundError, NotFoundError):
+        except ResourceNotFoundError | NotFoundError:
             LOGGER.warning(f"Ignoring pod {pod.name} that disappeared during cluster sanity check")
             pods_not_running.append({pod.name: "Deleted"})
     return pods_not_running

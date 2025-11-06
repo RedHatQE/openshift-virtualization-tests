@@ -211,7 +211,7 @@ def migrate_and_verify_multi_vms(vm_list):
         vm_sources = vms_dict[vm.name]
         try:
             verify_vm_migrated(vm=vm, node_before=vm_sources["node_before"])
-        except (AssertionError, TimeoutExpiredError):
+        except AssertionError | TimeoutExpiredError:
             failed_migrations_list.append(vm.name)
 
     assert not failed_migrations_list, f"Some VMs failed to migrate - {failed_migrations_list}"
