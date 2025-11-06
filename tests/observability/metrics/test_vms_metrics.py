@@ -528,15 +528,16 @@ class TestVmCreatedByPodTotal:
         for pod in virt_api_pods:
             metric_query = f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{pod.name}',namespace='{pod.namespace}'}}"
             current_values[pod.name] = int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
-            if initial_values[pod.name] == current_values[pod.name]:
+            if current_values[pod.name] == initial_values[pod.name]:
                 continue
-            if not is_increase_found and initial_values[pod.name] == current_values[pod.name] + 1:
+            if not is_increase_found and current_values[pod.name] == initial_values[pod.name] + 1:
                 is_increase_found = True
                 continue
-            raise LOGGER.error(
+            LOGGER.error(
                 f"Metrics value: {current_values[pod.name]},"
                 f"expected: {initial_values[pod.name]} or {initial_values[pod.name] + 1},"
                 f"initial values: {initial_values}"
             )
+            return
 
         LOGGER.info("One metric value increased correctly!")

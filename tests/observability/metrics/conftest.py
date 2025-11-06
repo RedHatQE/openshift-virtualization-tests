@@ -627,7 +627,9 @@ def virt_api_pods(admin_client, hco_namespace):
     wait_for_pod_running_by_prefix(
         admin_client=admin_client, namespace_name=hco_namespace.name, pod_prefix="virt-api", expected_number_of_pods=2
     )
-    pods = get_pod_by_name_prefix(dyn_client=admin_client, pod_prefix="virt-api", namespace=hco_namespace.name)
+    pods = get_pod_by_name_prefix(
+        dyn_client=admin_client, pod_prefix="virt-api", namespace=hco_namespace.name, get_all=True
+    )
     return pods
 
 
