@@ -623,29 +623,30 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture()
-def virt_api_pod_after_scale_to_one(admin_client, hco_namespace):
+def virt_api_pods(admin_client, hco_namespace):
     wait_for_pod_running_by_prefix(
-        admin_client=admin_client, namespace_name=hco_namespace.name, pod_prefix="virt-api", expected_number_of_pods=1
+        admin_client=admin_client, namespace_name=hco_namespace.name, pod_prefix="virt-api", expected_number_of_pods=2
     )
+    pods = get_pod_by_name_prefix(dyn_client=admin_client, pod_prefix="virt-api", namespace=hco_namespace.name)
+    return pods
 
 
 @pytest.fixture()
-def virt_api_initial_metric_value(prometheus, virt_api_pod_after_scale_to_one):
-    metric_query = (
-        f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}"
-        f"{{pod='{virt_api_pod_after_scale_to_one.name}',"
-        f"namespace='{virt_api_pod_after_scale_to_one.namespace}'}}"
-    )
-    return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
+def virt_api_initial_metric_values(prometheus, virt_api_pods):
+    initial_values = {}
+    for pod in virt_api_pods:
+        metric_query = f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{pod.name}',namespace='{pod.namespace}'}}"
+        initial_values[pod.name] = int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
+    return initial_values
 
 
 @pytest.fixture()
-def vm_in_virt_api_ns(virt_api_pod_after_scale_to_one):
-    vm_name = "virt-api-vm"
+def vm_in_hco_namespace(hco_namespace):
+    vm_name = "hco-vm"
 
     with VirtualMachineForTests(
         name=vm_name,
-        namespace=virt_api_pod_after_scale_to_one.namespace,
+        namespace=hco_namespace.name,
         body=fedora_vm_body(name=vm_name),
         ssh=False,
     ) as vm:

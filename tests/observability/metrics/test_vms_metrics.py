@@ -36,7 +36,6 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
     USED,
-    VIRT_API,
 )
 from utilities.infra import get_node_selector_dict
 from utilities.monitoring import get_metrics_value
@@ -514,30 +513,30 @@ class TestVmiPhaseTransitionFromDeletion:
 
 
 class TestVmCreatedByPodTotal:
-    @pytest.mark.parametrize(
-        "scaled_deployment",
-        [
-            pytest.param(
-                {"deployment_name": VIRT_API, "replicas": 1},
-                marks=pytest.mark.polarion("CNV-12361"),
-            )
-        ],
-        indirect=True,
-    )
+    @pytest.mark.polarion("CNV-12361")
     def test_kubevirt_vm_created_by_pod_total(
         self,
         prometheus,
         disabled_virt_operator,
-        scaled_deployment,
-        virt_api_pod_after_scale_to_one,
-        virt_api_initial_metric_value,
-        vm_in_virt_api_ns,
+        virt_api_pods,
+        virt_api_initial_metric_values,
+        vm_in_hco_namespace,
     ):
-        metric_query = (
-            f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}"
-            f"{{pod='{virt_api_pod_after_scale_to_one.name}',"
-            f"namespace='{virt_api_pod_after_scale_to_one.namespace}'}}"
-        )
-        validate_metrics_value(
-            prometheus=prometheus, metric_name=metric_query, expected_value=str(virt_api_initial_metric_value + 1)
-        )
+        initial_values = virt_api_initial_metric_values
+        current_values = {}
+        is_increase_found = False
+        for pod in virt_api_pods:
+            metric_query = f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{pod.name}',namespace='{pod.namespace}'}}"
+            current_values[pod.name] = int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
+            if initial_values[pod.name] == current_values[pod.name]:
+                continue
+            if not is_increase_found and initial_values[pod.name] == current_values[pod.name] + 1:
+                is_increase_found = True
+                continue
+            raise LOGGER.error(
+                f"Metrics value: {current_values[pod.name]},"
+                f"expected: {initial_values[pod.name]} or {initial_values[pod.name] + 1},"
+                f"initial values: {initial_values}"
+            )
+
+        LOGGER.info("One metric value increased correctly!")
