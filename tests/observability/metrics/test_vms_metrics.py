@@ -541,9 +541,7 @@ class TestVmCreatedByPodTotal:
             return
 
         assert is_increase_found, (
-            f"No changes in metric values were found,"
-            f"initial: {initial_values[pod.name]},"
-            f"current: {current_values[pod.name]}"
+            f"No changes in metric values were found,initial: {initial_values},current: {current_values}"
         )
 
         LOGGER.info("One metric value increased correctly!")
