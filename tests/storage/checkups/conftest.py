@@ -142,13 +142,6 @@ def checkup_job(
         containers=containers,
         client=unprivileged_client,
     ) as job:
-        job_pods = get_pods(
-            dyn_client=unprivileged_client,
-            namespace=checkups_namespace,
-            label=f"job-name={job.name}",
-        )
-        if not job_pods:
-            raise ResourceNotFoundError(f"{job.name} job failed. No pod found for the job {job.name}.")
         try:
             job.wait_for_condition(
                 condition=request.param["expected_condition"],
@@ -156,8 +149,15 @@ def checkup_job(
                 timeout=TIMEOUT_10MIN,
             )
         except TimeoutExpiredError:
-            job_pod = job_pods[0]
+            job_pods = get_pods(
+                dyn_client=unprivileged_client,
+                namespace=checkups_namespace,
+                label=f"job-name={job.name}",
+            )
+            if not job_pods:
+                raise ResourceNotFoundError(f"{job.name} job failed. No pod found for the job {job.name}.")
 
+            job_pod = job_pods[0]
             raise StorageCheckupConditionTimeoutExpiredError(
                 f"{job.name} job failed. Log of {job_pod.name} pod:\n{job_pod.log()}"
             )
