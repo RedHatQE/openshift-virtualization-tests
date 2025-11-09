@@ -33,7 +33,7 @@ sig-scale:
 sig-storage:
   - changed-files:
     - any-glob-to-any-file:
-      - 'tests/{data_protection,storage}/**'
+      - 'tests/{data_protection,storage,cross_cluster_live_migration}/**'
       - 'utilities/storage.py'
 
 sig-virt:
