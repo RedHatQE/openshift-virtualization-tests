@@ -3,8 +3,9 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.resource import ResourceEditor
 
 from utilities.constants import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
+from utilities.data_utils import name_prefix
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import create_ns, get_node_selector_dict, name_prefix
+from utilities.infra import create_ns, get_node_selector_dict
 from utilities.network import network_device, network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 

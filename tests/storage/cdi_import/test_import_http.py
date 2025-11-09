@@ -29,6 +29,7 @@ from tests.storage.utils import (
     wait_for_importer_container_message,
 )
 from utilities import console
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_1MIN,
@@ -47,7 +48,6 @@ from utilities.storage import (
     create_dummy_first_consumer_pod,
     create_dv,
     get_containers_for_pods_with_pvc,
-    get_test_artifact_server_url,
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import running_vm

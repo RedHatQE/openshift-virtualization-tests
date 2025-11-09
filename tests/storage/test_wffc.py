@@ -14,6 +14,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.storage.constants import CIRROS_QCOW2_IMG
 from tests.storage.utils import create_vm_from_dv, upload_image_to_dv, upload_token_request
+from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret, get_test_artifact_server_url
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
@@ -24,7 +25,6 @@ from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     hco_cr_jsonpatch_annotations_dict,
 )
-from utilities.infra import get_artifactory_config_map, get_artifactory_secret
 from utilities.storage import (
     add_dv_to_vm,
     cdi_feature_gate_list_with_added_feature,
@@ -34,7 +34,6 @@ from utilities.storage import (
     create_dv,
     data_volume,
     get_downloaded_artifact,
-    get_test_artifact_server_url,
     virtctl_upload_dv,
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity

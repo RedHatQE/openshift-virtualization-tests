@@ -12,6 +12,7 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from utilities.artifactory import get_http_image_url
 from utilities.constants import (
     HOSTPATH_PROVISIONER_CSI,
     HOSTPATH_PROVISIONER_OPERATOR,
@@ -22,7 +23,6 @@ from utilities.constants import (
 )
 from utilities.infra import (
     ExecCommandOnPod,
-    get_http_image_url,
     get_resources_by_name_prefix,
 )
 from utilities.storage import (

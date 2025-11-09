@@ -6,8 +6,8 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST
 from tests.storage.utils import get_importer_pod
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
-from utilities.storage import get_test_artifact_server_url
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 

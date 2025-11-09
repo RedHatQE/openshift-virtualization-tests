@@ -33,6 +33,7 @@ from timeout_sampler import TimeoutSampler
 import tests.storage.utils as storage_utils
 from tests.os_params import RHEL_LATEST
 from tests.storage.constants import HPP_STORAGE_CLASSES
+from utilities.artifactory import get_http_image_url, get_test_artifact_server_url
 from utilities.constants import (
     CDI_UPLOAD,
     CDI_UPLOAD_TMP_PVC,
@@ -47,7 +48,7 @@ from utilities.constants import (
     TIMEOUT_30SEC,
     Images,
 )
-from utilities.infra import get_http_image_url, get_pod_by_name_prefix
+from utilities.infra import get_pod_by_name_prefix
 from utilities.storage import (
     PodWithPVC,
     check_disk_count_in_vm,
@@ -55,7 +56,6 @@ from utilities.storage import (
     create_dv,
     get_containers_for_pods_with_pvc,
     get_downloaded_artifact,
-    get_test_artifact_server_url,
     virtctl_upload_dv,
 )
 from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
