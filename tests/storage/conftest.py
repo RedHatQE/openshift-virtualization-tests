@@ -47,6 +47,7 @@ from utilities.constants import (
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_20MIN,
     Images,
 )
 from utilities.hco import (
@@ -174,7 +175,7 @@ def internal_http_deployment(cnv_tests_utilities_namespace):
         template=INTERNAL_HTTP_TEMPLATE,
         replicas=1,
     ) as dep:
-        dep.wait_for_replicas()
+        dep.wait_for_replicas(timeout=TIMEOUT_20MIN)
         yield dep
 
 
