@@ -22,7 +22,13 @@ write_files:
         WantedBy=cloud-init.service
 runcmd:
   - systemctl daemon-reload
-  - dnf install -y tcpdump qemu-guest-agent iperf3 dmidecode nginx lldpad kernel-modules nmap dhcp-server dhcp-relay sshpass podman ethtool libibverbs dpdk stress-ng iotop fio
+  - |
+    PACKAGES="tcpdump qemu-guest-agent iperf3 nginx lldpad kernel-modules nmap dhcp-server dhcp-relay sshpass podman ethtool libibverbs stress-ng iotop fio"
+    ARCH=$(uname -m)
+    if [ "${ARCH}" != "s390x" ]; then
+      PACKAGES="$PACKAGES dmidecode dpdk"
+    fi
+    dnf install -y ${PACKAGES}
   - dnf autoremove
   - dnf clean all
   - rpm -q kernel-core | sort | head -1 | xargs rpm -e
