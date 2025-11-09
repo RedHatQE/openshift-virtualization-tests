@@ -197,8 +197,9 @@ def created_dns_nodeport_service(
     oc_expose_command = f"oc {expose_command} -n {hco_namespace.name}"
     res, out, err = run_command(
         command=shlex.split(oc_expose_command),
+        check=False,
     )
-    assert res, f"Command {oc_expose_command} failed. \nOutpus: {out}\nError: {err}"
+    assert res, f"Command {oc_expose_command} failed. \nOutput: {out}\nError: {err}"
 
 
 @pytest.fixture(scope="module")
