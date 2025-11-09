@@ -1,5 +1,8 @@
 import multiprocessing
-from multiprocessing import Process
+from multiprocessing.context import ForkContext
+
+# Use fork context to avoid pickling issues like Kubernetes clients containing thread locks
+_FORK_CONTEXT: ForkContext = multiprocessing.get_context("fork")
 
 
 class UtilityPodNotFoundError(Exception):
@@ -27,7 +30,7 @@ class MissingEnvironmentVariableError(Exception):
 
 
 # code from https://stackoverflow.com/questions/19924104/python-multiprocessing-handling-child-errors-in-parent
-class ProcessWithException(Process):
+class ProcessWithException(_FORK_CONTEXT.Process):  # type: ignore[name-defined]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._pconn, self._cconn = multiprocessing.Pipe()
