@@ -37,6 +37,9 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
+              CRITICAL: You MUST respond with a review comment on the Files Changed tab, NOT as a regular PR comment.
+              If it cannot be on the 1st line of the 1st file, add it to any other changed file.
+
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
               You will create a change request comment on the 1st line of the 1st file in the pr with the test execution plan.
               If you fail to run or post a comment, retry.
