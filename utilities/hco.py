@@ -556,5 +556,5 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
     except TimeoutExpiredError:
         LOGGER.error(f"Some AAQ pods still present: {sample}")
         raise
-    except (NotFoundError, ResourceNotFoundError):
+    except NotFoundError | ResourceNotFoundError:
         LOGGER.info("AAQ system PODs removed.")

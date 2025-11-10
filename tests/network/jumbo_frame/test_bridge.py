@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import pytest
 
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import assert_no_ping
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
@@ -93,7 +94,9 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
     name = "vma"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.1/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
+    }
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
     with VirtualMachineForTests(
@@ -116,7 +119,9 @@ def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_br
     name = "vmb"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.2/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
+    }
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
     with VirtualMachineForTests(

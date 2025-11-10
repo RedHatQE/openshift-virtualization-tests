@@ -209,11 +209,11 @@ def updated_resource_labels(ocp_resource_by_name):
 
 
 @pytest.fixture(scope="package")
-def is_jira_59518_open():
-    return is_jira_open(jira_id="CNV-59518")
+def is_jira_71826_open():
+    return is_jira_open(jira_id="CNV-71826")
 
 
 @pytest.fixture()
-def skip_if_hco_bearer_token_bug_open(is_jira_59518_open, ocp_resource_by_name):
-    if is_jira_59518_open and ocp_resource_by_name.name == HCO_BEARER_AUTH:
-        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 59518 bug")
+def skip_if_hco_bearer_token_bug_open(is_jira_71826_open, ocp_resource_by_name):
+    if is_jira_71826_open and ocp_resource_by_name.name == HCO_BEARER_AUTH:
+        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 71826 bug")
