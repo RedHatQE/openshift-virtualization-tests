@@ -4,7 +4,7 @@ from tests.observability.metrics.utils import validate_metric_value_greater_than
 
 
 class TestVMIGuestLoad:
-    #todo: when the pr for updating the fedora will be merged, adjust the test.
+    # todo: when the pr for updating the fedora will be merged, adjust the test.
     @pytest.mark.polarion("CNV-12369")
     def test_kubevirt_vmi_guest_load_centos(
         self,
