@@ -14,6 +14,7 @@ from tests.network.libs.dhcpd import (
     DHCP_SERVICE_RESTART,
     verify_dhcpd_activated,
 )
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (
@@ -28,17 +29,17 @@ from utilities.virt import (
     prepare_cloud_init_user_data,
 )
 
-#: Test setup
+#: Test setup example (third octet is random)
 #       .........                                                                                    ..........
-#       |       |---eth1:10.200.0.1:                                               10.200.0.2:eth1---|        |
-#       | VM-A  |---eth2:10.200.2.1    : multicast(ICMP), custom eth type test:    10.200.2.2:eth2---|  VM-B  |
-#       |       |---eth3:10.200.3.1    : DHCP test :                               10.200.3.2:eth3---|        |
-#       |.......|---eth4:10.200.4.1    : mpls test :                               10.200.4.2:eth4---|........|
+#       |       |---eth1:172.16.0.1                                                172.16.0.2:eth1---|        |
+#       | VM-A  |---eth2:172.16.2.1    : multicast(ICMP), custom eth type test:    172.16.2.2:eth2---|  VM-B  |
+#       |       |---eth3:172.16.3.1    : DHCP test :                               172.16.3.2:eth3---|        |
+#       |.......|---eth4:172.16.4.1    : mpls test :                               172.16.4.2:eth4---|........|
 
 
-VMA_MPLS_LOOPBACK_IP = "10.200.100.1/32"
+VMA_MPLS_LOOPBACK_IP = f"{random_ipv4_address(net_seed=5, host_address=1)}/32"
 VMA_MPLS_ROUTE_TAG = 100
-VMB_MPLS_LOOPBACK_IP = "10.200.200.1/32"
+VMB_MPLS_LOOPBACK_IP = f"{random_ipv4_address(net_seed=6, host_address=1)}/32"
 VMB_MPLS_ROUTE_TAG = 200
 DHCP_INTERFACE_NAME = "eth3"
 
@@ -312,10 +313,10 @@ def l2_bridge_running_vm_a(
     }
 
     interface_ip_addresses = [
-        "10.200.0.1",
-        "10.200.2.1",
-        "10.200.3.1",
-        "10.200.4.1",
+        random_ipv4_address(net_seed=0, host_address=1),
+        random_ipv4_address(net_seed=2, host_address=1),
+        random_ipv4_address(net_seed=3, host_address=1),
+        random_ipv4_address(net_seed=4, host_address=1),
     ]
     with bridge_attached_vm(
         name="vm-fedora-1",
@@ -327,7 +328,7 @@ def l2_bridge_running_vm_a(
         mpls_local_ip=VMA_MPLS_LOOPBACK_IP,
         mpls_dest_ip=VMB_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMB_MPLS_ROUTE_TAG,
-        mpls_route_next_hop="10.200.4.2",
+        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=2),
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as vm:
@@ -339,10 +340,10 @@ def l2_bridge_running_vm_a(
 @pytest.fixture(scope="class")
 def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivileged_client):
     interface_ip_addresses = [
-        "10.200.0.2",
-        "10.200.2.2",
-        "10.200.3.2",
-        "10.200.4.2",
+        random_ipv4_address(net_seed=0, host_address=2),
+        random_ipv4_address(net_seed=2, host_address=2),
+        random_ipv4_address(net_seed=3, host_address=2),
+        random_ipv4_address(net_seed=4, host_address=2),
     ]
     with bridge_attached_vm(
         name="vm-fedora-2",
@@ -353,7 +354,7 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
         mpls_local_ip=VMB_MPLS_LOOPBACK_IP,
         mpls_dest_ip=VMA_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMA_MPLS_ROUTE_TAG,
-        mpls_route_next_hop="10.200.4.1",
+        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=1),
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
     ) as vm:

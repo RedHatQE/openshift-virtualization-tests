@@ -8,6 +8,7 @@ import pytest
 
 import utilities.network
 from tests.network.libs import cloudinit as netcloud
+from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
@@ -127,7 +128,9 @@ def ovs_linux_bond_bridge_attached_vma(
     name = "bond-vma"
     networks = OrderedDict()
     networks[ovs_linux_br1bond_nad.name] = ovs_linux_br1bond_nad.name
-    netdata = netcloud.NetworkData(ethernets={"eth1": netcloud.EthernetDevice(addresses=["10.200.3.1/24"])})
+    netdata = netcloud.NetworkData(
+        ethernets={"eth1": netcloud.EthernetDevice(addresses=[f"{random_ipv4_address(net_seed=0, host_address=1)}/24"])}
+    )
 
     with VirtualMachineForTests(
         namespace=namespace.name,
@@ -154,7 +157,9 @@ def ovs_linux_bond_bridge_attached_vmb(
     name = "bond-vmb"
     networks = OrderedDict()
     networks[ovs_linux_br1bond_nad.name] = ovs_linux_br1bond_nad.name
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.3.2/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
+    }
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
     with VirtualMachineForTests(

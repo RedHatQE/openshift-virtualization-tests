@@ -18,7 +18,7 @@ jobs:
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Check out code 
+      - name: Check out code
         uses: actions/checkout@v4
       - name: Install dependencies
         run: |
@@ -29,11 +29,12 @@ jobs:
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_TOKEN }}
           registry: quay.io
-      - name: Create multi-arch image manifest and push the images to production 
+      - name: Create multi-arch image manifest and push the images to production
         run: |
+          set -euo pipefail
           # Function to retag container images
           # 5 args for this function are in order:
-          # source_repo, source_tag, dest_repo, dest_tag 
+          # source_repo, source_tag, dest_repo, dest_tag
           # and pr_tag (if available)
           retag_images() {
             SOURCE_REPO=$1
@@ -77,7 +78,7 @@ jobs:
             podman push "${X86_64_DEST_IMG}"
             podman push "${AARCH64_DEST_IMG}"
             podman push "${S390_DEST_IMG}"
-            
+
             # Create multi-arch image manifest
             podman manifest create "${DEST_IMG_MANIFEST}"
             podman manifest add "${DEST_IMG_MANIFEST}" "${X86_64_DEST_IMG}"
@@ -89,7 +90,7 @@ jobs:
           FEDORA_VERSION=$(sed -n "s/^FEDORA_VERSION[[:space:]]*=[[:space:]]*\(.*\)/\1/p" "${{ env.FEDORA_VARS_FILE }}")
           PROD_REPO=quay.io/openshift-cnv/qe-cnv-tests-fedora
           STAGE_REPO=quay.io/openshift-cnv/qe-cnv-tests-fedora-staging
-          podman manifest inspect "${PROD_REPO}":"${FEDORA_VERSION}" 1>prodimg 2>/dev/null || true
+          podman manifest inspect "${PROD_REPO}:${FEDORA_VERSION}" 1>prodimg 2>/dev/null || true
           if [ "$(grep -c digest prodimg)" -ne 0 ]; then
             # Backup the existing images and multi-arch image manifest as it is available
             retag_images "${PROD_REPO}" "${FEDORA_VERSION}" "${PROD_REPO}" "${FEDORA_VERSION}-pr-${{ env.PR_NUMBER }}"

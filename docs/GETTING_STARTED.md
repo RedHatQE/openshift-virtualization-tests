@@ -43,7 +43,7 @@ Please refer to [ARCHITECTURE_SUPPORT.md](ARCHITECTURE_SUPPORT.md) for more deta
 
 
 ## Python and dependencies
-python >=3.12
+python >=3.14
 
 The Complete list of environment dependencies can be found in [Dockerfile](../Dockerfile)
 
