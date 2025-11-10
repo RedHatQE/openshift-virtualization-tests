@@ -2,7 +2,7 @@ import random
 from functools import cache
 from typing import Final
 
-_MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION: Final[int] = 4
+_MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION: Final[int] = 16
 _IPV4_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "172.16"
 
 

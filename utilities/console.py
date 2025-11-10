@@ -2,10 +2,13 @@ import logging
 import os
 
 import pexpect
-from timeout_sampler import TimeoutSampler
+from ocp_resources.virtual_machine import VirtualMachine
+from timeout_sampler import TimeoutSampler, retry
 
 from utilities.constants import (
     TIMEOUT_5MIN,
+    TIMEOUT_10SEC,
+    TIMEOUT_30SEC,
     VIRTCTL,
 )
 from utilities.data_collector import get_data_collector_base_directory
@@ -14,19 +17,28 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Console(object):
-    def __init__(self, vm, username=None, password=None, timeout=30, prompt=None):
+    def __init__(
+        self,
+        vm: VirtualMachine,
+        username: str | None = None,
+        password: str | None = None,
+        timeout: int = TIMEOUT_30SEC,
+        prompt: str | list[str] | None = None,
+    ) -> None:
         """
         Connect to VM console
 
         Args:
-            vm (VirtualMachine): VM resource
-            username (str): VM username
-            password (str): VM password
+            vm: VM resource
+            username: VM username
+            password: VM password
+            timeout: Connection timeout in seconds
+            prompt: Shell prompt pattern(s) to expect
 
         Examples:
             from utilities import console
             with console.Console(vm=vm) as vmc:
-                vmc.sendline('some command)
+                vmc.sendline('some command')
                 vmc.expect('some output')
         """
         self.vm = vm
@@ -40,6 +52,7 @@ class Console(object):
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
+    @retry(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_10SEC)
     def connect(self):
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
@@ -56,7 +69,7 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt, timeout=TIMEOUT_5MIN)
+            self.child.expect(self.login_prompt)
             LOGGER.info(f"{self.vm.name}: Using username {self.username}")
             self.child.sendline(self.username)
             if self.password:
@@ -64,7 +77,8 @@ class Console(object):
                 LOGGER.info(f"{self.vm.name}: Using password {self.password}")
                 self.child.sendline(self.password)
 
-        self.child.expect(self.prompt, timeout=150)
+        LOGGER.info(f"{self.vm.name}: waiting for terminal prompt '{self.prompt}'")
+        self.child.expect(self.prompt)
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):

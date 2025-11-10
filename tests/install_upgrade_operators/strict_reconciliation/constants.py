@@ -205,7 +205,6 @@ OBSOLETE_CPUS_VALUE_HCO_CR = {
         "pentium5",
         "pentiumhome",
     ],
-    "minCPUModel": "Haswell",
 }
 OBSOLETE_CPUS_VALUE_KUBEVIRT_CR = {
     "obsoleteCPUModels": {
@@ -213,7 +212,6 @@ OBSOLETE_CPUS_VALUE_KUBEVIRT_CR = {
         "pentium5": True,
         "pentiumhome": True,
     },
-    "minCPUModel": "Haswell",
 }
 RESOURCE_REQUIREMENTS = {
     "storageWorkloads": {
