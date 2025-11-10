@@ -1,6 +1,7 @@
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     ES_NONE,
     KMP_DISABLED_LABEL,
@@ -43,7 +44,7 @@ def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.0.1"),
+        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=1)),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
@@ -61,7 +62,7 @@ def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.0.2"),
+        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=2)),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,

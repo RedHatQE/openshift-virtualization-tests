@@ -10,6 +10,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.network.constants import BRCNV
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     IPV4_STR,
     OS_FLAVOR_FEDORA,
@@ -273,7 +274,9 @@ def vm_for_brcnv_tests(
     network_data = {"ethernets": {}}
     for idx, nad in enumerate(nads, start=1):
         networks[nad.name] = nad.name
-        network_data["ethernets"][f"eth{idx}"] = {"addresses": [f"10.0.20{idx}.{address_suffix}/24"]}
+        network_data["ethernets"][f"eth{idx}"] = {
+            "addresses": [f"{random_ipv4_address(net_seed=idx, host_address=address_suffix)}/24"]
+        }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
 
     with VirtualMachineForTests(

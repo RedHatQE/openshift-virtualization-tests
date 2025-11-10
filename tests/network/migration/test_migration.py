@@ -12,6 +12,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_ssh_alive,
     run_ssh_in_background,
@@ -113,7 +114,9 @@ def vma(
 ):
     name = "vma"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.1/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
+    }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=dual_stack_network_data,
@@ -142,7 +145,9 @@ def vmb(
 ):
     name = "vmb"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.2/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
+    }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=dual_stack_network_data,
