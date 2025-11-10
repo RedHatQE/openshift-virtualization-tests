@@ -517,31 +517,13 @@ class TestVmCreatedByPodTotal:
     def test_kubevirt_vm_created_by_pod_total(
         self,
         prometheus,
-        disabled_virt_operator,
-        virt_api_pods,
-        virt_api_initial_metric_values,
+        hco_namespace,
+        vm_created_pod_total_initial_metric_value,
         vm_in_hco_namespace,
     ):
-        initial_values = virt_api_initial_metric_values
-        current_values = {}
-        is_increase_found = False
-        for pod in virt_api_pods:
-            metric_query = f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{pod.name}',namespace='{pod.namespace}'}}"
-            current_values[pod.name] = int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
-            if current_values[pod.name] == initial_values[pod.name]:
-                continue
-            if not is_increase_found and current_values[pod.name] == initial_values[pod.name] + 1:
-                is_increase_found = True
-                continue
-            LOGGER.error(
-                f"Metrics value: {current_values[pod.name]},"
-                f"expected: {initial_values[pod.name]} or {initial_values[pod.name] + 1},"
-                f"initial values: {initial_values}"
-            )
-            return
-
-        assert is_increase_found, (
-            f"No changes in metric values were found,initial: {initial_values},current: {current_values}"
+        metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{hco_namespace.name}'}})"
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=metric_query,
+            expected_value=str(vm_created_pod_total_initial_metric_value + 1),
         )
-
-        LOGGER.info("One metric value increased correctly!")

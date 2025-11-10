@@ -35,7 +35,7 @@ from tests.observability.metrics.utils import (
     wait_for_metric_vmi_request_cpu_cores_output,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, wait_for_pod_running_by_prefix
+from tests.utils import create_vms
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
@@ -623,23 +623,9 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture()
-def virt_api_pods(admin_client, hco_namespace):
-    wait_for_pod_running_by_prefix(
-        admin_client=admin_client, namespace_name=hco_namespace.name, pod_prefix="virt-api", expected_number_of_pods=2
-    )
-    pods = get_pod_by_name_prefix(
-        dyn_client=admin_client, pod_prefix="virt-api", namespace=hco_namespace.name, get_all=True
-    )
-    return pods
-
-
-@pytest.fixture()
-def virt_api_initial_metric_values(prometheus, virt_api_pods):
-    initial_values = {}
-    for pod in virt_api_pods:
-        metric_query = f"{KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{pod='{pod.name}',namespace='{pod.namespace}'}}"
-        initial_values[pod.name] = int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
-    return initial_values
+def vm_created_pod_total_initial_metric_value(prometheus, hco_namespace):
+    metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{hco_namespace.name}'}})"
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
 
 
 @pytest.fixture()
