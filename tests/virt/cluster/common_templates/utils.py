@@ -29,10 +29,10 @@ from utilities.constants import (
 from utilities.infra import (
     get_linux_guest_agent_version,
     get_linux_os_info,
-    is_jira_open,
     raise_multiple_exceptions,
     run_virtctl_command,
 )
+from utilities.jira import is_jira_open
 from utilities.ssp import get_windows_os_info
 from utilities.virt import VirtualMachineForTestsFromTemplate, delete_guestosinfo_keys, get_virtctl_os_info
 

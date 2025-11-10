@@ -9,7 +9,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource,
 )
 from utilities.exceptions import ResourceValueError
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 
 pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 

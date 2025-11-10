@@ -32,7 +32,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
 )
 from tests.os_params import FEDORA_LATEST
 from utilities.constants import ARM_64, COUNT_FIVE, S390X
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64, pytest.mark.s390x]
 

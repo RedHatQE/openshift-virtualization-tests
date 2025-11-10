@@ -64,9 +64,9 @@ from utilities.infra import (
     create_ns,
     get_node_selector_dict,
     get_pod_by_name_prefix,
-    is_jira_open,
     unique_name,
 )
+from utilities.jira import is_jira_open
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running

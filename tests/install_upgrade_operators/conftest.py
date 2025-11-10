@@ -27,8 +27,8 @@ from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
     get_pod_by_name_prefix,
-    is_jira_open,
 )
+from utilities.jira import is_jira_open
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
     get_machine_config_pools_conditions,
