@@ -82,9 +82,11 @@ nit_exclude_imports =
     tests.utils
 
 
+# PID and UFN extensions are temporarily disabled due to Python 3.14 compatibility issues
+# in flake8-plugins. These should be re-enabled once the plugins are updated.
 enable-extensions =
-    PID,
+#    PID,
     FCN,
-    UFN,
+#    UFN,
     NIC,
     NIT,
