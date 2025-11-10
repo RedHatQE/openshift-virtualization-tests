@@ -25,6 +25,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC_SA,
     VM_FOR_TEST,
 )
+from tests.storage.restricted_namespace_cloning.utils import create_dv_with_retry
 from tests.storage.utils import (
     create_cluster_role,
     create_role_binding,
@@ -231,7 +232,7 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
     permissions_datavolume_source,
 ):
     namespace = data_volume_multi_storage_scope_module.namespace
-    with create_dv(
+    with create_dv_with_retry(
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_module}",
         namespace=namespace,
         source=PVC,
