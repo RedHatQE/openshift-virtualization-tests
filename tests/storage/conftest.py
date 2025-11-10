@@ -58,8 +58,8 @@ from utilities.infra import (
     ExecCommandOnPod,
     get_artifactory_config_map,
     get_artifactory_secret,
-    is_jira_open,
 )
+from utilities.jira import is_jira_open
 from utilities.storage import (
     create_cirros_dv_for_snapshot_dict,
     data_volume,

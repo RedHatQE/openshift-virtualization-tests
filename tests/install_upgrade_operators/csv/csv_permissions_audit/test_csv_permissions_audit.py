@@ -15,7 +15,7 @@ from utilities.constants import (
     CNV_OPERATORS,
     HOSTPATH_PROVISIONER_OPERATOR,
 )
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 

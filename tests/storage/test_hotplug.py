@@ -13,7 +13,7 @@ from ocp_resources.storage_profile import StorageProfile
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from utilities.constants import HOTPLUG_DISK_SERIAL, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,

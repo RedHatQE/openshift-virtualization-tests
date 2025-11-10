@@ -29,9 +29,14 @@ mock_data_collector = MagicMock()
 mock_data_collector.get_data_collector_base_directory = MagicMock(return_value="/tmp/data")
 mock_data_collector.get_data_collector_base = MagicMock(return_value="/tmp/data/")
 
+# Mock jira package to prevent import conflicts
+mock_jira = MagicMock()
+mock_jira.JIRA = MagicMock()
+
 sys.modules["utilities.hco"] = mock_hco
 sys.modules["utilities.infra"] = mock_infra
 sys.modules["utilities.data_collector"] = mock_data_collector
+sys.modules["jira"] = mock_jira
 
 # Also set them as attributes of the utilities module for tests that need them
 
