@@ -30,6 +30,7 @@ from tests.storage.utils import (
 )
 from utilities import console
 from utilities.constants import (
+    OS_FLAVOR_ALPINE,
     OS_FLAVOR_RHEL,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
@@ -532,15 +533,15 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 
 
 @pytest.mark.parametrize(
-    "dv_from_http_import",
+    "data_volume_multi_storage_scope_function",
     [
         pytest.param(
             {
                 "dv_name": "cnv-3065",
-                "file_name": Images.Cdi.QCOW2_IMG,
-                "source": HTTPS,
-                "size": "100Mi",
-                "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
+                "source": HTTP,
+                "image": f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG}",
+                "dv_size": Images.Alpine.DEFAULT_DV_SIZE,
+                "wait": True,
             },
             marks=pytest.mark.polarion("CNV-3065"),
         ),
@@ -548,13 +549,17 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     indirect=True,
 )
 @pytest.mark.sno
-def test_disk_falloc(internal_http_configmap, dv_from_http_import):
-    dv_from_http_import.wait_for_dv_success()
-    with create_vm_from_dv(dv=dv_from_http_import) as vm_dv:
+def test_disk_falloc(data_volume_multi_storage_scope_function):
+    data_volume_multi_storage_scope_function.wait_for_dv_success()
+    with create_vm_from_dv(
+        dv=data_volume_multi_storage_scope_function,
+        os_flavor=OS_FLAVOR_ALPINE,
+        memory_guest=Images.Alpine.DEFAULT_MEMORY_SIZE,
+    ) as vm_dv:
         with console.Console(vm=vm_dv) as vm_console:
             LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/zero of=file bs=1M")
-            vm_console.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
+            vm_console.sendline("dd if=/dev/urandom of=file bs=1M")
+            vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.destructive
