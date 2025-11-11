@@ -20,6 +20,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
+    compare_metric_labels_with_vm_labels,
     get_pvc_size_bytes,
     timestamp_to_seconds,
     validate_metric_value_greater_than_initial_value,
@@ -508,4 +509,22 @@ class TestVmiPhaseTransitionFromDeletion:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
+        )
+
+
+class TestVmLabels:
+    @pytest.mark.polarion("CNV-12385")
+    def test_kubevirt_vm_labels(self, prometheus, running_metric_vm):
+        compare_metric_labels_with_vm_labels(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_labels{{name='{running_metric_vm.name}'}}",
+            vm=running_metric_vm,
+        )
+
+    @pytest.mark.polarion("CNV-12386")
+    def test_kubevirt_vm_labels_after_adding_label(self, prometheus, add_label_to_vm):
+        compare_metric_labels_with_vm_labels(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_labels{{name='{add_label_to_vm.name}'}}",
+            vm=add_label_to_vm,
         )

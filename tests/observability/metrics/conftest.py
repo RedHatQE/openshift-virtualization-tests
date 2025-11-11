@@ -619,3 +619,11 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
         for key, value in resource_used.items()
     }
     return formatted_hard_limit, formatted_used_value
+
+
+@pytest.fixture()
+def add_label_to_vm(running_metric_vm):
+    with ResourceEditor(
+        patches={running_metric_vm: {"spec": {"template": {"metadata": {"labels": {"test-label": "test-value"}}}}}}
+    ):
+        yield running_metric_vm
