@@ -21,7 +21,7 @@ from tests.install_upgrade_operators.constants import (
 )
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_11MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 

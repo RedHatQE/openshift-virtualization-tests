@@ -2,6 +2,13 @@ import pytest
 
 from tests.observability.metrics.utils import validate_metric_value_greater_than_initial_value
 
+KUBEVIRT_VMI_GUEST_LOAD_METRIC = "kubevirt_vmi_guest_load"
+GUEST_LOAD_TIME_PERIODS = [
+    f"{KUBEVIRT_VMI_GUEST_LOAD_METRIC}_1m",
+    f"{KUBEVIRT_VMI_GUEST_LOAD_METRIC}_5m",
+    f"{KUBEVIRT_VMI_GUEST_LOAD_METRIC}_15m",
+]
+
 
 class TestVMIGuestLoad:
     # todo: when the pr for updating the fedora will be merged, adjust the test.
@@ -10,12 +17,12 @@ class TestVMIGuestLoad:
         self,
         prometheus,
         fedora_vm_with_stress_ng,
-        qemu_guest_agent_version_updated_centos,
+        qemu_guest_agent_version_validated,
         stressed_vm_cpu_fedora,
-        guest_load_os_matrix__function__,
     ):
-        validate_metric_value_greater_than_initial_value(
-            prometheus=prometheus,
-            metric_name=f"{guest_load_os_matrix__function__}{{name='{fedora_vm_with_stress_ng.name}'}}",
-            initial_value=0,
-        )
+        for guest_load_time_period in GUEST_LOAD_TIME_PERIODS:
+            validate_metric_value_greater_than_initial_value(
+                prometheus=prometheus,
+                metric_name=f"{guest_load_time_period}{{name='{fedora_vm_with_stress_ng.name}'}}",
+                initial_value=0,
+            )

@@ -70,9 +70,9 @@ from utilities.infra import (
     get_linux_guest_agent_version,
     get_node_selector_dict,
     get_pod_by_name_prefix,
-    is_jira_open,
     unique_name,
 )
+from utilities.jira import is_jira_open
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
@@ -654,11 +654,14 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
 
 
 @pytest.fixture(scope="class")
-def qemu_guest_agent_version_updated_centos(fedora_vm_with_stress_ng):
+def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
     LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
-    agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec).split(".")
-    LOGGER.info(f"qemu-guest-agent version: {agent_version}")
-    version_num = float(f"{agent_version[0]}.{agent_version[1]}")
+    guest_agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
+    LOGGER.info(f"qemu-guest-agent version: {guest_agent_version}")
+    if len(guest_agent_version) < 2:
+        raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version}")
+    guest_agent_version = guest_agent_version.split(".")
+    version_num = float(f"{guest_agent_version[0]}.{guest_agent_version[1]}")
     if version_num >= MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS:
         return
     raise ValueError(
