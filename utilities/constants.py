@@ -336,7 +336,6 @@ UNPRIVILEGED_PASSWORD = "unprivileged-password"
 
 # KUBECONFIG variables
 KUBECONFIG = "KUBECONFIG"
-REMOTE_KUBECONFIG = "REMOTE_KUBECONFIG"
 
 # commands
 LS_COMMAND = "ls -1 | sort | tr '\n' ' '"

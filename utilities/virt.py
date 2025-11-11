@@ -12,7 +12,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import bitmath
 import jinja2
@@ -21,8 +21,11 @@ import yaml
 from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError
+from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor, get_client
@@ -78,6 +81,7 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    VIRT_HANDLER,
     VIRT_LAUNCHER,
     VIRTCTL,
     Images,
@@ -1753,7 +1757,9 @@ def running_vm(
         LOGGER.info(f"VM {_vm.name} status before dv check: {_vm.printable_status}")
         LOGGER.info(f"Volume(s) in VM spec: {_vm_dv_volumes_names_list} ")
         for dv_name in _vm_dv_volumes_names_list:
-            DataVolume(name=dv_name, namespace=_vm.namespace).wait_for_dv_success(timeout=_dv_wait_timeout)
+            DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client).wait_for_dv_success(
+                timeout=_dv_wait_timeout
+            )
 
     # To support all use cases of: 'runStrategy', container/VM from template, VM started outside this function
     allowed_vm_start_exceptions_list = [
@@ -2698,3 +2704,79 @@ def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
         # Consider agent "down" when condition is absent OR explicitly not True
         if not sample or all(condition.get("status") != "True" for condition in sample):
             break
+
+
+def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[Pod]:
+    return utilities.infra.get_pods(
+        dyn_client=client,
+        namespace=namespace,
+        label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
+    )
+
+
+def check_virt_handler_pods_for_migration_network(
+    client: DynamicClient, namespace: Namespace, network_name: str, migration_network: bool = True
+) -> List[Pod]:
+    """
+    Checks whether virt-handler pods have migration network.
+
+    Args:
+        client: DynamicClient object
+        namespace: HCO namespace object
+        network_name: string name of migration network to check
+        migration_network: if migration_network=True check that pods have network <network_name>
+                          if migration_network=False check that pods don't have network <network_name>
+
+    Returns:
+        List of pods that match the criteria
+    """
+    virt_handler_pods = get_virt_handler_pods(client=client, namespace=namespace)
+    verified_pods_list = []
+
+    for pod in virt_handler_pods:
+        pod_network_annotations = pod.instance.metadata.annotations.get(
+            f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks", ""
+        )
+        migration_network_on_pod = pod_network_annotations.split("@")[0] == network_name
+        if migration_network and migration_network_on_pod:
+            verified_pods_list.append(pod)
+        elif not migration_network and not migration_network_on_pod:
+            verified_pods_list.append(pod)
+    return verified_pods_list
+
+
+def wait_for_virt_handler_pods_network_updated(
+    client: DynamicClient,
+    namespace: Namespace,
+    network_name: str,
+    virt_handler_daemonset: DaemonSet,
+    migration_network: bool = True,
+) -> bool:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_10MIN,
+        sleep=TIMEOUT_10SEC,
+        func=check_virt_handler_pods_for_migration_network,
+        client=client,
+        namespace=namespace,
+        network_name=network_name,
+        migration_network=migration_network,
+        exceptions_dict={NotFoundError: []},
+    )
+    LOGGER.info(
+        "Waiting for all virt-handler pods to restart with "
+        f"{'new network' if migration_network else 'default'} configuration"
+    )
+    desired_number_of_pods = virt_handler_daemonset.instance.status.desiredNumberScheduled
+    try:
+        for sample in samples:
+            if sample and desired_number_of_pods == len(sample):
+                for pod in sample:
+                    pod.wait_for_status(status=Pod.Status.RUNNING)
+                return True
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Some virt-handler pods {'dont' if migration_network else 'still'} have migration network\n"
+            f"Updated pods: {[pod.name for pod in sample]}"
+        )
+        raise
+    return False
