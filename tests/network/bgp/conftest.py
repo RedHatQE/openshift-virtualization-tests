@@ -13,8 +13,8 @@ from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 
 from libs.net import netattachdef as libnad
-from libs.net.traffic_generator import PodClient as TcpClient
-from libs.net.traffic_generator import Server as TcpServer
+from libs.net.traffic_generator import PodTcpClient as TcpClient
+from libs.net.traffic_generator import TcpServer
 from libs.net.udn import create_udn_namespace
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
@@ -29,6 +29,7 @@ from tests.network.libs.bgp import (
     generate_frr_conf,
     wait_for_bgp_connection_established,
 )
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.nodenetworkstate import DEFAULT_ROUTE_V4, lookup_br_ex_gateway_v4
 from tests.network.libs.vm_factory import udn_vm
@@ -38,8 +39,8 @@ APP_CUDN_LABEL: Final[dict] = {"app": "cudn"}
 BGP_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "frr-config"
 CUDN_BGP_LABEL: Final[dict] = {"cudn-bgp": "blue"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
-EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = "10.250.100.0/24"
-EXTERNAL_PROVIDER_IP_V4: Final[str] = "10.250.100.150/24"
+EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=0)}/24"
+EXTERNAL_PROVIDER_IP_V4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=150)}/24"
 IPERF3_SERVER_PORT: Final[int] = 2354
 
 
@@ -211,8 +212,9 @@ def bgp_setup_ready(
 def vm_cudn(
     namespace_cudn: Namespace,
     cudn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
-    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp") as vm:
+    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp", client=admin_client) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm

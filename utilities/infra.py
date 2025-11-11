@@ -24,7 +24,6 @@ import pytest
 import requests
 import urllib3
 import yaml
-from jira import JIRA
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
@@ -93,7 +92,6 @@ from utilities.data_collector import (
 )
 from utilities.exceptions import (
     ClusterSanityError,
-    MissingEnvironmentVariableError,
     OsDictNotFoundError,
     StorageSanityError,
     UrlNotFoundError,
@@ -103,7 +101,6 @@ from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import guest_agent_version_parser
 from utilities.storage import get_test_artifact_server_url
 
-JIRA_STATUS_CLOSED = ("on_qa", "verified", "release pending", "closed")
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
 INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities"
@@ -247,23 +244,6 @@ def authorized_key(private_key_path):
     return f"ssh-rsa {private_to_public_key(key=private_key_path)} root@exec1.rdocloud"
 
 
-def get_jira_status(jira):
-    env_var = os.environ
-    if not (env_var.get("PYTEST_JIRA_TOKEN") and env_var.get("PYTEST_JIRA_URL")):
-        # For conformance tests without JIRA credentials, assume the JIRA is open
-        if py_config.get("conformance_tests"):
-            LOGGER.info(f"Conformance tests without JIRA credentials: assuming {jira} is open")
-            return "open"
-
-        raise MissingEnvironmentVariableError("Please set PYTEST_JIRA_TOKEN and PYTEST_JIRA_URL environment variables")
-
-    jira_connection = JIRA(
-        token_auth=env_var["PYTEST_JIRA_TOKEN"],
-        options={"server": env_var["PYTEST_JIRA_URL"]},
-    )
-    return jira_connection.issue(id=jira).fields.status.name.lower()
-
-
 def get_pods(dyn_client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
     return list(
         Pod.get(
@@ -311,7 +291,7 @@ def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list
                 pods_not_running.append({pod.name: pod.status})
             elif container_status_error := get_pod_container_error_status(pod=pod):
                 pods_not_running.append({pod.name: container_status_error})
-        except (ResourceNotFoundError, NotFoundError):
+        except ResourceNotFoundError | NotFoundError:
             LOGGER.warning(f"Ignoring pod {pod.name} that disappeared during cluster sanity check")
             pods_not_running.append({pod.name: "Deleted"})
     return pods_not_running
@@ -855,22 +835,6 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
     return mismatch_statuses
 
 
-def is_jira_open(jira_id):
-    """
-    Check if jira status is open.
-    Args:
-        jira_id (string): Jira card ID in format: "CNV-<jira_id>"
-    Returns:
-        True: if jira is open
-        False: if jira is closed
-    """
-    jira_status = get_jira_status(jira=jira_id)
-    if jira_status not in JIRA_STATUS_CLOSED:
-        LOGGER.info(f"Jira {jira_id}: status is {jira_status}")
-        return True
-    return False
-
-
 def get_hyperconverged_resource(client, hco_ns_name):
     hco_name = py_config["hco_cr_name"]
     hco = HyperConverged(
@@ -1073,12 +1037,19 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
     exceptions_dict={RuntimeError: []},
 )
 def get_node_audit_log_entries(log, node, log_entry):
+    # Patterns to match errors that should trigger a retry
+    error_patterns_list = [
+        r"^\s*error:",
+        r"Unhandled Error.*couldn't get current server API group list.*i/o timeout",
+    ]
+    error_patterns = re.compile("|".join(f"({pattern})" for pattern in error_patterns_list))
+
     lines = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
     ).splitlines()
-    has_errors = any(line.startswith("error:") for line in lines)
+    has_errors = any(error_patterns.search(line) for line in lines)
     if has_errors:
-        if any(line.startswith("404 page not found") for line in lines):
+        if any(line.strip().startswith("404 page not found") for line in lines):
             LOGGER.warning(f"Skipping {log} check as it was rotated:\n{lines}")
             return True, []
         LOGGER.warning(f"oc command failed for node {node}, log {log}:\n{lines}")

@@ -107,7 +107,7 @@ class TestProcessWithException:
 
         assert process.exception == test_exception
 
-    @patch("multiprocessing.Process.run")
+    @patch("utilities.exceptions._FORK_CONTEXT.Process.run")
     def test_process_with_exception_run_success(self, mock_super_run):
         """Test run method when no exception occurs"""
         process = ProcessWithException()
@@ -118,7 +118,7 @@ class TestProcessWithException:
         mock_super_run.assert_called_once()
         process._cconn.send.assert_called_once_with(None)
 
-    @patch("multiprocessing.Process.run")
+    @patch("utilities.exceptions._FORK_CONTEXT.Process.run")
     def test_process_with_exception_run_with_exception(self, mock_super_run):
         """Test run method when exception occurs"""
         process = ProcessWithException()

@@ -44,6 +44,7 @@ X86_64 = "x86_64"
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
+OS_FLAVOR_ALPINE = "alpine"
 OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
@@ -56,7 +57,7 @@ CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 class ArchImages:
     class X86_64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
-        BASE_ALPINE_NAME = "alpine-3.20.1-x86_64-disk"
+        BASE_ALPINE_NAME = "alpine-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -113,8 +114,8 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
 
     class ARM64:
-        BASE_ALPINE_NAME = "alpine-3.20.1-aarch64-disk"
         BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
+        BASE_ALPINE_NAME = "alpine-aarch64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -149,7 +150,7 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
 
     class S390X:
-        BASE_ALPINE_NAME = "alpine-3.20.1-s390x-disk"
+        BASE_ALPINE_NAME = "alpine-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -354,7 +355,6 @@ UNPRIVILEGED_PASSWORD = "unprivileged-password"
 
 # KUBECONFIG variables
 KUBECONFIG = "KUBECONFIG"
-REMOTE_KUBECONFIG = "REMOTE_KUBECONFIG"
 
 # commands
 LS_COMMAND = "ls -1 | sort | tr '\n' ' '"
@@ -414,6 +414,7 @@ CREATING_VIRTUAL_MACHINE_FROM_VOLUME = "creating-virtual-machine-from-volume"
 UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL9_STR = "rhel9"
+RHEL10_STR = "rhel10"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
 RHEL10_GUEST = "rhel10-guest"

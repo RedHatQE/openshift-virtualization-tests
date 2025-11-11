@@ -36,7 +36,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.infrastructure import Infrastructure
-from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
@@ -912,6 +911,16 @@ def rhel9_data_source_scope_session(golden_images_namespace):
     )
 
 
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
 """
 VM creation from template
 """
@@ -1138,11 +1147,6 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="class")
 def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
-
-
-@pytest.fixture(scope="module")
-def skip_access_mode_rwo_scope_module(storage_class_matrix__module__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__module__)
 
 
 @pytest.fixture(scope="session")
@@ -1571,21 +1575,6 @@ def cdi_spec(cdi):
 @pytest.fixture()
 def hco_spec(hyperconverged_resource_scope_function):
     return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
-
-
-@pytest.fixture(scope="module")
-def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
-    return (
-        len(
-            list(
-                InstallPlan.get(
-                    dyn_client=admin_client,
-                    namespace=hco_namespace.name,
-                )
-            )
-        )
-        > 1
-    )
 
 
 @pytest.fixture(scope="session")
