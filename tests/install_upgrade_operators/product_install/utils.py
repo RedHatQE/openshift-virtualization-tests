@@ -71,23 +71,6 @@ def get_all_resources(file_name, base_directory):
     }
 
 
-def validate_hpp_installation(admin_client, cnv_namespace, schedulable_nodes):
-    hpp_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=cnv_namespace.name)
-    assert hpp_deployment.exists
-    hpp_deployment.wait_for_replicas(timeout=TIMEOUT_15MIN)
-    wait_for_pod_running_by_prefix(
-        admin_client=admin_client,
-        namespace_name=cnv_namespace.name,
-        pod_prefix=HOSTPATH_PROVISIONER,
-        expected_number_of_pods=len(schedulable_nodes) + int(hpp_deployment.instance.status.replicas),
-    )
-    verify_hpp_pool_health(
-        admin_client=admin_client,
-        schedulable_nodes=schedulable_nodes,
-        hco_namespace=cnv_namespace,
-    )
-
-
 def wait_for_pod_running_by_prefix(
     admin_client,
     namespace_name,
@@ -129,3 +112,20 @@ def wait_for_pod_running_by_prefix(
             f"running state, out of {pod_names}, following pods are in not running state: {not_running_pods}"
         )
         raise
+
+
+def validate_hpp_installation(admin_client, cnv_namespace, schedulable_nodes):
+    hpp_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=cnv_namespace.name)
+    assert hpp_deployment.exists
+    hpp_deployment.wait_for_replicas(timeout=TIMEOUT_15MIN)
+    wait_for_pod_running_by_prefix(
+        admin_client=admin_client,
+        namespace_name=cnv_namespace.name,
+        pod_prefix=HOSTPATH_PROVISIONER,
+        expected_number_of_pods=len(schedulable_nodes) + int(hpp_deployment.instance.status.replicas),
+    )
+    verify_hpp_pool_health(
+        admin_client=admin_client,
+        schedulable_nodes=schedulable_nodes,
+        hco_namespace=cnv_namespace,
+    )
