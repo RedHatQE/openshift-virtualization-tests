@@ -17,13 +17,11 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest import FixtureRequest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.cluster.common_templates.constants import HYPERV_FEATURES_LABELS_DOM_XML
 from tests.virt.utils import get_or_create_golden_image_data_source
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
     TCP_TIMEOUT_30SEC,
-    TIMEOUT_15SEC,
     TIMEOUT_90SEC,
 )
 from utilities.exceptions import raise_multiple_exceptions
@@ -483,104 +481,12 @@ def check_machine_type(vm):
     assert vm_machine_type != "", f"Machine type does not exist in VM: {vm_machine_type}"
 
 
-def check_vm_xml_hyperv(vm):
-    """Verify HyperV values in VMI"""
-
-    hyperv_features = vm.privileged_vmi.xml_dict["domain"]["features"]["hyperv"]
-    failed_hyperv_features = [
-        hyperv_features[feature]
-        for feature in HYPERV_FEATURES_LABELS_DOM_XML
-        if hyperv_features[feature]["@state"] != "on"
-    ]
-    spinlocks_retries_value = hyperv_features["spinlocks"]["@retries"]
-    if int(spinlocks_retries_value) != 8191:
-        failed_hyperv_features.append(spinlocks_retries_value)
-
-    stimer_direct_feature = hyperv_features["stimer"]["direct"]
-    if stimer_direct_feature["@state"] != "on":
-        failed_hyperv_features.append(hyperv_features["stimer"])
-
-    assert not failed_hyperv_features, (
-        f"The following hyperV flags are not set correctly in VM spec: {failed_hyperv_features},"
-        f"hyperV features in VM spec: {hyperv_features}"
-    )
-
-
 def check_vm_xml_clock(vm):
     """Verify clock values in VMI"""
 
     clock_timer_list = vm.privileged_vmi.xml_dict["domain"]["clock"]["timer"]
     assert [i for i in clock_timer_list if i["@name"] == "hpet"][0]["@present"] == "no"
     assert [i for i in clock_timer_list if i["@name"] == "hypervclock"][0]["@present"] == "yes"
-
-
-def check_windows_vm_hvinfo(vm):
-    """Verify HyperV values in Windows VMI using hvinfo"""
-
-    def _check_hyperv_recommendations():
-        hyperv_windows_recommendations_list = [
-            "RelaxedTiming",
-            "MSRAPICRegisters",
-            "HypercallRemoteTLBFlush",
-            "SyntheticClusterIPI",
-        ]
-        failed_recommendations = []
-        vm_recommendations_dict = hvinfo_dict["Recommendations"]
-        failed_vm_recommendations = [
-            feature for feature in hyperv_windows_recommendations_list if not vm_recommendations_dict[feature]
-        ]
-
-        if failed_vm_recommendations:
-            failed_recommendations.extend(failed_vm_recommendations)
-
-        spinlocks = vm_recommendations_dict["SpinlockRetries"]
-        if int(spinlocks) != 8191:
-            failed_recommendations.append(f"SpinlockRetries: {spinlocks}")
-
-        return failed_recommendations
-
-    def _check_hyperv_privileges():
-        hyperv_windows_privileges_list = [
-            "AccessVpRunTimeReg",
-            "AccessSynicRegs",
-            "AccessSyntheticTimerRegs",
-            "AccessVpIndex",
-        ]
-        vm_privileges_dict = hvinfo_dict["Privileges"]
-        return [feature for feature in hyperv_windows_privileges_list if not vm_privileges_dict[feature]]
-
-    def _check_hyperv_features():
-        hyperv_windows_features_list = ["TimerFrequenciesQuery"]
-        vm_features_dict = hvinfo_dict["Features"]
-        return [feature for feature in hyperv_windows_features_list if not vm_features_dict[feature]]
-
-    hvinfo_dict = None
-
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_90SEC,
-        sleep=TIMEOUT_15SEC,
-        func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=["C:\\\\hvinfo\\\\hvinfo.exe"],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )
-    for sample in sampler:
-        output = sample[0]
-        if output and "connect: connection refused" not in output:
-            hvinfo_dict = json.loads(output)
-            break
-
-    failed_windows_hyperv_list = _check_hyperv_recommendations()
-    failed_windows_hyperv_list.extend(_check_hyperv_privileges())
-    failed_windows_hyperv_list.extend(_check_hyperv_features())
-
-    if not hvinfo_dict["HyperVsupport"]:
-        failed_windows_hyperv_list.append("HyperVsupport")
-
-    assert not failed_windows_hyperv_list, (
-        f"The following hyperV flags are not set correctly in the guest: {failed_windows_hyperv_list}\n"
-        f"VM hvinfo dict:{hvinfo_dict}"
-    )
 
 
 def set_vm_tablet_device_dict(tablet_params):
@@ -608,18 +514,6 @@ def check_vm_xml_tablet_device(vm):
     # specified during VM creation.
     assert tablet_dict_from_xml["@bus"] == vm_instance_tablet_device_dict.get("bus", "usb"), "Wrong bus type"
     assert tablet_dict_from_xml["alias"]["@name"] == f"ua-{vm_instance_tablet_device_dict['name']}", "Wrong device name"
-
-
-def assert_windows_efi(vm):
-    """
-    Verify guest OS is using EFI.
-    """
-    out = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split("bcdedit | findstr EFI"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-    assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
 
 
 def get_matrix_os_golden_image_data_source(
