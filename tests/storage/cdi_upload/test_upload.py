@@ -188,7 +188,7 @@ def test_successful_upload_with_supported_formats(
             {
                 "dv_name": "cnv-2018",
                 "source": "upload",
-                "dv_size": "3Gi",
+                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
                 "wait": False,
             },
             marks=(pytest.mark.polarion("CNV-2018")),

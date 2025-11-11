@@ -56,6 +56,7 @@ from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
+    OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
@@ -94,7 +95,7 @@ LOGGER = logging.getLogger(__name__)
 K8S_TAINT = "node.kubernetes.io/unschedulable"
 NO_SCHEDULE = "NoSchedule"
 CIRROS_IMAGE = "kubevirt/cirros-container-disk-demo:latest"
-FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS)
+FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS, OS_FLAVOR_ALPINE)
 VM_ERROR_STATUSES = [
     VirtualMachine.Status.CRASH_LOOPBACK_OFF,
     VirtualMachine.Status.ERROR_UNSCHEDULABLE,

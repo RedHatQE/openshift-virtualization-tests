@@ -48,7 +48,7 @@ class Console(object):
         self.timeout = timeout
         self.child = None
         self.login_prompt = "login:"
-        self.prompt = prompt if prompt else [r"\$"]
+        self.prompt = prompt if prompt else [r"#", r"\$"]
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
