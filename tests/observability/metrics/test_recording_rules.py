@@ -1,6 +1,7 @@
 import pytest
 from ocp_resources.resource import Resource
 
+from tests.observability.metrics.constants import KUBEVIRT_VIRT_OPERATOR_READY_STATUS
 from utilities.constants import KUBEVIRT_VIRT_OPERATOR_UP, VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER, VIRT_OPERATOR
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -12,7 +13,6 @@ virt_label_dict = {
     VIRT_CONTROLLER: f"{Resource.ApiGroup.KUBEVIRT_IO}={VIRT_CONTROLLER} ",
 }
 KUBEVIRT_VIRT_CONTROLLER_READY_STATUS = "kubevirt_virt_controller_ready_status"
-KUBEVIRT_VIRT_OPERATOR_READY_STATUS = "kubevirt_virt_operator_ready_status"
 KUBEVIRT_VIRT_OPERATOR_LEADING_STATUS = "kubevirt_virt_operator_leading_status"
 KUBEVIRT_VIRT_CONTROLLER_LEADING_STATUS = "kubevirt_virt_controller_leading_status"
 KUBEVIRT_VIRT_API_UP = "kubevirt_virt_api_up"
