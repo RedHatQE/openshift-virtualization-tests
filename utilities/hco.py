@@ -66,10 +66,11 @@ class ResourceEditorValidateHCOReconcile(ResourceEditor):
         consecutive_checks_count=3,
         list_resource_reconcile=None,
         wait_for_reconcile_post_update=False,
+        admin_client=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.admin_client = get_client()
+        self.admin_client = admin_client or get_client()
         self.hco_namespace = Namespace(client=self.admin_client, name=hco_namespace)
         self.wait_for_reconcile_post_update = wait_for_reconcile_post_update
         self._consecutive_checks_count = consecutive_checks_count

@@ -10,10 +10,8 @@ from tests.virt.node.migration_and_maintenance.utils import (
     assert_node_drain_and_vm_migration,
     assert_vm_migrated_through_dedicated_network_with_logs,
     assert_vm_migrated_through_dedicated_network_with_tcpdump,
-    get_virt_handler_pods,
     run_tcpdump_on_source_node,
     update_hco_migration_config,
-    wait_for_virt_handler_pods_network_updated,
 )
 from tests.virt.utils import migrate_and_verify_multi_vms
 from utilities.constants import VIRT_HANDLER
@@ -21,11 +19,13 @@ from utilities.hco import wait_for_hco_conditions
 from utilities.infra import get_daemonset_by_name
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
+    get_virt_handler_pods,
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
     running_vm,
     taint_node_no_schedule,
     wait_for_updated_kv_value,
+    wait_for_virt_handler_pods_network_updated,
 )
 
 pytestmark = [pytest.mark.destructive, pytest.mark.special_infra]

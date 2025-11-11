@@ -3,14 +3,13 @@ import logging
 import re
 from contextlib import contextmanager
 
-from kubernetes.dynamic.exceptions import InternalServerError, NotFoundError
+from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
-from ocp_resources.pod import Pod
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_10MIN, TIMEOUT_10SEC, VIRT_HANDLER
+from utilities.constants import TIMEOUT_3MIN, TIMEOUT_10SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import ExecCommandOnPod, get_hyperconverged_resource, get_pods
+from utilities.infra import ExecCommandOnPod, get_hyperconverged_resource
 from utilities.virt import check_migration_process_after_node_drain, node_mgmt_console
 
 LOGGER = logging.getLogger(__name__)
@@ -44,72 +43,6 @@ class MACVLANNetworkAttachmentDefinition(NetworkAttachmentDefinition):
         }
 
         self.res["spec"]["config"] = json.dumps(spec_config)
-
-
-def get_virt_handler_pods(client, namespace):
-    return get_pods(
-        dyn_client=client,
-        namespace=namespace,
-        label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
-    )
-
-
-def check_virt_handler_pods_for_migration_network(client, namespace, network_name, migration_network=True):
-    """
-    Checks whether virt-handler pods have migration network.
-
-    Args:
-        client (:obj:`DynamicClient`): DynamicClient object
-        namespace (:obj:`Namespace`): HCO namespace object
-        network_name (str): string name of migration network to check
-        migration_network (bool): if migration_network=True check that pods have network <network_name>
-                                  if migration_network=False check that pods don't have network <network_name>
-    """
-    virt_handler_pods = get_virt_handler_pods(client=client, namespace=namespace)
-    verified_pods_list = []
-
-    for pod in virt_handler_pods:
-        pod_network_annotations = pod.instance.metadata.annotations.get(
-            f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks", ""
-        )
-        migration_network_on_pod = pod_network_annotations.split("@")[0] == network_name
-        if migration_network and migration_network_on_pod:
-            verified_pods_list.append(pod)
-        elif not migration_network and not migration_network_on_pod:
-            verified_pods_list.append(pod)
-    return verified_pods_list
-
-
-def wait_for_virt_handler_pods_network_updated(
-    client, namespace, network_name, virt_handler_daemonset, migration_network=True
-):
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=TIMEOUT_10SEC,
-        func=check_virt_handler_pods_for_migration_network,
-        client=client,
-        namespace=namespace,
-        network_name=network_name,
-        migration_network=migration_network,
-        exceptions_dict={NotFoundError: []},
-    )
-    LOGGER.info(
-        "Waiting for all virt-handler pods to restart with "
-        f"{'new network' if migration_network else 'default'} configuration"
-    )
-    desired_number_of_pods = virt_handler_daemonset.instance.status.desiredNumberScheduled
-    try:
-        for sample in samples:
-            if sample and desired_number_of_pods == len(sample):
-                for pod in sample:
-                    pod.wait_for_status(status=Pod.Status.RUNNING)
-                return True
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Some virt-handler pods {'dont' if migration_network else 'still'} have migration network\n"
-            f"Updated pods: {[pod.name for pod in sample]}"
-        )
-        raise
 
 
 def assert_vm_migrated_through_dedicated_network_with_logs(source_node, vm, virt_handler_pods):

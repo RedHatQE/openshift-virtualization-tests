@@ -14,45 +14,14 @@ This directory contains tests for validating live migration of virtual machines 
 
 ## Setup
 
-### 1. Remote Cluster Configuration
+### Remote Cluster Configuration
 
-You need to provide a kubeconfig file for the remote (target) cluster. This should be a separate kubeconfig from your primary cluster.
+You need to provide authentication credentials for the remote (target) cluster. The tests will authenticate to the remote cluster using username and password.
 
-There are two ways to provide the remote kubeconfig:
-
-#### Option 1: Using CLI argument
+#### Required CLI arguments
 ```bash
-uv run pytest tests/cross_cluster_live_migration/ --remote-kubeconfig=/path/to/remote-cluster-kubeconfig
-```
-
-#### Option 2: Using environment variable
-```bash
-export REMOTE_KUBECONFIG=/path/to/remote-cluster-kubeconfig
-```
-
-### 2. Verify Remote Access
-
-Test that you can access the remote cluster:
-```bash
-oc --kubeconfig=$REMOTE_KUBECONFIG get nodes
-```
-
-## Running Tests
-
-### Run All Cross-Cluster Tests
-```bash
-uv run pytest tests/cross_cluster_live_migration/ -v
-```
-
-### Run Specific Test Files
-
-#### Connectivity Tests
-Test basic connectivity to the remote cluster:
-```bash
-# Using CLI argument
-uv run pytest tests/cross_cluster_live_migration/test_cross_cluster_connectivity.py -v --remote-kubeconfig=/path/to/remote-kubeconfig.yaml
-
-# Using environment variable
-export REMOTE_KUBECONFIG=/path/to/remote-cluster-kubeconfig.yaml
-uv run pytest tests/cross_cluster_live_migration/test_cross_cluster_connectivity.py -v
+uv run pytest tests/cross_cluster_live_migration/ \
+  --remote_cluster_host=https://api.remote-cluster.example.com:6443 \
+  --remote_cluster_username=kubeadmin \
+  --remote_cluster_password='YOUR_PASSWORD'
 ```
