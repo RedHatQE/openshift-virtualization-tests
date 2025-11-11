@@ -20,8 +20,10 @@ from utilities.infra import get_resources_by_name_prefix
 _CLUSTER_FRR_ASN: Final[int] = 64512
 _EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
+_IPERF3_IMAGE: Final[str] = "quay.io/networkstatic/iperf3"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
+POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 
 
 @contextmanager
@@ -184,6 +186,10 @@ def deploy_external_frr_pod(
     attaches it to a specified NetworkAttachmentDefinition (NAD), and mounts a ConfigMap for FRR
     configuration. On exiting the context, the pod is automatically deleted.
 
+    Also contains an iperf3 container to be used for connectivity testing. The process namespace
+    of the iperf3 container is shared with the frr container for the sake of process management
+    (due to the minimal capabilities of the iperf3 container).
+
     Args:
         namespace_name (str): The name of the namespace where the pod will be deployed.
         node_name (str): The name of the node where the pod will be scheduled.
@@ -197,7 +203,7 @@ def deploy_external_frr_pod(
     """
     annotations = {
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks": json.dumps([
-            {"name": nad_name, "interface": "net1", "default-route": [default_route]}
+            {"name": nad_name, "interface": POD_SECONDARY_IFACE_NAME, "default-route": [default_route]}
         ]),
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/default-network": "none",
     }
@@ -207,7 +213,12 @@ def deploy_external_frr_pod(
             "image": _EXTERNAL_FRR_IMAGE,
             "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
             "volumeMounts": [{"name": frr_configmap_name, "mountPath": "/etc/frr"}],
-        }
+        },
+        {
+            "name": "iperf3",
+            "image": _IPERF3_IMAGE,
+            "command": ["sleep", "infinity"],
+        },
     ]
     volumes = [{"name": frr_configmap_name, "configMap": {"name": frr_configmap_name}}]
 
@@ -219,6 +230,7 @@ def deploy_external_frr_pod(
         containers=containers,
         volumes=volumes,
         client=client,
+        share_process_namespace=True,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod

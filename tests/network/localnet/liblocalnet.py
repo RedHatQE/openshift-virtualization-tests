@@ -1,7 +1,12 @@
 import contextlib
+import logging
 from typing import Generator
 
-from libs.net.traffic_generator import Client, Server
+from kubernetes.client import ApiException
+from kubernetes.dynamic import DynamicClient
+
+from libs.net.traffic_generator import TcpServer
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
@@ -17,25 +22,31 @@ LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
 _IPERF_SERVER_PORT = 5201
+LOGGER = logging.getLogger(__name__)
 
 
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
-        vm.start()  # type: ignore[no-untyped-call]
+        try:
+            vm.start()  # type: ignore[no-untyped-call]
+        except ApiException as vm_exception:
+            if "VM is already running" in vm_exception.body:
+                LOGGER.warning(f"VM {vm.name} is already running")
+                continue
     for vm in vms:
         vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
         vm.wait_for_agent_connected()
     return vms
 
 
-def create_traffic_server(vm: BaseVirtualMachine) -> Server:
-    return Server(vm=vm, port=_IPERF_SERVER_PORT)
+def create_traffic_server(vm: BaseVirtualMachine) -> TcpServer:
+    return TcpServer(vm=vm, port=_IPERF_SERVER_PORT)
 
 
 def create_traffic_client(
     server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, spec_logical_network: str
-) -> Client:
-    return Client(
+) -> TcpClient:
+    return TcpClient(
         vm=client_vm,
         server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
         server_port=_IPERF_SERVER_PORT,
@@ -48,6 +59,7 @@ def localnet_vm(
     physical_network_name: str,
     spec_logical_network: str,
     cidr: str,
+    client: DynamicClient,
     interface_state: str | None = None,
 ) -> BaseVirtualMachine:
     """
@@ -64,6 +76,7 @@ def localnet_vm(
         name (str): The name of the VM.
         physical_network_name (str): The name of the Multus network to attach.
         cidr (str): The CIDR address to assign to the VM's interface.
+        client (DynamicClient): The Kubernetes dynamic client for resource creation.
         spec_logical_network (str): The name of the localnet network to attach.
         interface_state (str): The state of the interface (optional).
             Possible values are "up" or "down". When not specified, it behaves as "up".
@@ -96,7 +109,7 @@ def localnet_vm(
     vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
     vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
 
-    return fedora_vm(namespace=namespace, name=name, spec=spec)
+    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
 
 def localnet_cudn(
@@ -138,9 +151,9 @@ def client_server_active_connection(
     server_vm: BaseVirtualMachine,
     spec_logical_network: str,
     port: int = _IPERF_SERVER_PORT,
-) -> Generator[tuple[Client, Server], None, None]:
-    with Server(vm=server_vm, port=port) as server:
-        with Client(
+) -> Generator[tuple[TcpClient, TcpServer], None, None]:
+    with TcpServer(vm=server_vm, port=port) as server:
+        with TcpClient(
             vm=client_vm,
             server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
             server_port=port,

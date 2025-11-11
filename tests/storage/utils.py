@@ -86,7 +86,7 @@ def upload_image_to_dv(dv_name, storage_ns_name, storage_class, client, consume_
         source="upload",
         dv_name=dv_name,
         namespace=storage_ns_name,
-        size="3Gi",
+        size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=storage_class,
         client=client,
         consume_wffc=consume_wffc,
@@ -138,7 +138,7 @@ def upload_image(token, data, asynchronous=False):
     try:
         with open(data, "rb") as fd:
             fd_data = fd.read()
-    except (OSError, IOError):
+    except OSError | IOError:
         fd_data = data
 
     return requests.post(url=uploadproxy_url, data=fd_data, headers=headers, verify=False).status_code

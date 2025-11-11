@@ -4,33 +4,18 @@ import pytest
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
-from libs.net.traffic_generator import Client, Server, is_tcp_connection
-from libs.net.udn import udn_primary_network
+from libs.net.traffic_generator import TcpServer, is_tcp_connection
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
-from libs.vm.affinity import new_pod_anti_affinity
-from libs.vm.factory import base_vmspec, fedora_vm
-from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
+from tests.network.libs.ip import random_ipv4_address
+from tests.network.libs.vm_factory import udn_vm
+from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
-
-
-def udn_vm(namespace_name, name, template_labels=None):
-    spec = base_vmspec()
-    iface, network = udn_primary_network(name="udn-primary")
-    spec.template.spec.domain.devices.interfaces = [iface]
-    spec.template.spec.networks = [network]
-    if template_labels:
-        spec.template.metadata.labels = spec.template.metadata.labels or {}
-        spec.template.metadata.labels.update(template_labels)
-        # Use the first label key and first value as the anti-affinity label to use:
-        label, *_ = template_labels.items()
-        spec.template.spec.affinity = new_pod_anti_affinity(label=label)
-
-    return fedora_vm(namespace=namespace_name, name=name, spec=spec)
 
 
 @pytest.fixture(scope="module")
@@ -48,7 +33,7 @@ def namespaced_layer2_user_defined_network(udn_namespace):
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
-        subnets=["10.10.0.0/24"],
+        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
         ipam={"lifecycle": "Persistent"},
     ) as udn:
         udn.wait_for_condition(
@@ -64,16 +49,26 @@ def udn_affinity_label():
 
 
 @pytest.fixture(scope="class")
-def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
-    with udn_vm(namespace_name=udn_namespace.name, name="vma-udn", template_labels=dict((udn_affinity_label,))) as vm:
+def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vma-udn",
+        client=admin_client,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
 
 
 @pytest.fixture(scope="class")
-def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label):
-    with udn_vm(namespace_name=udn_namespace.name, name="vmb-udn", template_labels=dict((udn_affinity_label,))) as vm:
+def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vmb-udn",
+        client=admin_client,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
@@ -81,14 +76,14 @@ def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 
 @pytest.fixture(scope="class")
 def server(vmb_udn):
-    with Server(vm=vmb_udn, port=SERVER_PORT) as server:
+    with TcpServer(vm=vmb_udn, port=SERVER_PORT) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture(scope="class")
 def client(vma_udn, vmb_udn):
-    with Client(
+    with TcpClient(
         vm=vma_udn,
         server_ip=lookup_iface_status(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name)[IP_ADDRESS],
         server_port=SERVER_PORT,
@@ -140,10 +135,6 @@ class TestPrimaryUdn:
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
     @pytest.mark.gating
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Flaky test, fails on connecting to VM console; tracked in CNV-67470",
-        run=False,
-    )
     def test_connectivity_is_preserved_during_client_live_migration(self, server, client):
         migrate_vm_and_verify(vm=client.vm)
         assert is_tcp_connection(server=server, client=client)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from kubernetes.dynamic import DynamicClient
+
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
 from utilities.constants import OS_FLAVOR_FEDORA, Images
@@ -8,6 +10,7 @@ from utilities.constants import OS_FLAVOR_FEDORA, Images
 def fedora_vm(
     namespace: str,
     name: str,
+    client: DynamicClient,
     spec: VMSpec | None = None,
     vm_labels: dict[str, str] | None = None,
     vm_annotations: dict[str, str] | None = None,
@@ -21,6 +24,7 @@ def fedora_vm(
         vm_labels=vm_labels,
         vm_annotations=vm_annotations,
         os_distribution=OS_FLAVOR_FEDORA,
+        client=client,
     )
 
 

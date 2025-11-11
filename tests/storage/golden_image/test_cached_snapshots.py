@@ -100,8 +100,8 @@ def rhel9_data_import_cron(admin_client, golden_images_namespace, updated_templa
 
 
 @pytest.fixture(scope="module")
-def original_rhel9_boot_source_pvc(rhel9_data_source_scope_module):
-    return isinstance(rhel9_data_source_scope_module.source, PersistentVolumeClaim)
+def original_rhel9_boot_source_pvc(rhel9_data_source_scope_session):
+    return isinstance(rhel9_data_source_scope_session.source, PersistentVolumeClaim)
 
 
 @pytest.fixture(scope="module")
@@ -120,8 +120,8 @@ def updated_rhel9_boot_source(
 
 
 @pytest.fixture(scope="module")
-def rhel9_boot_source_name(rhel9_data_source_scope_module):
-    return rhel9_data_source_scope_module.source.name
+def rhel9_boot_source_name(rhel9_data_source_scope_session):
+    return rhel9_data_source_scope_session.source.name
 
 
 @pytest.fixture(scope="module")
@@ -158,7 +158,7 @@ def disabled_data_import_cron_annotation_rhel9(
     admin_client,
     hco_namespace,
     rhel9_cached_snapshot,
-    rhel9_data_source_scope_module,
+    rhel9_data_source_scope_session,
     hyperconverged_status_templates_scope_function,
     hyperconverged_resource_scope_function,
 ):
@@ -172,9 +172,9 @@ def disabled_data_import_cron_annotation_rhel9(
         hyperconverged_resource=hyperconverged_resource_scope_function,
         updated_template=updated_template,
     )
-    rhel9_data_source_scope_module.wait_for_condition(
-        condition=rhel9_data_source_scope_module.Condition.READY,
-        status=rhel9_data_source_scope_module.Condition.Status.TRUE,
+    rhel9_data_source_scope_session.wait_for_condition(
+        condition=rhel9_data_source_scope_session.Condition.READY,
+        status=rhel9_data_source_scope_session.Condition.Status.TRUE,
         timeout=TIMEOUT_3MIN,
     )
 
@@ -184,7 +184,7 @@ def rhel9_golden_image_vm(
     request,
     snapshot_storage_class_name_scope_module,
     rhel9_cached_snapshot,
-    rhel9_data_source_scope_module,
+    rhel9_data_source_scope_session,
     unprivileged_client,
     namespace,
 ):
@@ -193,7 +193,7 @@ def rhel9_golden_image_vm(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel9_data_source_scope_module,
+            data_source=rhel9_data_source_scope_session,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
@@ -205,11 +205,11 @@ def rhel9_golden_image_vm(
 def test_automatic_update_for_system_cached_snapshot(
     rhel9_cached_snapshot,
     disabled_common_boot_image_import_hco_spec_rhel9_scope_function,
-    rhel9_data_source_scope_module,
+    rhel9_data_source_scope_session,
 ):
-    rhel9_data_source_scope_module.wait_for_condition(
-        condition=rhel9_data_source_scope_module.Condition.READY,
-        status=rhel9_data_source_scope_module.Condition.Status.FALSE,
+    rhel9_data_source_scope_session.wait_for_condition(
+        condition=rhel9_data_source_scope_session.Condition.READY,
+        status=rhel9_data_source_scope_session.Condition.Status.FALSE,
         timeout=TIMEOUT_3MIN,
     )
 
@@ -219,12 +219,12 @@ def test_automatic_update_for_system_cached_snapshot(
 def test_disable_automatic_update_using_annotation(
     disabled_data_import_cron_annotation_rhel9,
     rhel9_data_import_cron,
-    rhel9_data_source_scope_module,
+    rhel9_data_source_scope_session,
 ):
     wait_for_deleted_data_import_crons(data_import_crons=[rhel9_data_import_cron])
-    rhel9_data_source_scope_module.wait_for_condition(
-        condition=rhel9_data_source_scope_module.Condition.READY,
-        status=rhel9_data_source_scope_module.Condition.Status.FALSE,
+    rhel9_data_source_scope_session.wait_for_condition(
+        condition=rhel9_data_source_scope_session.Condition.READY,
+        status=rhel9_data_source_scope_session.Condition.Status.FALSE,
         timeout=TIMEOUT_3MIN,
     )
 

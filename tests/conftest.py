@@ -36,7 +36,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.infrastructure import Infrastructure
-from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
@@ -590,6 +589,7 @@ def nodes_active_nics(
     workers_utility_pods,
     node_physical_nics,
 ):
+    # TODO: Add support for environments that do not have KNMstate installed. e.g: clouds
     # TODO: Reduce cognitive complexity
     def _bridge_ports(node_interface):
         ports = set()
@@ -901,12 +901,22 @@ def golden_image_data_source_scope_function(admin_client, golden_image_data_volu
     yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
 
 
-@pytest.fixture(scope="module")
-def rhel9_data_source_scope_module(golden_images_namespace):
+@pytest.fixture(scope="session")
+def rhel9_data_source_scope_session(golden_images_namespace):
     return DataSource(
         client=golden_images_namespace.client,
         name=RHEL9_STR,
         namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
         ensure_exists=True,
     )
 
@@ -1137,11 +1147,6 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="class")
 def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
-
-
-@pytest.fixture(scope="module")
-def skip_access_mode_rwo_scope_module(storage_class_matrix__module__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__module__)
 
 
 @pytest.fixture(scope="session")
@@ -1570,21 +1575,6 @@ def cdi_spec(cdi):
 @pytest.fixture()
 def hco_spec(hyperconverged_resource_scope_function):
     return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
-
-
-@pytest.fixture(scope="module")
-def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
-    return (
-        len(
-            list(
-                InstallPlan.get(
-                    dyn_client=admin_client,
-                    namespace=hco_namespace.name,
-                )
-            )
-        )
-        > 1
-    )
 
 
 @pytest.fixture(scope="session")
@@ -2860,11 +2850,13 @@ def machine_config_pools():
 
 
 @pytest.fixture(scope="session")
-def nmstate_namespace(admin_client, nmstate_required):
-    if nmstate_required:
-        return Namespace(client=admin_client, name="openshift-nmstate", ensure_exists=True)
+def nmstate_namespace(admin_client):
+    try:
+        return Namespace(client=admin_client, name=NamespacesNames.OPENSHIFT_NMSTATE, ensure_exists=True)
 
-    return None
+    except ResourceNotFoundError:
+        LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
+        return None
 
 
 @pytest.fixture()
@@ -2890,11 +2882,7 @@ def smbios_from_kubevirt_config(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["smbios"]
 
 
-@pytest.fixture(scope="session")
-def nmstate_required(admin_client):
-    return get_cluster_platform(admin_client=admin_client) in ("BareMetal", "OpenStack")
-
-
+# TODO: Replace this fixture with py_config.get("conformance_tests")
 @pytest.fixture(scope="session")
 def conformance_tests(request):
     return (

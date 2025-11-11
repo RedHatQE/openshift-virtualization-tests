@@ -7,8 +7,7 @@
     ":semanticCommitTypeAll(ci)"
   ],
   "baseBranches": [
-    "main",
-    "cnv-4.99"
+    "main"
   ],
   "prConcurrentLimit": 0,
   "lockFileMaintenance": {
@@ -19,12 +18,6 @@
     {
       "matchPackagePatterns": ["*"],
       "groupName": "python-deps"
-    },
-    {
-      "matchManagers": ["pep621"],
-      "matchPackageNames": ["python"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false
     }
   ]
 }
