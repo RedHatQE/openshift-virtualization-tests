@@ -656,11 +656,10 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
 @pytest.fixture(scope="class")
 def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
     LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
-    guest_agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
+    guest_agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec).split(".")
     LOGGER.info(f"qemu-guest-agent version: {guest_agent_version}")
     if len(guest_agent_version) < 2:
         raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version}")
-    guest_agent_version = guest_agent_version.split(".")
     version_num = float(f"{guest_agent_version[0]}.{guest_agent_version[1]}")
     if version_num >= MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS:
         return
