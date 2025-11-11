@@ -8,6 +8,7 @@ from ocp_resources.resource import ResourceEditor
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (
@@ -102,7 +103,9 @@ def linux_bridge_attached_vma(
     linux_macspoof_nad,
 ):
     name = "vma"
-    networks, network_data_data = _networks_data(nad=linux_macspoof_nad, ip="10.200.0.1/24")
+    networks, network_data_data = _networks_data(
+        nad=linux_macspoof_nad, ip=f"{random_ipv4_address(net_seed=0, host_address=1)}/24"
+    )
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
     )
@@ -128,7 +131,9 @@ def linux_bridge_attached_vmb(
     linux_macspoof_nad,
 ):
     name = "vmb"
-    networks, network_data_data = _networks_data(nad=linux_macspoof_nad, ip="10.200.0.2/24")
+    networks, network_data_data = _networks_data(
+        nad=linux_macspoof_nad, ip=f"{random_ipv4_address(net_seed=0, host_address=2)}/24"
+    )
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
     )

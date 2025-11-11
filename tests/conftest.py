@@ -36,7 +36,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.infrastructure import Infrastructure
-from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
@@ -1576,21 +1575,6 @@ def cdi_spec(cdi):
 @pytest.fixture()
 def hco_spec(hyperconverged_resource_scope_function):
     return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
-
-
-@pytest.fixture(scope="module")
-def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
-    return (
-        len(
-            list(
-                InstallPlan.get(
-                    dyn_client=admin_client,
-                    namespace=hco_namespace.name,
-                )
-            )
-        )
-        > 1
-    )
 
 
 @pytest.fixture(scope="session")
