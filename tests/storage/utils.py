@@ -86,7 +86,7 @@ def upload_image_to_dv(dv_name, storage_ns_name, storage_class, client, consume_
         source="upload",
         dv_name=dv_name,
         namespace=storage_ns_name,
-        size="3Gi",
+        size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=storage_class,
         client=client,
         consume_wffc=consume_wffc,

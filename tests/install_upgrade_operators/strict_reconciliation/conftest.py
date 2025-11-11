@@ -18,7 +18,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
 from tests.utils import wait_for_cr_labels_change
 from utilities.constants import HCO_BEARER_AUTH, TIMEOUT_1MIN, VERSION_LABEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import is_jira_open
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
