@@ -18,10 +18,13 @@ LOGGER = logging.getLogger(__name__)
 class BaseTcpClient(ABC):
     """Base abstract class for network traffic generator client."""
 
-    def __init__(self, server_ip: str, server_port: int):
+    def __init__(self, server_ip: str, server_port: int, maximum_segment_size: int | None = None):
         self._server_ip = server_ip
         self.server_port = server_port
-        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+        self._cmd = (
+            f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+            f"{f' --set-mss {maximum_segment_size}' if maximum_segment_size else ''}"
+        )
 
     @abstractmethod
     def __enter__(self) -> "BaseTcpClient":
@@ -90,12 +93,9 @@ class VMTcpClient(BaseTcpClient):
     """
 
     def __init__(
-        self,
-        vm: BaseVirtualMachine,
-        server_ip: str,
-        server_port: int,
+        self, vm: BaseVirtualMachine, server_ip: str, server_port: int, maximum_segment_size: int | None = None
     ):
-        super().__init__(server_ip=server_ip, server_port=server_port)
+        super().__init__(server_ip=server_ip, server_port=server_port, maximum_segment_size=maximum_segment_size)
         self._vm = vm
 
     def __enter__(self) -> "VMTcpClient":
