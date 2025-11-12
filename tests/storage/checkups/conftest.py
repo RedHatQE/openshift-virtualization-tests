@@ -1,4 +1,5 @@
 import pytest
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
@@ -10,6 +11,7 @@ from ocp_resources.role_binding import RoleBinding
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
+from timeout_sampler import TimeoutExpiredError
 
 from tests.storage.checkups.constants import (
     ACCESS_MODES,
@@ -29,7 +31,8 @@ from utilities.constants import (
     WILDCARD_CRON_EXPRESSION,
     StorageClassNames,
 )
-from utilities.infra import create_ns
+from utilities.exceptions import StorageCheckupConditionTimeoutExpiredError
+from utilities.infra import create_ns, get_pods
 from utilities.storage import update_default_sc
 
 KUBEVIRT_STORAGE_CHECKUP = "kubevirt-storage-checkup"
@@ -108,6 +111,7 @@ def checkup_configmap(checkups_namespace):
 
 @pytest.fixture(scope="function")
 def checkup_job(
+    unprivileged_client,
     request,
     checkups_namespace,
     checkup_image_url,
@@ -136,12 +140,28 @@ def checkup_job(
         restart_policy="Never",
         backoff_limit=0,
         containers=containers,
+        client=unprivileged_client,
     ) as job:
-        job.wait_for_condition(
-            condition=request.param["expected_condition"],
-            status=job.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        try:
+            job.wait_for_condition(
+                condition=request.param["expected_condition"],
+                status=job.Condition.Status.TRUE,
+                timeout=TIMEOUT_10MIN,
+            )
+        except TimeoutExpiredError:
+            job_pods = get_pods(
+                dyn_client=unprivileged_client,
+                namespace=checkups_namespace,
+                label=f"job-name={job.name}",
+            )
+            if not job_pods:
+                raise ResourceNotFoundError(f"{job.name} job failed. No pod found for the job {job.name}.")
+
+            job_pod = job_pods[0]
+            raise StorageCheckupConditionTimeoutExpiredError(
+                f"{job.name} job failed. Log of {job_pod.name} pod:\n{job_pod.log()}"
+            )
+
         yield job
 
 
