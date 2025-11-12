@@ -2,7 +2,6 @@ import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
 from tests.network.localnet.liblocalnet import LOCALNET_BR_EX_NETWORK, client_server_active_connection
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 
@@ -11,10 +10,6 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.single_nic
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11775")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Flaky, occasionally fails during setup on console init; tracked in CNV-67470",
-    run=False,
-)
 def test_connectivity_over_migration_between_localnet_vms(localnet_server, localnet_client):
     migrate_vm_and_verify(vm=localnet_client.vm)
     assert is_tcp_connection(server=localnet_server, client=localnet_client)
