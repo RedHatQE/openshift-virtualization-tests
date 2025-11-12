@@ -5,7 +5,7 @@ from ocp_resources.resource import Resource
 from tests.install_upgrade_operators.utils import (
     get_resource_container_env_image_mismatch,
 )
-from utilities.infra import ResourceMismatch
+from utilities.exceptions import ResourceMismatch
 
 
 def validate_liveness_probe_fields(deployment):

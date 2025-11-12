@@ -20,7 +20,6 @@ from typing import Any
 
 import netaddr
 import paramiko
-import pytest
 import requests
 import urllib3
 import yaml
@@ -44,11 +43,6 @@ from ocp_resources.project_request import ProjectRequest
 from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
-from ocp_utilities.exceptions import NodeNotReadyError, NodeUnschedulableError
-from ocp_utilities.infra import (
-    assert_nodes_in_healthy_condition,
-    assert_nodes_schedulable,
-)
 from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
@@ -65,17 +59,13 @@ from utilities.constants import (
     EXCLUDED_CPU_MODELS,
     EXCLUDED_OLD_CPU_MODELS,
     HCO_CATALOG_SOURCE,
-    IMAGE_CRON_STR,
     KUBECONFIG,
-    KUBELET_READY_CONDITION,
     KUBERNETES_ARCH_LABEL,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
-    SANITY_TESTS_FAILURE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10MIN,
@@ -85,19 +75,11 @@ from utilities.constants import (
     X86_64,
     NamespacesNames,
 )
-from utilities.data_collector import (
-    collect_default_cnv_must_gather_with_vm_gather,
-    get_data_collector_dir,
-    write_to_file,
-)
 from utilities.exceptions import (
-    ClusterSanityError,
     OsDictNotFoundError,
-    StorageSanityError,
     UrlNotFoundError,
     UtilityPodNotFoundError,
 )
-from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import guest_agent_version_parser
 from utilities.storage import get_test_artifact_server_url
 
@@ -475,34 +457,6 @@ def wait_for_consistent_resource_conditions(
         raise
 
 
-def raise_multiple_exceptions(exceptions):
-    """Raising multiple exceptions
-
-    To be used when multiple exceptions need to be raised, for example when using TimeoutSampler,
-    and additional information should be added (so it is viewable in junit report).
-    Example:
-        except TimeoutExpiredError as exp:
-            raise_multiple_exceptions(
-                exceptions=[
-                    ValueError(f"Error message: {output}"),
-                    exp,
-                ]
-            )
-
-    Args:
-        exceptions (list): List of exceptions to be raised. The 1st exception will appear in pytest error message;
-                           all exceptions will appear in the stacktrace.
-
-    """
-    # After all exceptions were raised
-    if not exceptions:
-        return
-    try:
-        raise exceptions.pop()
-    finally:
-        raise_multiple_exceptions(exceptions=exceptions)
-
-
 def get_node_pod(utility_pods, node):
     """
     This function will return a pod based on the node specified as an argument.
@@ -571,126 +525,6 @@ class ExecCommandOnPod:
                 continue
             release_info[values[0].strip()] = values[1].strip(" \"'")
         return release_info
-
-
-def storage_sanity_check(cluster_storage_classes_names):
-    config_sc = list([[*csc][0] for csc in py_config["storage_class_matrix"]])
-    exists_sc = [scn for scn in config_sc if scn in cluster_storage_classes_names]
-    if sorted(config_sc) != sorted(exists_sc):
-        LOGGER.error(f"Expected {config_sc}, On cluster {exists_sc}")
-        return False
-    return True
-
-
-def cluster_sanity(
-    request,
-    admin_client,
-    cluster_storage_classes_names,
-    nodes,
-    hco_namespace,
-    hco_status_conditions,
-    expected_hco_status,
-    junitxml_property=None,
-):
-    if "cluster_health_check" in request.config.getoption("-m"):
-        LOGGER.warning("Skipping cluster sanity test, got -m cluster_health_check")
-        return
-
-    skip_cluster_sanity_check = "--cluster-sanity-skip-check"
-    skip_storage_classes_check = "--cluster-sanity-skip-storage-check"
-    skip_nodes_check = "--cluster-sanity-skip-nodes-check"
-    exceptions_filename = "cluster_sanity_failure.txt"
-    try:
-        if request.session.config.getoption(skip_cluster_sanity_check):
-            LOGGER.warning(f"Skipping cluster sanity check, got {skip_cluster_sanity_check}")
-            return
-        LOGGER.info(
-            f"Running cluster sanity. (To skip cluster sanity check pass {skip_cluster_sanity_check} to pytest)"
-        )
-        # Check storage class only if --cluster-sanity-skip-storage-check not passed to pytest.
-        if request.session.config.getoption(skip_storage_classes_check):
-            LOGGER.warning(f"Skipping storage classes check, got {skip_storage_classes_check}")
-        else:
-            LOGGER.info(
-                f"Check storage classes sanity. (To skip storage class sanity check pass {skip_storage_classes_check} "
-                f"to pytest)"
-            )
-            if not storage_sanity_check(cluster_storage_classes_names=cluster_storage_classes_names):
-                raise StorageSanityError(
-                    err_str=f"Cluster is missing storage class.\n"
-                    f"either run with '--storage-class-matrix' or with '{skip_storage_classes_check}'"
-                )
-
-        # Check nodes only if --cluster-sanity-skip-nodes-check not passed to pytest.
-        if request.session.config.getoption(skip_nodes_check):
-            LOGGER.warning(f"Skipping nodes check, got {skip_nodes_check}")
-
-        else:
-            # validate that all the nodes are ready and schedulable and CNV pods are running
-            LOGGER.info(f"Check nodes sanity. (To skip nodes sanity check pass {skip_nodes_check} to pytest)")
-            assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
-            assert_nodes_schedulable(nodes=nodes)
-
-            try:
-                wait_for_pods_running(
-                    admin_client=admin_client,
-                    namespace=hco_namespace,
-                    filter_pods_by_name=IMAGE_CRON_STR,
-                )
-            except TimeoutExpiredError as timeout_error:
-                LOGGER.error(timeout_error)
-                raise ClusterSanityError(
-                    err_str=f"Timed out waiting for all pods in namespace {hco_namespace.name} to get to running state."
-                )
-        # Wait for hco to be healthy
-        wait_for_hco_conditions(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
-        )
-    except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError, StorageSanityError) as ex:
-        exit_pytest_execution(
-            filename=exceptions_filename,
-            message=str(ex),
-            junitxml_property=junitxml_property,
-        )
-
-
-class ResourceMismatch(Exception):
-    pass
-
-
-def exit_pytest_execution(message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None):
-    """Exit pytest execution
-
-    Exit pytest execution; invokes pytest_sessionfinish.
-    Optionally, log an error message to tests-collected-info/utilities/pytest_exit_errors/<filename>
-
-    Args:
-        message (str):  Message to display upon exit and to log in errors file
-        return_code (int. Default: 99): Exit return code
-        filename (str, optional. Default: None): filename where the given message will be saved
-        junitxml_property (pytest plugin): record_testsuite_property
-    """
-    target_location = os.path.join(get_data_collector_dir(), "pytest_exit_errors")
-    # collect must-gather for past 5 minutes:
-    if return_code == SANITY_TESTS_FAILURE:
-        try:
-            collect_default_cnv_must_gather_with_vm_gather(
-                since_time=TIMEOUT_5MIN,
-                target_dir=target_location,
-            )
-        except Exception as current_exception:
-            LOGGER.warning(f"Failed to collect logs cnv must-gather after cluster_sanity failure: {current_exception}")
-
-    if filename:
-        write_to_file(
-            file_name=filename,
-            content=message,
-            base_directory=target_location,
-        )
-    if junitxml_property:
-        junitxml_property(name="exit_code", value=return_code)
-    pytest.exit(reason=message, returncode=return_code)
 
 
 def get_kubevirt_package_manifest(admin_client):

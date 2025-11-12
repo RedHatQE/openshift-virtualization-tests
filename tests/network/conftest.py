@@ -30,7 +30,6 @@ from utilities.constants import (
 )
 from utilities.infra import (
     ExecCommandOnPod,
-    exit_pytest_execution,
     get_deployment_by_name,
     get_node_selector_dict,
     wait_for_pods_running,
@@ -40,6 +39,7 @@ from utilities.network import (
     ip_version_data_from_matrix,
     network_nad,
 )
+from utilities.pytest_utils import exit_pytest_execution
 
 LOGGER = logging.getLogger(__name__)
 

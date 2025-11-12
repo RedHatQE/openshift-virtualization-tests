@@ -82,7 +82,6 @@ from utilities.constants import (
     CLUSTER,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_VM_SSH_KEY_PATH,
-    DEFAULT_HCO_CONDITIONS,
     ES_NONE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FEATURE_GATES,
@@ -131,10 +130,8 @@ from utilities.infra import (
     ExecCommandOnPod,
     add_scc_to_service_account,
     base64_encode_str,
-    cluster_sanity,
     create_ns,
     download_file_from_cluster,
-    exit_pytest_execution,
     find_common_cpu_model_for_live_migration,
     generate_namespace_name,
     generate_openshift_pull_secret_file,
@@ -183,6 +180,8 @@ from utilities.operator import (
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
+from utilities.pytest_utils import exit_pytest_execution
+from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
     create_or_update_data_source,
@@ -1490,8 +1489,6 @@ def cluster_sanity_scope_session(
             nodes=nodes,
             hco_namespace=hco_namespace,
             junitxml_property=junitxml_plugin,
-            hco_status_conditions=hyperconverged_resource_scope_session.instance.status.conditions,
-            expected_hco_status=DEFAULT_HCO_CONDITIONS,
         )
 
 
@@ -1518,8 +1515,6 @@ def cluster_sanity_scope_module(
             nodes=nodes,
             hco_namespace=hco_namespace,
             junitxml_property=junitxml_plugin,
-            hco_status_conditions=hyperconverged_resource_scope_session.instance.status.conditions,
-            expected_hco_status=DEFAULT_HCO_CONDITIONS,
         )
 
 
