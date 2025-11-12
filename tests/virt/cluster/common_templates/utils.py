@@ -46,12 +46,11 @@ def xfail_old_guest_agent_version(vm, ga_version):
 
 
 def vm_os_version(vm):
-    """Verify VM os version using SSH"""
-
     # Replace rhel with "redhat"
     os_name = "redhat" if OS_FLAVOR_RHEL in vm.os_flavor else vm.os_flavor
-    os = re.search(r"(\w+-)?(\d+(-\d+)?)(-\d+-\d+)$", vm.name).group(2)
-    command = shlex.split(f"cat /etc/{os_name}-release | grep {os.replace('-', '.')}")
+    os = re.search(r"(\w+-)?(\d+?)", vm.name).group(2)
+    grep_cmd = os_name.title() if "fedora" in vm.os_flavor else os.replace("-", ".")
+    command = shlex.split(f"cat /etc/{os_name}-release | grep {grep_cmd}")
 
     run_ssh_commands(host=vm.ssh_exec, commands=command)
 
@@ -397,13 +396,20 @@ def get_libvirt_user_info(vm):
 
 
 def get_linux_user_info(ssh_exec):
-    cmd = shlex.split("lastlog | grep tty; who | awk \"'{print$3}'\"")
-    out = run_ssh_commands(host=ssh_exec, commands=cmd)[0]
-    users = out.strip().split()
-    date = datetime.strptime(f"{users[7]}-{users[3]}-{users[4]} {users[5]}", "%Y-%b-%d %H:%M:%S")
+    try:
+        # Newer versions of Linux (for e.g. F40+ and RHEL9+) use last -w --time-format iso to get the login time
+        cmd = shlex.split("last -w --time-format iso | grep 'tty.*still logged in'")
+        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
+        date = datetime.fromisoformat(output[2])
+    except Exception:
+        # Older versions of Linux (RHEL 7, 8) use lastlog and who to get the login time
+        cmd = shlex.split("lastlog | grep tty; who | awk \"'{print$3}'\"")
+        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
+        date = datetime.strptime(f"{output[7]}-{output[3]}-{output[4]} {output[5]}", "%Y-%b-%d %H:%M:%S")
+
     timestamp = date.replace(tzinfo=timezone(timedelta(seconds=int(ssh_exec.os.timezone.offset) * 36))).timestamp()
     return {
-        "userName": users[0],
+        "userName": output[0],
         "loginTime": int(timestamp),
     }
 
