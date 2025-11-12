@@ -62,9 +62,7 @@ from utilities.infra import (
 from utilities.jira import is_jira_open
 from utilities.storage import (
     create_cirros_dv_for_snapshot_dict,
-    data_volume,
     get_downloaded_artifact,
-    sc_volume_binding_mode_is_wffc,
     write_file,
 )
 from utilities.virt import VirtualMachineForTests
@@ -209,12 +207,6 @@ def skip_test_if_no_hpp_sc(cluster_storage_classes):
     existing_hpp_sc = [sc.name for sc in cluster_storage_classes if sc.name in HPP_STORAGE_CLASSES]
     if not existing_hpp_sc:
         pytest.skip(f"This test runs only on one of the hpp storage classes: {HPP_STORAGE_CLASSES}")
-
-
-@pytest.fixture(scope="module")
-def skip_when_hpp_no_waitforfirstconsumer(storage_class_matrix_hpp_matrix__module__):
-    if not sc_volume_binding_mode_is_wffc(sc=[*storage_class_matrix_hpp_matrix__module__][0]):
-        pytest.skip("Test only run when volumeBindingMode is WaitForFirstConsumer")
 
 
 @pytest.fixture()
@@ -424,21 +416,6 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 @pytest.fixture()
 def cirros_vm_name(request):
     return request.param["vm_name"]
-
-
-@pytest.fixture(scope="module")
-def data_volume_multi_hpp_storage(
-    request,
-    namespace,
-    schedulable_nodes,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-        schedulable_nodes=schedulable_nodes,
-    )
 
 
 @pytest.fixture(scope="session")
