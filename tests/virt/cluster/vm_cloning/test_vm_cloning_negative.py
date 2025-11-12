@@ -27,10 +27,11 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
 )
-def test_cloning_job_if_source_not_exist_negative(namespace, cloning_job_bad_params):
+def test_cloning_job_if_source_not_exist_negative(unprivileged_client, namespace, cloning_job_bad_params):
     with VirtualMachineClone(
         name="clone-job-negative-test",
         namespace=namespace.name,
+        client=unprivileged_client,
         source_name=cloning_job_bad_params["source_name"],
         source_kind=cloning_job_bad_params["source_kind"],
     ) as vmc:

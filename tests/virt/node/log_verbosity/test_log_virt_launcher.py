@@ -71,6 +71,7 @@ def vm_for_migration_progress_test(
     name = "vm-for-migration-progress-test"
     with VirtualMachineForTests(
         name=name,
+        client=unprivileged_client,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         additional_labels=MIGRATION_POLICY_VM_LABEL,

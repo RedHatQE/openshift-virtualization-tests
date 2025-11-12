@@ -109,7 +109,7 @@ def virt_special_infra_sanity(
     def _verify_rwx_default_storage():
         storage_class = py_config["default_storage_class"]
         LOGGER.info(f"Verifing default storage class {storage_class} supports RWX mode")
-        access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+        access_modes = StorageProfile(client=admin_client, name=storage_class).first_claim_property_set_access_modes()
         if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
             failed_verifications_list.append(f"Default storage class {storage_class} doesn't support RWX mode")
 
