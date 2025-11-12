@@ -4,7 +4,7 @@ from typing import Any, Final
 from kubernetes.dynamic.client import ResourceField
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
-from libs.vm.spec import Devices, Interface, Network, SpecDisk, VMISpec, Volume
+from libs.vm.spec import Devices, Network, SpecDisk, VMISpec, Volume
 from libs.vm.vm import BaseVirtualMachine
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
@@ -122,15 +122,6 @@ def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
         if network.pod is not None:
             return Network(**network)
     raise VMInterfaceSpecNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
-
-
-def add_network_interface(vmi_spec: VMISpec, network: Network, interface: Interface) -> VMISpec:
-    vmi_spec.networks = vmi_spec.networks or []
-    vmi_spec.networks.append(network)
-    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
-    vmi_spec.domain.devices.interfaces = vmi_spec.domain.devices.interfaces or []
-    vmi_spec.domain.devices.interfaces.append(interface)
-    return vmi_spec
 
 
 def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpec:
