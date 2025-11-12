@@ -16,7 +16,7 @@ from ocp_resources.service import Service
 from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
 from utilities.constants import HCO_PART_OF_LABEL_VALUE, NamespacesNames
 from utilities.data_collector import get_data_collector_base_directory
-from utilities.infra import ResourceMismatch
+from utilities.exceptions import ResourceMismatch
 
 LOGGER = logging.getLogger(__name__)
 MUST_GATHER_VM_NAME_PREFIX = "must-gather-vm"

@@ -29,7 +29,8 @@ from tests.virt.utils import (
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, exit_pytest_execution, label_nodes
+from utilities.infra import ExecCommandOnPod, label_nodes
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)

@@ -13,8 +13,9 @@ from timeout_sampler import TimeoutSampler
 
 from utilities.constants import KUBELET_READY_CONDITION, TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.hco import get_installed_hco_csv, wait_for_hco_conditions
-from utilities.infra import storage_sanity_check, wait_for_pods_running
+from utilities.infra import wait_for_pods_running
 from utilities.operator import wait_for_cluster_operator_stabilize
+from utilities.sanity import storage_sanity_check
 from utilities.storage import get_data_sources_managed_by_data_import_cron
 
 # flake8: noqa: PID001
