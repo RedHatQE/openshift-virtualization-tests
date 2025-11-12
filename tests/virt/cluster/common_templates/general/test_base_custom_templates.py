@@ -19,6 +19,7 @@ class CustomTemplate(Template):
     def __init__(
         self,
         name,
+        client,
         namespace,
         source_template,
         vm_validation_rule=None,
@@ -33,6 +34,7 @@ class CustomTemplate(Template):
         """
         super().__init__(
             name=name,
+            client=client,
             namespace=namespace,
         )
         self.source_template = source_template
@@ -64,10 +66,13 @@ class CustomTemplate(Template):
 
 
 @pytest.fixture()
-def custom_template_from_base_template(request, namespace):
-    base_template = Template(namespace=NamespacesNames.OPENSHIFT, name=request.param["base_template_name"])
+def custom_template_from_base_template(request, admin_client, unprivileged_client, namespace):
+    base_template = Template(
+        client=admin_client, namespace=NamespacesNames.OPENSHIFT, name=request.param["base_template_name"]
+    )
     with CustomTemplate(
         name=request.param["new_template_name"],
+        client=unprivileged_client,
         namespace=namespace.name,
         source_template=base_template,
         vm_validation_rule=request.param.get("validation_rule"),

@@ -41,9 +41,10 @@ WINDOWS_VM_FOR_CLONING = "win-vm-for-cloning"
 FEDORA_VM_FOR_CLONING = "fedora-vm-with-labels-annotations-mac-smbios"
 
 
-def dummy_dv_dict_for_vm_cloning(namespace):
+def dummy_dv_dict_for_vm_cloning(client, namespace):
     dv = DataVolume(
         name="dummy-dv-for-clone",
+        client=client,
         namespace=namespace.name,
         source="blank",
         size="10Gi",
@@ -56,11 +57,16 @@ def dummy_dv_dict_for_vm_cloning(namespace):
 
 @pytest.fixture()
 def vm_with_dv_for_cloning(
-    skip_if_no_storage_class_for_snapshot, request, namespace, golden_image_data_volume_template_for_test_scope_function
+    skip_if_no_storage_class_for_snapshot,
+    request,
+    unprivileged_client,
+    namespace,
+    golden_image_data_volume_template_for_test_scope_function,
 ):
     with VirtualMachineForCloning(
         name=request.param["vm_name"],
         namespace=namespace.name,
+        client=unprivileged_client,
         data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         memory_guest=request.param["memory_guest"],
         cpu_cores=request.param.get("cpu_cores", 1),
@@ -70,15 +76,18 @@ def vm_with_dv_for_cloning(
     ) as vm:
         # Add second DV when needed
         if request.param.get("extra_dv"):
-            add_dv_to_vm(vm=vm, template_dv=dummy_dv_dict_for_vm_cloning(namespace=namespace))
+            add_dv_to_vm(
+                vm=vm, template_dv=dummy_dv_dict_for_vm_cloning(client=unprivileged_client, namespace=namespace)
+            )
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def cloning_job_fedora_vm(request, namespace):
+def cloning_job_fedora_vm(request, unprivileged_client, namespace):
     with create_vm_cloning_job(
         name=f"clone-job-{request.param['source_name']}",
+        client=unprivileged_client,
         namespace=namespace.name,
         source_name=request.param["source_name"],
         target_name=request.param["target_name"],
@@ -108,8 +117,8 @@ def files_created_on_pvc_disks(vm_with_dv_for_cloning):
 
 
 @pytest.fixture(scope="class")
-def fedora_target_vm(cloning_job_fedora_vm):
-    with target_vm_from_cloning_job(cloning_job=cloning_job_fedora_vm) as target_vm:
+def fedora_target_vm(unprivileged_client, cloning_job_fedora_vm):
+    with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=cloning_job_fedora_vm) as target_vm:
         yield target_vm
 
 

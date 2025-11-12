@@ -20,8 +20,8 @@ VIRTCTL_CREATE_CLONE_COMMAND = (
 )
 
 
-def create_cloning_job_from_manifest_and_wait_for_success(manifest):
-    with VirtualMachineClone(yaml_file=manifest) as vmc:
+def create_cloning_job_from_manifest_and_wait_for_success(client, manifest):
+    with VirtualMachineClone(client=client, yaml_file=manifest) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
 
 
@@ -53,13 +53,7 @@ def vmsnapshot_created(fedora_vm_for_cloning):
 
 @pytest.mark.parametrize(
     "fedora_vm_for_cloning",
-    [
-        pytest.param(
-            {
-                "vm_name": "fedora-vm-for-manifest-clone-test",
-            },
-        )
-    ],
+    [pytest.param({"vm_name": "fedora-vm-for-manifest-clone-test"})],
     indirect=True,
 )
 @pytest.mark.usefixtures(
@@ -68,22 +62,24 @@ def vmsnapshot_created(fedora_vm_for_cloning):
 class TestVMCloneVirtctlManifest:
     @pytest.mark.parametrize(
         "virtctl_cloning_manifest",
-        [
-            pytest.param("vm"),
-        ],
+        [pytest.param("vm")],
         indirect=True,
     )
     @pytest.mark.polarion("CNV-10300")
-    def test_clone_vm_with_virtctl_manifest(self, virtctl_cloning_manifest):
-        create_cloning_job_from_manifest_and_wait_for_success(manifest=virtctl_cloning_manifest)
+    def test_clone_vm_with_virtctl_manifest(self, unprivileged_client, virtctl_cloning_manifest):
+        create_cloning_job_from_manifest_and_wait_for_success(
+            client=unprivileged_client, manifest=virtctl_cloning_manifest
+        )
 
     @pytest.mark.parametrize(
         "virtctl_cloning_manifest",
-        [
-            pytest.param("vmsnapshot"),
-        ],
+        [pytest.param("vmsnapshot")],
         indirect=True,
     )
     @pytest.mark.polarion("CNV-10301")
-    def test_clone_vmsnapshot_with_virtctl_manifest(self, vmsnapshot_created, virtctl_cloning_manifest):
-        create_cloning_job_from_manifest_and_wait_for_success(manifest=virtctl_cloning_manifest)
+    def test_clone_vmsnapshot_with_virtctl_manifest(
+        self, unprivileged_client, vmsnapshot_created, virtctl_cloning_manifest
+    ):
+        create_cloning_job_from_manifest_and_wait_for_success(
+            client=unprivileged_client, manifest=virtctl_cloning_manifest
+        )
