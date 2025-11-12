@@ -16,14 +16,17 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
+    NODE_HUGE_PAGES_1GI_KEY,
     RHSM_SECRET_NAME,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
@@ -32,6 +35,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
@@ -564,3 +568,52 @@ def create_cirros_vm(
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+def verify_cpumanager_workers(schedulable_nodes) -> None:
+    """Verify cluster nodes have CPU Manager labels
+
+    Args:
+        schedulable_nodes: List of schedulable node objects.
+
+    Raises:
+        ResourceValueError: If no node has CPU Manager enabled.
+    """
+    LOGGER.info("Verifying cluster nodes have CPU Manager labels")
+    if not any(node.labels.cpumanager == "true" for node in schedulable_nodes):
+        raise ResourceValueError("Cluster does not have CPU Manager enabled on any node")
+
+
+def verify_hugepages_1gi(hugepages_gib_values):
+    """Verify that cluster nodes have 1Gi hugepages enabled.
+
+    Args:
+        hugepages_gib_values: list of hugepage sizes (in GiB) from nodes.
+
+    Raises:
+        ResourceValueError: If 1Gi hugepages are not configured or are insufficient.
+    """
+    LOGGER.info("Verifying cluster has 1Gi hugepages enabled")
+    if not hugepages_gib_values or max(hugepages_gib_values) < 1:
+        raise ResourceValueError(f"Cluster does not have sufficient {NODE_HUGE_PAGES_1GI_KEY}")
+
+
+def verify_rwx_default_storage(client) -> None:
+    """Verify default storage class supports RWX mode.
+
+    Args:
+        client: pass client argument
+
+    Raises:
+       ResourceValueError: access mode is not RWX
+    """
+    storage_class = py_config["default_storage_class"]
+    LOGGER.info(f"Verifying default storage class {storage_class} supports RWX mode")
+
+    access_modes = StorageProfile(client=client, name=storage_class).first_claim_property_set_access_modes()
+    found_mode = access_modes[0] if access_modes else None
+    if found_mode != DataVolume.AccessMode.RWX:
+        raise ResourceValueError(
+            f"Default storage class '{storage_class}' doesn't support RWX mode "
+            f"(required: RWX, found: {found_mode or 'none'})"
+        )
