@@ -3,7 +3,7 @@ from ocp_resources.resource import Resource
 
 from utilities.constants import PVC
 
-pytestmark = [pytest.mark.tier3, pytest.mark.special_infra]
+pytestmark = [pytest.mark.tier3, pytest.mark.special_infra, pytest.mark.tekton]
 
 
 @pytest.mark.parametrize(

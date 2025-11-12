@@ -16,6 +16,7 @@ from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     CNV_SUPPLEMENTAL_TEMPLATES_URL,
     MTU_9000,
+    NODE_HUGE_PAGES_1GI_KEY,
     SRIOV,
     TIMEOUT_10MIN,
     TIMEOUT_20SEC,
@@ -37,7 +38,6 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 VM_SRIOV_IFACE_NAME = "sriov1"
-NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"
 
 
 def vm_sriov_mac(mac_suffix_index):

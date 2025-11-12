@@ -17,6 +17,7 @@ from signal import SIGINT, SIGTERM, getsignal, signal
 from subprocess import check_output
 
 import bcrypt
+import bitmath
 import paramiko
 import pytest
 import requests
@@ -99,6 +100,7 @@ from utilities.constants import (
     KUBEMACPOOL_MAC_RANGE_CONFIG,
     LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
+    NODE_HUGE_PAGES_1GI_KEY,
     NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
@@ -1108,11 +1110,6 @@ def _skip_access_mode_rwo(storage_class_matrix):
 @pytest.fixture()
 def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__function__)
-
-
-@pytest.fixture(scope="class")
-def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
 
 
 @pytest.fixture(scope="session")
@@ -2899,3 +2896,13 @@ def application_aware_resource_quota(admin_client, namespace):
         hard=ARQ_QUOTA_HARD_SPEC,
     ) as arq:
         yield arq
+
+
+@pytest.fixture(scope="session")
+def hugepages_gib_values(workers):
+    """Return the list of hugepage sizes (in GiB) across all worker nodes."""
+    return [
+        int(bitmath.parse_string_unsafe(value).GiB)
+        for worker in workers
+        if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
+    ]
