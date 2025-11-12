@@ -702,6 +702,7 @@ def must_gather_for_test(
     else:
         return cnv_image_path_must_gather_all_images
 
+
 @pytest.fixture(scope="session")
 def xfail_if_non_compact_cluster_and_ocpbugs_64743_is_open(compact_cluster, sno_cluster):
     if not compact_cluster and not sno_cluster and is_jira_open("OCPBUGS-64743"):
