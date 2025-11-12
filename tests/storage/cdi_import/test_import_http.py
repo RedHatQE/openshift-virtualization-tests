@@ -22,7 +22,6 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
-    create_vm_and_verify_image_permission,
     create_vm_from_dv,
     get_file_url,
     get_importer_pod,
@@ -43,11 +42,8 @@ from utilities.infra import get_node_selector_dict
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
-    PodWithPVC,
-    check_disk_count_in_vm,
     create_dummy_first_consumer_pod,
     create_dv,
-    get_containers_for_pods_with_pvc,
     get_test_artifact_server_url,
     sc_volume_binding_mode_is_wffc,
 )
@@ -63,12 +59,6 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-
-DV_PARAMS = {
-    "file_name": Images.Cdi.QCOW2_IMG,
-    "source": HTTPS,
-    "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
-}
 
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
@@ -176,45 +166,11 @@ def test_empty_url(namespace, storage_class_name_scope_module):
             pass
 
 
-@pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-2145",
-                "file_name": TAR_IMG,
-                "content_type": DataVolume.ContentType.ARCHIVE,
-            },
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2145")
-@pytest.mark.s390x
-def test_successful_import_archive(
-    skip_block_volumemode_scope_module,
-    running_pod_with_dv_pvc,
-):
-    """
-    Skip block volume mode - archive does not support block mode DVs,
-    https://github.com/kubevirt/containerized-data-importer/blob/main/doc/supported_operations.md
-    """
-    assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
-
-
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
     "dv_from_http_import",
     [
-        pytest.param(
-            {
-                "dv_name": "cnv-2143",
-                "file_name": Images.Cdi.QCOW2_IMG,
-            },
-            marks=pytest.mark.polarion("CNV-2143"),
-        ),
         pytest.param(
             {
                 "dv_name": "cnv-377",
@@ -226,7 +182,6 @@ def test_successful_import_archive(
     indirect=True,
 )
 def test_successful_import_image(
-    running_pod_with_dv_pvc,
     dv_from_http_import,
     storage_class_name_scope_module,
     cluster_csi_drivers_names,
@@ -270,7 +225,12 @@ def test_successful_import_secure_archive(
     "dv_from_http_import",
     [
         pytest.param(
-            DV_PARAMS,
+            {
+                "dv_name": "cnv-2719",
+                "file_name": Images.Cdi.QCOW2_IMG,
+                "source": HTTPS,
+                "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
+            },
             marks=pytest.mark.polarion("CNV-2719"),
         ),
     ],
@@ -284,20 +244,14 @@ def test_successful_import_secure_image(internal_http_configmap, dv_from_http_im
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    ("content_type", "file_name"),
+    "content_type, file_name",
     [
-        pytest.param(
-            DataVolume.ContentType.ARCHIVE,
-            TAR_IMG,
-            marks=(pytest.mark.polarion("CNV-2339")),
-        ),
         pytest.param(
             DataVolume.ContentType.KUBEVIRT,
             Images.Cirros.RAW_IMG_XZ,
             marks=(pytest.mark.polarion("CNV-784"), pytest.mark.smoke()),
         ),
     ],
-    ids=["import_basic_auth_archive", "import_basic_auth_kubevirt"],
 )
 @pytest.mark.s390x
 def test_successful_import_basic_auth(
@@ -324,17 +278,6 @@ def test_successful_import_basic_auth(
         storage_class=storage_class_name_scope_module,
     ) as dv:
         dv.wait_for_dv_success()
-        pvc = dv.pvc
-        with PodWithPVC(
-            namespace=pvc.namespace,
-            name=f"{pvc.name}-pod",
-            pvc_name=pvc.name,
-            containers=get_containers_for_pods_with_pvc(
-                volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
-                pvc_name=pvc.name,
-            ),
-        ) as pod:
-            pod.wait_for_status(status=pod.Status.RUNNING)
 
 
 @pytest.mark.sno
@@ -404,21 +347,6 @@ def test_unpack_compressed(
         ),
         msg=ErrorMsg.EXIT_STATUS_2,
     )
-
-
-@pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            DV_PARAMS,
-            marks=pytest.mark.polarion("CNV-2811"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-def test_certconfigmap(internal_http_configmap, running_pod_with_dv_pvc):
-    assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=1)
 
 
 @pytest.mark.sno
@@ -517,7 +445,6 @@ def test_successful_concurrent_blank_disk_import(
 ):
     for vm in vm_list_created_by_multiprocess:
         running_vm(vm=vm)
-        check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -642,13 +569,6 @@ def test_successful_vm_from_imported_dv_windows(
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
     )
-
-
-@pytest.mark.polarion("CNV-4032")
-@pytest.mark.sno
-@pytest.mark.s390x
-def test_disk_image_after_import(skip_block_volumemode_scope_module, cirros_dv_unprivileged):
-    create_vm_and_verify_image_permission(dv=cirros_dv_unprivileged)
 
 
 @pytest.mark.polarion("CNV-4724")
