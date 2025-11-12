@@ -29,6 +29,7 @@ from utilities.constants import (
 from utilities.infra import (
     get_linux_guest_agent_version,
     get_linux_os_info,
+    is_jira_open,
     raise_multiple_exceptions,
     run_virtctl_command,
 )
