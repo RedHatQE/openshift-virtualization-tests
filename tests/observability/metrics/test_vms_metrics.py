@@ -513,27 +513,17 @@ class TestVmiPhaseTransitionFromDeletion:
 
 
 class TestVmCreatedByPodTotal:
-    metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='openshift-cnv'}})"
-
-    @pytest.mark.parametrize(
-        "initial_metric_value",
-        [
-            pytest.param(
-                metric_query,
-                marks=pytest.mark.polarion("CNV-12361"),
-            )
-        ],
-        indirect=True,
-    )
+    @pytest.mark.polarion("CNV-12361")
     def test_kubevirt_vm_created_by_pod_total(
         self,
         prometheus,
-        hco_namespace,
-        initial_metric_value,
-        vm_in_hco_namespace,
+        namespace,
+        vm_created_pod_total_initial_metric_value,
+        vm_in_new_namespace,
     ):
+        metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{namespace.name}'}})"
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=self.metric_query,
-            expected_value=str(initial_metric_value + 1),
+            metric_name=metric_query,
+            expected_value=str(vm_created_pod_total_initial_metric_value + 1),
         )

@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
@@ -622,12 +623,18 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture()
-def vm_in_hco_namespace(hco_namespace):
-    vm_name = "hco-vm"
+def vm_created_pod_total_initial_metric_value(prometheus, namespace):
+    metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{namespace.name}'}})"
+    return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
+
+
+@pytest.fixture()
+def vm_in_new_namespace(namespace):
+    vm_name = "vm-created-by-pod-total-vm"
 
     with VirtualMachineForTests(
         name=vm_name,
-        namespace=hco_namespace.name,
+        namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
         ssh=False,
     ) as vm:
