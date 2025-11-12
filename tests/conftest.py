@@ -2471,9 +2471,11 @@ def migrated_vm_multiple_times(request, vm_for_migration_test):
 
 
 @pytest.fixture()
-def removed_default_storage_classes(cluster_storage_classes):
+def removed_default_storage_classes(admin_client, golden_images_namespace, cluster_storage_classes):
     with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
         yield
+    if not verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name):
+        pytest.fail("Failed to reimport all boot sources at teardown")
 
 
 @pytest.fixture(scope="session")
