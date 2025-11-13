@@ -172,9 +172,9 @@ def mock_os_images():
 
     # Mock Fedora class
     mock_fedora_class = MagicMock()
-    mock_fedora_class.LATEST_RELEASE_STR = "fedora-41.qcow2"
+    mock_fedora_class.LATEST_RELEASE_STR = "fedora-43.qcow2"
     mock_fedora_class.DEFAULT_DV_SIZE = "20Gi"
-    mock_fedora_class.FEDORA41_IMG = "fedora-41.qcow2"
+    mock_fedora_class.FEDORA43_IMG = "fedora-43.qcow2"
     mock_fedora_class.DIR = "cnv-tests/fedora-images"
 
     # Mock CentOS class

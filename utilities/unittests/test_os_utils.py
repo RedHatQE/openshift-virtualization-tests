@@ -96,12 +96,12 @@ class TestGenerateOsMatrixDict:
         """Test Fedora OS matrix generation"""
         mock_images.Fedora = mock_os_images["fedora"]
 
-        result = generate_os_matrix_dict("fedora", ["fedora-41"])
+        result = generate_os_matrix_dict("fedora", ["fedora-43"])
 
         assert len(result) == 1
-        fedora_config = result[0]["fedora-41"]
-        assert fedora_config["os_version"] == "41"
-        assert fedora_config["image_name"] == "fedora-41.qcow2"
+        fedora_config = result[0]["fedora-43"]
+        assert fedora_config["os_version"] == "43"
+        assert fedora_config["image_name"] == "fedora-43.qcow2"
         assert fedora_config["template_labels"]["workload"] == "server"
         assert fedora_config["template_labels"]["flavor"] == "small"
         assert fedora_config["latest_released"] is True
@@ -308,7 +308,7 @@ class TestOsMappingsConstants:
         """Test Fedora OS mapping has correct structure"""
         assert "workload" in FEDORA_OS_MAPPING
         assert "flavor" in FEDORA_OS_MAPPING
-        assert "fedora-41" in FEDORA_OS_MAPPING
+        assert "fedora-43" in FEDORA_OS_MAPPING
 
     def test_centos_os_mapping_structure(self):
         """Test CentOS OS mapping has correct structure"""

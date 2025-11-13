@@ -99,10 +99,11 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+            FEDORA43_IMG="Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
             DISK_DEMO="fedora-cloud-registry-disk-demo",
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA43_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
