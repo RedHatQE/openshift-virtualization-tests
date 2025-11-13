@@ -125,16 +125,16 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
 FEDORA_OS_MAPPING: dict[str, dict[str, str | Any]] = {
     WORKLOAD_STR: Template.Workload.SERVER,
     FLAVOR_STR: Template.Flavor.SMALL,
-    "fedora-41": {
-        IMAGE_NAME_STR: "FEDORA41_IMG",
-        OS_VERSION_STR: "41",
-        OS_STR: "fedora41",
-        DATA_SOURCE_STR: "fedora",
-    },
     "fedora-42": {
         IMAGE_NAME_STR: "FEDORA42_IMG",
         OS_VERSION_STR: "42",
         OS_STR: "fedora42",
+        DATA_SOURCE_STR: "fedora",
+    },
+    "fedora-43": {
+        IMAGE_NAME_STR: "FEDORA43_IMG",
+        OS_VERSION_STR: "43",
+        OS_STR: "fedora43",
         DATA_SOURCE_STR: "fedora",
     },
 }
