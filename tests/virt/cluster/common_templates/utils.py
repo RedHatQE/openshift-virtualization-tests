@@ -114,7 +114,7 @@ def validate_user_info_virtctl_vs_linux_os(vm):
         virtctl_info = get_virtctl_user_info(vm=vm)
         cnv_info = get_cnv_user_info(vm=vm)
         libvirt_info = get_libvirt_user_info(vm=vm)
-        linux_info = get_linux_user_info(ssh_exec=vm.ssh_exec)
+        linux_info = get_linux_user_info(vm=vm)
         return virtctl_info, cnv_info, libvirt_info, linux_info
 
     user_info_sampler = TimeoutSampler(wait_timeout=30, sleep=10, func=_get_user_info, vm=vm)
@@ -395,17 +395,18 @@ def get_libvirt_user_info(vm):
         }
 
 
-def get_linux_user_info(ssh_exec):
-    try:
-        # Newer versions of Linux (for e.g. F40+ and RHEL9+) use last -w --time-format iso to get the login time
-        cmd = shlex.split("last -w --time-format iso | grep 'tty.*still logged in'")
-        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
-        date = datetime.fromisoformat(output[2])
-    except Exception:
-        # Older versions of Linux (RHEL 7, 8) use lastlog and who to get the login time
+def get_linux_user_info(vm):
+    ssh_exec = vm.ssh_exec
+    if any(os_version in vm.name for os_version in ["rhel-7", "rhel-8", "centos-8"]):
+        # Older versions use lastlog and who to get the login time
         cmd = shlex.split("lastlog | grep tty; who | awk \"'{print$3}'\"")
         output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
         date = datetime.strptime(f"{output[7]}-{output[3]}-{output[4]} {output[5]}", "%Y-%b-%d %H:%M:%S")
+    else:
+        # Newer versions use last -w --time-format iso to get the login time
+        cmd = shlex.split("last -w --time-format iso | grep 'tty.*still logged in'")
+        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
+        date = datetime.fromisoformat(output[2])
 
     timestamp = date.replace(tzinfo=timezone(timedelta(seconds=int(ssh_exec.os.timezone.offset) * 36))).timestamp()
     return {
