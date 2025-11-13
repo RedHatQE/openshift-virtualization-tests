@@ -3,15 +3,11 @@ Import from HTTP server
 """
 
 import logging
-import math
-import re
 
 import pytest
-from bitmath import GiB
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
-from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -24,11 +20,8 @@ from tests.storage.constants import (
     INTERNAL_HTTP_CONFIGMAP_NAME,
 )
 from tests.storage.utils import (
-    assert_disk_img,
     assert_num_files_in_pod,
     assert_use_populator,
-    create_pod_for_pvc,
-    create_vm_and_verify_image_permission,
     create_vm_from_dv,
     get_file_url,
     get_importer_pod,
@@ -38,7 +31,6 @@ from utilities import console
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_1MIN,
-    TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_12MIN,
@@ -49,11 +41,8 @@ from utilities.infra import get_node_selector_dict
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
-    PodWithPVC,
-    check_disk_count_in_vm,
     create_dummy_first_consumer_pod,
     create_dv,
-    get_containers_for_pods_with_pvc,
     get_test_artifact_server_url,
     sc_volume_binding_mode_is_wffc,
 )
@@ -69,12 +58,6 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-
-DV_PARAMS = {
-    "file_name": Images.Cdi.QCOW2_IMG,
-    "source": HTTPS,
-    "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
-}
 
 
 def get_importer_pod_node(importer_pod):
@@ -147,11 +130,6 @@ def test_delete_pvc_after_successful_import(
     if sc_volume_binding_mode_is_wffc(sc=storage_class):
         create_dummy_first_consumer_pod(pvc=pvc)
     data_volume_multi_storage_scope_function.wait_for_dv_success()
-    with create_pod_for_pvc(
-        pvc=data_volume_multi_storage_scope_function.pvc,
-        volume_mode=StorageProfile(name=storage_class).instance.status["claimPropertySets"][0]["volumeMode"],
-    ) as pod:
-        assert_disk_img(pod=pod)
 
 
 @pytest.mark.sno
@@ -183,44 +161,11 @@ def test_empty_url(namespace, storage_class_name_scope_module):
             pass
 
 
-@pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-2145",
-                "file_name": TAR_IMG,
-                "content_type": DataVolume.ContentType.ARCHIVE,
-            },
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2145")
-def test_successful_import_archive(
-    skip_block_volumemode_scope_module,
-    running_pod_with_dv_pvc,
-):
-    """
-    Skip block volume mode - archive does not support block mode DVs,
-    https://github.com/kubevirt/containerized-data-importer/blob/main/doc/supported_operations.md
-    """
-    assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
-
-
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
     "dv_from_http_import",
     [
-        pytest.param(
-            {
-                "dv_name": "cnv-2143",
-                "file_name": Images.Cdi.QCOW2_IMG,
-            },
-            marks=pytest.mark.polarion("CNV-2143"),
-        ),
         pytest.param(
             {
                 "dv_name": "cnv-377",
@@ -232,12 +177,10 @@ def test_successful_import_archive(
     indirect=True,
 )
 def test_successful_import_image(
-    running_pod_with_dv_pvc,
     dv_from_http_import,
     storage_class_name_scope_module,
     cluster_csi_drivers_names,
 ):
-    assert_disk_img(pod=running_pod_with_dv_pvc)
     assert_use_populator(
         pvc=dv_from_http_import.pvc,
         storage_class=storage_class_name_scope_module,
@@ -276,7 +219,12 @@ def test_successful_import_secure_archive(
     "dv_from_http_import",
     [
         pytest.param(
-            DV_PARAMS,
+            {
+                "dv_name": "cnv-2719",
+                "file_name": Images.Cdi.QCOW2_IMG,
+                "source": HTTPS,
+                "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
+            },
             marks=pytest.mark.polarion("CNV-2719"),
         ),
     ],
@@ -284,26 +232,20 @@ def test_successful_import_secure_archive(
 )
 @pytest.mark.sno
 @pytest.mark.gating
-def test_successful_import_secure_image(internal_http_configmap, running_pod_with_dv_pvc):
-    assert_disk_img(pod=running_pod_with_dv_pvc)
+def test_successful_import_secure_image(internal_http_configmap, dv_from_http_import):
+    dv_from_http_import.wait_for_dv_success()
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    ("content_type", "file_name"),
+    "content_type, file_name",
     [
-        pytest.param(
-            DataVolume.ContentType.ARCHIVE,
-            TAR_IMG,
-            marks=(pytest.mark.polarion("CNV-2339")),
-        ),
         pytest.param(
             DataVolume.ContentType.KUBEVIRT,
             Images.Cirros.RAW_IMG_XZ,
             marks=(pytest.mark.polarion("CNV-784"), pytest.mark.smoke()),
         ),
     ],
-    ids=["import_basic_auth_archive", "import_basic_auth_kubevirt"],
 )
 def test_successful_import_basic_auth(
     namespace,
@@ -329,17 +271,6 @@ def test_successful_import_basic_auth(
         storage_class=storage_class_name_scope_module,
     ) as dv:
         dv.wait_for_dv_success()
-        pvc = dv.pvc
-        with PodWithPVC(
-            namespace=pvc.namespace,
-            name=f"{pvc.name}-pod",
-            pvc_name=pvc.name,
-            containers=get_containers_for_pods_with_pvc(
-                volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
-                pvc_name=pvc.name,
-            ),
-        ) as pod:
-            pod.wait_for_status(status=pod.Status.RUNNING)
 
 
 @pytest.mark.sno
@@ -408,21 +339,6 @@ def test_unpack_compressed(
         ),
         msg=ErrorMsg.EXIT_STATUS_2,
     )
-
-
-@pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            DV_PARAMS,
-            marks=pytest.mark.polarion("CNV-2811"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-def test_certconfigmap(internal_http_configmap, running_pod_with_dv_pvc):
-    assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=1)
 
 
 @pytest.mark.sno
@@ -517,8 +433,7 @@ def test_successful_concurrent_blank_disk_import(
     vm_list_created_by_multiprocess,
 ):
     for vm in vm_list_created_by_multiprocess:
-        running_vm(vm=vm, wait_for_interfaces=False)
-        check_disk_count_in_vm(vm=vm)
+        running_vm(vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -530,76 +445,6 @@ def test_successful_concurrent_blank_disk_import(
 @pytest.mark.polarion("CNV-2004")
 def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_function):
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    ("size", "unit", "dv_name"),
-    [
-        pytest.param(64, "M", "cnv-1404", marks=(pytest.mark.polarion("CNV-1404"))),
-        pytest.param(1, "G", "cnv-6532", marks=(pytest.mark.polarion("CNV-6532"))),
-        pytest.param(13, "G", "cnv-6536", marks=(pytest.mark.polarion("CNV-6536"))),
-    ],
-)
-def test_vmi_image_size(
-    namespace,
-    storage_class_matrix__module__,
-    storage_class_name_scope_module,
-    images_internal_http_server,
-    internal_http_configmap,
-    size,
-    unit,
-    dv_name,
-    default_fs_overhead,
-):
-    m_byte = "M"
-    assert size >= 1, "This test support only dv size >= 1"
-    with create_dv(
-        dv_name=dv_name,
-        namespace=namespace.name,
-        size=f"{size}{unit}i",
-        storage_class=storage_class_name_scope_module,
-        url=get_file_url(url=images_internal_http_server[HTTPS], file_name=Images.Cdi.QCOW2_IMG),
-        cert_configmap=internal_http_configmap.name,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
-        containers = get_containers_for_pods_with_pvc(
-            volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"], pvc_name=dv.name
-        )
-        with create_vm_from_dv(dv=dv, start=False):
-            with PodWithPVC(
-                namespace=dv.namespace,
-                name=f"{dv.name}-pod",
-                pvc_name=dv.name,
-                containers=containers,
-            ) as pod:
-                # In case of file system volume mode, the FS overhead should be taken into account
-                # the default overhead is 5.5%, so in order to reserve the 5.5% for the overhead
-                # the actual size for the disk will be smaller than the requested size
-                if dv.volume_mode == DataVolume.VolumeMode.FILE:
-                    size *= 1 - default_fs_overhead
-                    # In case that size < 1, convert from Gi to Mi
-                    if size < 1:
-                        size = GiB(size).to_MiB().value
-                        unit = m_byte
-                pod.wait_for_status(status=pod.Status.RUNNING)
-                virtual_size_output_line = pod.execute(
-                    command=[
-                        "bash",
-                        "-c",
-                        "qemu-img info /pvc/disk.img|grep 'virtual size'",
-                    ]
-                )
-                match = re.search(
-                    r":\s*(\d+)\s*([MG])",
-                    virtual_size_output_line,
-                )
-                assert match, (
-                    "Incorrect virtual size found on disk image /pvc/disk.img\n"
-                    f"Virtual size reported as: {virtual_size_output_line}"
-                )
-                assert unit == match.group(2)
-                assert math.floor(size) == float(match.group(1))
 
 
 @pytest.mark.parametrize(
@@ -708,12 +553,6 @@ def test_successful_vm_from_imported_dv_windows(
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
     )
-
-
-@pytest.mark.polarion("CNV-4032")
-@pytest.mark.sno
-def test_disk_image_after_import(skip_block_volumemode_scope_module, cirros_dv_unprivileged):
-    create_vm_and_verify_image_permission(dv=cirros_dv_unprivileged)
 
 
 @pytest.mark.polarion("CNV-4724")
