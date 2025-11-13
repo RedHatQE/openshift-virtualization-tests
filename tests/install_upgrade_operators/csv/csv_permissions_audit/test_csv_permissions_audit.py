@@ -14,6 +14,7 @@ from utilities.constants import (
     CDI_OPERATOR,
     CNV_OPERATORS,
     HOSTPATH_PROVISIONER_OPERATOR,
+    QUARANTINED,
 )
 from utilities.jira import is_jira_open
 
@@ -75,6 +76,10 @@ def test_new_operator_in_csv(operators_from_csv):
 
 
 @pytest.mark.polarion("CNV-9547")
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Should be tested in tier1; tracked in CNV-72139",
+    run=False,
+)
 def test_compare_csv_permissions(cnv_operators_matrix__function__, csv_permissions_from_yaml, csv_permissions):
     from_yaml = csv_permissions_from_yaml.get(cnv_operators_matrix__function__, {})
     from_csv = csv_permissions.get(cnv_operators_matrix__function__, {})
