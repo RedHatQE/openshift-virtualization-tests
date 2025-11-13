@@ -157,6 +157,7 @@ class ArchImages:
             RHEL8_10_IMG="rhel-810-s390x.qcow2",
             RHEL9_3_IMG="rhel-93-s390x.qcow2",
             RHEL9_4_IMG="rhel-94-s390x.qcow2",
+            RHEL9_5_IMG="rhel-95-s390x.qcow2",
             RHEL9_6_IMG="rhel-96-s390x.qcow2",
         )
         Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
