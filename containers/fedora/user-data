@@ -38,4 +38,5 @@ runcmd:
   - systemctl enable nginx
   - systemctl enable sshd
   - grubby --args="net.ifnames=0" --update-kernel=ALL
+  - if [ $(uname -m) == "s390x" ]; then zipl; fi
   - shutdown
