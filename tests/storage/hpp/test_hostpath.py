@@ -151,7 +151,6 @@ def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-8928")
-@pytest.mark.s390x
 def test_hpp_cr(hostpath_provisioner_scope_module):
     assert hostpath_provisioner_scope_module.exists
     hostpath_provisioner_scope_module.wait_for_condition(
@@ -163,7 +162,6 @@ def test_hpp_cr(hostpath_provisioner_scope_module):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-7969")
-@pytest.mark.s390x
 def test_hpp_prometheus_resources(hpp_prometheus_resources):
     non_existing_resources = []
     for rsc in hpp_prometheus_resources:
@@ -174,7 +172,6 @@ def test_hpp_prometheus_resources(hpp_prometheus_resources):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3279")
-@pytest.mark.s390x
 def test_hpp_serviceaccount(
     hpp_serviceaccount,
     hpp_daemonset_scope_module,
@@ -200,7 +197,6 @@ def test_hpp_serviceaccount(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-8901")
-@pytest.mark.s390x
 def test_hpp_scc(hpp_scc, hpp_cr_suffix_scope_module):
     assert hpp_scc.exists
     assert (
@@ -211,7 +207,6 @@ def test_hpp_scc(hpp_scc, hpp_cr_suffix_scope_module):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-8902")
-@pytest.mark.s390x
 def test_hpp_clusterrole_and_clusterrolebinding(
     hpp_clusterrole,
     hpp_clusterrolebinding,
@@ -233,7 +228,6 @@ def test_hpp_clusterrole_and_clusterrolebinding(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-8903")
-@pytest.mark.s390x
 def test_hpp_daemonset(hpp_daemonset_scope_module):
     assert (
         hpp_daemonset_scope_module.instance.status.numberReady
@@ -243,7 +237,6 @@ def test_hpp_daemonset(hpp_daemonset_scope_module):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-8904")
-@pytest.mark.s390x
 def test_hpp_operator_pod(hpp_operator_pod):
     assert hpp_operator_pod.status == Pod.Status.RUNNING, f"HPP operator pod {hpp_operator_pod.name} is not running"
 
@@ -269,7 +262,6 @@ def test_hpp_operator_recreate_after_deletion(
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-6097")
-@pytest.mark.s390x
 def test_hpp_operator_scc(hpp_scc, hpp_operator_pod):
     assert hpp_scc.exists, f"scc {hpp_scc.name} is not existed"
     user_id = hpp_operator_pod.instance.spec["containers"][0]["securityContext"]["runAsUser"]
@@ -330,10 +322,8 @@ def test_hpp_operator_scc(hpp_scc, hpp_operator_pod):
     ],
     indirect=True,
 )
-@pytest.mark.s390x
 def test_verify_hpp_res_app_label(
     hpp_resources,
     cnv_current_version,
 ):
     verify_hpp_app_label(hpp_resources=hpp_resources, cnv_version=cnv_current_version)
-    
