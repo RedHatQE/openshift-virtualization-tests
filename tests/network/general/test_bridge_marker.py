@@ -127,21 +127,6 @@ def non_homogenous_bridges(worker_node1, worker_node2):
             yield bridgemarker2_ncp, bridgemarker3_ncp
 
 
-def _assert_failure_reason_is_bridge_missing(vmi, bridge):
-    requested_condition = "PodScheduled"
-
-    # Store the list of conditions, to make sure that if an exception is encountered, it is aligned with the conditions
-    # we check.
-    conditions = vmi.instance.status.conditions
-    for cond in conditions:
-        if cond.type == requested_condition:
-            assert cond.status == "False"
-            assert cond.reason == "Unschedulable"
-            assert f"Insufficient {bridge.resource_name}" in cond.message
-            return
-    pytest.fail(f"VMI {vmi.name} doesn't report {requested_condition}. Reported conditions:{conditions}")
-
-
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2234")
 @pytest.mark.s390x
@@ -151,9 +136,12 @@ def test_bridge_marker_no_device(bridge_marker_bridge_network, bridge_attached_v
         bridge_attached_vmi_for_bridge_marker_no_device.wait_until_running(timeout=_VM_NOT_RUNNING_TIMEOUT, logs=False)
 
     # validate the exact reason for VMI startup failure is missing bridge
-    _assert_failure_reason_is_bridge_missing(
-        vmi=bridge_attached_vmi_for_bridge_marker_no_device,
-        bridge=bridge_marker_bridge_network,
+    bridge_attached_vmi_for_bridge_marker_no_device.wait_for_condition(
+        condition="PodScheduled",
+        status="False",
+        reason="Unschedulable",
+        message=f"Insufficient {bridge_marker_bridge_network.resource_name}",
+        timeout=2,
     )
 
 
@@ -180,4 +168,10 @@ def test_bridge_marker_devices_exist_on_different_nodes(
 
     # validate the exact reason for VMI startup failure is missing bridge
     for bridge in bridge_networks:
-        _assert_failure_reason_is_bridge_missing(vmi=multi_bridge_attached_vmi, bridge=bridge)
+        multi_bridge_attached_vmi.wait_for_condition(
+            condition="PodScheduled",
+            status="False",
+            reason="Unschedulable",
+            message=f"Insufficient {bridge.resource_name}",
+            timeout=2,
+        )
