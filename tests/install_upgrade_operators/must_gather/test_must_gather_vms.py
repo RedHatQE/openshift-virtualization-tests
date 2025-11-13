@@ -283,11 +283,7 @@ class TestMustGatherVmDetails:
         )
 
     @pytest.mark.polarion("CNV-10243")
-    def test_must_gather_and_vm_same_node(
-        self,
-        must_gather_vm,
-        collected_vm_details_must_gather_from_vm_node,
-    ):
+    def test_must_gather_and_vm_same_node(self, must_gather_vm, collected_vm_details_must_gather_from_vm_node):
         extracted_data_from_must_gather_on_vm_node(
             collected_vm_details_must_gather_from_vm_node=collected_vm_details_must_gather_from_vm_node,
             must_gather_vm=must_gather_vm,

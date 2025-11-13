@@ -28,6 +28,7 @@ from utilities.infra import (
     create_ns,
     get_node_selector_dict,
 )
+from utilities.jira import is_jira_open
 from utilities.must_gather import collect_must_gather, run_must_gather
 from utilities.network import (
     network_device,
@@ -597,6 +598,7 @@ def disks_from_multiple_disks_vm(multiple_disks_vm):
 
 @pytest.fixture(scope="class")
 def collected_vm_details_must_gather_from_vm_node(
+    xfail_if_non_compact_cluster_and_ocpbugs_64743_is_open,
     request,
     must_gather_tmpdir_scope_module,
     must_gather_image_url,
@@ -699,3 +701,9 @@ def must_gather_for_test(
         return collected_cluster_must_gather
     else:
         return cnv_image_path_must_gather_all_images
+
+
+@pytest.fixture(scope="session")
+def xfail_if_non_compact_cluster_and_ocpbugs_64743_is_open(compact_cluster, sno_cluster):
+    if not compact_cluster and not sno_cluster and is_jira_open("OCPBUGS-64743"):
+        pytest.xfail(reason="OCPBUGS-64743")
