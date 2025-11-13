@@ -29,7 +29,8 @@ from tests.virt.utils import (
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, exit_pytest_execution, label_nodes
+from utilities.infra import ExecCommandOnPod, label_nodes
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ def virt_special_infra_sanity(
     def _verify_rwx_default_storage():
         storage_class = py_config["default_storage_class"]
         LOGGER.info(f"Verifing default storage class {storage_class} supports RWX mode")
-        access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+        access_modes = StorageProfile(client=admin_client, name=storage_class).first_claim_property_set_access_modes()
         if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
             failed_verifications_list.append(f"Default storage class {storage_class} doesn't support RWX mode")
 

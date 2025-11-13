@@ -90,8 +90,9 @@ def updated_hco_memory_overcommit(hyperconverged_resource_scope_class):
 
 
 @pytest.fixture(scope="class")
-def first_pod_for_aaq_test(namespace):
+def first_pod_for_aaq_test(admin_client, namespace):
     with Pod(
+        client=admin_client,
         name="first-pod-for-aaq-test",
         namespace=namespace.name,
         security_context=POD_SECURITY_CONTEXT_SPEC,
@@ -102,8 +103,9 @@ def first_pod_for_aaq_test(namespace):
 
 
 @pytest.fixture(scope="class")
-def second_pod_for_aaq_test_in_gated_state(namespace):
+def second_pod_for_aaq_test_in_gated_state(admin_client, namespace):
     with Pod(
+        client=admin_client,
         name="second-pod-for-aaq-test",
         namespace=namespace.name,
         security_context=POD_SECURITY_CONTEXT_SPEC,

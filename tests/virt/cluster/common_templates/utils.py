@@ -26,10 +26,10 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_90SEC,
 )
+from utilities.exceptions import raise_multiple_exceptions
 from utilities.infra import (
     get_linux_guest_agent_version,
     get_linux_os_info,
-    raise_multiple_exceptions,
     run_virtctl_command,
 )
 from utilities.jira import is_jira_open
