@@ -14,7 +14,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VIRT_OPERATOR_READY_STATUS,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
@@ -34,7 +33,6 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
-    TIMEOUT_15SEC,
     TIMEOUT_30SEC,
     USED,
 )
@@ -511,28 +509,3 @@ class TestVmiPhaseTransitionFromDeletion:
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
         )
-
-
-class TestVirtOperatorReadyStatus:
-    @pytest.mark.polarion("CNV-12378")
-    def test_kubevirt_virt_operator_ready_status(
-        self,
-        prometheus,
-        disabled_virt_operator,
-    ):
-        sample = None
-        try:
-            for sample in TimeoutSampler(
-                wait_timeout=TIMEOUT_2MIN,
-                sleep=TIMEOUT_15SEC,
-                func=get_metrics_value,
-                prometheus=prometheus,
-                metrics_name=KUBEVIRT_VIRT_OPERATOR_READY_STATUS,
-            ):
-                # here we expect empty results because we disabled the virt operator
-                if not sample:
-                    LOGGER.info("Metrics value matches the expected value! (no results were found)")
-                    return
-        except TimeoutExpiredError:
-            LOGGER.error(f"Metric {KUBEVIRT_VIRT_OPERATOR_READY_STATUS} did not become zero. Last value: {sample}")
-            raise

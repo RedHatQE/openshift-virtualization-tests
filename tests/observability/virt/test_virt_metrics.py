@@ -1,12 +1,21 @@
+import logging
+
 import pytest
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
+from tests.observability.metrics.constants import KUBEVIRT_VIRT_OPERATOR_READY_STATUS
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
+    TIMEOUT_2MIN,
+    TIMEOUT_15SEC,
     VIRT_API,
     VIRT_CONTROLLER,
     VIRT_OPERATOR,
 )
+from utilities.monitoring import get_metrics_value
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestKubevirtVirtOperatorReady:
@@ -57,3 +66,28 @@ class TestVirtPodsDownMetrics:
         scaled_deployment,
     ):
         validate_metrics_value(prometheus=prometheus, metric_name=metric_name, expected_value="0")
+
+
+class TestVirtOperatorReadyStatus:
+    @pytest.mark.polarion("CNV-12378")
+    def test_kubevirt_virt_operator_ready_status(
+        self,
+        prometheus,
+        disabled_virt_operator,
+    ):
+        sample = None
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_2MIN,
+                sleep=TIMEOUT_15SEC,
+                func=get_metrics_value,
+                prometheus=prometheus,
+                metrics_name=KUBEVIRT_VIRT_OPERATOR_READY_STATUS,
+            ):
+                # here we expect empty results because we disabled the virt operator
+                if not sample:
+                    LOGGER.info("Metrics value matches the expected value! (no results were found)")
+                    return
+        except TimeoutExpiredError:
+            LOGGER.error(f"Metric {KUBEVIRT_VIRT_OPERATOR_READY_STATUS} did not become zero. Last value: {sample}")
+            raise
