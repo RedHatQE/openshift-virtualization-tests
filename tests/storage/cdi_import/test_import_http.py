@@ -60,8 +60,6 @@ TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
 
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
-
 
 def get_importer_pod_node(importer_pod):
     for sample in TimeoutSampler(
