@@ -383,8 +383,9 @@ def localnet_vms_have_connectivity(localnet_running_vms: tuple[BaseVirtualMachin
 
 
 @pytest.fixture()
-@pytest.mark.usefixtures("localnet_vms_have_connectivity")
-def migrated_localnet_vm(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> BaseVirtualMachine:
+def migrated_localnet_vm(
+    localnet_vms_have_connectivity: None, localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]
+) -> BaseVirtualMachine:
     vm, _ = localnet_running_vms
     migrate_vm_and_verify(vm=vm)
     return vm
