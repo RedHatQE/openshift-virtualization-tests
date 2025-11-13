@@ -9,6 +9,7 @@ import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
@@ -83,7 +84,7 @@ def cudn_localnet(
 
 @pytest.fixture(scope="module")
 def ipv4_localnet_address_pool() -> Generator[str]:
-    return (f"10.0.0.{host_value}/24" for host_value in range(1, 254))
+    return (f"{random_ipv4_address(net_seed=0, host_address=host_value)}/24" for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")
