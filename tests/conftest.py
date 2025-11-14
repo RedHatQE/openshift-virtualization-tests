@@ -107,6 +107,7 @@ from utilities.constants import (
     RHEL9_STR,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
+    S390X,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -1161,6 +1162,11 @@ def nodes_cpu_vendor(schedulable_nodes):
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture(nodes):
     return get_nodes_cpu_architecture(nodes=nodes)
+
+
+@pytest.fixture(scope="session")
+def is_s390x_cluster(nodes_cpu_architecture):
+    return nodes_cpu_architecture == S390X
 
 
 @pytest.fixture(scope="session")
