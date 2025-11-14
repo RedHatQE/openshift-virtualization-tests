@@ -5,15 +5,14 @@ GPU PCI Passthrough with Windows VM
 import logging
 
 import pytest
-from pytest_testconfig import config as py_config
 
+from tests.os_params import WINDOWS_10, WINDOWS_10_TEMPLATE_LABELS, WINDOWS_2019, WINDOWS_2019_TEMPLATE_LABELS
 from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
 )
 from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm, verify_gpu_device_exists_in_vm
 from utilities.constants import Images
-from utilities.virt import get_windows_os_dict
 
 pytestmark = [
     pytest.mark.post_upgrade,
@@ -25,44 +24,29 @@ pytestmark = [
 
 
 LOGGER = logging.getLogger(__name__)
-WIN10 = get_windows_os_dict(windows_version="win-10")
-WIN10_LABELS = WIN10.get("template_labels", {})
-WIN19 = get_windows_os_dict(windows_version="win-2019")
-WIN19_LABELS = WIN19.get("template_labels", {})
-DV_SIZE = Images.Windows.DEFAULT_DV_SIZE
 TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma",
+    "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            {
-                "dv_name": WIN10_LABELS.get("os"),
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": DV_SIZE,
-            },
+            {"os_dict": WINDOWS_10},
             {
                 "vm_name": "win10-passthrough-vm",
-                "template_labels": WIN10_LABELS,
+                "template_labels": WINDOWS_10_TEMPLATE_LABELS,
                 "host_device": GPU_DEVICE_NAME_STR,
-                "cloned_dv_size": DV_SIZE,
+                "cloned_dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             id="test_win10_pci_passthrough",
         ),
         pytest.param(
-            {
-                "dv_name": WIN19_LABELS.get("os"),
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN2k19_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": DV_SIZE,
-            },
+            {"os_dict": WINDOWS_2019},
             {
                 "vm_name": "win19-passthrough-vm",
-                "template_labels": WIN19_LABELS,
+                "template_labels": WINDOWS_2019_TEMPLATE_LABELS,
                 "host_device": GPU_DEVICE_NAME_STR,
-                "cloned_dv_size": DV_SIZE,
+                "cloned_dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             id="test_win19_pci_passthrough",
         ),

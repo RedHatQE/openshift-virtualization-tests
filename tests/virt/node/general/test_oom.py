@@ -10,11 +10,10 @@ from threading import Event, Thread
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
-from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND
+from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND, WINDOWS_10_WSL
 from tests.virt.utils import start_stress_on_vm
 from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
@@ -103,15 +102,10 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
 
 @pytest.mark.ibm_bare_metal
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, vm_with_memory_load",
+    "golden_image_data_source_for_test_scope_function, vm_with_memory_load",
     [
         pytest.param(
-            {
-                "dv_name": "dv-win10-wsl2",
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "storage_class": py_config["default_storage_class"],
-            },
+            {"os_dict": WINDOWS_10_WSL},
             {
                 "vm_name": "windows-vm-with-memory-load",
                 "template_labels": WINDOWS_10_TEMPLATE_LABELS,

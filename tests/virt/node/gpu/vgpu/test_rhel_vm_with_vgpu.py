@@ -6,9 +6,8 @@ import logging
 
 import pytest
 from ocp_resources.template import Template
-from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.node.gpu.constants import (
     MDEV_AVAILABLE_INSTANCES_STR,
     MDEV_GRID_AVAILABLE_INSTANCES_STR,
@@ -49,7 +48,7 @@ TESTS_CLASS_NAME = "TestVGPURHELGPUSSpec"
 def gpu_vmb(
     unprivileged_client,
     namespace,
-    golden_image_dv_scope_module_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     supported_gpu_device,
     gpu_vma,
 ):
@@ -61,7 +60,7 @@ def gpu_vmb(
         namespace=namespace.name,
         client=unprivileged_client,
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
-        data_source=golden_image_dv_scope_module_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_affinity=gpu_vma.vm_affinity,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
     ) as vm:
@@ -74,7 +73,7 @@ def node_mdevtype_gpu_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_dv_scope_module_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     nodes_with_supported_gpus,
     supported_gpu_device,
 ):
@@ -89,7 +88,7 @@ def node_mdevtype_gpu_vm(
         request=request,
         namespace=namespace,
         unprivileged_client=unprivileged_client,
-        data_source=golden_image_dv_scope_module_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_affinity=build_node_affinity_dict(values=[[*nodes_with_supported_gpus][1].name]),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],
     ) as vm:
@@ -103,15 +102,10 @@ def vm_with_no_gpu(gpu_vma, node_mdevtype_gpu_vm):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma",
+    "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "rhel-vgpu-gpus-spec-vm",
                 "template_labels": RHEL_LATEST_LABELS,
@@ -179,15 +173,10 @@ class TestVGPURHELGPUSSpec:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma, node_mdevtype_gpu_vm",
+    "golden_image_data_source_for_test_scope_class, gpu_vma, node_mdevtype_gpu_vm",
     [
         pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "rhel-vgpu-gpus-spec-vm1",
                 "template_labels": RHEL_LATEST_LABELS,
