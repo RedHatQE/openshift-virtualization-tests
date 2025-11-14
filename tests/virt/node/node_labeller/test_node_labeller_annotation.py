@@ -5,8 +5,7 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import CPU_MODEL_LABEL_PREFIX, TIMEOUT_5SEC, TIMEOUT_10MIN
-from utilities.exceptions import ResourceValueError
-from utilities.infra import raise_multiple_exceptions
+from utilities.exceptions import ResourceValueError, raise_multiple_exceptions
 
 LOGGER = logging.getLogger(__name__)
 DISABLED_CPU_LABEL_VALUE = "false"

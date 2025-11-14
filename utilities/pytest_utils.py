@@ -8,6 +8,7 @@ import shutil
 import socket
 import sys
 
+import pytest
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
@@ -19,10 +20,16 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
     POD_SECURITY_NAMESPACE_LABELS,
+    SANITY_TESTS_FAILURE,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
+)
+from utilities.data_collector import (
+    collect_default_cnv_must_gather_with_vm_gather,
+    get_data_collector_dir,
+    write_to_file,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
-from utilities.infra import exit_pytest_execution
 
 LOGGER = logging.getLogger(__name__)
 
@@ -269,3 +276,37 @@ def get_tests_cluster_markers(items, filepath=None) -> None:
         LOGGER.info(f"Write cluster-related test markers in {filepath}")
         with open(filepath, "w") as fd:
             fd.write(json.dumps(tests_cluster_markers))
+
+
+def exit_pytest_execution(message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None):
+    """Exit pytest execution
+
+    Exit pytest execution; invokes pytest_sessionfinish.
+    Optionally, log an error message to tests-collected-info/utilities/pytest_exit_errors/<filename>
+
+    Args:
+        message (str):  Message to display upon exit and to log in errors file
+        return_code (int. Default: 99): Exit return code
+        filename (str, optional. Default: None): filename where the given message will be saved
+        junitxml_property (pytest plugin): record_testsuite_property
+    """
+    target_location = os.path.join(get_data_collector_dir(), "pytest_exit_errors")
+    # collect must-gather for past 5 minutes:
+    if return_code == SANITY_TESTS_FAILURE:
+        try:
+            collect_default_cnv_must_gather_with_vm_gather(
+                since_time=TIMEOUT_5MIN,
+                target_dir=target_location,
+            )
+        except Exception as current_exception:
+            LOGGER.warning(f"Failed to collect logs cnv must-gather after cluster_sanity failure: {current_exception}")
+
+    if filename:
+        write_to_file(
+            file_name=filename,
+            content=message,
+            base_directory=target_location,
+        )
+    if junitxml_property:
+        junitxml_property(name="exit_code", value=return_code)
+    pytest.exit(reason=message, returncode=return_code)
