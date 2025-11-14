@@ -574,7 +574,7 @@ def data_volume_template_dict(
     return dv.res
 
 
-def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
+def data_volume_template_with_source_ref_dict(data_source, storage_class=...):
     source_dict = data_source.source.instance.to_dict()
     source_spec_dict = source_dict["spec"]
     dv = DataVolume(
@@ -582,7 +582,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
         namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        storage_class=storage_class if storage_class is not ... else source_spec_dict.get("storageClassName"),
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
