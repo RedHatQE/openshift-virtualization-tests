@@ -89,5 +89,5 @@ class TestVirtOperatorReadyStatus:
                     LOGGER.info("Metrics value matches the expected value! (no results were found)")
                     return
         except TimeoutExpiredError:
-            LOGGER.error(f"Metric {KUBEVIRT_VIRT_OPERATOR_READY_STATUS} did not become zero. Last value: {sample}")
+            LOGGER.exception(f"Metric {KUBEVIRT_VIRT_OPERATOR_READY_STATUS} did not become zero. Last value: {sample}")
             raise
