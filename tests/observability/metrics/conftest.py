@@ -622,9 +622,9 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     return formatted_hard_limit, formatted_used_value
 
 
-@pytest.fixture()
+@pytest.fixture(scope="class")
 def vm_created_pod_total_initial_metric_value(prometheus, namespace):
-    metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{namespace.name}'}})"
+    metric_query = KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
     return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
 
 

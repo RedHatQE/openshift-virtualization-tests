@@ -513,15 +513,24 @@ class TestVmiPhaseTransitionFromDeletion:
 
 
 class TestVmCreatedByPodTotal:
-    @pytest.mark.polarion("CNV-12361")
+    @pytest.mark.parametrize(
+        "vm_for_test",
+        [
+            pytest.param(
+                "vm-created-by-pod-total-vm",
+                marks=pytest.mark.polarion("CNV-12361"),
+            )
+        ],
+        indirect=True,
+    )
     def test_kubevirt_vm_created_by_pod_total(
         self,
         prometheus,
         namespace,
         vm_created_pod_total_initial_metric_value,
-        vm_in_new_namespace,
+        vm_for_test,
     ):
-        metric_query = f"sum({KUBEVIRT_VM_CREATED_BY_POD_TOTAL}{{namespace='{namespace.name}'}})"
+        metric_query = KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=metric_query,
