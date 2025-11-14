@@ -167,6 +167,10 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: fails to get DV status, most likely automation issue; CNV-72460",
+    run=False,
+)
 @pytest.mark.gating
 @pytest.mark.parametrize(
     "namespace, data_volume_multi_storage_scope_module",
