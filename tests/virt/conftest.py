@@ -26,6 +26,7 @@ from tests.virt.utils import (
     get_or_create_golden_image_data_source,
     get_pod_memory_requests,
     patch_hco_cr_with_mdev_permitted_hostdevices,
+    update_hco_memory_overcommit,
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
@@ -378,3 +379,8 @@ def vm_for_test_from_template_scope_class(
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="class")
+def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
+    yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=200)
