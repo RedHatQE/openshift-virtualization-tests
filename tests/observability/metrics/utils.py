@@ -865,3 +865,36 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
+
+
+def compare_metric_labels_with_vm_labels(prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
+    )
+    missing_labels = None
+    mismatch_labels = None
+    try:
+        for sample in samples:
+            if sample:
+                metric_labels = sample[0].get("metric")
+                vm_labels = vm.instance.spec.template.metadata.labels
+                if metric_labels:
+                    missing_labels = []
+                    mismatch_labels = {}
+                    for label, expected_value in vm_labels.items():
+                        actual_value = metric_labels.get(f"label_{label.translate(str.maketrans('/.-', '___'))}")
+                        if not actual_value:
+                            missing_labels.append(label)
+                        elif actual_value != expected_value:
+                            mismatch_labels[label] = {"Expected": expected_value, "Actual": actual_value}
+                    if not (mismatch_labels or missing_labels):
+                        return
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"There is a mismatch between expected and actual results:\n {mismatch_labels}\n "
+            f"Missing labels: {missing_labels}"
+        )
+        raise
