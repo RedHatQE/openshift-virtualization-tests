@@ -6,11 +6,13 @@ import logging
 
 import pytest
 
-from tests.virt.cluster.common_templates.utils import (
+from tests.utils import (
     assert_windows_efi,
-    check_machine_type,
     check_vm_xml_hyperv,
     check_windows_vm_hvinfo,
+)
+from tests.virt.cluster.common_templates.utils import (
+    check_machine_type,
     validate_fs_info_virtctl_vs_windows_os,
     validate_os_info_virtctl_vs_windows_os,
     validate_user_info_virtctl_vs_windows_os,

@@ -6,10 +6,10 @@ import logging
 
 import pytest
 
+from tests.utils import check_vm_xml_hyperv
 from tests.virt.cluster.common_templates.utils import (
     check_machine_type,
     check_vm_xml_clock,
-    check_vm_xml_hyperv,
     validate_fs_info_virtctl_vs_linux_os,
     validate_os_info_virtctl_vs_linux_os,
     validate_user_info_virtctl_vs_linux_os,
