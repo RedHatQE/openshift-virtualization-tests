@@ -56,57 +56,9 @@ from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
-KUBEVIRT_CR_ALERT_NAME = "KubeVirtCRModified"
 CURL_QUERY = "curl -k https://localhost:8443/metrics"
 SINGLE_VM = 1
-ONE_CPU_CORES = 1
-ZERO_CPU_CORES = 0
-COUNT_TWO = 2
 COUNT_THREE = 3
-
-
-def wait_for_metric_vmi_request_cpu_cores_output(prometheus: Prometheus, expected_cpu: int) -> None:
-    """
-    This function will wait for the expected metrics core cpu to show up in Prometheus query output
-    and return if results equal to the expected total requested cpu for all total vm's
-    Args:
-        prometheus (Prometheus): Prometheus object
-        expected_cpu (int):  expected core cpu
-    Raise:
-        TimeoutExpiredError: if the expected results does not show up in prometheus query output
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
-        func=get_prometheus_vmi_request_cpu_sum_query_value,
-        prometheus=prometheus,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if round(sample * 10) == expected_cpu:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting for prometheus output, expected results: {expected_cpu}\n"
-            f"actual results: {sample}"
-        )
-        raise
-
-
-def get_prometheus_vmi_request_cpu_sum_query_value(prometheus: Prometheus) -> float:
-    """
-    This function will perform Prometheus query cluster:vmi_request_cpu_cores:sum and return query cpu output result
-
-    Args:
-        prometheus (Prometheus): Prometheus object.
-
-    Returns:
-        float: prometheus query value output, return 0.0 if case no results found
-
-    """
-    metric_results = prometheus.query(query="cluster:vmi_request_cpu_cores:sum")["data"]["result"]
-    return float(metric_results[0]["value"][1]) if metric_results else 0.0
 
 
 def get_vm_metrics(prometheus: Prometheus, query: str, vm_name: str, timeout: int = TIMEOUT_5MIN) -> list[dict] | None:
