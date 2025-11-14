@@ -1,7 +1,7 @@
 import pytest
 from ocp_resources.resource import Resource
 
-from tests.observability.metrics.constants import KUBEVIRT_VIRT_OPERATOR_READY_STATUS
+from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY_STATUS
 from utilities.constants import KUBEVIRT_VIRT_OPERATOR_UP, VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER, VIRT_OPERATOR
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]

@@ -3,8 +3,7 @@ import logging
 import pytest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
-from tests.observability.metrics.constants import KUBEVIRT_VIRT_OPERATOR_READY_STATUS
+from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY, KUBEVIRT_VIRT_OPERATOR_READY_STATUS
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     TIMEOUT_2MIN,
