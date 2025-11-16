@@ -87,6 +87,7 @@ def rhel_8_10_vm(unprivileged_client, namespace, rhel_8_10_ds):
         )
     ],
 )
+@pytest.mark.x86_64  # no legacy machinetype for s390x which is different from emulated machine types
 def test_legacy_machine_type(
     updated_hco_emulated_machine_i440fx,
     rhel_8_10_vm,

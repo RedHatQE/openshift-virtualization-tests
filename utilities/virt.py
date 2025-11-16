@@ -46,6 +46,7 @@ from rrmngmnt import Host, ssh, user
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
+from utilities.architecture import is_s390x
 from utilities.console import Console
 from utilities.constants import (
     CLOUD_INIT_DISK_NAME,
@@ -1992,7 +1993,7 @@ def vm_instance_from_template(
         existing_data_volume=existing_data_volume,
         vm_dict=params.get("vm_dict"),
         cpu_cores=params.get("cpu_cores"),
-        cpu_threads=params.get("cpu_threads"),
+        cpu_threads=1 if is_s390x() else params.get("cpu_threads"),
         memory_requests=params.get("memory_requests"),
         network_model=params.get("network_model"),
         network_multiqueue=params.get("network_multiqueue"),

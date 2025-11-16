@@ -58,13 +58,14 @@ class TestMigrationVMWithMemoryLoad:
                     "vm_name": "fedora-vm-with-memory-load",
                     "template_labels": FEDORA_LATEST_LABELS,
                     "memory_guest": "4Gi",
-                    "cpu_cores": 2,
+                    "cpu_cores": 1,
                 },
-                marks=pytest.mark.polarion("CNV-4661"),
+                marks=[pytest.mark.polarion("CNV-4661")],
             ),
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_fedora_vm_migrate_with_memory_load(
         self,
         vm_with_memory_load,
@@ -91,7 +92,7 @@ class TestMigrationVMWithMemoryLoad:
                     "cpu_cores": 16,
                     "cpu_threads": 1,
                 },
-                marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
+                marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.x86_64()],
             ),
         ],
         indirect=True,

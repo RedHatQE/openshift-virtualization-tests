@@ -82,13 +82,14 @@ def get_disk_usage(ssh_exec):
             {
                 "vm_name": "fedora-load-vm",
                 "template_labels": FEDORA_LATEST_LABELS,
-                "cpu_threads": 2,
+                "cpu_threads": 1,
             },
-            marks=pytest.mark.polarion("CNV-4663"),
+            marks=[pytest.mark.polarion("CNV-4663")],
         ),
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 @pytest.mark.rwx_default_storage
 def test_fedora_vm_load_migration(vm_with_fio, running_fio_in_vm):
     LOGGER.info("Test migrate VM with disk load")
