@@ -14,6 +14,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
     DV_PARAMS,
+    LIST_GET,
     METADATA,
     PERMISSIONS_DST,
     PERMISSIONS_DST_SA,
@@ -71,13 +72,15 @@ def create_vm_negative(
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
+    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account, "
+    "permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
             DV_PARAMS,
             {PERMISSIONS_SRC_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_DST_SA: ALL},
+            {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
             marks=pytest.mark.polarion("CNV-2826"),
         )
     ],
@@ -91,6 +94,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     perm_src_service_account,
     perm_destination_service_account,
     permissions_pvc_destination,
+    permissions_datavolume_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(
@@ -167,17 +171,14 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     )
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: fails to get DV status, most likely automation issue; CNV-72460",
-    run=False,
-)
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module",
+    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
             DV_PARAMS,
+            {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
             marks=pytest.mark.polarion("CNV-2829"),
         ),
     ],
@@ -190,6 +191,7 @@ def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
     permission_src_service_account_for_creating_pods,
     permission_destination_service_account_for_creating_pods,
     permissions_pvc_destination,
+    permissions_datavolume_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
     verify_snapshot_used_namespace_transfer(
