@@ -626,17 +626,3 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 def vm_created_pod_total_initial_metric_value(prometheus, namespace):
     metric_query = KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
     return int(get_metrics_value(prometheus=prometheus, metrics_name=metric_query))
-
-
-@pytest.fixture()
-def vm_in_new_namespace(namespace):
-    vm_name = "vm-created-by-pod-total-vm"
-
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        ssh=False,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        yield vm
