@@ -143,7 +143,7 @@ def _is_process_running(vm: BaseVirtualMachine, cmd: str) -> bool:
 class PodTcpClient(BaseTcpClient):
     """Represents a TCP client that connects to a server to test network performance.
 
-    Expects pod to have iperf3 container.
+    Expects pod to have a container with iperf3.
 
     Args:
         pod (Pod): The pod where the client runs.
@@ -169,12 +169,10 @@ class PodTcpClient(BaseTcpClient):
         return self
 
     def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
-        self._pod.execute(
-            command=["pkill", "-f", self._cmd],
-        )
+        self._pod.execute(command=["pkill", "-f", self._cmd], container=self._container)
 
     def is_running(self) -> bool:
-        out = self._pod.execute(command=["pgrep", "-f", self._cmd], ignore_rc=True)
+        out = self._pod.execute(command=["pgrep", "-f", self._cmd], container=self._container, ignore_rc=True)
         return bool(out.strip())
 
     @retry(wait_timeout=30, sleep=2, exceptions_dict={})
