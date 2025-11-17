@@ -543,3 +543,18 @@ def get_data_volume_template_dict_with_default_storage_class(data_source: DataSo
         py_config["default_storage_class_configuration"]["access_mode"]
     ]
     return data_volume_template
+
+
+def update_hco_memory_overcommit(hco, percentage):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hco: {
+                "spec": {
+                    "higherWorkloadDensity": {"memoryOvercommitPercentage": percentage},
+                }
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
