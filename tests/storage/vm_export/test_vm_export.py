@@ -10,10 +10,8 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import config as py_config
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
-from utilities.constants import Images
 from utilities.infra import run_virtctl_command
 from utilities.virt import running_vm
 
@@ -25,16 +23,10 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
 
 
 @pytest.mark.parametrize(
-    "namespace, data_volume_scope_function",
+    "namespace",
     [
         pytest.param(
             {"use_unprivileged_client": False},
-            {
-                "dv_name": "cirros-dv-9338",
-                "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-                "storage_class": py_config["default_storage_class"],
-            },
             marks=pytest.mark.polarion("CNV-9338"),
         )
     ],
@@ -42,8 +34,9 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
 )
 @pytest.mark.s390x
 def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
+    namespace,
+    blank_dv_created_by_admin_user,
     unprivileged_client,
-    data_volume_scope_function,
 ):
     with pytest.raises(
         ApiException,
@@ -51,12 +44,12 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
     ):
         with VirtualMachineExport(
             name="vmexport-unprivileged",
-            namespace=data_volume_scope_function.namespace,
+            namespace=blank_dv_created_by_admin_user.namespace,
             client=unprivileged_client,
             source={
                 "apiGroup": "",
                 "kind": PersistentVolumeClaim.kind,
-                "name": data_volume_scope_function.name,
+                "name": blank_dv_created_by_admin_user.name,
             },
         ) as vmexport:
             assert not vmexport, "VMExport created by unprivileged client"
@@ -79,14 +72,14 @@ def test_vmexport_snapshot_manifests(
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-11597")
 def test_virtctl_vmexport_unprivileged(
-    vmexport_download_path, blank_dv_created_by_specific_user, virtctl_unprivileged_client
+    vmexport_download_path, blank_dv_created_by_unprivileged_user, virtctl_unprivileged_client
 ):
     return_code, out, err = run_virtctl_command(
         command=shlex.split(
-            f"vmexport download test-pvc-export-unprivileged --pvc={blank_dv_created_by_specific_user.name} "
+            f"vmexport download test-pvc-export-unprivileged --pvc={blank_dv_created_by_unprivileged_user.name} "
             f"--output {vmexport_download_path}"
         ),
-        namespace=blank_dv_created_by_specific_user.namespace,
+        namespace=blank_dv_created_by_unprivileged_user.namespace,
         verify_stderr=False,
     )
     assert return_code, f"Failed to run virtctl vmexport by unprivileged user, out: {out}, err: {err}."
