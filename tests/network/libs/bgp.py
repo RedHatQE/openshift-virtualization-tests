@@ -15,12 +15,12 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
+from utilities.constants import NET_UTIL_CONTAINER_IMAGE
 from utilities.infra import get_resources_by_name_prefix
 
 _CLUSTER_FRR_ASN: Final[int] = 64512
 _EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
-_IPERF3_IMAGE: Final[str] = "quay.io/networkstatic/iperf3"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
@@ -216,7 +216,7 @@ def deploy_external_frr_pod(
         },
         {
             "name": "iperf3",
-            "image": _IPERF3_IMAGE,
+            "image": NET_UTIL_CONTAINER_IMAGE,
             "command": ["sleep", "infinity"],
         },
     ]
@@ -230,7 +230,6 @@ def deploy_external_frr_pod(
         containers=containers,
         volumes=volumes,
         client=client,
-        share_process_namespace=True,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod
