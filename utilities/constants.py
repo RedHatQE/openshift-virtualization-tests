@@ -985,3 +985,6 @@ QUOTA_FOR_ONE_VMI = {
 }
 
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
+
+# High performance & Numa related constants
+NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"

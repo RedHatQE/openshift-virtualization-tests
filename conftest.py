@@ -118,6 +118,7 @@ def pytest_addoption(parser):
     session_group = parser.getgroup(name="Session")
     csv_group = parser.getgroup(name="CSV")
     ci_group = parser.getgroup(name="CI")
+    component_sanity_group = parser.getgroup(name="ComponentSanity")
     csv_group.addoption("--update-csv", action="store_true")
 
     # Upgrade addoption
@@ -301,12 +302,7 @@ def pytest_addoption(parser):
         default=False,
         help="Skip artifactory environment variable checks. To be used for tests that does not need articatory access",
     )
-    session_group.addoption(
-        "--skip-virt-sanity-check",
-        action="store_true",
-        default=False,
-        help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
-    )
+
     session_group.addoption(
         "--remote_cluster_host",
         help="Host address of the remote cluster for cross-cluster tests",
@@ -329,6 +325,19 @@ def pytest_addoption(parser):
     ci_group.addoption(
         "--tests-markers-file",
         help="Full filepath to store collected test markers.",
+    )
+
+    component_sanity_group.addoption(
+        "--skip-virt-sanity-check",
+        action="store_true",
+        default=False,
+        help="Skip virtualization infrastructure sanity checks",
+    )
+    component_sanity_group.addoption(
+        "--skip-infra-sanity-check",
+        action="store_true",
+        default=False,
+        help="Skip infrastructure prerequisite sanity checks",
     )
 
 

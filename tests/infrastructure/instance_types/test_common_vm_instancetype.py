@@ -21,7 +21,7 @@ def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
 @pytest.mark.special_infra
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-10387")
-def test_cx1_instancetype_profile(xfail_if_no_huge_pages, unprivileged_client, namespace):
+def test_cx1_instancetype_profile(unprivileged_client, namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-cx1",
