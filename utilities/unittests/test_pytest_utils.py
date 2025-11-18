@@ -279,58 +279,164 @@ class TestSeparator:
 class TestReorderEarlyFixtures:
     """Test cases for reorder_early_fixtures function"""
 
-    def test_reorder_early_fixtures_with_early_mark(self):
-        """Test reordering fixtures with early mark"""
-        # Create mock fixture with early mark
+    def test_reorder_early_fixtures_autouse_in_middle(self):
+        """Test reordering when autouse_fixtures is in the middle of the list"""
+        # Create mock fixturedef with argname
         mock_fixturedef = MagicMock()
-        mock_fixturedef.argname = "early_fixture"
-
-        mock_mark = MagicMock()
-        mock_mark.name = "early"
-        mock_mark.kwargs = {"order": 0}
-
-        mock_fixturedef.func.pytestmark = [mock_mark]
+        mock_fixturedef.argname = "autouse_fixtures"
 
         # Create mock metafunc
         mock_metafunc = MagicMock()
-        mock_metafunc._arg2fixturedefs = {"early_fixture": [mock_fixturedef]}
-        mock_metafunc.fixturenames = ["other_fixture", "early_fixture", "another_fixture"]
+        mock_metafunc._arg2fixturedefs = {
+            "fixture1": [MagicMock(argname="fixture1")],
+            "autouse_fixtures": [mock_fixturedef],
+            "fixture2": [MagicMock(argname="fixture2")],
+        }
+        # Initial fixture order: autouse_fixtures is in the middle (index 1)
+        mock_metafunc.fixturenames = ["fixture1", "autouse_fixtures", "fixture2"]
 
         reorder_early_fixtures(mock_metafunc)
 
-        # early_fixture should be moved to position 0
-        assert mock_metafunc.fixturenames == ["early_fixture", "other_fixture", "another_fixture"]
+        # After reordering, autouse_fixtures should be first
+        assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2"]
 
-    def test_reorder_early_fixtures_no_early_mark(self):
-        """Test fixtures without early mark remain unchanged"""
+    def test_reorder_early_fixtures_autouse_at_end(self):
+        """Test reordering when autouse_fixtures is at the end of the list"""
+        # Create mock fixturedef with argname
         mock_fixturedef = MagicMock()
-        mock_fixturedef.argname = "normal_fixture"
-        mock_fixturedef.func.pytestmark = []
+        mock_fixturedef.argname = "autouse_fixtures"
 
+        # Create mock metafunc
         mock_metafunc = MagicMock()
-        mock_metafunc._arg2fixturedefs = {"normal_fixture": [mock_fixturedef]}
-        mock_metafunc.fixturenames = ["fixture1", "normal_fixture", "fixture2"]
+        mock_metafunc._arg2fixturedefs = {
+            "fixture1": [MagicMock(argname="fixture1")],
+            "fixture2": [MagicMock(argname="fixture2")],
+            "autouse_fixtures": [mock_fixturedef],
+        }
+        # Initial fixture order: autouse_fixtures is at the end
+        mock_metafunc.fixturenames = ["fixture1", "fixture2", "autouse_fixtures"]
 
-        original_order = mock_metafunc.fixturenames.copy()
         reorder_early_fixtures(mock_metafunc)
 
-        assert mock_metafunc.fixturenames == original_order
+        # After reordering, autouse_fixtures should be first
+        assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2"]
 
-    def test_reorder_early_fixtures_no_pytestmark(self):
-        """Test fixtures without pytestmark attribute"""
+    def test_reorder_early_fixtures_autouse_already_first(self):
+        """Test when autouse_fixtures is already first in the list (no reorder needed)"""
+        # Create mock fixturedef with argname
         mock_fixturedef = MagicMock()
-        mock_fixturedef.argname = "normal_fixture"
-        # No pytestmark attribute
-        del mock_fixturedef.func.pytestmark
+        mock_fixturedef.argname = "autouse_fixtures"
 
+        # Create mock metafunc
         mock_metafunc = MagicMock()
-        mock_metafunc._arg2fixturedefs = {"normal_fixture": [mock_fixturedef]}
-        mock_metafunc.fixturenames = ["fixture1", "normal_fixture", "fixture2"]
+        mock_metafunc._arg2fixturedefs = {
+            "autouse_fixtures": [mock_fixturedef],
+            "fixture1": [MagicMock(argname="fixture1")],
+            "fixture2": [MagicMock(argname="fixture2")],
+        }
+        # autouse_fixtures is already first
+        mock_metafunc.fixturenames = ["autouse_fixtures", "fixture1", "fixture2"]
 
-        original_order = mock_metafunc.fixturenames.copy()
         reorder_early_fixtures(mock_metafunc)
 
-        assert mock_metafunc.fixturenames == original_order
+        # Should remain unchanged
+        assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2"]
+
+    def test_reorder_early_fixtures_autouse_not_in_list(self):
+        """Test when autouse_fixtures is not in the fixture list (no action)"""
+        # Create mock metafunc without autouse_fixtures
+        mock_metafunc = MagicMock()
+        mock_metafunc._arg2fixturedefs = {
+            "fixture1": [MagicMock(argname="fixture1")],
+            "fixture2": [MagicMock(argname="fixture2")],
+            "fixture3": [MagicMock(argname="fixture3")],
+        }
+        # No autouse_fixtures in the list
+        mock_metafunc.fixturenames = ["fixture1", "fixture2", "fixture3"]
+
+        reorder_early_fixtures(mock_metafunc)
+
+        # Should remain unchanged
+        assert mock_metafunc.fixturenames == ["fixture1", "fixture2", "fixture3"]
+
+    def test_reorder_early_fixtures_empty_arg2fixturedefs(self):
+        """Test when metafunc has empty _arg2fixturedefs (no fixtures)"""
+        # Create mock metafunc with empty fixtures
+        mock_metafunc = MagicMock()
+        mock_metafunc._arg2fixturedefs = {}
+        mock_metafunc.fixturenames = []
+
+        # Should not raise any errors
+        reorder_early_fixtures(mock_metafunc)
+
+        # fixturenames should remain empty
+        assert mock_metafunc.fixturenames == []
+
+    def test_reorder_early_fixtures_break_behavior(self):
+        """Test the break behavior (only processes first matching fixture)"""
+        # Create two mock fixturedefs, both with autouse_fixtures name (edge case)
+        mock_fixturedef1 = MagicMock()
+        mock_fixturedef1.argname = "autouse_fixtures"
+
+        mock_fixturedef2 = MagicMock()
+        mock_fixturedef2.argname = "autouse_fixtures"
+
+        # Create mock metafunc with duplicate autouse_fixtures entries
+        mock_metafunc = MagicMock()
+        mock_metafunc._arg2fixturedefs = {
+            "fixture1": [MagicMock(argname="fixture1")],
+            "autouse_fixtures": [mock_fixturedef1],
+            "fixture2": [MagicMock(argname="fixture2")],
+            "autouse_fixtures_duplicate": [mock_fixturedef2],
+        }
+        # autouse_fixtures appears once in fixturenames (normal case)
+        mock_metafunc.fixturenames = ["fixture1", "autouse_fixtures", "fixture2"]
+
+        reorder_early_fixtures(mock_metafunc)
+
+        # Should move autouse_fixtures to position 0 and break
+        assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2"]
+
+    def test_reorder_early_fixtures_single_fixture(self):
+        """Test when there is only one fixture and it's autouse_fixtures"""
+        # Create mock fixturedef with argname
+        mock_fixturedef = MagicMock()
+        mock_fixturedef.argname = "autouse_fixtures"
+
+        # Create mock metafunc with single fixture
+        mock_metafunc = MagicMock()
+        mock_metafunc._arg2fixturedefs = {
+            "autouse_fixtures": [mock_fixturedef],
+        }
+        # Single fixture
+        mock_metafunc.fixturenames = ["autouse_fixtures"]
+
+        reorder_early_fixtures(mock_metafunc)
+
+        # Should remain unchanged
+        assert mock_metafunc.fixturenames == ["autouse_fixtures"]
+
+    def test_reorder_early_fixtures_multiple_early_fixtures_only_autouse(self):
+        """Test that only autouse_fixtures is moved (current implementation only defines autouse_fixtures)"""
+        # Create mock fixturedef with argname
+        mock_fixturedef = MagicMock()
+        mock_fixturedef.argname = "autouse_fixtures"
+
+        # Create mock metafunc
+        mock_metafunc = MagicMock()
+        mock_metafunc._arg2fixturedefs = {
+            "fixture1": [MagicMock(argname="fixture1")],
+            "fixture2": [MagicMock(argname="fixture2")],
+            "autouse_fixtures": [mock_fixturedef],
+            "fixture3": [MagicMock(argname="fixture3")],
+        }
+        # autouse_fixtures is in the middle
+        mock_metafunc.fixturenames = ["fixture1", "fixture2", "autouse_fixtures", "fixture3"]
+
+        reorder_early_fixtures(mock_metafunc)
+
+        # autouse_fixtures should be at position 0 (first position in use_early_fixture_names)
+        assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2", "fixture3"]
 
 
 class TestStopIfRunInProgress:

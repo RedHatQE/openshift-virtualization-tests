@@ -463,6 +463,31 @@ class TestPrepareDataDir:
 
     @patch("os.makedirs")
     @patch("os.path.split")
+    def test_prepare_pytest_item_data_dir_with_configvalue(self, mock_split, mock_makedirs):
+        """Test prepare_pytest_item_data_dir with pytest 9 ConfigValue object"""
+        mock_split.return_value = ("/some/path", "test_dir")
+
+        # Mock pytest 9's ConfigValue object
+        class ConfigValue:
+            def __init__(self, value):
+                self.value = value
+
+        # Mock pytest item
+        mock_item = MagicMock()
+        mock_item.cls.__name__ = "TestMyClass"
+        mock_item.name = "test_my_function"
+        mock_item.fspath.dirname = "/home/user/git/test-repo/tests/test_dir"
+        mock_item.fspath.basename = "test_something.py"
+        mock_item.session.config.inicfg.get.return_value = ConfigValue("tests")
+
+        result = prepare_pytest_item_data_dir(mock_item, "/output")
+
+        expected_path = "/output/test_dir/test_something/TestMyClass/test_my_function"
+        assert result == expected_path
+        mock_makedirs.assert_called_once_with(expected_path, exist_ok=True)
+
+    @patch("os.makedirs")
+    @patch("os.path.split")
     def test_prepare_pytest_item_data_dir_without_class(self, mock_split, mock_makedirs):
         """Test prepare_pytest_item_data_dir without test class"""
         mock_split.return_value = ("/some/path", "test_dir")

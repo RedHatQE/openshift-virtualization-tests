@@ -254,10 +254,10 @@ def get_pod_container_error_status(pod: Pod) -> str | None:
         raise
 
 
-def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list[dict[str, str]]:
+def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list[dict[str | None, str]]:
     pods_not_running = []
     for pod in pods:
-        if filter_pods_by_name and filter_pods_by_name in pod.name:
+        if filter_pods_by_name and filter_pods_by_name in pod.name:  # type: ignore[operator]
             LOGGER.warning(f"Ignoring pod: {pod.name} for pod state validations.")
             continue
         try:

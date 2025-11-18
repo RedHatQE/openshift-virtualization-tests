@@ -1721,7 +1721,7 @@ def wait_for_running_vm(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)  # type: ignore[arg-type]
         raise
 
 
@@ -2629,7 +2629,11 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> b
 
 
 def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
-    boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
+    boot_command = (
+        'net statistics workstation | findstr "Statistics since"'
+        if "windows" in vm.name  # type: ignore[operator]
+        else "who -b"
+    )
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
 
 

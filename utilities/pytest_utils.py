@@ -145,21 +145,20 @@ def separator(symbol_, val=None):
 
 def reorder_early_fixtures(metafunc):
     """
-    Put fixtures with `pytest.mark.early` first during execution
+    Reorders fixtures based on a predefined list of fixtures which must run first.
 
-    This allows patch of configurations before the application is initialized
-
-    Due to the way pytest collects fixtures, marks must be placed below
-    @pytest.fixture — which is to say, they must be applied BEFORE @pytest.fixture.
+    Args:
+        metafunc: pytest metafunc
     """
+    use_early_fixture_names = ["autouse_fixtures"]
+
     for fixturedef in metafunc._arg2fixturedefs.values():
-        fixturedef = fixturedef[0]
-        for mark in getattr(fixturedef.func, "pytestmark", []):
-            if mark.name == "early":
-                mark_order = mark.kwargs.get("order", 0)
-                order = metafunc.fixturenames
-                order.insert(mark_order, order.pop(order.index(fixturedef.argname)))
-                break
+        name = fixturedef[0].argname
+        if name in use_early_fixture_names:
+            order = use_early_fixture_names.index(name)
+            fixtures_list = metafunc.fixturenames
+            fixtures_list.insert(order, fixtures_list.pop(fixtures_list.index(name)))
+            break
 
 
 def stop_if_run_in_progress():

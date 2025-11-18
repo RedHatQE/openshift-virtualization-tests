@@ -20,7 +20,6 @@ def xfail_if_no_huge_pages(hugepages_gib_values):
 
 
 @pytest.fixture(scope="session")
-@pytest.mark.usefixtures("xfail_if_no_huge_pages")
-def hugepages_gib_max(hugepages_gib_values):
+def hugepages_gib_max(xfail_if_no_huge_pages, hugepages_gib_values):
     """Return the maximum 1Gi hugepage size, capped at 64Gi."""
     return min(max(hugepages_gib_values), 64)
