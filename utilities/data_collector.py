@@ -163,6 +163,9 @@ def prepare_pytest_item_data_dir(item, output_dir):
     """
     item_cls_name = item.cls.__name__ if item.cls else ""
     tests_path = item.session.config.inicfg.get("testpaths")
+    # As of pytest 9, this is a ConfigValue object
+    if hasattr(tests_path, "value"):
+        tests_path = tests_path.value
     assert tests_path, "pytest.ini must include testpaths"
 
     fspath_split_str = "/" if tests_path != os.path.split(item.fspath.dirname)[1] else ""

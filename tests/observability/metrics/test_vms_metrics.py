@@ -522,9 +522,9 @@ class TestVmLabels:
         )
 
     @pytest.mark.polarion("CNV-12386")
-    def test_kubevirt_vm_labels_after_adding_label(self, prometheus, add_label_to_vm):
+    def test_kubevirt_vm_labels_after_adding_label(self, prometheus, updated_vm_with_label):
         compare_metric_labels_with_vm_labels(
             prometheus=prometheus,
-            metric_name=f"kubevirt_vm_labels{{name='{add_label_to_vm.name}'}}",
-            vm=add_label_to_vm,
+            metric_name=f"kubevirt_vm_labels{{name='{updated_vm_with_label.name}'}}",
+            vm=updated_vm_with_label,
         )

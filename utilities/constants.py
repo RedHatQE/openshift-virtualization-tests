@@ -1,3 +1,5 @@
+from typing import Any
+
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
@@ -49,6 +51,10 @@ OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
 
+FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
+CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
+CIRROS_QCOW2_IMG = "cirros-qcow2.img"
+
 
 class ArchImages:
     class X86_64:  # noqa: N801
@@ -61,7 +67,7 @@ class ArchImages:
             QCOW2_IMG=f"{BASE_CIRROS_NAME}.qcow2",
             QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
             QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
-            DISK_DEMO="cirros-registry-disk-demo",
+            DISK_DEMO=CIRROS_DISK_DEMO,
         )
 
         Alpine = Alpine(
@@ -99,20 +105,28 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+            FEDORA43_IMG="Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
-            DISK_DEMO="fedora-cloud-registry-disk-demo",
+            DISK_DEMO=FEDORA_DISK_DEMO,
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA43_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-20220107.0.x86_64.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
 
-        Cdi = Cdi(QCOW2_IMG="cirros-qcow2.img")
+        Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
 
     class ARM64:
+        BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
         BASE_ALPINE_NAME = "alpine-aarch64-disk"
         Cirros = Cirros(
-            RAW_IMG_XZ="cirros-0.4.0-aarch64-disk.raw.xz",
+            RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
+            RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
+            RAW_IMG_XZ=f"{BASE_CIRROS_NAME}.raw.xz",
+            QCOW2_IMG=f"{BASE_CIRROS_NAME}.qcow2",
+            QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
+            QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
+            DISK_DEMO=CIRROS_DISK_DEMO,
         )
 
         Alpine = Alpine(
@@ -126,9 +140,17 @@ class ArchImages:
         Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
 
         Windows = Windows()
-        Fedora = Fedora()
-        Centos = Centos()
-        Cdi = Cdi()
+        Fedora = Fedora(
+            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64",
+            DISK_DEMO=FEDORA_DISK_DEMO,
+        )
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
+
+        Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2")
+        Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
+
+        Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
 
     class S390X:
         BASE_ALPINE_NAME = "alpine-s390x-disk"
@@ -140,7 +162,7 @@ class ArchImages:
             QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
             QCOW2_IMG_GZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.gz",
             QCOW2_IMG_XZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.xz",
-            DISK_DEMO="fedora-cloud-registry-disk-demo",
+            DISK_DEMO=FEDORA_DISK_DEMO,
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
             DEFAULT_MEMORY_SIZE="1Gi",
@@ -157,6 +179,7 @@ class ArchImages:
             RHEL8_10_IMG="rhel-810-s390x.qcow2",
             RHEL9_3_IMG="rhel-93-s390x.qcow2",
             RHEL9_4_IMG="rhel-94-s390x.qcow2",
+            RHEL9_5_IMG="rhel-95-s390x.qcow2",
             RHEL9_6_IMG="rhel-96-s390x.qcow2",
         )
         Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
@@ -164,7 +187,7 @@ class ArchImages:
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
-            DISK_DEMO="fedora-cloud-registry-disk-demo",
+            DISK_DEMO=FEDORA_DISK_DEMO,
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
 
@@ -865,7 +888,7 @@ BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
 
-HPP_CAPABILITIES = {
+HPP_CAPABILITIES: dict[str, Any] = {
     VOLUME_MODE: DataVolume.VolumeMode.FILE,
     ACCESS_MODE: DataVolume.AccessMode.RWO,
     "snapshot": False,

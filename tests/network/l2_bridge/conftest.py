@@ -12,6 +12,7 @@ from tests.network.libs.dhcpd import (
     DHCP_IP_SUBNET,
     DHCP_SERVER_CONF_FILE,
     DHCP_SERVICE_RESTART,
+    UNIQUE_CLIENT_ID,
     verify_dhcpd_activated,
 )
 from tests.network.libs.ip import random_ipv4_address
@@ -304,6 +305,7 @@ def l2_bridge_running_vm_a(
         DHCP_IP_RANGE_START=DHCP_IP_RANGE_START,
         DHCP_IP_RANGE_END=DHCP_IP_RANGE_END,
         CLIENT_MAC_ADDRESS=get_vmi_mac_address_by_iface_name(vmi=l2_bridge_running_vm_b.vmi, iface_name=dhcp_nad.name),
+        UNIQUE_CLIENT_ID=UNIQUE_CLIENT_ID,
     )
     cloud_init_extra_user_data = {
         "runcmd": [
@@ -391,11 +393,14 @@ def configured_l2_bridge_vm_a(l2_bridge_running_vm_a):
 @pytest.fixture()
 def started_vmb_dhcp_client(l2_bridge_running_vm_b, eth3_nmcli_connection_uuid):
     nmcli_cmd = "sudo nmcli connection"
-    # Start dhcp client in l2_bridge_running_vm_b
+    # Use a unique DHCP client identifier to ensure only our test server responds
+
+    # Start dhcp client with unique client identifier
     run_ssh_commands(
         host=l2_bridge_running_vm_b.ssh_exec,
         commands=[
             shlex.split(f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.method auto"),
+            shlex.split(f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.dhcp-client-id '{UNIQUE_CLIENT_ID}'"),
             shlex.split(f"{nmcli_cmd} up '{eth3_nmcli_connection_uuid}'"),
             shlex.split("sudo systemctl restart qemu-guest-agent.service"),
         ],
