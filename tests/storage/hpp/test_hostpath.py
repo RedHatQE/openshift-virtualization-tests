@@ -5,17 +5,13 @@ Hostpath Provisioner test suite
 """
 
 import logging
-from multiprocessing.pool import ThreadPool
 
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
-from ocp_resources.persistent_volume import PersistentVolume
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.prometheus_rule import PrometheusRule
 from ocp_resources.resource import Resource
@@ -25,40 +21,14 @@ from ocp_resources.security_context_constraints import SecurityContextConstraint
 from ocp_resources.service import Service
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.service_monitor import ServiceMonitor
-from ocp_resources.storage_class import StorageClass
-from ocp_resources.template import Template
-from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutSampler
 
-import tests.storage.utils as storage_utils
-from tests.os_params import RHEL_LATEST
-from tests.storage.constants import HPP_STORAGE_CLASSES
 from utilities.constants import (
-    CDI_UPLOAD,
-    CDI_UPLOAD_TMP_PVC,
     HOSTPATH_PROVISIONER_OPERATOR,
     HPP_POOL,
     TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_10MIN,
-    TIMEOUT_20SEC,
-    TIMEOUT_30SEC,
-    Images,
 )
-from utilities.infra import get_http_image_url, get_pod_by_name_prefix
-from utilities.storage import (
-    PodWithPVC,
-    check_disk_count_in_vm,
-    check_upload_virtctl_result,
-    create_dv,
-    get_containers_for_pods_with_pvc,
-    get_downloaded_artifact,
-    get_test_artifact_server_url,
-    virtctl_upload_dv,
-)
-from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
+from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
@@ -113,26 +83,10 @@ def verify_hpp_app_label(hpp_resources, cnv_version):
 
 
 @pytest.fixture(scope="module")
-def skip_when_hpp_no_immediate(storage_class_matrix_hpp_matrix__module__):
-    storage_class = [*storage_class_matrix_hpp_matrix__module__][0]
-    volume_binding_mode = StorageClass(name=storage_class).instance[VOLUME_BINDING_MODE]
-    if volume_binding_mode != StorageClass.VolumeBindingMode.Immediate:
-        pytest.skip(
-            f"Test only runs when volumeBindingMode is Immediate, but '{storage_class}' has '{volume_binding_mode}'"
-        )
-
-
-@pytest.fixture(scope="module")
 def hpp_operator_deployment(hco_namespace):
     hpp_operator_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=hco_namespace.name)
     assert hpp_operator_deployment.exists
     return hpp_operator_deployment
-
-
-@pytest.fixture(scope="module")
-def skip_when_cdiconfig_scratch_no_hpp(cdi_config):
-    if cdi_config.scratch_space_storage_class_from_status not in HPP_STORAGE_CLASSES:
-        pytest.skip("scratchSpaceStorageClass of cdiconfig is not HPP")
 
 
 @pytest.fixture(scope="module")
@@ -186,21 +140,6 @@ def hpp_operator_pod(admin_client, hco_namespace):
     )
 
 
-@pytest.fixture()
-def dv_kwargs(request, namespace, worker_node1, storage_class_matrix_hpp_matrix__module__):
-    return {
-        "dv_name": request.param.get("name"),
-        "namespace": namespace.name,
-        "url": request.param.get(
-            "url",
-            f"{get_test_artifact_server_url()}{py_config['latest_fedora_os_dict']['image_path']}",
-        ),
-        "size": request.param.get("size", Images.Fedora.DEFAULT_DV_SIZE),
-        "storage_class": [*storage_class_matrix_hpp_matrix__module__][0],
-        "hostpath_node": worker_node1.name,
-    }
-
-
 @pytest.fixture(scope="module")
 def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
     return [
@@ -208,370 +147,6 @@ def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
         for dp in Deployment.get(dyn_client=admin_client, namespace=hco_namespace.name)
         if dp.name.startswith(HPP_POOL)
     ]
-
-
-def assert_provision_on_node_annotation(pvc, node_name, type_):
-    provision_on_node = "kubevirt.io/provisionOnNode"
-    assert pvc.instance.metadata.annotations.get(provision_on_node) == node_name
-    f"No '{provision_on_node}' annotation found on {type_} PVC / node names differ"
-
-
-def assert_selected_node_annotation(pvc_node_name, pod_node_name, type_="source"):
-    assert pvc_node_name == pod_node_name, (
-        f"No 'volume.kubernetes.io/selected-node' annotation found on {type_} PVC / node names differ"
-    )
-
-
-def _get_pod_and_scratch_pvc(dyn_client, namespace, pod_prefix, pvc_suffix):
-    pvcs = list(PersistentVolumeClaim.get(dyn_client=dyn_client, namespace=namespace))
-    matched_pvcs = [pvc for pvc in pvcs if pvc.name.endswith(pvc_suffix)]
-    matched_pod = get_pod_by_name_prefix(dyn_client=dyn_client, pod_prefix=pod_prefix, namespace=namespace)
-    return {
-        "pod": matched_pod,
-        "pvc": matched_pvcs[0] if matched_pvcs else None,
-    }
-
-
-def get_pod_and_scratch_pvc_nodes(dyn_client, namespace):
-    """
-    Returns scratch pvc and pod nodes using sampling.
-    This is essential in order to get hold of the resources before they are finished and not accessible.
-
-    Args:
-        namespace: namespace to search in
-        dyn_client: open connection to remote cluster
-    """
-    LOGGER.info("Waiting for cdi-upload worker pod and scratch pvc")
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_30SEC,
-        sleep=5,
-        func=_get_pod_and_scratch_pvc,
-        dyn_client=dyn_client,
-        namespace=namespace,
-        pod_prefix=CDI_UPLOAD,
-        pvc_suffix="scratch",
-    )
-    for sample in sampler:
-        pod = sample.get("pod")
-        pvc = sample.get("pvc")
-        if pod and pvc:
-            pod_node = pod.instance.spec.nodeName
-            pvc_node = pvc.selected_node
-            if pod_node and pvc_node:
-                LOGGER.info(f"Found {CDI_UPLOAD} worker pod and scratch pvc")
-                return {
-                    "pod_node": pod_node,
-                    "scratch_pvc_node": pvc_node,
-                }
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-3354")
-@pytest.mark.s390x
-def test_hpp_not_specify_node_immediate(
-    skip_when_hpp_no_immediate,
-    namespace,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Negative case
-    Check that PVC should remain Pending when hostpath node was not specified
-    and the volumeBindingMode of hostpath-provisioner StorageClass is 'Immediate'
-    """
-    with create_dv(
-        source="http",
-        dv_name="cnv-3354",
-        namespace=namespace.name,
-        url=f"{get_test_artifact_server_url()}{Images.Windows.WIN2k16_UEFI_IMG}",
-        content_type=DataVolume.ContentType.KUBEVIRT,
-        size="35Gi",
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-    ) as dv:
-        dv.wait_for_status(
-            status=dv.Status.PENDING,
-            timeout=TIMEOUT_2MIN,
-            stop_status=dv.Status.SUCCEEDED,
-        )
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-3228")
-@pytest.mark.s390x
-def test_hpp_specify_node_immediate(
-    skip_when_hpp_no_immediate,
-    namespace,
-    worker_node1,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that the PVC will bound PV and DataVolume status becomes Succeeded once importer Pod finished importing
-    when PVC is annotated to a specified node and the volumeBindingMode of hostpath-provisioner StorageClass is
-    'Immediate'
-    """
-    with create_dv(
-        source="http",
-        dv_name="cnv-3228",
-        namespace=namespace.name,
-        url=f"{get_test_artifact_server_url()}{RHEL_LATEST['image_path']}",
-        content_type=DataVolume.ContentType.KUBEVIRT,
-        size="35Gi",
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-        hostpath_node=worker_node1.name,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_10MIN)
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-3227")
-@pytest.mark.s390x
-def test_hpp_pvc_without_specify_node_waitforfirstconsumer(
-    skip_when_hpp_no_waitforfirstconsumer,
-    namespace,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that in the condition of the volumeBindingMode of hostpath-provisioner StorageClass is 'WaitForFirstConsumer',
-    if you do not specify the node on the PVC, it will remain Pending.
-    The PV will be created only and PVC get bound when the first Pod using this PVC is scheduled.
-    """
-    with PersistentVolumeClaim(
-        name="cnv-3227",
-        namespace=namespace.name,
-        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size="1Gi",
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-    ) as pvc:
-        pvc.wait_for_status(
-            status=pvc.Status.PENDING,
-            timeout=TIMEOUT_1MIN,
-            stop_status=pvc.Status.BOUND,
-        )
-        with PodWithPVC(
-            namespace=pvc.namespace,
-            name=f"{pvc.name}-pod",
-            pvc_name=pvc.name,
-            containers=get_containers_for_pods_with_pvc(volume_mode=pvc.volume_mode, pvc_name=pvc.name),
-        ) as pod:
-            pod.wait_for_status(status=pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
-            pvc.wait_for_status(status=pvc.Status.BOUND, timeout=TIMEOUT_1MIN)
-            assert pod.instance.spec.nodeName == pvc.selected_node
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-3280")
-@pytest.mark.s390x
-def test_hpp_pvc_specify_node_immediate(
-    skip_when_hpp_no_immediate,
-    namespace,
-    worker_node1,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that kubevirt.io/provisionOnNode annotation works in Immediate mode.
-    The annotation causes an immediate bind on the specified node.
-    """
-    with PersistentVolumeClaim(
-        name="cnv-3280",
-        namespace=namespace.name,
-        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size="1Gi",
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-        hostpath_node=worker_node1.name,
-    ) as pvc:
-        assert_provision_on_node_annotation(pvc=pvc, node_name=worker_node1.name, type_="regular")
-        with PodWithPVC(
-            namespace=pvc.namespace,
-            name=f"{pvc.name}-pod",
-            pvc_name=pvc.name,
-            containers=get_containers_for_pods_with_pvc(volume_mode=pvc.volume_mode, pvc_name=pvc.name),
-        ) as pod:
-            pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
-            assert pod.instance.spec.nodeName == worker_node1.name
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2771")
-@pytest.mark.s390x
-def test_hpp_upload_virtctl(
-    skip_when_hpp_no_waitforfirstconsumer,
-    skip_when_cdiconfig_scratch_no_hpp,
-    admin_client,
-    namespace,
-    tmpdir,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that upload disk image via virtctl tool works
-    """
-    latest_fedora_image = py_config["latest_fedora_os_dict"]["image_name"]
-    local_name = f"{tmpdir}/{latest_fedora_image}"
-    remote_name = f"{Images.Fedora.DIR}/{latest_fedora_image}"
-    get_downloaded_artifact(remote_name=remote_name, local_name=local_name)
-    pvc_name = "cnv-2771"
-
-    # Get pod and scratch pvc nodes, before they are inaccessible
-    thread_pool = ThreadPool(processes=1)
-    async_result = thread_pool.apply_async(
-        func=get_pod_and_scratch_pvc_nodes,
-        kwds={"dyn_client": admin_client, "namespace": namespace.name},
-    )
-    # Start virtctl upload process, meanwhile, resources are sampled
-    with virtctl_upload_dv(
-        namespace=namespace.name,
-        name=pvc_name,
-        size=Images.Fedora.DEFAULT_DV_SIZE,
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-        image_path=local_name,
-        insecure=True,
-    ) as virtctl_upload:
-        check_upload_virtctl_result(result=virtctl_upload)
-        return_val = async_result.get()  # get return value from side thread
-        pvc = PersistentVolumeClaim(name=pvc_name, namespace=namespace.name)
-        assert pvc.bound()
-        pv = PersistentVolume(name=pvc.instance.spec.volumeName)
-        pv_node = (
-            pv.instance.spec.nodeAffinity.required.nodeSelectorTerms[0].get("matchExpressions")[0].get("values")[0]
-        )
-        assert pv_node == return_val.get("pod_node") == return_val.get("scratch_pvc_node"), "Node names differ"
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2769")
-@pytest.mark.s390x
-def test_hostpath_upload_dv_with_token(
-    skip_when_cdiconfig_scratch_no_hpp,
-    skip_when_hpp_no_waitforfirstconsumer,
-    namespace,
-    tmpdir,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    dv_name = "cnv-2769"
-    local_name = f"{tmpdir}/{Images.Cirros.QCOW2_IMG}"
-    remote_name = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
-    get_downloaded_artifact(
-        remote_name=remote_name,
-        local_name=local_name,
-    )
-    with create_dv(
-        source="upload",
-        dv_name=dv_name,
-        namespace=namespace.name,
-        size="1Gi",
-        storage_class=[*storage_class_matrix_hpp_matrix__module__][0],
-    ) as dv:
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
-        storage_utils.upload_token_request(storage_ns_name=dv.namespace, pvc_name=dv.pvc.name, data=local_name)
-        dv.wait_for_dv_success()
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_hpp_storage",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-3516-source-dv",
-                "image": py_config.get("latest_fedora_os_dict", {}).get("image_path"),
-                "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-3516"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_hostpath_clone_dv_without_annotation_wffc(
-    skip_when_hpp_no_waitforfirstconsumer,
-    admin_client,
-    namespace,
-    data_volume_multi_hpp_storage,
-):
-    """
-    Check that in case of WaitForFirstConsumer binding mode, without annotating the source/target DV to a node,
-    CDI clone function works well. The PVCs will have an annotation 'volume.kubernetes.io/selected-node' containing
-    the node name where the pod is scheduled on.
-    """
-    storage_class = data_volume_multi_hpp_storage.storage_class
-    with create_dv(
-        source="pvc",
-        dv_name=f"cnv-3516-target-dv-{storage_class}",
-        namespace=namespace.name,
-        source_namespace=data_volume_multi_hpp_storage.namespace,
-        source_pvc=data_volume_multi_hpp_storage.pvc.name,
-        size=data_volume_multi_hpp_storage.size,
-        storage_class=storage_class,
-    ) as target_dv:
-        upload_target_pod = None
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_20SEC,
-            sleep=1,
-            func=get_pod_by_name_prefix,
-            dyn_client=admin_client,
-            namespace=namespace.name,
-            pod_prefix=CDI_UPLOAD_TMP_PVC,
-        ):
-            if sample:
-                upload_target_pod = sample
-                break
-
-        upload_target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
-        assert_selected_node_annotation(
-            pvc_node_name=target_dv.pvc.selected_node,
-            pod_node_name=upload_target_pod.instance.spec.nodeName,
-            type_="target",
-        )
-        target_dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-        with VirtualMachineForTestsFromTemplate(
-            name="fedora-vm",
-            namespace=namespace.name,
-            client=admin_client,
-            labels=Template.generate_template_labels(**py_config["latest_fedora_os_dict"]["template_labels"]),
-            existing_data_volume=target_dv,
-        ) as vm:
-            running_vm(vm=vm)
-
-
-@pytest.mark.polarion("CNV-2770")
-@pytest.mark.s390x
-def test_hostpath_clone_dv_with_annotation(
-    skip_when_hpp_no_immediate,
-    namespace,
-    worker_node1,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that on Immediate binding mode,
-    if the source/target DV is annotated to a specified node, CDI clone function works well.
-    The PVCs will have an annotation 'kubevirt.io/provisionOnNode: <specified_node_name>'
-    and bound immediately.
-    """
-    storage_class = [*storage_class_matrix_hpp_matrix__module__][0]
-    with create_dv(
-        source="http",
-        dv_name="cnv-2770-source-dv",
-        namespace=namespace.name,
-        content_type=DataVolume.ContentType.KUBEVIRT,
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        storage_class=storage_class,
-        hostpath_node=worker_node1.name,
-    ) as source_dv:
-        source_dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-        assert_provision_on_node_annotation(pvc=source_dv.pvc, node_name=worker_node1.name, type_="import")
-        with create_dv(
-            source="pvc",
-            dv_name="cnv-2770-target-dv",
-            namespace=namespace.name,
-            size=source_dv.size,
-            storage_class=storage_class,
-            hostpath_node=worker_node1.name,
-            source_namespace=source_dv.namespace,
-            source_pvc=source_dv.pvc.name,
-        ) as target_dv:
-            target_dv.wait_for_dv_success(timeout=TIMEOUT_10MIN)
-            assert_provision_on_node_annotation(pvc=target_dv.pvc, node_name=worker_node1.name, type_="target")
-            with storage_utils.create_vm_from_dv(dv=target_dv) as vm:
-                check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.sno

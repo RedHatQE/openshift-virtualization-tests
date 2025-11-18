@@ -43,8 +43,12 @@ class Console(object):
         """
         self.vm = vm
         # TODO: `BaseVirtualMachine` does not set cloud-init so the VM is using predefined credentials
-        self.username = username or getattr(self.vm, "login_params", {}).get("username") or self.vm.username
-        self.password = password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password
+        self.username = (
+            username or getattr(self.vm, "login_params", {}).get("username") or self.vm.username  # type: ignore[attr-defined]  # noqa: E501
+        )
+        self.password = (
+            password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password  # type: ignore[attr-defined]  # noqa: E501
+        )
         self.timeout = timeout
         self.child = None
         self.login_prompt = "login:"

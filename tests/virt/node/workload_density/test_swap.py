@@ -3,7 +3,6 @@ import shlex
 
 import pytest
 from ocp_resources.daemonset import DaemonSet
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -11,7 +10,6 @@ from tests.utils import start_stress_on_vm
 from tests.virt.constants import REMOVE_NEWLINE
 from tests.virt.utils import build_node_affinity_dict
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
@@ -50,22 +48,6 @@ def wait_virt_launcher_pod_using_swap(vm):
     except TimeoutExpiredError:
         LOGGER.error(f"virt-launcher pod does not use swap, current value: {sample}")
         raise
-
-
-@pytest.fixture(scope="class")
-def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {
-                    "higherWorkloadDensity": {"memoryOvercommitPercentage": 200},
-                }
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
 
 
 @pytest.fixture(scope="class")

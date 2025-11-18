@@ -83,8 +83,8 @@ class Windows:
 
 @dataclass
 class Fedora:
-    FEDORA41_IMG: str | None = None
     FEDORA42_IMG: str | None = None
+    FEDORA43_IMG: str | None = None
     FEDORA_CONTAINER_IMAGE: str | None = None
     DISK_DEMO: str | None = None
     DIR: str = f"{BASE_IMAGES_DIR}/fedora-images"

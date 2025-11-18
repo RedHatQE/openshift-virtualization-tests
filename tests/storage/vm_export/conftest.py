@@ -19,13 +19,12 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
-from tests.storage.vm_export.utils import get_manifest_from_vmexport, get_manifest_url
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_1MIN, U1_SMALL, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from tests.storage.vm_export.utils import create_blank_dv_by_specific_user, get_manifest_from_vmexport, get_manifest_url
+from utilities.constants import OS_FLAVOR_RHEL, U1_SMALL, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
-from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
+from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -151,18 +150,22 @@ def vm_from_vmexport(
 
 
 @pytest.fixture()
-def blank_dv_created_by_specific_user(namespace, unprivileged_client):
-    with create_dv(
-        source="blank",
-        dv_name="blank-dv-by-unprivileged-user",
-        namespace=namespace.name,
-        size="1Gi",
-        storage_class=py_config["default_storage_class"],
-        consume_wffc=False,
-        bind_immediate=True,
+def blank_dv_created_by_unprivileged_user(namespace, unprivileged_client):
+    with create_blank_dv_by_specific_user(
         client=unprivileged_client,
+        namespace_name=namespace.name,
+        dv_name="blank-dv-by-unprivileged-user",
     ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+        yield dv
+
+
+@pytest.fixture()
+def blank_dv_created_by_admin_user(namespace, admin_client):
+    with create_blank_dv_by_specific_user(
+        client=admin_client,
+        namespace_name=namespace.name,
+        dv_name="blank-dv-by-admin-user",
+    ) as dv:
         yield dv
 
 

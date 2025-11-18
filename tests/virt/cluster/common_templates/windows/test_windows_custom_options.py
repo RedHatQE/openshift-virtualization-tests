@@ -208,8 +208,9 @@ class TestCustomWindowsOptions:
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-7886")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migration", depends=[f"{TESTS_CLASS_NAME}::boot"])
-    def test_windows_custom_options_migration(self, custom_windows_vm):
+    def test_windows_custom_options_migration(self, admin_client, custom_windows_vm):
         with VirtualMachineInstanceMigration(
+            client=admin_client,
             name="custom-windows-vm-migration",
             namespace=custom_windows_vm.namespace,
             vmi_name=custom_windows_vm.vmi.name,
