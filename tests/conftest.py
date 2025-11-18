@@ -2056,9 +2056,8 @@ def artifactory_setup(pytestconfig):
 
 
 @pytest.fixture(autouse=True)
-@pytest.mark.early(order=0)
 def autouse_fixtures(
-    leftovers_cleanup,  # Must be called first to avoid delete created resources.
+    leftovers_cleanup,  # Must be called first to avoid deleting created resources.
     artifactory_setup,
     bin_directory_to_os_path,
     cluster_info,
