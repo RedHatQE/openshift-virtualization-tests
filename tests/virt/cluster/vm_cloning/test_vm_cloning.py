@@ -76,7 +76,7 @@ def dv_template_for_vm_cloning(
 
 @pytest.fixture()
 def vm_with_dv_for_cloning(
-    request, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot, is_s390x_cluster
+    request, is_s390x_cluster, namespace, dv_template_for_vm_cloning, storage_class_for_snapshot
 ):
     if is_s390x_cluster:
         smm_enabled = False
