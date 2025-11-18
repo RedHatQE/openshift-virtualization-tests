@@ -16,7 +16,7 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_SOURCE_NAME,
     DEFAULT_FEDORA_REGISTRY_URL,
 )
-from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names
+from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names, get_image_version
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     TIMEOUT_1MIN,
@@ -488,3 +488,16 @@ def test_data_source_instancetype_preference_label(
     assert not failed_data_source_list, (
         f"Could not create VMs with the following data sources: {failed_data_source_list}"
     )
+
+
+@pytest.mark.polarion("CNV-12414")
+def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_rhel_release_versions_dict, subtests):
+    for rhel_dic in [dic for dic in golden_images_data_import_crons_scope_class if "rhel" in dic.name.lower()]:
+        rhel_instance_dict = rhel_dic.instance
+        image_reference_version = get_image_version(
+            image=rhel_instance_dict.metadata.annotations.get("cdi.kubevirt.io/storage.import.imageStreamDockerRef")
+        )
+        with subtests.test(rhel_dic_name=rhel_dic.name, managed_data_source=rhel_instance_dict.spec.managedDataSource):
+            managed_data_source = rhel_instance_dict.spec.managedDataSource
+            assert managed_data_source, "spec.managedDataSource doesn't exists"
+            assert latest_rhel_release_versions_dict[managed_data_source] == image_reference_version
