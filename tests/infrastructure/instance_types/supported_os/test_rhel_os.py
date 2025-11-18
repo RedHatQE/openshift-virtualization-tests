@@ -72,6 +72,16 @@ class TestVMCreationAndValidation:
         )
 
 
+class TestVmRhelImageVersion:
+    @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
+    @pytest.mark.polarion("CNV-12414")
+    def test_latest_rhel_version(
+        self, instance_type_rhel_os_matrix__module__, rhel_vm_minor_ver_num, latest_rhel_release_versions_dict
+    ):
+        latest_rhel_version = latest_rhel_release_versions_dict[next(iter(instance_type_rhel_os_matrix__module__))]
+        assert rhel_vm_minor_ver_num == latest_rhel_version.split(".")[1]
+
+
 @pytest.mark.usefixtures("xfail_if_rhel8")
 @pytest.mark.sno
 class TestVMFeatures:
