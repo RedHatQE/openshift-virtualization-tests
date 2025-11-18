@@ -5,6 +5,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,7 +20,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Mock get_client to prevent K8s API calls
 
-resource.get_client = lambda: MagicMock()
+
+def _mock_get_client(*args: Any, **kwargs: Any) -> MagicMock:  # type: ignore[misc]
+    return MagicMock()
+
+
+resource.get_client = _mock_get_client  # type: ignore[assignment]
 
 # Create mock modules to break circular imports
 # Set up mock modules before any imports
@@ -29,9 +35,14 @@ mock_data_collector = MagicMock()
 mock_data_collector.get_data_collector_base_directory = MagicMock(return_value="/tmp/data")
 mock_data_collector.get_data_collector_base = MagicMock(return_value="/tmp/data/")
 
+# Mock jira package to prevent import conflicts
+mock_jira = MagicMock()
+mock_jira.JIRA = MagicMock()
+
 sys.modules["utilities.hco"] = mock_hco
 sys.modules["utilities.infra"] = mock_infra
 sys.modules["utilities.data_collector"] = mock_data_collector
+sys.modules["jira"] = mock_jira
 
 # Also set them as attributes of the utilities module for tests that need them
 
@@ -167,9 +178,9 @@ def mock_os_images():
 
     # Mock Fedora class
     mock_fedora_class = MagicMock()
-    mock_fedora_class.LATEST_RELEASE_STR = "fedora-41.qcow2"
+    mock_fedora_class.LATEST_RELEASE_STR = "fedora-43.qcow2"
     mock_fedora_class.DEFAULT_DV_SIZE = "20Gi"
-    mock_fedora_class.FEDORA41_IMG = "fedora-41.qcow2"
+    mock_fedora_class.FEDORA43_IMG = "fedora-43.qcow2"
     mock_fedora_class.DIR = "cnv-tests/fedora-images"
 
     # Mock CentOS class
