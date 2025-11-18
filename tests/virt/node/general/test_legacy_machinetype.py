@@ -6,13 +6,6 @@ from ocp_resources.template import Template
 
 from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import validate_machine_type
-from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import Images
-from utilities.hco import is_hco_tainted, update_hco_annotations
-from utilities.storage import create_dv, create_or_update_data_source
-from tests.virt.utils import (
-    validate_machine_type,
-)
 from utilities.constants import (
     DATA_SOURCE_STR,
     DV_SIZE_STR,
