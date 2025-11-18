@@ -86,7 +86,11 @@ def uploaded_cirros_dv(
 
 
 @pytest.mark.polarion("CNV-8635")
-def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_for_fs_overhead_test):
+def test_import_vm_with_specify_fs_overhead(
+    skip_block_volumemode_scope_module,
+    updated_fs_overhead_20_with_hco,
+    vm_for_fs_overhead_test
+):
     vm_metadata = vm_for_fs_overhead_test.data_volume_template["metadata"]
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(
@@ -104,6 +108,7 @@ def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_
 
 @pytest.mark.polarion("CNV-8637")
 def test_upload_dv_with_specify_fs_overhead(
+    skip_block_volumemode_scope_module,
     updated_fs_overhead_20_with_hco,
     uploaded_cirros_dv,
 ):

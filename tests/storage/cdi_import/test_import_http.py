@@ -296,6 +296,7 @@ def test_successful_import_basic_auth(
     indirect=True,
 )
 def test_wrong_content_type(
+    skip_block_volumemode_scope_module,
     admin_client,
     dv_from_http_import,
 ):
@@ -337,6 +338,7 @@ def test_wrong_content_type(
 )
 @pytest.mark.s390x
 def test_unpack_compressed(
+    skip_block_volumemode_scope_module,
     admin_client,
     dv_from_http_import,
 ):
