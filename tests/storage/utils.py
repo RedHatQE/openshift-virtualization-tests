@@ -247,15 +247,6 @@ def set_permissions(
             yield
 
 
-def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
-    v_pod = vm.vmi.virt_launcher_pod
-    LOGGER.debug("Check image exist, permission and ownership")
-    output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
-    assert "disk.img" in output
-    assert "-rw-rw----." in output
-    assert "qemu qemu" in output
-
-
 def get_importer_pod(
     dyn_client,
     namespace,
