@@ -531,7 +531,7 @@ def check_windows_vm_hvinfo(vm):
         ]
 
         if failed_vm_recommendations:
-            failed_recommendations.append(failed_vm_recommendations)
+            failed_recommendations.extend(failed_vm_recommendations)
 
         spinlocks = vm_recommendations_dict["SpinlockRetries"]
         if int(spinlocks) != 8191:
@@ -575,7 +575,7 @@ def check_windows_vm_hvinfo(vm):
     failed_windows_hyperv_list.extend(_check_hyperv_features())
 
     if not hvinfo_dict["HyperVsupport"]:
-        failed_windows_hyperv_list.extend("HyperVsupport")
+        failed_windows_hyperv_list.append("HyperVsupport")
 
     assert not failed_windows_hyperv_list, (
         f"The following hyperV flags are not set correctly in the guest: {failed_windows_hyperv_list}\n"
