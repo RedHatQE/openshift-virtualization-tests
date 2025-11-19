@@ -1,3 +1,5 @@
+from typing import Any
+
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.aaq import AAQ
 from ocp_resources.api_service import APIService
@@ -886,7 +888,7 @@ BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.
 
 HCO_DEFAULT_CPU_MODEL_KEY = "defaultCPUModel"
 
-HPP_CAPABILITIES = {
+HPP_CAPABILITIES: dict[str, Any] = {
     VOLUME_MODE: DataVolume.VolumeMode.FILE,
     ACCESS_MODE: DataVolume.AccessMode.RWO,
     "snapshot": False,
