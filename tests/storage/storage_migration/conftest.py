@@ -22,6 +22,7 @@ from tests.storage.storage_migration.constants import (
 )
 from tests.storage.storage_migration.utils import get_storage_class_for_storage_migration
 from tests.storage.utils import create_windows_directory
+from utilities.artifactory import get_http_image_url
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
@@ -33,7 +34,6 @@ from utilities.constants import (
     U1_SMALL,
     Images,
 )
-from utilities.infra import get_http_image_url
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,

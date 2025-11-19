@@ -16,12 +16,12 @@ from tests.virt.cluster.longevity_tests.constants import (
     WINDOWS_OS_PREFIX,
 )
 from tests.virt.utils import migrate_and_verify_multi_vms, verify_wsl2_guest_works
-from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_5MIN, TIMEOUT_30MIN, TIMEOUT_40MIN, TIMEOUT_60MIN, WIN_10
-from utilities.infra import (
+from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
 )
+from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_5MIN, TIMEOUT_30MIN, TIMEOUT_40MIN, TIMEOUT_60MIN, WIN_10
 from utilities.storage import get_test_artifact_server_url
 from utilities.virt import (
     VirtualMachineForTests,

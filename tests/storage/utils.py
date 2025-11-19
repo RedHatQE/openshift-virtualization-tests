@@ -24,6 +24,12 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
+)
 from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_2MIN,
@@ -32,10 +38,6 @@ from utilities.constants import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_http_image_url,
     get_pod_by_name_prefix,
 )
 from utilities.ssp import validate_os_info_vmi_vs_windows_os

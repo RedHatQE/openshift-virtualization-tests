@@ -29,6 +29,12 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
 )
 from tests.observability.utils import validate_metrics_value
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
+)
 from utilities.constants import (
     CAPACITY,
     KUBEVIRT_VIRT_OPERATOR_UP,
@@ -45,12 +51,6 @@ from utilities.constants import (
     USED,
     VIRT_HANDLER,
     Images,
-)
-from utilities.infra import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_http_image_url,
 )
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm

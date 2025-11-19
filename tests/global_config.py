@@ -6,6 +6,7 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.architecture import get_cluster_architecture
+from utilities.artifactory import BASE_ARTIFACTORY_LOCATION
 from utilities.constants import (
     AAQ_VIRTUAL_RESOURCES,
     AAQ_VMI_POD_USAGE,
@@ -15,7 +16,6 @@ from utilities.constants import (
     ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
-    BASE_ARTIFACTORY_LOCATION,
     BREW_REGISTERY_SOURCE,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,

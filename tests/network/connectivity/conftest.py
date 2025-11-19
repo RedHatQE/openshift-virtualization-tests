@@ -2,7 +2,8 @@ import pytest
 
 from tests.network.connectivity.utils import create_running_vm
 from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE
-from utilities.infra import get_node_selector_dict, name_prefix
+from utilities.data_utils import name_prefix
+from utilities.infra import get_node_selector_dict
 from utilities.network import network_device, network_nad
 
 

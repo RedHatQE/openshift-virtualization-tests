@@ -18,14 +18,14 @@ from tests.infrastructure.golden_images.constants import (
     PVC_NOT_FOUND_ERROR,
 )
 from tests.utils import get_parameters_from_template
-from utilities.constants import DATA_SOURCE_NAME, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
-from utilities.exceptions import ResourceValueError
-from utilities.infra import (
+from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
     get_http_image_url,
 )
+from utilities.constants import DATA_SOURCE_NAME, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
+from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value
 
 LOGGER = logging.getLogger(__name__)

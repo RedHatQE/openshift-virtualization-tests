@@ -805,9 +805,7 @@ VM_CONSOLE_PROXY_NAMESPACE_RESOURCES = [
     RoleBinding,
 ]
 
-ARTIFACTORY_SECRET_NAME = "cnv-tests-artifactory-secret"
 CNV_TEST_RUN_IN_PROGRESS_NS = f"{CNV_TEST_RUN_IN_PROGRESS}-ns"
-BASE_ARTIFACTORY_LOCATION = "artifactory/cnv-qe-server-local"
 
 SECURITY_CONTEXT = "securityContext"
 
