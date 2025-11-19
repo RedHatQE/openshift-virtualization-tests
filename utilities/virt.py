@@ -1721,7 +1721,7 @@ def wait_for_running_vm(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)  # type: ignore[arg-type]
         raise
 
 
@@ -2044,6 +2044,7 @@ def node_mgmt_console(node, node_mgmt):
 @contextmanager
 def create_vm_cloning_job(
     name,
+    client,
     namespace,
     source_name,
     source_kind=None,
@@ -2068,6 +2069,7 @@ def create_vm_cloning_job(
     """
     with VirtualMachineClone(
         name=name,
+        client=client,
         namespace=namespace,
         source_name=source_name,
         source_kind=source_kind,
@@ -2428,9 +2430,10 @@ class VirtualMachineForCloning(VirtualMachineForTests):
 
 
 @contextmanager
-def target_vm_from_cloning_job(cloning_job):
+def target_vm_from_cloning_job(client, cloning_job):
     cloning_job_spec = cloning_job.instance.spec
     target_vm = VirtualMachineForTests(
+        client=client,
         name=cloning_job_spec.target.name,
         namespace=cloning_job.namespace,
         os_flavor=cloning_job_spec.source.name.split("-")[0],
@@ -2626,7 +2629,11 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> b
 
 
 def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
-    boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
+    boot_command = (
+        'net statistics workstation | findstr "Statistics since"'
+        if "windows" in vm.name  # type: ignore[operator]
+        else "who -b"
+    )
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
 
 

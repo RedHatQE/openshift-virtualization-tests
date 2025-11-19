@@ -4,10 +4,11 @@ from utilities.virt import VirtualMachineForCloning, fedora_vm_body, running_vm
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_cloning(request, namespace, cpu_for_migration):
+def fedora_vm_for_cloning(request, unprivileged_client, namespace, cpu_for_migration):
     name = request.param["vm_name"]
     with VirtualMachineForCloning(
         name=name,
+        client=unprivileged_client,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         vm_labels=request.param.get("labels"),

@@ -5,6 +5,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,7 +20,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Mock get_client to prevent K8s API calls
 
-resource.get_client = lambda: MagicMock()
+
+def _mock_get_client(*args: Any, **kwargs: Any) -> MagicMock:  # type: ignore[misc]
+    return MagicMock()
+
+
+resource.get_client = _mock_get_client  # type: ignore[assignment]
 
 # Create mock modules to break circular imports
 # Set up mock modules before any imports
@@ -172,9 +178,9 @@ def mock_os_images():
 
     # Mock Fedora class
     mock_fedora_class = MagicMock()
-    mock_fedora_class.LATEST_RELEASE_STR = "fedora-41.qcow2"
+    mock_fedora_class.LATEST_RELEASE_STR = "fedora-43.qcow2"
     mock_fedora_class.DEFAULT_DV_SIZE = "20Gi"
-    mock_fedora_class.FEDORA41_IMG = "fedora-41.qcow2"
+    mock_fedora_class.FEDORA43_IMG = "fedora-43.qcow2"
     mock_fedora_class.DIR = "cnv-tests/fedora-images"
 
     # Mock CentOS class
