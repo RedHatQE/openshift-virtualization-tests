@@ -867,7 +867,25 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
 
 
-def compare_metric_labels_with_vm_labels(prometheus: Prometheus, metric_name: str, vm: VirtualMachineForTests) -> None:
+def compare_metric_labels_with_vm_labels(
+    prometheus: Prometheus,
+    metric_name: str,
+    vm: VirtualMachineForTests,
+    specific_label_changes: Optional[dict[str, str]] = None,
+) -> None:
+    """
+    This function compares the labels of a VM with the labels of a prometheus metric.
+    Args:
+        prometheus: Prometheus object
+        metric_name: Name of the prometheus metric
+        vm: VirtualMachineForTests object
+        specific_label_changes: Dictionary of labels that should be changed or deleted
+            example: {"test-label": "test-value", "test-label-2": None}
+            This means that the label "test-label" should be changed to "test-value" and the label "test-label-2"
+            should be deleted.
+            If no specific_label_changes are provided, all labels of the VM will be compared with the labels of the
+            prometheus metric.
+    """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_15SEC,
@@ -876,25 +894,51 @@ def compare_metric_labels_with_vm_labels(prometheus: Prometheus, metric_name: st
     )
     missing_labels = None
     mismatch_labels = None
+    labels_that_should_be_missing = None
+    labels_that_updated = None
     try:
+        vm_labels = vm.instance.spec.template.metadata.labels
         for sample in samples:
             if sample:
                 metric_labels = sample[0].get("metric")
-                vm_labels = vm.instance.spec.template.metadata.labels
                 if metric_labels:
-                    missing_labels = []
-                    mismatch_labels = {}
-                    for label, expected_value in vm_labels.items():
-                        actual_value = metric_labels.get(f"label_{label.translate(str.maketrans('/.-', '___'))}")
-                        if not actual_value:
-                            missing_labels.append(label)
-                        elif actual_value != expected_value:
-                            mismatch_labels[label] = {"Expected": expected_value, "Actual": actual_value}
-                    if not (mismatch_labels or missing_labels):
-                        return
+                    if specific_label_changes:
+                        labels_that_should_be_missing = []
+                        labels_that_updated = {}
+                        for label, value in specific_label_changes.items():
+                            actual_value = metric_labels.get(f"label_{label.translate(str.maketrans('/.-', '___'))}")
+                            # If label value is present in prometheus but should be
+                            # deleted, add it to labels_that_should_be_missing
+                            if actual_value and not value:
+                                labels_that_should_be_missing.append(label)
+                            # If label value is present, means it updated, if not, means the label not updated.
+                            elif value and actual_value != value:
+                                labels_that_updated[label] = {"Expected": value, "Actual": actual_value}
+                        if not (labels_that_should_be_missing or labels_that_updated):
+                            return
+                    else:
+                        missing_labels = []
+                        mismatch_labels = {}
+                        for label, expected_value in vm_labels.items():
+                            actual_value = metric_labels.get(f"label_{label.translate(str.maketrans('/.-', '___'))}")
+                            if not actual_value:
+                                missing_labels.append(label)
+                            elif actual_value != expected_value:
+                                mismatch_labels[label] = {"Expected": expected_value, "Actual": actual_value}
+                        if not (mismatch_labels or missing_labels):
+                            return
     except TimeoutExpiredError:
-        LOGGER.error(
-            f"There is a mismatch between expected and actual results:\n {mismatch_labels}\n "
-            f"Missing labels: {missing_labels}"
-        )
+        message = None
+        if specific_label_changes:
+            message = (
+                f"Labels that should be missing but are present in prometheus metric: "
+                f"{labels_that_should_be_missing}, labels that should be updated but are not: "
+                f"{labels_that_updated}"
+            )
+        else:
+            message = (
+                f"There is a mismatch between expected and actual results:\n {mismatch_labels}\n "
+                f"Missing labels: {missing_labels}"
+            )
+        LOGGER.error(message)
         raise

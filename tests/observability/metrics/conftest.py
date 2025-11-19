@@ -3,6 +3,7 @@ import shlex
 
 import bitmath
 import pytest
+from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
@@ -622,8 +623,25 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture()
-def updated_vm_with_label(running_metric_vm):
-    with ResourceEditor(
-        patches={running_metric_vm: {"spec": {"template": {"metadata": {"labels": {"test-label": "test-value"}}}}}}
-    ):
+def updated_vm_with_label(request, running_metric_vm):
+    labels = request.param
+    with ResourceEditor(patches={running_metric_vm: {"spec": {"template": {"metadata": {"labels": labels}}}}}):
         yield running_metric_vm
+
+
+@pytest.fixture()
+def kubevirt_vm_labels_configmap(admin_client, hco_namespace):
+    """
+    Create a ConfigMap to control which VM labels are exposed using allowedLabels.
+    Only labels specified in allowedLabels will be exposed in the metric.
+    """
+    with ConfigMap(
+        name="kubevirt-vm-labels-config",
+        namespace=hco_namespace.name,
+        client=admin_client,
+        data={
+            "allowlist": "allowed-label-1,allowed-label-2",
+            "ignorelist": "ignored-label-1,ignored-label-2",
+        },
+    ) as configmap:
+        yield configmap

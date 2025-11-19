@@ -521,10 +521,67 @@ class TestVmLabels:
             vm=running_metric_vm,
         )
 
-    @pytest.mark.polarion("CNV-12386")
+    @pytest.mark.dependency(name="test_kubevirt_vm_labels_after_adding_label")
+    @pytest.mark.parametrize(
+        "updated_vm_with_label",
+        [
+            pytest.param(
+                {"test-label": "test-value", "test-label-2": "test-value-2"}, marks=pytest.mark.polarion("CNV-12386")
+            )
+        ],
+        indirect=True,
+    )
     def test_kubevirt_vm_labels_after_adding_label(self, prometheus, updated_vm_with_label):
         compare_metric_labels_with_vm_labels(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_labels{{name='{updated_vm_with_label.name}'}}",
             vm=updated_vm_with_label,
+        )
+
+    @pytest.mark.parametrize(
+        "updated_vm_with_label",
+        [
+            pytest.param(
+                {"test-label": None, "test-label-2": "test-value-changed"}, marks=pytest.mark.polarion("CNV-12412")
+            )
+        ],
+        indirect=True,
+    )
+    @pytest.mark.dependency(depends=["test_kubevirt_vm_labels_after_adding_label"])
+    def test_kubevirt_vm_labels_after_removing_and_updating_labels(
+        self, prometheus, running_metric_vm, updated_vm_with_label
+    ):
+        compare_metric_labels_with_vm_labels(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_labels{{name='{updated_vm_with_label.name}'}}",
+            vm=updated_vm_with_label,
+            specific_label_changes={"test-label": None, "test-label-2": "test-value-changed"},
+        )
+
+    @pytest.mark.parametrize(
+        "updated_vm_with_label",
+        [
+            pytest.param(
+                {
+                    "allowed-label-1": "test-value",
+                    "allowed-label-2": "test-value-2",
+                    "ignored-label-1": "test-value-3",
+                    "ignored-label-2": "test-value-4",
+                },
+                marks=pytest.mark.polarion("CNV-12413"),
+            )
+        ],
+        indirect=True,
+    )
+    def test_kubevirt_vm_labels_with_configmap(self, prometheus, updated_vm_with_label, kubevirt_vm_labels_configmap):
+        compare_metric_labels_with_vm_labels(
+            prometheus=prometheus,
+            metric_name=f"kubevirt_vm_labels{{name='{updated_vm_with_label.name}'}}",
+            vm=updated_vm_with_label,
+            specific_label_changes={
+                "allowed-label-1": "test-value",
+                "allowed-label-2": "test-value-2",
+                "ignored-label-1": None,
+                "ignored-label-2": None,
+            },
         )
