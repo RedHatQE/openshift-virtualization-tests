@@ -5,12 +5,10 @@ import pytest
 from tests.os_params import (
     RHEL_LATEST,
     RHEL_LATEST_LABELS,
-    RHEL_LATEST_OS,
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
-    WINDOWS_LATEST_OS,
 )
-from utilities.constants import ROOTDISK, StorageClassNames
+from utilities.constants import ROOTDISK
 from utilities.virt import get_guest_os_info, vm_instance_from_template
 
 pytestmark = pytest.mark.usefixtures("skip_test_if_no_ocs_sc")
@@ -18,20 +16,6 @@ pytestmark = pytest.mark.usefixtures("skip_test_if_no_ocs_sc")
 
 LOGGER = logging.getLogger(__name__)
 # Use OCS SC for Block disk IO logic
-STORAGE_CLASS = StorageClassNames.CEPH_RBD_VIRTUALIZATION
-
-
-def _vm_test_params(
-    template_labels,
-    disk_io_option=None,
-    cpu_threads=None,
-):
-    return {
-        "vm_name": f"vm-disk-io-options-{disk_io_option if disk_io_option else 'auto-driver'}",
-        "cpu_threads": cpu_threads,
-        "template_labels": template_labels,
-        "disk_io_option": disk_io_option,
-    }
 
 
 def check_disk_io_option_on_domain_xml(vm, expected_disk_io_option):
@@ -54,13 +38,13 @@ def disk_options_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm
 
@@ -68,17 +52,8 @@ def disk_options_vm(
 @pytest.mark.gating
 @pytest.mark.s390x
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "dv_size": RHEL_LATEST["dv_size"],
-                "storage_class": STORAGE_CLASS,
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": RHEL_LATEST})],
     indirect=True,
 )
 class TestRHELIOOptions:
@@ -86,17 +61,19 @@ class TestRHELIOOptions:
         "disk_options_vm, expected_disk_io_option",
         [
             pytest.param(
-                _vm_test_params(
-                    disk_io_option="threads",
-                    template_labels=RHEL_LATEST_LABELS,
-                ),
+                {
+                    "vm_name": "rhel-vm-disk-io-options-threads",
+                    "template_labels": RHEL_LATEST_LABELS,
+                    "disk_io_option": "threads",
+                },
                 "threads",
-                marks=(pytest.mark.polarion("CNV-4567"),),
+                marks=pytest.mark.polarion("CNV-4567"),
             ),
             pytest.param(
-                _vm_test_params(
-                    template_labels=RHEL_LATEST_LABELS,
-                ),
+                {
+                    "vm_name": "rhel-vm-disk-io-options-none",
+                    "template_labels": RHEL_LATEST_LABELS,
+                },
                 "native",
                 marks=pytest.mark.polarion("CNV-4560"),
             ),
@@ -116,17 +93,8 @@ class TestRHELIOOptions:
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-                "storage_class": STORAGE_CLASS,
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": WINDOWS_LATEST})],
     indirect=True,
 )
 @pytest.mark.special_infra
@@ -136,7 +104,11 @@ class TestWindowsIOOptions:
         "disk_options_vm, expected_disk_io_option",
         [
             pytest.param(
-                _vm_test_params(template_labels=WINDOWS_LATEST_LABELS, cpu_threads=2),
+                {
+                    "vm_name": "win-vm-disk-io-options-none",
+                    "template_labels": WINDOWS_LATEST_LABELS,
+                    "cpu_threads": 2,
+                },
                 "native",
                 marks=pytest.mark.polarion("CNV-4692"),
             ),
