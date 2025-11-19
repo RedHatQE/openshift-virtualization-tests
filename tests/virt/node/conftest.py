@@ -19,6 +19,7 @@ from utilities.constants import (
     ONE_CPU_THREAD,
     TEN_GI_MEMORY,
 )
+from utilities.jira import is_jira_open
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     running_vm,
@@ -48,6 +49,25 @@ def vm_with_memory_load(
         yield vm
 
 
+@pytest.fixture(scope="session")
+def vmx_disabled_flag():
+    """
+    VMX CPU feature should be disabled, otherwise hotplugged CPUs come up offline on RHEL.
+    """
+    return (
+        {
+            "features": [
+                {
+                    "name": "vmx",
+                    "policy": "disable",
+                }
+            ]
+        }
+        if is_jira_open("CNV-62851")
+        else None
+    )
+
+
 @pytest.fixture(scope="class")
 def hotplugged_vm(
     request,
@@ -55,6 +75,7 @@ def hotplugged_vm(
     unprivileged_client,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
+    vmx_disabled_flag,
 ):
     with VirtualMachineForTestsFromTemplate(
         name=request.param["vm_name"],
@@ -70,6 +91,7 @@ def hotplugged_vm(
         cpu_cores=ONE_CPU_CORE,
         memory_guest=FOUR_GI_MEMORY,
         cpu_model=modern_cpu_for_migration,
+        cpu_flags=vmx_disabled_flag,
     ) as vm:
         running_vm(vm=vm)
         yield vm
