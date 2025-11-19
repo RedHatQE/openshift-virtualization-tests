@@ -250,7 +250,7 @@ def dv_destination_cloned_from_pvc(
     storage_class_name_scope_module,
     data_volume_multi_storage_scope_module,
     destination_namespace,
-    unprivileged_client,
+    admin_client,
     permissions_datavolume_source,
     permissions_datavolume_destination,
 ):
@@ -261,7 +261,7 @@ def dv_destination_cloned_from_pvc(
         size=data_volume_multi_storage_scope_module.size,
         source_pvc=data_volume_multi_storage_scope_module.pvc.name,
         source_namespace=data_volume_multi_storage_scope_module.namespace,
-        client=unprivileged_client,
+        client=admin_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
         cdv.wait_for_dv_success()
@@ -296,8 +296,3 @@ def user_has_get_permissions_in_source_namespace(
     _ = DataVolume(
         namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
     ).instance
-
-
-@pytest.fixture()
-def requested_verify_image_permissions(request):
-    return request.param.get("verify_image_permissions")

@@ -3,18 +3,17 @@ CDI Import
 """
 
 import logging
+import uuid
 
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import TIMEOUT_1MIN, Images
-from utilities.storage import (
-    check_upload_virtctl_result,
-    get_downloaded_artifact,
-    virtctl_upload_dv,
-)
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, Images
+from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
+DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
+LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
 
 
 @pytest.fixture(scope="function")
@@ -63,3 +62,32 @@ def uploaded_dv_with_immediate_binding(
         assert dv.pvc.bound(), f"PVC status is {dv.pvc.status}"
         yield dv
         dv.delete(wait=True)
+
+
+@pytest.fixture(scope="class")
+def uploaded_dv_class_scope(unprivileged_client, namespace, storage_class_name_scope_class):
+    dv_name = f"upload-existing-dv-{str(uuid.uuid4())[:8]}"
+    get_downloaded_artifact(
+        remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}",
+        local_name=LOCAL_PATH,
+    )
+    with create_dv(
+        source="upload",
+        dv_name=dv_name,
+        namespace=namespace.name,
+        size=DEFAULT_DV_SIZE,
+        storage_class=storage_class_name_scope_class,
+        client=unprivileged_client,
+    ) as dv:
+        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
+        with virtctl_upload_dv(
+            namespace=namespace.name,
+            name=dv.name,
+            size=DEFAULT_DV_SIZE,
+            image_path=LOCAL_PATH,
+            insecure=True,
+            storage_class=storage_class_name_scope_class,
+            no_create=True,
+        ) as upload_result:
+            check_upload_virtctl_result(result=upload_result)
+            yield dv
