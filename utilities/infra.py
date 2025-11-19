@@ -57,6 +57,7 @@ from utilities.constants import (
     PROMETHEUS_K8S,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10MIN,
@@ -272,7 +273,7 @@ def wait_for_pods_running(
          state
     """
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_pods,
         dyn_client=admin_client,
