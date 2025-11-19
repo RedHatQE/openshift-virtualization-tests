@@ -526,13 +526,11 @@ class TestVmCreatedByPodTotal:
     def test_kubevirt_vm_created_by_pod_total(
         self,
         prometheus,
-        namespace,
         vm_created_pod_total_initial_metric_value,
         vm_for_test,
     ):
-        metric_query = KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=metric_query,
+            metric_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=vm_for_test.namespace),
             expected_value=str(vm_created_pod_total_initial_metric_value + 1),
         )
