@@ -9,7 +9,6 @@ from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABEL
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_vm_from_dv,
     create_windows_vm_validate_guest_agent_info,
 )
 from utilities.constants import (
@@ -22,6 +21,7 @@ from utilities.constants import (
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
+    create_vm_from_dv,
     data_volume_template_dict,
     overhead_size_for_dv,
 )
