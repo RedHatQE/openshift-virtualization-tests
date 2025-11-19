@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY, KUBEVIRT_VIRT_OPERATOR_READY_STATUS
@@ -9,8 +7,6 @@ from utilities.constants import (
     VIRT_CONTROLLER,
     VIRT_OPERATOR,
 )
-
-LOGGER = logging.getLogger(__name__)
 
 
 class TestKubevirtVirtOperatorReady:
