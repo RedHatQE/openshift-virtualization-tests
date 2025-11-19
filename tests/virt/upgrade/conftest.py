@@ -90,10 +90,10 @@ def vms_for_upgrade(
                 vms_list.append(vm)
                 vm.start(timeout=TIMEOUT_40MIN, wait=False)
 
-            for vm in vms_list:
-                running_vm(vm=vm, wait_for_cloud_init=True)
+        for vm in vms_list:
+            running_vm(vm=vm, wait_for_cloud_init=True)
 
-            yield vms_list
+        yield vms_list
 
     finally:
         for vm in vms_list:
