@@ -5,17 +5,17 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.supported_os.utils import golden_image_vm_with_instance_type
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+)
 from utilities.constants import (
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
     RHEL8_PREFERENCE,
     Images,
-)
-from utilities.infra import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
 )
 from utilities.storage import get_test_artifact_server_url
 from utilities.virt import VirtualMachineForTests

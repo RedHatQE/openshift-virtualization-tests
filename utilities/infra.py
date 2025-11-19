@@ -6,7 +6,6 @@ import os
 import platform
 import re
 import shlex
-import ssl
 import stat
 import subprocess
 import tarfile
@@ -19,7 +18,6 @@ from subprocess import PIPE, CalledProcessError, Popen
 from typing import Any
 
 import netaddr
-import paramiko
 import requests
 import urllib3
 import yaml
@@ -28,7 +26,6 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.cluster_version import ClusterVersion
-from ocp_resources.config_map import ConfigMap
 from ocp_resources.console_cli_download import ConsoleCLIDownload
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
@@ -36,7 +33,6 @@ from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
-from ocp_resources.node import Node
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
 from ocp_resources.project_request import ProjectRequest
@@ -52,15 +48,10 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 import utilities.virt
 from utilities.constants import (
     AMD_64,
-    ARTIFACTORY_SECRET_NAME,
     AUDIT_LOGS_PATH,
     CLUSTER,
-    CPU_MODEL_LABEL_PREFIX,
-    EXCLUDED_CPU_MODELS,
-    EXCLUDED_OLD_CPU_MODELS,
     HCO_CATALOG_SOURCE,
     KUBECONFIG,
-    KUBERNETES_ARCH_LABEL,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
@@ -81,7 +72,6 @@ from utilities.exceptions import (
     UtilityPodNotFoundError,
 )
 from utilities.ssp import guest_agent_version_parser
-from utilities.storage import get_test_artifact_server_url
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
@@ -208,22 +198,6 @@ def get_latest_os_dict_list(os_list):
     for _os in os_list:
         res.append(list(generate_latest_os_dict(os_list=_os).values())[0])
     return res
-
-
-def base64_encode_str(text):
-    return base64.b64encode(text.encode()).decode()
-
-
-def private_to_public_key(key):
-    return paramiko.RSAKey.from_private_key_file(key).get_base64()
-
-
-def name_prefix(name):
-    return name.split(".")[0]
-
-
-def authorized_key(private_key_path):
-    return f"ssh-rsa {private_to_public_key(key=private_key_path)} root@exec1.rdocloud"
 
 
 def get_pods(dyn_client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
@@ -840,10 +814,6 @@ def unique_name(name, service_type=None):
     return f"{name}-{service_type}{time.time()}".replace(".", "-")
 
 
-def get_http_image_url(image_directory, image_name):
-    return f"{get_test_artifact_server_url()}{image_directory}/{image_name}"
-
-
 def get_openshift_pull_secret(client: DynamicClient = None) -> Secret:
     pull_secret_name = "pull-secret"
     secret = Secret(
@@ -1162,44 +1132,6 @@ def get_prometheus_k8s_token(duration="1800s"):
     return out
 
 
-def get_artifactory_header():
-    return {"Authorization": f"Bearer {os.environ['ARTIFACTORY_TOKEN']}"}
-
-
-def get_artifactory_secret(
-    namespace,
-):
-    artifactory_secret = Secret(
-        name=ARTIFACTORY_SECRET_NAME,
-        namespace=namespace,
-        accesskeyid=base64_encode_str(os.environ["ARTIFACTORY_USER"]),
-        secretkey=base64_encode_str(os.environ["ARTIFACTORY_TOKEN"]),
-    )
-    if not artifactory_secret.exists:
-        artifactory_secret.deploy()
-    return artifactory_secret
-
-
-def get_artifactory_config_map(
-    namespace,
-):
-    artifactory_cm = ConfigMap(
-        name="artifactory-configmap",
-        namespace=namespace,
-        data={"tlsregistry.crt": ssl.get_server_certificate(addr=(py_config["server_url"], 443))},
-    )
-    if not artifactory_cm.exists:
-        artifactory_cm.deploy()
-    return artifactory_cm
-
-
-def cleanup_artifactory_secret_and_config_map(artifactory_secret=None, artifactory_config_map=None):
-    if artifactory_secret:
-        artifactory_secret.clean_up()
-    if artifactory_config_map:
-        artifactory_config_map.clean_up()
-
-
 def add_scc_to_service_account(namespace, scc_name, sa_name):
     output = subprocess.check_output(
         shlex.split(f"oc adm policy add-scc-to-user {scc_name} system:serviceaccount:{namespace}:{sa_name}")
@@ -1214,69 +1146,6 @@ def get_node_selector_name(node_selector):
 
 def get_node_selector_dict(node_selector):
     return {f"{Resource.ApiGroup.KUBERNETES_IO}/hostname": node_selector}
-
-
-def get_nodes_cpu_model(nodes):
-    """
-    Checks the cpu model labels on each nodes passed and returns a dictionary of nodes and supported nodes
-
-    :param nodes (list) : Nodes, for which cpu model labels are to be checked
-
-    :return: Dict of nodes and associated cpu models
-    """
-
-    nodes_cpu_model = {"common": {}, "modern": {}}
-    for node in nodes:
-        nodes_cpu_model["common"][node.name] = set()
-        nodes_cpu_model["modern"][node.name] = set()
-        for label, value in node.labels.items():
-            match_object = re.match(rf"{CPU_MODEL_LABEL_PREFIX}/(.*)", label)
-            if is_cpu_model_not_in_excluded_list(
-                filter_list=EXCLUDED_CPU_MODELS, match=match_object, label_value=value
-            ):
-                nodes_cpu_model["common"][node.name].add(match_object.group(1))
-            if is_cpu_model_not_in_excluded_list(
-                filter_list=EXCLUDED_OLD_CPU_MODELS, match=match_object, label_value=value
-            ):
-                nodes_cpu_model["modern"][node.name].add(match_object.group(1))
-    return nodes_cpu_model
-
-
-def is_cpu_model_not_in_excluded_list(filter_list, match, label_value):
-    return bool(match and label_value == "true" and not any(element in match.group(1) for element in filter_list))
-
-
-def get_host_model_cpu(nodes):
-    nodes_host_model_cpu = {}
-    for node in nodes:
-        for label, value in node.labels.items():
-            match_object = re.match(rf"{HOST_MODEL_CPU_LABEL}/(.*)", label)
-            if match_object and value == "true":
-                nodes_host_model_cpu[node.name] = match_object.group(1)
-    assert len(nodes_host_model_cpu) == len(nodes), (
-        f"All nodes did not have host-model-cpu label: {nodes_host_model_cpu} "
-    )
-    return nodes_host_model_cpu
-
-
-def find_common_cpu_model_for_live_migration(cluster_cpu, host_cpu_model):
-    if cluster_cpu:
-        if len(set(host_cpu_model.values())) == 1:
-            LOGGER.info(f"Host model cpus for all nodes are same {host_cpu_model}. No common cpus are needed")
-            return None
-        else:
-            LOGGER.info(f"Using cluster node cpu: {cluster_cpu}")
-            return cluster_cpu
-    # if we reach here, it is heterogeneous cluster, we would return None
-    LOGGER.warning("This is a heterogeneous cluster with no common cluster cpu.")
-    return None
-
-
-def get_common_cpu_from_nodes(cluster_cpus):
-    """
-    Receives a set of unique common cpus between all the schedulable nodes and returns one from the set
-    """
-    return next(iter(cluster_cpus)) if cluster_cpus else None
 
 
 def delete_resources_from_namespace_by_type(resources_types, namespace, wait=False):
@@ -1320,9 +1189,3 @@ def validate_os_info_vmi_vs_linux_os(vm: utilities.virt.VirtualMachineForTests) 
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)["os"]
 
     assert vmi_info == linux_info, f"Data mismatch! VMI: {vmi_info}\nOS: {linux_info}"
-
-
-def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
-    nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
-    assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
-    return next(iter(nodes_cpu_arch))

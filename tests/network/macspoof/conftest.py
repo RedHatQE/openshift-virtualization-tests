@@ -10,7 +10,8 @@ from timeout_sampler import TimeoutSampler
 
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
-from utilities.infra import get_node_selector_dict, name_prefix
+from utilities.data_utils import name_prefix
+from utilities.infra import get_node_selector_dict
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,

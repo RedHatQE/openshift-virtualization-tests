@@ -18,6 +18,7 @@ from tests.virt.upgrade.utils import (
     wait_for_automatic_vm_migrations,
 )
 from tests.virt.utils import get_boot_time_for_multiple_vms
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     ES_LIVE_MIGRATE_IF_POSSIBLE,
     OS_FLAVOR_RHEL,
@@ -29,7 +30,6 @@ from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
     generate_data_source_dict,
-    get_test_artifact_server_url,
 )
 from utilities.virt import (
     VirtualMachineForTests,

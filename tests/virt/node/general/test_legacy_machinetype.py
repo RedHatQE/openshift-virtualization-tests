@@ -7,9 +7,10 @@ from pytest_testconfig import config as py_config
 
 from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import validate_machine_type
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.hco import is_hco_tainted, update_hco_annotations
-from utilities.storage import create_dv, create_or_update_data_source, get_test_artifact_server_url
+from utilities.storage import create_dv, create_or_update_data_source
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_rhel_os_dict,

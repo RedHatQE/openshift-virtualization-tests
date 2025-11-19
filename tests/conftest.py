@@ -71,6 +71,7 @@ from timeout_sampler import TimeoutSampler
 
 import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
@@ -124,30 +125,30 @@ from utilities.constants import (
     StorageClassNames,
     UpgradeStreams,
 )
+from utilities.cpu import (
+    find_common_cpu_model_for_live_migration,
+    get_common_cpu_from_nodes,
+    get_host_model_cpu,
+    get_nodes_cpu_architecture,
+    get_nodes_cpu_model,
+)
+from utilities.data_utils import base64_encode_str, name_prefix
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import (
     ClusterHosts,
     ExecCommandOnPod,
     add_scc_to_service_account,
-    base64_encode_str,
     create_ns,
     download_file_from_cluster,
-    find_common_cpu_model_for_live_migration,
     generate_namespace_name,
     generate_openshift_pull_secret_file,
-    get_artifactory_header,
     get_cluster_platform,
     get_clusterversion,
-    get_common_cpu_from_nodes,
     get_daemonset_yaml_file_with_image_hash,
     get_deployment_by_name,
-    get_host_model_cpu,
-    get_http_image_url,
     get_hyperconverged_resource,
     get_infrastructure,
     get_node_selector_dict,
-    get_nodes_cpu_architecture,
-    get_nodes_cpu_model,
     get_nodes_with_label,
     get_pods,
     get_subscription,
@@ -155,7 +156,6 @@ from utilities.infra import (
     label_nodes,
     label_project,
     login_with_user_password,
-    name_prefix,
     run_virtctl_command,
     scale_deployment_replicas,
     wait_for_pods_deletion,
@@ -188,7 +188,6 @@ from utilities.storage import (
     data_volume,
     get_default_storage_class,
     get_storage_class_with_specified_volume_mode,
-    get_test_artifact_server_url,
     is_snapshot_supported_by_sc,
     remove_default_storage_classes,
     sc_is_hpp_with_immediate_volume_binding,
@@ -2605,8 +2604,8 @@ def dvs_for_upgrade(
 ):
     golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
-    artifactory_secret = utilities.infra.get_artifactory_secret(namespace=golden_images_namespace_name)
-    artifactory_config_map = utilities.infra.get_artifactory_config_map(namespace=golden_images_namespace_name)
+    artifactory_secret = utilities.artifactory.get_artifactory_secret(namespace=golden_images_namespace_name)
+    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(namespace=golden_images_namespace_name)
 
     for sc in py_config["storage_class_matrix"]:
         storage_class = [*sc][0]
@@ -2633,7 +2632,7 @@ def dvs_for_upgrade(
 
     for dv in dvs_list:
         dv.clean_up()
-    utilities.infra.cleanup_artifactory_secret_and_config_map(
+    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret,
         artifactory_config_map=artifactory_config_map,
     )

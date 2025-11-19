@@ -17,6 +17,7 @@ from tests.chaos.utils import (
     pod_deleting_process_recover,
     terminate_process,
 )
+from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
 from utilities.constants import (
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     OS_FLAVOR_RHEL,
@@ -34,8 +35,6 @@ from utilities.constants import (
 from utilities.infra import (
     ExecCommandOnPod,
     create_ns,
-    get_artifactory_config_map,
-    get_artifactory_secret,
     get_nodes_with_label,
     get_pod_by_name_prefix,
     get_utility_pods_from_nodes,

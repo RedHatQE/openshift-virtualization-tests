@@ -25,16 +25,17 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
-    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -134,10 +135,10 @@ def create_dv(
             # Make sure URL exists
             validate_file_exists_in_url(url=url)
         if not secret:
-            secret = utilities.infra.get_artifactory_secret(namespace=namespace)
+            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace)
             artifactory_secret = secret
         if not cert_configmap:
-            cert_created = utilities.infra.get_artifactory_config_map(namespace=namespace)
+            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace)
             cert_configmap = cert_created.name
 
     with DataVolume(
@@ -166,7 +167,7 @@ def create_dv(
         if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
             create_dummy_first_consumer_pod(dv=dv)
         yield dv
-    utilities.infra.cleanup_artifactory_secret_and_config_map(
+    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=cert_created
     )
 
@@ -300,7 +301,7 @@ def get_downloaded_artifact(remote_name, local_name):
     """
     Download image or artifact to local tmpdir path
     """
-    artifactory_header = utilities.infra.get_artifactory_header()
+    artifactory_header = utilities.artifactory.get_artifactory_header()
     url = f"{get_test_artifact_server_url()}{remote_name}"
     resp = requests.head(
         url,
@@ -596,41 +597,6 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     return dv.res
 
 
-def get_test_artifact_server_url(schema="https"):
-    """
-    Verify https server server connectivity (regardless of schema).
-    Return the requested "registry" or "https" server url.
-
-    Args:
-        schema (str): registry or https.
-
-    Returns:
-        str: Server URL.
-
-    Raises:
-        URLError: If server is not accessible.
-    """
-    artifactory_connection_url = py_config["servers"]["https_server"]
-    LOGGER.info(f"Testing connectivity to {artifactory_connection_url} {schema.upper()} server")
-    sample = None
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: requests.get(
-                artifactory_connection_url, headers=utilities.infra.get_artifactory_header(), verify=False
-            ),
-        ):
-            if sample.status_code == requests.codes.ok:
-                return py_config["servers"][f"{schema}_server"]
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Unable to connect to test image server: {artifactory_connection_url} "
-            f"{schema.upper()}, with error code: {sample.status_code}, error: {sample.text}"
-        )
-        raise
-
-
 def overhead_size_for_dv(image_size, overhead_value):
     """
     Calculate the size of the dv to include overhead and rounds up
@@ -806,7 +772,9 @@ def create_cirros_dv_for_snapshot_dict(name, namespace, storage_class, artifacto
         name=f"dv-{name}",
         namespace=namespace,
         source="http",
-        url=utilities.infra.get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+        url=utilities.artifactory.get_http_image_url(
+            image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG
+        ),
         storage_class=storage_class,
         size=Images.Cirros.DEFAULT_DV_SIZE,
         secret=artifactory_secret,
@@ -1168,6 +1136,6 @@ def vm_snapshot(vm, name):
 
 
 def validate_file_exists_in_url(url):
-    response = requests.head(url, headers=utilities.infra.get_artifactory_header(), verify=False)
+    response = requests.head(url, headers=utilities.artifactory.get_artifactory_header(), verify=False)
     if response.status_code != 200:
         raise UrlNotFoundError(url_request=response)
