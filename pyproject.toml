@@ -99,6 +99,7 @@ packages = ["*"]
 dev = [
     "ipdb>=0.13.13",
     "ipython>=8.12.3",
+    "pytest-repeat>=0.9.4",
 ]
 
 [tool.uv.sources]
