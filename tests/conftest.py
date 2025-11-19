@@ -36,7 +36,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.infrastructure import Infrastructure
-from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
@@ -83,7 +82,6 @@ from utilities.constants import (
     CLUSTER,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_VM_SSH_KEY_PATH,
-    DEFAULT_HCO_CONDITIONS,
     ES_NONE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     FEATURE_GATES,
@@ -132,10 +130,8 @@ from utilities.infra import (
     ExecCommandOnPod,
     add_scc_to_service_account,
     base64_encode_str,
-    cluster_sanity,
     create_ns,
     download_file_from_cluster,
-    exit_pytest_execution,
     find_common_cpu_model_for_live_migration,
     generate_namespace_name,
     generate_openshift_pull_secret_file,
@@ -184,6 +180,8 @@ from utilities.operator import (
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
+from utilities.pytest_utils import exit_pytest_execution
+from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
     create_or_update_data_source,
@@ -1491,8 +1489,6 @@ def cluster_sanity_scope_session(
             nodes=nodes,
             hco_namespace=hco_namespace,
             junitxml_property=junitxml_plugin,
-            hco_status_conditions=hyperconverged_resource_scope_session.instance.status.conditions,
-            expected_hco_status=DEFAULT_HCO_CONDITIONS,
         )
 
 
@@ -1519,8 +1515,6 @@ def cluster_sanity_scope_module(
             nodes=nodes,
             hco_namespace=hco_namespace,
             junitxml_property=junitxml_plugin,
-            hco_status_conditions=hyperconverged_resource_scope_session.instance.status.conditions,
-            expected_hco_status=DEFAULT_HCO_CONDITIONS,
         )
 
 
@@ -1576,21 +1570,6 @@ def cdi_spec(cdi):
 @pytest.fixture()
 def hco_spec(hyperconverged_resource_scope_function):
     return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
-
-
-@pytest.fixture(scope="module")
-def is_post_cnv_upgrade_cluster(admin_client, hco_namespace):
-    return (
-        len(
-            list(
-                InstallPlan.get(
-                    dyn_client=admin_client,
-                    namespace=hco_namespace.name,
-                )
-            )
-        )
-        > 1
-    )
 
 
 @pytest.fixture(scope="session")
@@ -2077,9 +2056,8 @@ def artifactory_setup(pytestconfig):
 
 
 @pytest.fixture(autouse=True)
-@pytest.mark.early(order=0)
 def autouse_fixtures(
-    leftovers_cleanup,  # Must be called first to avoid delete created resources.
+    leftovers_cleanup,  # Must be called first to avoid deleting created resources.
     artifactory_setup,
     bin_directory_to_os_path,
     cluster_info,
@@ -2492,9 +2470,11 @@ def migrated_vm_multiple_times(request, vm_for_migration_test):
 
 
 @pytest.fixture()
-def removed_default_storage_classes(cluster_storage_classes):
+def removed_default_storage_classes(admin_client, golden_images_namespace, cluster_storage_classes):
     with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
         yield
+    if not verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name):
+        pytest.fail("Failed to reimport all boot sources at teardown")
 
 
 @pytest.fixture(scope="session")
@@ -2524,9 +2504,10 @@ def hyperconverged_status_templates_scope_class(
 
 
 @pytest.fixture()
-def cloning_job_scope_function(request, namespace):
+def cloning_job_scope_function(request, unprivileged_client, namespace):
     with create_vm_cloning_job(
         name=f"clone-job-{request.param['source_name']}",
+        client=unprivileged_client,
         namespace=namespace.name,
         source_name=request.param["source_name"],
         label_filters=request.param.get("label_filters"),
@@ -2536,8 +2517,8 @@ def cloning_job_scope_function(request, namespace):
 
 
 @pytest.fixture()
-def target_vm_scope_function(cloning_job_scope_function):
-    with target_vm_from_cloning_job(cloning_job=cloning_job_scope_function) as target_vm:
+def target_vm_scope_function(unprivileged_client, cloning_job_scope_function):
+    with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=cloning_job_scope_function) as target_vm:
         yield target_vm
 
 

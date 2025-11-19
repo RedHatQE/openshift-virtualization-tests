@@ -13,7 +13,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.3
+    rev: v0.14.4
     hooks:
       - id: ruff
         stages: [pre-commit]
@@ -47,7 +47,7 @@ repos:
         args: [--config=.flake8]
         additional_dependencies:
           [
-            "git+https://github.com/RedHatQE/flake8-plugins.git@v0.0.10",
+            "git+https://github.com/RedHatQE/flake8-plugins.git@v1.0.0",
             "flake8-mutable",
             "pep8-naming",
           ]
@@ -60,7 +60,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: "v8.28.0"
+    rev: "v8.29.0"
     hooks:
       - id: gitleaks
 

@@ -26,7 +26,7 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Check out PR code safely (merge ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: refs/pull/${{ env.PR_NUMBER }}/merge
           persist-credentials: false
@@ -67,7 +67,7 @@ jobs:
           [ -n "${!URL:-}" ] && [ -n "${!IMAGE:-}" ] || { echo "Missing URL/IMAGE for ${{ matrix.CPU_ARCH }}"; exit 1; }
           wget -q "${!URL}/${!IMAGE}"
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.6"
       - name: Create VM
@@ -94,7 +94,7 @@ jobs:
       PR_NUMBER: ${{ github.event.number }}
     steps:
       - name: Check out PR code safely (merge ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: refs/pull/${{ env.PR_NUMBER }}/merge
       - name: Install dependencies

@@ -7,17 +7,21 @@ from kubernetes.dynamic import DynamicClient
 
 from libs.net.traffic_generator import TcpServer
 from libs.net.traffic_generator import VMTcpClient as TcpClient
-from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
+from libs.net.vmspec import IP_ADDRESS, add_volume_disk, lookup_iface_status
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import CloudInitNoCloud, Interface, Metadata, Multus, Network
+from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
 from libs.vm.vm import BaseVirtualMachine, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
 
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
+LOCALNET_BR_EX_NETWORK_NO_VLAN = "localnet-br-ex-network-no-vlan"
 LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
+LOCALNET_BR_EX_INTERFACE = "localnet-iface-vlan"
+LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
+LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
@@ -56,52 +60,64 @@ def create_traffic_client(
 def localnet_vm(
     namespace: str,
     name: str,
-    physical_network_name: str,
-    spec_logical_network: str,
-    cidr: str,
     client: DynamicClient,
-    interface_state: str | None = None,
+    networks: list[Network],
+    interfaces: list[Interface],
+    network_data: cloudinit.NetworkData,
 ) -> BaseVirtualMachine:
     """
-    Create a Fedora-based Virtual Machine connected to a given localnet network with a static IP configuration.
+    Create a Fedora-based Virtual Machine connected to localnet network(s).
 
     The VM will:
-    - Attach to a Multus network using a bridge interface.
     - Apply a specific label for anti-affinity scheduling.
-    - Use cloud-init to configure a static IP address.
     - Based on a standard Fedora VM template.
 
     Args:
         namespace (str): The namespace where the VM should be created.
         name (str): The name of the VM.
-        physical_network_name (str): The name of the Multus network to attach.
-        cidr (str): The CIDR address to assign to the VM's interface.
         client (DynamicClient): The Kubernetes dynamic client for resource creation.
-        spec_logical_network (str): The name of the localnet network to attach.
-        interface_state (str): The state of the interface (optional).
-            Possible values are "up" or "down". When not specified, it behaves as "up".
+        networks (list[Network]): List of Network objects defining the networks to attach.
+            Each Network should have a name and configuration.
+        interfaces (list[Interface]): List of Interface objects defining the interface configurations.
+            Each Interface should have a name matching a Network, and additional configuration and state.
+        network_data (cloudinit.NetworkData): Cloud-init NetworkData object containing the network
+            configuration for the VM interfaces.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
+
+    Example:
+        >>> networks = [
+        ...     Network(name="net1", multus=Multus(networkName="physical-net1")),
+        ...     Network(name="net2", multus=Multus(networkName="physical-net2")),
+        ... ]
+        >>> interfaces = [
+        ...     Interface(name="net1", bridge={}, state="up"),
+        ...     Interface(name="net2", bridge={}, state="up"),
+        ... ]
+        >>> network_data = cloudinit.NetworkData(ethernets={
+        ...     "eth0": cloudinit.EthernetDevice(addresses=["172.16.1.1/24"]),
+        ...     "eth1": cloudinit.EthernetDevice(addresses=["172.16.2.1/24"]),
+        ... })
+        >>> vm = localnet_vm(namespace="test-localnet", name="vm1", client=client,
+        ...                   networks=networks, interfaces=interfaces, network_data=network_data)
     """
     spec = base_vmspec()
     spec.template.metadata = spec.template.metadata or Metadata()
     spec.template.metadata.labels = spec.template.metadata.labels or {}
     spec.template.metadata.labels.update(LOCALNET_TEST_LABEL)
+
     vmi_spec = spec.template.spec
+    vmi_spec.networks = networks
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.interfaces = interfaces
 
-    vmi_spec = add_network_interface(
-        vmi_spec=vmi_spec,
-        network=Network(name=spec_logical_network, multus=Multus(networkName=physical_network_name)),
-        interface=Interface(name=spec_logical_network, bridge={}, state=interface_state),
-    )
-
-    netdata = cloudinit.NetworkData(ethernets={"eth0": cloudinit.EthernetDevice(addresses=[cidr])})
     # Prevents cloud-init from overriding the default OS user credentials
     userdata = cloudinit.UserData(users=[])
     disk, volume = cloudinitdisk_storage(
         data=CloudInitNoCloud(
-            networkData=cloudinit.asyaml(no_cloud=netdata), userData=cloudinit.format_cloud_config(userdata=userdata)
+            networkData=cloudinit.asyaml(no_cloud=network_data),
+            userData=cloudinit.format_cloud_config(userdata=userdata),
         )
     )
     vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
@@ -113,7 +129,10 @@ def localnet_vm(
 
 
 def localnet_cudn(
-    name: str, match_labels: dict[str, str], vlan_id: int, physical_network_name: str
+    name: str,
+    match_labels: dict[str, str],
+    physical_network_name: str,
+    vlan_id: int | None = None,
 ) -> libcudn.ClusterUserDefinedNetwork:
     """
     Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
@@ -127,14 +146,18 @@ def localnet_cudn(
     Args:
         name (str): The name of the CUDN resource.
         match_labels (dict[str, str]): Labels for namespace selection.
-        vlan_id (int): The VLAN ID to configure for the network.
         physical_network_name (str): The name of the physical network to associate with the localnet configuration.
+        vlan_id (int|None): The VLAN ID to configure for the network. If None, no VLAN is configured.
 
     Returns:
         ClusterUserDefinedNetwork: The configured CUDN object ready for creation.
     """
     ipam = libcudn.Ipam(mode=libcudn.Ipam.Mode.DISABLED.value)
-    vlan = libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
+    vlan = (
+        libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
+        if vlan_id is not None
+        else None
+    )
     localnet = libcudn.Localnet(
         role=libcudn.Localnet.Role.SECONDARY.value, physicalNetworkName=physical_network_name, vlan=vlan, ipam=ipam
     )

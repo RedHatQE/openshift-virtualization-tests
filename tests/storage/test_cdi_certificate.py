@@ -194,7 +194,7 @@ def test_upload_after_certs_renewal(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=Images.Cirros.DEFAULT_DV_SIZE,
         image_path=LOCAL_QCOW2_IMG_PATH,
         storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
@@ -213,7 +213,7 @@ def test_upload_after_certs_renewal(
             {
                 "dv_name": "dv-source",
                 "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-                "dv_size": "1Gi",
+                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
                 "wait": True,
             },
         ),
@@ -258,7 +258,7 @@ def test_upload_after_validate_aggregated_api_cert(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name=dv_name,
-        size="1Gi",
+        size=Images.Cirros.DEFAULT_DV_SIZE,
         image_path=LOCAL_QCOW2_IMG_PATH,
         storage_class=storage_class_name_immediate_binding_scope_module,
         insecure=True,
@@ -314,7 +314,7 @@ def test_cert_exposure_rotation(
     with virtctl_upload_dv(
         namespace=namespace.name,
         name="cnv-5708",
-        size="1Gi",
+        size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         image_path=downloaded_cirros_image,
         insecure=False,
