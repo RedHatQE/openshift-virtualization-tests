@@ -389,7 +389,7 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, admin_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(namespace, admin_client, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=admin_client,
         name="disk-allocation-size-vm",

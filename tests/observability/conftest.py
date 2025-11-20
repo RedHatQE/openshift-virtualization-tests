@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -40,10 +39,7 @@ def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
 
 @pytest.fixture(scope="session")
 def olm_namespace(admin_client):
-    olm_ns = Namespace(name="openshift-operator-lifecycle-manager", client=admin_client)
-    if olm_ns.exists:
-        return olm_ns
-    raise ResourceNotFoundError(f"Namespace: {olm_ns.name} not found.")
+    return Namespace(name="openshift-operator-lifecycle-manager", client=admin_client, ensure_exists=True)
 
 
 @pytest.fixture(scope="class")
