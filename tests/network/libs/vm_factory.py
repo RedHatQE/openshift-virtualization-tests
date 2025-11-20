@@ -9,10 +9,14 @@ from libs.vm.vm import BaseVirtualMachine
 
 
 def udn_vm(
-    namespace_name: str, name: str, client: DynamicClient, template_labels: dict | None = None
+    namespace_name: str,
+    name: str,
+    client: DynamicClient,
+    binding: str,
+    template_labels: dict | None = None,
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
-    iface, network = udn_primary_network(name="udn-primary")
+    iface, network = udn_primary_network(name="udn-primary", binding=binding)
     spec.template.spec.domain.devices.interfaces = [iface]  # type: ignore
     spec.template.spec.networks = [network]
     if template_labels:
