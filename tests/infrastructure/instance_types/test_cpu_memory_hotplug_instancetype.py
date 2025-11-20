@@ -53,10 +53,12 @@ def instance_type_hotplug_vm(
 
 
 @pytest.fixture(scope="module")
-def available_rwx_storage_class_name(available_storage_classes_names):
+def available_rwx_storage_class_name(unprivileged_client, available_storage_classes_names):
     for storage_class_name in available_storage_classes_names:
         if (
-            StorageProfile(name=storage_class_name).first_claim_property_set_access_modes()[0]
+            StorageProfile(client=unprivileged_client, name=storage_class_name).first_claim_property_set_access_modes()[
+                0
+            ]
             == DataVolume.AccessMode.RWX
         ):
             return storage_class_name
@@ -97,8 +99,9 @@ def hotplugged_six_sockets_instance_type(admin_client, instance_type_hotplug_vm,
 
 
 @pytest.fixture(scope="class")
-def hotplug_vm_snapshot_instance_type(instance_type_hotplug_vm):
+def hotplug_vm_snapshot_instance_type(instance_type_hotplug_vm, unprivileged_client):
     with VirtualMachineSnapshot(
+        client=unprivileged_client,
         name=f"{instance_type_hotplug_vm.name}-snapshot",
         namespace=instance_type_hotplug_vm.namespace,
         vm_name=instance_type_hotplug_vm.name,
