@@ -17,7 +17,8 @@ from tests.network.libs.dhcpd import (
 )
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import update_cloud_init_extra_user_data
-from utilities.infra import get_node_selector_dict, name_prefix
+from utilities.data_utils import name_prefix
+from utilities.infra import get_node_selector_dict
 from utilities.network import (
     cloud_init_network_data,
     get_vmi_mac_address_by_iface_name,
