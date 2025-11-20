@@ -114,7 +114,7 @@ def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_re
     )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def vm_with_node_selector_for_upgrade(namespace, worker_node1):
     name = "vm-with-node-selector"
     with VirtualMachineForTests(

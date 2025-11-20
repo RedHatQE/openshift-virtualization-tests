@@ -6,7 +6,7 @@ from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 
 
-@pytest.mark.upgrade
+@pytest.mark.cnv_upgrade
 class TestUpgradeObservability:
     TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE = (
         "test_metric_kubevirt_vmi_number_of_outdated_before_upgrade"

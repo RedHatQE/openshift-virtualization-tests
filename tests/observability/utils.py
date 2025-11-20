@@ -80,5 +80,5 @@ def wait_for_greater_than_zero_metric_value(prometheus: Prometheus, metric_name:
             if sample and int(sample) > 0:
                 return
     except TimeoutExpiredError:
-        LOGGER.info(f"Metric value of: {metric_name} is: {sample}, expected value: non zero")
+        LOGGER.error(f"Metric value of: {metric_name} is: {sample}, expected value: non zero")
         raise
