@@ -14,6 +14,7 @@ from ocp_resources.pipeline_run import PipelineRun
 from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from utilities.artifactory import get_http_image_url
 from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
@@ -25,7 +26,6 @@ from utilities.constants import (
     WIN_11,
     Images,
 )
-from utilities.infra import get_http_image_url
 
 LOGGER = logging.getLogger(__name__)
 

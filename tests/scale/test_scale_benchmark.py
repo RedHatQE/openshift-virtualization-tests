@@ -26,6 +26,11 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+)
 from utilities.constants import (
     NODE_STR,
     OS_FLAVOR_FEDORA,
@@ -36,10 +41,7 @@ from utilities.constants import (
     StorageClassNames,
 )
 from utilities.infra import (
-    cleanup_artifactory_secret_and_config_map,
     create_ns,
-    get_artifactory_config_map,
-    get_artifactory_secret,
 )
 from utilities.must_gather import run_must_gather
 from utilities.storage import generate_data_source_dict, get_test_artifact_server_url

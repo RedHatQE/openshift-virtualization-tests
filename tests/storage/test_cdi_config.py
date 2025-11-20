@@ -16,6 +16,7 @@ from tests.storage.utils import (
     upload_image_to_dv,
     upload_token_request,
 )
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import CDI_UPLOADPROXY, Images, StorageClassNames
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
@@ -24,7 +25,6 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     get_downloaded_artifact,
-    get_test_artifact_server_url,
     update_default_sc,
     wait_for_default_sc_in_cdiconfig,
 )
