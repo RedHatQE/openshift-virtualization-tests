@@ -22,8 +22,8 @@ HPP_CUSTOM_NODE_SELECTOR_DICT = {
 
 
 @pytest.fixture(scope="class")
-def hostpath_provisioner_scope_class():
-    yield HostPathProvisioner(name=HOSTPATH_PROVISIONER)
+def hostpath_provisioner_scope_class(admin_client):
+    yield HostPathProvisioner(name=HOSTPATH_PROVISIONER, client=admin_client)
 
 
 @pytest.fixture(scope="module")
