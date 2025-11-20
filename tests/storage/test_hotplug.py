@@ -270,8 +270,8 @@ class TestHotPlugWithSerialPersist:
 @pytest.mark.tier3
 class TestHotPlugWindows:
     @pytest.mark.xfail(
-    reason=f"{QUARANTINED}: fails to get DV status, most likely automation issue; CNV-72460",
-    run=False,
+        reason=f"{QUARANTINED}: fails to get DV status, most likely automation issue; CNV-72460",
+        run=False,
     )
     @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")
