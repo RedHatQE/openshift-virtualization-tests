@@ -11,7 +11,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import HOTPLUG_DISK_SERIAL
+from utilities.constants import HOTPLUG_DISK_SERIAL, QUARANTINED
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
@@ -269,6 +269,10 @@ class TestHotPlugWithSerialPersist:
 )
 @pytest.mark.tier3
 class TestHotPlugWindows:
+    @pytest.mark.xfail(
+    reason=f"{QUARANTINED}: fails to get DV status, most likely automation issue; CNV-72460",
+    run=False,
+    )
     @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")
     def test_windows_hotplug(
