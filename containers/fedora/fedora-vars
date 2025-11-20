@@ -1,0 +1,12 @@
+FEDORA_VERSION=42
+
+# Add download directory and filename of Fedora Cloud base generic qcow2 file
+# for x86_64, aarch64, s390x
+FEDORA_x86_64_DOWNLOAD_DIR=https://download.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Cloud/x86_64/images
+FEDORA_x86_64_IMAGE=Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2
+
+FEDORA_aarch64_DOWNLOAD_DIR=https://download.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Cloud/aarch64/images
+FEDORA_aarch64_IMAGE=Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2
+
+FEDORA_s390x_DOWNLOAD_DIR=https://download.fedoraproject.org/pub/fedora-secondary/releases/${FEDORA_VERSION}/Cloud/s390x/images
+FEDORA_s390x_IMAGE=Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2
