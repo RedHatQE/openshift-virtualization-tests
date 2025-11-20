@@ -29,3 +29,4 @@ SSP_ALERTS_LIST = [
     "SSPCommonTemplatesModificationReverted",
     SSP_HIGH_RATE_REJECTED_VMS,
 ]
+KUBEVIRT_VIRT_OPERATOR_READY_STATUS = "kubevirt_virt_operator_ready_status"
