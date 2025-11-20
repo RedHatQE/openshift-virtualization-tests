@@ -72,6 +72,7 @@ class Interface:
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None
     vlan: Vlan | None = None
+    mtu: int | None = None
 
 
 @dataclass

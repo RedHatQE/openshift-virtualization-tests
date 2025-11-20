@@ -87,16 +87,14 @@ class VMTcpClient(BaseTcpClient):
         vm (BaseVirtualMachine): The virtual machine where the client runs.
         server_ip (str): The destination IP address of the server the client connects to.
         server_port (int): The port on which the server listens for connections.
+        maximum_segment_size (int):MTU customization (by customizing mss) in bytes.
+                                   Default value is 0 (do not change mss).
     """
 
-    def __init__(
-        self,
-        vm: BaseVirtualMachine,
-        server_ip: str,
-        server_port: int,
-    ):
+    def __init__(self, vm: BaseVirtualMachine, server_ip: str, server_port: int, maximum_segment_size: int = 0):
         super().__init__(server_ip=server_ip, server_port=server_port)
         self._vm = vm
+        self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
     def __enter__(self) -> "VMTcpClient":
         self._vm.console(
