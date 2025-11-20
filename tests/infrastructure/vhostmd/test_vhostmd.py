@@ -12,9 +12,10 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from utilities.artifactory import get_artifactory_header
 from utilities.constants import TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import get_artifactory_header, get_node_selector_dict, get_node_selector_name
+from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
     running_vm,
     vm_instance_from_template,

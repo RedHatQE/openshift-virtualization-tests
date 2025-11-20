@@ -24,6 +24,7 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
     VGPU_PRETTY_NAME_STR,
 )
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     DATA_SOURCE_STR,
     DEFAULT_HCO_CONDITIONS,
@@ -49,7 +50,6 @@ from utilities.storage import (
     create_dv,
     create_or_update_data_source,
     data_volume_template_with_source_ref_dict,
-    get_test_artifact_server_url,
 )
 from utilities.virt import (
     VirtualMachineForTests,

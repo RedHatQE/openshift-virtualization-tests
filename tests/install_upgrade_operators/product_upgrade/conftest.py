@@ -51,10 +51,12 @@ from utilities.operator import (
     update_subscription_source,
     wait_for_mcp_update_completion,
 )
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_oc_image_info
 
 LOGGER = logging.getLogger(__name__)
 POD_STR_NOT_MANAGED_BY_HCO = "hostpath-"
+EUS_ERROR_CODE = 98
 
 
 @pytest.fixture(scope="session")
@@ -318,6 +320,10 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 
 @pytest.fixture(scope="session")
 def eus_cnv_upgrade_path(eus_target_cnv_version):
+    if eus_target_cnv_version is None:
+        exit_pytest_execution(
+            message="EUS upgrade can not be performed from non-eus version", return_code=EUS_ERROR_CODE
+        )
     # Get the shortest path to the target (EUS) version
     upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
     # Get the shortest path to the intermediate (non-EUS) version
