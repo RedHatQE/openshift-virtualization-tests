@@ -9,7 +9,6 @@ import pytest
 from tests.virt.cluster.common_templates.utils import (
     check_machine_type,
     check_vm_xml_clock,
-    check_vm_xml_hyperv,
     validate_fs_info_virtctl_vs_linux_os,
     validate_os_info_virtctl_vs_linux_os,
     validate_user_info_virtctl_vs_linux_os,
@@ -17,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
 )
 from utilities import console
 from utilities.constants import LINUX_STR
+from utilities.guest_support import check_vm_xml_hyperv
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,

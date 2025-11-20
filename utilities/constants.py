@@ -880,6 +880,23 @@ WIN_2K22 = "win2k22"
 WIN_2K16 = "win2k16"
 WIN_2K19 = "win2k19"
 
+HYPERV_FEATURES_LABELS_DOM_XML = [
+    "relaxed",
+    "vapic",
+    "spinlocks",
+    "vpindex",
+    "synic",
+    "stimer",  # synictimer in VM yaml
+    "frequencies",
+    "ipi",
+    "reset",
+    "runtime",
+    "tlbflush",
+    "reenlightenment",
+]
+HYPERV_FEATURES_LABELS_VM_YAML = HYPERV_FEATURES_LABELS_DOM_XML.copy()
+HYPERV_FEATURES_LABELS_VM_YAML[HYPERV_FEATURES_LABELS_VM_YAML.index("stimer")] = "synictimer"
+
 PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}
