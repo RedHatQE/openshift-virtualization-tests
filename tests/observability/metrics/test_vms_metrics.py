@@ -92,13 +92,14 @@ def vm_in_error_state(namespace):
 
 
 @pytest.fixture()
-def pvc_for_vm_in_starting_state(namespace):
+def pvc_for_vm_in_starting_state(unprivileged_client, namespace):
     with PersistentVolumeClaim(
         name="vm-in-starting-state-pvc",
         namespace=namespace.name,
         accessmodes=PersistentVolumeClaim.AccessMode.RWX,
         size="1Gi",
         pvlabel="non-existent-pv",
+        client=unprivileged_client,
     ) as pvc:
         yield pvc
 
@@ -133,11 +134,12 @@ def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
 
 
 @pytest.fixture()
-def vm_metric_1_vmim(vm_metric_1):
+def vm_metric_1_vmim(admin_client, vm_metric_1):
     with VirtualMachineInstanceMigration(
         name="vm-metric-1-vmim",
         namespace=vm_metric_1.namespace,
         vmi_name=vm_metric_1.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield
@@ -414,23 +416,26 @@ class TestVmDiskAllocatedSizeLinux:
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
         self,
         prometheus,
+        unprivileged_client,
         vm_for_vm_disk_allocation_size_test,
     ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=vm_for_vm_disk_allocation_size_test.name),
-            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test),
+            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test, client=unprivileged_client),
         )
 
 
 @pytest.mark.tier3
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
-    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(
+        self, prometheus, unprivileged_client, windows_vm_for_test
+    ):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),
-            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test),
+            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test, client=unprivileged_client),
         )
 
 

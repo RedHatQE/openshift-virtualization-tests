@@ -695,8 +695,8 @@ def create_windows11_wsl2_vm(
         name=vm_name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)
@@ -732,7 +732,7 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+def get_pvc_size_bytes(vm: VirtualMachineForTests, client: DynamicClient) -> str:
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
     assert vm_dv_templates, "VM has no DataVolume templates"
     return str(
@@ -741,6 +741,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
                 PersistentVolumeClaim(
                     name=vm_dv_templates[0].metadata.name,
                     namespace=vm.namespace,
+                    client=client,
                 ).instance.spec.resources.requests.storage
             ).Byte.bytes
         )
