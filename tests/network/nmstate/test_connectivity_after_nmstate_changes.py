@@ -17,7 +17,8 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
 )
-from utilities.infra import get_node_selector_dict, get_pod_by_name_prefix, name_prefix
+from utilities.data_utils import name_prefix
+from utilities.infra import get_node_selector_dict, get_pod_by_name_prefix
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
