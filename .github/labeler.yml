@@ -41,3 +41,8 @@ sig-virt:
     - any-glob-to-any-file:
       - 'tests/virt/**'
       - 'utilities/virt.py'
+
+# Adds a 'quarantine' label when a PR title starts with `Quarantine:` (case-insensitive)
+quarantine:
+  - pr-title:
+    - '(?i)^quarantine:'
