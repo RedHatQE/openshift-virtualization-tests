@@ -7,11 +7,12 @@ from ocp_resources.namespace import Namespace
 from libs.vm.spec import Interface, NetBinding, Network
 from utilities.infra import create_ns
 
-UDN_BINDING_PLUGIN_NAME: Final[str] = "l2bridge"
+UDN_BINDING_DEFAULT_PLUGIN_NAME: Final[str] = "l2bridge"
+UDN_BINDING_PASST_PLUGIN_NAME: Final[str] = "passt"
 
 
-def udn_primary_network(name: str) -> tuple[Interface, Network]:
-    return Interface(name=name, binding=NetBinding(name=UDN_BINDING_PLUGIN_NAME)), Network(name=name, pod={})
+def udn_primary_network(name: str, binding: str) -> tuple[Interface, Network]:
+    return Interface(name=name, binding=NetBinding(name=binding)), Network(name=name, pod={})
 
 
 def create_udn_namespace(

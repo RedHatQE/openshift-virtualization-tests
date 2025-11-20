@@ -6,6 +6,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import TcpServer, is_tcp_connection
 from libs.net.traffic_generator import VMTcpClient as TcpClient
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
 from tests.network.libs.ip import random_ipv4_address
@@ -55,6 +56,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         namespace_name=udn_namespace.name,
         name="vma-udn",
         client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
         template_labels=dict((udn_affinity_label,)),
     ) as vm:
         vm.start(wait=True)
@@ -68,6 +70,7 @@ def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         namespace_name=udn_namespace.name,
         name="vmb-udn",
         client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
         template_labels=dict((udn_affinity_label,)),
     ) as vm:
         vm.start(wait=True)
