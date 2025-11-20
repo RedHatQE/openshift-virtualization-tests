@@ -14,7 +14,7 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 from tests.infrastructure.golden_images.utils import (
     assert_missing_golden_image_pvc,
 )
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
+from utilities.constants import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -30,7 +30,7 @@ RHEL9_NAME = "rhel9"
 def assert_os_version_mismatch_in_vm(vm, expected_os):
     expected_os_params = re.match(r"(?P<os_name>[a-z]+)(-stream)?(?P<os_ver>[0-9]+)", expected_os).groupdict()
     vm_os = vm.ssh_exec.os.release_str.lower()
-    os_name = "redhat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else vm.os_flavor
+    os_name = OS_FLAVOR_RHEL if expected_os_params["os_name"] == OS_FLAVOR_RHEL else vm.os_flavor
     expected_name_in_vm_os = "red hat" if expected_os_params["os_name"] == OS_FLAVOR_RHEL else os_name
     assert re.match(rf"({expected_name_in_vm_os}).*({expected_os_params['os_ver']}).*", vm_os), (
         f"Wrong VM OS, expected: {expected_os_params}, actual: {vm_os}"
@@ -156,7 +156,7 @@ def test_vm_from_auto_update_boot_source(
     latest_fedora_release_version,
 ):
     LOGGER.info(f"Verify {auto_update_boot_source_vm.name} OS version and virtctl info")
-    if "fedora" in boot_source_os_from_data_source_dict and latest_fedora_release_version:
+    if OS_FLAVOR_FEDORA in boot_source_os_from_data_source_dict and latest_fedora_release_version:
         boot_source_os_from_data_source_dict = f"fedora{latest_fedora_release_version}"
     assert_os_version_mismatch_in_vm(
         vm=auto_update_boot_source_vm,
