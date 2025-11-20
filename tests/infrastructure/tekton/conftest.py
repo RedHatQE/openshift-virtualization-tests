@@ -23,6 +23,7 @@ from tests.infrastructure.tekton.utils import (
     win_iso_download_url_for_pipelineref,
     yaml_files_in_dir,
 )
+from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     OS_FLAVOR_FEDORA,
@@ -35,11 +36,9 @@ from utilities.constants import (
     TIMEOUT_50MIN,
     WINDOWS_EFI_INSTALLER_STR,
 )
+from utilities.data_utils import base64_encode_str
 from utilities.infra import (
-    base64_encode_str,
     create_ns,
-    get_artifactory_config_map,
-    get_artifactory_secret,
     get_resources_by_name_prefix,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict

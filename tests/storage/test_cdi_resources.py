@@ -17,6 +17,7 @@ from ocp_resources.service import Service
 from ocp_resources.service_account import ServiceAccount
 
 from tests.storage.utils import import_image_to_dv, upload_image_to_dv
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     CDI_APISERVER,
     CDI_CONFIGMAPS,
@@ -32,7 +33,6 @@ from utilities.constants import (
 from utilities.storage import (
     create_dv,
     data_volume,
-    get_test_artifact_server_url,
     wait_for_cdi_worker_pod,
 )
 
