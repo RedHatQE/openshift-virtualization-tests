@@ -1038,23 +1038,146 @@ def get_cluster_cni_type(admin_client):
     return Network(client=admin_client, name="cluster").instance.status.networkType
 
 
-def wait_for_ready_sriov_nodes(snns):
-    for status in (INPROGRESS, SriovNetworkNodePolicy.Status.SUCCEEDED):
+def _node_matches_policy_selector(node, policy):
+    """
+    Check if a node matches the policy's nodeSelector.
+
+    Args:
+        node: Node object
+        policy: SriovNetworkNodePolicy object
+
+    Returns:
+        bool: True if node matches policy selector or if no selector is specified
+    """
+    policy_spec = policy.instance.spec
+    node_selector = getattr(policy_spec, "nodeSelector", {})
+
+    if not node_selector:
+        return True
+
+    node_labels = node.instance.metadata.labels
+    for key, value in node_selector.items():
+        if node_labels.get(key) != value:
+            return False
+
+    return True
+
+
+def _verify_sriov_interface_config(sriov_node_network_state, policy):
+    """
+    Verify that SR-IOV interfaces match the policy configuration.
+
+    Args:
+        sriov_node_network_state: SriovNetworkNodeState object
+        policy: SriovNetworkNodePolicy object with the desired configuration
+
+    Raises:
+        AssertionError: If interface configuration doesn't match policy
+    """
+    if not policy:
+        return
+
+    node = Node(client=sriov_node_network_state.client, name=sriov_node_network_state.name)
+
+    if not _node_matches_policy_selector(node=node, policy=policy):
+        LOGGER.info(f"Skipping verification for node {node.name} - does not match policy {policy.name} nodeSelector")
+        return
+
+    policy_spec = policy.instance.spec
+    pf_names = policy_spec.nicSelector.get("pfNames", [])
+    root_devices = policy_spec.nicSelector.get("rootDevices", [])
+    expected_num_vfs = policy_spec.get("numVfs")
+    expected_mtu = policy_spec.get("mtu")
+
+    matching_interfaces = []
+    for iface in sriov_node_network_state.instance.status.interfaces:
+        if iface.name in pf_names or iface.pciAddress in root_devices:
+            matching_interfaces.append(iface)
+
+    if not matching_interfaces:
+        LOGGER.info(
+            f"Skipping verification for node {sriov_node_network_state.name} - "
+            f"no interfaces matching policy {policy.name} (pfNames={pf_names}, rootDevices={root_devices})"
+        )
+        return
+
+    for iface in matching_interfaces:
+        LOGGER.info(
+            f"Verifying interface {iface.name} on node {sriov_node_network_state.name}: "
+            f"numVfs={iface.numVfs} (expected: {expected_num_vfs})"
+        )
+
+        if iface.numVfs != expected_num_vfs:
+            LOGGER.error(
+                f"Interface {iface.name} on {sriov_node_network_state.name} has numVfs={iface.numVfs}, "
+                f"expected {expected_num_vfs}"
+            )
+            raise AssertionError(f"numVfs mismatch for {iface.name}: got {iface.numVfs}, expected {expected_num_vfs}")
+
+        if expected_mtu:
+            iface_mtu = getattr(iface, "mtu", None)
+            if iface_mtu and iface_mtu != expected_mtu:
+                LOGGER.error(
+                    f"Interface {iface.name} on {sriov_node_network_state.name} has mtu={iface_mtu}, "
+                    f"expected {expected_mtu}"
+                )
+                raise AssertionError(f"MTU mismatch for {iface.name}: got {iface_mtu}, expected {expected_mtu}")
+
+        LOGGER.info(f"Interface {iface.name} configuration verified successfully")
+
+
+def wait_for_ready_sriov_nodes(snns, policy=None):
+    """
+    Wait for SR-IOV nodes to be ready and verify interface configuration matches policy.
+
+    Args:
+        snns: List of SriovNetworkNodeState objects
+        policy: Optional SriovNetworkNodePolicy object to verify configuration against
+
+    Raises:
+        TimeoutExpiredError: If sync status doesn't reach SUCCEEDED state or configuration doesn't match
+        AssertionError: If interface configuration doesn't match policy
+    """
+    for sriov_node_network_state in snns:
+        LOGGER.info(f"Waiting for node {sriov_node_network_state.name} to reach SUCCEEDED status")
+        sampler = TimeoutSampler(
+            wait_timeout=1000,
+            sleep=5,
+            func=lambda snns=sriov_node_network_state: snns.instance.status.syncStatus,
+        )
+        try:
+            for sample in sampler:
+                if sample == SriovNetworkNodePolicy.Status.SUCCEEDED:
+                    LOGGER.info(f"Node {sriov_node_network_state.name} reached SUCCEEDED status")
+                    break
+        except TimeoutExpiredError:
+            current_status = sriov_node_network_state.instance.status.syncStatus
+            LOGGER.error(
+                f"Timeout waiting for node {sriov_node_network_state.name} to reach SUCCEEDED status. "
+                f"Current status: {current_status}"
+            )
+            raise
+
+    if policy:
+        LOGGER.info(f"Verifying SR-IOV interface configuration matches policy {policy.name}")
         for sriov_node_network_state in snns:
-            LOGGER.info(f"Checking state: {sriov_node_network_state.name}")
+            sampler = TimeoutSampler(
+                wait_timeout=1000,
+                sleep=5,
+                func=_verify_sriov_interface_config,
+                sriov_node_network_state=sriov_node_network_state,
+                policy=policy,
+                exceptions_dict={AssertionError: []},
+            )
             try:
-                sriov_node_network_state.wait_for_status_sync(wanted_status=status)
+                for _ in sampler:
+                    LOGGER.info(f"Successfully verified configuration for node {sriov_node_network_state.name}")
+                    break
             except TimeoutExpiredError:
-                if (
-                    status == INPROGRESS
-                    and sriov_node_network_state.instance.status.syncStatus == SriovNetworkNodePolicy.Status.SUCCEEDED
-                ):
-                    continue
-                else:
-                    LOGGER.error(
-                        f"Current status: {sriov_node_network_state.instance.status.syncStatus} expected: {status}"
-                    )
-                    raise
+                LOGGER.error(
+                    f"Timeout waiting for SR-IOV configuration to match policy on node {sriov_node_network_state.name}"
+                )
+                raise
 
 
 def create_sriov_node_policy(
@@ -1075,8 +1198,9 @@ def create_sriov_node_policy(
         # so the mtu parameter only affects the PF. we need to change the mtu manually on the VM.
         mtu=mtu,
     ) as policy:
-        wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
+        wait_for_ready_sriov_nodes(snns=sriov_nodes_states, policy=policy)
         yield policy
+    # After teardown, wait for nodes to stabilize without policy verification
     wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
 
 
