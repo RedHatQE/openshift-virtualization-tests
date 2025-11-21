@@ -84,7 +84,7 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         IMAGE_NAME_STR: "WIN2k16_IMG",
         OS_VERSION_STR: "2016",
         OS_STR: WIN_2K16,
-        "uefi": True,
+        # "uefi": True,
         DATA_SOURCE_STR: WIN_2K16,
         CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K16),
     },
