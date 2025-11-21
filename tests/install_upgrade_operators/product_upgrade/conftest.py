@@ -52,6 +52,7 @@ from utilities.operator import (
     update_subscription_source,
     wait_for_mcp_update_completion,
 )
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_oc_image_info
 
 LOGGER = logging.getLogger(__name__)
