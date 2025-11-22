@@ -3,7 +3,6 @@ from collections.abc import Generator
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
-from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.traffic_generator import TcpServer
@@ -24,6 +23,7 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
     client_server_active_connection,
+    create_nncp_localnet_on_secondary_node_nic,
     create_traffic_client,
     create_traffic_server,
     localnet_cudn,
@@ -36,7 +36,6 @@ from utilities.constants import (
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
-NNCP_INTERFACE_TYPE_OVS_BRIDGE = "ovs-bridge"
 PRIMARY_INTERFACE_NAME = "eth0"
 
 
@@ -208,55 +207,22 @@ def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualM
 
 
 @pytest.fixture(scope="module")
-def nncp_localnet_on_secondary_node_nic(
-    worker_node1: Node, nodes_available_nics: dict[str, list[str]]
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    bridge_name = "localnet-ovs-br"
-    desired_state = libnncp.DesiredState(
-        interfaces=[
-            libnncp.Interface(
-                name=bridge_name,
-                type=NNCP_INTERFACE_TYPE_OVS_BRIDGE,
-                ipv4=libnncp.IPv4(enabled=False),
-                ipv6=libnncp.IPv6(enabled=False),
-                state=libnncp.Resource.Interface.State.UP,
-                bridge=libnncp.Bridge(
-                    options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
-                    port=[
-                        libnncp.Port(
-                            name=nodes_available_nics[worker_node1.name][-1],
-                        )
-                    ],
-                ),
-            )
-        ],
-        ovn=libnncp.OVN([
-            libnncp.BridgeMappings(
-                localnet=LOCALNET_OVS_BRIDGE_NETWORK,
-                bridge=bridge_name,
-                state=libnncp.BridgeMappings.State.PRESENT.value,
-            )
-        ]),
-    )
-    with libnncp.NodeNetworkConfigurationPolicy(
-        name=bridge_name,
-        desired_state=desired_state,
-        node_selector={WORKER_NODE_LABEL_KEY: ""},
-    ) as nncp:
-        nncp.wait_for_status_success()
-        yield nncp
-
-
-@pytest.fixture(scope="module")
 def cudn_localnet_ovs_bridge(
-    vlan_id: int,
-    namespace_localnet_1: Namespace,
+    vlan_id: int, namespace_localnet_1: Namespace, request: pytest.FixtureRequest
 ) -> Generator[libcudn.ClusterUserDefinedNetwork]:
+    params = getattr(request, "param", {})
+    mtu = None
+
+    mtu_fixture_name = params.get("mtu")
+    if mtu_fixture_name:
+        mtu = request.getfixturevalue(mtu_fixture_name)
+
     with localnet_cudn(
         name=LOCALNET_OVS_BRIDGE_NETWORK,
         match_labels=LOCALNET_TEST_LABEL,
         vlan_id=vlan_id,
         physical_network_name=LOCALNET_OVS_BRIDGE_NETWORK,
+        mtu=mtu,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn
@@ -389,3 +355,25 @@ def migrated_localnet_vm(
     vm, _ = localnet_running_vms
     migrate_vm_and_verify(vm=vm)
     return vm
+
+
+@pytest.fixture(scope="module")
+def nodes_common_available_nic_name(hosts_common_available_ports: list[str]) -> str:
+    return hosts_common_available_ports[-1]
+
+
+@pytest.fixture(scope="module")
+def nncp_localnet_on_secondary_node_nic(
+    nodes_common_available_nic_name: str, request: pytest.FixtureRequest
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    params = getattr(request, "param", {})
+    mtu = None
+
+    mtu_fixture_name = params.get("mtu")
+    if mtu_fixture_name:
+        mtu = request.getfixturevalue(mtu_fixture_name)
+
+    with create_nncp_localnet_on_secondary_node_nic(
+        nodes_common_available_nic_name=nodes_common_available_nic_name, mtu=mtu
+    ) as nncp:
+        yield nncp
