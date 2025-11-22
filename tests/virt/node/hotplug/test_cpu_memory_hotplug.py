@@ -67,6 +67,7 @@ def hotplug_vm_snapshot(hotplugged_vm):
                 "vm_name": "rhel-latest-cpu-hotplug-vm",
             },
             id="RHEL-VM",
+            marks=[pytest.mark.s390x],
         ),
         pytest.param(
             {

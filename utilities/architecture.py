@@ -31,3 +31,9 @@ def get_cluster_architecture() -> str:
         raise ValueError(f"{arch} architecture in not supported")
 
     return arch
+
+
+def is_cluster_s390x() -> bool:
+    from utilities.constants import S390X
+
+    return get_cluster_architecture() == S390X

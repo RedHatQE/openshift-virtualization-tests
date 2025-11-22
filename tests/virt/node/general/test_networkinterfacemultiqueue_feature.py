@@ -113,6 +113,7 @@ class TestLatestRHEL:
 
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values")
     @pytest.mark.polarion("CNV-8891")
+    @pytest.mark.s390x
     def test_default_cpu_values(
         self,
         network_interface_multiqueue_vm,
@@ -123,6 +124,7 @@ class TestLatestRHEL:
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8892")
+    @pytest.mark.s390x
     def test_feature_disabled(self, network_interface_multiqueue_vm):
         update_validate_cpu_in_vm(
             vm=network_interface_multiqueue_vm,
@@ -131,11 +133,13 @@ class TestLatestRHEL:
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8893")
+    @pytest.mark.s390x
     def test_four_cores(self, network_interface_multiqueue_vm):
         update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, cores=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8894")
+    @pytest.mark.s390x
     def test_four_sockets(self, network_interface_multiqueue_vm):
         update_validate_cpu_in_vm(
             vm=network_interface_multiqueue_vm,

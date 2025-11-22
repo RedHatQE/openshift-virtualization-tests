@@ -70,7 +70,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from utilities.architecture import is_cluster_s390x
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
@@ -160,6 +160,7 @@ from utilities.infra import (
     scale_deployment_replicas,
     wait_for_pods_deletion,
 )
+from utilities.jira import is_jira_open
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
@@ -212,6 +213,9 @@ from utilities.virt import (
     wait_for_kv_stabilize,
     wait_for_windows_vm,
 )
+
+from .utils import download_and_extract_tar, update_cluster_cpu_model
+from .virt.constants import MachineTypesNames
 
 LOGGER = logging.getLogger(__name__)
 HTTP_SECRET_NAME = "htpass-secret-for-cnv-tests"
@@ -2767,10 +2771,26 @@ def cluster_modern_cpu_model_scope_class(
     wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@pytest.fixture(scope="session")
+def is_s390x_cluster():
+    return is_cluster_s390x()
+
+
+@pytest.fixture(scope="function")
+def non_default_machine_type(is_s390x_cluster):
+    return MachineTypesNames.s390_ccw_virtio if is_s390x_cluster else MachineTypesNames.pc_q35_rhel7_6
+
+
 @pytest.fixture(scope="module")
-def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
+def machine_type_from_kubevirt_config(is_s390x_cluster, kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    # Workaround for s390x (https://github.com/kubevirt/kubevirt/issues/14953), as machine type missing in config and
+    # hardcoded to s390_ccw_virtio in kubevirt code.
+    if is_s390x_cluster and is_jira_open("CNV-71825"):
+        mc_type = "s390-ccw-virtio"
+    else:
+        mc_type = kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    return mc_type
 
 
 @pytest.fixture(scope="module")
