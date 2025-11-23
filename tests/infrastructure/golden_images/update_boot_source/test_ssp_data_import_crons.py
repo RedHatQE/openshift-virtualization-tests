@@ -189,7 +189,7 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
             exceptions_dict={IndexError: []},
         ):
             if sample:
-                created_dv = DataVolume(name=sample.name, namespace=sample.namespace)
+                created_dv = DataVolume(client=unprivileged_client, name=sample.name, namespace=sample.namespace)
                 created_dv.wait_for_dv_success()
                 yield sample
                 created_dv.clean_up()
@@ -217,6 +217,7 @@ def created_data_import_cron(
 ):
     cron_template_spec = golden_images_data_import_cron_spec.template.spec
     with DataImportCron(
+        client=unprivileged_client,
         name="data-import-cron-for-test",
         namespace=data_import_cron_namespace.name,
         managed_data_source=golden_images_data_import_cron_spec.managedDataSource,
@@ -479,7 +480,9 @@ def test_data_source_instancetype_preference_label(
             with create_vm_with_infer_from_volume(
                 client=unprivileged_client,
                 namespace=namespace,
-                data_source_for_test=DataSource(name=data_source_name, namespace=golden_images_namespace.name),
+                data_source_for_test=DataSource(
+                    client=unprivileged_client, name=data_source_name, namespace=golden_images_namespace.name
+                ),
             ):
                 pass
         except Exception as exp:
