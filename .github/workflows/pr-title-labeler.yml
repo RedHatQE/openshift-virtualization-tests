@@ -1,0 +1,60 @@
+# PR Title Labeler - Automatically adds a 'quarantine' label based on PR title
+#
+# Summary:
+# ┌──────────────────┬─────────────────────────┬───────────────┬──────────────────────┐
+# │ Event            │ Title                   │ Current Label │ Action               │
+# ├──────────────────┼─────────────────────────┼───────────────┼──────────────────────┤
+# │ PR opened        │ "Quarantine: test"      │ None          │ ✅ Add label         │
+# │ PR opened        │ "Quarantine: test"      │ Already has   │ ✅ No-op (safe)      │
+# │ Title edited     │ "Fix" → "Quarantine: x" │ None          │ ✅ Add label         │
+# │ Title edited     │ "Quarantine: x" → "Fix" │ Has label     │ ⚠️  Keeps label      │
+# │ PR reopened      │ "Quarantine: test"      │ None          │ ✅ Add label         │
+# │ Manual add       │ "Fix test"              │ Manually added│ ✅ Safe (preserved)  │
+# │ New commit       │ Any                     │ Any           │ ⏭️  Does NOT run     │
+# └──────────────────┴─────────────────────────┴───────────────┴──────────────────────┘
+#
+
+name: "PR Title Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label-quarantine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add quarantine label for PRs starting with "Quarantine:"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title.toLowerCase();
+            const prNumber = context.payload.pull_request.number;
+
+            console.log(`Processing PR #${prNumber}: "${context.payload.pull_request.title}"`);
+
+            try {
+              // Check if title starts with "quarantine:" (case-insensitive)
+              if (title.startsWith('quarantine:')) {
+                console.log(`Title starts with "quarantine:", adding label`);
+
+                // Add the quarantine label (idempotent - won't fail if already present)
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: ['quarantine']
+                });
+
+                console.log('✅ Added "quarantine" label');
+              } else {
+                console.log(`Title does not start with "quarantine:", no action needed`);
+              }
+            } catch (error) {
+              console.error('Error managing quarantine label:', error);
+              throw error;
+            }
