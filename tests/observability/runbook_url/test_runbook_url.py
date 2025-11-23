@@ -1,8 +1,9 @@
+import http
 import logging
 
 import pytest
+import requests
 
-from tests.utils import validate_runbook_url_exists
 from utilities.constants import CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
@@ -16,18 +17,14 @@ def validate_downstream_runbook_url(runbook_urls_from_prometheus_rule: dict[str,
         if not runbook_url:
             LOGGER.error(f"For alert: {alert_name} Url not found")
             alerts_without_runbook.append(alert_name)
-        error = validate_runbook_url_exists(url=runbook_url)
-        if error:
+            continue
+        if requests.get(runbook_url, allow_redirects=False).status_code != http.HTTPStatus.OK:
             LOGGER.error(f"Alert {alert_name} url {runbook_url} is not valid")
             error_messages[alert_name] = runbook_url
-    if alerts_without_runbook:
-        LOGGER.error(f"Runbook url missing for following CNV alerts: {alerts_without_runbook}")
-        raise AssertionError("CNV alerts with missing runbook url found.")
-
-    if error_messages:
-        message = f"Downstream runbook url validation failed for the followings: {error_messages}"
-        LOGGER.error(message)
-        raise AssertionError(message)
+    assert not (alerts_without_runbook or error_messages), (
+        f"CNV alerts with missing runbook url: {alerts_without_runbook}, "
+        f"D/S runbook url validation failed for the followings alerts: {error_messages}"
+    )
 
 
 class TestRunbookUrlsAndPrometheusRules:
