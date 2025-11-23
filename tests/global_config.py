@@ -171,7 +171,6 @@ run_strategy_matrix = [
     VirtualMachine.RunStrategy.RERUNONFAILURE,
 ]
 
-
 aaq_allocation_methods_matrix = [AAQ_VIRTUAL_RESOURCES, AAQ_VMI_POD_USAGE]
 
 sysprep_source_matrix = ["ConfigMap", "Secret"]

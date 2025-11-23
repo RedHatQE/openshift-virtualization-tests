@@ -111,7 +111,7 @@ def checkup_configmap(checkups_namespace):
 
 @pytest.fixture(scope="function")
 def checkup_job(
-    unprivileged_client,
+    admin_client,
     request,
     checkups_namespace,
     checkup_image_url,
@@ -140,7 +140,7 @@ def checkup_job(
         restart_policy="Never",
         backoff_limit=0,
         containers=containers,
-        client=unprivileged_client,
+        client=admin_client,
     ) as job:
         try:
             job.wait_for_condition(
@@ -150,7 +150,7 @@ def checkup_job(
             )
         except TimeoutExpiredError:
             job_pods = get_pods(
-                dyn_client=unprivileged_client,
+                dyn_client=admin_client,
                 namespace=checkups_namespace,
                 label=f"job-name={job.name}",
             )

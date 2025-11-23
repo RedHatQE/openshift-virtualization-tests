@@ -1,7 +1,5 @@
 import bitmath
 
-from utilities.constants import Images
-
 VIRT_PROCESS_MEMORY_LIMITS = {
     "virt-launcher-monitor": bitmath.MiB(25),
     "virt-launcher": bitmath.MiB(100),
@@ -9,12 +7,6 @@ VIRT_PROCESS_MEMORY_LIMITS = {
     "virtlogd": bitmath.MiB(25),
 }
 
-
-CIRROS_OS = {
-    "data_source": "cirros-dv",
-    "image_path": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
-    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-}
 
 STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "

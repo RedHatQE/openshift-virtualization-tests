@@ -11,9 +11,9 @@ GUEST_LOAD_TIME_PERIODS = [
 
 
 class TestVMIGuestLoad:
-    # todo: when the pr for updating the fedora will be merged, adjust the test.
+    # TODO: when the pr for updating the fedora will be merged, adjust the test.
     @pytest.mark.polarion("CNV-12369")
-    def test_kubevirt_vmi_guest_load_centos(
+    def test_kubevirt_vmi_guest_load(
         self,
         prometheus,
         fedora_vm_with_stress_ng,

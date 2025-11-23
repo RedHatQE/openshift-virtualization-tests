@@ -11,12 +11,14 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
+from packaging.version import Version
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
@@ -97,7 +99,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
-MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = 9.6
+MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
 
 
 @pytest.fixture(scope="module")
@@ -591,7 +593,7 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
-        name="fedora42-vm-test",
+        name="fedora-vm-test-with-stress-ng",
         namespace=namespace.name,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
@@ -615,15 +617,16 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
 @pytest.fixture(scope="class")
 def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
     LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
-    guest_agent_version = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec).split(".")
-    LOGGER.info(f"qemu-guest-agent version: {guest_agent_version}")
-    if len(guest_agent_version) < 2:
-        raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version}")
-    version_num = float(f"{guest_agent_version[0]}.{guest_agent_version[1]}")
-    if version_num >= MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS:
+    guest_agent_version_str = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
+    LOGGER.info(f"qemu-guest-agent version: {guest_agent_version_str}")
+    try:
+        guest_agent_version = Version(version=guest_agent_version_str)
+    except Exception as e:
+        raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version_str}") from e
+    if guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS):
         return
     raise ValueError(
-        f"qemu-guest-agent version {version_num} is less than required "
+        f"qemu-guest-agent version {guest_agent_version} is less than required "
         f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
     )
 
@@ -635,4 +638,13 @@ def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
     start_stress_on_vm(
         vm=fedora_vm_with_stress_ng,
         stress_command=STRESS_CPU_MEM_IO_COMMAND.format(workers="2", memory="50%", timeout="30m"),
+    )
+
+
+@pytest.fixture(scope="class")
+def vm_created_pod_total_initial_metric_value(prometheus, namespace):
+    return int(
+        get_metrics_value(
+            prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
+        )
     )
