@@ -3,10 +3,20 @@ from typing import Any
 import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import StorageClassNames
+from utilities.constants import (
+    ALL_CNV_DAEMONSETS_NO_HPP_CSI,
+    ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
+    CNV_PODS_NO_HPP_CSI_HPP_POOL,
+    StorageClassNames,
+)
 
 global config
 global_config = pytest_testconfig.load_python(py_file="tests/global_config.py", encoding="utf-8")
+
+cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
+cnv_pod_matrix = CNV_PODS_NO_HPP_CSI_HPP_POOL
+cnv_daemonset_matrix = ALL_CNV_DAEMONSETS_NO_HPP_CSI
+
 storage_class_matrix = [
     {
         StorageClassNames.GPFS: {
