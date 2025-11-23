@@ -113,7 +113,7 @@ def hpp_resources(request, admin_client):
 
 
 @pytest.fixture(scope="module")
-def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1):
+def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1, admin_client):
     svc_ip = internal_http_service.instance.to_dict()["spec"]["clusterIP"]
 
     def _fetch_cert():
@@ -138,6 +138,7 @@ def internal_http_configmap(namespace, internal_http_service, workers_utility_po
                     name=INTERNAL_HTTP_CONFIGMAP_NAME,
                     namespace=namespace.name,
                     data={"tlsregistry.crt": sample},
+                    client=admin_client,
                 ) as configmap:
                     yield configmap
                 break
@@ -148,18 +149,19 @@ def internal_http_configmap(namespace, internal_http_service, workers_utility_po
 
 
 @pytest.fixture(scope="module")
-def internal_http_secret(namespace):
+def internal_http_secret(namespace, admin_client):
     with Secret(
         name="internal-http-secret",
         namespace=namespace.name,
         accesskeyid="YWRtaW4=",
         secretkey="cGFzc3dvcmQ=",
+        client=admin_client,
     ) as secret:
         yield secret
 
 
 @pytest.fixture(scope="session")
-def internal_http_deployment(cnv_tests_utilities_namespace):
+def internal_http_deployment(cnv_tests_utilities_namespace, admin_client):
     """
     Deploy internal HTTP server Deployment into the cnv_tests_utilities_namespace namespace.
     This Deployment deploys a pod that runs an HTTP server
@@ -170,14 +172,17 @@ def internal_http_deployment(cnv_tests_utilities_namespace):
         selector=INTERNAL_HTTP_SELECTOR,
         template=INTERNAL_HTTP_TEMPLATE,
         replicas=1,
+        client=admin_client,
     ) as dep:
         dep.wait_for_replicas()
         yield dep
 
 
 @pytest.fixture(scope="session")
-def internal_http_service(cnv_tests_utilities_namespace, internal_http_deployment):
-    with HttpService(name=internal_http_deployment.name, namespace=cnv_tests_utilities_namespace.name) as svc:
+def internal_http_service(cnv_tests_utilities_namespace, internal_http_deployment, admin_client):
+    with HttpService(
+        name=internal_http_deployment.name, namespace=cnv_tests_utilities_namespace.name, client=admin_client
+    ) as svc:
         yield svc
 
 
@@ -270,12 +275,13 @@ def https_server_certificate():
 
 
 @pytest.fixture()
-def https_config_map(request, namespace, https_server_certificate):
+def https_config_map(request, namespace, https_server_certificate, admin_client):
     data = {"ca.pem": request.param["data"]} if hasattr(request, "param") else {"ca.pem": https_server_certificate}
     with ConfigMap(
         name=HTTPS_CONFIG_MAP_NAME,
         namespace=namespace.name,
         data=data,
+        client=admin_client,
     ) as configmap:
         yield configmap
 

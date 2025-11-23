@@ -18,13 +18,16 @@ def data_import_cron_pvc_target_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def dv_source_for_data_import_cron(namespace, storage_class_name_scope_module, rhel9_http_image_url):
+def dv_source_for_data_import_cron(
+    namespace, storage_class_name_scope_module, rhel9_http_image_url, unprivileged_client
+):
     with create_dv(
         dv_name="dv-source-rhel",
         namespace=namespace.name,
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
+        client=unprivileged_client,
     ) as dv:
         yield dv
 
@@ -56,6 +59,7 @@ def data_import_cron_with_pvc_source(
     dv_source_for_data_import_cron,
     imported_data_source,
     storage_class_name_scope_module,
+    unprivileged_client,
 ):
     with DataImportCron(
         name="datasource-with-pvc-source",
@@ -77,6 +81,7 @@ def data_import_cron_with_pvc_source(
                 },
             }
         },
+        client=unprivileged_client,
     ) as data_import_cron:
         data_import_cron.wait_for_condition(
             condition="UpToDate", status=data_import_cron.Condition.Status.TRUE, timeout=TIMEOUT_10MIN

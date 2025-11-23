@@ -221,10 +221,12 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
 )
 @pytest.mark.s390x
 def test_cloner_pods_cdi_label(
+    unprivileged_client,
     namespace,
     data_volume_without_snapshot_capability_scope_function,
 ):
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=data_volume_without_snapshot_capability_scope_function.namespace,

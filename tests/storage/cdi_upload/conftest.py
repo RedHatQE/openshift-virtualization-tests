@@ -43,6 +43,7 @@ def uploaded_dv_with_immediate_binding(
     namespace,
     storage_class_name_immediate_binding_scope_module,
     tmpdir,
+    unprivileged_client,
 ):
     image_file = request.param.get("image_file")
     dv_name = image_file.split(".")[0].replace("_", "-").lower()
@@ -57,7 +58,7 @@ def uploaded_dv_with_immediate_binding(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         assert dv.pvc.bound(), f"PVC status is {dv.pvc.status}"
         yield dv

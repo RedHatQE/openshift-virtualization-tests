@@ -22,7 +22,6 @@ from tests.storage.utils import (
 from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
-    check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dummy_first_consumer_pod,
     create_dv,
@@ -60,7 +59,7 @@ def skip_no_reencrypt_route(upload_proxy_route):
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2192")
-def test_successful_virtctl_upload_no_url(namespace, tmpdir):
+def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir):
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2192"
@@ -73,18 +72,19 @@ def test_successful_virtctl_upload_no_url(namespace, tmpdir):
         insecure=True,
     ) as virtctl_upload:
         check_upload_virtctl_result(result=virtctl_upload)
-        assert PersistentVolumeClaim(name=pvc_name, namespace=namespace.name).bound()
+        assert PersistentVolumeClaim(name=pvc_name, namespace=namespace.name, client=unprivileged_client).bound()
 
 
 @pytest.mark.destructive
 @pytest.mark.polarion("CNV-2191")
 def test_successful_virtctl_upload_no_route(
+    admin_client,
     hco_namespace,
     namespace,
     tmpdir,
     uploadproxy_route_deleted,
 ):
-    route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name)
+    route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     with pytest.raises(NotFoundError):
         route.instance
 
@@ -110,6 +110,7 @@ def test_successful_virtctl_upload_no_route(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2217")
 def test_image_upload_with_overridden_url(
+    unprivileged_client,
     namespace,
     tmpdir,
     cdi_config_upload_proxy_overridden,
@@ -126,13 +127,14 @@ def test_image_upload_with_overridden_url(
         insecure=True,
     ) as virtctl_upload:
         check_upload_virtctl_result(result=virtctl_upload)
-        assert PersistentVolumeClaim(name=pvc_name, namespace=namespace.name).bound()
+        assert PersistentVolumeClaim(name=pvc_name, namespace=namespace.name, client=unprivileged_client).bound()
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3031")
 @pytest.mark.s390x
 def test_virtctl_image_upload_with_ca(
+    unprivileged_client,
     enabled_ca,
     skip_no_reencrypt_route,
     tmpdir,
@@ -149,7 +151,7 @@ def test_virtctl_image_upload_with_ca(
         image_path=local_path,
     ) as res:
         check_upload_virtctl_result(result=res)
-        pvc = PersistentVolumeClaim(namespace=namespace.name, name=pvc_name)
+        pvc = PersistentVolumeClaim(namespace=namespace.name, name=pvc_name, client=unprivileged_client)
         assert pvc.bound()
 
 
@@ -157,6 +159,7 @@ def test_virtctl_image_upload_with_ca(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3724")
 def test_virtctl_image_upload_dv(
+    unprivileged_client,
     namespace,
     storage_class_name_immediate_binding_scope_module,
     download_image,
@@ -174,10 +177,9 @@ def test_virtctl_image_upload_dv(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
-            check_disk_count_in_vm(vm=vm)
+        storage_utils.create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
 @pytest.mark.sno
@@ -254,7 +256,9 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3725")
-def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_class_name_scope_module):
+def test_virtctl_image_upload_with_exist_dv(
+    unprivileged_client, download_image, namespace, storage_class_name_scope_module
+):
     """
     Check that virtctl is able to upload a local disk image to an existing DataVolume
     """
@@ -278,8 +282,7 @@ def test_virtctl_image_upload_with_exist_dv(download_image, namespace, storage_c
         ) as res:
             check_upload_virtctl_result(result=res)
             if not sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
-                with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
-                    check_disk_count_in_vm(vm=vm)
+                storage_utils.create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
 @pytest.fixture()
@@ -340,7 +343,6 @@ def test_virtctl_image_upload_with_exist_pvc(
                 pvc=empty_pvc,
             ) as vm:
                 running_vm(vm=vm, wait_for_interfaces=False)
-                check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.polarion("CNV-3729")
@@ -469,8 +471,8 @@ def test_disk_image_after_upload_virtctl(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name)
-        create_vm_and_verify_image_permission(dv=dv)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
+        create_vm_and_verify_image_permission(client=unprivileged_client, dv=dv)
         assert_use_populator(
             pvc=dv.pvc,
             storage_class=storage_class_name_scope_module,

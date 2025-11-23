@@ -108,7 +108,7 @@ def rhel8_latest_image_truncated_sha_from_image_stream(namespace, rhel8_image_st
 
 
 @pytest.fixture()
-def data_import_cron_image_stream(namespace, storage_class_name_scope_function):
+def data_import_cron_image_stream(namespace, storage_class_name_scope_function, unprivileged_client):
     with DataImportCron(
         name=f"{RHEL8_STR}-image-import-cron",
         namespace=namespace.name,
@@ -131,6 +131,7 @@ def data_import_cron_image_stream(namespace, storage_class_name_scope_function):
                 },
             }
         },
+        client=unprivileged_client,
     ) as data_import_cron:
         yield data_import_cron
 

@@ -64,12 +64,14 @@ def import_image_to_dv(
     images_https_server_name,
     storage_ns_name,
     https_server_certificate,
+    unprivileged_client,
 ):
     url = get_file_url_https_server(images_https_server=images_https_server_name, file_name=Images.Cirros.QCOW2_IMG)
     with ConfigMap(
         name="https-cert-configmap",
         namespace=storage_ns_name,
         data={"tlsregistry.crt": https_server_certificate},
+        client=unprivileged_client,
     ) as configmap:
         with create_dv(
             source="http",
@@ -78,6 +80,7 @@ def import_image_to_dv(
             url=url,
             cert_configmap=configmap.name,
             storage_class=py_config["default_storage_class"],
+            client=unprivileged_client,
         ) as dv:
             yield dv
 
@@ -98,8 +101,10 @@ def upload_image_to_dv(dv_name, storage_ns_name, storage_class, client, consume_
 
 
 @contextmanager
-def upload_token_request(storage_ns_name, pvc_name, data):
-    with UploadTokenRequest(name="upload-image", namespace=storage_ns_name, pvc_name=pvc_name) as utr:
+def upload_token_request(storage_ns_name, pvc_name, data, admin_client):
+    with UploadTokenRequest(
+        name="upload-image", namespace=storage_ns_name, pvc_name=pvc_name, client=admin_client
+    ) as utr:
         token = utr.create().status.token
         LOGGER.info("Ensure upload was successful")
         sampler = TimeoutSampler(
@@ -130,9 +135,9 @@ def create_windows_vm_validate_guest_agent_info(
         validate_os_info_vmi_vs_windows_os(vm=vm_dv)
 
 
-def upload_image(token, data, asynchronous=False):
+def upload_image(token, data, asynchronous=False, client=None):
     headers = {"Authorization": f"Bearer {token}"}
-    uploadproxy = Route(name=CDI_UPLOADPROXY, namespace=py_config["hco_namespace"])
+    uploadproxy = Route(name=CDI_UPLOADPROXY, namespace=py_config["hco_namespace"], client=client)
     uploadproxy_url = f"https://{uploadproxy.host}/v1alpha1/upload"
     if asynchronous:
         uploadproxy_url = f"{uploadproxy_url}-async"
@@ -436,6 +441,7 @@ def create_pod_for_pvc(pvc, volume_mode):
         name=f"{pvc.name}-pod",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
+        client=pvc.client,
     ) as pod:
         pod.wait_for_status(status=pod.Status.RUNNING)
         yield pod

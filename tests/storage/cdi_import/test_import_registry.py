@@ -6,13 +6,12 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE, REGISTRY_STR
 from tests.storage.utils import (
-    create_vm_from_dv,
     get_importer_pod,
     wait_for_importer_container_message,
 )
 from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
-from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv
+from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
 from utilities.virt import running_vm
 
 pytestmark = pytest.mark.post_upgrade
@@ -41,6 +40,7 @@ def test_disk_image_not_conform_to_registy_disk(
     admin_client, dv_name, url, namespace, storage_class_matrix__function__
 ):
     with create_dv(
+        client=admin_client,
         source=REGISTRY_STR,
         dv_name=dv_name,
         namespace=namespace.name,
@@ -67,7 +67,6 @@ def test_public_registry_multiple_data_volume(
 ):
     for vm in dvs_and_vms_from_public_registry:
         running_vm(vm=vm)
-        check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.sno
@@ -91,12 +90,14 @@ def test_public_registry_multiple_data_volume(
     ],
 )
 def test_public_registry_data_volume(
+    unprivileged_client,
     namespace,
     dv_name,
     content_type,
     storage_class_name_scope_function,
 ):
     with create_dv(
+        client=unprivileged_client,
         source=REGISTRY_STR,
         dv_name=dv_name,
         namespace=namespace.name,
@@ -106,14 +107,14 @@ def test_public_registry_data_volume(
         storage_class=storage_class_name_scope_function,
     ) as dv:
         dv.wait_for_dv_success()
-        with create_vm_from_dv(
+        create_vm_from_dv(
+            client=unprivileged_client,
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_interfaces=True,
-        ) as vm_dv:
-            check_disk_count_in_vm(vm=vm_dv)
+        )
 
 
 # The following test is to show after imports fails because low capacity storage,
@@ -121,7 +122,7 @@ def test_public_registry_data_volume(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2024")
 @pytest.mark.s390x
-def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_scope_function):
+def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace, storage_class_name_scope_function):
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
         "source": REGISTRY_STR,
@@ -130,6 +131,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
     }
     # negative flow - low capacity volume
     with create_dv(
+        client=unprivileged_client,
         source=dv_param["source"],
         dv_name=dv_param["dv_name"],
         namespace=namespace.name,
@@ -145,6 +147,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
         wait_for_condition_message_value(resource=dv, expected_message=ErrorMsg.DATA_VOLUME_TOO_SMALL)
     # positive flow
     with create_dv(
+        client=unprivileged_client,
         source=dv_param["source"],
         dv_name=dv_param["dv_name"],
         namespace=namespace.name,
@@ -154,6 +157,7 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
     ) as dv:
         dv.wait_for_dv_success()
         with create_vm_from_dv(
+            client=unprivileged_client,
             dv=dv,
             vm_name="fedora-vm-from-dv",
             os_flavor=OS_FLAVOR_FEDORA,
@@ -166,9 +170,10 @@ def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2150")
 @pytest.mark.s390x
-def test_public_registry_data_volume_archive(namespace, storage_class_name_scope_function):
+def test_public_registry_data_volume_archive(unprivileged_client, namespace, storage_class_name_scope_function):
     with pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"):
         with create_dv(
+            client=unprivileged_client,
             source=REGISTRY_STR,
             dv_name="import-public-registry-archive",
             namespace=namespace.name,

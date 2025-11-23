@@ -93,6 +93,7 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         name=f"first-consumer-{pvc.name}",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
+        client=pvc.client,
     ) as pod:
         LOGGER.info(
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "
@@ -182,6 +183,7 @@ def data_volume(
     check_dv_exists=False,
     admin_client=None,
     bind_immediate=None,
+    client=None,
 ):
     """
     DV creation using create_dv.
@@ -249,14 +251,6 @@ def data_volume(
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
 
-    # In hpp, volume must reside on the same worker as the VM
-    # This is not needed for golden image PVC
-    hostpath_node = (
-        schedulable_nodes[0].name
-        if (sc_is_hpp_with_immediate_volume_binding(sc=storage_class) and not is_golden_image)
-        else None
-    )
-
     dv_kwargs = {
         "dv_name": dv_name,
         "namespace": dv_namespace,
@@ -266,11 +260,11 @@ def data_volume(
         "access_modes": params_dict.get("access_modes"),
         "volume_mode": params_dict.get("volume_mode"),
         "content_type": DataVolume.ContentType.KUBEVIRT,
-        "hostpath_node": hostpath_node,
         "consume_wffc": consume_wffc,
         "bind_immediate": bind_immediate,
         "preallocation": params_dict.get("preallocation", None),
         "url": url,
+        "client": client,
     }
     if params_dict.get("cert_configmap"):
         dv_kwargs["cert_configmap"] = params_dict.get("cert_configmap")
@@ -280,12 +274,7 @@ def data_volume(
             if source == "upload":
                 dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
             else:
-                if (
-                    not consume_wffc
-                    and sc_volume_binding_mode_is_wffc(sc=storage_class)
-                    and check_cdi_feature_gate_enabled(feature="HonorWaitForFirstConsumer")
-                    and not bind_immediate
-                ):
+                if not consume_wffc and sc_volume_binding_mode_is_wffc(sc=storage_class) and not bind_immediate:
                     # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
                     # and bind_immediate is False (i.e bind_immediate annotation will be added, import will not wait
                     # first consumer)
@@ -340,10 +329,6 @@ def sc_is_hpp_with_immediate_volume_binding(sc):
 
 def sc_volume_binding_mode_is_wffc(sc):
     return StorageClass(name=sc).instance["volumeBindingMode"] == StorageClass.VolumeBindingMode.WaitForFirstConsumer
-
-
-def check_cdi_feature_gate_enabled(feature):
-    return feature in CDIConfig(name="config").instance.to_dict().get("spec", {}).get("featureGates", [])
 
 
 @contextmanager
@@ -525,8 +510,8 @@ def get_containers_for_pods_with_pvc(volume_mode, pvc_name):
 
 
 class PodWithPVC(Pod):
-    def __init__(self, name, namespace, pvc_name, containers, teardown=True):
-        super().__init__(name=name, namespace=namespace, containers=containers, teardown=teardown)
+    def __init__(self, name, namespace, pvc_name, containers, teardown=True, client=None):
+        super().__init__(name=name, namespace=namespace, containers=containers, teardown=teardown, client=client)
         self._pvc_name = pvc_name
 
     def to_dict(self):
@@ -966,6 +951,7 @@ def create_vm_from_dv(
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
     wait_for_interfaces=False,
+    client=None,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,
@@ -976,6 +962,7 @@ def create_vm_from_dv(
         cpu_model=cpu_model,
         memory_guest=memory_guest,
         os_flavor=os_flavor,
+        client=client,
     ) as vm:
         if start:
             virt_util.running_vm(

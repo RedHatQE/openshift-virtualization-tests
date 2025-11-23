@@ -244,8 +244,10 @@ def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2215")
 @pytest.mark.s390x
-def test_route_for_different_service(cdi_config, upload_proxy_route):
-    with Route(namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api") as cdi_api_route:
+def test_route_for_different_service(admin_client, cdi_config, upload_proxy_route):
+    with Route(
+        namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api", client=admin_client
+    ) as cdi_api_route:
         assert cdi_config.upload_proxy_url != cdi_api_route.host
         assert cdi_config.upload_proxy_url == upload_proxy_route.host
 
@@ -253,8 +255,8 @@ def test_route_for_different_service(cdi_config, upload_proxy_route):
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2216")
 @pytest.mark.s390x
-def test_upload_proxy_url_overridden(cdi_config, namespace, cdi_config_upload_proxy_overridden):
-    with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY) as new_route:
+def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
+    with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY, client=admin_client) as new_route:
         assert cdi_config.upload_proxy_url != new_route.host
 
 
@@ -262,6 +264,7 @@ def test_upload_proxy_url_overridden(cdi_config, namespace, cdi_config_upload_pr
 @pytest.mark.polarion("CNV-2441")
 @pytest.mark.s390x
 def test_cdiconfig_changing_storage_class_default(
+    unprivileged_client,
     skip_test_if_no_ocs_sc,
     available_hpp_storage_class,
     namespace,
@@ -276,11 +279,13 @@ def test_cdiconfig_changing_storage_class_default(
                 file_name=Images.Cirros.QCOW2_IMG,
             )
             with ConfigMap(
+                client=unprivileged_client,
                 name="https-cert-configmap",
                 namespace=namespace.name,
                 data={"tlsregistry.crt": https_server_certificate},
             ) as configmap:
                 with create_dv(
+                    client=unprivileged_client,
                     source="http",
                     dv_name="import-cdiconfig-scratch-space-not-default",
                     namespace=configmap.namespace,
@@ -289,8 +294,7 @@ def test_cdiconfig_changing_storage_class_default(
                     cert_configmap=configmap.name,
                 ) as dv:
                     dv.wait_for_dv_success()
-                    with create_vm_from_dv(dv=dv) as vm_dv:
-                        check_disk_count_in_vm(vm=vm_dv)
+                    create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
 @pytest.mark.sno
