@@ -846,6 +846,7 @@ def get_node_audit_log_entries(log, node, log_entry):
     error_patterns_list = [
         r"^\s*error:",
         r"Unhandled Error.*couldn't get current server API group list.*i/o timeout",
+        r".*read tcp.*connection reset by peer",
     ]
     error_patterns = re.compile("|".join(f"({pattern})" for pattern in error_patterns_list))
 

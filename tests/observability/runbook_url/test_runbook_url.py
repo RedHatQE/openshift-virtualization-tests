@@ -18,8 +18,13 @@ def validate_downstream_runbook_url(runbook_urls_from_prometheus_rule: dict[str,
             LOGGER.error(f"For alert: {alert_name} Url not found")
             alerts_without_runbook.append(alert_name)
             continue
-        if requests.get(runbook_url, allow_redirects=False).status_code != http.HTTPStatus.OK:
-            LOGGER.error(f"Alert {alert_name} url {runbook_url} is not valid")
+        try:
+            response = requests.get(runbook_url, allow_redirects=False, timeout=10)
+            if response.status_code != http.HTTPStatus.OK:
+                LOGGER.error(f"Alert {alert_name} url {runbook_url} returned status {response.status_code}")
+                error_messages[alert_name] = runbook_url
+        except requests.RequestException as e:
+            LOGGER.error(f"Alert {alert_name} url {runbook_url} failed: {e}")
             error_messages[alert_name] = runbook_url
     assert not (alerts_without_runbook or error_messages), (
         f"CNV alerts with missing runbook url: {alerts_without_runbook}, "
