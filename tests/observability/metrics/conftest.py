@@ -390,13 +390,15 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, admin_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
-        client=admin_client,
+        client=unprivileged_client,
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=admin_client),
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
+            ),
             storage_class=py_config["default_storage_class"],
         ),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
@@ -436,11 +438,11 @@ def windows_vm_info_to_compare(windows_vm_for_test):
 
 
 @pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, admin_client):
+def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        admin_client=admin_client,
+        admin_client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:

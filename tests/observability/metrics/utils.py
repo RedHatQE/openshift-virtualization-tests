@@ -673,14 +673,14 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, admin_client: DynamicClient, vm_name: str, storage_class: str
+    dv_name: str, namespace: str, unprivileged_client: DynamicClient, vm_name: str, storage_class: str
 ) -> Generator:
     """
     Create a Windows 11 WSL2 VM with a DataVolume template
     Args:
         dv_name (str): The name of the DataVolume
         namespace (str): The namespace of the VM
-        admin_client (DynamicClient): Admin client to use to create the VM with instanceType and preference.
+        unprivileged_client (DynamicClient): unprivileged_client client to use to create the VM.
         vm_name (str): The name of the VM
         storage_class (str): The storage class to use for the DataVolume
     """
@@ -693,7 +693,7 @@ def create_windows11_wsl2_vm(
         source="http",
         url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
-        client=admin_client,
+        client=unprivileged_client,
         api_name="storage",
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
@@ -703,9 +703,9 @@ def create_windows11_wsl2_vm(
         os_flavor=OS_FLAVOR_WINDOWS,
         name=vm_name,
         namespace=namespace,
-        client=admin_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.xlarge"),
-        vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.11"),
+        client=unprivileged_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)
@@ -741,7 +741,7 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def get_pvc_size_bytes(vm: VirtualMachineForTests, client: DynamicClient) -> str:
+def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
     assert vm_dv_templates, "VM has no DataVolume templates"
     return str(
@@ -750,7 +750,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests, client: DynamicClient) -> str
                 PersistentVolumeClaim(
                     name=vm_dv_templates[0].metadata.name,
                     namespace=vm.namespace,
-                    client=client,
+                    client=vm.client,
                 ).instance.spec.resources.requests.storage
             ).Byte.bytes
         )

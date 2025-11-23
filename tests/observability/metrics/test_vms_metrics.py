@@ -423,7 +423,7 @@ class TestVmDiskAllocatedSizeLinux:
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=vm_for_vm_disk_allocation_size_test.name),
-            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test, client=unprivileged_client),
+            expected_value=get_pvc_size_bytes(vm=vm_for_vm_disk_allocation_size_test),
         )
 
 
@@ -436,7 +436,7 @@ class TestVmDiskAllocatedSizeWindows:
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),
-            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test, client=unprivileged_client),
+            expected_value=get_pvc_size_bytes(vm=windows_vm_for_test),
         )
 
 
