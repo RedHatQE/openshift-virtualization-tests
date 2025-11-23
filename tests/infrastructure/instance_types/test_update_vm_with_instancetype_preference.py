@@ -41,10 +41,11 @@ def get_mismatched_fields_list(
 
 
 @pytest.fixture()
-def vm_cluster_instance_type_to_update():
+def vm_cluster_instance_type_to_update(unprivileged_client):
     cluster_instancetype_list = list(
         VirtualMachineClusterInstancetype.get(
-            label_selector="instancetype.kubevirt.io/memory=4Gi, instancetype.kubevirt.io/cpu=1"
+            client=unprivileged_client,
+            label_selector="instancetype.kubevirt.io/memory=4Gi, instancetype.kubevirt.io/cpu=1",
         )
     )
     assert cluster_instancetype_list, "No cluster instance type found on the cluster"
@@ -52,8 +53,8 @@ def vm_cluster_instance_type_to_update():
 
 
 @pytest.fixture()
-def rhel_9_vm_cluster_preference():
-    return VirtualMachineClusterPreference(name="rhel.9")
+def rhel_9_vm_cluster_preference(unprivileged_client):
+    return VirtualMachineClusterPreference(client=unprivileged_client, name="rhel.9")
 
 
 @pytest.fixture()
