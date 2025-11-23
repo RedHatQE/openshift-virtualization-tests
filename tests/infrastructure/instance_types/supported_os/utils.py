@@ -21,6 +21,7 @@ def golden_image_vm_with_instance_type(
         vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
+                client=client,
                 name=data_source_name,
                 namespace=golden_images_namespace_name,
             ),

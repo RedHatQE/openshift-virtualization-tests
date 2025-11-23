@@ -31,6 +31,7 @@ def get_controller_revision(
     }
 
     return ControllerRevision(
+        client=vm_instance.client,
         name=ref_mapping[ref_type],
         namespace=vm_instance.namespace,
     )

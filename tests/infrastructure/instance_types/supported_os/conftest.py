@@ -89,6 +89,7 @@ def golden_image_fedora_vm_with_instance_type(
 
 @pytest.fixture(scope="module")
 def windows_data_volume_template(
+    unprivileged_client,
     namespace,
     windows_os_matrix__module__,
 ):
@@ -97,6 +98,7 @@ def windows_data_volume_template(
     secret = get_artifactory_secret(namespace=namespace.name)
     cert = get_artifactory_config_map(namespace=namespace.name)
     win_dv = DataVolume(
+        client=unprivileged_client,
         name=f"{os_matrix_key}-dv",
         namespace=namespace.name,
         api_name="storage",
@@ -125,9 +127,10 @@ def golden_image_windows_vm(
         client=unprivileged_client,
         name=f"{os_name}-vm-with-instance-type-2",
         namespace=namespace.name,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(
-            name=windows_os_matrix__module__[os_name][DATA_SOURCE_STR].replace("win", "windows.")
+            client=unprivileged_client,
+            name=windows_os_matrix__module__[os_name][DATA_SOURCE_STR].replace("win", "windows."),
         ),
         data_volume_template=windows_data_volume_template.res,
         os_flavor="win-container-disk",
