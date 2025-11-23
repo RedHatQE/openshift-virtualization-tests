@@ -1,4 +1,4 @@
-# PR Title Labeler - Automatically adds a 'quarantine' label based on PR title
+# PR Title Labeler - Automatically adds/removes 'quarantine' label based on PR title
 #
 # Summary:
 # ┌──────────────────┬─────────────────────────┬───────────────┬──────────────────────┐
@@ -7,9 +7,9 @@
 # │ PR opened        │ "Quarantine: test"      │ None          │ ✅ Add label         │
 # │ PR opened        │ "Quarantine: test"      │ Already has   │ ✅ No-op (safe)      │
 # │ Title edited     │ "Fix" → "Quarantine: x" │ None          │ ✅ Add label         │
-# │ Title edited     │ "Quarantine: x" → "Fix" │ Has label     │ ⚠️  Keeps label      │
+# │ Title edited     │ "Quarantine: x" → "Fix" │ Has label     │ ✅ Remove label      │
 # │ PR reopened      │ "Quarantine: test"      │ None          │ ✅ Add label         │
-# │ Manual add       │ "Fix test"              │ Manually added│ ✅ Safe (preserved)  │
+# │ PR opened        │ "Fix test"              │ None          │ ✅ No action         │
 # │ New commit       │ Any                     │ Any           │ ⏭️  Does NOT run     │
 # └──────────────────┴─────────────────────────┴───────────────┴──────────────────────┘
 #
@@ -52,7 +52,32 @@ jobs:
 
                 console.log('✅ Added "quarantine" label');
               } else {
-                console.log(`Title does not start with "quarantine:", no action needed`);
+                console.log(`Title does not start with "quarantine:", checking if label should be removed`);
+
+                // Get current labels
+                const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber
+                });
+
+                const hasQuarantineLabel = labels.some(label => label.name === 'quarantine');
+
+                // Remove quarantine label if it exists and title no longer matches
+                if (hasQuarantineLabel) {
+                  console.log('Removing "quarantine" label as title no longer matches');
+
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    name: 'quarantine'
+                  });
+
+                  console.log('✅ Removed "quarantine" label');
+                } else {
+                  console.log('No action needed - label not present');
+                }
               }
             } catch (error) {
               console.error('Error managing quarantine label:', error);
