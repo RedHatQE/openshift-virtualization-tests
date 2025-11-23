@@ -31,6 +31,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
     "KubevirtSeccompProfile",
     "WithHostModelCPU",
     "HypervStrictCheck",
+    "VideoConfig",
     "HotplugVolumes",
 ]
 EXPECTED_CDI_HARDCODED_FEATUREGATES = ["DataVolumeClaimAdoption", "HonorWaitForFirstConsumer", "WebhookPvcRendering"]
@@ -43,7 +44,8 @@ HCO_DEFAULT_FEATUREGATES = {
     "enableMultiArchBootImageImport": FG_DISABLED,
     "decentralizedLiveMigration": FG_DISABLED,
     "declarativeHotplugVolumes": FG_DISABLED,
-    "videoConfig": FG_DISABLED,
+    "videoConfig": FG_ENABLED,
+    "objectGraph": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
