@@ -14,6 +14,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
+    KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
@@ -389,7 +390,7 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, admin_client, unprivileged_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(namespace, admin_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=admin_client,
         name="disk-allocation-size-vm",
@@ -435,11 +436,11 @@ def windows_vm_info_to_compare(windows_vm_for_test):
 
 
 @pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, unprivileged_client):
+def windows_vm_for_test(namespace, admin_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        client=unprivileged_client,
+        admin_client=admin_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
@@ -581,3 +582,12 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
         for key, value in resource_used.items()
     }
     return formatted_hard_limit, formatted_used_value
+
+
+@pytest.fixture(scope="class")
+def vm_created_pod_total_initial_metric_value(prometheus, namespace):
+    return int(
+        get_metrics_value(
+            prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
+        )
+    )

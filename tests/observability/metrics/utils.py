@@ -673,8 +673,17 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str
+    dv_name: str, namespace: str, admin_client: DynamicClient, vm_name: str, storage_class: str
 ) -> Generator:
+    """
+    Create a Windows 11 WSL2 VM with a DataVolume template
+    Args:
+        dv_name (str): The name of the DataVolume
+        namespace (str): The namespace of the VM
+        admin_client (DynamicClient): Admin client to use to create the VM with instanceType and preference.
+        vm_name (str): The name of the VM
+        storage_class (str): The storage class to use for the DataVolume
+    """
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
@@ -684,7 +693,7 @@ def create_windows11_wsl2_vm(
         source="http",
         url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
         size=Images.Windows.DEFAULT_DV_SIZE,
-        client=client,
+        client=admin_client,
         api_name="storage",
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
@@ -694,9 +703,9 @@ def create_windows11_wsl2_vm(
         os_flavor=OS_FLAVOR_WINDOWS,
         name=vm_name,
         namespace=namespace,
-        client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.xlarge"),
-        vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
+        client=admin_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)

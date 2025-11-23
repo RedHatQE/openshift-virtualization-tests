@@ -11,18 +11,20 @@ COMMON_INSTANCETYPE_SELECTOR = f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/ve
 
 
 @pytest.fixture(scope="session")
-def base_vm_cluster_preferences():
+def base_vm_cluster_preferences(unprivileged_client):
     return list(
         VirtualMachineClusterPreference.get(
+            client=unprivileged_client,
             label_selector=COMMON_INSTANCETYPE_SELECTOR,
         )
     )
 
 
 @pytest.fixture(scope="session")
-def base_vm_cluster_instancetypes():
+def base_vm_cluster_instancetypes(unprivileged_client):
     return list(
         VirtualMachineClusterInstancetype.get(
+            client=unprivileged_client,
             label_selector=COMMON_INSTANCETYPE_SELECTOR,
         )
     )
