@@ -1,10 +1,8 @@
 import pytest
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
-from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.utils import build_node_affinity_dict
-from utilities.constants import TIMEOUT_20SEC
 from utilities.virt import (
     node_mgmt_console,
     vm_instance_from_template,
@@ -19,13 +17,13 @@ def unscheduled_node_vm(
     worker_node1,
     unprivileged_client,
     namespace,
-    data_volume_scope_function,
+    golden_image_data_volume_template_for_test_scope_function,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        existing_data_volume=data_volume_scope_function,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         vm_affinity=build_node_affinity_dict(values=[worker_node1.hostname]),
     ) as vm:
         yield vm
@@ -35,15 +33,10 @@ def unscheduled_node_vm(
 @pytest.mark.s390x
 @pytest.mark.rwx_default_storage
 @pytest.mark.parametrize(
-    "data_volume_scope_function, unscheduled_node_vm",
+    "golden_image_data_source_for_test_scope_function, unscheduled_node_vm",
     [
         pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "rhel-node-maintenance",
                 "template_labels": RHEL_LATEST_LABELS,
@@ -54,7 +47,7 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
-def test_schedule_vm_on_cordoned_node(worker_node1, data_volume_scope_function, unscheduled_node_vm):
+def test_schedule_vm_on_cordoned_node(worker_node1, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
     1. Cordon the target node specified in the VM's nodeAffinity (worker_node1).
     2. Wait until the node status becomes 'Ready,SchedulingDisabled'.
@@ -68,7 +61,6 @@ def test_schedule_vm_on_cordoned_node(worker_node1, data_volume_scope_function, 
     with node_mgmt_console(node=worker_node1, node_mgmt="cordon"):
         wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
-        unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.SCHEDULING, timeout=TIMEOUT_20SEC)
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
     vmi_node_name = unscheduled_node_vm.privileged_vmi.virt_launcher_pod.node.name
     assert vmi_node_name == worker_node1.name, (

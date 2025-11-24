@@ -4,10 +4,9 @@ import shlex
 
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
+from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from utilities.constants import TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify, running_vm, vm_instance_from_template
 
@@ -20,13 +19,13 @@ def vm_with_fio(
     cluster_cpu_model_scope_function,
     unprivileged_client,
     namespace,
-    data_volume_scope_function,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        existing_data_volume=data_volume_scope_function,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm_with_fio:
         running_vm(vm=vm_with_fio)
         yield vm_with_fio
@@ -34,6 +33,9 @@ def vm_with_fio(
 
 @pytest.fixture()
 def running_fio_in_vm(vm_with_fio):
+    LOGGER.info("Installing fio and iotop tools")
+    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=shlex.split("sudo dnf install -y iotop fio"))
+
     # Random write/read -  create a 1G file, and perform 4KB reads and writes using a 75%/25%
     LOGGER.info("Running fio in VM")
     fio_cmd = shlex.split(
@@ -70,15 +72,10 @@ def get_disk_usage(ssh_exec):
 
 
 @pytest.mark.parametrize(
-    "data_volume_scope_function, vm_with_fio",
+    "golden_image_data_source_for_test_scope_class, vm_with_fio",
     [
         pytest.param(
-            {
-                "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST.get("image_path"),
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": FEDORA_LATEST.get("dv_size"),
-            },
+            {"os_dict": FEDORA_LATEST},
             {
                 "vm_name": "fedora-load-vm",
                 "template_labels": FEDORA_LATEST_LABELS,

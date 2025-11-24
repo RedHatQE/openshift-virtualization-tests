@@ -1,15 +1,13 @@
 import logging
 
 import pytest
-from pytest_testconfig import config as py_config
 
 from tests.os_params import (
     FEDORA_LATEST,
     FEDORA_LATEST_LABELS,
-    FEDORA_LATEST_OS,
     WINDOWS_10_TEMPLATE_LABELS,
 )
-from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND
+from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND, WINDOWS_10_WSL
 from tests.virt.utils import get_stress_ng_pid, start_stress_on_vm, verify_stress_ng_pid_not_changed
 from utilities.constants import TIMEOUT_20MIN, Images
 from utilities.virt import migrate_vm_and_verify
@@ -45,15 +43,10 @@ def migrate_vm_with_memory_load(vm_with_memory_load):
 @pytest.mark.usefixtures("migration_policy_with_allow_auto_converge")
 class TestMigrationVMWithMemoryLoad:
     @pytest.mark.parametrize(
-        "golden_image_data_volume_scope_function, vm_with_memory_load",
+        "golden_image_data_source_for_test_scope_function, vm_with_memory_load",
         [
             pytest.param(
-                {
-                    "dv_name": FEDORA_LATEST_OS,
-                    "image": FEDORA_LATEST.get("image_path"),
-                    "dv_size": FEDORA_LATEST.get("dv_size"),
-                    "storage_class": py_config["default_storage_class"],
-                },
+                {"os_dict": FEDORA_LATEST},
                 {
                     "vm_name": "fedora-vm-with-memory-load",
                     "template_labels": FEDORA_LATEST_LABELS,
@@ -75,15 +68,10 @@ class TestMigrationVMWithMemoryLoad:
 
     @pytest.mark.ibm_bare_metal
     @pytest.mark.parametrize(
-        "golden_image_data_volume_scope_function, vm_with_memory_load",
+        "golden_image_data_source_for_test_scope_function, vm_with_memory_load",
         [
             pytest.param(
-                {
-                    "dv_name": "dv-win10-wsl2",
-                    "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
-                    "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                    "storage_class": py_config["default_storage_class"],
-                },
+                {"os_dict": WINDOWS_10_WSL},
                 {
                     "vm_name": "windows-vm-with-memory-load",
                     "template_labels": WINDOWS_10_TEMPLATE_LABELS,

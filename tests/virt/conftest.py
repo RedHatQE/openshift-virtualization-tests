@@ -331,9 +331,9 @@ def golden_image_data_source_for_test_scope_module(request, admin_client, golden
 
 
 @pytest.fixture(scope="module")
-def golden_image_data_volume_template_for_test_scope_module(golden_image_data_source_for_test_scope_module):
+def golden_image_data_volume_template_for_test_scope_module(request, golden_image_data_source_for_test_scope_module):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_module
+        data_source=golden_image_data_source_for_test_scope_module, params=getattr(request, "param", {})
     )
 
 
@@ -345,9 +345,9 @@ def golden_image_data_source_for_test_scope_class(request, admin_client, golden_
 
 
 @pytest.fixture(scope="class")
-def golden_image_data_volume_template_for_test_scope_class(golden_image_data_source_for_test_scope_class):
+def golden_image_data_volume_template_for_test_scope_class(request, golden_image_data_source_for_test_scope_class):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_class
+        data_source=golden_image_data_source_for_test_scope_class, params=getattr(request, "param", {})
     )
 
 
@@ -359,9 +359,11 @@ def golden_image_data_source_for_test_scope_function(request, admin_client, gold
 
 
 @pytest.fixture()
-def golden_image_data_volume_template_for_test_scope_function(golden_image_data_source_for_test_scope_function):
+def golden_image_data_volume_template_for_test_scope_function(
+    request, golden_image_data_source_for_test_scope_function
+):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_function
+        data_source=golden_image_data_source_for_test_scope_function, params=getattr(request, "param", {})
     )
 
 

@@ -6,7 +6,6 @@ import logging
 
 import pytest
 from ocp_resources.template import Template
-from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_OS
 from tests.utils import (
@@ -19,49 +18,35 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.cpu_manager]
 
-
-VM_DICT = {
-    "vm_name": RHEL_LATEST_OS,
-    "cpu_placement": True,
-    "isolate_emulator_thread": True,
-}
-
-TEMPLATE_LABELS = {
-    "os": RHEL_LATEST_OS,
-    "workload": Template.Workload.SERVER,
-}
-
 ISOLATE_EMULATOR_THREAD = "TestIsolateEmulatorThread::isolate_emulator_thread"
 
 
 @pytest.fixture(scope="class")
 def isolated_emulatorthread_vm(
-    request, unprivileged_client, namespace, golden_image_data_source_scope_class, cpu_for_migration
+    request, unprivileged_client, namespace, golden_image_data_volume_template_for_test_scope_class, cpu_for_migration
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_cpu_model=cpu_for_migration,
     ) as isolated_emulatorthread_vm:
         yield isolated_emulatorthread_vm
 
 
 @pytest.mark.parametrize(
-    ("golden_image_data_volume_scope_class", "isolated_emulatorthread_vm"),
+    ("golden_image_data_source_for_test_scope_class", "isolated_emulatorthread_vm"),
     [
         pytest.param(
+            {"os_dict": RHEL_LATEST},
             {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
-            {
-                **VM_DICT,
+                "vm_name": RHEL_LATEST_OS,
+                "cpu_placement": True,
+                "isolate_emulator_thread": True,
                 "template_labels": {
-                    **TEMPLATE_LABELS,
+                    "os": RHEL_LATEST_OS,
+                    "workload": Template.Workload.SERVER,
                     "flavor": Template.Flavor.MEDIUM,
                 },
             },
