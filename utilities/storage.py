@@ -234,7 +234,6 @@ def data_volume(
     # Don't need URL for DVs that are not http
     url = f"{get_test_artifact_server_url()}{image}" if source == "http" else None
 
-    is_golden_image = False
     # For golden images; images are created once per module in
     # golden images namepace and cloned when using common templates.
     # If the DV exists, yield the DV else create a new one in
@@ -244,7 +243,6 @@ def data_volume(
     if check_dv_exists:
         consume_wffc = False
         bind_immediate = True
-        is_golden_image = True
         try:
             golden_image = list(DataVolume.get(dyn_client=admin_client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]

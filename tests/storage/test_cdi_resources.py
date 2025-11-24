@@ -178,6 +178,7 @@ def test_importer_pod_cdi_label(namespace, https_server_certificate):
         images_https_server_name=get_test_artifact_server_url(schema="https"),
         storage_ns_name=namespace.name,
         https_server_certificate=https_server_certificate,
+        client=namespace.client,
     ):
         wait_for_cdi_worker_pod(
             pod_name="importer",

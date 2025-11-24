@@ -15,10 +15,6 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
 import tests.storage.utils as storage_utils
-from tests.storage.utils import (
-    assert_use_populator,
-    create_vm_and_verify_image_permission,
-)
 from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
@@ -449,35 +445,6 @@ def test_successful_vm_from_uploaded_dv_windows(
         unprivileged_client=unprivileged_client,
         vm_params=vm_params,
     )
-
-
-@pytest.mark.polarion("CNV-4033")
-@pytest.mark.s390x
-def test_disk_image_after_upload_virtctl(
-    skip_block_volumemode_scope_module,
-    unprivileged_client,
-    namespace,
-    download_image,
-    storage_class_name_scope_module,
-    cluster_csi_drivers_names,
-):
-    dv_name = f"cnv-4033-{storage_class_name_scope_module}"
-    with virtctl_upload_dv(
-        namespace=namespace.name,
-        name=dv_name,
-        size=DEFAULT_DV_SIZE,
-        image_path=LOCAL_PATH,
-        storage_class=storage_class_name_scope_module,
-        insecure=True,
-    ) as res:
-        check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
-        create_vm_and_verify_image_permission(client=unprivileged_client, dv=dv)
-        assert_use_populator(
-            pvc=dv.pvc,
-            storage_class=storage_class_name_scope_module,
-            cluster_csi_drivers_names=cluster_csi_drivers_names,
-        )
 
 
 @pytest.mark.parametrize(

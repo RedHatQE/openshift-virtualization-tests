@@ -188,6 +188,7 @@ def vm_list_created_by_multiprocess(
             namespace=dv.namespace,
             os_flavor=OS_FLAVOR_FEDORA,
             data_volume=dv,
+            image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         )
         vm.deploy()

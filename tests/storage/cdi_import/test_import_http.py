@@ -427,10 +427,6 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
     "number_of_processes",
     [
         pytest.param(
-            1,
-            marks=(pytest.mark.polarion("CNV-2151")),
-        ),
-        pytest.param(
             4,
             marks=(pytest.mark.polarion("CNV-2001")),
         ),

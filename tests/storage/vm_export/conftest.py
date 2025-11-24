@@ -93,7 +93,7 @@ def secret_headers_for_vmexport_from_vmsnapshot(
         kind=Secret.kind,
     )
     with Secret(
-        yaml_file=secret_yaml_file, namespace=namespace_vmexport_target.name, client=vmexport_from_vmsnapshot.client
+        yaml_file=secret_yaml_file, namespace=namespace_vmexport_target.name, client=namespace_vmexport_target.client
     ):
         yield
 

@@ -160,12 +160,12 @@ def test_cdi_uploadproxy_route_owner_references(hco_namespace):
     ],
 )
 def test_successful_upload_with_supported_formats(
+    unprivileged_client,
     namespace,
     tmpdir,
     dv_name,
     remote_name,
     local_name,
-    unprivileged_client,
 ):
     local_name = f"{tmpdir}/{local_name}"
     get_downloaded_artifact(remote_name=remote_name, local_name=local_name)
@@ -175,7 +175,9 @@ def test_successful_upload_with_supported_formats(
         storage_ns_name=namespace.name,
         client=unprivileged_client,
     ) as dv:
-        storage_utils.upload_token_request(storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name)
+        storage_utils.upload_token_request(
+            storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name, client=unprivileged_client
+        )
         dv.wait_for_dv_success()
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 

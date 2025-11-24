@@ -64,14 +64,14 @@ def import_image_to_dv(
     images_https_server_name,
     storage_ns_name,
     https_server_certificate,
-    unprivileged_client,
+    client,
 ):
     url = get_file_url_https_server(images_https_server=images_https_server_name, file_name=Images.Cirros.QCOW2_IMG)
     with ConfigMap(
         name="https-cert-configmap",
         namespace=storage_ns_name,
         data={"tlsregistry.crt": https_server_certificate},
-        client=unprivileged_client,
+        client=client,
     ) as configmap:
         with create_dv(
             source="http",
@@ -80,7 +80,7 @@ def import_image_to_dv(
             url=url,
             cert_configmap=configmap.name,
             storage_class=py_config["default_storage_class"],
-            client=unprivileged_client,
+            client=client,
         ) as dv:
             yield dv
 
@@ -101,10 +101,8 @@ def upload_image_to_dv(dv_name, storage_ns_name, storage_class, client, consume_
 
 
 @contextmanager
-def upload_token_request(storage_ns_name, pvc_name, data, admin_client):
-    with UploadTokenRequest(
-        name="upload-image", namespace=storage_ns_name, pvc_name=pvc_name, client=admin_client
-    ) as utr:
+def upload_token_request(storage_ns_name, pvc_name, data, client):
+    with UploadTokenRequest(name="upload-image", namespace=storage_ns_name, pvc_name=pvc_name, client=client) as utr:
         token = utr.create().status.token
         LOGGER.info("Ensure upload was successful")
         sampler = TimeoutSampler(
