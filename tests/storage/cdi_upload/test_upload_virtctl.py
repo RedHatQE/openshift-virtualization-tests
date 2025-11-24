@@ -14,13 +14,14 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
-import tests.storage.utils as storage_utils
+from tests.storage.utils import create_windows_vm_validate_guest_agent_info
 from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
     create_dummy_first_consumer_pod,
     create_dv,
+    create_vm_from_dv,
     get_downloaded_artifact,
     sc_is_hpp_with_immediate_volume_binding,
     sc_volume_binding_mode_is_wffc,
@@ -175,7 +176,7 @@ def test_virtctl_image_upload_dv(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        storage_utils.create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
+        create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
 @pytest.mark.sno
@@ -278,7 +279,7 @@ def test_virtctl_image_upload_with_exist_dv(
         ) as res:
             check_upload_virtctl_result(result=res)
             if not sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
-                storage_utils.create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
+                create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
 @pytest.fixture()
@@ -439,7 +440,7 @@ def test_successful_vm_from_uploaded_dv_windows(
     uploaded_dv_with_immediate_binding,
     vm_params,
 ):
-    storage_utils.create_windows_vm_validate_guest_agent_info(
+    create_windows_vm_validate_guest_agent_info(
         dv=uploaded_dv_with_immediate_binding,
         namespace=namespace,
         unprivileged_client=unprivileged_client,

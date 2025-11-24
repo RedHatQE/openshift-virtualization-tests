@@ -44,7 +44,6 @@ from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
     create_dv,
-    create_vm_from_dv,
     get_containers_for_pods_with_pvc,
 )
 from utilities.virt import (
