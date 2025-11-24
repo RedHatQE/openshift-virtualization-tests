@@ -442,7 +442,7 @@ def windows_vm_for_test(namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
         namespace=namespace.name,
-        admin_client=unprivileged_client,
+        client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
     ) as vm:
