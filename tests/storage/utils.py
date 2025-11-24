@@ -248,12 +248,6 @@ def set_permissions(
             yield
 
 
-def create_vm_and_verify_image_permission(dv: DataVolume) -> None:
-    with create_vm_from_dv(dv=dv) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False, wait_for_interfaces=False)
-        verify_vm_disk_image_permission(vm=vm)
-
-
 def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
     v_pod = vm.vmi.virt_launcher_pod
     LOGGER.debug("Check image exist, permission and ownership")
