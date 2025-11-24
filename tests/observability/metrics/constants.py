@@ -17,7 +17,9 @@ KUBEVIRT_VM_INFO = "kubevirt_vm_info{{name='{vm_name}'}}"
 KUBEVIRT_VMI_STATUS_ADDRESSES = "kubevirt_vmi_status_addresses{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES = "kubevirt_vmi_migration_data_processed_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES = "kubevirt_vmi_migration_data_remaining_bytes{{name='{vm_name}'}}"
-KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES = "kubevirt_vmi_migration_disk_transfer_rate_bytes{{name='{vm_name}'}}"
+KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES = (
+    "kubevirt_vmi_migration_memory_transfer_rate_bytes{{name='{vm_name}'}}"
+)
 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES = "kubevirt_vmi_migration_dirty_memory_rate_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES = "kubevirt_vm_disk_allocated_size_bytes{{name='{vm_name}'}}"
 KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE = "kubevirt_vmi_migrations_in_scheduling_phase"
