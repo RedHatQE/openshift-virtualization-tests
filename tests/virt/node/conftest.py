@@ -34,7 +34,7 @@ def vm_with_memory_load(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_function,
+    golden_image_data_volume_template_for_test_scope_function,
     modern_cpu_for_migration,
     vm_cpu_flags,
 ):
@@ -42,7 +42,7 @@ def vm_with_memory_load(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         vm_cpu_model=modern_cpu_for_migration,
         vm_cpu_flags=vm_cpu_flags,
     ) as vm:
@@ -73,7 +73,7 @@ def hotplugged_vm(
     request,
     namespace,
     unprivileged_client,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
     vmx_disabled_flag,
 ):
@@ -83,7 +83,7 @@ def hotplugged_vm(
         labels=Template.generate_template_labels(**request.param["template_labels"]),
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
         memory_max_guest=TEN_GI_MEMORY,
         cpu_sockets=FOUR_CPU_SOCKETS,

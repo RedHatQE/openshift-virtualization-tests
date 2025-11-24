@@ -1,13 +1,14 @@
 import logging
+from copy import deepcopy
 
 import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
-from pytest_testconfig import py_config
 
 from tests.os_params import (
     RHEL_LATEST,
     RHEL_LATEST_OS,
+    WINDOWS_2019,
 )
 from utilities.constants import Images
 from utilities.virt import running_vm, vm_instance_from_template
@@ -19,6 +20,8 @@ LOGGER = logging.getLogger(__name__)
 CPUTUNE = "cputune"
 RHEL_TESTS_CLASS_NAME = "TestHighPerformanceTemplatesRHEL"
 WINDOWS_TESTS_CLASS_NAME = "TestHighPerformanceTemplatesWindows"
+WINDOWS_2019_HA = deepcopy(WINDOWS_2019)
+WINDOWS_2019_HA["image_path"] = f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}"
 
 
 def key_is_in_cputune(vm, key):
@@ -45,12 +48,14 @@ def vm_has_io_thread_policy(vm, policy):
 
 
 @pytest.fixture(scope="class")
-def high_performance_vm(request, golden_image_data_source_scope_class, unprivileged_client, namespace):
+def high_performance_vm(
+    request, golden_image_data_volume_template_for_test_scope_class, unprivileged_client, namespace
+):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm
 
@@ -80,15 +85,10 @@ def increased_high_performance_vm_core_count_by_one(high_performance_vm):
 @pytest.mark.arm64
 @pytest.mark.gating()
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, high_performance_vm",
+    "golden_image_data_source_for_test_scope_class, high_performance_vm",
     [
         [
-            {
-                "dv_name": "rhel8-hp-vm-dv",
-                "image": RHEL_LATEST["image_path"],
-                "dv_size": RHEL_LATEST["dv_size"],
-                "storage_class": py_config["default_storage_class"],
-            },
+            {"os_dict": RHEL_LATEST},
             {
                 "vm_name": "high-performance-rhel-vm",
                 "template_labels": {
@@ -137,15 +137,10 @@ class TestHighPerformanceTemplatesRHEL:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, high_performance_vm",
+    "golden_image_data_source_for_test_scope_class, high_performance_vm",
     [
         [
-            {
-                "dv_name": "win-hp-vm-dv",
-                "image": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "storage_class": py_config["default_storage_class"],
-            },
+            {"os_dict": WINDOWS_2019_HA},
             {
                 "vm_name": "high-performance-win-vm",
                 "template_labels": {

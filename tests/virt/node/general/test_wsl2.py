@@ -10,8 +10,8 @@ import shlex
 import pytest
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import config as py_config
 
+from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
 from tests.virt.utils import verify_wsl2_guest_works
 from utilities.constants import TCP_TIMEOUT_30SEC, Images
 from utilities.virt import (
@@ -56,7 +56,7 @@ def windows_wsl2_vm(
     request,
     namespace,
     unprivileged_client,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
     vm_cpu_flags,
 ):
@@ -67,7 +67,7 @@ def windows_wsl2_vm(
         labels=Template.generate_template_labels(**get_windows_os_dict(windows_version=win_ver)["template_labels"]),
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,
         memory_guest=Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
@@ -86,25 +86,15 @@ def migrated_wsl2_vm(windows_wsl2_vm):
 @pytest.mark.ibm_bare_metal
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, windows_wsl2_vm",
+    "golden_image_data_source_for_test_scope_class, windows_wsl2_vm",
     [
         pytest.param(
-            {
-                "dv_name": "dv-win10-wsl2",
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
+            {"os_dict": WINDOWS_10_WSL},
             {"win_ver": "win-10"},
             id="Windows-10",
         ),
         pytest.param(
-            {
-                "dv_name": "dv-win11-wsl2",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
+            {"os_dict": WINDOWS_11_WSL},
             {"win_ver": "win-11"},
             id="Windows-11",
         ),
