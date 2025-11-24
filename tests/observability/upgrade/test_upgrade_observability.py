@@ -1,7 +1,7 @@
 import pytest
 
 from tests.observability.constants import KUBEVIRT_VMI_NUMBER_OF_OUTDATED
-from tests.observability.utils import validate_metrics_value, wait_for_greater_than_zero_metric_value
+from tests.observability.utils import validate_metrics_value
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 
@@ -31,8 +31,9 @@ class TestUpgradeObservability:
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(self, prometheus):
-        wait_for_greater_than_zero_metric_value(
+    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(self, prometheus, kubevirt_resource_scope_session):
+        validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_NUMBER_OF_OUTDATED,
+            expected_value=str(kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads),
         )
