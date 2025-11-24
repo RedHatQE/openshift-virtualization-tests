@@ -6,8 +6,8 @@ import logging
 
 import pytest
 from ocp_resources.template import Template
-from pytest_testconfig import config as py_config
 
+from tests.os_params import WINDOWS_10, WINDOWS_10_TEMPLATE_LABELS
 from tests.virt.node.gpu.constants import VGPU_DEVICE_NAME_STR, VGPU_PRETTY_NAME_STR
 from tests.virt.node.gpu.utils import (
     install_nvidia_drivers_on_windows_vm,
@@ -21,7 +21,6 @@ from tests.virt.utils import (
 from utilities.constants import Images
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
-    get_windows_os_dict,
     running_vm,
 )
 
@@ -35,8 +34,6 @@ pytestmark = [
 
 
 LOGGER = logging.getLogger(__name__)
-WIN10 = get_windows_os_dict(windows_version="win-10")
-WIN10_LABELS = WIN10.get("template_labels", {})
 DV_SIZE = Images.Windows.DEFAULT_DV_SIZE
 TESTS_CLASS_NAME = "TestVGPUWindowsGPUSSpec"
 
@@ -45,7 +42,7 @@ TESTS_CLASS_NAME = "TestVGPUWindowsGPUSSpec"
 def gpu_vmc(
     unprivileged_client,
     namespace,
-    golden_image_dv_scope_module_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     supported_gpu_device,
     gpu_vma,
 ):
@@ -56,8 +53,8 @@ def gpu_vmc(
         name="win10-vgpu-gpus-spec-vm2",
         namespace=namespace.name,
         client=unprivileged_client,
-        labels=Template.generate_template_labels(**WIN10_LABELS),
-        data_source=golden_image_dv_scope_module_data_source_scope_class,
+        labels=Template.generate_template_labels(**WINDOWS_10_TEMPLATE_LABELS),
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         node_selector=gpu_vma.node_selector,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
         cloned_dv_size=DV_SIZE,
@@ -68,18 +65,13 @@ def gpu_vmc(
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module, gpu_vma",
+    "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            {
-                "dv_name": WIN10_LABELS.get("os"),
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": DV_SIZE,
-            },
+            {"os_dict": WINDOWS_10},
             {
                 "vm_name": "win10-vgpu-gpus-spec-vm",
-                "template_labels": WIN10_LABELS,
+                "template_labels": WINDOWS_10_TEMPLATE_LABELS,
                 "gpu_device": VGPU_DEVICE_NAME_STR,
                 "cloned_dv_size": DV_SIZE,
             },
