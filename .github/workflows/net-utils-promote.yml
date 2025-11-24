@@ -1,0 +1,47 @@
+name: Promote net utility image to latest
+
+on:
+  pull_request_target:
+    types:
+      - 'closed'
+    branches:
+      - 'main'
+    paths:
+      - 'containers/utility/Dockerfile'
+
+jobs:
+  promote-to-latest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # safe to use pull_request_target because we only run this for trusted collaborators
+    if: |
+      contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      github.event.pull_request.merged == true
+    steps:
+      - name: Install skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Log in to quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+
+      - name: Promote manifest (staging -> latest)
+        run: |
+          IMAGE_NAME="quay.io/openshift-cnv/qe-cnv-tests-net-util-container"
+          skopeo copy \
+            --all \
+            docker://${IMAGE_NAME}:staging \
+            docker://${IMAGE_NAME}:latest
+
+      - name: Comment on PR for promotion
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: The net-utils image has been promoted to `latest` tag on quay.io.

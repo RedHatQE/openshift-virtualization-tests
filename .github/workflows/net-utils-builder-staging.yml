@@ -1,0 +1,67 @@
+name: Build and push net utility staging image
+
+on:
+  pull_request_target:
+    branches:
+      - 'main'
+    paths:
+      - 'containers/utility/Dockerfile'
+
+jobs:
+  build-and-push-staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # safe to use pull_request_target because we only run this for trusted collaborators
+    if: contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up QEMU for multi-arch builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Define image tag
+        id: image-tag
+        run: |
+          IMAGE_NAME="quay.io/openshift-cnv/qe-cnv-tests-net-util-container"
+          TAG="staging"
+          echo "IMAGE_TAG=${IMAGE_NAME}:${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Create manifest
+        run: |
+          podman manifest create ${{ steps.image-tag.outputs.IMAGE_TAG }}
+
+      - name: Build and add to manifest
+        run: |
+          podman build \
+            --platform linux/amd64,linux/arm64,linux/s390x \
+            --manifest ${{ steps.image-tag.outputs.IMAGE_TAG }} \
+            containers/utility/
+
+      - name: Log in to registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: quay.io
+
+      - name: Push manifest
+        run: |
+          podman manifest push ${{ steps.image-tag.outputs.IMAGE_TAG }}
+
+      - name: Comment on PR with image tag
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            Staging image built and pushed to: `${{ steps.image-tag.outputs.IMAGE_TAG }}`
