@@ -4,6 +4,9 @@ from typing import Final
 
 _MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION: Final[int] = 16
 _IPV4_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "172.16"
+TCP_HEADER_SIZE: Final[int] = 20
+IPV4_HEADER_SIZE: Final[int] = 20
+ICMPV4_HEADER_SIZE: Final[int] = 8
 
 
 def random_ipv4_address(net_seed: int, host_address: int) -> str:
