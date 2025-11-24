@@ -2,8 +2,8 @@ import logging
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
-from pytest_testconfig import config as py_config
 
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.utils import (
     assert_guest_os_cpu_count,
     assert_guest_os_memory_amount,
@@ -17,7 +17,6 @@ from utilities.constants import (
     SIX_GI_MEMORY,
     TIMEOUT_15MIN,
     TIMEOUT_30MIN,
-    Images,
 )
 from utilities.virt import (
     check_migration_process_after_node_drain,
@@ -82,31 +81,21 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class, hotplugged_vm",
+    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
     [
         pytest.param(
+            {"os_dict": RHEL_LATEST},
             {
-                "dv_name": "dv-rhel-latest-vm",
-                "image": py_config["latest_rhel_os_dict"]["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Rhel.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": py_config["latest_rhel_os_dict"]["template_labels"],
+                "template_labels": RHEL_LATEST_LABELS,
                 "vm_name": "rhel-latest-post-copy-migration-vm",
                 "additional_labels": VM_LABEL,
             },
             id="RHEL-VM",
         ),
         pytest.param(
+            {"os_dict": WINDOWS_LATEST},
             {
-                "dv_name": "dv-windows-latest-vm",
-                "image": py_config.get("latest_windows_os_dict", {}).get("image_path"),
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "template_labels": py_config.get("latest_windows_os_dict", {}).get("template_labels"),
+                "template_labels": WINDOWS_LATEST_LABELS,
                 "vm_name": "windows-latest-post-copy-migration-vm",
                 "additional_labels": VM_LABEL,
             },
