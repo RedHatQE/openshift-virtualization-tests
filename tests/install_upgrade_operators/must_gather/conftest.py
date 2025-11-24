@@ -246,7 +246,7 @@ def resource_type(request, admin_client):
 @pytest.fixture(scope="function")
 def config_map_by_name(request, admin_client):
     cm_name, cm_namespace = request.param
-    return ConfigMap(name=cm_name, namespace=cm_namespace)
+    return ConfigMap(client=admin_client, name=cm_name, namespace=cm_namespace)
 
 
 @pytest.fixture(scope="class")

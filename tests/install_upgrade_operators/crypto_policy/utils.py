@@ -35,7 +35,7 @@ from utilities.operator import wait_for_cluster_operator_stabilize
 LOGGER = logging.getLogger(__name__)
 
 
-def get_resource_crypto_policy(resource, name, key_name, namespace=None):
+def get_resource_crypto_policy(resource, name, key_name, admin_client, namespace=None):
     """
     This function is used to get crypto policy settings associated with a resource
 
@@ -43,6 +43,7 @@ def get_resource_crypto_policy(resource, name, key_name, namespace=None):
         resource (Resource): Resource kind
         name (str): name of a resource
         key_name (str): full key path with separator
+        admin_client (DynamicClient): Dynamic client object
         namespace (str, optional): namespace for the resource
 
     Returns:
@@ -50,17 +51,20 @@ def get_resource_crypto_policy(resource, name, key_name, namespace=None):
     """
     return get_resource_key_value(
         key_name=key_name,
-        resource=get_resource_by_name(resource_kind=resource, name=name, namespace=namespace),
+        resource=get_resource_by_name(
+            resource_kind=resource, name=name, admin_client=admin_client, namespace=namespace
+        ),
     )
 
 
-def get_resources_crypto_policy_dict(resources_dict, resources=MANAGED_CRS_LIST):
+def get_resources_crypto_policy_dict(resources_dict, admin_client, resources=MANAGED_CRS_LIST):
     """
     This function collects crypto policy corresponding to each resources in the list
     'resources'
 
     Args:
         resources_dict (dict): Dict containing resource name, key_name, namespace
+        admin_client (DynamicClient): Dynamic client object
         resources (list): List of resource objects whose TLS policies are required
 
     Returns:
@@ -71,13 +75,14 @@ def get_resources_crypto_policy_dict(resources_dict, resources=MANAGED_CRS_LIST)
             resource=resource,
             name=resources_dict[resource][RESOURCE_NAME_STR],
             key_name=resources_dict[resource][KEY_NAME_STR],
+            admin_client=admin_client,
             namespace=resources_dict[resource].get(RESOURCE_NAMESPACE_STR),
         )
         for resource in resources
     }
 
 
-def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, key_name, expected_policy):
+def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, key_name, expected_policy, admin_client):
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=2,
@@ -86,6 +91,7 @@ def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, k
         namespace=resource_namespace,
         name=resource_name,
         key_name=key_name,
+        admin_client=admin_client,
     )
     sample = None
     try:
@@ -110,6 +116,7 @@ def assert_crypto_policy_propagated_to_components(
     crypto_policy,
     resources_dict,
     updated_resource_kind,
+    admin_client,
 ):
     """
     This function is used to assert whether the updated crypto policy settings
@@ -121,6 +128,7 @@ def assert_crypto_policy_propagated_to_components(
                                in dict
         updated_resource_kind (str): Resource kind of the updated resource
             ( HyperConverged or APIServer )
+        admin_client (DynamicClient): Dynamic client object
 
     Raises:
         AssertionError: When TLS crypto policy of HCO managed CRs(KubeVirt, SSP, CNAO
@@ -135,6 +143,7 @@ def assert_crypto_policy_propagated_to_components(
             resource_name=resources_dict[resource][RESOURCE_NAME_STR],
             key_name=resources_dict[resource][KEY_NAME_STR],
             expected_policy=expected_value,
+            admin_client=admin_client,
         )
         if error_message:
             conflicting_resources.append(resource.kind)
@@ -144,11 +153,12 @@ def assert_crypto_policy_propagated_to_components(
     )
 
 
-def assert_no_crypto_policy_in_hco(crypto_policy, hco_namespace, hco_name):
+def assert_no_crypto_policy_in_hco(crypto_policy, hco_namespace, hco_name, admin_client):
     hco_crypto_policy = get_resource_crypto_policy(
         resource=HyperConverged,
         name=hco_name,
         key_name=TLS_SECURITY_PROFILE,
+        admin_client=admin_client,
         namespace=hco_namespace,
     )
     assert not hco_crypto_policy, (

@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9330")
 def test_update_api_server(
+    admin_client,
     hco_namespace,
     workers,
     workers_utility_pods,
@@ -38,11 +39,13 @@ def test_update_api_server(
         crypto_policy=cnv_crypto_policy_matrix__function__,
         resources_dict=resources_dict,
         updated_resource_kind=APIServer.kind,
+        admin_client=admin_client,
     )
     assert_no_crypto_policy_in_hco(
         crypto_policy=cnv_crypto_policy_matrix__function__,
         hco_namespace=hco_namespace.name,
         hco_name=py_config["hco_cr_name"],
+        admin_client=admin_client,
     )
 
     # Old profile works only on non-FIPS cluster

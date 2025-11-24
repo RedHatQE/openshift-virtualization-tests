@@ -324,11 +324,12 @@ def unprivileged_secret(admin_client, skip_unprivileged_client):
             yield secret
 
         #  Wait for oauth-openshift deployment to update after removing htpass-secret
-        _wait_for_oauth_openshift_deployment()
+        _wait_for_oauth_openshift_deployment(admin_client=admin_client)
 
 
-def _wait_for_oauth_openshift_deployment():
+def _wait_for_oauth_openshift_deployment(admin_client):
     dp = get_deployment_by_name(
+        admin_client=admin_client,
         deployment_name="oauth-openshift",
         namespace_name="openshift-authentication",
     )

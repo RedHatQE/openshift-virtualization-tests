@@ -46,6 +46,7 @@ def cnv_deployment_by_name_no_hpp(
     cnv_deployment_no_hpp_matrix__function__,
 ):
     return get_deployment_by_name(
+        admin_client=admin_client,
         namespace_name=hco_namespace.name,
         deployment_name=cnv_deployment_no_hpp_matrix__function__,
     )
@@ -70,6 +71,7 @@ def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_
         return hpp_pool_deployments[0]
 
     return get_deployment_by_name(
+        admin_client=admin_client,
         namespace_name=hco_namespace.name,
         deployment_name=cnv_deployment_matrix__function__,
     )
@@ -229,12 +231,14 @@ def related_object_from_hco_status(
 @pytest.fixture()
 def updated_resource(
     request,
+    admin_client,
 ):
     cr_kind = request.param.get(RESOURCE_TYPE_STR)
     cr = get_resource_by_name(
         resource_kind=cr_kind,
         name=request.param.get(RESOURCE_NAME_STR),
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
+        admin_client=admin_client,
     )
     with ResourceEditorValidateHCOReconcile(
         patches={cr: request.param["patch"]},

@@ -200,8 +200,9 @@ def cluster_hardware_mtu(network_overhead, cluster_network_mtu):
 
 
 @pytest.fixture(scope="module")
-def cnao_deployment(hco_namespace):
+def cnao_deployment(admin_client, hco_namespace):
     return get_deployment_by_name(
+        admin_client=admin_client,
         namespace_name=hco_namespace.name,
         deployment_name=CLUSTER_NETWORK_ADDONS_OPERATOR,
     )

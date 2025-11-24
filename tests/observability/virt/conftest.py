@@ -33,7 +33,9 @@ def modified_virt_operator_httpget_from_hco_and_delete_virt_operator_pods(
             )
         }
     ):
-        wait_hco_csv_updated_virt_operator_httpget(namespace=hco_namespace.name, updated_hco_field=BAD_HTTPGET_PATH)
+        wait_hco_csv_updated_virt_operator_httpget(
+            admin_client=admin_client, namespace=hco_namespace.name, updated_hco_field=BAD_HTTPGET_PATH
+        )
         delete_replica_set_by_prefix(
             dyn_client=admin_client,
             replica_set_prefix=VIRT_OPERATOR,
@@ -41,7 +43,7 @@ def modified_virt_operator_httpget_from_hco_and_delete_virt_operator_pods(
         )
         yield
     wait_hco_csv_updated_virt_operator_httpget(
-        namespace=hco_namespace.name, updated_hco_field=initial_readiness_probe_httpget_path
+        admin_client=admin_client, namespace=hco_namespace.name, updated_hco_field=initial_readiness_probe_httpget_path
     )
     delete_replica_set_by_prefix(
         dyn_client=admin_client,
