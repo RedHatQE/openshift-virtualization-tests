@@ -16,7 +16,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
-from utilities.constants import TIMEOUT_60MIN
+from utilities.constants import QUARANTINED, TIMEOUT_60MIN
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -168,6 +168,10 @@ class TestStorageClassMigrationWithVolumeHotplug:
         ],
         indirect=True,
     )
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Windows MigMigration timeout waiting for condition succeeded. CNV-73329",
+        run=False,
+    )
     def test_vm_storage_class_migration_with_hotplugged_volume(
         self,
         source_storage_class,
@@ -234,7 +238,11 @@ class TestStorageClassMigrationWithVolumeHotplug:
 @pytest.mark.tier3
 class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm")
-    @pytest.mark.polarion("CNV-11499")
+    @pytest.mark.polarion("CNV-73329")
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Windows MigMigration timeout waiting for condition succeeded. CNV-73329",
+        run=False,
+    )
     def test_vm_storage_class_migration_windows_vm_with_vtpm(
         self,
         source_storage_class,
