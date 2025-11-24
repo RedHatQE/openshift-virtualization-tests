@@ -27,6 +27,7 @@ class TestPrometheusServiceMonitor:
 
     @pytest.mark.polarion("CNV-9264")
     @pytest.mark.s390x
+    @pytest.mark.conformance
     def test_prometheus_service_monitor_in_our_namespace(
         self,
         kubevirt_prometheus_service_monitor_list,
