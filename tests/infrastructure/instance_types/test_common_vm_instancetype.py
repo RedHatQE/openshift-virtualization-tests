@@ -27,7 +27,7 @@ def test_cx1_instancetype_profile(xfail_if_no_huge_pages, unprivileged_client, n
         name="rhel-vm-with-cx1",
         namespace=namespace.name,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="cx1.medium1gi"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="cx1.medium1gi"),
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 

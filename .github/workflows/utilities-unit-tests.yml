@@ -4,7 +4,6 @@ on:
   pull_request_target:
     branches:
       - main
-      - cnv-4.99
     paths:
       - 'utilities/**'
       - '!utilities/unittests/**'
@@ -24,7 +23,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
