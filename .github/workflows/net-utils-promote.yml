@@ -18,7 +18,7 @@ jobs:
 
     # safe to use pull_request_target because we only run this for trusted collaborators
     if: |
-      contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      contains(fromJson('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association) &&
       github.event.pull_request.merged == true
     steps:
       - name: Install skopeo
@@ -35,7 +35,7 @@ jobs:
 
       - name: Promote manifest (staging -> latest)
         run: |
-          IMAGE_NAME="quay.io/openshift-cnv/qe-cnv-tests-net-util-container"
+          IMAGE_NAME="quay.io/openshift-cnv/qe-net-utils"
           skopeo copy \
             --all \
             docker://${IMAGE_NAME}:staging \
