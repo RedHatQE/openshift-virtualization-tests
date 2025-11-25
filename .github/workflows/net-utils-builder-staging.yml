@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
 
     # safe to use pull_request_target because we only run this for trusted collaborators
-    if: contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    if: contains(fromJson('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association)
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -34,7 +34,7 @@ jobs:
       - name: Define image tag
         id: image-tag
         run: |
-          IMAGE_NAME="quay.io/openshift-cnv/qe-cnv-tests-net-util-container"
+          IMAGE_NAME="quay.io/openshift-cnv/qe-net-utils"
           TAG="staging"
           echo "IMAGE_TAG=${IMAGE_NAME}:${TAG}" >> $GITHUB_OUTPUT
 
