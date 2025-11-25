@@ -81,11 +81,12 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
-    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pod_by_name):
-        verify_component_labels_by_resource(
-            component=cnv_pod_by_name,
-            expected_component_labels=expected_label_dictionary,
-        )
+    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pods_by_type):
+        for pod in cnv_pods_by_type:
+            verify_component_labels_by_resource(
+                component=pod,
+                expected_component_labels=expected_label_dictionary,
+            )
 
     @pytest.mark.parametrize(
         "expected_label_dictionary",

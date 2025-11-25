@@ -10,6 +10,7 @@ from utilities.constants import (
     ALL_CNV_DEPLOYMENTS,
     HCO_OPERATOR,
     HCO_WEBHOOK,
+    HPP_POOL,
 )
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -67,12 +68,13 @@ def test_request_param(deployment_by_name, cpu_min_value):
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-7675")
 def test_cnv_deployment_priority_class_name(
-    cnv_deployment_by_name_no_hpp,
+    cnv_deployment_by_name,
 ):
-    if not cnv_deployment_by_name_no_hpp.instance.spec.template.spec.priorityClassName:
+    if cnv_deployment_by_name.name.startswith(HPP_POOL):
+        pytest.xfail("HPP pool deployment doesn't have priority class name")
+    elif not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
         pytest.fail(
-            f"For cnv deployment {cnv_deployment_by_name_no_hpp.name}, spec.template.spec.priorityClassName "
-            "has not been set."
+            f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
         )
 
 

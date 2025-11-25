@@ -40,18 +40,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def cnv_deployment_by_name_no_hpp(
-    admin_client,
-    hco_namespace,
-    cnv_deployment_no_hpp_matrix__function__,
-):
-    return get_deployment_by_name(
-        namespace_name=hco_namespace.name,
-        deployment_name=cnv_deployment_no_hpp_matrix__function__,
-    )
-
-
-@pytest.fixture()
 def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_deployment_matrix__function__):
     deployment_name = cnv_deployment_matrix__function__
     if deployment_name == HPP_POOL:
@@ -81,7 +69,7 @@ def cnv_daemonset_by_name(
     cnv_daemonset_matrix__function__,
 ):
     daemonset_name = cnv_daemonset_matrix__function__
-    if daemonset_name.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
+    if daemonset_name == HOSTPATH_PROVISIONER_CSI and not hpp_cr_installed:
         pytest.xfail(f"{daemonset_name} daemonset shouldn't be present on the cluster if HPP CR is not installed")
     return get_daemonset_by_name(
         admin_client=admin_client,
@@ -91,7 +79,7 @@ def cnv_daemonset_by_name(
 
 
 @pytest.fixture()
-def cnv_pod_by_name(
+def cnv_pods_by_type(
     admin_client,
     hco_namespace,
     hpp_cr_installed,
@@ -100,11 +88,13 @@ def cnv_pod_by_name(
     pod_prefix = cnv_pod_matrix__function__
     if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
         pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
-    return get_pod_by_name_prefix(
+    pod_list = get_pod_by_name_prefix(
         dyn_client=admin_client,
         namespace=hco_namespace.name,
         pod_prefix=pod_prefix,
+        get_all=True,
     )
+    return pod_list
 
 
 @pytest.fixture(scope="session")
