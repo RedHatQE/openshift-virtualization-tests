@@ -12,12 +12,14 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 @pytest.fixture()
-def priority_class(request):
+def priority_class(request, admin_client):
     vm_priority_class_value = request.param.get("vm_priority_class_value")
     dv_priority_class_value = request.param.get("dv_priority_class_value", None)
-    with PriorityClass(name="vm-priority", value=vm_priority_class_value) as vm_priority_class:
+    with PriorityClass(name="vm-priority", value=vm_priority_class_value, client=admin_client) as vm_priority_class:
         if dv_priority_class_value:
-            with PriorityClass(name="dv-priority", value=dv_priority_class_value) as dv_priority_class:
+            with PriorityClass(
+                name="dv-priority", value=dv_priority_class_value, client=admin_client
+            ) as dv_priority_class:
                 yield {
                     "vm_priority_class": vm_priority_class,
                     "dv_priority_class": dv_priority_class,
@@ -27,7 +29,7 @@ def priority_class(request):
 
 
 @pytest.fixture()
-def dv_dict(namespace, priority_class):
+def dv_dict(namespace, priority_class, unprivileged_client):
     dv = DataVolume(
         source="http",
         name="priority-dv",
@@ -37,6 +39,7 @@ def dv_dict(namespace, priority_class):
         storage_class=py_config["default_storage_class"],
         volume_mode=py_config["default_volume_mode"],
         access_modes=py_config["default_access_mode"],
+        client=unprivileged_client,
     )
     dv.to_dict()
     dv_priority_class = priority_class["dv_priority_class"]
@@ -50,6 +53,7 @@ def vm_with_priority_class(
     namespace,
     dv_dict,
     priority_class,
+    unprivileged_client,
 ):
     vm_priority_class = priority_class["vm_priority_class"]
     vm_name = "priority-vm"
@@ -64,6 +68,7 @@ def vm_with_priority_class(
         priority_class_name=vm_priority_class.name,
         body=fedora_vm_body(name=vm_name),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        client=unprivileged_client,
     ) as vm:
         yield vm
 
