@@ -22,7 +22,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource_from_module_name,
 )
 from utilities.constants import HCO_BEARER_AUTH, HPP_POOL
-from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
+from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version, is_hco_tainted
 from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
@@ -37,6 +37,18 @@ from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def validate_cluster_not_tainted(admin_client, hco_namespace):
+    """Fail fast if cluster is already tainted before running crypto_policy or json_patch tests."""
+    tainted_conditions = is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
+    if tainted_conditions and any(condition.get("status") == "True" for condition in tainted_conditions):
+        raise RuntimeError(
+            f"HCO with TaintedConfiguration condition set to True when it should be False. "
+            f"This test should not run in this condition. Failing fast. "
+            f"Tainted conditions: {tainted_conditions}"
+        )
 
 
 @pytest.fixture()

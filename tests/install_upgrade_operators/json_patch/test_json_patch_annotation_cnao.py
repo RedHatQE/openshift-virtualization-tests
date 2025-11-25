@@ -45,6 +45,7 @@ def json_patched_cnao(
 
 
 @pytest.mark.usefixtures(
+    "validate_cluster_not_tainted",
     "kubevirt_all_unsafe_modification_metrics_before_test",
     "kubevirt_alerts_before_test",
     "json_patched_cnao",

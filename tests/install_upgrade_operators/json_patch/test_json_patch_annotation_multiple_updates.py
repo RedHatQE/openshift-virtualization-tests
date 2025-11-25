@@ -72,6 +72,7 @@ def multiple_json_patched(admin_client, hco_namespace, prometheus, hyperconverge
 
 
 @pytest.mark.usefixtures(
+    "validate_cluster_not_tainted",
     "kubevirt_all_unsafe_modification_metrics_before_test",
     "kubevirt_alerts_before_test",
     "cdi_feature_gates_scope_class",

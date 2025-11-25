@@ -39,6 +39,7 @@ def json_patched_cdi(admin_client, hco_namespace, prometheus, hyperconverged_res
 
 
 @pytest.mark.usefixtures(
+    "validate_cluster_not_tainted",
     "kubevirt_all_unsafe_modification_metrics_before_test",
     "kubevirt_alerts_before_test",
     "cdi_feature_gates_scope_class",
