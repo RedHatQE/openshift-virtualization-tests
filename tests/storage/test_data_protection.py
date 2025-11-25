@@ -28,8 +28,9 @@ def _assert_cdi_delete(exc_info):
 
 
 @pytest.fixture(scope="module")
-def pvc_hpp(namespace, worker_node1, available_hpp_storage_class):
+def pvc_hpp(unprivileged_client, namespace, worker_node1, available_hpp_storage_class):
     with PersistentVolumeClaim(
+        client=unprivileged_client,
         name="pvc-hpp",
         namespace=namespace.name,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,

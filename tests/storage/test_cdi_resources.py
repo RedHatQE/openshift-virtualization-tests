@@ -178,6 +178,7 @@ def test_importer_pod_cdi_label(namespace, https_server_certificate):
         images_https_server_name=get_test_artifact_server_url(schema="https"),
         storage_ns_name=namespace.name,
         https_server_certificate=https_server_certificate,
+        client=namespace.client,
     ):
         wait_for_cdi_worker_pod(
             pod_name="importer",
@@ -221,10 +222,12 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
 )
 @pytest.mark.s390x
 def test_cloner_pods_cdi_label(
+    unprivileged_client,
     namespace,
     data_volume_without_snapshot_capability_scope_function,
 ):
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=data_volume_without_snapshot_capability_scope_function.namespace,

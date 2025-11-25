@@ -34,8 +34,8 @@ def local_storage_class(request, admin_client):
 
 
 @pytest.fixture()
-def local_storage_profile_claim_property_sets(local_storage_class):
-    return StorageProfile(name=local_storage_class.name).instance.status["claimPropertySets"][0]
+def local_storage_profile_claim_property_sets(local_storage_class, admin_client):
+    return StorageProfile(name=local_storage_class.name, client=admin_client).instance.status["claimPropertySets"][0]
 
 
 @pytest.mark.parametrize(

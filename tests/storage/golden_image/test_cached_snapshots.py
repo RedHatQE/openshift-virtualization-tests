@@ -82,6 +82,7 @@ def updated_templates_rhel9_data_import_cron(
         VolumeSnapshot(
             name=rhel9_boot_source_name,
             namespace=golden_images_namespace.name,
+            client=admin_client,
         ).clean_up()
         wait_for_succeeded_dv(namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name)
         wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
@@ -106,6 +107,7 @@ def original_rhel9_boot_source_pvc(rhel9_data_source_scope_session):
 
 @pytest.fixture(scope="module")
 def updated_rhel9_boot_source(
+    admin_client,
     original_rhel9_boot_source_pvc,
     golden_images_namespace,
     rhel9_boot_source_name,
@@ -116,6 +118,7 @@ def updated_rhel9_boot_source(
         DataVolume(
             name=rhel9_boot_source_name,
             namespace=golden_images_namespace.name,
+            client=admin_client,
         ).clean_up()
 
 

@@ -55,7 +55,9 @@ def vmexport_from_vmsnapshot_external_links(vmexport_from_vmsnapshot):
 @pytest.fixture()
 def token_for_vmexport_from_vmsnapshot(vmexport_from_vmsnapshot):
     secret_name = f"export-token-{vmexport_from_vmsnapshot.name}"
-    secret_object = Secret(name=secret_name, namespace=vmexport_from_vmsnapshot.namespace)
+    secret_object = Secret(
+        name=secret_name, namespace=vmexport_from_vmsnapshot.namespace, client=vmexport_from_vmsnapshot.client
+    )
     assert secret_object.exists, f"Secret: '{secret_name}' not found"
     token_data = secret_object.instance.get("data", {}).get("token")
     assert token_data, f"No token in Secret {secret_name}"
@@ -90,7 +92,9 @@ def secret_headers_for_vmexport_from_vmsnapshot(
         token=token_for_vmexport_from_vmsnapshot,
         kind=Secret.kind,
     )
-    with Secret(yaml_file=secret_yaml_file, namespace=namespace_vmexport_target.name):
+    with Secret(
+        yaml_file=secret_yaml_file, namespace=namespace_vmexport_target.name, client=namespace_vmexport_target.client
+    ):
         yield
 
 
@@ -120,7 +124,9 @@ def configmap_with_vmexport_external_cert_vmsnapshot(
         token=token_for_vmexport_from_vmsnapshot,
         kind=ConfigMap.kind,
     )
-    with ConfigMap(yaml_file=configmap_yaml_file, namespace=namespace_vmexport_target.name) as router_cert_configmap:
+    with ConfigMap(
+        yaml_file=configmap_yaml_file, namespace=namespace_vmexport_target.name, client=namespace_vmexport_target.client
+    ) as router_cert_configmap:
         yield router_cert_configmap
 
 
@@ -141,6 +147,7 @@ def vm_from_vmexport(
         namespace_vmexport_target=namespace_vmexport_target.name,
     )
     with VirtualMachineForTests(
+        client=namespace_vmexport_target.client,
         name="target-vm",
         namespace=namespace_vmexport_target.name,
         os_flavor=OS_FLAVOR_RHEL,

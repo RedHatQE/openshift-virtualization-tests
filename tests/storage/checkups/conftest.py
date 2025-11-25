@@ -47,23 +47,24 @@ def checkups_namespace(admin_client):
 
 
 @pytest.fixture(scope="package")
-def checkup_service_account(checkups_namespace):
-    with ServiceAccount(name="storage-checkup-sa", namespace=checkups_namespace.name) as sa:
+def checkup_service_account(checkups_namespace, admin_client):
+    with ServiceAccount(name="storage-checkup-sa", namespace=checkups_namespace.name, client=admin_client) as sa:
         yield sa
 
 
 @pytest.fixture(scope="package")
-def checkup_role(checkups_namespace):
+def checkup_role(checkups_namespace, admin_client):
     with Role(
         name="storage-checkup-role",
         namespace=checkups_namespace.name,
         rules=CHECKUP_RULES,
+        client=admin_client,
     ) as role:
         yield role
 
 
 @pytest.fixture(scope="package")
-def checkup_role_binding(checkups_namespace, checkup_service_account, checkup_role):
+def checkup_role_binding(checkups_namespace, checkup_service_account, checkup_role, admin_client):
     with RoleBinding(
         name=checkup_role.name,
         namespace=checkups_namespace.name,
@@ -71,12 +72,13 @@ def checkup_role_binding(checkups_namespace, checkup_service_account, checkup_ro
         subjects_name=checkup_service_account.name,
         role_ref_kind=checkup_role.kind,
         role_ref_name=checkup_role.name,
+        client=admin_client,
     ) as role_binding:
         yield role_binding
 
 
 @pytest.fixture(scope="package")
-def checkup_cluster_reader(checkups_namespace, checkup_role_binding, checkup_service_account):
+def checkup_cluster_reader(checkups_namespace, checkup_role_binding, checkup_service_account, admin_client):
     with ClusterRoleBinding(
         name=f"{KUBEVIRT_STORAGE_CHECKUP}-clustereader",
         cluster_role="cluster-reader",
@@ -87,6 +89,7 @@ def checkup_cluster_reader(checkups_namespace, checkup_role_binding, checkup_ser
                 "namespace": checkups_namespace.name,
             }
         ],
+        client=admin_client,
     ) as crb:
         yield crb
 
@@ -100,11 +103,12 @@ def checkup_image_url(csv_related_images_scope_session):
 
 
 @pytest.fixture(scope="function")
-def checkup_configmap(checkups_namespace):
+def checkup_configmap(checkups_namespace, admin_client):
     with ConfigMap(
         name="storage-checkup-config",
         namespace=checkups_namespace.name,
         data={f"{SPEC_STR}.timeout": "10m"},
+        client=admin_client,
     ) as configmap:
         yield configmap
 
@@ -177,19 +181,20 @@ def updated_two_default_storage_classes(removed_default_storage_classes, cluster
 
 
 @pytest.fixture()
-def storage_class_with_unknown_provisioner():
+def storage_class_with_unknown_provisioner(admin_client):
     with StorageClass(
         name="sc-non-existent-provisioner",
         provisioner=NON_EXISTENT_STR,
         reclaim_policy=StorageClass.ReclaimPolicy.DELETE,
         volume_binding_mode=StorageClass.VolumeBindingMode.Immediate,
+        client=admin_client,
     ) as sc:
         yield sc
 
 
 @pytest.fixture()
-def updated_default_storage_profile(default_sc):
-    storage_profile = StorageProfile(name=default_sc.name)
+def updated_default_storage_profile(default_sc, admin_client):
+    storage_profile = StorageProfile(name=default_sc.name, client=admin_client)
     claim_property_set_dict = update_storage_profile(storage_profile=storage_profile)
     with ResourceEditor(patches={storage_profile: {SPEC_STR: {"claimPropertySets": [claim_property_set_dict]}}}):
         yield storage_profile
@@ -215,8 +220,8 @@ def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
 
 
 @pytest.fixture()
-def broken_data_import_cron(golden_images_namespace):
-    data_source = DataSource(name="broken-data-source", namespace=golden_images_namespace.name)
+def broken_data_import_cron(golden_images_namespace, admin_client):
+    data_source = DataSource(name="broken-data-source", namespace=golden_images_namespace.name, client=admin_client)
     with DataImportCron(
         name="broken-data-import-cron",
         namespace=golden_images_namespace.name,
@@ -241,6 +246,7 @@ def broken_data_import_cron(golden_images_namespace):
                 },
             }
         },
+        client=admin_client,
     ) as data_import_cron:
         yield data_import_cron
     # DataImportCron created a DataSource, but it is not supposed to clean it up
@@ -248,26 +254,27 @@ def broken_data_import_cron(golden_images_namespace):
 
 
 @pytest.fixture()
-def storage_class_with_hpp_provisioner():
+def storage_class_with_hpp_provisioner(admin_client):
     with StorageClass(
         name="test-sc-hpp",
         provisioner=StorageClass.Provisioner.HOSTPATH,
         reclaim_policy=StorageClass.ReclaimPolicy.DELETE,
         volume_binding_mode=StorageClass.VolumeBindingMode.Immediate,
+        client=admin_client,
     ) as sc:
         yield sc
 
 
 @pytest.fixture()
-def updated_storage_class_snapshot_clone_strategy(storage_class_with_hpp_provisioner):
-    storage_profile = StorageProfile(name=storage_class_with_hpp_provisioner.name)
+def updated_storage_class_snapshot_clone_strategy(storage_class_with_hpp_provisioner, admin_client):
+    storage_profile = StorageProfile(name=storage_class_with_hpp_provisioner.name, client=admin_client)
     with ResourceEditor(patches={storage_profile: {SPEC_STR: {"cloneStrategy": "snapshot"}}}):
         yield storage_profile
 
 
 @pytest.fixture()
-def default_storage_class_access_modes(default_sc):
-    storage_profile = StorageProfile(name=default_sc.name)
+def default_storage_class_access_modes(default_sc, admin_client):
+    storage_profile = StorageProfile(name=default_sc.name, client=admin_client)
     return storage_profile.instance.status.claimPropertySets[0][ACCESS_MODES]
 
 

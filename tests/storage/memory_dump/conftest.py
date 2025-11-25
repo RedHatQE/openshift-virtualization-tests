@@ -30,7 +30,7 @@ def windows_vm_for_memory_dump(
 
 
 @pytest.fixture()
-def pvc_for_windows_memory_dump(namespace, storage_class_with_filesystem_volume_mode):
+def pvc_for_windows_memory_dump(unprivileged_client, namespace, storage_class_with_filesystem_volume_mode):
     # memory_dump_size is 10Gi(Images.Windows.DEFAULT_MEMORY_SIZE + memory dump overhead size)
     memory_dump_size = (
         (bitmath.parse_string_unsafe(Images.Windows.DEFAULT_MEMORY_SIZE) + bitmath.parse_string_unsafe("2Gi"))
@@ -38,6 +38,7 @@ def pvc_for_windows_memory_dump(namespace, storage_class_with_filesystem_volume_
         .format("{value:.2f}{unit}")[:-1]
     )
     with PersistentVolumeClaim(
+        client=unprivileged_client,
         name="dump-pvc",
         namespace=namespace.name,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
@@ -73,6 +74,7 @@ def consumer_pod_for_verifying_windows_memory_dump(namespace, windows_vm_for_mem
         containers=get_containers_for_pods_with_pvc(
             volume_mode=DataVolume.VolumeMode.FILE, pvc_name=pvc_for_windows_memory_dump.name
         ),
+        client=pvc_for_windows_memory_dump.client,
     ) as pod:
         pod.wait_for_status(status=pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
 
