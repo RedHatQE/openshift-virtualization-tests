@@ -32,6 +32,7 @@ from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_RHEL,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -135,6 +136,10 @@ def test_delete_pvc_after_successful_import(
     data_volume_multi_storage_scope_function.wait_for_dv_success()
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Automation bug after wait_for_condition change; tracked in CNV-73197",
+    run=False,
+)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-876")
 @pytest.mark.s390x
