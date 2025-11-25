@@ -19,7 +19,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
     get_artifactory_config_map,
@@ -31,6 +31,7 @@ from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
     RHSM_SECRET_NAME,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -469,12 +470,15 @@ def get_parameters_from_template(template, parameter_subset):
     }
 
 
+@retry(wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_1SEC)
 def download_and_extract_tar(tarfile_url, dest_path):
     """Download and Extract the tar file."""
     artifactory_header = get_artifactory_header()
-    request = requests.get(tarfile_url, verify=False, headers=artifactory_header)
+    request = requests.get(tarfile_url, verify=False, headers=artifactory_header, timeout=10)
     tar_file = tarfile.open(fileobj=BytesIO(request.content), mode="r|xz")
     tar_file.extractall(path=dest_path)
+
+    return True
 
 
 @contextmanager

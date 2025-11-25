@@ -1138,7 +1138,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/70/c8/ebd2472f1627433bc
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.105"
+version = "11.0.106"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloup" },
@@ -1158,7 +1158,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/5c/5ee1833be37acf57937f3d7940a4b0adc22f84234af3fdb404c46e6784b5/openshift_python_wrapper-11.0.105.tar.gz", hash = "sha256:20bfccc3dde7e624449cb4e39ee80d2eb6441d0b424c348d58f8add283fd9794", size = 7162441, upload-time = "2025-11-16T09:50:25.85Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/32/50/6a9534580838150523cc587e64fbfea0131342f5eb7253c6fedde4ecc1e7/openshift_python_wrapper-11.0.106.tar.gz", hash = "sha256:ef6c32035dda06d3db056a364056337e309cffed5f35fcdf157b3785485eced4", size = 7162577, upload-time = "2025-11-24T17:33:07.925Z" }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -1179,6 +1179,7 @@ dependencies = [
     { name = "bcrypt" },
     { name = "bitmath" },
     { name = "bs4" },
+    { name = "cachetools" },
     { name = "click" },
     { name = "colorlog" },
     { name = "deepdiff" },
@@ -1243,6 +1244,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=4.2.0" },
     { name = "bitmath", specifier = ">=1.3.3.1" },
     { name = "bs4", specifier = ">=0.0.2" },
+    { name = "cachetools", specifier = ">=6.2.2" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "colorlog", specifier = ">=6.9.0" },
     { name = "deepdiff", specifier = ">=8.0.1" },
