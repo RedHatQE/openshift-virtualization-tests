@@ -350,3 +350,14 @@ def nodes_taints_before_descheduler_test_run(nodes):
     for node in nodes_taints_before:
         if nodes_taints_after[node] != nodes_taints_before[node]:
             ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
+
+
+@pytest.fixture()
+def workers_psi_metric_values(prometheus, workers):
+    workers_names_list = [worker.name for worker in workers]
+    metric_output = prometheus.query_sampler(query="descheduler:combined_utilization_and_pressure:avg1m")
+    return {
+        item["metric"]["instance"]: float(item["value"][1]) * 100
+        for item in metric_output
+        if item["metric"]["instance"] in workers_names_list
+    }
