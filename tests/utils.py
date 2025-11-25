@@ -26,6 +26,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
+    OS_FLAVOR_RHEL,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -526,6 +527,52 @@ def register_vm_to_rhsm(vm):
             "--auto-attach"
         ),
     )
+
+@contextmanager
+def create_rhel_vm(
+    storage_class: str,
+    namespace: str,
+    client: DynamicClient,
+    dv_name: str,
+    dv_size: str,
+    vm_name: str,
+    rhel10_data_source_scope_module,
+    node: Optional[str] = None,
+    wait_running: Optional[bool] = True,
+    volume_mode: Optional[str] = None,
+    cpu_model: Optional[str] = None,
+    annotations: Optional[str] = None,
+) -> Generator[VirtualMachineForTests, None, None]:
+    dv = DataVolume(
+        name=dv_name,
+        namespace=namespace,
+        source_ref={
+            "kind": rhel10_data_source_scope_module.kind,
+            "name": rhel10_data_source_scope_module.name,
+            "namespace": rhel10_data_source_scope_module.namespace,
+        },
+        storage_class=storage_class,
+        size=dv_size,
+        api_name="storage",
+        volume_mode=volume_mode,
+    )
+    dv.to_dict()
+    dv_metadata = dv.res["metadata"]
+    with VirtualMachineForTests(
+        client=client,
+        name=vm_name,
+        namespace=dv_metadata["namespace"],
+        os_flavor=OS_FLAVOR_RHEL,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
+        node_selector=node,
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        cpu_model=cpu_model,
+        annotations=annotations,
+    ) as vm:
+        if wait_running:
+            running_vm(vm=vm)
+        yield vm
 
 
 @contextmanager

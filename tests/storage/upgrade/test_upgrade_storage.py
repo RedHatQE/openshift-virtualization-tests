@@ -16,7 +16,7 @@ from utilities.constants import DEPENDENCY_SCOPE_SESSION, LS_COMMAND
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
-    run_command_on_cirros_vm_and_check_output,
+    run_command_on_rhel_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
 from utilities.virt import migrate_vm_and_verify
@@ -61,19 +61,19 @@ class TestUpgradeStorage:
     def test_vm_snapshot_restore_before_upgrade(
         self,
         skip_if_no_storage_class_for_snapshot,
-        cirros_vm_for_upgrade_a,
+        rhel_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
     ):
         with VirtualMachineRestore(
-            name=f"restore-snapshot-{cirros_vm_for_upgrade_a.name}",
+            name=f"restore-snapshot-{rhel_vm_for_upgrade_a.name}",
             namespace=snapshots_for_upgrade_a.namespace,
-            vm_name=cirros_vm_for_upgrade_a.name,
+            vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
         ) as vm_restore:
             vm_restore.wait_restore_done()
-            cirros_vm_for_upgrade_a.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
-                vm=cirros_vm_for_upgrade_a,
+            rhel_vm_for_upgrade_a.start(wait=True)
+            run_command_on_rhel_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_a,
                 command=LS_COMMAND,
                 expected_result="1",
             )
@@ -145,10 +145,10 @@ class TestUpgradeStorage:
     )
     def test_vm_snapshot_restore_check_after_upgrade(
         self,
-        cirros_vm_for_upgrade_a,
+        rhel_vm_for_upgrade_a,
     ):
-        run_command_on_cirros_vm_and_check_output(
-            vm=cirros_vm_for_upgrade_a,
+        run_command_on_rhel_vm_and_check_output(
+            vm=rhel_vm_for_upgrade_a,
             command=LS_COMMAND,
             expected_result="1",
         )
@@ -164,17 +164,17 @@ class TestUpgradeStorage:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_vm_snapshot_restore_create_after_upgrade(self, cirros_vm_for_upgrade_b, snapshots_for_upgrade_b):
+    def test_vm_snapshot_restore_create_after_upgrade(self, rhel_vm_for_upgrade_b, snapshots_for_upgrade_b):
         with VirtualMachineRestore(
-            name=f"restore-snapshot-{cirros_vm_for_upgrade_b.name}",
+            name=f"restore-snapshot-{rhel_vm_for_upgrade_b.name}",
             namespace=snapshots_for_upgrade_b.namespace,
-            vm_name=cirros_vm_for_upgrade_b.name,
+            vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
         ) as vm_restore:
             vm_restore.wait_restore_done()
-            cirros_vm_for_upgrade_b.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
-                vm=cirros_vm_for_upgrade_b,
+            rhel_vm_for_upgrade_b.start(wait=True)
+            run_command_on_rhel_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_b,
                 command=LS_COMMAND,
                 expected_result="1",
             )

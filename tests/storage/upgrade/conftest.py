@@ -68,11 +68,12 @@ def skip_if_not_override_cdiconfig_scratch_space(override_cdiconfig_scratch_spec
 
 
 @pytest.fixture(scope="session")
-def cirros_vm_for_upgrade_a(
+def rhel_vm_for_upgrade_a(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
     cluster_common_node_cpu,
+    rhel10_data_source_scope_session,
 ):
     with create_vm_for_snapshot_upgrade_tests(
         vm_name="snapshot-upgrade-a",
@@ -80,6 +81,7 @@ def cirros_vm_for_upgrade_a(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=cluster_common_node_cpu,
+        rhel10_data_source_scope_module=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
 
@@ -87,18 +89,19 @@ def cirros_vm_for_upgrade_a(
 @pytest.fixture(scope="session")
 def snapshots_for_upgrade_a(
     admin_client,
-    cirros_vm_for_upgrade_a,
+    rhel_vm_for_upgrade_a,
 ):
-    with create_snapshot_for_upgrade(vm=cirros_vm_for_upgrade_a, client=admin_client) as snapshot:
+    with create_snapshot_for_upgrade(vm=rhel_vm_for_upgrade_a, client=admin_client) as snapshot:
         yield snapshot
 
 
 @pytest.fixture(scope="session")
-def cirros_vm_for_upgrade_b(
+def rhel_vm_for_upgrade_b(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
     cluster_common_node_cpu,
+    rhel10_data_source_scope_session,
 ):
     with create_vm_for_snapshot_upgrade_tests(
         vm_name="snapshot-upgrade-b",
@@ -106,6 +109,7 @@ def cirros_vm_for_upgrade_b(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=cluster_common_node_cpu,
+        rhel10_data_source_scope_module=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
 
@@ -113,9 +117,9 @@ def cirros_vm_for_upgrade_b(
 @pytest.fixture(scope="session")
 def snapshots_for_upgrade_b(
     admin_client,
-    cirros_vm_for_upgrade_b,
+    rhel_vm_for_upgrade_b,
 ):
-    with create_snapshot_for_upgrade(vm=cirros_vm_for_upgrade_b, client=admin_client) as snapshot:
+    with create_snapshot_for_upgrade(vm=rhel_vm_for_upgrade_b, client=admin_client) as snapshot:
         yield snapshot
 
 
