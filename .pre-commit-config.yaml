@@ -80,4 +80,5 @@ repos:
             "types-setuptools",
             "types-pexpect",
             "types-netaddr",
+            "types-cachetools"
           ]

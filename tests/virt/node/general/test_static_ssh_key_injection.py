@@ -7,9 +7,8 @@ import os
 import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.secret import Secret
-from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST
 from utilities.constants import CLOUD_INIT_NO_CLOUD, CNV_VM_SSH_KEY_PATH, OS_FLAVOR_RHEL
 from utilities.data_utils import authorized_key, base64_encode_str
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -34,19 +33,17 @@ def vm_with_ssh_secret(
     namespace,
     ssh_secret,
     unprivileged_client,
-    data_volume_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     """VM with Static Access Credentials Injection"""
     with VirtualMachineForTests(
         name=NAME,
         namespace=namespace.name,
         client=unprivileged_client,
-        data_volume=data_volume_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         memory_requests="1Gi",
         os_flavor=OS_FLAVOR_RHEL,
-        cloud_init_data={
-            "userData": "",
-        },
+        cloud_init_data={"userData": ""},
         cloud_init_type=CLOUD_INIT_NO_CLOUD,
         ssh_secret=ssh_secret,
     ) as vm:
@@ -56,17 +53,8 @@ def vm_with_ssh_secret(
 @pytest.mark.gating
 @pytest.mark.s390x
 @pytest.mark.parametrize(
-    "data_volume_scope_class",
-    [
-        pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": RHEL_LATEST})],
     indirect=True,
 )
 class TestVMWithStaticKeyInjection:
