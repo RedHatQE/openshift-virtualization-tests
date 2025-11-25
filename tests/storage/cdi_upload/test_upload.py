@@ -338,7 +338,10 @@ def test_successful_upload_missing_file_in_transit(namespace, storage_class_matr
         remote_name=RHEL_LATEST["image_path"],
         local_name=upload_file_path,
     )
-    upload_process = multiprocessing.Process(
+    # Use fork context to avoid pickling issues with nested functions
+    _fork_context = multiprocessing.get_context("fork")
+
+    upload_process = _fork_context.Process(
         target=_upload_image,
         args=(dv_name, namespace, storage_class, upload_file_path, "10Gi"),
     )
