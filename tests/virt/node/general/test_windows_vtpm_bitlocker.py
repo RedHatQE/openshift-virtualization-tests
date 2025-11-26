@@ -7,8 +7,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.os_params import WINDOWS_11, WINDOWS_2022
 from tests.utils import update_hco_with_persistent_storage_config
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN, Images
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_windows_os_dict,
@@ -93,7 +94,7 @@ def windows_vtpm_vm(
     namespace,
     unprivileged_client,
     file_system_persistent_storage_hco_config,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
 ):
     windows_version = request.param["windows_version"]
@@ -105,7 +106,7 @@ def windows_vtpm_vm(
         ),
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         tpm_params=presistent_enabled,
         efi_params=presistent_enabled,
         cpu_model=modern_cpu_for_migration,
@@ -128,27 +129,17 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
 
 
 @pytest.mark.parametrize(
-    "file_system_persistent_storage_hco_config, golden_image_data_volume_scope_class, windows_vtpm_vm",
+    "file_system_persistent_storage_hco_config,golden_image_data_source_for_test_scope_class,windows_vtpm_vm",
     [
         pytest.param(
             {"rwx_access_mode": False},
-            {
-                "dv_name": "dv-win11-vtpm-vm",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
+            {"os_dict": WINDOWS_11},
             {"windows_version": "win-11"},
             id="Windows-11",
         ),
         pytest.param(
             {"rwx_access_mode": True},
-            {
-                "dv_name": "dv-win2022-vtpm-vm",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
+            {"os_dict": WINDOWS_2022},
             {"windows_version": "win-2022"},
             id="Windows-2k22",
         ),

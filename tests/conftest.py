@@ -776,33 +776,6 @@ def data_volume_multi_storage_scope_module(
     )
 
 
-@pytest.fixture(scope="class")
-def golden_image_data_volume_multi_storage_scope_class(
-    admin_client,
-    request,
-    golden_images_namespace,
-    storage_class_matrix__class__,
-    schedulable_nodes,
-):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class_matrix=storage_class_matrix__class__,
-        schedulable_nodes=schedulable_nodes,
-        check_dv_exists=True,
-        admin_client=admin_client,
-    )
-
-
-@pytest.fixture(scope="class")
-def golden_image_data_source_multi_storage_scope_class(
-    admin_client, golden_image_data_volume_multi_storage_scope_class
-):
-    yield from create_or_update_data_source(
-        admin_client=admin_client, dv=golden_image_data_volume_multi_storage_scope_class
-    )
-
-
 @pytest.fixture()
 def golden_image_data_volume_multi_storage_scope_function(
     admin_client,
@@ -964,29 +937,6 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_function,
-        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def golden_image_vm_instance_from_template_multi_storage_scope_class(
-    request,
-    unprivileged_client,
-    namespace,
-    golden_image_data_source_multi_storage_scope_class,
-    cpu_for_migration,
-):
-    """Calls vm_instance_from_template contextmanager
-
-    Creates a VM from template and starts it (if requested).
-    """
-
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_multi_storage_scope_class,
         vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
     ) as vm:
         yield vm
