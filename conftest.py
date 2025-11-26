@@ -629,6 +629,7 @@ def pytest_runtest_makereport(item, call):
         if hasattr(report, "wasxfail") and QUARANTINED in report.wasxfail:
             setattr(report, QUARANTINED, True)
 
+            jira = "Missing"
             if match := re.search(r"CNV-\d+", report.wasxfail):
                 jira = match.group(0)
                 wasxfail = report.wasxfail.replace(
@@ -636,6 +637,8 @@ def pytest_runtest_makereport(item, call):
                     f"<a href='https://issues.redhat.com/browse/{jira}' target='_blank'>{jira}</a>",
                 )
                 report.wasxfail = wasxfail
+
+            item.user_properties.append((QUARANTINED, jira))
 
         elif fail_error := re.search(r"(Failed): (.*?)\n", report.longreprtext):
             setattr(report, SETUP_ERROR, fail_error.group(2))

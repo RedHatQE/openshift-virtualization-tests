@@ -18,8 +18,7 @@ from tests.storage.hpp.utils import (
     verify_hpp_cr_deleted_successfully,
     verify_hpp_cr_installed_successfully,
 )
-from tests.storage.utils import create_vm_from_dv
-from utilities.storage import HppCsiStorageClass
+from utilities.storage import HppCsiStorageClass, create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)
 

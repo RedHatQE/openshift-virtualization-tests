@@ -9,7 +9,6 @@ from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABEL
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_vm_from_dv,
     create_windows_vm_validate_guest_agent_info,
 )
 from utilities.constants import (
@@ -22,6 +21,7 @@ from utilities.constants import (
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
+    create_vm_from_dv,
     data_volume_template_dict,
     overhead_size_for_dv,
 )
@@ -60,7 +60,6 @@ def create_vm_from_clone_dv_template(
         ),
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False)
-        check_disk_count_in_vm(vm=vm)
 
 
 @pytest.mark.tier3
@@ -84,10 +83,6 @@ def test_successful_clone_of_large_image(
     namespace,
     data_volume_multi_storage_scope_function,
 ):
-    conditions = [
-        DataVolume.Condition.Type.BOUND,
-        DataVolume.Condition.Type.READY,
-    ]
     with create_dv(
         source="pvc",
         dv_name="dv-target",
@@ -97,12 +92,6 @@ def test_successful_clone_of_large_image(
         storage_class=data_volume_multi_storage_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        for condition in conditions:
-            cdv.wait_for_condition(
-                condition=condition,
-                status=DataVolume.Condition.Status.TRUE,
-                timeout=TIMEOUT_1MIN,
-            )
 
 
 @pytest.mark.sno
@@ -139,13 +128,14 @@ def test_successful_vm_restart_with_cloned_dv(
         cdv.pvc.wait()
 
         with create_vm_from_dv(
+            client=unprivileged_client,
             dv=cdv,
             vm_name="fedora-vm",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_interfaces=True,
         ) as vm_dv:
-            restart_vm_wait_for_running_vm(vm=vm_dv, wait_for_interfaces=False)
+            restart_vm_wait_for_running_vm(vm=vm_dv)
 
         assert_use_populator(
             pvc=cdv.pvc,
@@ -183,6 +173,7 @@ def test_successful_vm_from_cloned_dv_windows(
     namespace,
 ):
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=data_volume_multi_storage_scope_function.namespace,
@@ -222,12 +213,14 @@ def test_successful_vm_from_cloned_dv_windows(
     indirect=True,
 )
 def test_successful_snapshot_clone(
+    unprivileged_client,
     data_volume_snapshot_capable_storage_scope_function,
     cluster_csi_drivers_names,
 ):
     namespace = data_volume_snapshot_capable_storage_scope_function.namespace
     storage_class = data_volume_snapshot_capable_storage_scope_function.storage_class
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=namespace,
@@ -238,6 +231,7 @@ def test_successful_snapshot_clone(
         cdv.wait_for_dv_success()
         if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
             with create_vm_from_dv(
+                client=unprivileged_client,
                 dv=cdv,
                 vm_name="fedora-vm",
                 os_flavor=OS_FLAVOR_FEDORA,

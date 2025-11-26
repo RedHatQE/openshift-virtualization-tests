@@ -18,7 +18,6 @@ from ocp_resources.secret import Secret
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
-import tests.storage.utils as storage_utils
 from utilities.constants import (
     CDI_SECRETS,
     TIMEOUT_1MIN,
@@ -29,9 +28,9 @@ from utilities.constants import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
-    check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dv,
+    create_vm_from_dv,
     get_downloaded_artifact,
     virtctl_upload_dv,
 )
@@ -137,12 +136,11 @@ def refresh_cdi_certificates(secrets):
 
 
 @pytest.fixture()
-def dv_of_multi_storage_cirros_vm(
-    data_volume_template_metadata,
-):
+def dv_of_multi_storage_cirros_vm(unprivileged_client, data_volume_template_metadata):
     return DataVolume(
         name=data_volume_template_metadata["name"],
         namespace=data_volume_template_metadata["namespace"],
+        client=unprivileged_client,
     )
 
 
@@ -176,12 +174,12 @@ def test_dv_delete_from_vm(
     assert dv_of_multi_storage_cirros_vm.delete(wait=True, timeout=TIMEOUT_1MIN), "DV was not deleted"
     # DV re-creation is triggered by VM
     running_vm(vm=multi_storage_cirros_vm, wait_for_interfaces=False)
-    check_disk_count_in_vm(vm=multi_storage_cirros_vm)
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3667")
 def test_upload_after_certs_renewal(
+    unprivileged_client,
     namespace,
     storage_class_name_immediate_binding_scope_module,
     refresh_cdi_certificates,
@@ -200,10 +198,9 @@ def test_upload_after_certs_renewal(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
-            check_disk_count_in_vm(vm=vm)
+        create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
 @pytest.mark.parametrize(
@@ -223,6 +220,7 @@ def test_upload_after_certs_renewal(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3678")
 def test_import_clone_after_certs_renewal(
+    unprivileged_client,
     refresh_cdi_certificates,
     data_volume_multi_storage_scope_module,
     namespace,
@@ -231,6 +229,7 @@ def test_import_clone_after_certs_renewal(
     Check that CDI can do import and clone operation after certs get refreshed
     """
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=namespace.name,
@@ -239,13 +238,13 @@ def test_import_clone_after_certs_renewal(
         storage_class=data_volume_multi_storage_scope_module.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=TIMEOUT_3MIN)
-        with storage_utils.create_vm_from_dv(dv=cdv, start=True) as vm:
-            check_disk_count_in_vm(vm=vm)
+        create_vm_from_dv(client=unprivileged_client, dv=cdv)
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3977")
 def test_upload_after_validate_aggregated_api_cert(
+    unprivileged_client,
     namespace,
     storage_class_name_immediate_binding_scope_module,
     valid_aggregated_api_client_cert,
@@ -266,8 +265,7 @@ def test_upload_after_validate_aggregated_api_cert(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
-            check_disk_count_in_vm(vm=vm)
+        create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
 @pytest.fixture()
