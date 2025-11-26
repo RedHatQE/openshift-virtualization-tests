@@ -1,0 +1,85 @@
+# PR Title Labeler - Automatically adds/removes 'quarantine' label based on PR title
+#
+# Summary:
+# ┌──────────────────┬─────────────────────────┬───────────────┬──────────────────────┐
+# │ Event            │ Title                   │ Current Label │ Action               │
+# ├──────────────────┼─────────────────────────┼───────────────┼──────────────────────┤
+# │ PR opened        │ "Quarantine: test"      │ None          │ ✅ Add label         │
+# │ PR opened        │ "Quarantine: test"      │ Already has   │ ✅ No-op (safe)      │
+# │ Title edited     │ "Fix" → "Quarantine: x" │ None          │ ✅ Add label         │
+# │ Title edited     │ "Quarantine: x" → "Fix" │ Has label     │ ✅ Remove label      │
+# │ PR reopened      │ "Quarantine: test"      │ None          │ ✅ Add label         │
+# │ PR opened        │ "Fix test"              │ None          │ ✅ No action         │
+# │ New commit       │ Any                     │ Any           │ ⏭️  Does NOT run     │
+# └──────────────────┴─────────────────────────┴───────────────┴──────────────────────┘
+#
+
+name: "PR Title Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label-quarantine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add quarantine label for PRs starting with "Quarantine:"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title.toLowerCase();
+            const prNumber = context.payload.pull_request.number;
+
+            console.log(`Processing PR #${prNumber}: "${context.payload.pull_request.title}"`);
+
+            try {
+              // Check if title starts with "quarantine:" (case-insensitive)
+              if (title.startsWith('quarantine:')) {
+                console.log(`Title starts with "quarantine:", adding label`);
+
+                // Add the quarantine label (idempotent - won't fail if already present)
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: ['quarantine']
+                });
+
+                console.log('✅ Added "quarantine" label');
+              } else {
+                console.log(`Title does not start with "quarantine:", checking if label should be removed`);
+
+                // Get current labels
+                const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber
+                });
+
+                const hasQuarantineLabel = labels.some(label => label.name === 'quarantine');
+
+                // Remove quarantine label if it exists and title no longer matches
+                if (hasQuarantineLabel) {
+                  console.log('Removing "quarantine" label as title no longer matches');
+
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    name: 'quarantine'
+                  });
+
+                  console.log('✅ Removed "quarantine" label');
+                } else {
+                  console.log('No action needed - label not present');
+                }
+              }
+            } catch (error) {
+              console.error('Error managing quarantine label:', error);
+              throw error;
+            }
