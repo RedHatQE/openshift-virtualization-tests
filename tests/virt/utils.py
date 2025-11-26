@@ -184,6 +184,7 @@ def start_stress_on_vm(vm, stress_command):
         verify_wsl2_guest_works(vm=vm)
         command = f"wsl nohup bash -c '{stress_command}'"
     else:
+        run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo dnf install -y stress-ng"))
         command = stress_command
     run_ssh_commands(
         host=vm.ssh_exec,
@@ -514,6 +515,7 @@ def get_or_create_golden_image_data_source(
         yield data_source
     else:
         LOGGER.warning(f"No DataSource {data_source_name} found or it doesn't have a source pvc/snapshot.")
+
         with create_dv(
             dv_name=data_source_name,
             namespace=golden_images_namespace.name,
@@ -526,21 +528,30 @@ def get_or_create_golden_image_data_source(
             yield from create_or_update_data_source(admin_client=admin_client, dv=dv)
 
 
-def get_data_volume_template_dict_with_default_storage_class(data_source: DataSource) -> dict[str, dict]:
+def get_data_volume_template_dict_with_default_storage_class(
+    data_source: DataSource, params: dict[str, Any] | None = None
+) -> dict[str, dict]:
     """
     Generates a dataVolumeTemplate dict with the py_config based storage class.
 
     Args:
         data_source (DataSource): The data source object used to create the data volume template.
+        params (dict[str, Any], optional): dict of request.param passed to pytest fixture.
 
     Returns:
         dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
     """
     data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-    data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
-    data_volume_template["spec"]["storage"]["accessModes"] = [
-        py_config["default_storage_class_configuration"]["access_mode"]
-    ]
+    if params and (storage_class_params := params.get("storage_class")):
+        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class_params["name"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [storage_class_params["access_mode"]]
+        data_volume_template["spec"]["storage"]["volumeMode"] = storage_class_params["volume_mode"]
+    else:
+        default_sc_config = py_config["default_storage_class_configuration"]
+        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [default_sc_config["access_mode"]]
+        data_volume_template["spec"]["storage"]["volumeMode"] = default_sc_config["volume_mode"]
+
     return data_volume_template
 
 

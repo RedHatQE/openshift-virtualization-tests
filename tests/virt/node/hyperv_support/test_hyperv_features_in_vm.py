@@ -1,15 +1,12 @@
 import logging
 
 import pytest
-from pytest_testconfig import py_config
 
 from tests.os_params import (
     FEDORA_LATEST,
     FEDORA_LATEST_LABELS,
-    FEDORA_LATEST_OS,
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
-    WINDOWS_LATEST_OS,
 )
 from utilities.constants import VIRT_LAUNCHER
 from utilities.virt import vm_instance_from_template
@@ -22,7 +19,7 @@ def hyperv_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_class,
+    golden_image_data_volume_template_for_test_scope_class,
 ):
     hyperv_dict = request.param.get("hyperv_dict")
     if hyperv_dict:
@@ -31,7 +28,7 @@ def hyperv_vm(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:
         yield vm
 
@@ -57,17 +54,8 @@ def verify_evmcs_related_attributes(vmi_xml_dict):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": WINDOWS_LATEST})],
     indirect=True,
 )
 @pytest.mark.special_infra
@@ -159,17 +147,8 @@ class TestWindowsHyperVFlags:
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_class,",
-    [
-        pytest.param(
-            {
-                "dv_name": FEDORA_LATEST_OS,
-                "image": FEDORA_LATEST.get("image_path"),
-                "dv_size": FEDORA_LATEST.get("dv_size"),
-                "storage_class": py_config["default_storage_class"],
-            },
-        ),
-    ],
+    "golden_image_data_source_for_test_scope_class",
+    [pytest.param({"os_dict": FEDORA_LATEST})],
     indirect=True,
 )
 class TestFedoraHyperVFlags:

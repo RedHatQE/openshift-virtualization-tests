@@ -9,27 +9,27 @@ from utilities.constants import CNV_PROMETHEUS_RULES
 LOGGER = logging.getLogger(__name__)
 
 
-def validate_downstream_runbook_url(runbook_urls_from_prometheus_rule: dict[str, str]) -> None:
-    error_messages = {}
-    alerts_without_runbook = []
+def validate_downstream_runbook_url(
+    runbook_urls_from_prometheus_rule: dict[str, str], subtests: pytest.Subtests
+) -> None:
+    """
+    Validate that all runbook URLs are accessible.
 
+    Args:
+        runbook_urls_from_prometheus_rule: Iterable of (alert_name, runbook_url) tuples
+        subtests: pytest subtests fixture for independent subtest execution
+    """
     for alert_name, runbook_url in runbook_urls_from_prometheus_rule:
-        if not runbook_url:
-            LOGGER.error(f"For alert: {alert_name} Url not found")
-            alerts_without_runbook.append(alert_name)
-            continue
-        try:
-            response = requests.get(runbook_url, allow_redirects=False, timeout=10)
-            if response.status_code != http.HTTPStatus.OK:
-                LOGGER.error(f"Alert {alert_name} url {runbook_url} returned status {response.status_code}")
-                error_messages[alert_name] = runbook_url
-        except requests.RequestException as e:
-            LOGGER.error(f"Alert {alert_name} url {runbook_url} failed: {e}")
-            error_messages[alert_name] = runbook_url
-    assert not (alerts_without_runbook or error_messages), (
-        f"CNV alerts with missing runbook url: {alerts_without_runbook}, "
-        f"D/S runbook url validation failed for the followings alerts: {error_messages}"
-    )
+        with subtests.test(msg=alert_name):
+            assert runbook_url, f"Alert '{alert_name}' is missing runbook URL"
+
+            try:
+                response = requests.get(runbook_url, allow_redirects=False, timeout=10)
+                assert response.status_code == http.HTTPStatus.OK, (
+                    f"Alert '{alert_name}' runbook URL '{runbook_url}' returned status {response.status_code}"
+                )
+            except requests.RequestException as e:
+                pytest.fail(f"Alert '{alert_name}' runbook URL '{runbook_url}' failed: {e}")
 
 
 class TestRunbookUrlsAndPrometheusRules:
@@ -44,7 +44,8 @@ class TestRunbookUrlsAndPrometheusRules:
         )
 
     @pytest.mark.polarion("CNV-10084")
-    def test_runbook_downstream_urls(self, cnv_alerts_runbook_urls_from_prometheus_rule):
+    def test_runbook_downstream_urls(self, cnv_alerts_runbook_urls_from_prometheus_rule, subtests):
         validate_downstream_runbook_url(
-            runbook_urls_from_prometheus_rule=cnv_alerts_runbook_urls_from_prometheus_rule.items()
+            runbook_urls_from_prometheus_rule=cnv_alerts_runbook_urls_from_prometheus_rule.items(),
+            subtests=subtests,
         )

@@ -22,7 +22,6 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
-    create_vm_from_dv,
     get_file_url,
     get_importer_pod,
     wait_for_importer_container_message,
@@ -32,6 +31,7 @@ from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_RHEL,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -45,6 +45,7 @@ from utilities.storage import (
     ErrorMsg,
     create_dummy_first_consumer_pod,
     create_dv,
+    create_vm_from_dv,
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import running_vm
@@ -135,6 +136,10 @@ def test_delete_pvc_after_successful_import(
     data_volume_multi_storage_scope_function.wait_for_dv_success()
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Automation bug after wait_for_condition change; tracked in CNV-73197",
+    run=False,
+)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-876")
 @pytest.mark.s390x
@@ -154,9 +159,10 @@ def test_invalid_url(dv_non_exist_url):
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-674")
 @pytest.mark.s390x
-def test_empty_url(namespace, storage_class_name_scope_module):
+def test_empty_url(namespace, storage_class_name_scope_module, unprivileged_client):
     with pytest.raises(UnprocessibleEntityError):
         with create_dv(
+            client=unprivileged_client,
             dv_name=f"cnv-674-{storage_class_name_scope_module}",
             namespace=namespace.name,
             url="",
@@ -255,6 +261,7 @@ def test_successful_import_secure_image(internal_http_configmap, dv_from_http_im
 )
 @pytest.mark.s390x
 def test_successful_import_basic_auth(
+    admin_client,
     namespace,
     storage_class_matrix__module__,
     storage_class_name_scope_module,
@@ -263,12 +270,8 @@ def test_successful_import_basic_auth(
     content_type,
     file_name,
 ):
-    if (
-        content_type == DataVolume.ContentType.ARCHIVE
-        and storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"] == "Block"
-    ):
-        pytest.skip("Skipping test, can't use archives with volumeMode block")
     with create_dv(
+        client=admin_client,
         dv_name="import-http-dv",
         namespace=namespace.name,
         url=get_file_url(url=images_internal_http_server["http_auth"], file_name=file_name),
@@ -429,10 +432,6 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
     "number_of_processes",
     [
         pytest.param(
-            1,
-            marks=(pytest.mark.polarion("CNV-2151")),
-        ),
-        pytest.param(
             4,
             marks=(pytest.mark.polarion("CNV-2001")),
         ),
@@ -476,9 +475,10 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     indirect=True,
 )
 @pytest.mark.sno
-def test_disk_falloc(data_volume_multi_storage_scope_function):
+def test_disk_falloc(data_volume_multi_storage_scope_function, unprivileged_client):
     data_volume_multi_storage_scope_function.wait_for_dv_success()
     with create_vm_from_dv(
+        client=unprivileged_client,
         dv=data_volume_multi_storage_scope_function,
         os_flavor=OS_FLAVOR_ALPINE,
         memory_guest=Images.Alpine.DEFAULT_MEMORY_SIZE,
@@ -526,6 +526,7 @@ def test_vm_from_dv_on_different_node(
     nodes = list(filter(lambda node: importer_node_name != node.name, schedulable_nodes))
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_12MIN)
     with create_vm_from_dv(
+        client=admin_client,
         dv=data_volume_multi_storage_scope_function,
         vm_name="rhel-vm",
         os_flavor=OS_FLAVOR_RHEL,

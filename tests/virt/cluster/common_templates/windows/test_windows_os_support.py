@@ -7,16 +7,14 @@ import logging
 import pytest
 
 from tests.virt.cluster.common_templates.utils import (
-    assert_windows_efi,
     check_machine_type,
-    check_vm_xml_hyperv,
-    check_windows_vm_hvinfo,
     validate_fs_info_virtctl_vs_windows_os,
     validate_os_info_virtctl_vs_windows_os,
     validate_user_info_virtctl_vs_windows_os,
 )
 from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
 from utilities.constants import OS_FLAVOR_WINDOWS
+from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
     assert_vm_xml_efi,
