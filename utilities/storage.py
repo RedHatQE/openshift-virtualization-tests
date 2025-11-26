@@ -687,6 +687,10 @@ def write_file(vm, filename, content, stop_vm=True):
     if stop_vm:
         vm.stop(wait=True)
 
+def run_command_on_rhel_vm_and_check_output(vm, command, expected_result):
+    with console.Console(vm=vm) as vm_console:
+        vm_console.sendline(command)
+        vm_console.expect(expected_result, timeout=20)
 
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
