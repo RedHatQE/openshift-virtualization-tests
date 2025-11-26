@@ -92,6 +92,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             bridge_name (str): Bridge name.
             bridge_type (str): Bridge type (Linux Bridge, OVS)
             stp_config (bool): Spanning Tree enabled/disabled.
+            client (DynamicClient): DynamicClient to use.
             ports (list): The bridge's port(s).
             mtu (int): MTU size
             ipv4_dhcp: determines if ipv4_dhcp should be used
@@ -549,6 +550,7 @@ def network_nad(
         "teardown": teardown,
         "vlan": vlan,
     }
+    # TODO: Client should be mandatory. Remove this check once all tests are updated, and add client to kwargs.
     if client is not None:
         kwargs["client"] = client
     if nad_type == LINUX_BRIDGE:

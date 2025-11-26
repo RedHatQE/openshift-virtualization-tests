@@ -1064,13 +1064,14 @@ def sriov_ifaces(sriov_nodes_states, workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def sriov_node_policy(sriov_unused_ifaces, sriov_nodes_states, workers_utility_pods, sriov_namespace):
+def sriov_node_policy(admin_client, sriov_unused_ifaces, sriov_nodes_states, workers_utility_pods, sriov_namespace):
     yield from create_sriov_node_policy(
         nncp_name="test-sriov-policy",
         namespace=sriov_namespace.name,
         sriov_iface=sriov_unused_ifaces[0],
         sriov_nodes_states=sriov_nodes_states,
         sriov_resource_name="sriov_net",
+        client=admin_client,
     )
 
 
