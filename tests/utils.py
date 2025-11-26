@@ -542,7 +542,7 @@ def create_rhel_vm(
     wait_running: Optional[bool] = True,
     volume_mode: Optional[str] = None,
     cpu_model: Optional[str] = None,
-    annotations: Optional[str] = None,
+    annotations: Optional[dict[str, str]] = None,
 ) -> Generator[VirtualMachineForTests, None, None]:
     dv = DataVolume(
         name=dv_name,
