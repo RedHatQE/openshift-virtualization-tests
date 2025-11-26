@@ -7,6 +7,7 @@ from utilities.storage import write_file
 
 RHEL_DV_SIZE = "40Gi"
 
+
 @contextmanager
 def create_vm_for_snapshot_upgrade_tests(
     vm_name,
