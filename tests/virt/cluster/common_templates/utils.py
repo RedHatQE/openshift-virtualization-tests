@@ -76,15 +76,15 @@ def validate_os_info_virtctl_vs_linux_os(vm):
 
 
 def validate_fs_info_virtctl_vs_linux_os(vm):
-    orig_virtctl_info = orig_linux_info = None
-    linux_info = get_linux_fs_info(ssh_exec=vm.ssh_exec)
+    orig_virtctl_info = None
+    orig_linux_info = get_linux_fs_info(ssh_exec=vm.ssh_exec)
     try:
         for virtctl_info in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_15SEC, func=get_virtctl_fs_info, vm=vm
         ):
             if virtctl_info:
                 orig_virtctl_info = virtctl_info.copy()
-                orig_linux_info = linux_info.copy()
+                linux_info = orig_linux_info.copy()
 
                 # Disk usage may not be bit exact; allowing up to 10% diff
                 disk_usage_diff_validation = 1 - virtctl_info.pop("used") / linux_info.pop("used") <= 0.1
@@ -133,15 +133,15 @@ def validate_os_info_virtctl_vs_windows_os(vm):
 
 
 def validate_fs_info_virtctl_vs_windows_os(vm):
-    orig_virtctl_info = orig_windows_info = None
-    windows_info = get_windows_fs_info(ssh_exec=vm.ssh_exec)
+    orig_virtctl_info = None
+    orig_windows_info = get_windows_fs_info(ssh_exec=vm.ssh_exec)
     try:
         for virtctl_info in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_15SEC, func=get_virtctl_fs_info, vm=vm
         ):
             if virtctl_info:
                 orig_virtctl_info = virtctl_info.copy()
-                orig_windows_info = windows_info.copy()
+                windows_info = orig_windows_info.copy()
 
                 # Disk usage may not be bit exact; allowing up to 10% diff (to allow deviation after conversion to GB)
                 disk_usage_diff_validation = 1 - virtctl_info.pop("used") / windows_info.pop("used") <= 0.1
