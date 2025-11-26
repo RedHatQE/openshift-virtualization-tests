@@ -4,6 +4,7 @@ import os
 import shlex
 from contextlib import contextmanager
 
+import cachetools.func
 import kubernetes
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -23,7 +24,7 @@ from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.artifactory
 import utilities.infra
@@ -36,6 +37,7 @@ from utilities.constants import (
     HPP_POOL,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -93,6 +95,7 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         name=f"first-consumer-{pvc.name}",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
+        client=pvc.client,
     ) as pod:
         LOGGER.info(
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "
@@ -182,6 +185,7 @@ def data_volume(
     check_dv_exists=False,
     admin_client=None,
     bind_immediate=None,
+    client=None,
 ):
     """
     DV creation using create_dv.
@@ -232,7 +236,6 @@ def data_volume(
     # Don't need URL for DVs that are not http
     url = f"{get_test_artifact_server_url()}{image}" if source == "http" else None
 
-    is_golden_image = False
     # For golden images; images are created once per module in
     # golden images namepace and cloned when using common templates.
     # If the DV exists, yield the DV else create a new one in
@@ -242,20 +245,11 @@ def data_volume(
     if check_dv_exists:
         consume_wffc = False
         bind_immediate = True
-        is_golden_image = True
         try:
             golden_image = list(DataVolume.get(dyn_client=admin_client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
-
-    # In hpp, volume must reside on the same worker as the VM
-    # This is not needed for golden image PVC
-    hostpath_node = (
-        schedulable_nodes[0].name
-        if (sc_is_hpp_with_immediate_volume_binding(sc=storage_class) and not is_golden_image)
-        else None
-    )
 
     dv_kwargs = {
         "dv_name": dv_name,
@@ -266,11 +260,11 @@ def data_volume(
         "access_modes": params_dict.get("access_modes"),
         "volume_mode": params_dict.get("volume_mode"),
         "content_type": DataVolume.ContentType.KUBEVIRT,
-        "hostpath_node": hostpath_node,
         "consume_wffc": consume_wffc,
         "bind_immediate": bind_immediate,
         "preallocation": params_dict.get("preallocation", None),
         "url": url,
+        "client": client,
     }
     if params_dict.get("cert_configmap"):
         dv_kwargs["cert_configmap"] = params_dict.get("cert_configmap")
@@ -280,12 +274,7 @@ def data_volume(
             if source == "upload":
                 dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
             else:
-                if (
-                    not consume_wffc
-                    and sc_volume_binding_mode_is_wffc(sc=storage_class)
-                    and check_cdi_feature_gate_enabled(feature="HonorWaitForFirstConsumer")
-                    and not bind_immediate
-                ):
+                if not consume_wffc and sc_volume_binding_mode_is_wffc(sc=storage_class) and not bind_immediate:
                     # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
                     # and bind_immediate is False (i.e bind_immediate annotation will be added, import will not wait
                     # first consumer)
@@ -297,6 +286,7 @@ def data_volume(
         yield dv
 
 
+@retry(wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_1SEC)
 def get_downloaded_artifact(remote_name, local_name):
     """
     Download image or artifact to local tmpdir path
@@ -318,6 +308,8 @@ def get_downloaded_artifact(remote_name, local_name):
                 file_downloaded.write(chunk)
     try:
         assert os.path.isfile(local_name)
+        return True
+
     except FileNotFoundError as err:
         LOGGER.error(err)
         raise
@@ -340,10 +332,6 @@ def sc_is_hpp_with_immediate_volume_binding(sc):
 
 def sc_volume_binding_mode_is_wffc(sc):
     return StorageClass(name=sc).instance["volumeBindingMode"] == StorageClass.VolumeBindingMode.WaitForFirstConsumer
-
-
-def check_cdi_feature_gate_enabled(feature):
-    return feature in CDIConfig(name="config").instance.to_dict().get("spec", {}).get("featureGates", [])
 
 
 @contextmanager
@@ -525,8 +513,8 @@ def get_containers_for_pods_with_pvc(volume_mode, pvc_name):
 
 
 class PodWithPVC(Pod):
-    def __init__(self, name, namespace, pvc_name, containers, teardown=True):
-        super().__init__(name=name, namespace=namespace, containers=containers, teardown=teardown)
+    def __init__(self, name, namespace, pvc_name, containers, teardown=True, client=None):
+        super().__init__(name=name, namespace=namespace, containers=containers, teardown=teardown, client=client)
         self._pvc_name = pvc_name
 
     def to_dict(self):
@@ -966,6 +954,7 @@ def create_vm_from_dv(
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
     wait_for_interfaces=False,
+    client=None,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,
@@ -976,6 +965,7 @@ def create_vm_from_dv(
         cpu_model=cpu_model,
         memory_guest=memory_guest,
         os_flavor=os_flavor,
+        client=client,
     ) as vm:
         if start:
             virt_util.running_vm(
@@ -1135,7 +1125,11 @@ def vm_snapshot(vm, name):
         yield snapshot
 
 
+@cachetools.func.ttl_cache(ttl=TIMEOUT_60MIN)
+@retry(wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_10SEC)
 def validate_file_exists_in_url(url):
-    response = requests.head(url, headers=utilities.artifactory.get_artifactory_header(), verify=False)
+    response = requests.head(url, headers=utilities.artifactory.get_artifactory_header(), verify=False, timeout=10)
     if response.status_code != 200:
         raise UrlNotFoundError(url_request=response)
+
+    return True

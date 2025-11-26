@@ -13,7 +13,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.5
+    rev: v0.14.6
     hooks:
       - id: ruff
         stages: [pre-commit]
@@ -60,7 +60,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: "v8.29.0"
+    rev: "v8.29.1"
     hooks:
       - id: gitleaks
 
@@ -80,4 +80,5 @@ repos:
             "types-setuptools",
             "types-pexpect",
             "types-netaddr",
+            "types-cachetools"
           ]

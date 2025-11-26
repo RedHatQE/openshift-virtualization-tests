@@ -57,6 +57,6 @@ class TestDeschedulerLoadAwareRebalancing:
     @pytest.mark.polarion("CNV-12346")
     def test_psi_values_within_threshold(
         self,
-        prometheus,
+        workers_psi_metric_values,
     ):
-        assert_psi_values_within_threshold(prometheus=prometheus)
+        assert_psi_values_within_threshold(psi_values_dict=workers_psi_metric_values)

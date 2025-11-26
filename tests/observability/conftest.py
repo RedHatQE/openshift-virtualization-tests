@@ -14,7 +14,12 @@ from utilities.constants import (
     VIRT_OPERATOR,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
-from utilities.infra import get_deployment_by_name, get_node_selector_dict, scale_deployment_replicas
+from utilities.infra import (
+    create_ns,
+    get_deployment_by_name,
+    get_node_selector_dict,
+    scale_deployment_replicas,
+)
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, get_all_virt_pods_with_running_status, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -115,13 +120,19 @@ def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_re
 
 
 @pytest.fixture(scope="session")
-def vm_with_node_selector_for_upgrade(upgrade_namespace_scope_session, worker_node1):
+def vm_with_node_selector_namespace(admin_client):
+    yield from create_ns(admin_client=admin_client, name="test-outdated-vm-ns")
+
+
+@pytest.fixture(scope="session")
+def vm_with_node_selector_for_upgrade(vm_with_node_selector_namespace, unprivileged_client, worker_node1):
     name = "vm-with-node-selector"
     with VirtualMachineForTests(
         name=name,
-        namespace=upgrade_namespace_scope_session.name,
+        namespace=vm_with_node_selector_namespace.name,
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm

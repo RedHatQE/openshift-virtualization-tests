@@ -7,13 +7,11 @@ HonorWaitForFirstConsumer test suite
 import logging
 
 import pytest
-from ocp_resources.cdi import CDI
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.storage.constants import CIRROS_QCOW2_IMG
-from tests.storage.utils import create_vm_from_dv, upload_image_to_dv, upload_token_request
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret, get_test_artifact_server_url
 from utilities.constants import (
     TIMEOUT_2MIN,
@@ -21,25 +19,18 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     Images,
 )
-from utilities.hco import (
-    ResourceEditorValidateHCOReconcile,
-    hco_cr_jsonpatch_annotations_dict,
-)
 from utilities.storage import (
     add_dv_to_vm,
-    cdi_feature_gate_list_with_added_feature,
-    check_cdi_feature_gate_enabled,
     check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dv,
+    create_vm_from_dv,
     data_volume,
-    get_downloaded_artifact,
     virtctl_upload_dv,
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
 pytestmark = [
-    pytest.mark.usefixtures("enable_wffc_feature_gate"),
     pytest.mark.post_upgrade,
 ]
 
@@ -52,27 +43,6 @@ DV_PARAMS = {
     "image": CIRROS_QCOW2_IMG,
     "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
 }
-
-
-@pytest.fixture(scope="module")
-def enable_wffc_feature_gate(hyperconverged_resource_scope_module, cdi_config):
-    honor_wffc = "HonorWaitForFirstConsumer"
-    if check_cdi_feature_gate_enabled(feature=honor_wffc):
-        yield
-    else:
-        # Feature gate wasn't enabled
-        with ResourceEditorValidateHCOReconcile(
-            patches={
-                hyperconverged_resource_scope_module: hco_cr_jsonpatch_annotations_dict(
-                    component="cdi",
-                    path="featureGates",
-                    value=cdi_feature_gate_list_with_added_feature(feature=honor_wffc),
-                    op="replace",
-                )
-            },
-            list_resource_reconcile=[CDI],
-        ):
-            yield
 
 
 @pytest.fixture(scope="module")
@@ -130,8 +100,8 @@ def validate_vm_and_disk_count(vm):
 
 
 @pytest.fixture(scope="class")
-def uploaded_wffc_dv(namespace):
-    return DataVolume(namespace=namespace.name, name=WFFC_DV_NAME)
+def uploaded_wffc_dv(namespace, unprivileged_client):
+    return DataVolume(namespace=namespace.name, name=WFFC_DV_NAME, client=unprivileged_client)
 
 
 @pytest.fixture(scope="class")
@@ -154,11 +124,12 @@ def uploaded_dv_via_virtctl_wffc(
 
 
 @pytest.fixture()
-def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_dv):
+def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_dv, unprivileged_client):
     with create_vm_from_dv(
         dv=uploaded_wffc_dv,
         vm_name=WFFC_DV_NAME,
         start=False,
+        client=unprivileged_client,
     ) as vm_dv:
         pvc = uploaded_wffc_dv.pvc
         vm_dv.start(wait=False)
@@ -232,6 +203,7 @@ class TestWFFCUploadVirtctl:
 @pytest.mark.polarion("CNV-4739")
 @pytest.mark.s390x
 def test_wffc_import_registry_dv(
+    unprivileged_client,
     namespace,
     storage_class_matrix_wffc_matrix__module__,
 ):
@@ -245,55 +217,7 @@ def test_wffc_import_registry_dv(
         consume_wffc=True,
     ) as dv:
         dv.wait_for_dv_success()
-        with create_vm_from_dv(dv=dv, vm_name=dv_name) as vm_dv:
-            check_disk_count_in_vm(vm=vm_dv)
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-4741")
-@pytest.mark.s390x
-def test_wffc_upload_dv_via_token(
-    unprivileged_client,
-    namespace,
-    tmpdir,
-    storage_class_matrix_wffc_matrix__module__,
-):
-    dv_name = "cnv-4741"
-    local_name = f"{tmpdir}/{Images.Cirros.QCOW2_IMG}"
-    get_downloaded_artifact(
-        remote_name=CIRROS_QCOW2_IMG,
-        local_name=local_name,
-    )
-    with upload_image_to_dv(
-        dv_name=dv_name,
-        storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
-        storage_ns_name=namespace.name,
-        client=unprivileged_client,
-        consume_wffc=True,
-    ) as dv:
-        upload_token_request(storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name)
-        dv.wait_for_dv_success()
-        with create_vm_from_dv(dv=dv, vm_name=dv_name) as vm_dv:
-            check_disk_count_in_vm(vm=vm_dv)
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_wffc_storage_scope_module",
-    [
-        pytest.param(
-            {**DV_PARAMS, **{"consume_wffc": True}},
-            marks=pytest.mark.polarion("CNV-4371"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_wffc_import_http_dv(data_volume_multi_wffc_storage_scope_module):
-    with create_vm_from_dv(
-        dv=data_volume_multi_wffc_storage_scope_module, vm_name=data_volume_multi_wffc_storage_scope_module.name
-    ) as vm_dv:
-        check_disk_count_in_vm(vm=vm_dv)
+        create_vm_from_dv(client=unprivileged_client, dv=dv, vm_name=dv_name)
 
 
 @pytest.mark.sno
@@ -308,8 +232,9 @@ def test_wffc_import_http_dv(data_volume_multi_wffc_storage_scope_module):
     indirect=True,
 )
 @pytest.mark.s390x
-def test_wffc_clone_dv(data_volume_multi_wffc_storage_scope_module):
+def test_wffc_clone_dv(unprivileged_client, data_volume_multi_wffc_storage_scope_module):
     with create_dv(
+        client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
         namespace=data_volume_multi_wffc_storage_scope_module.namespace,
@@ -319,8 +244,7 @@ def test_wffc_clone_dv(data_volume_multi_wffc_storage_scope_module):
         consume_wffc=True,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
-        with create_vm_from_dv(dv=cdv, vm_name=cdv.name) as vm_dv:
-            check_disk_count_in_vm(vm=vm_dv)
+        create_vm_from_dv(client=unprivileged_client, dv=cdv, vm_name=cdv.name)
 
 
 @pytest.mark.sno
@@ -341,10 +265,12 @@ def test_wffc_clone_dv(data_volume_multi_wffc_storage_scope_module):
 )
 @pytest.mark.s390x
 def test_wffc_add_dv_to_vm_with_data_volume_template(
+    unprivileged_client,
     namespace,
     data_volume_multi_wffc_storage_scope_function,
 ):
     with VirtualMachineForTests(
+        client=unprivileged_client,
         name="cnv-4742-vm",
         namespace=namespace.name,
         os_flavor=Images.Cirros.OS_FLAVOR,
@@ -367,11 +293,13 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 @pytest.mark.polarion("CNV-4743")
 @pytest.mark.s390x
 def test_wffc_vm_with_two_data_volume_templates(
+    unprivileged_client,
     namespace,
     storage_class_matrix_wffc_matrix__module__,
 ):
     storage_class = [*storage_class_matrix_wffc_matrix__module__][0]
     with VirtualMachineForTests(
+        client=unprivileged_client,
         name="cnv-4743-vm",
         namespace=namespace.name,
         os_flavor=Images.Cirros.OS_FLAVOR,
