@@ -19,6 +19,12 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -37,6 +43,7 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
+    U1_SMALL,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -47,6 +54,7 @@ from utilities.infra import (
     get_artifactory_secret,
     get_http_image_url,
 )
+from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -534,38 +542,26 @@ def create_rhel_vm(
     storage_class: str,
     namespace: str,
     client: DynamicClient,
-    dv_name: str,
-    dv_size: str,
     vm_name: str,
-    rhel10_data_source_scope_module,
+    data_source,
     node: Optional[str] = None,
     wait_running: Optional[bool] = True,
-    volume_mode: Optional[str] = None,
     cpu_model: Optional[str] = None,
     annotations: Optional[dict[str, str]] = None,
+    instance_type_name: Optional[str] = U1_SMALL,
+    preference_name: Optional[str] = "rhel.10",
 ) -> Generator[VirtualMachineForTests, None, None]:
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        source_ref={
-            "kind": rhel10_data_source_scope_module.kind,
-            "name": rhel10_data_source_scope_module.name,
-            "namespace": rhel10_data_source_scope_module.namespace,
-        },
-        storage_class=storage_class,
-        size=dv_size,
-        api_name="storage",
-        volume_mode=volume_mode,
-    )
-    dv.to_dict()
-    dv_metadata = dv.res["metadata"]
     with VirtualMachineForTests(
-        client=client,
         name=vm_name,
-        namespace=dv_metadata["namespace"],
+        namespace=namespace,
+        client=client,
         os_flavor=OS_FLAVOR_RHEL,
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
-        data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
+        vm_instance_type=VirtualMachineClusterInstancetype(name=instance_type_name),
+        vm_preference=VirtualMachineClusterPreference(name=preference_name),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=data_source,
+            storage_class=storage_class,
+        ),
         node_selector=node,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_model,

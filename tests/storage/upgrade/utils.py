@@ -5,8 +5,6 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from tests.utils import create_rhel_vm
 from utilities.storage import write_file
 
-RHEL_DV_SIZE = "40Gi"
-
 
 @contextmanager
 def create_vm_for_snapshot_upgrade_tests(
@@ -21,11 +19,9 @@ def create_vm_for_snapshot_upgrade_tests(
         storage_class=storage_class_for_snapshot,
         namespace=namespace,
         client=client,
-        dv_name=f"dv-{vm_name}",
-        dv_size=RHEL_DV_SIZE,
         vm_name=f"vm-{vm_name}",
+        data_source=rhel10_data_source_scope_module,
         cpu_model=cpu_model,
-        rhel10_data_source_scope_module=rhel10_data_source_scope_module,
     ) as vm:
         write_file(
             vm=vm,
