@@ -19,6 +19,8 @@ from utilities.virt import (
     wait_for_ssh_connectivity,
 )
 
+from tests.storage.conftest import rhel10_data_source_scope_module
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -67,13 +69,13 @@ def skip_if_not_override_cdiconfig_scratch_space(override_cdiconfig_scratch_spec
         pytest.skip("Skip test because the scratch space was not changed.")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def rhel_vm_for_upgrade_a(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
     modern_cpu_for_migration,
-    rhel10_data_source_scope_session,
+    rhel10_data_source_scope_module,
 ):
     with create_vm_for_snapshot_upgrade_tests(
         vm_name="snapshot-upgrade-a",
@@ -81,12 +83,12 @@ def rhel_vm_for_upgrade_a(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=modern_cpu_for_migration,
-        rhel10_data_source_scope_module=rhel10_data_source_scope_session,
+        rhel10_data_source_scope_module=rhel10_data_source_scope_module,
     ) as vm:
         yield vm
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def snapshots_for_upgrade_a(
     admin_client,
     rhel_vm_for_upgrade_a,
@@ -95,13 +97,13 @@ def snapshots_for_upgrade_a(
         yield snapshot
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def rhel_vm_for_upgrade_b(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
     modern_cpu_for_migration,
-    rhel10_data_source_scope_session,
+    rhel10_data_source_scope_module,
 ):
     with create_vm_for_snapshot_upgrade_tests(
         vm_name="snapshot-upgrade-b",
@@ -109,12 +111,12 @@ def rhel_vm_for_upgrade_b(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=modern_cpu_for_migration,
-        rhel10_data_source_scope_module=rhel10_data_source_scope_session,
+        rhel10_data_source_scope_module=rhel10_data_source_scope_module,
     ) as vm:
         yield vm
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def snapshots_for_upgrade_b(
     admin_client,
     rhel_vm_for_upgrade_b,
