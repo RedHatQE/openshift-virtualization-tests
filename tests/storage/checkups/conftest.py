@@ -4,6 +4,7 @@ from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
+from ocp_resources.exceptions import ConditionError
 from ocp_resources.job import Job
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.role import Role
@@ -146,13 +147,15 @@ def checkup_job(
         containers=containers,
         client=admin_client,
     ) as job:
+        stop_condition = job.Status.FAILED if request.param["expected_condition"] == job.Status.COMPLETE else None
         try:
             job.wait_for_condition(
                 condition=request.param["expected_condition"],
                 status=job.Condition.Status.TRUE,
                 timeout=TIMEOUT_10MIN,
+                stop_condition=stop_condition,
             )
-        except TimeoutExpiredError:
+        except (TimeoutExpiredError, ConditionError) as e:
             job_pods = get_pods(
                 dyn_client=admin_client,
                 namespace=checkups_namespace,
@@ -163,6 +166,7 @@ def checkup_job(
 
             job_pod = job_pods[0]
             raise StorageCheckupConditionTimeoutExpiredError(
+                f"Error while waiting for the job condition: {e}\n"
                 f"{job.name} job failed. Log of {job_pod.name} pod:\n{job_pod.log()}"
             )
 
