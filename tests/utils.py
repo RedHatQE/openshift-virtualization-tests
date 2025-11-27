@@ -15,6 +15,7 @@ import xmltodict
 from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
@@ -538,18 +539,16 @@ def register_vm_to_rhsm(vm):
 
 
 @contextmanager
-def create_rhel_vm(
+def create_rhel_vm_from_data_source(
     storage_class: str,
     namespace: str,
     client: DynamicClient,
     vm_name: str,
-    data_source,
-    node: Optional[str] = None,
-    wait_running: Optional[bool] = True,
+    data_source: DataSource,
     cpu_model: Optional[str] = None,
-    annotations: Optional[dict[str, str]] = None,
     instance_type_name: Optional[str] = U1_SMALL,
     preference_name: Optional[str] = "rhel.10",
+    run_strategy: Optional[VirtualMachine.RunStrategy] = VirtualMachine.RunStrategy.ALWAYS,
 ) -> Generator[VirtualMachineForTests, None, None]:
     with VirtualMachineForTests(
         name=vm_name,
@@ -562,13 +561,10 @@ def create_rhel_vm(
             data_source=data_source,
             storage_class=storage_class,
         ),
-        node_selector=node,
-        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        run_strategy=run_strategy,
         cpu_model=cpu_model,
-        annotations=annotations,
     ) as vm:
-        if wait_running:
-            running_vm(vm=vm)
+        running_vm(vm=vm)
         yield vm
 
 
