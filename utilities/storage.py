@@ -689,9 +689,11 @@ def write_file(vm, filename, content, stop_vm=True):
 
 
 def run_command_on_rhel_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
+
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
+    assert expected_result in output.strip(), (
+        f"Expected '{expected_result}' not found in command output: '{output.strip()}'"
+    )
 
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """

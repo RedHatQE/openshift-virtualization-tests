@@ -3,6 +3,11 @@ import logging
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
+from tests.storage.upgrade.constants import (
+    UPGRADE_STORAGE_TEST_FILE_CONTENT,
+    UPGRADE_STORAGE_TEST_FILE_NAME_A,
+    UPGRADE_STORAGE_TEST_FILE_NAME_B,
+)
 from tests.upgrade_params import (
     CDI_SCRATCH_PRESERVE_NODE_ID,
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
@@ -12,12 +17,13 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION, LS_COMMAND
+from utilities.constants import DEPENDENCY_SCOPE_SESSION
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
     run_command_on_rhel_vm_and_check_output,
     wait_for_vm_volume_ready,
+    write_file,
 )
 from utilities.virt import migrate_vm_and_verify
 
@@ -72,10 +78,16 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_a.start(wait=True)
+            write_file(
+                vm=rhel_vm_for_upgrade_a,
+                filename=UPGRADE_STORAGE_TEST_FILE_NAME_A,
+                content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
+                stop_vm=False,
+            )
             run_command_on_rhel_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_a,
-                command=LS_COMMAND,
-                expected_result="1",
+                command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_A}",
+                expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
             )
 
     @pytest.mark.sno
@@ -147,10 +159,16 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
+        write_file(
+            vm=rhel_vm_for_upgrade_a,
+            filename=UPGRADE_STORAGE_TEST_FILE_NAME_A,
+            content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
+            stop_vm=False,
+        )
         run_command_on_rhel_vm_and_check_output(
             vm=rhel_vm_for_upgrade_a,
-            command=LS_COMMAND,
-            expected_result="1",
+            command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_A}",
+            expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
         )
 
     @pytest.mark.sno
@@ -173,10 +191,16 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_b.start(wait=True)
+            write_file(
+                vm=rhel_vm_for_upgrade_b,
+                filename=UPGRADE_STORAGE_TEST_FILE_NAME_B,
+                content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
+                stop_vm=False,
+            )
             run_command_on_rhel_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_b,
-                command=LS_COMMAND,
-                expected_result="1",
+                command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_B}",
+                expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
             )
 
     @pytest.mark.polarion("CNV-5310")

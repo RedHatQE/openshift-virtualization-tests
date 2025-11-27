@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
-from tests.utils import create_rhel_vm
+from tests.utils import create_rhel_vm_from_data_source
 from utilities.storage import write_file
 
 
@@ -15,7 +15,7 @@ def create_vm_for_snapshot_upgrade_tests(
     cpu_model,
     rhel10_data_source_scope_module,
 ):
-    with create_rhel_vm(
+    with create_rhel_vm_from_data_source(
         storage_class=storage_class_for_snapshot,
         namespace=namespace,
         client=client,
