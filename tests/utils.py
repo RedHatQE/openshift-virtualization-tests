@@ -158,14 +158,6 @@ def get_image_from_csv(image_string, csv_related_images):
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 
 
-def get_image_name_from_csv(image_string, csv_related_images):
-    for image in csv_related_images:
-        if image_string in image["name"]:
-            return image["name"]
-
-    raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
-
-
 def hotplug_spec_vm_and_verify_hotplug(vm, client, sockets=None, memory_guest=None):
     assert sockets or memory_guest, "No resource for update provided!!!"
     hotplug_spec_vm(vm=vm, sockets=sockets, memory_guest=memory_guest)
