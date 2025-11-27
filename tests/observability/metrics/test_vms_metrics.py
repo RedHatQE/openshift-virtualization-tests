@@ -430,9 +430,7 @@ class TestVmDiskAllocatedSizeLinux:
 @pytest.mark.tier3
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
-    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(
-        self, prometheus, unprivileged_client, windows_vm_for_test
-    ):
+    def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),

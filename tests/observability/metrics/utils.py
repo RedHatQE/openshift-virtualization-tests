@@ -673,14 +673,19 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str
+    dv_name: str,
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    storage_class: str,
 ) -> Generator:
     """
     Create a Windows 11 WSL2 VM with a DataVolume template
+
     Args:
         dv_name (str): The name of the DataVolume
         namespace (str): The namespace of the VM
-        client (DynamicClient): client to use to create the VM.
+        client (DynamicClient): Client to use to create the VM.
         vm_name (str): The name of the VM
         storage_class (str): The storage class to use for the DataVolume
     """
