@@ -529,26 +529,20 @@ def get_or_create_golden_image_data_source(
 
 
 def get_data_volume_template_dict_with_default_storage_class(
-    data_source: DataSource, params: dict[str, Any] | None = None
+    data_source: DataSource, storage_class: str | None = None
 ) -> dict[str, dict]:
     """
     Generates a dataVolumeTemplate dict with the py_config based storage class.
 
     Args:
         data_source (DataSource): The data source object used to create the data volume template.
-        params (dict[str, Any], optional): dict of request.param passed to pytest fixture.
+        storage_class (str, optional): Storage class name.
 
     Returns:
         dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
     """
     data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-    if params and (storage_class_params := params.get("storage_class")):
-        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class_params["name"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [storage_class_params["access_mode"]]
-        data_volume_template["spec"]["storage"]["volumeMode"] = storage_class_params["volume_mode"]
-    else:
-        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
-
+    data_volume_template["spec"]["storage"]["storageClassName"] = storage_class or py_config["default_storage_class"]
     return data_volume_template
 
 
