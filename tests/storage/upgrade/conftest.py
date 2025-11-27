@@ -72,7 +72,7 @@ def rhel_vm_for_upgrade_a(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
-    cluster_common_node_cpu,
+    modern_cpu_for_migration,
     rhel10_data_source_scope_session,
 ):
     with create_vm_for_snapshot_upgrade_tests(
@@ -80,7 +80,7 @@ def rhel_vm_for_upgrade_a(
         namespace=upgrade_namespace_scope_session.name,
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
-        cpu_model=cluster_common_node_cpu,
+        cpu_model=modern_cpu_for_migration,
         rhel10_data_source_scope_module=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
@@ -100,7 +100,7 @@ def rhel_vm_for_upgrade_b(
     upgrade_namespace_scope_session,
     admin_client,
     storage_class_for_snapshot,
-    cluster_common_node_cpu,
+    modern_cpu_for_migration,
     rhel10_data_source_scope_session,
 ):
     with create_vm_for_snapshot_upgrade_tests(
@@ -108,7 +108,7 @@ def rhel_vm_for_upgrade_b(
         namespace=upgrade_namespace_scope_session.name,
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
-        cpu_model=cluster_common_node_cpu,
+        cpu_model=modern_cpu_for_migration,
         rhel10_data_source_scope_module=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
