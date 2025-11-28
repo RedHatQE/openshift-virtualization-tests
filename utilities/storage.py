@@ -687,8 +687,18 @@ def write_file(vm, filename, content, stop_vm=True):
     if stop_vm:
         vm.stop(wait=True)
 
+def write_file_via_ssh(vm, filename, content):
 
-def run_command_on_rhel_vm_and_check_output(vm, command, expected_result):
+    # Import here to avoid circular imports errors
+    from utilities.virt import wait_for_ssh_connectivity
+    
+    wait_for_ssh_connectivity(vm=vm)
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[shlex.split(f"echo '{content}' > {filename}")],
+    )
+    
+def run_command_on_vm_and_check_output(vm, command, expected_result):
 
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
     assert expected_result in output.strip(), (
