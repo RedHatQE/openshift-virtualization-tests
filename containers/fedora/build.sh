@@ -15,7 +15,7 @@ trap cleanup EXIT
 [ -z "${FEDORA_VERSION}" ] && echo "Set the env variable FEDORA_VERSION" && exit 1
 [ -z "${CPU_ARCH}" ] && echo "Set the env variable CPU_ARCH" && exit 1
 
-BUILD_DIR="fedora_build"
+BUILD_DIR="fedora_build_${CPU_ARCH}"
 CLOUD_INIT_ISO="cidata.iso"
 NAME="fedora${FEDORA_VERSION}"
 FEDORA_CONTAINER_IMAGE="localhost/fedora:${FEDORA_VERSION}-${CPU_ARCH}"
@@ -96,6 +96,9 @@ if [ $CPU_ARCH = "arm64" ]; then
 else
     virsh undefine "${NAME}"
 fi
+
+# Ensures the 'fedora' pool is destroyed to prevent hanging on subsequent executions
+virsh pool-destroy fedora
 
 rm -f "${CLOUD_INIT_ISO}"
 
