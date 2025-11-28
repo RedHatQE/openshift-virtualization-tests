@@ -1,12 +1,9 @@
-import shlex
 from contextlib import contextmanager
 
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.utils import create_rhel_vm_from_data_source
 from utilities.storage import write_file
-from utilities.virt import wait_for_ssh_connectivity
 
 
 @contextmanager
