@@ -21,9 +21,9 @@ from utilities.constants import DEPENDENCY_SCOPE_SESSION
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
-    run_command_on_rhel_vm_and_check_output,
+    run_command_on_vm_and_check_output,
+    write_file_via_ssh,
     wait_for_vm_volume_ready,
-    write_file,
 )
 from utilities.virt import migrate_vm_and_verify
 
@@ -78,13 +78,12 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_a.start(wait=True)
-            write_file(
+            write_file_via_ssh(
                 vm=rhel_vm_for_upgrade_a,
                 filename=UPGRADE_STORAGE_TEST_FILE_NAME_A,
                 content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
-                stop_vm=False,
             )
-            run_command_on_rhel_vm_and_check_output(
+            run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_a,
                 command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_A}",
                 expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
@@ -159,13 +158,12 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
-        write_file(
+        write_file_via_ssh(
             vm=rhel_vm_for_upgrade_a,
             filename=UPGRADE_STORAGE_TEST_FILE_NAME_A,
             content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
-            stop_vm=False,
         )
-        run_command_on_rhel_vm_and_check_output(
+        run_command_on_vm_and_check_output(
             vm=rhel_vm_for_upgrade_a,
             command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_A}",
             expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
@@ -191,13 +189,12 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_b.start(wait=True)
-            write_file(
+            write_file_via_ssh(
                 vm=rhel_vm_for_upgrade_b,
                 filename=UPGRADE_STORAGE_TEST_FILE_NAME_B,
                 content=UPGRADE_STORAGE_TEST_FILE_CONTENT,
-                stop_vm=False,
             )
-            run_command_on_rhel_vm_and_check_output(
+            run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_b,
                 command=f"cat {UPGRADE_STORAGE_TEST_FILE_NAME_B}",
                 expected_result=UPGRADE_STORAGE_TEST_FILE_CONTENT,
