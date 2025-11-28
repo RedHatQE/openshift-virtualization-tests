@@ -22,8 +22,8 @@ from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
     run_command_on_vm_and_check_output,
-    write_file_via_ssh,
     wait_for_vm_volume_ready,
+    write_file_via_ssh,
 )
 from utilities.virt import migrate_vm_and_verify
 

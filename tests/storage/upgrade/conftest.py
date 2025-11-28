@@ -19,8 +19,6 @@ from utilities.virt import (
     wait_for_ssh_connectivity,
 )
 
-from tests.storage.conftest import rhel10_data_source_scope_module
-
 LOGGER = logging.getLogger(__name__)
 
 
