@@ -28,6 +28,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 import utilities.virt
+from tests.network.libs.sriovnetworknode import wait_for_ready_sriov_nodes
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -1038,31 +1039,13 @@ def get_cluster_cni_type(admin_client):
     return Network(client=admin_client, name="cluster").instance.status.networkType
 
 
-def wait_for_ready_sriov_nodes(snns):
-    for status in (INPROGRESS, SriovNetworkNodePolicy.Status.SUCCEEDED):
-        for sriov_node_network_state in snns:
-            LOGGER.info(f"Checking state: {sriov_node_network_state.name}")
-            try:
-                sriov_node_network_state.wait_for_status_sync(wanted_status=status)
-            except TimeoutExpiredError:
-                if (
-                    status == INPROGRESS
-                    and sriov_node_network_state.instance.status.syncStatus == SriovNetworkNodePolicy.Status.SUCCEEDED
-                ):
-                    continue
-                else:
-                    LOGGER.error(
-                        f"Current status: {sriov_node_network_state.instance.status.syncStatus} expected: {status}"
-                    )
-                    raise
-
-
 def create_sriov_node_policy(
     nncp_name,
     namespace,
     sriov_iface,
     sriov_nodes_states,
     sriov_resource_name,
+    admin_client,
     mtu=MTU_9000,
 ):
     with network_device(
@@ -1075,9 +1058,11 @@ def create_sriov_node_policy(
         # so the mtu parameter only affects the PF. we need to change the mtu manually on the VM.
         mtu=mtu,
     ) as policy:
-        wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
+        wait_for_ready_sriov_nodes(snns_list=sriov_nodes_states, admin_client=admin_client, policy=policy)
+        nic_selector = dict(policy.instance.spec.nicSelector)
         yield policy
-    wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
+
+    wait_for_ready_sriov_nodes(snns_list=sriov_nodes_states, admin_client=admin_client, nic_selector=nic_selector)
 
 
 def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefinition, node: Node) -> None:
