@@ -634,7 +634,7 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
+def run_command_on_vm_and_check_output(vm, command, expected_result):
     with console.Console(vm=vm) as vm_console:
         vm_console.sendline(command)
         vm_console.expect(expected_result, timeout=20)
