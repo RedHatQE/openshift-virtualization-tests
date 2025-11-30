@@ -34,6 +34,9 @@ def vm_with_fio(
 
 @pytest.fixture()
 def running_fio_in_vm(vm_with_fio):
+    LOGGER.info("Installing fio and iotop tools")
+    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=shlex.split("sudo dnf install -y iotop fio"))
+
     # Random write/read -  create a 1G file, and perform 4KB reads and writes using a 75%/25%
     LOGGER.info("Running fio in VM")
     fio_cmd = shlex.split(
