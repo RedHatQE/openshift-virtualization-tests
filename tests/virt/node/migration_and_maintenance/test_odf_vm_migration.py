@@ -1,5 +1,4 @@
 import pytest
-from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from utilities.constants import StorageClassNames
@@ -31,13 +30,7 @@ def vm_with_common_cpu_model_scope_function(
     [
         pytest.param(
             {"os_dict": FEDORA_LATEST},
-            {
-                "storage_class": {
-                    "name": StorageClassNames.CEPHFS,
-                    "volume_mode": DataVolume.VolumeMode.FILE,
-                    "access_mode": DataVolume.AccessMode.RWX,
-                },
-            },
+            {"storage_class": StorageClassNames.CEPHFS},
             {"vm_name": "cephfs-vm", "template_labels": FEDORA_LATEST_LABELS},
             marks=pytest.mark.polarion("CNV-11303"),
         )
