@@ -218,7 +218,9 @@ def client_server_active_connection(
 
 @contextlib.contextmanager
 def create_nncp_localnet_on_secondary_node_nic(
-    node_nic_name: str, mtu: int | None = None
+    node_nic_name: str,
+    client: DynamicClient,
+    mtu: int | None = None,
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy, None, None]:
     """Create NNCP to configure an OVS bridge on a secondary NIC across all worker nodes.
 
@@ -228,6 +230,7 @@ def create_nncp_localnet_on_secondary_node_nic(
 
     Args:
         node_nic_name: Name of the available NIC on all nodes.
+        client: Dynamic client used to create and manage the NNCP resource.
         mtu: Optional MTU to configure on the physical NIC.
 
     Yields:
@@ -276,6 +279,7 @@ def create_nncp_localnet_on_secondary_node_nic(
         ]),
     )
     with libnncp.NodeNetworkConfigurationPolicy(
+        client=client,
         name=bridge_name,
         desired_state=desired_state,
         node_selector={WORKER_NODE_LABEL_KEY: ""},
