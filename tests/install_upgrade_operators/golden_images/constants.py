@@ -1,5 +1,5 @@
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
-from utilities.constants import OUTDATED, WILDCARD_CRON_EXPRESSION
+from utilities.constants import AMD_64, ARM_64, OUTDATED, S390X, WILDCARD_CRON_EXPRESSION
 
 HCO_CR_DATA_IMPORT_SCHEDULE_KEY = "dataImportSchedule"
 RE_NAMED_GROUP_MINUTES = "minutes"
@@ -40,3 +40,6 @@ CUSTOM_CRON_TEMPLATE = {
         },
     },
 }
+
+ARCH_LABEL = "kubernetes.io/arch"
+EXPECTED_DEFAULT_ARCHITECTURES = {AMD_64, ARM_64, S390X}
