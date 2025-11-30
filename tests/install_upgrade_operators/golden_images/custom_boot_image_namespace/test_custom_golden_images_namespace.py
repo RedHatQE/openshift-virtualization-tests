@@ -11,8 +11,9 @@ from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.install_upgrade_operators.golden_images.constants import COMMON_TEMPLATE
-from tests.install_upgrade_operators.golden_images.utils import get_templates_by_type_from_hco_status
+from tests.install_upgrade_operators.golden_images.utils import (
+    verify_resource_in_ns,
+)
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -32,40 +33,10 @@ COMMON_BOOT_IMAGE_NAMESPACE_STR = "commonBootImageNamespace"
 pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 
-def get_templates_resources_names_dict(templates):
-    resource_dict = {}
-    for template in templates:
-        image_stream_name = template["spec"]["template"]["spec"]["source"]["registry"].get("imageStream")
-        if image_stream_name:
-            resource_dict.setdefault(ImageStream.kind, set()).add(image_stream_name)
-        resource_dict.setdefault(DataImportCron.kind, set()).add(template["metadata"]["name"])
-        resource_dict.setdefault(DataSource.kind, set()).add(template["spec"]["managedDataSource"])
-    return resource_dict
-
-
 def verify_resource_not_in_ns(resource_type, namespace, client):
     resources = resource_type.get(client=client, namespace=namespace)
     resources_names = {resource.name for resource in resources}
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
-
-
-def verify_resource_in_ns(expected_resource_names, namespace, client, resource_type, ready_condition=None):
-    """
-    Verify that resources exist in expected_namespace and in ready status.
-    """
-    resources = resource_type.get(client=client, namespace=namespace)
-    resources_names = {resource.name for resource in resources}
-    missing_resources_names = expected_resource_names - resources_names
-    assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
-
-    if ready_condition:
-        LOGGER.info(f"Verify that {expected_resource_names} are in {ready_condition} condition")
-        for resource in resources:
-            resource.wait_for_condition(
-                condition=ready_condition,
-                status=resource.Condition.Status.TRUE,
-                timeout=TIMEOUT_10MIN,
-            )
 
 
 def wait_for_any_resource_exists_in_namespace(client, namespace, resource_types):
@@ -103,18 +74,6 @@ def verify_common_template_namespace_updated(common_templates, namespace_name):
 @pytest.fixture(scope="module")
 def custom_golden_images_namespace(admin_client):
     yield from create_ns(admin_client=admin_client, name="custom-golden-images-namespace")
-
-
-@pytest.fixture(scope="class")
-def default_common_template_hco_status(hyperconverged_status_templates_scope_class):
-    return get_templates_by_type_from_hco_status(
-        hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
-    )
-
-
-@pytest.fixture(scope="class")
-def default_common_templates_related_resources(default_common_template_hco_status):
-    return get_templates_resources_names_dict(templates=default_common_template_hco_status)
 
 
 @pytest.fixture(scope="class")
