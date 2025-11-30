@@ -11,10 +11,8 @@ from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
-    COMMON_TEMPLATE,
-    get_templates_by_type_from_hco_status,
-)
+from tests.install_upgrade_operators.golden_images.constants import COMMON_TEMPLATE
+from tests.install_upgrade_operators.golden_images.utils import get_templates_by_type_from_hco_status
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,

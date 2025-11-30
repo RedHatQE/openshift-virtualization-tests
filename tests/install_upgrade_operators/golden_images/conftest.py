@@ -3,9 +3,11 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.pod import Pod
 from ocp_utilities.infra import get_pods_by_name_prefix
 
-from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
+from tests.install_upgrade_operators.golden_images.constants import (
     CUSTOM_TEMPLATE,
     HCO_CR_DATA_IMPORT_SCHEDULE_KEY,
+)
+from tests.install_upgrade_operators.golden_images.utils import (
     get_modifed_common_template_names,
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
