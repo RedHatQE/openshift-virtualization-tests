@@ -13,7 +13,7 @@ from timeout_sampler import retry
 
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
 
-WAIT_FOR_STATUS_TIMEOUT_SEC = 90
+WAIT_FOR_STATUS_TIMEOUT_SEC = 120
 WAIT_FOR_STATUS_INTERVAL_SEC = 5
 DEFAULT_OVN_EXTERNAL_BRIDGE = "br-ex"  # Default name for OVN-Kubernetes external bridge
 
@@ -68,6 +68,7 @@ class Interface:
     name: str
     type: str
     state: str
+    mtu: int | None = None
     ipv4: IPv4 | None = None
     ipv6: IPv6 | None = None
     bridge: Bridge | None = None
