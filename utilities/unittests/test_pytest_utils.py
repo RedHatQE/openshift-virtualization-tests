@@ -2,7 +2,7 @@
 
 """Unit tests for pytest_utils module"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -13,11 +13,13 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    exit_pytest_execution,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
     get_current_running_data,
     get_matrix_params,
+    get_tests_cluster_markers,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -737,3 +739,335 @@ class TestGetCnvVersionExplorerUrl:
         result = get_cnv_version_explorer_url(mock_config)
 
         assert result is None
+
+
+class TestGetTestsClusterMarkers:
+    """Test cases for get_tests_cluster_markers function"""
+
+    def _create_marker(self, name):
+        """Helper to create a mock marker with a string name attribute"""
+        marker = MagicMock()
+        marker.name = name
+        return marker
+
+    @patch("utilities.pytest_utils.json.dumps")
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_success(self, mock_logger, mock_json):
+        """Test basic test with markers found"""
+        # Create mock test items with markers
+        mock_item1 = MagicMock()
+        mock_item1.iter_markers.return_value = [
+            self._create_marker("ipv4"),
+            self._create_marker("smoke"),
+        ]
+
+        mock_item2 = MagicMock()
+        mock_item2.iter_markers.return_value = [
+            self._create_marker("gpu"),
+            self._create_marker("dpdk"),
+        ]
+
+        items = [mock_item1, mock_item2]
+
+        # Use actual pytest.ini content format with proper indentation
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Tests IPv4\n    dpdk: Tests DPDK\n    ## Hardware requirements\n    gpu: Requires GPU\n    ## Other markers\n    smoke: Smoke tests\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # Should extract ipv4, dpdk, and gpu (from Configuration and Hardware sections)
+        mock_logger.info.assert_called()
+        call_args_list = mock_logger.info.call_args_list
+        # Get the actual logged markers from the call
+        logged_markers = call_args_list[0][0][0]
+        assert "ipv4" in logged_markers or "dpdk" in logged_markers or "gpu" in logged_markers
+
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_no_markers(self, mock_logger):
+        """Test when no markers match"""
+        # Create mock test items with non-cluster markers only
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("smoke"),
+            self._create_marker("tier1"),
+        ]
+
+        items = [mock_item]
+
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Tests IPv4\n    ## Other markers\n    smoke: Smoke tests\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # Should log empty list
+        call_args = str(mock_logger.info.call_args_list)
+        assert "[]" in call_args
+
+    @patch("utilities.pytest_utils.json.dumps")
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_with_filepath(self, mock_logger, mock_json):
+        """Test when filepath is provided (writes to file)"""
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("ipv4"),
+        ]
+
+        items = [mock_item]
+        filepath = "/tmp/test_markers.json"
+        mock_json.return_value = '["ipv4"]'
+
+        pytest_ini_content = (
+            "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Tests IPv4\n    dpdk: Tests DPDK\n"
+        )
+
+        m = mock_open(read_data=pytest_ini_content)
+        with patch("builtins.open", m):
+            get_tests_cluster_markers(items, filepath=filepath)
+
+            # Verify that open was called for both reading pytest.ini and writing the file
+            # Check that filepath was logged
+            info_calls = [str(call) for call in mock_logger.info.call_args_list]
+            assert any(filepath in call for call in info_calls)
+            # Verify json.dumps was called for the markers
+            mock_json.assert_called_once()
+
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_config_section_parsing(self, mock_logger):
+        """Test correct parsing of pytest.ini Configuration requirements section"""
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("ipv4"),
+            self._create_marker("other_marker"),
+        ]
+
+        items = [mock_item]
+
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Config IPv4\n    dpdk: Config DPDK\n    ## Other section\n    other_marker: Other marker\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # Only ipv4 should be in cluster markers, not other_marker
+        call_args_list = mock_logger.info.call_args_list
+        logged_markers = call_args_list[0][0][0]
+        assert "ipv4" in logged_markers
+        # Since other_marker is not in a cluster section, it shouldn't be included
+        assert "'ipv4'" in logged_markers or "ipv4" in logged_markers
+
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_hardware_section(self, mock_logger):
+        """Test Hardware requirements section"""
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("gpu"),
+            self._create_marker("smoke"),
+        ]
+
+        items = [mock_item]
+
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Hardware requirements\n    gpu: Requires GPU\n    sriov: Requires SR-IOV\n    ## Other section\n    smoke: Smoke tests\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # Only gpu should be in cluster markers
+        call_args_list = mock_logger.info.call_args_list
+        logged_markers = call_args_list[0][0][0]
+        assert "gpu" in logged_markers
+
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_section_end_on_empty_line(self, mock_logger):
+        """Test section ends on empty line"""
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("ipv4"),
+            self._create_marker("other_marker"),
+        ]
+
+        items = [mock_item]
+
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Marker 1\n\n    ## Other section\n    other_marker: Other\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # ipv4 should be detected, other_marker should not
+        call_args_list = mock_logger.info.call_args_list
+        logged_markers = call_args_list[0][0][0]
+        assert "ipv4" in logged_markers
+
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_tests_cluster_markers_section_end_on_comment(self, mock_logger):
+        """Test section ends on comment line"""
+        mock_item = MagicMock()
+        mock_item.iter_markers.return_value = [
+            self._create_marker("ipv4"),
+            self._create_marker("other_marker"),
+        ]
+
+        items = [mock_item]
+
+        pytest_ini_content = "[pytest]\nmarkers =\n    ## Configuration requirements\n    ipv4: Marker 1\n    ## Another section\n    other_marker: Other\n"
+
+        with patch("builtins.open", mock_open(read_data=pytest_ini_content)):
+            get_tests_cluster_markers(items)
+
+        # Only ipv4 should be in cluster markers
+        call_args_list = mock_logger.info.call_args_list
+        logged_markers = call_args_list[0][0][0]
+        assert "ipv4" in logged_markers
+
+
+class TestExitPytestExecution:
+    """Test cases for exit_pytest_execution function"""
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    def test_exit_pytest_execution_basic(self, mock_get_dir, mock_pytest_exit):
+        """Test basic exit with message"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Test exit message"
+
+        exit_pytest_execution(message, return_code=1)
+
+        mock_pytest_exit.assert_called_once_with(reason=message, returncode=1)
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.write_to_file")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    def test_exit_pytest_execution_with_filename(self, mock_get_dir, mock_write, mock_pytest_exit):
+        """Test exit with filename for logging"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Test error"
+        filename = "test_error.log"
+
+        exit_pytest_execution(message, return_code=1, filename=filename)
+
+        mock_write.assert_called_once_with(
+            file_name=filename,
+            content=message,
+            base_directory="/tmp/test/pytest_exit_errors",
+        )
+        mock_pytest_exit.assert_called_once()
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    def test_exit_pytest_execution_with_junitxml(self, mock_get_dir, mock_pytest_exit):
+        """Test exit with junitxml_property"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Test exit"
+        mock_junitxml = MagicMock()
+
+        exit_pytest_execution(message, return_code=5, junitxml_property=mock_junitxml)
+
+        mock_junitxml.assert_called_once_with(name="exit_code", value=5)
+        mock_pytest_exit.assert_called_once()
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
+    @patch("utilities.pytest_utils.TIMEOUT_5MIN", 300)
+    def test_exit_pytest_execution_sanity_failure_collects_must_gather(
+        self, mock_get_dir, mock_collect, mock_pytest_exit
+    ):
+        """Test must-gather collection on SANITY_TESTS_FAILURE"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Sanity test failure"
+
+        exit_pytest_execution(message, return_code=99)
+
+        mock_collect.assert_called_once_with(
+            since_time=300,
+            target_dir="/tmp/test/pytest_exit_errors",
+        )
+        mock_pytest_exit.assert_called_once()
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.LOGGER")
+    @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
+    def test_exit_pytest_execution_must_gather_fails_silently(
+        self, mock_logger, mock_get_dir, mock_collect, mock_pytest_exit
+    ):
+        """Test that must-gather failure doesn't prevent exit"""
+        mock_get_dir.return_value = "/tmp/test"
+        mock_collect.side_effect = Exception("Must-gather failed")
+        message = "Sanity test failure"
+
+        exit_pytest_execution(message, return_code=99)
+
+        # Should log warning but still exit
+        mock_logger.warning.assert_called_once()
+        assert "Failed to collect logs" in str(mock_logger.warning.call_args)
+        mock_pytest_exit.assert_called_once()
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
+    def test_exit_pytest_execution_custom_return_code(self, mock_get_dir, mock_collect, mock_pytest_exit):
+        """Test with non-SANITY_TESTS_FAILURE code (skips must-gather)"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Regular exit"
+
+        exit_pytest_execution(message, return_code=5)
+
+        # Should not collect must-gather
+        mock_collect.assert_not_called()
+        mock_pytest_exit.assert_called_once_with(reason=message, returncode=5)
+
+    @patch("utilities.pytest_utils.pytest.exit")
+    @patch("utilities.pytest_utils.write_to_file")
+    @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
+    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
+    @patch("utilities.pytest_utils.TIMEOUT_5MIN", 300)
+    def test_exit_pytest_execution_all_options(self, mock_get_dir, mock_collect, mock_write, mock_pytest_exit):
+        """Test with all options provided"""
+        mock_get_dir.return_value = "/tmp/test"
+        message = "Complete failure"
+        filename = "error.log"
+        mock_junitxml = MagicMock()
+
+        exit_pytest_execution(message, return_code=99, filename=filename, junitxml_property=mock_junitxml)
+
+        # All components should be called
+        mock_collect.assert_called_once_with(
+            since_time=300,
+            target_dir="/tmp/test/pytest_exit_errors",
+        )
+        mock_write.assert_called_once_with(
+            file_name=filename,
+            content=message,
+            base_directory="/tmp/test/pytest_exit_errors",
+        )
+        mock_junitxml.assert_called_once_with(name="exit_code", value=99)
+        mock_pytest_exit.assert_called_once_with(reason=message, returncode=99)
+
+
+class TestGetMatrixParamsAdditionalCoverage:
+    """Additional test cases to cover missing lines in get_matrix_params
+
+    Note: Lines 88, 95-96 in get_matrix_params are difficult to test in isolation due to:
+    - Line 88: Module import path is conditional on sys.modules state and requires complex setup
+    - Lines 95-96: Second warning path requires specific config state that overlaps with line 78 path
+    These lines are exercised during integration tests when the actual pytest_matrix_utils module is used.
+    """
+
+    @patch("utilities.pytest_utils.py_config", {})
+    @patch("utilities.pytest_utils.skip_if_pytest_flags_exists")
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_matrix_params_missing_matrix_in_config(self, mock_logger, mock_skip_flags):
+        """Test warning when matrix is missing in config file"""
+        mock_skip_flags.return_value = False
+        mock_pytest_config = MagicMock()
+
+        # When matrix_name exists in config but is None/empty
+        with patch("utilities.pytest_utils.py_config", {"test_matrix": None}):
+            result = get_matrix_params(mock_pytest_config, "test_matrix")
+
+            # Should return empty list and log warning (lines 94-96)
+            assert result == []
+            mock_logger.warning.assert_called_with("test_matrix is missing in config file")

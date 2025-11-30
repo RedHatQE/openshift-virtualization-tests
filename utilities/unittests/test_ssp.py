@@ -22,6 +22,11 @@ utilities.virt = mock_virt
 utilities.storage = mock_storage
 utilities.infra = mock_infra
 
+# Clear any mock of utilities.ssp from other test modules (e.g., test_hco.py)
+# to ensure we can import the real module for testing
+if "utilities.ssp" in sys.modules:
+    del sys.modules["utilities.ssp"]
+
 # Import after setting up mocks to avoid circular dependency
 from utilities.ssp import (  # noqa: E402
     cluster_instance_type_for_hot_plug,
