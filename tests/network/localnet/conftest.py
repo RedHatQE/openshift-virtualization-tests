@@ -89,6 +89,7 @@ def vlan_id(vlan_index_number: Generator[int]) -> int:
 
 @pytest.fixture(scope="module")
 def cudn_localnet(
+    admin_client: DynamicClient,
     vlan_id: int,
     namespace_localnet_1: Namespace,
     namespace_localnet_2: Namespace,
@@ -98,6 +99,7 @@ def cudn_localnet(
         match_labels=LOCALNET_TEST_LABEL,
         vlan_id=vlan_id,
         physical_network_name=LOCALNET_BR_EX_NETWORK,
+        client=admin_client,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn
@@ -105,12 +107,14 @@ def cudn_localnet(
 
 @pytest.fixture(scope="module")
 def cudn_localnet_no_vlan(
+    admin_client: DynamicClient,
     namespace_localnet_1: Namespace,
 ) -> Generator[libcudn.ClusterUserDefinedNetwork]:
     with localnet_cudn(
         name=LOCALNET_BR_EX_NETWORK_NO_VLAN,
         match_labels=LOCALNET_TEST_LABEL,
         physical_network_name=LOCALNET_BR_EX_NETWORK,
+        client=admin_client,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn
@@ -210,6 +214,7 @@ def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualM
 
 @pytest.fixture(scope="module")
 def cudn_localnet_ovs_bridge(
+    admin_client: DynamicClient,
     vlan_id: int,
     namespace_localnet_1: Namespace,
 ) -> Generator[libcudn.ClusterUserDefinedNetwork]:
@@ -218,6 +223,7 @@ def cudn_localnet_ovs_bridge(
         match_labels=LOCALNET_TEST_LABEL,
         vlan_id=vlan_id,
         physical_network_name=LOCALNET_OVS_BRIDGE_NETWORK,
+        client=admin_client,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn
@@ -380,6 +386,7 @@ def nncp_localnet_on_secondary_node_nic_with_jumbo_frame(
 
 @pytest.fixture(scope="module")
 def cudn_localnet_ovs_bridge_jumbo_frame(
+    admin_client: DynamicClient,
     vlan_id: int,
     cluster_hardware_mtu: int,
     namespace_localnet_1: Namespace,
@@ -390,6 +397,7 @@ def cudn_localnet_ovs_bridge_jumbo_frame(
         vlan_id=vlan_id,
         physical_network_name=LOCALNET_OVS_BRIDGE_NETWORK,
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn
