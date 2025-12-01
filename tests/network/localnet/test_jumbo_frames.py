@@ -7,6 +7,12 @@ from utilities.network import get_vmi_ip_v4_by_name
 from utilities.virt import vm_console_run_commands
 
 
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.jumbo_frame,
+]
+
+
 @pytest.mark.polarion("CNV-12349")
 @pytest.mark.jumbo_frame
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic_with_jumbo_frame")
