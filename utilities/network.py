@@ -523,6 +523,7 @@ def network_nad(
     nad_type,
     nad_name,
     namespace,
+    client,
     interface_name=None,
     tuning=None,
     vlan=None,
@@ -541,6 +542,7 @@ def network_nad(
         "namespace": namespace.name,
         "teardown": teardown,
         "vlan": vlan,
+        "client": client,
     }
     if nad_type == LINUX_BRIDGE:
         kwargs["cni_type"] = py_config["linux_bridge_cni"]
