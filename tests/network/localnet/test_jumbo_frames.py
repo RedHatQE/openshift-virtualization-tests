@@ -14,7 +14,6 @@ pytestmark = [
 
 
 @pytest.mark.polarion("CNV-12349")
-@pytest.mark.jumbo_frame
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic_with_jumbo_frame")
 def test_connectivity_ovs_bridge_jumbo_frames_no_fragmentation(
     cluster_hardware_mtu,
