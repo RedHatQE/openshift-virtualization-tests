@@ -178,8 +178,8 @@ def brcnv_vma_with_vlan_1(
 
 
 @pytest.fixture(scope="session")
-def cluster_network_mtu():
-    network_resource = Network(name=CLUSTER)
+def cluster_network_mtu(admin_client):
+    network_resource = Network(name=CLUSTER, client=admin_client)
     if not network_resource.exists:
         raise ResourceNotFoundError(f"{CLUSTER} Network resource not found.")
 
@@ -213,8 +213,10 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session")
-def network_operator():
-    return Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True)
+def network_operator(admin_client):
+    return Network(
+        name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True, client=admin_client
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -266,7 +268,7 @@ def network_sanity(
         if any(test.get_closest_marker("dpdk") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running DPDK tests...")
             dpdk_performance_profile_name = "dpdk"
-            if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
+            if not PerformanceProfile(name=dpdk_performance_profile_name, client=admin_client).exists:
                 failure_msgs.append(
                     f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
                     "does not exist"
@@ -302,7 +304,7 @@ def network_sanity(
     def _verify_sriov():
         if any(test.get_closest_marker("sriov") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running SRIOV tests...")
-            if not Namespace(name=py_config["sriov_namespace"]).exists:
+            if not Namespace(name=py_config["sriov_namespace"], client=admin_client).exists:
                 failure_msgs.append(
                     f"SRIOV operator is not installed, the '{py_config['sriov_namespace']}' namespace does not exist"
                 )
