@@ -6,7 +6,6 @@ from tests.network.localnet.liblocalnet import LOCALNET_OVS_BRIDGE_INTERFACE
 from utilities.network import get_vmi_ip_v4_by_name
 from utilities.virt import vm_console_run_commands
 
-
 pytestmark = [
     pytest.mark.special_infra,
     pytest.mark.jumbo_frame,
