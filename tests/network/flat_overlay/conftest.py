@@ -43,11 +43,14 @@ SPECIFIC_HOST_MASK = "32"
 
 
 @pytest.fixture(scope="module")
-def enable_multi_network_policy_usage(network_operator):
+def enable_multi_network_policy_usage(admin_client, network_operator):
     with ResourceEditor(patches={network_operator: {"spec": {"useMultiNetworkPolicy": True}}}):
-        wait_for_multi_network_policy_resources(deploy_mnp_crd=True)
+        wait_for_multi_network_policy_resources(client=admin_client, deploy_mnp_crd=True)
         yield
-    wait_for_multi_network_policy_resources(deploy_mnp_crd=False)
+    wait_for_multi_network_policy_resources(
+        client=admin_client,
+        deploy_mnp_crd=False,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -288,6 +291,7 @@ def vmd_flat_overlay_ip_address(vmd_flat_overlay, flat_overlay_vmc_vmd_nad):
 
 @pytest.fixture()
 def vma_egress_multi_network_policy(
+    admin_client,
     flat_overlay_vma_vmb_nad,
     vmb_flat_overlay_ip_address,
     vma_domain_label,
@@ -302,12 +306,14 @@ def vma_egress_multi_network_policy(
             ip_address=f"{vmb_flat_overlay_ip_address}/{SPECIFIC_HOST_MASK}",
         ),
         pod_selector={"matchLabels": vma_domain_label},
+        client=admin_client,
     ) as mnp:
         yield mnp
 
 
 @pytest.fixture()
 def vmb_ingress_multi_network_policy(
+    admin_client,
     flat_overlay_vma_vmb_nad,
     vmb_domain_label,
 ):
@@ -320,12 +326,14 @@ def vmb_ingress_multi_network_policy(
         ingress=create_ip_block(
             ip_address=f"{random_ipv4_address(net_seed=0, host_address=123)}/{SPECIFIC_HOST_MASK}",
         ),
+        client=admin_client,
     ) as mnp:
         yield mnp
 
 
 @pytest.fixture()
 def vmc_ingress_multi_network_policy(
+    admin_client,
     flat_overlay_vmc_vmd_nad,
     vmc_domain_label,
     vmd_ingress_ip_block,
@@ -337,6 +345,7 @@ def vmc_ingress_multi_network_policy(
         network_name=flat_overlay_vmc_vmd_nad.name,
         policy_types=["Ingress"],
         ingress=vmd_ingress_ip_block,
+        client=admin_client,
     ) as mnp:
         yield mnp
 

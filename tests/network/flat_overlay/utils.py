@@ -66,10 +66,12 @@ def create_ip_block(ip_address, ingress=True):
     return [{network_direction: [{"ipBlock": {"cidr": ip_address}}]}]
 
 
-def wait_for_multi_network_policy_resources(deploy_mnp_crd=False):
+def wait_for_multi_network_policy_resources(client, deploy_mnp_crd=False):
     sample = None
     consecutive_check = 0
-    mnp_crd = CustomResourceDefinition(name=f"multi-networkpolicies.{NamespacedResource.ApiGroup.K8S_CNI_CNCF_IO}")
+    mnp_crd = CustomResourceDefinition(
+        name=f"multi-networkpolicies.{NamespacedResource.ApiGroup.K8S_CNI_CNCF_IO}", client=client
+    )
     try:
         sampler = TimeoutSampler(
             wait_timeout=TIMEOUT_3MIN,
