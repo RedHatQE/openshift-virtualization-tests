@@ -136,6 +136,7 @@ def localnet_cudn(
     name: str,
     match_labels: dict[str, str],
     physical_network_name: str,
+    client: DynamicClient,
     vlan_id: int | None = None,
     mtu: int | None = None,
 ) -> libcudn.ClusterUserDefinedNetwork:
@@ -152,6 +153,7 @@ def localnet_cudn(
         name (str): The name of the CUDN resource.
         match_labels (dict[str, str]): Labels for namespace selection.
         physical_network_name (str): The name of the physical network to associate with the localnet configuration.
+        client (DynamicClient): Dynamic client for resource creation.
         vlan_id (int|None): The VLAN ID to configure for the network. If None, no VLAN is configured.
         mtu (int): Optional customized MTU of the network.
 
@@ -174,7 +176,10 @@ def localnet_cudn(
     network = libcudn.Network(topology=libcudn.Network.Topology.LOCALNET.value, localnet=localnet)
 
     return libcudn.ClusterUserDefinedNetwork(
-        name=name, namespace_selector=LabelSelector(matchLabels=match_labels), network=network
+        name=name,
+        namespace_selector=LabelSelector(matchLabels=match_labels),
+        network=network,
+        client=client,
     )
 
 
@@ -218,7 +223,8 @@ def client_server_active_connection(
 
 @contextlib.contextmanager
 def create_nncp_localnet_on_secondary_node_nic(
-    node_nic_name: str, mtu: int | None = None
+    node_nic_name: str,
+    mtu: int | None = None,
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy, None, None]:
     """Create NNCP to configure an OVS bridge on a secondary NIC across all worker nodes.
 
