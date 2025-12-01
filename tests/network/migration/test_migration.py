@@ -94,12 +94,13 @@ def bridge_worker_2(
 
 
 @pytest.fixture(scope="module")
-def br1test_nad(namespace, bridge_worker_1, bridge_worker_2):
+def br1test_nad(admin_client, namespace, bridge_worker_1, bridge_worker_2):
     with network_nad(
         nad_type=bridge_worker_1.bridge_type,
         nad_name="network-migration-nad",
         interface_name=bridge_worker_1.bridge_name,
         namespace=namespace,
+        client=admin_client,
     ) as nad:
         yield nad
 

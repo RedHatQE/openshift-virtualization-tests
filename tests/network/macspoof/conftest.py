@@ -83,6 +83,7 @@ def linux_bridge_device_worker_2(nodes_available_nics, worker_node2):
 
 @pytest.fixture(scope="class")
 def linux_macspoof_nad(
+    admin_client,
     namespace,
     linux_bridge_device_worker_1,
     linux_bridge_device_worker_2,
@@ -93,6 +94,7 @@ def linux_macspoof_nad(
         nad_name=linux_bridge_device_worker_1.bridge_name,
         interface_name=linux_bridge_device_worker_1.iface["name"],
         macspoofchk=True,
+        client=admin_client,
     ) as nad:
         yield nad
 

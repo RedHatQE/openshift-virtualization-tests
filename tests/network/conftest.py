@@ -145,6 +145,7 @@ def vlan_index_number(vlans_list):
 
 @pytest.fixture(scope="module")
 def brcnv_ovs_nad_vlan_1(
+    admin_client,
     hyperconverged_ovs_annotations_enabled_scope_session,
     namespace,
     vlan_index_number,
@@ -156,6 +157,7 @@ def brcnv_ovs_nad_vlan_1(
         nad_name=f"{BRCNV}-{vlan_tag}",
         interface_name=BRCNV,
         vlan=vlan_tag,
+        client=admin_client,
     ) as nad:
         yield nad
 

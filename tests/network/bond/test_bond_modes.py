@@ -83,12 +83,13 @@ def matrix_bond_modes_bond(
 
 
 @pytest.fixture()
-def bond_modes_nad(bridge_device_matrix__function__, namespace, matrix_bond_modes_bond):
+def bond_modes_nad(admin_client, bridge_device_matrix__function__, namespace, matrix_bond_modes_bond):
     with network_nad(
         namespace=namespace,
         nad_type=bridge_device_matrix__function__,
         nad_name=f"bond-nad-{matrix_bond_modes_bond.bond_name}",
         interface_name=f"br{matrix_bond_modes_bond.bond_name}",
+        client=admin_client,
     ) as nad:
         yield nad
 
