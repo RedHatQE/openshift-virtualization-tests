@@ -146,26 +146,6 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
     yield vms_dict
 
 
-@pytest.fixture(scope="session")
-def upgrade_namespaces(upgrade_namespace_scope_session, kmp_enabled_namespace):
-    return [kmp_enabled_namespace, upgrade_namespace_scope_session]
-
-
-@pytest.fixture(scope="session")
-def migratable_vms(admin_client, upgrade_namespaces):
-    migratable_vms = []
-    for ns in upgrade_namespaces:
-        for vm in list(VirtualMachine.get(client=admin_client, namespace=ns.name)):
-            if any(
-                condition.type == "LiveMigratable" and condition.status == "True"
-                for condition in vm.vmi.instance.status.conditions
-            ):
-                migratable_vms.append(vm)
-
-    LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
-    return migratable_vms
-
-
 @pytest.fixture()
 def unupdated_vmi_pods_names(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, migratable_vms):
     wait_for_automatic_vm_migrations(vm_list=migratable_vms)
@@ -272,7 +252,7 @@ def windows_vm(
                 data_source=ds,
                 cpu_model=modern_cpu_for_migration,
             ) as vm:
-                running_vm(vm=vm, check_ssh_connectivity=False)
+                running_vm(vm=vm)
                 yield vm
 
 

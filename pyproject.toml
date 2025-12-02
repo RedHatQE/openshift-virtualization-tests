@@ -135,11 +135,9 @@ omit = [
   "*/test_*.py",
   "__init__.py",
   "utilities/unittests/conftest.py",
-  # TODO: Add coverage to these large modules when individual fixes are needed
-  "utilities/hco.py",
+  # Large modules with partial test coverage - excluded until full coverage is achieved
   "utilities/infra.py",
   "utilities/network.py",
-  "utilities/operator.py",
   "utilities/storage.py",
   "utilities/virt.py",
 ]

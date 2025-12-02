@@ -4,7 +4,7 @@ import logging
 import pytest
 import requests
 
-from utilities.constants import CNV_PROMETHEUS_RULES
+from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def validate_downstream_runbook_url(
             assert runbook_url, f"Alert '{alert_name}' is missing runbook URL"
 
             try:
-                response = requests.get(runbook_url, allow_redirects=False, timeout=10)
+                response = requests.get(runbook_url, allow_redirects=False, timeout=TIMEOUT_10SEC)
                 assert response.status_code == http.HTTPStatus.OK, (
                     f"Alert '{alert_name}' runbook URL '{runbook_url}' returned status {response.status_code}"
                 )

@@ -2,6 +2,7 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.storage_profile import StorageProfile
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
 from tests.utils import (
@@ -16,6 +17,7 @@ from utilities.constants import (
     SIX_CPU_SOCKETS,
     TEN_CPU_SOCKETS,
 )
+from utilities.jira import is_jira_open
 from utilities.ssp import cluster_instance_type_for_hot_plug
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import (
@@ -37,6 +39,7 @@ def instance_type_hotplug_vm(
     rhel10_data_source_scope_session,
     available_rwx_storage_class_name,
     four_sockets_instance_type,
+    hotplug_preference,
 ):
     with VirtualMachineForTests(
         name=f"{rhel10_data_source_scope_session.name}-hotplug-instance-type-vm",
@@ -47,6 +50,7 @@ def instance_type_hotplug_vm(
             storage_class=available_rwx_storage_class_name,
         ),
         vm_instance_type=four_sockets_instance_type,
+        vm_preference=hotplug_preference,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -63,6 +67,16 @@ def available_rwx_storage_class_name(unprivileged_client, available_storage_clas
         ):
             return storage_class_name
     pytest.fail("No RWX storage class available in the cluster")
+
+
+@pytest.fixture(scope="module")
+def hotplug_preference(admin_client):
+    with VirtualMachineClusterPreference(
+        client=admin_client,
+        name="hotplug-preference",
+        cpu={"preferredCPUFeatures": [{"name": "vmx", "policy": "disable"}] if is_jira_open("CNV-62851") else None},
+    ) as vm_preference:
+        yield vm_preference
 
 
 @pytest.fixture(scope="class")
