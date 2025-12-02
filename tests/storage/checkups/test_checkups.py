@@ -24,16 +24,16 @@ LOGGER = logging.getLogger(__name__)
     ],
     indirect=True,
 )
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
+        "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
+    ),
+    run=False,
+)
 class TestCheckupPositive:
     @pytest.mark.s390x
     @pytest.mark.polarion("CNV-10707")
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
-            "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
-        ),
-        run=False,
-    )
     def test_overriden_storage_profile_claim_propertyset(
         self,
         updated_default_storage_profile,
@@ -50,13 +50,6 @@ class TestCheckupPositive:
         )
 
     @pytest.mark.polarion("CNV-10708")
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
-            "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
-        ),
-        run=False,
-    )
     def test_storage_profile_missing_volume_snapshot_class(
         self,
         updated_storage_class_snapshot_clone_strategy,
@@ -74,13 +67,6 @@ class TestCheckupPositive:
         )
 
     @pytest.mark.polarion("CNV-10709")
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
-            "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
-        ),
-        run=False,
-    )
     def test_ocs_rbd_non_virt_vm_exist(
         self,
         skip_if_no_ocs_rbd_non_virt_sc,
@@ -98,13 +84,6 @@ class TestCheckupPositive:
         )
 
     @pytest.mark.polarion("CNV-10712")
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
-            "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
-        ),
-        run=False,
-    )
     def test_checkup_live_migration(
         self,
         default_storage_class_access_modes,
