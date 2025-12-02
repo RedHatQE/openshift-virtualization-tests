@@ -9,6 +9,7 @@ from tests.utils import (
     clean_up_migration_jobs,
     hotplug_spec_vm,
     hotplug_spec_vm_and_verify_hotplug,
+    update_cluster_cpu_model,
 )
 from tests.virt.utils import append_feature_gate_to_hco
 from utilities.constants import (
@@ -24,6 +25,7 @@ from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     running_vm,
     vm_instance_from_template,
+    wait_for_kv_stabilize,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -140,3 +142,37 @@ def migration_policy_with_allow_auto_converge(namespace):
         allow_auto_converge=True,
     ):
         yield
+
+
+@pytest.fixture()
+def cluster_cpu_model_scope_function(
+    admin_client,
+    hco_namespace,
+    hyperconverged_resource_scope_function,
+    cluster_common_node_cpu,
+):
+    with update_cluster_cpu_model(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        hco_resource=hyperconverged_resource_scope_function,
+        cpu_model=cluster_common_node_cpu,
+    ):
+        yield
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
+@pytest.fixture(scope="class")
+def cluster_modern_cpu_model_scope_class(
+    admin_client,
+    hco_namespace,
+    hyperconverged_resource_scope_class,
+    cluster_common_modern_node_cpu,
+):
+    with update_cluster_cpu_model(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        hco_resource=hyperconverged_resource_scope_class,
+        cpu_model=cluster_common_modern_node_cpu,
+    ):
+        yield
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
