@@ -269,7 +269,7 @@ def restarted_vmi_b(vm_b):
 
 
 @pytest.fixture(scope="class")
-def disabled_ns_vm(disabled_ns, disabled_ns_nad, mac_pool):
+def disabled_ns_vm(unprivileged_client, disabled_ns, disabled_ns_nad, mac_pool):
     networks = {disabled_ns_nad.name: disabled_ns_nad.name}
     name = f"{disabled_ns.name}-vm"
     with VirtualMachineForTests(
@@ -278,6 +278,7 @@ def disabled_ns_vm(disabled_ns, disabled_ns_nad, mac_pool):
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
+        client=unprivileged_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)
@@ -287,7 +288,7 @@ def disabled_ns_vm(disabled_ns, disabled_ns_nad, mac_pool):
 
 
 @pytest.fixture(scope="class")
-def enabled_ns_vm(kmp_enabled_ns, enabled_ns_nad, mac_pool):
+def enabled_ns_vm(unprivileged_client, kmp_enabled_ns, enabled_ns_nad, mac_pool):
     networks = {enabled_ns_nad.name: enabled_ns_nad.name}
     name = f"{kmp_enabled_ns.name}-vm"
     with VirtualMachineForTests(
@@ -296,6 +297,7 @@ def enabled_ns_vm(kmp_enabled_ns, enabled_ns_nad, mac_pool):
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
+        client=unprivileged_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)
@@ -305,7 +307,7 @@ def enabled_ns_vm(kmp_enabled_ns, enabled_ns_nad, mac_pool):
 
 
 @pytest.fixture(scope="class")
-def no_label_ns_vm(no_label_ns, no_label_ns_nad, mac_pool):
+def no_label_ns_vm(unprivileged_client, no_label_ns, no_label_ns_nad, mac_pool):
     networks = {no_label_ns_nad.name: no_label_ns_nad.name}
     name = f"{no_label_ns.name}-vm"
     with VirtualMachineForTests(
@@ -314,6 +316,7 @@ def no_label_ns_vm(no_label_ns, no_label_ns_nad, mac_pool):
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
+        client=unprivileged_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)

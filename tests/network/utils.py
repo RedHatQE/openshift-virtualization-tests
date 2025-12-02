@@ -183,7 +183,7 @@ def wait_for_address_on_iface(worker_pod, iface_name):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
-        func=NodeNetworkState(worker_pod.node.name).ipv4,
+        func=NodeNetworkState(name=worker_pod.node.name, client=worker_pod.client).ipv4,
         iface=iface_name,
     )
     try:
@@ -323,8 +323,8 @@ def basic_expose_command(
     )
 
 
-def get_service(name, namespace):
-    service = Service(name=name, namespace=namespace)
+def get_service(name, namespace, client):
+    service = Service(name=name, namespace=namespace, client=client)
     if service.exists:
         return service
 
