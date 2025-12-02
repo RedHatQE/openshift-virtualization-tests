@@ -8,6 +8,7 @@ import logging
 import os
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_config_openshift_io import Network
@@ -217,6 +218,11 @@ def network_operator():
     return Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True)
 
 
+@pytest.fixture(scope="session")
+def mtv_namespace(admin_client: DynamicClient) -> Namespace:  # noqa: UFN001
+    return Namespace(name="openshift-mtv", client=admin_client)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     admin_client,
@@ -231,6 +237,7 @@ def network_sanity(
     ipv6_supported_cluster,
     conformance_tests,
     nmstate_namespace,
+    mtv_namespace,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -360,6 +367,16 @@ def network_sanity(
         except TimeoutExpiredError:
             failure_msgs.append(f"Some pods are not running in nmstate namespace '{namespace.name}'")
 
+    def _verify_mtv_installed():
+        if any(test.get_closest_marker("mtv") for test in collected_tests):
+            LOGGER.info("Verifying if the MTV operator is installed in the cluster...")
+            if not mtv_namespace.exists:
+                failure_msgs.append(
+                    f"MTV operator is not installed, the '{mtv_namespace.name}' namespace does not exist"
+                )
+            else:
+                LOGGER.info(f"Validated MTV operator is installed in the cluster with '{mtv_namespace.name}' namespace")
+
     _verify_multi_nic(_request=request)
     _verify_dpdk()
     _verify_service_mesh()
@@ -369,6 +386,7 @@ def network_sanity(
     _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
     _verify_bgp_env_vars()
     _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
+    _verify_mtv_installed()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)
