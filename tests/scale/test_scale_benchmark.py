@@ -127,9 +127,13 @@ def failure_finalizer(vms_list, must_gather_image_url):
     )
 
 
-def start_live_migration(vm):
+def start_live_migration(vm, client):
     with VirtualMachineInstanceMigration(
-        name=vm.name, namespace=vm.namespace, vmi_name=vm.vmi.name, teardown=False
+        name=vm.name,
+        namespace=vm.namespace,
+        vmi_name=vm.vmi.name,
+        teardown=False,
+        client=client,
     ) as migration:
         return migration
 
@@ -355,14 +359,14 @@ def scale_vms(
 
 
 @pytest.fixture(scope="class")
-def vm_migration_info(scale_vms):
+def vm_migration_info(scale_vms, admin_client):
     vm_migration_info = {}
     for batch in scale_vms:
         for vm in batch:
             vm_migration_info[vm.name] = {
                 NODE_STR: vm.vmi.node,
                 VMI_SOURCE_POD_STR: vm.vmi.virt_launcher_pod,
-                MIGRATION_INSTANCE_STR: start_live_migration(vm=vm),
+                MIGRATION_INSTANCE_STR: start_live_migration(vm=vm, client=admin_client),
             }
     return vm_migration_info
 
@@ -472,4 +476,3 @@ class TestScale:
     ):
         # TODO record time for the deletion of VMs and the cloned DVs
         delete_resources(resources=list(data_sources.values()) + golden_images_scale_dvs + all_vms_objects)
-        scale_namespace.clean_up()
