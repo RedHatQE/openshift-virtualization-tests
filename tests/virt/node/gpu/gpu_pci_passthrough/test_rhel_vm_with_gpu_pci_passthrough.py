@@ -24,7 +24,7 @@ from utilities.constants import TIMEOUT_5SEC
 from utilities.virt import (
     CIRROS_IMAGE,
     VirtualMachineForTests,
-    pause_optional_migrate_unpause_and_check_connectivity,
+    pause_unpause_vm_and_check_connectivity,
 )
 
 pytestmark = [
@@ -126,7 +126,7 @@ class TestPCIPassthroughRHELHostDevicesSpec:
         Test VM with Device using hostdevices spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
-            pause_optional_migrate_unpause_and_check_connectivity(vm=gpu_vma)
+            pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_HOSTDEVICES_NAME}::test_access_hostdevices_rhel_vm"])
     @pytest.mark.polarion("CNV-5641")
@@ -171,7 +171,7 @@ class TestPCIPassthroughRHELGPUSSpec:
         Test VM with Device using GPUS spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
-            pause_optional_migrate_unpause_and_check_connectivity(vm=gpu_vma)
+            pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_GPUS_NAME}::access_gpus_rhel_vm"])
     @pytest.mark.polarion("CNV-5642")

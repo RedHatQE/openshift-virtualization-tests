@@ -15,7 +15,7 @@ from tests.virt.node.gpu.utils import (
 )
 from tests.virt.utils import (
     get_gpu_device_name_from_windows_vm,
-    validate_pause_optional_migrate_unpause_windows_vm,
+    validate_pause_unpause_windows_vm,
     verify_gpu_device_exists_in_vm,
 )
 from utilities.constants import Images
@@ -110,7 +110,7 @@ class TestVGPUWindowsGPUSSpec:
         """
         Test Windows VM with vGPU using gpus spec, can be paused and unpaused successfully.
         """
-        validate_pause_optional_migrate_unpause_windows_vm(vm=gpu_vma)
+        validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm"])
     @pytest.mark.polarion("CNV-8083")
