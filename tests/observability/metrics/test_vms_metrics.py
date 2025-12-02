@@ -417,7 +417,6 @@ class TestVmDiskAllocatedSizeLinux:
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
         self,
         prometheus,
-        unprivileged_client,
         vm_for_vm_disk_allocation_size_test,
     ):
         validate_metrics_value(

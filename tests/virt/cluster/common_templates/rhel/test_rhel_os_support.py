@@ -15,7 +15,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
-from utilities.constants import LINUX_STR, QUARANTINED
+from utilities.constants import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
@@ -26,7 +26,7 @@ from utilities.virt import (
     running_vm,
     update_vm_efi_spec_and_restart,
     validate_libvirt_persistent_domain,
-    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_pause_unpause_linux_vm,
     validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
@@ -174,13 +174,12 @@ class TestCommonTemplatesRhel:
     def test_vm_smbios_default(self, smbios_from_kubevirt_config, matrix_rhel_os_vm_from_template):
         check_vm_xml_smbios(vm=matrix_rhel_os_vm_from_template, cm_values=smbios_from_kubevirt_config)
 
-    @pytest.mark.xfail(reason=f"{QUARANTINED}: Flake in pause VM checks; CNV-70033", run=False)
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5916")
     def test_pause_unpause_vm(self, matrix_rhel_os_vm_from_template):
-        validate_pause_optional_migrate_unpause_linux_vm(vm=matrix_rhel_os_vm_from_template)
+        validate_pause_unpause_linux_vm(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.smoke
@@ -199,7 +198,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-5902")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(self, matrix_rhel_os_vm_from_template, ping_process_in_rhel_os):
-        validate_pause_optional_migrate_unpause_linux_vm(
+        validate_pause_unpause_linux_vm(
             vm=matrix_rhel_os_vm_from_template,
             pre_pause_pid=ping_process_in_rhel_os(matrix_rhel_os_vm_from_template),
         )
