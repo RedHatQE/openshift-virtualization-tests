@@ -20,7 +20,7 @@ from utilities.virt import (
     running_vm,
     update_vm_efi_spec_and_restart,
     validate_libvirt_persistent_domain,
-    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_pause_unpause_linux_vm,
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
@@ -135,12 +135,12 @@ class TestVMMigrationAndState:
     @pytest.mark.polarion("CNV-11836")
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TESTS_MIGRATE_VM}"])
     def test_pause_unpause_vm(self, golden_image_rhel_vm_with_instance_type):
-        validate_pause_optional_migrate_unpause_linux_vm(vm=golden_image_rhel_vm_with_instance_type)
+        validate_pause_unpause_linux_vm(vm=golden_image_rhel_vm_with_instance_type)
 
     @pytest.mark.polarion("CNV-11837")
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TESTS_MIGRATE_VM}"])
     def test_pause_unpause_after_migrate(self, golden_image_rhel_vm_with_instance_type, ping_process_in_rhel_os):
-        validate_pause_optional_migrate_unpause_linux_vm(
+        validate_pause_unpause_linux_vm(
             vm=golden_image_rhel_vm_with_instance_type,
             pre_pause_pid=ping_process_in_rhel_os(golden_image_rhel_vm_with_instance_type),
         )

@@ -11,7 +11,7 @@ from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
 )
-from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm, verify_gpu_device_exists_in_vm
+from tests.virt.utils import validate_pause_unpause_windows_vm, verify_gpu_device_exists_in_vm
 from utilities.constants import Images
 
 pytestmark = [
@@ -72,7 +72,7 @@ class TestPCIPassthroughWinHostDevicesSpec:
         """
         Test Windows VM with Device using hostdevices spec, can be paused and unpaused successfully.
         """
-        validate_pause_optional_migrate_unpause_windows_vm(vm=gpu_vma)
+        validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_hostdevices_win_vm"])
     @pytest.mark.polarion("CNV-5648")
@@ -96,7 +96,7 @@ class TestPCIPassthroughWinHostDevicesSpec:
         """
         Test Windows VM with Device using gpus spec, can be paused and unpaused successfully.
         """
-        validate_pause_optional_migrate_unpause_windows_vm(vm=gpu_vma)
+        validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_gpus_win_vm"])
     @pytest.mark.polarion("CNV-5744")
