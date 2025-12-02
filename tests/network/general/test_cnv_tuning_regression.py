@@ -1,5 +1,6 @@
 import pytest
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, network_device, network_nad
@@ -33,7 +34,9 @@ def linux_bridge_device(worker_node1, linux_bridge_nad):
 def cnv_tuning_vm(unprivileged_client, worker_node1, linux_bridge_nad, linux_bridge_device):
     name = "tuning-vma"
     networks = {"net1": linux_bridge_nad.name}
-    network_data_data = {"ethernets": {"eth1": {"addresses": ["10.200.0.1/24"]}}}
+    network_data_data = {
+        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
+    }
 
     with VirtualMachineForTests(
         namespace=linux_bridge_nad.namespace,

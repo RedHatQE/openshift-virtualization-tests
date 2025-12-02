@@ -11,6 +11,7 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     CNV_SUPPLEMENTAL_TEMPLATES_URL,
     MTU_9000,
@@ -20,9 +21,7 @@ from utilities.constants import (
 )
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
-    SriovIfaceNotFound,
     cloud_init_network_data,
-    create_sriov_node_policy,
     network_nad,
     sriov_network_dict,
 )
@@ -86,28 +85,6 @@ def sriov_vm(
         yield vm
 
 
-@pytest.fixture(scope="session")
-def sriov_iface_with_vlan(sriov_unused_ifaces, vlan_base_iface):
-    for interface in sriov_unused_ifaces:
-        if interface["name"] == vlan_base_iface:
-            return interface
-    raise SriovIfaceNotFound(
-        f"No sriov interface with vlan found. vlan base iface is {vlan_base_iface}, "
-        f"sriov ifaces is {sriov_unused_ifaces}"
-    )
-
-
-@pytest.fixture(scope="session")
-def sriov_with_vlan_node_policy(sriov_nodes_states, sriov_iface_with_vlan, sriov_namespace):
-    yield from create_sriov_node_policy(
-        nncp_name="test-sriov-on-vlan-policy",
-        namespace=sriov_namespace.name,
-        sriov_iface=sriov_iface_with_vlan,
-        sriov_nodes_states=sriov_nodes_states,
-        sriov_resource_name="sriov_net_with_vlan",
-    )
-
-
 @pytest.fixture(scope="module")
 def sriov_network(sriov_node_policy, namespace, sriov_namespace):
     """
@@ -124,14 +101,14 @@ def sriov_network(sriov_node_policy, namespace, sriov_namespace):
 
 
 @pytest.fixture(scope="class")
-def sriov_network_vlan(sriov_with_vlan_node_policy, namespace, sriov_namespace, vlan_index_number):
+def sriov_network_vlan(sriov_node_policy, namespace, sriov_namespace, vlan_index_number):
     """
     Create a SR-IOV VLAN network linked to SR-IOV policy.
     """
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-test-network-vlan",
-        sriov_resource_name=sriov_with_vlan_node_policy.resource_name,
+        sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
         vlan=next(vlan_index_number),
@@ -147,7 +124,7 @@ def sriov_vm1(index_number, sriov_workers_node1, namespace, unprivileged_client,
         name="sriov-vm1",
         namespace=namespace,
         worker=sriov_workers_node1,
-        ip_config="10.200.1.1/24",
+        ip_config=f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
         sriov_network=sriov_network,
     )
 
@@ -160,7 +137,7 @@ def sriov_vm2(index_number, unprivileged_client, sriov_workers_node2, namespace,
         name="sriov-vm2",
         namespace=namespace,
         worker=sriov_workers_node2,
-        ip_config="10.200.1.2/24",
+        ip_config=f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
         sriov_network=sriov_network,
     )
 
@@ -179,7 +156,7 @@ def sriov_vm3(
         name="sriov-vm3",
         namespace=namespace,
         worker=sriov_workers_node1,
-        ip_config="10.200.3.1/24",
+        ip_config=f"{random_ipv4_address(net_seed=1, host_address=1)}/24",
         sriov_network=sriov_network_vlan,
     )
 
@@ -198,7 +175,7 @@ def sriov_vm4(
         name="sriov-vm4",
         namespace=namespace,
         worker=sriov_workers_node2,
-        ip_config="10.200.3.2/24",
+        ip_config=f"{random_ipv4_address(net_seed=1, host_address=2)}/24",
         sriov_network=sriov_network_vlan,
     )
 
@@ -264,7 +241,7 @@ def sriov_vm_migrate(index_number, unprivileged_client, namespace, sriov_network
         unprivileged_client=unprivileged_client,
         name="sriov-vm-migrate",
         namespace=namespace,
-        ip_config="10.200.1.3/24",
+        ip_config=f"{random_ipv4_address(net_seed=0, host_address=3)}/24",
         sriov_network=sriov_network,
     )
 

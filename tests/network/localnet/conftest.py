@@ -8,6 +8,7 @@ import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef
 from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.libs.ip import random_ipv4_address
 from tests.network.localnet.liblocalnet import (
     create_traffic_client,
     create_traffic_server,
@@ -89,7 +90,7 @@ def nad_localnet_2(
 
 @pytest.fixture(scope="module")
 def ipv4_localnet_address_pool() -> Generator[str]:
-    return (f"10.0.0.{host_value}/24" for host_value in range(1, 254))
+    return (f"{random_ipv4_address(net_seed=0, host_address=host_value)}/24" for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")

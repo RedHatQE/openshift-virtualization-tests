@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 
+from tests.network.libs.ip import random_ipv4_address
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
@@ -31,7 +32,7 @@ def create_vm_for_jumbo_test(
 def cloud_init_data_for_secondary_traffic(index):
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"10.200.0.{index}/24"]},
+            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=index)}/24"]},
         }
     }
 

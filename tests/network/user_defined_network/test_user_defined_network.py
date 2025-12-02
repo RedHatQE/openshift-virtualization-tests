@@ -10,6 +10,7 @@ from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
+from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
@@ -47,7 +48,7 @@ def namespaced_layer2_user_defined_network(udn_namespace):
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
-        subnets=["10.10.0.0/24"],
+        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
         ipam={"lifecycle": "Persistent"},
     ) as udn:
         udn.wait_for_condition(
