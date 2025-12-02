@@ -80,6 +80,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "numa",
     "bgp",
     "cclm",
+    "mtv",
 ]
 
 TEAM_MARKERS = {
