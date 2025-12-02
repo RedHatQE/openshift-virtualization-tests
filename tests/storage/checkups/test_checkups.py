@@ -5,6 +5,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.job import Job
 
 from tests.storage.checkups.utils import assert_results_in_configmap
+from utilities.constants import QUARANTINED
 
 MSG_MIGRATION_FAIL = "cannot migrate VMI"
 MSG_MIGRATION_SUCCESS = "migration completed"
@@ -22,6 +23,13 @@ LOGGER = logging.getLogger(__name__)
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: default storage class is not set properly: CNV-67730 "
+        "(HPP clone is slow, may cause job failure), not enough info to debug the failed checkup job: CNV-72377"
+    ),
+    run=False,
 )
 class TestCheckupPositive:
     @pytest.mark.polarion("CNV-10707")
