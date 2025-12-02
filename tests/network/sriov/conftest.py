@@ -250,13 +250,14 @@ def sriov_vm_migrate(index_number, unprivileged_client, namespace, sriov_network
 
 
 @pytest.fixture(scope="class")
-def dpdk_template(namespace, tmpdir_factory):
+def dpdk_template(admin_client, namespace, tmpdir_factory):
     template_dir = tmpdir_factory.mktemp("dpdk_template")
     with create_custom_template_from_url(
         url=f"{CNV_SUPPLEMENTAL_TEMPLATES_URL}/testpmd/resource-specs/sriov-vm1-template.yaml",
         template_name="dpdk_vm_template.yaml",
         template_dir=template_dir,
         namespace=namespace.name,
+        client=admin_client,
     ) as template:
         yield template
 
