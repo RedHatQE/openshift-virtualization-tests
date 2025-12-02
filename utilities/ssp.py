@@ -150,7 +150,7 @@ def wait_for_condition_message_value(resource, expected_message):
 
 
 @contextmanager
-def create_custom_template_from_url(url, template_name, template_dir, namespace):
+def create_custom_template_from_url(url, template_name, template_dir, namespace, client):
     template_filepath = os.path.join(template_dir, template_name)
     urllib.request.urlretrieve(
         url=url,
@@ -159,6 +159,7 @@ def create_custom_template_from_url(url, template_name, template_dir, namespace)
     with Template(
         yaml_file=template_filepath,
         namespace=namespace,
+        client=client,
     ) as template:
         yield template
 
