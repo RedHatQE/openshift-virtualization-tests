@@ -17,7 +17,7 @@ def updated_default_storage_class_scope_function(
     removed_default_storage_classes,
 ):
     sc_name = [*storage_class_matrix__function__][0]
-    sc = StorageClass(name=sc_name)
+    sc = StorageClass(client=admin_client, name=sc_name)
     with ResourceEditor(
         patches={
             sc: {
