@@ -21,11 +21,11 @@ from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
-from ocp_resources.resource import get_client
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
 
+import utilities.cluster
 import utilities.infra
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -792,7 +792,7 @@ def pytest_sessionstart(session):
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
-                cluster_host_url=get_client().configuration.host
+                cluster_host_url=utilities.cluster.cache_admin_client().configuration.host
             )
             py_config["servers"] = {
                 name: _server.format(server=py_config["server_url"]) for name, _server in py_config["servers"].items()
