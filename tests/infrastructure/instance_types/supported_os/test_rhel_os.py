@@ -30,6 +30,7 @@ pytestmark = [pytest.mark.post_upgrade]
 TESTS_MODULE_IDENTIFIER = "TestCommonInstancetypeRhel"
 
 
+@pytest.mark.conformance
 @pytest.mark.arm64
 @pytest.mark.s390x
 @pytest.mark.smoke
@@ -153,6 +154,7 @@ class TestVMMigrationAndState:
         )
 
 
+@pytest.mark.conformance
 @pytest.mark.arm64
 @pytest.mark.smoke
 @pytest.mark.gating

@@ -120,7 +120,7 @@ class TestOnlineResizeMatrix:
 class TestHppMatrix:
     """Test cases for hpp_matrix function"""
 
-    @patch("utilities.pytest_matrix_utils._cache_admin_client")
+    @patch("utilities.infra.cache_admin_client")
     @patch("utilities.pytest_matrix_utils.StorageClass")
     def test_hpp_matrix_with_hpp_provisioner(self, mock_storage_class, mock_cache_admin_client):
         """Test hpp_matrix filters storage classes with HPP provisioner"""
@@ -156,9 +156,7 @@ class TestHppMatrix:
         assert len(result) == 1
         assert {"hpp-sc": {"other": "value"}} in result
 
-    @patch("utilities.pytest_matrix_utils._cache_admin_client")
-    @patch("utilities.pytest_matrix_utils.StorageClass")
-    def test_hpp_matrix_empty_matrix(self, mock_storage_class, mock_cache_admin_client):
+    def test_hpp_matrix_empty_matrix(self):
         """Test hpp_matrix with empty matrix"""
         matrix = []
 
