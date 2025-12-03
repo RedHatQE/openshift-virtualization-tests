@@ -52,6 +52,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
+from utilities.virt import VirtualMachineForTests
 
 if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
@@ -687,6 +688,20 @@ def write_file(vm, filename, content, stop_vm=True):
     if stop_vm:
         vm.stop(wait=True)
 
+
+def write_file_via_ssh(vm: VirtualMachineForTests, filename: str, content: str) -> None:
+    """
+    Write content to a file in VM using SSH connection.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+
+    Raises:
+        TimeoutExpiredError: If SSH connectivity cannot be established
+        SSHException: If SSH command execution fails
+    """
 
 def write_file_via_ssh(vm, filename, content):
     # Import here to avoid circular imports errors
