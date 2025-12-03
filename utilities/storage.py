@@ -702,9 +702,6 @@ def write_file_via_ssh(vm: VirtualMachineForTests, filename: str, content: str) 
         TimeoutExpiredError: If SSH connectivity cannot be established
         SSHException: If SSH command execution fails
     """
-
-
-def write_file_via_ssh(vm, filename, content):
     # Import here to avoid circular imports errors
     from utilities.virt import wait_for_ssh_connectivity
 
