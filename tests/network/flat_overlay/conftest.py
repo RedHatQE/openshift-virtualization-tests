@@ -82,19 +82,20 @@ def flat_overlay_second_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def flat_overlay_vma_vmb_nad(namespace):
+def flat_overlay_vma_vmb_nad(admin_client, namespace):
     with network_nad(
         nad_type=FLAT_OVERLAY_STR,
         network_name=FLAT_OVERLAY_VMA_VMB_NETWORK_NAME,
         nad_name=FLAT_OVERLAY_VMA_VMB_NAD_NAME,
         namespace=namespace,
         topology=LAYER2,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
-def flat_overlay_vmc_vmd_nad(namespace):
+def flat_overlay_vmc_vmd_nad(admin_client, namespace):
     nad_for_vms = "vmc-vmd"
     with network_nad(
         nad_type=FLAT_OVERLAY_STR,
@@ -102,24 +103,26 @@ def flat_overlay_vmc_vmd_nad(namespace):
         nad_name=f"{FLAT_L2_BASIC_NAD_NAME}-{nad_for_vms}",
         namespace=namespace,
         topology=LAYER2,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
-def flat_overlay_vme_nad(flat_overlay_second_namespace):
+def flat_overlay_vme_nad(admin_client, flat_overlay_second_namespace):
     with network_nad(
         nad_type=FLAT_OVERLAY_STR,
         network_name=FLAT_OVERLAY_VMA_VMB_NETWORK_NAME,
         nad_name=FLAT_OVERLAY_VMA_VMB_NAD_NAME,
         namespace=flat_overlay_second_namespace,
         topology=LAYER2,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
-def flat_overlay_jumbo_frame_nad(namespace, cluster_hardware_mtu):
+def flat_overlay_jumbo_frame_nad(admin_client, namespace, cluster_hardware_mtu):
     with network_nad(
         nad_type=FLAT_OVERLAY_STR,
         network_name=f"{FLAT_L2_BASIC_NETWORK_NAME}-jumbo",
@@ -127,6 +130,7 @@ def flat_overlay_jumbo_frame_nad(namespace, cluster_hardware_mtu):
         namespace=namespace,
         mtu=cluster_hardware_mtu,
         topology=LAYER2,
+        client=admin_client,
     ) as nad:
         yield nad
 

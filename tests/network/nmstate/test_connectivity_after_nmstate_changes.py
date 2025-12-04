@@ -71,6 +71,7 @@ def nmstate_linux_bridge_device_worker_2(nodes_available_nics, worker_node2):
 
 @pytest.fixture(scope="class")
 def nmstate_linux_nad(
+    admin_client,
     namespace,
     nmstate_linux_bridge_device_worker_1,
     nmstate_linux_bridge_device_worker_2,
@@ -80,6 +81,7 @@ def nmstate_linux_nad(
         nad_type=nmstate_linux_bridge_device_worker_1.bridge_type,
         nad_name="nmstate-br1test-nad",
         interface_name=nmstate_linux_bridge_device_worker_1.bridge_name,
+        client=admin_client,
     ) as nad:
         yield nad
 
