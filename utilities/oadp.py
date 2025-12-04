@@ -64,7 +64,6 @@ def delete_velero_resource(resource: Backup | Restore, client: DynamicClient) ->
 
     except ResourceNotFoundError:
         LOGGER.error(
-
             f"Failed to delete Velero resource: kind={resource.kind} name={resource.name} command={' '.join(command)}",
             exc_info=True,
         )
