@@ -26,12 +26,13 @@ pytestmark = pytest.mark.usefixtures(
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_br1bond_nad(bridge_device_matrix__class__, namespace):
+def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace):
     with network_nad(
         namespace=namespace,
         nad_type=bridge_device_matrix__class__,
         nad_name="br1bond-nad",
         interface_name="br1bond",
+        client=admin_client,
     ) as nad:
         yield nad
 

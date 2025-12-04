@@ -51,6 +51,7 @@ def kubemacpool_bridge_device_worker_2(
 
 @pytest.fixture(scope="module")
 def manual_mac_nad(
+    admin_client,
     namespace,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -61,12 +62,14 @@ def manual_mac_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-manual-mac-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=namespace,
+        client=admin_client,
     ) as manual_mac_nad:
         yield manual_mac_nad
 
 
 @pytest.fixture(scope="module")
 def automatic_mac_nad(
+    admin_client,
     namespace,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -77,12 +80,14 @@ def automatic_mac_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-automatic-mac-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=namespace,
+        client=admin_client,
     ) as automatic_mac_nad:
         yield automatic_mac_nad
 
 
 @pytest.fixture(scope="module")
 def manual_mac_out_of_pool_nad(
+    admin_client,
     namespace,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -93,12 +98,14 @@ def manual_mac_out_of_pool_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-manual-out-pool-mac-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=namespace,
+        client=admin_client,
     ) as manual_mac_out_pool_nad:
         yield manual_mac_out_pool_nad
 
 
 @pytest.fixture(scope="module")
 def automatic_mac_tuning_net_nad(
+    admin_client,
     namespace,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -109,12 +116,14 @@ def automatic_mac_tuning_net_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-automatic-mac-tun-net-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=namespace,
+        client=admin_client,
     ) as automatic_mac_tuning_net_nad:
         yield automatic_mac_tuning_net_nad
 
 
 @pytest.fixture(scope="class")
 def disabled_ns_nad(
+    admin_client,
     disabled_ns,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -125,12 +134,14 @@ def disabled_ns_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-{disabled_ns.name}-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=disabled_ns,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def enabled_ns_nad(
+    admin_client,
     kmp_enabled_ns,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -141,12 +152,14 @@ def enabled_ns_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-{kmp_enabled_ns.name}-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=kmp_enabled_ns,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def no_label_ns_nad(
+    admin_client,
     no_label_ns,
     kubemacpool_bridge_device_worker_1,
     kubemacpool_bridge_device_worker_2,
@@ -157,6 +170,7 @@ def no_label_ns_nad(
         nad_name=f"{kubemacpool_bridge_device_name}-{no_label_ns.name}-nad",
         interface_name=kubemacpool_bridge_device_name,
         namespace=no_label_ns,
+        client=admin_client,
     ) as nad:
         yield nad
 

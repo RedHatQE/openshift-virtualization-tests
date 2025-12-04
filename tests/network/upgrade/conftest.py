@@ -17,6 +17,7 @@ NAD_MAC_SPOOF_NAME = "brspoofupgrade"
 
 @pytest.fixture(scope="session")
 def upgrade_linux_macspoof_nad(
+    admin_client,
     upgrade_namespace_scope_session,
 ):
     with network_nad(
@@ -26,6 +27,7 @@ def upgrade_linux_macspoof_nad(
         interface_name=NAD_MAC_SPOOF_NAME,
         macspoofchk=True,
         add_resource_name=False,
+        client=admin_client,
     ) as nad:
         yield nad
 

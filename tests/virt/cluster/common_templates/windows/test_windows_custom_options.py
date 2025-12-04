@@ -121,12 +121,13 @@ def windows_custom_bridge():
 
 
 @pytest.fixture(scope="class")
-def windows_custom_bridge_nad(windows_custom_bridge, namespace):
+def windows_custom_bridge_nad(admin_client, windows_custom_bridge, namespace):
     with network_nad(
         namespace=namespace,
         nad_type=windows_custom_bridge.bridge_type,
         nad_name="br1-win-custom-nad",
         interface_name=(windows_custom_bridge.bridge_name),
+        client=admin_client,
     ) as nad:
         yield nad
 

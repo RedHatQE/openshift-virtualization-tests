@@ -38,29 +38,32 @@ def _get_name(suffix):
 
 
 @pytest.fixture()
-def bridge_marker_bridge_network(namespace):
+def bridge_marker_bridge_network(admin_client, namespace):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=BRIDGEMARKER1,
         interface_name=BRIDGEMARKER1,
         namespace=namespace,
+        client=admin_client,
     ) as attachdef:
         yield attachdef
 
 
 @pytest.fixture()
-def bridge_networks(namespace):
+def bridge_networks(admin_client, namespace):
     with network_nad(
         nad_type=LINUX_BRIDGE,
         nad_name=BRIDGEMARKER2,
         interface_name=BRIDGEMARKER2,
         namespace=namespace,
+        client=admin_client,
     ) as bridgemarker2_nad:
         with network_nad(
             nad_type=LINUX_BRIDGE,
             nad_name=BRIDGEMARKER3,
             interface_name=BRIDGEMARKER3,
             namespace=namespace,
+            client=admin_client,
         ) as bridgemarker3_nad:
             yield bridgemarker2_nad, bridgemarker3_nad
 

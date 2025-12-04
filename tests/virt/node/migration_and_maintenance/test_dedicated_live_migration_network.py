@@ -48,11 +48,12 @@ def migration_interface(hosts_common_available_ports):
 
 
 @pytest.fixture(scope="module")
-def dedicated_network_nad(migration_interface, hco_namespace):
+def dedicated_network_nad(admin_client, migration_interface, hco_namespace):
     with MACVLANNetworkAttachmentDefinition(
         name="migration-nad",
         namespace=hco_namespace.name,
         master=migration_interface,
+        client=admin_client,
     ) as nad:
         yield nad
 

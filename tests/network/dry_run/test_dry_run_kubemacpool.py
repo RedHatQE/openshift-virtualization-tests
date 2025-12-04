@@ -43,12 +43,13 @@ def bridge_on_all_nodes():
 
 
 @pytest.fixture()
-def linux_bridge_network_nad(namespace, bridge_on_all_nodes):
+def linux_bridge_network_nad(admin_client, namespace, bridge_on_all_nodes):
     with network_nad(
         nad_type=bridge_on_all_nodes.bridge_type,
         nad_name=f"{bridge_on_all_nodes.bridge_name}-nad",
         interface_name=bridge_on_all_nodes.bridge_name,
         namespace=namespace,
+        client=admin_client,
     ) as dry_run_nad:
         yield dry_run_nad
 

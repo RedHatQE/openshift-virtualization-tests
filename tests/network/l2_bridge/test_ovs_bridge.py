@@ -29,18 +29,20 @@ def ovs_bridge_on_worker1(worker_node1_pod_executor):
 
 
 @pytest.fixture()
-def ovs_bridge_nad(namespace, ovs_bridge_on_worker1):
+def ovs_bridge_nad(admin_client, namespace, ovs_bridge_on_worker1):
     with network_nad(
         namespace=namespace,
         nad_type=OVS_BRIDGE,
         nad_name="ovs-test-nad",
         interface_name=ovs_bridge_on_worker1,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="module")
 def brcnv_ovs_nad_vlan_2(
+    admin_client,
     namespace,
     vlan_index_number,
 ):
@@ -51,6 +53,7 @@ def brcnv_ovs_nad_vlan_2(
         nad_name=f"{BRCNV}-{vlan_tag}",
         interface_name=BRCNV,
         vlan=vlan_tag,
+        client=admin_client,
     ) as nad:
         yield nad
 

@@ -115,6 +115,7 @@ def jumbo_frame_bridge_on_bond_worker_2(
 
 @pytest.fixture(scope="class")
 def br1bond_nad(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     namespace,
@@ -127,6 +128,7 @@ def br1bond_nad(
         nad_name=f"{BRIDGE_NAME}-bond-nad",
         interface_name=jumbo_frame_bridge_on_bond_worker_1.bridge_name,
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as nad:
         yield nad
 

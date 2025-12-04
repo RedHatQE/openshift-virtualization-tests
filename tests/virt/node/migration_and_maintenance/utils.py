@@ -23,7 +23,7 @@ class MACVLANNetworkAttachmentDefinition(NetworkAttachmentDefinition):
         name,
         namespace,
         master,
-        client=None,
+        client,
         teardown=True,
     ):
         super().__init__(name=name, namespace=namespace, client=client, teardown=teardown)

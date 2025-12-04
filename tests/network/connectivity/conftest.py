@@ -99,6 +99,7 @@ def nncp_ovs_bridge_device_worker_2_destination(
 
 @pytest.fixture(scope="class")
 def nad_linux_bridge(
+    admin_client,
     namespace,
     nncp_linux_bridge_device_worker_1_source,
     nncp_linux_bridge_device_worker_2_destination,
@@ -109,12 +110,14 @@ def nad_linux_bridge(
         nad_type=LINUX_BRIDGE,
         nad_name=f"linux-{bridge_device_name}-nad",
         interface_name=bridge_device_name,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_ovs_bridge(
+    admin_client,
     namespace,
     nncp_ovs_bridge_device_worker_1_source,
     nncp_ovs_bridge_device_worker_2_destination,
@@ -125,12 +128,14 @@ def nad_ovs_bridge(
         nad_type=OVS_BRIDGE,
         nad_name=f"ovs-{bridge_device_name}-nad",
         interface_name=bridge_device_name,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_linux_bridge_vlan_1(
+    admin_client,
     namespace,
     nncp_linux_bridge_device_worker_1_source,
     nncp_linux_bridge_device_worker_2_destination,
@@ -143,12 +148,14 @@ def nad_linux_bridge_vlan_1(
         nad_name=f"linux-{bridge_device_name}-vlan{vlan_id_1}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_1,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_ovs_bridge_vlan_1(
+    admin_client,
     namespace,
     nncp_ovs_bridge_device_worker_1_source,
     nncp_ovs_bridge_device_worker_2_destination,
@@ -161,12 +168,14 @@ def nad_ovs_bridge_vlan_1(
         nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_1}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_1,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_linux_bridge_vlan_2(
+    admin_client,
     namespace,
     nncp_linux_bridge_device_worker_1_source,
     nncp_linux_bridge_device_worker_2_destination,
@@ -179,12 +188,14 @@ def nad_linux_bridge_vlan_2(
         nad_name=f"linux-{bridge_device_name}-vlan{vlan_id_2}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_2,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_ovs_bridge_vlan_2(
+    admin_client,
     namespace,
     nncp_ovs_bridge_device_worker_1_source,
     nncp_ovs_bridge_device_worker_2_destination,
@@ -197,12 +208,14 @@ def nad_ovs_bridge_vlan_2(
         nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_2}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_2,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_linux_bridge_vlan_3(
+    admin_client,
     namespace,
     nncp_linux_bridge_device_worker_1_source,
     nncp_linux_bridge_device_worker_2_destination,
@@ -215,12 +228,14 @@ def nad_linux_bridge_vlan_3(
         nad_name=f"linux-{bridge_device_name}-vlan{vlan_id_3}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_3,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def nad_ovs_bridge_vlan_3(
+    admin_client,
     namespace,
     nncp_ovs_bridge_device_worker_1_source,
     nncp_ovs_bridge_device_worker_2_destination,
@@ -233,6 +248,7 @@ def nad_ovs_bridge_vlan_3(
         nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_3}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_3,
+        client=admin_client,
     ) as nad:
         yield nad
 

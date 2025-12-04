@@ -55,6 +55,7 @@ def bridge_interface_for_hot_plug(hosts_common_available_ports):
 
 @pytest.fixture(scope="module")
 def network_attachment_definition_for_hot_plug(
+    admin_client,
     namespace,
     bridge_interface_for_hot_plug,
 ):
@@ -63,6 +64,7 @@ def network_attachment_definition_for_hot_plug(
         namespace=namespace.name,
         name=f"{bridge_name}-nad",
         config=netattachdef.NetConfig(bridge_name, [netattachdef.CNIPluginBridgeConfig(bridge=bridge_name)]),
+        client=admin_client,
     ) as nad:
         yield nad
 
@@ -185,6 +187,7 @@ def bridge_jumbo_interface_for_hot_plug(hosts_common_available_ports, cluster_ha
 
 @pytest.fixture()
 def network_attachment_definition_for_jumbo_hot_plug(
+    admin_client,
     namespace,
     bridge_jumbo_interface_for_hot_plug,
     cluster_hardware_mtu,
@@ -202,6 +205,7 @@ def network_attachment_definition_for_jumbo_hot_plug(
                 )
             ],
         ),
+        client=admin_client,
     ) as nad:
         yield nad
 
@@ -255,6 +259,7 @@ def hot_plugged_interface_from_flat_overlay_network(
 
 @pytest.fixture()
 def flat_overlay_network_attachment_definition_for_hot_plug(
+    admin_client,
     namespace,
 ):
     with network_nad(
@@ -263,6 +268,7 @@ def flat_overlay_network_attachment_definition_for_hot_plug(
         nad_name=f"{FLAT_OVERLAY_STR}-nad",
         network_name=f"{FLAT_OVERLAY_STR}-network",
         topology=FLAT_OVERLAY_STR,
+        client=admin_client,
     ) as nad:
         yield nad
 
@@ -419,13 +425,14 @@ def vm2_with_hot_plugged_sriov_interface(
 
 
 @pytest.fixture(scope="module")
-def sriov_network_for_hot_plug(sriov_node_policy, namespace, sriov_namespace):
+def sriov_network_for_hot_plug(admin_client, sriov_node_policy, namespace, sriov_namespace):
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-hot-plug-test-network",
         sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
+        client=admin_client,
     ) as sriov_network:
         yield sriov_network
 
