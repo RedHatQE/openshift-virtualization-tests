@@ -1,9 +1,13 @@
 import logging
 
 import pytest
+from ocp_resources.daemonset import DaemonSet
+from ocp_resources.deployment import Deployment
+from timeout_sampler import TimeoutSampler
 
+from tests.chaos.utils import pod_deleting_process_recover
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 
