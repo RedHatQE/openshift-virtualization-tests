@@ -1,9 +1,13 @@
 from contextlib import contextmanager
 
+from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
-from tests.utils import create_rhel_vm_from_data_source
-from utilities.storage import write_file
+from utilities.constants import OS_FLAVOR_RHEL, U1_SMALL
+from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
+from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
 
 @contextmanager
@@ -13,17 +17,25 @@ def create_vm_for_snapshot_upgrade_tests(
     client,
     storage_class_for_snapshot,
     cpu_model,
-    rhel10_data_source_scope_module,
+    rhel10_data_source_scope_session,
 ):
-    with create_rhel_vm_from_data_source(
-        storage_class=storage_class_for_snapshot,
+    with VirtualMachineForTests(
+        name=f"vm-{vm_name}",
         namespace=namespace,
         client=client,
-        vm_name=f"vm-{vm_name}",
-        data_source=rhel10_data_source_scope_module,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=client, name="rhel.10"),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_session,
+            storage_class=storage_class_for_snapshot,
+        ),
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_model,
     ) as vm:
-        write_file(
+        running_vm(vm=vm)
+        wait_for_ssh_connectivity(vm=vm)
+        write_file_via_ssh(
             vm=vm,
             filename="first-file.txt",
             content="first-file",
@@ -41,7 +53,8 @@ def create_snapshot_for_upgrade(vm, client):
         client=client,
     ) as vm_snapshot:
         vm_snapshot.wait_snapshot_done()
-        write_file(
+        wait_for_ssh_connectivity(vm=vm)
+        write_file_via_ssh(
             vm=vm,
             filename="second-file.txt",
             content="second-file",

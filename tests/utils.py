@@ -15,17 +15,10 @@ import xmltodict
 from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_cluster_instancetype import (
-    VirtualMachineClusterInstancetype,
-)
-from ocp_resources.virtual_machine_cluster_preference import (
-    VirtualMachineClusterPreference,
-)
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -33,7 +26,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
-    OS_FLAVOR_RHEL,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -44,7 +36,6 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    U1_SMALL,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -55,7 +46,6 @@ from utilities.infra import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -536,36 +526,6 @@ def register_vm_to_rhsm(vm):
             "--auto-attach"
         ),
     )
-
-
-@contextmanager
-def create_rhel_vm_from_data_source(
-    storage_class: str,
-    namespace: str,
-    client: DynamicClient,
-    vm_name: str,
-    data_source: DataSource,
-    cpu_model: str | None = None,
-    instance_type_name: str | None = U1_SMALL,
-    preference_name: str | None = "rhel.10",
-    run_strategy: VirtualMachine.RunStrategy | None = VirtualMachine.RunStrategy.ALWAYS,
-) -> Generator[VirtualMachineForTests, None, None]:
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        os_flavor=OS_FLAVOR_RHEL,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=instance_type_name),
-        vm_preference=VirtualMachineClusterPreference(client=client, name=preference_name),
-        data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=data_source,
-            storage_class=storage_class,
-        ),
-        run_strategy=run_strategy,
-        cpu_model=cpu_model,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
 
 
 @contextmanager
