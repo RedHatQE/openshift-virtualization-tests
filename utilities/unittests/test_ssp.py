@@ -347,19 +347,25 @@ class TestCreateCustomTemplateFromUrl:
         mock_template_class.return_value.__exit__ = MagicMock(return_value=None)
 
         mock_namespace = MagicMock()
+        mock_client = MagicMock()
 
         with create_custom_template_from_url(
             url="https://example.com/template.yaml",
             template_name="custom-template",
             template_dir="/tmp",
             namespace=mock_namespace,
+            client=mock_client,
         ) as template:
             assert template == mock_template
 
         mock_urlretrieve.assert_called_once_with(
             url="https://example.com/template.yaml", filename="/tmp/custom-template"
         )
-        mock_template_class.assert_called_once()
+        mock_template_class.assert_called_once_with(
+            yaml_file="/tmp/custom-template",
+            namespace=mock_namespace,
+            client=mock_client,
+        )
 
 
 class TestGuestAgentVersionParser:

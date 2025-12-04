@@ -24,10 +24,15 @@ def boot_source_preference_from_data_source_dict(
 
 @pytest.fixture()
 def data_source_from_data_import_cron(
+    unprivileged_client,
     golden_images_namespace,
     data_import_cron_matrix__function__,
 ):
-    data_source = DataSource(name=[*data_import_cron_matrix__function__][0], namespace=golden_images_namespace.name)
+    data_source = DataSource(
+        client=unprivileged_client,
+        name=[*data_import_cron_matrix__function__][0],
+        namespace=golden_images_namespace.name,
+    )
     data_source.wait_for_condition(
         condition=data_source.Condition.READY, status=data_source.Condition.Status.TRUE, timeout=TIMEOUT_5SEC
     )

@@ -74,6 +74,7 @@ import utilities.hco
 from tests.utils import download_and_extract_tar, update_cluster_cpu_model
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
+from utilities.cluster import cache_admin_client
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
     AMD,
@@ -305,7 +306,7 @@ def admin_client():
     """
     Get DynamicClient
     """
-    return get_client()
+    return cache_admin_client()
 
 
 @pytest.fixture(scope="session")

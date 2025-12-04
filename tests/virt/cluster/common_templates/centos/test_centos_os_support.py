@@ -21,7 +21,7 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
     validate_libvirt_persistent_domain,
-    validate_pause_optional_migrate_unpause_linux_vm,
+    validate_pause_unpause_linux_vm,
     validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
@@ -117,7 +117,7 @@ class TestCommonTemplatesCentos:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5918")
     def test_pause_unpause_vm(self, matrix_centos_os_vm_from_template):
-        validate_pause_optional_migrate_unpause_linux_vm(vm=matrix_centos_os_vm_from_template)
+        validate_pause_unpause_linux_vm(vm=matrix_centos_os_vm_from_template)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-5841")
@@ -132,9 +132,7 @@ class TestCommonTemplatesCentos:
     @pytest.mark.polarion("CNV-5904")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(self, matrix_centos_os_vm_from_template, ping_process_in_centos_os):
-        validate_pause_optional_migrate_unpause_linux_vm(
-            vm=matrix_centos_os_vm_from_template, pre_pause_pid=ping_process_in_centos_os
-        )
+        validate_pause_unpause_linux_vm(vm=matrix_centos_os_vm_from_template, pre_pause_pid=ping_process_in_centos_os)
 
     @pytest.mark.polarion("CNV-6008")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
