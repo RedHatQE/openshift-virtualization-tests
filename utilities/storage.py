@@ -52,7 +52,9 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
-from utilities.virt import VirtualMachineForTests
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
@@ -689,7 +691,7 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
-def write_file_via_ssh(vm: VirtualMachineForTests, filename: str, content: str) -> None:
+def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection.
 
@@ -702,17 +704,11 @@ def write_file_via_ssh(vm: VirtualMachineForTests, filename: str, content: str) 
         TimeoutExpiredError: If SSH connectivity cannot be established
         SSHException: If SSH command execution fails
     """
-    # Import here to avoid circular imports errors
-    from utilities.virt import wait_for_ssh_connectivity
-
-    wait_for_ssh_connectivity(vm=vm)
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"echo '{content}' > {filename}")],
-    )
+    cmd = shlex.split(f"echo '{content}' > {filename} && sync")
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
-def run_command_on_vm_and_check_output(vm, command, expected_result):
+def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
     assert expected_result in output.strip(), (
         f"Expected '{expected_result}' not found in command output: '{output.strip()}'"
