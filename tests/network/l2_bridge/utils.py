@@ -123,7 +123,30 @@ def hot_plug_interface(
         "name": hot_plugged_interface_name,
     })
 
+    initial_node = vm.vmi.node
+
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
+    LOGGER.info(
+        f"Wait for VM {vm.name} to complete migration from node {initial_node.name} "
+        f"after hot-plugging interface {hot_plugged_interface_name}"
+    )
+
+    # Hot-plug is followed by an automatically-generated migration,
+    # make sure it is completed successfully.
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=240,
+            sleep=5,
+            func=lambda: vm.vmi.node.name != initial_node.name,
+        ):
+            if sample:
+                LOGGER.info(f"VM {vm.name} migrated successfully following interface hot-plug")
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"VM {vm.name} post-hot-plug migration failed after hot-plugging interface {hot_plugged_interface_name}"
+        )
+        raise
 
     return lookup_iface_status(
         vm=vm,
