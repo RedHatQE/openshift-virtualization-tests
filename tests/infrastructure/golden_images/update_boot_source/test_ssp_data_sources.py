@@ -247,21 +247,21 @@ def data_sources_names_from_templates_scope_function(base_templates):
 
 
 @pytest.fixture()
-def data_sources_from_templates_scope_function(data_sources_names_from_templates_scope_function):
+def data_sources_from_templates_scope_function(admin_client, data_sources_names_from_templates_scope_function):
     return [
-        DataSource(name=data_source_name, namespace=py_config["golden_images_namespace"])
+        DataSource(client=admin_client, name=data_source_name, namespace=py_config["golden_images_namespace"])
         for data_source_name in data_sources_names_from_templates_scope_function
     ]
 
 
 @pytest.fixture()
-def data_source_by_name_scope_function(request, admin_client, golden_images_namespace):
-    return DataSource(name=request.param, namespace=golden_images_namespace.name)
+def data_source_by_name_scope_function(request, unprivileged_client, golden_images_namespace):
+    return DataSource(client=unprivileged_client, name=request.param, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")
 def data_source_by_name_scope_class(request, admin_client, golden_images_namespace):
-    return DataSource(name=request.param, namespace=golden_images_namespace.name)
+    return DataSource(client=admin_client, name=request.param, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")

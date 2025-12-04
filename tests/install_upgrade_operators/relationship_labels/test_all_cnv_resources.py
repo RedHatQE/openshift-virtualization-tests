@@ -29,6 +29,7 @@ ALLOWLIST_STRING_LIST = [
     "hyperconverged-cluster-operator-lock",
     "kubevirt-ipam-controller-webhook-service",
     "istio-ca-root-cert",
+    "istio-ca-crl",
 ]
 PRINT_COMMAND = '{printf "%s%s",sep,$0;sep=","}'
 AWK_COMMAND = f"awk '{PRINT_COMMAND}'"
@@ -136,7 +137,7 @@ def test_relationship_labels_all_cnv_resources(
 
                         else:
                             errors.setdefault(kind, []).append(
-                                f"{name} has missing labels: {labels} and is not managed by olm"
+                                f'{name} has missing labels. Current labels are "{labels}" and is not managed by olm'
                             )
             else:
                 errors.setdefault(kind, []).append(f"{name} resource not found")
