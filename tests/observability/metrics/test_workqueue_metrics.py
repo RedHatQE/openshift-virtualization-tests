@@ -17,6 +17,7 @@ CNV_WORKQUEUE_METRICS = [
 
 class TestWorkQueueMetrics:
     @pytest.mark.polarion("CNV-12279")
+    @pytest.mark.conformance
     def test_work_queue_metrics(self, prometheus):
         metrics_without_value = [
             metric for metric in CNV_WORKQUEUE_METRICS if not prometheus.query_sampler(query=metric)
