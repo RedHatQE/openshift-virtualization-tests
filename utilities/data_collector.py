@@ -91,6 +91,7 @@ def write_to_file(file_name, content, base_directory, mode="w"):
     file_path = os.path.join(base_directory, file_name)
 
     try:
+        LOGGER.info(f"Writing data to file: {file_path}")
         with open(file_path, mode) as fd:
             fd.write(content)
     except Exception as exp:
