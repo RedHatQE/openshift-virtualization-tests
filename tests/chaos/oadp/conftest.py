@@ -3,12 +3,15 @@ import logging
 
 import pytest
 
+from tests.chaos.utils import create_pod_deleting_process, terminate_process
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
+    TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
+    Images,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.oadp import VeleroBackup, create_rhel_vm
@@ -79,3 +82,117 @@ def drain_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
     with node_mgmt_console(node=vm_node, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
+
+
+@pytest.fixture(scope="module")
+def rhel_vm_with_dv_running_factory(
+    admin_client,
+    chaos_namespace,
+    snapshot_storage_class_name_scope_module,
+):
+    """
+    Factory fixture: create a RHEL VM with a DataVolume.
+    Usage in test: vm = rhel_vm_with_dv_running_factory(vm_name="myvm")
+    """
+    created_vms = []
+
+    def _create(vm_name, rhel_image=Images.Rhel.LATEST_RELEASE_STR):
+        vm_generator = create_rhel_vm(
+            storage_class=snapshot_storage_class_name_scope_module,
+            namespace=chaos_namespace.name,
+            vm_name=vm_name,
+            dv_name=f"dv-{vm_name}",
+            client=admin_client,
+            wait_running=True,
+            rhel_image=rhel_image,
+        )
+        vm = vm_generator.__enter__()
+        created_vms.append((vm, vm_generator))
+        write_file(
+            vm=vm,
+            filename=FILE_NAME_FOR_BACKUP,
+            content=TEXT_TO_TEST,
+            stop_vm=False,
+        )
+
+        return vm
+
+    yield _create
+
+    # Cleanup all created VMs
+    for vm, vm_generator in created_vms:
+        try:
+            vm.clean_up()
+        finally:
+            try:
+                vm_generator.__exit__(None, None, None)  # noqa: FCN001
+            except Exception:
+                LOGGER.exception(f"Failed to cleanup VM {vm.name}")
+
+
+@pytest.fixture()
+def oadp_backup_start_factory(admin_client, chaos_namespace, rhel_vm_with_dv_running_factory):
+    """
+    Factory fixture: start an OADP backup and yield the backup object.
+    """
+    created_backups = []
+
+    def _start_backup():
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_name = f"backup-{timestamp}"
+
+        backup = VeleroBackup(
+            name=backup_name,
+            included_namespaces=[chaos_namespace.name],
+            client=admin_client,
+            snapshot_move_data=True,
+            storage_location=BACKUP_STORAGE_LOCATION,
+            wait_complete=False,
+        )
+        backup.__enter__()
+        created_backups.append(backup)
+        # backup.wait_for_status(status=backup.Backup.Status.INPROGRESS, timeout=TIMEOUT_3MIN)
+        return backup
+
+    yield _start_backup
+
+    # Cleanup all created backups
+    for backup in created_backups:
+        try:
+            backup.__exit__(exception_type=None, exception_value=None, traceback=None)
+        except Exception:
+            LOGGER.exception(f"Failed to cleanup backup {backup.name}")
+
+
+@pytest.fixture()
+def pod_deleting_process_during_oadp_operations(request, admin_client):
+    """
+    Only create process, not start it. You need to control start timing in the test body.
+    """
+    pod_prefix = request.param["pod_prefix"]
+    namespace_name = request.param["namespace_name"]
+    process = create_pod_deleting_process(
+        dyn_client=admin_client,
+        pod_prefix=pod_prefix,
+        namespace_name=namespace_name,
+        ratio=request.param["ratio"],
+        interval=request.param["interval"],
+        max_duration=request.param["max_duration"],
+    )
+
+    yield {
+        "process": process,
+        "namespace_name": namespace_name,
+        "pod_prefix": pod_prefix,
+    }
+
+    # Teardown: terminate the subprocess
+    terminate_process(process=process)
+    # Ensure join a start process
+    if process.is_alive():
+        process.join(timeout=TIMEOUT_1MIN)
+        # Ensure the subprocess has fully exited
+        if process.is_alive():
+            LOGGER.warning(f"Pod deleting process for {pod_prefix} in {namespace_name} did not exit within 60 seconds")
+    else:
+        LOGGER.info(f"Pod deleting process for {pod_prefix} in {namespace_name} was never started or already stopped")

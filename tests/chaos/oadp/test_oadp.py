@@ -1,9 +1,14 @@
 import logging
 
 import pytest
+from ocp_resources.daemonset import DaemonSet
+from ocp_resources.deployment import Deployment
+from timeout_sampler import TimeoutSampler
 
+from tests.chaos.utils import pod_deleting_process_recover
+from tests.data_protection.oadp.utils import check_file_in_vm
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -67,4 +72,119 @@ def test_drain_vm_node_during_backup(
     LOGGER.info(f"Waiting for backup to reach '{oadp_backup_in_progress.Backup.Status.COMPLETED}' during node drain.")
     oadp_backup_in_progress.wait_for_status(
         status=oadp_backup_in_progress.Backup.Status.COMPLETED, timeout=TIMEOUT_10MIN
+    )
+
+
+@pytest.mark.chaos
+@pytest.mark.parametrize(
+    "pod_deleting_process_during_oadp_operations, expected_status",
+    [
+        pytest.param(
+            {
+                "pod_prefix": "openshift-adp-controller-manager",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 20,
+                "max_duration": 180,
+            },
+            "Completed",
+            marks=pytest.mark.polarion("CNV-12024"),
+            id="openshift-adp-controller-manager",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "minio",
+                "namespace_name": "minio",
+                "ratio": 1.0,
+                "interval": 180,
+                "max_duration": 360,
+            },
+            "Failed",
+            marks=pytest.mark.polarion("CNV-12028"),
+            id="minio",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "velero",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 30,
+                "max_duration": 300,
+            },
+            "Failed",
+            marks=pytest.mark.polarion("CNV-12026"),
+            id="velero",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "node-agent",
+                "namespace_name": "openshift-adp",
+                "ratio": 1,
+                "interval": 20,
+                "max_duration": 180,
+            },
+            "PartiallyFailed",
+            marks=pytest.mark.polarion("CNV-12022"),
+            id="node-agent",
+        ),
+    ],
+    indirect=["pod_deleting_process_during_oadp_operations"],
+)
+def test_delete_pods_during_backup(
+    admin_client,
+    chaos_namespace,
+    rhel_vm_with_dv_running_factory,
+    oadp_backup_start_factory,
+    pod_deleting_process_during_oadp_operations,
+    expected_status,
+):
+    """
+    This test verifies OADP Backup resilience under control-plane disruptions.
+
+    Test flow:
+    1. Create a healthy VM and persist data inside the guest.
+    2. Trigger an OADP Backup.
+    3. Start a background process that continuously deletes critical OADP-related
+       pods (e.g. controller-manager, node-agent, velero, minio) while the Backup
+       is in progress.
+    4. Wait for the OADP Backup to reach a terminal state.
+    5. Stop the pod deletion process once the Backup finishes.
+    6. Verify the final Backup status matches the expected result.
+    """
+    # Each test case creates its own VM to ensure isolation and OADP Backup has resources to process
+    vm = rhel_vm_with_dv_running_factory(vm_name="rhel-vm")
+    check_file_in_vm(vm=vm)
+
+    backup = oadp_backup_start_factory()
+
+    # Start pod deletion process
+    process = pod_deleting_process_during_oadp_operations["process"]
+    process.start()
+
+    # Wait until backup reaches any terminal state
+    terminal_statuses = {
+        backup.Backup.Status.COMPLETED,
+        backup.Backup.Status.FAILED,
+        backup.Backup.Status.PARTIALLYFAILED,
+        backup.Backup.Status.FAILEDVALIDATION,
+    }
+
+    final_status = None
+    for _ in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=5,
+        func=lambda: backup.instance.status.phase,
+    ):
+        final_status = backup.instance.status.phase
+        if final_status in terminal_statuses:
+            break
+
+    LOGGER.info(f"Backup {backup.name} finished with status: {final_status}")
+    assert final_status == expected_status, f"Expected backup status {expected_status}, got {final_status}"
+
+    # Verify recovery if applicable
+    pod_deleting_process_recover(
+        resources=[Deployment, DaemonSet],
+        namespace=pod_deleting_process_during_oadp_operations["namespace_name"],
+        pod_prefix=pod_deleting_process_during_oadp_operations["pod_prefix"],
     )
