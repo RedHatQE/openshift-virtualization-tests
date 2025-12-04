@@ -9,6 +9,7 @@ from utilities.constants import (
     TEXT_TO_TEST,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
+    Images,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.oadp import VeleroBackup, create_rhel_vm
@@ -79,3 +80,46 @@ def drain_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
     with node_mgmt_console(node=vm_node, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
+
+
+@pytest.fixture(scope="module")
+def rhel_vm_with_dv_running_factory(
+    admin_client,
+    chaos_namespace,
+    snapshot_storage_class_name_scope_module,
+):
+    """
+    Factory fixture: create a RHEL VM with a DataVolume.
+    Usage in test: vm = rhel_vm_with_dv_running_factory(vm_name="myvm")
+    """
+    created_vms = []
+
+    def _create(vm_name, rhel_image=Images.Rhel.LATEST_RELEASE_STR):
+        vm_generator = create_rhel_vm(
+            storage_class=snapshot_storage_class_name_scope_module,
+            namespace=chaos_namespace.name,
+            vm_name=vm_name,
+            dv_name=f"dv-{vm_name}",
+            client=admin_client,
+            wait_running=True,
+            rhel_image=rhel_image,
+        )
+        vm = vm_generator.__enter__()
+        created_vms.append((vm, vm_generator))
+        write_file(
+            vm=vm,
+            filename=FILE_NAME_FOR_BACKUP,
+            content=TEXT_TO_TEST,
+            stop_vm=False,
+        )
+
+        return vm
+
+    yield _create
+
+    # Cleanup all created VMs
+    for vm, vm_generator in created_vms:
+        try:
+            vm_generator.__exit__(None, None, None)  # noqa: FCN001
+        except Exception:
+            LOGGER.exception(f"Failed to cleanup VM {vm.name}")
