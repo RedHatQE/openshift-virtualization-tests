@@ -9,6 +9,8 @@ def get_cluster_architecture() -> str:
     """
     Returns cluster architecture.
 
+    To run in CI, where a cluster is not available, set `OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH` env variable.
+
     Returns:
         str: cluster architecture.
 

@@ -9,6 +9,7 @@ import socket
 import sys
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
@@ -161,19 +162,20 @@ def reorder_early_fixtures(metafunc):
             break
 
 
-def stop_if_run_in_progress():
-    run_in_progress = run_in_progress_config_map()
+def stop_if_run_in_progress(client: DynamicClient) -> None:
+    run_in_progress = run_in_progress_config_map(client=client)
     if run_in_progress.exists:
         exit_pytest_execution(
             message=f"openshift-virtualization-tests run already in progress: \n{run_in_progress.instance.data}"
             f"\nAfter verifying no one else is performing tests against the cluster, run:"
             f"\n'oc delete configmap -n {run_in_progress.namespace} {run_in_progress.name}'",
             return_code=100,
+            admin_client=client,
         )
 
 
-def deploy_run_in_progress_namespace():
-    run_in_progress_namespace = Namespace(name=CNV_TEST_RUN_IN_PROGRESS_NS)
+def deploy_run_in_progress_namespace(client: DynamicClient) -> Namespace:
+    run_in_progress_namespace = Namespace(client=client, name=CNV_TEST_RUN_IN_PROGRESS_NS)
     if not run_in_progress_namespace.exists:
         run_in_progress_namespace.deploy(wait=True)
         run_in_progress_namespace.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
@@ -181,12 +183,13 @@ def deploy_run_in_progress_namespace():
     return run_in_progress_namespace
 
 
-def deploy_run_in_progress_config_map(session):
-    run_in_progress_config_map(session=session).deploy()
+def deploy_run_in_progress_config_map(client: DynamicClient, session) -> None:
+    run_in_progress_config_map(client=client, session=session).deploy(wait=True)
 
 
-def run_in_progress_config_map(session=None):
+def run_in_progress_config_map(client: DynamicClient, session=None) -> ConfigMap:
     return ConfigMap(
+        client=client,
         name=CNV_TEST_RUN_IN_PROGRESS,
         namespace=CNV_TEST_RUN_IN_PROGRESS_NS,
         data=get_current_running_data(session=session) if session else None,
@@ -277,13 +280,16 @@ def get_tests_cluster_markers(items, filepath=None) -> None:
             fd.write(json.dumps(tests_cluster_markers))
 
 
-def exit_pytest_execution(message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None):
+def exit_pytest_execution(
+    admin_client, message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None
+):
     """Exit pytest execution
 
     Exit pytest execution; invokes pytest_sessionfinish.
     Optionally, log an error message to tests-collected-info/utilities/pytest_exit_errors/<filename>
 
     Args:
+        admin_client (DynamicClient): cluster admin client
         message (str):  Message to display upon exit and to log in errors file
         return_code (int. Default: 99): Exit return code
         filename (str, optional. Default: None): filename where the given message will be saved
@@ -294,8 +300,7 @@ def exit_pytest_execution(message, return_code=SANITY_TESTS_FAILURE, filename=No
     if return_code == SANITY_TESTS_FAILURE:
         try:
             collect_default_cnv_must_gather_with_vm_gather(
-                since_time=TIMEOUT_5MIN,
-                target_dir=target_location,
+                since_time=TIMEOUT_5MIN, target_dir=target_location, admin_client=admin_client
             )
         except Exception as current_exception:
             LOGGER.warning(f"Failed to collect logs cnv must-gather after cluster_sanity failure: {current_exception}")

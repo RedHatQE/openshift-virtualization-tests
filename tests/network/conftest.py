@@ -380,4 +380,5 @@ def network_sanity(
             return_code=91,
             filename="network_cluster_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            admin_client=admin_client,
         )

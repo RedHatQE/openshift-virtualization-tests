@@ -145,4 +145,5 @@ def cluster_sanity(
             filename=exceptions_filename,
             message=str(ex),
             junitxml_property=junitxml_property,
+            admin_client=admin_client,
         )

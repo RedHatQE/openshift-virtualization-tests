@@ -467,6 +467,7 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
                 f"\nAfter verifying no one else is performing tests against the cluster, run:"
                 f"\n'oc delete namespace {name}'",
                 return_code=100,
+                admin_client=admin_client,
             )
 
         else:
@@ -2559,7 +2560,9 @@ def updated_default_storage_class_ocs_virt(
             namespace=golden_images_namespace.name,
         )
         if not boot_source_imported_successfully:
-            exit_pytest_execution(message=f"Failed to set {ocs_storage_class.name} as default storage class")
+            exit_pytest_execution(
+                message=f"Failed to set {ocs_storage_class.name} as default storage class", admin_client=admin_client
+            )
     else:
         yield
 

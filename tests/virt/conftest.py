@@ -173,6 +173,7 @@ def virt_special_infra_sanity(
             return_code=98,
             filename="virt_special_infra_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            admin_client=admin_client,
         )
 
 
