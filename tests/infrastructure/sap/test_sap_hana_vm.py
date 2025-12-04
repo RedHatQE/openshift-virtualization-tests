@@ -340,10 +340,11 @@ def sriov_network_node_policy(admin_client, sriov_namespace):
 
 
 @pytest.fixture(scope="class")
-def sriov_nads(namespace, sriov_network_node_policy, sriov_namespace):
+def sriov_nads(admin_client, namespace, sriov_network_node_policy, sriov_namespace):
     nads_list = []
     for idx in range(REQUIRED_NUMBER_OF_NETWORKS):
         with network_nad(
+            client=admin_client,
             nad_type=SRIOV,
             nad_name=f"sriov-net-{idx + 1}",
             sriov_resource_name=sriov_network_node_policy[idx].instance.spec.resourceName,

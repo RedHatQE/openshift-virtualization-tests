@@ -65,6 +65,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
         bridge_name,
         bridge_type,
         stp_config,
+        client=None,
         ports=None,
         mtu=None,
         node_selector=None,
@@ -91,6 +92,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             bridge_name (str): Bridge name.
             bridge_type (str): Bridge type (Linux Bridge, OVS)
             stp_config (bool): Spanning Tree enabled/disabled.
+            client (DynamicClient): DynamicClient to use.
             ports (list): The bridge's port(s).
             mtu (int): MTU size
             ipv4_dhcp: determines if ipv4_dhcp should be used
@@ -115,6 +117,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             routes=routes,
             dns_resolver=dns_resolver,
             state=bridge_state,
+            client=client,
         )
         self.ovs_bridge_type = OVS_BRIDGE
         self.linux_bridge_type = LINUX_BRIDGE
@@ -176,6 +179,7 @@ class LinuxBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPo
         self,
         name,
         bridge_name,
+        client=None,
         stp_config=False,
         ports=None,
         mtu=None,
@@ -215,6 +219,7 @@ class LinuxBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPo
             routes=routes,
             dns_resolver=dns_resolver,
             bridge_state=bridge_state,
+            client=client,
         )
 
 
@@ -224,6 +229,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
         name,
         bridge_name,
         ports,
+        client=None,
         stp_config=False,
         mtu=None,
         node_selector=None,
@@ -250,6 +256,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
             set_ipv6=False,
             dry_run=dry_run,
             node_selector_labels=node_selector_labels,
+            client=client,
         )
         self.set_dummy_ovs_iface = set_dummy_ovs_iface
         self.set_port_mac = set_port_mac
@@ -523,6 +530,7 @@ def network_nad(
     nad_type,
     nad_name,
     namespace,
+    client=None,
     interface_name=None,
     tuning=None,
     vlan=None,
@@ -542,6 +550,9 @@ def network_nad(
         "teardown": teardown,
         "vlan": vlan,
     }
+    # TODO: Client should be mandatory. Remove this check once all tests are updated, and add client to kwargs.
+    if client is not None:
+        kwargs["client"] = client
     if nad_type == LINUX_BRIDGE:
         kwargs["cni_type"] = py_config["linux_bridge_cni"]
         kwargs["tuning_type"] = py_config["bridge_tuning"] if tuning else None
@@ -958,6 +969,7 @@ def wait_for_ovs_daemonset_resource(admin_client, hco_namespace):
 def network_device(
     interface_type,
     nncp_name,
+    client=None,
     interface_name=None,
     ports=None,
     mtu=None,
@@ -973,6 +985,7 @@ def network_device(
     kwargs = {
         "name": nncp_name,
         "mtu": mtu,
+        "client": client,
     }
     if interface_type == SRIOV:
         kwargs["namespace"] = namespace
@@ -1063,11 +1076,13 @@ def create_sriov_node_policy(
     sriov_iface,
     sriov_nodes_states,
     sriov_resource_name,
+    client,
     mtu=MTU_9000,
 ):
     with network_device(
         interface_type=SRIOV,
         nncp_name=nncp_name,
+        client=client,
         namespace=namespace,
         sriov_iface=sriov_iface,
         sriov_resource_name=sriov_resource_name,

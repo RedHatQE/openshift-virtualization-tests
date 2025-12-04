@@ -419,8 +419,9 @@ def vm2_with_hot_plugged_sriov_interface(
 
 
 @pytest.fixture(scope="module")
-def sriov_network_for_hot_plug(sriov_node_policy, namespace, sriov_namespace):
+def sriov_network_for_hot_plug(admin_client, sriov_node_policy, namespace, sriov_namespace):
     with network_nad(
+        client=admin_client,
         nad_type=SRIOV,
         nad_name="sriov-hot-plug-test-network",
         sriov_resource_name=sriov_node_policy.resource_name,
