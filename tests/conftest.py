@@ -2291,19 +2291,6 @@ def kmp_deployment(hco_namespace):
     return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER)
 
 
-@pytest.fixture(scope="class")
-def running_metric_vm(namespace, unprivileged_client):
-    name = "running-metrics-vm"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        yield vm
-
-
 @pytest.fixture()
 def vm_from_template_with_existing_dv(
     request,
