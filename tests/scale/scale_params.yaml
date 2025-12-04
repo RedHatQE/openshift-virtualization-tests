@@ -4,7 +4,7 @@ run_live_migration: False
 test_namespace: "scale-test"
 default_vms_cores: &default_num_cores 1
 default_vms_memory: &default_vm_memory 2Gi
-default_run_strategy: &default_run_strategy null
+default_run_strategy: &default_run_strategy Manual
 test_duration: 720
 vms_verification_interval: 10
 seconds_between_batches: 5

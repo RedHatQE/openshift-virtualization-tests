@@ -19,10 +19,12 @@ class TestVMIGuestLoad:
         fedora_vm_with_stress_ng,
         qemu_guest_agent_version_validated,
         stressed_vm_cpu_fedora,
+        subtests,
     ):
         for guest_load_time_period in GUEST_LOAD_TIME_PERIODS:
-            validate_metric_value_greater_than_initial_value(
-                prometheus=prometheus,
-                metric_name=f"{guest_load_time_period}{{name='{fedora_vm_with_stress_ng.name}'}}",
-                initial_value=0,
-            )
+            with subtests.test(msg=guest_load_time_period):
+                validate_metric_value_greater_than_initial_value(
+                    prometheus=prometheus,
+                    metric_name=f"{guest_load_time_period}{{name='{fedora_vm_with_stress_ng.name}'}}",
+                    initial_value=0,
+                )

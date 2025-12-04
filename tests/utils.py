@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import http
 import logging
 import re
 import shlex
@@ -12,7 +11,6 @@ from typing import Generator, Optional
 import bitmath
 import requests
 import xmltodict
-from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
@@ -137,39 +135,10 @@ def wait_for_cr_labels_change(expected_value, component, timeout=TIMEOUT_10MIN):
         raise
 
 
-def validate_runbook_url_exists(url, alert_name=None, production=False):
-    response = requests.get(url, allow_redirects=False)
-    LOGGER.info(response)
-    if response.status_code != http.HTTPStatus.OK:
-        return f"{url} validation failed: {response}"
-    if production:
-        assert alert_name
-        url_link = f"#virt-runbook-{alert_name}"
-        if NOT_PUBLISHED_MESSAGE in response.text:
-            LOGGER.error(f"{url} found with message {NOT_PUBLISHED_MESSAGE}: {response.content}")
-            return f"{url} not published yet."
-        soup = BeautifulSoup(response.content)
-        for link in soup.findAll("a"):
-            url_str = link.get("href")
-            if url_str and url_str.endswith(url_link):
-                LOGGER.info(f"Alert link is found : {link}")
-                return
-        LOGGER.warning(f"Alert url {url} not found for alert {alert_name}")
-        return f"Alert url {url} not found"
-
-
 def get_image_from_csv(image_string, csv_related_images):
     for image in csv_related_images:
         if image_string in image["image"]:
             return image["image"]
-
-    raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
-
-
-def get_image_name_from_csv(image_string, csv_related_images):
-    for image in csv_related_images:
-        if image_string in image["name"]:
-            return image["name"]
 
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 
@@ -577,7 +546,7 @@ def create_cirros_vm(
         yield vm
 
 
-def start_stress_on_vm(vm, stress_command):
+def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
     LOGGER.info(f"Running memory load in VM {vm.name}")
     if "windows" in vm.name:
         verify_wsl2_guest_running(vm=vm)
@@ -592,7 +561,7 @@ def start_stress_on_vm(vm, stress_command):
     )
 
 
-def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
+def verify_wsl2_guest_running(vm: VirtualMachineForTests, timeout: int = TIMEOUT_3MIN) -> bool:
     def _get_wsl2_running_status():
         guests_status = run_ssh_commands(
             host=vm.ssh_exec,
@@ -611,6 +580,7 @@ def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
     except TimeoutExpiredError:
         LOGGER.error("WSL2 guest is not running in the VM!")
         raise
+    return False
 
 
 def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
@@ -622,17 +592,17 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
         TimeoutExpiredError: If WSL2 fails to return the expected output within
             the specified timeout period.
     """
-    echo_string = "TEST"
+    test_str = "TEST"
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_15SEC,
         func=run_ssh_commands,
         host=vm.ssh_exec,
-        commands=shlex.split(f"wsl echo {echo_string}"),
+        commands=shlex.split(f"wsl echo {test_str}"),
     )
     try:
         for sample in samples:
-            if sample and echo_string in sample[0]:
+            if sample and test_str in sample[0]:
                 return
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")

@@ -11,7 +11,7 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -621,7 +621,7 @@ def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
     LOGGER.info(f"qemu-guest-agent version: {guest_agent_version_str}")
     try:
         guest_agent_version = Version(version=guest_agent_version_str)
-    except Exception as e:
+    except InvalidVersion as e:
         raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version_str}") from e
     if guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS):
         return
@@ -633,7 +633,6 @@ def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
 
 @pytest.fixture(scope="class")
 def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
-    # Run stress test in background to allow test to proceed
     LOGGER.info(f"Starting CPU stress test on VM: {fedora_vm_with_stress_ng.name}")
     start_stress_on_vm(
         vm=fedora_vm_with_stress_ng,

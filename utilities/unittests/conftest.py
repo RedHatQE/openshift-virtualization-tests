@@ -29,6 +29,7 @@ resource.get_client = _mock_get_client  # type: ignore[assignment]
 
 # Create mock modules to break circular imports
 # Set up mock modules before any imports
+# Note: utilities.hco is mocked here but test_hco.py will clear it and import real module
 mock_hco = MagicMock()
 mock_infra = MagicMock()
 mock_data_collector = MagicMock()
@@ -45,7 +46,6 @@ sys.modules["utilities.data_collector"] = mock_data_collector
 sys.modules["jira"] = mock_jira
 
 # Also set them as attributes of the utilities module for tests that need them
-
 utilities.hco = mock_hco  # type: ignore[attr-defined]
 utilities.infra = mock_infra  # type: ignore[attr-defined]
 utilities.data_collector = mock_data_collector  # type: ignore[attr-defined]
