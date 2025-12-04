@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
@@ -69,54 +70,45 @@ def create_pod_deleting_process(
 
     Returns:
         multiprocessing.Process: Process that continuously deletes pods.
-
-    Example:
-        pod_deleting_process = create_pod_deleting_process(
-            client=admin_client, pod_prefix="apiserver",
-            namespace_name="openshift-apiserver", ratio=0.5, interval=5, max_duration=180
-        )
-        pod_deleting_process.start()
-        ...
-        pod_deleting_process.terminate()
     """
 
-    def _choose_surviving_pods(_client, pod_prefix, namespace_name, ratio):
-        initial_pods = get_pod_by_name_prefix(
-            client=_client,
+    def _delete_pods(dyn_client, pod_prefix, namespace_name, ratio):
+        pods = get_pod_by_name_prefix(
+            dyn_client=dyn_client,
             pod_prefix=pod_prefix,
             namespace=namespace_name,
             get_all=True,
         )
-        number_of_deleted_pods = round(number=ratio * len(initial_pods))
-        LOGGER.info(f"Number of pods to delete: {number_of_deleted_pods} out of {len(initial_pods)}.")
-        surviving_pods = [
-            pod for pod in random.sample(population=initial_pods, k=len(initial_pods) - number_of_deleted_pods)
-        ]
-        LOGGER.info(f"Surviving pods: {[pod.name for pod in surviving_pods]}")
 
-        return surviving_pods
+        if not pods:
+            LOGGER.info("No pods found, skipping this round")
+            return
 
-    def _delete_pods(_client, pod_prefix, namespace_name, surviving_pods):
-        deleted_pods = get_pod_by_name_prefix(
-            client=_client,
-            pod_prefix=pod_prefix,
-            namespace=namespace_name,
-            get_all=True,
-        )
-        for pod in deleted_pods:
-            if pod.name not in [surviving_pod.name for surviving_pod in surviving_pods]:
-                # Set the log level to ERROR to avoid cluttering the console with the logs resulting from pod deletion
-                with resource_log_level_error(resource=pod) as _pod:
-                    _pod.delete()
-
-    def _delete_pods_continuously(_client, pod_prefix, namespace_name, ratio, interval, max_duration):
-        surviving_pods = _choose_surviving_pods(
-            _client=_client,
-            pod_prefix=pod_prefix,
-            namespace_name=namespace_name,
-            ratio=ratio,
+        delete_count = max(1, round(ratio * len(pods)))
+        pods_to_delete = random.sample(
+            pods,
+            min(delete_count, len(pods)),
         )
 
+        LOGGER.info(f"Deleting {len(pods_to_delete)} out of {len(pods)} pods: {[pod.name for pod in pods_to_delete]}")
+
+        for pod in pods_to_delete:
+            pod_name = pod.name
+            pod_uid = pod.instance.metadata.uid
+
+            LOGGER.info(f"Deleting pod {pod_name} (UID={pod_uid})")
+
+            pod.delete()
+
+            try:
+                pod.wait_deleted(timeout=30)
+                LOGGER.info(f"Pod {pod_name} deleted")
+
+            except TimeoutExpiredError:
+                LOGGER.warning(f"Pod {pod_name} was not deleted.")
+
+
+    def _delete_pods_continuously(dyn_client, pod_prefix, namespace_name, ratio, interval, max_duration):
         try:
             for _ in TimeoutSampler(
                 wait_timeout=max_duration,
@@ -125,7 +117,7 @@ def create_pod_deleting_process(
                 _client=client,
                 pod_prefix=pod_prefix,
                 namespace_name=namespace_name,
-                surviving_pods=surviving_pods,
+                ratio=ratio,
             ):
                 pass
         except TimeoutExpiredError:
@@ -388,21 +380,66 @@ def rebooting_node(node, utility_pods):
     wait_for_node_status(node=node, status=True, wait_timeout=TIMEOUT_10MIN)
 
 
-def pod_deleting_process_recover(resource, namespace, pod_prefix):
+def pod_deleting_process_recover(resources, namespace, pod_prefix):
     """
-    This function will make sure that the pods for the affected deployment recover after the test.
-    """
-    resource_objs = get_resources_by_name_prefix(
-        prefix=pod_prefix,
-        namespace=namespace,
-        api_resource_name=resource,
-    )
-    if not resource_objs:
-        raise ResourceNotFoundError(f"No resources found with prefix {pod_prefix} in namespace {namespace}")
+    Wait for affected workloads to recover after pod deletion.
 
-    for resource_obj in resource_objs:
-        if resource_obj.kind == Deployment.kind:
-            resource_obj.wait_for_replicas()
+    This helper ensures that pods belonging to the given Kubernetes workloads
+    (Deployment or DaemonSet) recover after a pod-deleting test. The function
+    polls the workloads until they report a healthy state.
+
+    Args:
+        resources (Union[Deployment, DaemonSet, Sequence[Union[Deployment, DaemonSet]]]):
+            A single Deployment/DaemonSet or a list/tuple of them to be checked.
+        namespace (str):
+            Namespace in which the workloads reside.
+        pod_prefix (str):
+            Name prefix used to locate affected workloads.
+
+    Raises:
+        ValueError:
+            If any resource is not a Deployment or DaemonSet.
+        ResourceNotFoundError:
+            If no matching workloads are found in the given namespace.
+    """
+    if not isinstance(resources, (list, tuple)):
+        resources = [resources]
+
+    for resource in resources:
+        if resource.kind not in (Deployment.kind, DaemonSet.kind):
+            raise ValueError(
+                f"Unsupported resource type {resource.kind} for pod recovery. "
+                f"Only Deployment or DaemonSet is supported."
+            )
+
+    # This flag does not indicate whether the resource has been recovered,
+    # nor does it represent the success of the current polling iteration.
+    # It only tracks whether the resource object has ever been observed.
+    found_any = False
+
+    for resource in resources:
+        resource_objs = get_resources_by_name_prefix(
+            prefix=pod_prefix,
+            namespace=namespace,
+            api_resource_name=resource,
+        )
+        if not resource_objs:
+            LOGGER.debug(f"No {resource.kind} found with prefix {pod_prefix} in namespace {namespace}")
+            continue
+
+        found_any = True
+
+        for resource_obj in resource_objs:
+            if resource_obj.kind == Deployment.kind:
+                LOGGER.info(f"Waiting for Deployment {resource_obj.name} to recover replicas")
+                resource_obj.wait_for_replicas()
+
+            elif resource_obj.kind == DaemonSet.kind:
+                LOGGER.info(f"Waiting for DaemonSet {resource_obj.name} to recover")
+                resource_obj.wait_until_deployed()
+
+    if not found_any:
+        raise ResourceNotFoundError(f"No resources found with prefix {pod_prefix} in namespace {namespace}")
 
     LOGGER.info("Pod recovery process completed successfully.")
 
