@@ -342,6 +342,7 @@ class TestCreateCustomTemplateFromUrl:
     @patch("utilities.ssp.Template")
     def test_create_custom_template_from_url_success(self, mock_template_class, mock_urlretrieve):
         """Test successful creation of custom template from URL"""
+        mock_admin_client = MagicMock()
         mock_template = MagicMock()
         mock_template_class.return_value.__enter__ = MagicMock(return_value=mock_template)
         mock_template_class.return_value.__exit__ = MagicMock(return_value=None)
@@ -349,6 +350,7 @@ class TestCreateCustomTemplateFromUrl:
         mock_namespace = MagicMock()
 
         with create_custom_template_from_url(
+            client=mock_admin_client,
             url="https://example.com/template.yaml",
             template_name="custom-template",
             template_dir="/tmp",

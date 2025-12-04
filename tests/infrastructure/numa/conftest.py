@@ -55,6 +55,7 @@ def created_vm_cx1_instancetype(
             data_source=DataSource(
                 name=data_source_name,
                 namespace=golden_images_namespace.name,
+                client=unprivileged_client,
             ),
             storage_class=[*storage_class_matrix__module__][0],
         ),

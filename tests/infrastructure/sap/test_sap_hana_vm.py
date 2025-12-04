@@ -474,10 +474,11 @@ def sap_hana_template_labels():
 
 
 @pytest.fixture(scope="module")
-def sap_hana_template(tmpdir_factory):
+def sap_hana_template(admin_client, tmpdir_factory):
     template_name = "sap_hana_template"
     template_dir = tmpdir_factory.mktemp(template_name)
     with create_custom_template_from_url(
+        client=admin_client,
         url=f"{CNV_SUPPLEMENTAL_TEMPLATES_URL}/saphana/rhel8.saphana.yaml",
         template_name=f"{template_name}.yaml",
         template_dir=template_dir,
