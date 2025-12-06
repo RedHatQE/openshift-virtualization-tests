@@ -1036,10 +1036,10 @@ def sriov_workers(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def vlan_base_iface(worker_node1, nodes_available_nics):
+def vlan_base_iface(hosts_common_available_ports):
     # Select the last NIC from the list as a way to ensure that the selected NIC
     # is not already used (e.g. as a bond's port).
-    return nodes_available_nics[worker_node1.name][-1]
+    return hosts_common_available_ports[-1]
 
 
 @pytest.fixture(scope="session")
@@ -1226,8 +1226,16 @@ def hosts_common_available_ports(nodes_available_nics):
 
     will return ['ens3', 'ens6']
     """
-    nics_list = list(set.intersection(*[set(_list) for _list in nodes_available_nics.values()]))
-    nics_list.sort()
+    nic_sets = [set(lst) for lst in nodes_available_nics.values()]
+    if not nic_sets:
+        LOGGER.warning("No common NICs across workers: nodes_available_nics is empty.")
+        return []
+
+    nics_list = sorted(set.intersection(*nic_sets))
+    if not nics_list:
+        LOGGER.warning("No common NICs found across all nodes.")
+        return []
+
     LOGGER.info(f"Hosts common available NICs: {nics_list}")
     return nics_list
 

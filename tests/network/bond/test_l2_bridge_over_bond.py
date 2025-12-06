@@ -41,7 +41,7 @@ def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace
 def ovs_linux_bond1_worker_1(
     index_number,
     worker_node1,
-    nodes_available_nics,
+    hosts_common_available_ports,
 ):
     """
     Create BOND if setup support BOND
@@ -50,7 +50,7 @@ def ovs_linux_bond1_worker_1(
     with BondNodeNetworkConfigurationPolicy(
         name=f"bond{bond_idx}nncp-worker-1",
         bond_name=f"bond{bond_idx}",
-        bond_ports=nodes_available_nics[worker_node1.name][-2:],
+        bond_ports=hosts_common_available_ports[-2:],
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as bond:
         yield bond
@@ -60,7 +60,7 @@ def ovs_linux_bond1_worker_1(
 def ovs_linux_bond1_worker_2(
     index_number,
     worker_node2,
-    nodes_available_nics,
+    hosts_common_available_ports,
     ovs_linux_bond1_worker_1,
 ):
     """
@@ -71,7 +71,7 @@ def ovs_linux_bond1_worker_2(
         BondNodeNetworkConfigurationPolicy(
             name=f"bond{bond_idx}nncp-worker-2",
             bond_name=ovs_linux_bond1_worker_1.bond_name,  # Use the same BOND name for each test.
-            bond_ports=nodes_available_nics[worker_node2.name][-2:],
+            bond_ports=hosts_common_available_ports[-2:],
             node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ) as bond
     ):
