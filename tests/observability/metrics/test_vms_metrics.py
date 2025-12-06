@@ -93,13 +93,14 @@ def vm_in_error_state(namespace):
 
 
 @pytest.fixture()
-def pvc_for_vm_in_starting_state(namespace):
+def pvc_for_vm_in_starting_state(unprivileged_client, namespace):
     with PersistentVolumeClaim(
         name="vm-in-starting-state-pvc",
         namespace=namespace.name,
         accessmodes=PersistentVolumeClaim.AccessMode.RWX,
         size="1Gi",
         pvlabel="non-existent-pv",
+        client=unprivileged_client,
     ) as pvc:
         yield pvc
 
@@ -134,11 +135,12 @@ def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
 
 
 @pytest.fixture()
-def vm_metric_1_vmim(vm_metric_1):
+def vm_metric_1_vmim(admin_client, vm_metric_1):
     with VirtualMachineInstanceMigration(
         name="vm-metric-1-vmim",
         namespace=vm_metric_1.namespace,
         vmi_name=vm_metric_1.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield

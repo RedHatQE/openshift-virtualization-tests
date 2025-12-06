@@ -13,10 +13,11 @@ def cnv_prometheus_rules_names(hco_namespace):
 
 
 @pytest.fixture()
-def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__):
+def cnv_alerts_runbook_urls_from_prometheus_rule(admin_client, cnv_prometheus_rules_matrix__function__):
     cnv_prometheus_rule_by_name = PrometheusRule(
         namespace=py_config["hco_namespace"],
         name=cnv_prometheus_rules_matrix__function__,
+        client=admin_client,
     )
     LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
     return {
