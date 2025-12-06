@@ -101,7 +101,7 @@ class TestMustGatherCluster:
         )
 
     @pytest.mark.polarion("CNV-2982")
-    def test_namespace(self, hco_namespace, must_gather_for_test):
+    def test_namespace(self, admin_client, hco_namespace, must_gather_for_test):
         namespace_name = hco_namespace.name
         check_resource(
             resource=Namespace,
@@ -109,6 +109,7 @@ class TestMustGatherCluster:
             temp_dir=must_gather_for_test,
             resource_path=f"namespaces/{namespace_name}/{namespace_name}.yaml",
             checks=VALIDATE_FIELDS,
+            admin_client=admin_client,
         )
 
     @pytest.mark.polarion("CNV-5885")
