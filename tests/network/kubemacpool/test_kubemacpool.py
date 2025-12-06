@@ -6,6 +6,8 @@ from utilities.virt import VirtualMachineForTests
 
 from . import utils as kmp_utils
 
+pytestmark = [pytest.mark.ipv4]
+
 
 @pytest.mark.s390x
 class TestKMPConnectivity:
