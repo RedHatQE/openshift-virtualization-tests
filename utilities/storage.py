@@ -3,6 +3,7 @@ import math
 import os
 import shlex
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import cachetools.func
 import kubernetes
@@ -51,6 +52,9 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -682,6 +686,30 @@ def write_file(vm, filename, content, stop_vm=True):
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
+
+
+def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
+    """
+    Write content to a file in VM using SSH connection.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+
+    Raises:
+        TimeoutExpiredError: If SSH connectivity cannot be established
+        SSHException: If SSH command execution fails
+    """
+    cmd = shlex.split(f"echo '{content}' > {filename} && sync")
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+
+
+def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
+    assert expected_result in output.strip(), (
+        f"Expected '{expected_result}' not found in command output: '{output.strip()}'"
+    )
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
