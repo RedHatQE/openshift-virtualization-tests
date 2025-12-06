@@ -11,8 +11,9 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import HOTPLUG_DISK_SERIAL
+from utilities.constants import HOTPLUG_DISK_SERIAL, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.infra import is_jira_open
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
@@ -144,11 +145,22 @@ def param_substring_scope_class(storage_class_name_scope_class):
 @pytest.fixture(scope="class")
 def fedora_vm_for_hotplug_scope_class(namespace, param_substring_scope_class, cpu_for_migration):
     name = f"fedora-hotplug-{param_substring_scope_class}"
+    memory_requests = None
+    cpu_requests = None
+
+    if is_jira_open(jira_id="CNV-71599"):
+        memory_requests = f"{float(Images.Fedora.DEFAULT_MEMORY_SIZE[:-2]) * 2}Gi"
+        cpu_requests = 1
+
     with VirtualMachineForTests(
         name=name,
+        memory_requests=memory_requests,
+        memory_limits=memory_requests,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         cpu_model=cpu_for_migration,
+        cpu_limits=cpu_requests,
+        cpu_requests=cpu_requests,
     ) as vm:
         running_vm(vm=vm)
         yield vm
