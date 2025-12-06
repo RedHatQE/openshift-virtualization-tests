@@ -16,7 +16,7 @@ from utilities.constants import DEPENDENCY_SCOPE_SESSION, LS_COMMAND
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
-    run_command_on_cirros_vm_and_check_output,
+    run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
 from utilities.virt import migrate_vm_and_verify
@@ -72,7 +72,7 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             cirros_vm_for_upgrade_a.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
+            run_command_on_vm_and_check_output(
                 vm=cirros_vm_for_upgrade_a,
                 command=LS_COMMAND,
                 expected_result="1",
@@ -147,7 +147,7 @@ class TestUpgradeStorage:
         self,
         cirros_vm_for_upgrade_a,
     ):
-        run_command_on_cirros_vm_and_check_output(
+        run_command_on_vm_and_check_output(
             vm=cirros_vm_for_upgrade_a,
             command=LS_COMMAND,
             expected_result="1",
@@ -173,7 +173,7 @@ class TestUpgradeStorage:
         ) as vm_restore:
             vm_restore.wait_restore_done()
             cirros_vm_for_upgrade_b.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
+            run_command_on_vm_and_check_output(
                 vm=cirros_vm_for_upgrade_b,
                 command=LS_COMMAND,
                 expected_result="1",
