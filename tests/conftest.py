@@ -584,6 +584,7 @@ def node_physical_nics(workers_utility_pods):
 
 @pytest.fixture(scope="session")
 def nodes_active_nics(
+    admin_client,
     workers,
     workers_utility_pods,
     node_physical_nics,
@@ -607,7 +608,7 @@ def nodes_active_nics(
     nodes_nics = {}
     for node in workers:
         nodes_nics[node.name] = {"available": [], "occupied": []}
-        nns = NodeNetworkState(name=node.name)
+        nns = NodeNetworkState(name=node.name, client=admin_client)
 
         for node_iface in nns.interfaces:
             iface_name = node_iface["name"]
@@ -1016,8 +1017,8 @@ def worker_node3(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def sriov_namespace():
-    return Namespace(name=py_config["sriov_namespace"])
+def sriov_namespace(admin_client):
+    return Namespace(name=py_config["sriov_namespace"], client=admin_client)
 
 
 @pytest.fixture(scope="session")
@@ -1077,9 +1078,11 @@ def sriov_node_policy(sriov_unused_ifaces, sriov_nodes_states, workers_utility_p
 
 
 @pytest.fixture(scope="session")
-def mac_pool(hco_namespace):
+def mac_pool(admin_client, hco_namespace):
     return MacPool(
-        kmp_range=ConfigMap(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG).instance["data"]
+        kmp_range=ConfigMap(
+            namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
+        ).instance["data"]
     )
 
 
@@ -2226,8 +2229,8 @@ def disabled_default_sources_in_operatorhub_scope_module(admin_client, installin
 
 
 @pytest.fixture(scope="module")
-def kmp_deployment(hco_namespace):
-    return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER)
+def kmp_deployment(admin_client, hco_namespace):
+    return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER, client=admin_client)
 
 
 @pytest.fixture(scope="class")
