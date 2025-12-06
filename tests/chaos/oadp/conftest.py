@@ -3,6 +3,7 @@ import logging
 
 import pytest
 
+from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
@@ -79,3 +80,59 @@ def drain_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
     with node_mgmt_console(node=vm_node, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
+
+
+@pytest.fixture()
+def rhel_vm_with_dv_running_factory(
+    admin_client,
+    chaos_namespace,
+    snapshot_storage_class_name_scope_module,
+):
+    """
+    Factory fixture: create a RHEL VM with a DataVolume.
+    Usage in test: vm = rhel_vm_with_dv_running_factory(vm_name="myvm")
+    """
+
+    def _create(vm_name, rhel_image=RHEL_LATEST["image_name"]):
+        with create_rhel_vm(
+            storage_class=snapshot_storage_class_name_scope_module,
+            namespace=chaos_namespace.name,
+            vm_name=vm_name,
+            dv_name=f"dv-{vm_name}",
+            client=admin_client,
+            wait_running=True,
+            rhel_image=rhel_image,
+        ) as vm:
+            write_file(
+                vm=vm,
+                filename=FILE_NAME_FOR_BACKUP,
+                content=TEXT_TO_TEST,
+                stop_vm=False,
+            )
+            return vm
+
+    return _create
+
+
+@pytest.fixture()
+def oadp_backup_in_progress_factory(admin_client, chaos_namespace):
+    """
+    Factory fixture: start an OADP backup and yield the backup object while it's IN_PROGRESS.
+    """
+
+    def _start_backup():
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_name = f"backup-{timestamp}"
+
+        backup = VeleroBackup(
+            name=backup_name,
+            included_namespaces=[chaos_namespace.name],
+            client=admin_client,
+            snapshot_move_data=True,
+            storage_location=BACKUP_STORAGE_LOCATION,
+            wait_complete=False,
+        )
+        backup.wait_for_status(status=backup.Backup.Status.INPROGRESS, timeout=TIMEOUT_3MIN)
+        return backup
+
+    return _start_backup
