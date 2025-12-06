@@ -162,12 +162,13 @@ def must_gather_nad(admin_client, must_gather_bridge, node_gather_unprivileged_n
 
 
 @pytest.fixture(scope="package")
-def must_gather_bridge(worker_node1):
+def must_gather_bridge(admin_client, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="must-gather-br",
         interface_name="mg-br1",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        client=admin_client,
     ) as br:
         yield br
 

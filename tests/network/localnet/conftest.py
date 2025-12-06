@@ -41,7 +41,7 @@ PRIMARY_INTERFACE_NAME = "eth0"
 
 
 @pytest.fixture(scope="module")
-def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+def nncp_localnet(admin_client: DynamicClient) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     desired_state = libnncp.DesiredState(
         ovn=libnncp.OVN([
             libnncp.BridgeMappings(
@@ -53,6 +53,7 @@ def nncp_localnet() -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     )
 
     with libnncp.NodeNetworkConfigurationPolicy(
+        client=admin_client,
         name="test-localnet-nncp",
         desired_state=desired_state,
         node_selector={WORKER_NODE_LABEL_KEY: ""},
@@ -353,18 +354,26 @@ def migrated_localnet_vm(
 
 @pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic(
+    admin_client: DynamicClient,
     hosts_common_available_ports: list[str],
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with create_nncp_localnet_on_secondary_node_nic(node_nic_name=(hosts_common_available_ports[-1])) as nncp:
+    with create_nncp_localnet_on_secondary_node_nic(
+        node_nic_name=(hosts_common_available_ports[-1]),
+        client=admin_client,
+    ) as nncp:
         yield nncp
 
 
 @pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic_with_jumbo_frame(
-    hosts_common_available_ports: list[str], cluster_hardware_mtu: int
+    admin_client: DynamicClient,
+    hosts_common_available_ports: list[str],
+    cluster_hardware_mtu: int,
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     with create_nncp_localnet_on_secondary_node_nic(
-        node_nic_name=(hosts_common_available_ports[-1]), mtu=cluster_hardware_mtu
+        node_nic_name=(hosts_common_available_ports[-1]),
+        client=admin_client,
+        mtu=cluster_hardware_mtu,
     ) as nncp:
         yield nncp
 

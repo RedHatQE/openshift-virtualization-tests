@@ -961,7 +961,11 @@ def started_windows_vm(
 
 
 @pytest.fixture(scope="session")
-def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nodes):
+def worker_nodes_ipv4_false_secondary_nics(
+    admin_client,
+    nodes_available_nics,
+    schedulable_nodes,
+):
     """
     Function removes ipv4 from secondary nics.
     """
@@ -969,6 +973,7 @@ def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nod
         worker_nics = nodes_available_nics[worker_node.name]
         with EthernetNetworkConfigurationPolicy(
             name=f"disable-ipv4-{name_prefix(worker_node.name)}",
+            client=admin_client,
             node_selector=get_node_selector_dict(node_selector=worker_node.hostname),
             interfaces_name=worker_nics,
         ):
@@ -1066,13 +1071,20 @@ def sriov_ifaces(sriov_nodes_states, workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def sriov_node_policy(sriov_unused_ifaces, sriov_nodes_states, workers_utility_pods, sriov_namespace):
+def sriov_node_policy(
+    admin_client,
+    sriov_unused_ifaces,
+    sriov_nodes_states,
+    workers_utility_pods,
+    sriov_namespace,
+):
     yield from create_sriov_node_policy(
         nncp_name="test-sriov-policy",
         namespace=sriov_namespace.name,
         sriov_iface=sriov_unused_ifaces[0],
         sriov_nodes_states=sriov_nodes_states,
         sriov_resource_name="sriov_net",
+        client=admin_client,
     )
 
 
@@ -1671,6 +1683,7 @@ def term_handler_scope_session():
 
 @pytest.fixture(scope="session")
 def upgrade_bridge_on_all_nodes(
+    admin_client,
     label_schedulable_nodes,
     hosts_common_available_ports,
 ):
@@ -1680,17 +1693,19 @@ def upgrade_bridge_on_all_nodes(
         interface_name="br1upgrade",
         node_selector_labels=NODE_TYPE_WORKER_LABEL,
         ports=[hosts_common_available_ports[0]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="session")
-def bridge_on_one_node(worker_node1):
+def bridge_on_one_node(admin_client, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="upgrade-br-marker",
         interface_name="upg-br-mark",
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+        client=admin_client,
     ) as br:
         yield br
 

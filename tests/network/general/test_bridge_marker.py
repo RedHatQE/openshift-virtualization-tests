@@ -104,28 +104,31 @@ def multi_bridge_attached_vmi(namespace, bridge_networks, unprivileged_client):
 
 
 @pytest.fixture()
-def bridge_device_on_all_nodes():
+def bridge_device_on_all_nodes(admin_client):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="bridge-marker1",
         interface_name=BRIDGEMARKER1,
+        client=admin_client,
     ) as dev:
         yield dev
 
 
 @pytest.fixture()
-def non_homogenous_bridges(worker_node1, worker_node2):
+def non_homogenous_bridges(admin_client, worker_node1, worker_node2):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="bridge-marker2",
         interface_name=BRIDGEMARKER2,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        client=admin_client,
     ) as bridgemarker2_ncp:
         with network_device(
             interface_type=LINUX_BRIDGE,
             nncp_name="bridge-marker3",
             interface_name=BRIDGEMARKER3,
             node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
+            client=admin_client,
         ) as bridgemarker3_ncp:
             yield bridgemarker2_ncp, bridgemarker3_ncp
 
