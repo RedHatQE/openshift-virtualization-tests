@@ -13,14 +13,12 @@ from utilities.constants import (
     ALL_CNV_CRDS,
     ALL_CNV_DAEMONSETS,
     ALL_CNV_DEPLOYMENTS,
-    ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
     BREW_REGISTERY_SOURCE,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
-    CNV_PODS_NO_HPP_CSI_HPP_POOL,
     CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
@@ -197,7 +195,6 @@ ip_stack_version_matrix = [
     IPV4_STR,
     IPV6_STR,
 ]
-cnv_pod_priority_class_matrix = CNV_PODS_NO_HPP_CSI_HPP_POOL
 cnv_pod_matrix = ALL_CNV_PODS
 cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
@@ -206,7 +203,6 @@ cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
 cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
 
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
-cnv_deployment_no_hpp_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]
 cnv_operators_matrix = CNV_OPERATORS
