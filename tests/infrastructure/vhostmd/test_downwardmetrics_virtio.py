@@ -114,19 +114,21 @@ def rhel_container_disk_image(rhel_version, cnv_rhel_container_disk_images_matri
 
 
 @pytest.fixture()
-def preferred_cluster_instance_type():
+def preferred_cluster_instance_type(unprivileged_client):
     instance_type_selector = (
         f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/class=general.purpose, "
         f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/cpu=1, "
         f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/memory in (2Gi, 4Gi)"
     )
-    return next(VirtualMachineClusterInstancetype.get(label_selector=instance_type_selector))
+    return next(
+        VirtualMachineClusterInstancetype.get(client=unprivileged_client, label_selector=instance_type_selector)
+    )
 
 
 @pytest.fixture()
-def preferred_preference_for_rhel_version(rhel_version):
+def preferred_preference_for_rhel_version(rhel_version, unprivileged_client):
     preference_name = re.sub(r"(\D+)(\d+)", r"\1.\2", rhel_version)
-    preference_object = VirtualMachineClusterPreference(name=preference_name)
+    preference_object = VirtualMachineClusterPreference(name=preference_name, client=unprivileged_client)
     if preference_object.exists:
         return preference_object
     raise ResourceNotFoundError(f"VirtualMachineClusterPreference {preference_name} not found")
