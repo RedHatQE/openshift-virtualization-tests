@@ -156,7 +156,10 @@ def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace
         namespace=namespace.name,
         client=unprivileged_client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        data_volume_template=data_volume_template_with_source_ref_dict(data_source=custom_data_source_scope_function),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=custom_data_source_scope_function,
+            storage_class=custom_data_source_scope_function.source.instance.to_dict()["spec"].get("storageClassName"),
+        ),
     ) as vm:
         running_vm(vm=vm)
         yield vm

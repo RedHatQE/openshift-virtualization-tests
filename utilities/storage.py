@@ -571,7 +571,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
         namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        storage_class=storage_class,
         api_name="storage",
         source_ref={
             "kind": data_source.kind,

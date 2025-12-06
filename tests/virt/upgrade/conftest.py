@@ -133,7 +133,10 @@ def vm_with_instancetypes_for_upgrade(
         os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=vm_cluster_instancetype_for_upgrade,
         vm_preference=vm_cluster_preference_for_upgrade,
-        data_volume_template=data_volume_template_with_source_ref_dict(data_source=datasources_for_upgrade[0]),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=datasources_for_upgrade[0],
+            storage_class=datasources_for_upgrade[0].source.instance.to_dict()["spec"].get("storageClassName"),
+        ),
     ) as vm:
         yield vm
 
