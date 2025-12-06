@@ -45,8 +45,13 @@ IPERF3_SERVER_PORT: Final[int] = 2354
 
 
 @pytest.fixture(scope="session")
-def vlan_nncp(vlan_base_iface: str, worker_node1: Node) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+def vlan_nncp(
+    admin_client: DynamicClient,
+    vlan_base_iface: str,
+    worker_node1: Node,
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     with libnncp.NodeNetworkConfigurationPolicy(
+        client=admin_client,
         name="test-vlan-nncp",
         desired_state=libnncp.DesiredState(
             interfaces=[
@@ -131,7 +136,10 @@ def namespace_cudn(admin_client: DynamicClient) -> Generator[Namespace]:
 
 
 @pytest.fixture(scope="module")
-def cudn_layer2(namespace_cudn: Namespace) -> Generator[libcudn.ClusterUserDefinedNetwork]:
+def cudn_layer2(
+    admin_client: DynamicClient,
+    namespace_cudn: Namespace,
+) -> Generator[libcudn.ClusterUserDefinedNetwork]:
     with libcudn.ClusterUserDefinedNetwork(
         name="l2-network-cudn",
         namespace_selector=LabelSelector(matchLabels=CUDN_BGP_LABEL),
@@ -144,6 +152,7 @@ def cudn_layer2(namespace_cudn: Namespace) -> Generator[libcudn.ClusterUserDefin
             ),
         ),
         label=APP_CUDN_LABEL,
+        client=admin_client,
     ) as cudn:
         cudn.wait_for_status_success()
         yield cudn

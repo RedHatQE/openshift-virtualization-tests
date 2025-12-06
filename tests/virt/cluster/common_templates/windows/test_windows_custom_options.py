@@ -111,11 +111,12 @@ def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive
 
 
 @pytest.fixture(scope="class")
-def windows_custom_bridge():
+def windows_custom_bridge(admin_client):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="br1-win-custom-nnc",
         interface_name="br1-win-custom",
+        client=admin_client,
     ) as br:
         yield br
 

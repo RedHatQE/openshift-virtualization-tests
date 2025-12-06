@@ -27,9 +27,9 @@ def assert_nmstate_bridge_creation(bridge):
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: NodeNetworkState(name=get_node_selector_name(node_selector=bridge.node_selector)).get_interface(
-            name=bridge_name
-        ),
+        func=lambda: NodeNetworkState(
+            name=get_node_selector_name(node_selector=bridge.node_selector), client=bridge.client
+        ).get_interface(name=bridge_name),
     )
     try:
         for sample in sampler:
