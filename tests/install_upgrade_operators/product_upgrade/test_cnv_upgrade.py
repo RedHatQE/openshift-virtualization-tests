@@ -4,60 +4,58 @@ import pytest
 
 from tests.install_upgrade_operators.product_upgrade.utils import (
     verify_upgrade_cnv,
-    verify_upgrade_ocp,
 )
+from tests.install_upgrade_operators.utils import wait_for_install_plan
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
 
-pytestmark = pytest.mark.usefixtures(
-    "nodes_taints_before_upgrade",
-    "nodes_labels_before_upgrade",
-)
+pytestmark = [
+    pytest.mark.product_upgrade_test,
+    pytest.mark.gating,
+    pytest.mark.sno,
+    pytest.mark.upgrade,
+    pytest.mark.upgrade_custom,
+    pytest.mark.cnv_upgrade,
+]
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.product_upgrade_test
-@pytest.mark.sno
-@pytest.mark.upgrade
-@pytest.mark.upgrade_custom
-class TestUpgrade:
-    @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-8381")
-    @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
-    def test_ocp_upgrade_process(
-        self,
-        admin_client,
-        nodes,
-        active_machine_config_pools,
-        machine_config_pools_conditions,
-        extracted_ocp_version_from_image_url,
-        updated_ocp_upgrade_channel,
-        fired_alerts_before_upgrade,
-        triggered_ocp_upgrade,
-    ):
-        verify_upgrade_ocp(
-            admin_client=admin_client,
-            target_ocp_version=extracted_ocp_version_from_image_url,
-            machine_config_pools_list=active_machine_config_pools,
-            initial_mcp_conditions=machine_config_pools_conditions,
-            nodes=nodes,
-        )
+@pytest.mark.order("first")
+@pytest.mark.polarion("CNV-2990")  # noqa
+def test_upgrade_install_plan_creation(
+    admin_client,
+    hco_namespace,
+    cnv_target_version,
+    cnv_upgrade_stream,
+    hco_target_csv_name,
+    is_production_source,
+    cnv_subscription_scope_session,
+    disabled_default_sources_in_operatorhub,
+    updated_icsp_idms,
+    updated_custom_hco_catalog_source_image,
+    updated_cnv_subscription_source,
+):
+    wait_for_install_plan(
+        dyn_client=admin_client,
+        hco_namespace=hco_namespace.name,
+        hco_target_csv_name=hco_target_csv_name,
+        is_production_source=is_production_source,
+        cnv_subscription=cnv_subscription_scope_session,
+    )
 
-    @pytest.mark.gating
-    @pytest.mark.cnv_upgrade
+
+@pytest.mark.usefixtures(
+    "nodes_taints_before_upgrade",
+    "nodes_labels_before_upgrade",
+    "fired_alerts_before_upgrade",
+)
+@pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
+class TestUpgradeCNV:
     @pytest.mark.polarion("CNV-2991")
-    @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_cnv_upgrade_process(
         self,
         admin_client,
         hco_namespace,
         migratable_vms,
-        cnv_target_version,
-        cnv_upgrade_stream,
-        fired_alerts_before_upgrade,
-        disabled_default_sources_in_operatorhub,
-        updated_image_content_source_policy,
-        updated_custom_hco_catalog_source_image,
-        updated_cnv_subscription_source,
         approved_cnv_upgrade_install_plan,
         started_cnv_upgrade,
         created_target_hco_csv,
@@ -68,7 +66,7 @@ class TestUpgrade:
         Test the CNV upgrade process (using OSBS/fbc sources). The main steps of the test are:
 
         1. Disable the default sources in operatorhub in order to be able to upgrade usg a custom catalog source.
-        2. Generate a new ICSP for the IIB image being used.
+        2. Generate a new ICSP/IDMS for the IIB image being used.
         3. Update HCO CatalogSource with the image being used.
         4. Update the CNV Subscription source.
         5. Wait for the upgrade InstallPlan to be created and approve it.
@@ -84,19 +82,12 @@ class TestUpgrade:
             expected_images=related_images_from_target_csv.values(),
         )
 
-    @pytest.mark.gating
-    @pytest.mark.cnv_upgrade
     @pytest.mark.polarion("CNV-9933")
-    @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_production_source_cnv_upgrade_process(
         self,
         admin_client,
         hco_namespace,
         migratable_vms,
-        cnv_target_version,
-        cnv_upgrade_stream,
-        fired_alerts_before_upgrade,
-        updated_cnv_subscription_source,
         approved_cnv_upgrade_install_plan,
         started_cnv_upgrade,
         created_target_hco_csv,
