@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+from ipaddress import IPv4Address, IPv6Address
 
 import netaddr
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -44,6 +45,7 @@ from utilities.constants import (
     WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 IFACE_UP_STATE = NodeNetworkConfigurationPolicy.Interface.State.UP
@@ -474,7 +476,27 @@ NAD_TYPE = {
 }
 
 
-def get_vmi_ip_v4_by_name(vm, name):
+def _get_vmi_ip_by_name_and_version(
+    vm: VirtualMachineForTests, name: str, ip_version: int
+) -> IPv4Address | IPv6Address | None:
+    """Get IP address from VMI interface by name and IP version.
+
+    Retrieves an IP address from a VirtualMachineInstance interface, filtering by
+    the specified IP version (IPv4 or IPv6). Waits for the interface to have IP
+    addresses if not immediately available.
+
+    Args:
+        vm: VirtualMachineForTests object containing the VMI.
+        name (str): Name of the network interface to query.
+        ip_version (int): IP version to filter by (4 for IPv4, 6 for IPv6).
+
+    Returns:
+        IPv4Address | IPv6Address | None: The IP address of the specified version.
+
+    Raises:
+        IfaceNotFound: If the interface with the given name does not exist.
+        IpNotFound: If no IP of the requested version is found within the timeout period.
+    """
     vmi = vm.vmi
 
     def _get_iface_by_name(vmi_interfaces):
@@ -503,11 +525,47 @@ def get_vmi_ip_v4_by_name(vm, name):
         for ip_addresses in sampler:
             for ip_address in ip_addresses:
                 ip = ipaddress.ip_interface(address=ip_address)
-                if ip.version == 4:
+                if ip.version == ip_version:
                     return ip.ip
 
     except TimeoutExpiredError:
         raise IpNotFound(name)
+
+    return None
+
+
+def get_vmi_ip_v4_by_name(vm: VirtualMachineForTests, name: str) -> IPv4Address | None:
+    """Get IPv4 address from VMI interface by name.
+
+    Args:
+        vm: VirtualMachineForTests object containing the VMI.
+        name (str): Name of the network interface to query.
+
+    Returns:
+        IPv4Address | None: The IPv4 address of the interface, or None if not found.
+
+    Raises:
+        IfaceNotFound: If the interface with the given name does not exist.
+        IpNotFound: If no IPv4 address is found within the timeout period.
+    """
+    return _get_vmi_ip_by_name_and_version(vm=vm, name=name, ip_version=4)  # type: ignore[return-value]
+
+
+def get_vmi_ip_v6_by_name(vm: VirtualMachineForTests, name: str) -> IPv6Address | None:
+    """Get IPv6 address from VMI interface by name.
+
+    Args:
+        vm: VirtualMachineForTests object containing the VMI.
+        name (str): Name of the network interface to query.
+
+    Returns:
+        IPv6Address | None: The IPv6 address of the interface, or None if not found.
+
+    Raises:
+        IfaceNotFound: If the interface with the given name does not exist.
+        IpNotFound: If no IPv6 address is found within the timeout period.
+    """
+    return _get_vmi_ip_by_name_and_version(vm=vm, name=name, ip_version=6)  # type: ignore[return-value]
 
 
 class IpNotFound(Exception):
