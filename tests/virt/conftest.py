@@ -7,11 +7,13 @@ import pytest
 from bitmath import parse_string_unsafe
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import update_cluster_cpu_model
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
     NVIDIA_VGPU_MANAGER_DS,
@@ -30,9 +32,9 @@ from tests.virt.utils import (
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, label_nodes
+from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
 from utilities.pytest_utils import exit_pytest_execution
-from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
+from utilities.virt import get_nodes_gpu_info, vm_instance_from_template, wait_for_kv_stabilize
 
 LOGGER = logging.getLogger(__name__)
 
@@ -389,3 +391,47 @@ def vm_for_test_from_template_scope_class(
 @pytest.fixture(scope="class")
 def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
     yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=200)
+
+
+@pytest.fixture(scope="class")
+def cluster_cpu_model_scope_class(
+    admin_client,
+    hco_namespace,
+    hyperconverged_resource_scope_class,
+    cluster_common_node_cpu,
+):
+    with update_cluster_cpu_model(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        hco_resource=hyperconverged_resource_scope_class,
+        cpu_model=cluster_common_node_cpu,
+    ):
+        yield
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
+@pytest.fixture(scope="module")
+def cluster_cpu_model_scope_module(
+    admin_client,
+    hco_namespace,
+    hyperconverged_resource_scope_module,
+    cluster_common_node_cpu,
+):
+    with update_cluster_cpu_model(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        hco_resource=hyperconverged_resource_scope_module,
+        cpu_model=cluster_common_node_cpu,
+    ):
+        yield
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
+@pytest.fixture(scope="session")
+def gpu_nodes(nodes):
+    return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
+
+
+@pytest.fixture(scope="session")
+def is_psi_cluster():
+    return Infrastructure(name="cluster").instance.status.platform == "OpenStack"
