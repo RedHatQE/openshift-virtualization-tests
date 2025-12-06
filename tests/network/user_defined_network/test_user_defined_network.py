@@ -28,13 +28,14 @@ def udn_namespace(admin_client):
 
 
 @pytest.fixture(scope="module")
-def namespaced_layer2_user_defined_network(udn_namespace):
+def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
     with Layer2UserDefinedNetwork(
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
         subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
         ipam={"lifecycle": "Persistent"},
+        client=admin_client,
     ) as udn:
         udn.wait_for_condition(
             condition="NetworkAllocationSucceeded",
