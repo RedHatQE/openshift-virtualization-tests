@@ -1,6 +1,6 @@
 import pytest
 
-from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
+from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY, KUBEVIRT_VIRT_OPERATOR_READY_STATUS
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     VIRT_API,
@@ -57,3 +57,13 @@ class TestVirtPodsDownMetrics:
         scaled_deployment,
     ):
         validate_metrics_value(prometheus=prometheus, metric_name=metric_name, expected_value="0")
+
+
+class TestVirtOperatorReadyStatus:
+    @pytest.mark.polarion("CNV-12378")
+    def test_kubevirt_virt_operator_ready_status(self, prometheus, initial_virt_operator_replicas):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=f"sum({KUBEVIRT_VIRT_OPERATOR_READY_STATUS})",
+            expected_value=initial_virt_operator_replicas,
+        )
