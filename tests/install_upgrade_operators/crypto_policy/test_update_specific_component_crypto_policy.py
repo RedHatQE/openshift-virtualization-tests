@@ -141,6 +141,7 @@ def updated_cr_with_custom_crypto_policy(
     indirect=["updated_cr_with_custom_crypto_policy"],
 )
 def test_update_specific_component_crypto_policy(
+    validate_cluster_not_tainted,
     resources_dict,
     updated_cr_with_custom_crypto_policy,
 ):
