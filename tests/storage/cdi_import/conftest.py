@@ -56,12 +56,13 @@ def bridge_on_node():
 
 
 @pytest.fixture()
-def linux_nad(namespace, bridge_on_node):
+def linux_nad(admin_client, namespace, bridge_on_node):
     with network_nad(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
         nad_name=f"{BRIDGE_NAME}-nad",
         interface_name=bridge_on_node.bridge_name,
+        client=admin_client,
     ) as nad:
         yield nad
 

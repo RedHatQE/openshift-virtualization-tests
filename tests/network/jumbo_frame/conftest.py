@@ -109,12 +109,13 @@ def running_vme_jumbo_primary_interface_and_secondary_interface(
 
 
 @pytest.fixture()
-def secondary_linux_bridge_nad(namespace, linux_bridge_interface):
+def secondary_linux_bridge_nad(admin_client, namespace, linux_bridge_interface):
     with network_nad(
         namespace=namespace,
         nad_type=linux_bridge_interface.bridge_type,
         nad_name=f"{linux_bridge_interface.name}-nad",
         interface_name=linux_bridge_interface.bridge_name,
+        client=admin_client,
     ) as nad:
         yield nad
 

@@ -35,12 +35,13 @@ def fail_if_no_numa(schedulable_nodes, workers_utility_pods):
 
 
 @pytest.fixture(scope="module")
-def sriov_net(sriov_node_policy, namespace):
+def sriov_net(admin_client, sriov_node_policy, namespace):
     with SriovNetwork(
         name="numa-sriov-test-net",
         namespace=sriov_node_policy.namespace,
         resource_name=sriov_node_policy.resource_name,
         network_namespace=namespace.name,
+        client=admin_client,
     ) as net:
         yield net
 
