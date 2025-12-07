@@ -28,9 +28,10 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def created_nodehealthcheck_snr_object(snr_remediation_template):
+def created_nodehealthcheck_snr_object(admin_client, snr_remediation_template):
     with NodeHealthCheck(
         name="nhc-remediation-snr",
+        client=admin_client,
         min_unhealthy=1,
         selector_match_expressions=SELECTOR_MATCH_EXPRESSIONS,
         unhealthy_conditions=UNHEALTHY_CONDITIONS,
@@ -41,8 +42,8 @@ def created_nodehealthcheck_snr_object(snr_remediation_template):
 
 
 @pytest.fixture(scope="module")
-def snr_remediation_template(checkup_nodehealthcheck_operator_deployment):
-    template = next(SelfNodeRemediationTemplate.get(namespace=REMEDIATION_OPERATOR_NAMESPACE))
+def snr_remediation_template(admin_client, checkup_nodehealthcheck_operator_deployment):
+    template = next(SelfNodeRemediationTemplate.get(namespace=REMEDIATION_OPERATOR_NAMESPACE, dyn_client=admin_client))
     return {
         "apiVersion": template.api_version,
         "name": template.name,
