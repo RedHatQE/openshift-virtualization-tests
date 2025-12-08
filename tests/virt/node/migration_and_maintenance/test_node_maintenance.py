@@ -125,7 +125,6 @@ def test_node_drain_using_console_fedora(
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 @pytest.mark.ibm_bare_metal
 class TestNodeMaintenanceRHEL:
     @pytest.mark.polarion("CNV-2292")
@@ -170,7 +169,6 @@ class TestNodeMaintenanceRHEL:
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("cluster_modern_cpu_model_scope_class")
 @pytest.mark.ibm_bare_metal
 class TestNodeCordonAndDrain:
     @pytest.mark.polarion("CNV-2048")
