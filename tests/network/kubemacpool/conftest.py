@@ -19,6 +19,7 @@ def kubemacpool_bridge_device_name(index_number):
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_1(
+    admin_client,
     worker_node1,
     kubemacpool_bridge_device_name,
     nodes_available_nics,
@@ -29,12 +30,14 @@ def kubemacpool_bridge_device_worker_1(
         interface_name=kubemacpool_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
+        client=admin_client,
     ) as dev:
         yield dev
 
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_2(
+    admin_client,
     worker_node2,
     kubemacpool_bridge_device_name,
     nodes_available_nics,
@@ -45,6 +48,7 @@ def kubemacpool_bridge_device_worker_2(
         interface_name=kubemacpool_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
+        client=admin_client,
     ) as dev:
         yield dev
 
