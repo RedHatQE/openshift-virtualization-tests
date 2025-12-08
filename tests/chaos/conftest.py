@@ -12,7 +12,6 @@ from tests.chaos.utils import (
     create_cluster_monitoring_process,
     create_nginx_monitoring_process,
     create_pod_deleting_process,
-    create_vm_with_nginx_service,
     get_instance_type,
     pod_deleting_process_recover,
     terminate_process,
@@ -43,7 +42,7 @@ from utilities.infra import (
     utility_daemonset_for_custom_tests,
     wait_for_node_status,
 )
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, create_vm_with_nginx_service, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
