@@ -14,7 +14,7 @@ def create_running_vm(
     end_ip_octet,
     node_selector,
     network_names,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
     client,
     namespace,
 ):
@@ -37,7 +37,7 @@ def create_running_vm(
                     for i in range(0, 3)
                 }
             },
-            ipv6_network_data=dual_stack_network_data,
+            ipv6_network_data=ipv6_primary_interface_cloud_init_data,
         ),
         client=client,
     ) as vm:

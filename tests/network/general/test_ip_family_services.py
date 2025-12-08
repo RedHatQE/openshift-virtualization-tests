@@ -35,10 +35,10 @@ def running_vm_for_exposure(
     worker_node1,
     namespace,
     unprivileged_client,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
 ):
     vm_name = "exposed-vm"
-    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=dual_stack_network_data)
+    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
 
     with VirtualMachineForTests(
         namespace=namespace.name,
