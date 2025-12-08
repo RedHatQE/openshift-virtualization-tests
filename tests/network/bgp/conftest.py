@@ -45,8 +45,13 @@ IPERF3_SERVER_PORT: Final[int] = 2354
 
 
 @pytest.fixture(scope="session")
-def vlan_nncp(vlan_base_iface: str, worker_node1: Node) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+def vlan_nncp(
+    admin_client: DynamicClient,
+    vlan_base_iface: str,
+    worker_node1: Node,
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     with libnncp.NodeNetworkConfigurationPolicy(
+        client=admin_client,
         name="test-vlan-nncp",
         desired_state=libnncp.DesiredState(
             interfaces=[

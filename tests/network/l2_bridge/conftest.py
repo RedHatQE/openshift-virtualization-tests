@@ -53,6 +53,7 @@ def l2_bridge_device_name(index_number):
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_1(
+    admin_client,
     bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node1,
@@ -64,12 +65,14 @@ def l2_bridge_device_worker_1(
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_2(
+    admin_client,
     bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node2,
@@ -81,6 +84,7 @@ def l2_bridge_device_worker_2(
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 

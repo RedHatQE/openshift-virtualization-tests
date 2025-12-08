@@ -39,6 +39,7 @@ def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace
 
 @pytest.fixture(scope="class")
 def ovs_linux_bond1_worker_1(
+    admin_client,
     index_number,
     worker_node1,
     nodes_available_nics,
@@ -48,6 +49,7 @@ def ovs_linux_bond1_worker_1(
     """
     bond_idx = next(index_number)
     with BondNodeNetworkConfigurationPolicy(
+        client=admin_client,
         name=f"bond{bond_idx}nncp-worker-1",
         bond_name=f"bond{bond_idx}",
         bond_ports=nodes_available_nics[worker_node1.name][-2:],
@@ -58,6 +60,7 @@ def ovs_linux_bond1_worker_1(
 
 @pytest.fixture(scope="class")
 def ovs_linux_bond1_worker_2(
+    admin_client,
     index_number,
     worker_node2,
     nodes_available_nics,
@@ -70,6 +73,7 @@ def ovs_linux_bond1_worker_2(
     with (
         BondNodeNetworkConfigurationPolicy(
             name=f"bond{bond_idx}nncp-worker-2",
+            client=admin_client,
             bond_name=ovs_linux_bond1_worker_1.bond_name,  # Use the same BOND name for each test.
             bond_ports=nodes_available_nics[worker_node2.name][-2:],
             node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -80,6 +84,7 @@ def ovs_linux_bond1_worker_2(
 
 @pytest.fixture(scope="class")
 def ovs_linux_bridge_on_bond_worker_1(
+    admin_client,
     bridge_device_matrix__class__,
     worker_node1,
     ovs_linux_br1bond_nad,
@@ -94,12 +99,14 @@ def ovs_linux_bridge_on_bond_worker_1(
         interface_name=ovs_linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[ovs_linux_bond1_worker_1.bond_name],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def ovs_linux_bridge_on_bond_worker_2(
+    admin_client,
     bridge_device_matrix__class__,
     worker_node2,
     ovs_linux_br1bond_nad,
@@ -114,6 +121,7 @@ def ovs_linux_bridge_on_bond_worker_2(
         interface_name=ovs_linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[ovs_linux_bond1_worker_2.bond_name],
+        client=admin_client,
     ) as br:
         yield br
 
