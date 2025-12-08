@@ -97,17 +97,21 @@ def worker_node1_pod_executor(workers_utility_pods, worker_node1):
 
 
 @pytest.fixture(scope="module")
-def dual_stack_network_data(ipv6_supported_cluster):
+def ipv6_primary_interface_cloud_init_data(
+    ipv4_supported_cluster: bool, ipv6_supported_cluster: bool
+) -> dict[str, dict] | None:
     if ipv6_supported_cluster:
         return {
             "ethernets": {
                 "eth0": {
-                    "dhcp4": True,
                     "addresses": ["fd10:0:2::2/120"],
                     "gateway6": "fd10:0:2::1",
+                    "dhcp4": ipv4_supported_cluster,
+                    "dhcp6": False,
                 },
             },
         }
+    return None
 
 
 @pytest.fixture(scope="session")

@@ -114,7 +114,7 @@ def vma(
     namespace,
     unprivileged_client,
     cpu_for_migration,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
     br1test_nad,
 ):
     name = "vma"
@@ -124,8 +124,9 @@ def vma(
     }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
-        ipv6_network_data=dual_stack_network_data,
+        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
     )
+
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
@@ -145,7 +146,7 @@ def vmb(
     namespace,
     unprivileged_client,
     cpu_for_migration,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
     br1test_nad,
 ):
     name = "vmb"
@@ -155,7 +156,7 @@ def vmb(
     }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
-        ipv6_network_data=dual_stack_network_data,
+        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
     )
 
     with VirtualMachineForTests(
