@@ -1414,6 +1414,11 @@ def hostpath_provisioner_scope_session():
     yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
+@pytest.fixture(scope="session")
+def hpp_cr_installed(hostpath_provisioner_scope_session):
+    return hostpath_provisioner_scope_session.exists
+
+
 @pytest.fixture(scope="module")
 def cnv_pods(admin_client, hco_namespace):
     yield list(Pod.get(dyn_client=admin_client, namespace=hco_namespace.name))

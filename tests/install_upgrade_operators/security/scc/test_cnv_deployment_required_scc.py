@@ -6,7 +6,7 @@ Test to verify all HCO deployments have 'openshift.io/required-scc' annotation.
 import pytest
 from ocp_resources.deployment import Deployment
 
-from utilities.constants import ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
+from utilities.constants import ALL_CNV_DEPLOYMENTS, HPP_POOL
 
 REQUIRED_SCC_ANNOTATION = "openshift.io/required-scc"
 REQUIRED_SCC_VALUE = "restricted-v2"
@@ -19,10 +19,10 @@ def required_scc_deployment_check(admin_client, hco_namespace):
     missing_required_scc_annotation = []
     incorrect_required_scc_annotation_value = {}
 
-    for dp in (
-        Deployment(client=admin_client, name=name, namespace=hco_namespace.name)
-        for name in ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
-    ):
+    for name in ALL_CNV_DEPLOYMENTS:
+        if name.startswith(HPP_POOL):
+            continue
+        dp = Deployment(client=admin_client, name=name, namespace=hco_namespace.name)
         scc = dp.instance.spec.template.metadata.annotations.get(REQUIRED_SCC_ANNOTATION)
 
         if scc is None:

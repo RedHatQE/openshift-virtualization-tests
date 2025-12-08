@@ -12,6 +12,7 @@ from tests.install_upgrade_operators.pod_validation.utils import (
 )
 from utilities.constants import (
     ALL_CNV_PODS,
+    HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
 )
 
@@ -23,20 +24,6 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def cnv_jobs(admin_client, hco_namespace):
     return [job.name for job in Job.get(dyn_client=admin_client, namespace=hco_namespace.name)]
-
-
-@pytest.fixture()
-def cnv_pods_by_type(cnv_pod_matrix__function__, cnv_pods):
-    pod_list = [pod for pod in cnv_pods if pod.name.startswith(cnv_pod_matrix__function__)]
-    assert pod_list, f"Pod {cnv_pod_matrix__function__} not found"
-    return pod_list
-
-
-@pytest.fixture()
-def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function__, cnv_pods):
-    pod_list = [pod for pod in cnv_pods if pod.name.startswith(cnv_pod_priority_class_matrix__function__)]
-    assert pod_list, f"Pod {cnv_pod_priority_class_matrix__function__} not found"
-    return pod_list
 
 
 @pytest.mark.polarion("CNV-7261")
@@ -53,9 +40,11 @@ def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
 
 
 @pytest.mark.polarion("CNV-7262")
-def test_pods_priority_class_value(cnv_pods_by_type_no_hpp_csi_hpp_pool):
-    validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
-    validate_priority_class_value(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
+def test_pods_priority_class_value(cnv_pods_by_type):
+    if any(pod.name.startswith((HPP_POOL, HOSTPATH_PROVISIONER_CSI)) for pod in cnv_pods_by_type):
+        pytest.xfail("HPP pods don't have priority class name")
+    validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type)
+    validate_priority_class_value(pod_list=cnv_pods_by_type)
 
 
 @pytest.mark.polarion("CNV-7306")
