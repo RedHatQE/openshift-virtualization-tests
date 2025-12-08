@@ -1055,6 +1055,22 @@ wheels = [
 ]
 
 [[package]]
+name = "openshift-python-scale-utilities"
+version = "0.1.1.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openshift-python-utilities" },
+    { name = "openshift-python-wrapper" },
+    { name = "pytest" },
+    { name = "pytest-order" },
+    { name = "python-simple-logger" },
+    { name = "timeout-sampler" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/ce/b665316eea3b5c8f622953cf28ef5d009fe54fabe760e149bb4b49be387f/openshift_python_scale_utilities-0.1.1.5-py3-none-any.whl", hash = "sha256:b85acac5441d38f0cd56b642f4dd23eb85a900d7a806fa6869e3845ec7a70f85", size = 11872, upload-time = "2025-12-04T19:05:30.831Z" },
+]
+
+[[package]]
 name = "openshift-python-utilities"
 version = "6.0.15"
 source = { registry = "https://pypi.org/simple" }
