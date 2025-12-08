@@ -59,7 +59,9 @@ class TestHardcodedFeatureGates:
         key_name,
     ):
         actual_value = get_resource_key_value(resource=updated_resource, key_name=key_name)
-        assert sorted(actual_value) == sorted(expected_value), (
+        actual_value_set = set(actual_value)
+        assert len(actual_value_set) == len(actual_value)
+        assert actual_value_set == expected_value, (
             f"For {updated_resource.name}, actual featuregates:"
             f" {actual_value} does not match expected "
             f"featuregates: {expected_value}"
