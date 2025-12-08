@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import io
 import ipaddress
 import json
@@ -61,11 +62,13 @@ from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
+    MIGRATION_POLICY_VM_LABEL,
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     OS_PROC_NAME,
+    PORT_80,
     ROOTDISK,
     SSH_PORT_22,
     TCP_TIMEOUT_30SEC,
@@ -2757,3 +2760,48 @@ def wait_for_virt_handler_pods_network_updated(
         )
         raise
     return False
+
+
+def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, node, node_selector_label=None):
+    name = "nginx"
+    with VirtualMachineForTests(
+        namespace=chaos_namespace.name,
+        name=name,
+        body=fedora_vm_body(name=name),
+        client=admin_client,
+        node_selector_labels=node_selector_label,
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)
+        vm.custom_service_enable(service_name=name, port=PORT_80, service_type=Service.Type.CLUSTER_IP)
+        verify_vm_service_reachable(
+            utility_pods=utility_pods,
+            node=node,
+            url=f"{vm.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}",
+        )
+        LOGGER.info(f"VMI Host Node:{vm.vmi.node.name}")
+        yield vm
+
+
+def verify_vm_service_reachable(utility_pods, node, url):
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=is_http_ok,
+            utility_pods=utility_pods,
+            node=node,
+            url=url,
+        ):
+            if sample:
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Service at {url} is not reachable")
+        raise
+
+
+def is_http_ok(utility_pods, node, url):
+    http_result = utilities.infra.ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
+        command=f"curl -s --connect-timeout {TIMEOUT_10SEC} -w '%{{http_code}}' {url}  -o /dev/null"
+    )
+    return int(http_result) == http.HTTPStatus.OK
