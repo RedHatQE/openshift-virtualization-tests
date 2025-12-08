@@ -46,10 +46,11 @@ def running_vm_for_nic_hot_plug(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def bridge_interface_for_hot_plug(hosts_common_available_ports):
+def bridge_interface_for_hot_plug(admin_client, hosts_common_available_ports):
     yield from create_bridge_interface_for_hot_plug(
         bridge_name=f"{HOT_PLUG_STR}-br",
         bridge_port=hosts_common_available_ports[-1],
+        client=admin_client,
     )
 
 
@@ -176,12 +177,13 @@ def running_vm_for_jumbo_nic_hot_plug(namespace, unprivileged_client):
 
 
 @pytest.fixture()
-def bridge_jumbo_interface_for_hot_plug(hosts_common_available_ports, cluster_hardware_mtu):
+def bridge_jumbo_interface_for_hot_plug(admin_client, hosts_common_available_ports, cluster_hardware_mtu):
     yield from create_bridge_interface_for_hot_plug(
         bridge_name=f"{HOT_PLUG_STR}-jumbo",
         # hosts_common_available_ports[-1] is already used for another tests bridge.
         bridge_port=hosts_common_available_ports[-2],
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     )
 
 
