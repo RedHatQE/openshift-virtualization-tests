@@ -126,8 +126,8 @@ def check_list_of_resources(
             )
 
 
-def check_resource(resource, resource_name, temp_dir, resource_path, checks):
-    resource_instance = resource(name=resource_name)
+def check_resource(resource, resource_name, temp_dir, resource_path, checks, admin_client):
+    resource_instance = resource(client=admin_client, name=resource_name)
     compare_resources(
         resource_instance=resource_instance,
         temp_dir=temp_dir,

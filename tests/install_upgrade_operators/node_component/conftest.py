@@ -104,7 +104,7 @@ def expected_node_by_label(node_placement_labels):
 
 @pytest.fixture(scope="class")
 def np_nodes_labels_dict(admin_client):
-    return {node.name: node.instance.metadata.labels for node in Node.get(dyn_client=admin_client)}
+    return {node.name: node.instance.metadata.labels for node in Node.get(client=admin_client)}
 
 
 @pytest.fixture(scope="class")
@@ -115,7 +115,7 @@ def nodes_labeled(np_nodes_labels_dict):
 @pytest.fixture()
 def virt_template_validator_spec_nodeselector(admin_client, hco_namespace):
     virt_template_validator_spec = get_deployment_by_name(
-        namespace_name=hco_namespace.name, deployment_name=VIRT_TEMPLATE_VALIDATOR
+        admin_client=admin_client, namespace_name=hco_namespace.name, deployment_name=VIRT_TEMPLATE_VALIDATOR
     ).instance.to_dict()["spec"]["template"]["spec"]
     return virt_template_validator_spec.get("nodeSelector")
 
@@ -129,6 +129,7 @@ def network_addon_config_spec_placement(admin_client):
 def network_deployment_placement(admin_client, hco_namespace):
     node_selector_deployments = {}
     nw_deployment = get_deployment_by_name(
+        admin_client=admin_client,
         namespace_name=hco_namespace.name,
         deployment_name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     ).instance.to_dict()["spec"]["template"]["spec"]
@@ -168,7 +169,7 @@ def virt_deployment_nodeselector_comp_list(admin_client, hco_namespace):
     virt_deployments = [VIRT_API, VIRT_CONTROLLER]
     for deployment in virt_deployments:
         virt_deployment = get_deployment_by_name(
-            namespace_name=hco_namespace.name, deployment_name=deployment
+            admin_client=admin_client, namespace_name=hco_namespace.name, deployment_name=deployment
         ).instance.to_dict()["spec"]["template"]["spec"]
         nodeselector_lists.append(virt_deployment.get("nodeSelector").get("infra-comp"))
     return nodeselector_lists
@@ -180,7 +181,7 @@ def cdi_deployment_nodeselector_list(admin_client, hco_namespace):
     cdi_deployments = [CDI_APISERVER, CDI_DEPLOYMENT, CDI_UPLOADPROXY]
     for deployment in cdi_deployments:
         cdi_deployment = get_deployment_by_name(
-            namespace_name=hco_namespace.name, deployment_name=deployment
+            admin_client=admin_client, namespace_name=hco_namespace.name, deployment_name=deployment
         ).instance.to_dict()["spec"]["template"]["spec"]
         nodeselector_lists.append(cdi_deployment.get("nodeSelector"))
     return nodeselector_lists

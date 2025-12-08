@@ -263,8 +263,8 @@ def get_resource_from_module_name(related_obj, ocp_resources_submodule_list, adm
     )
 
 
-def get_resource_by_name(resource_kind, name, namespace=None):
-    kwargs = {"name": name}
+def get_resource_by_name(resource_kind, name, admin_client, namespace=None):
+    kwargs = {"name": name, "client": admin_client}
     if namespace:
         kwargs["namespace"] = namespace
     resource = resource_kind(**kwargs)
