@@ -78,7 +78,6 @@ HYPERV_DICT = {
     [({"vm_dict": HYPERV_DICT})],
     indirect=True,
 )
-@pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 class TestCommonTemplatesFedora:
     @pytest.mark.sno
     @pytest.mark.ibm_bare_metal

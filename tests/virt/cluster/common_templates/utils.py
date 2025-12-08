@@ -518,6 +518,7 @@ def matrix_os_vm_from_template(
     namespace: Namespace,
     data_source_object: DataSource,
     os_matrix: dict[str, dict],
+    cpu_model: str | None = None,
     request: Optional[FixtureRequest] = None,
     data_volume_template: Optional[dict[str, dict]] = None,
 ) -> VirtualMachineForTestsFromTemplate:
@@ -532,6 +533,7 @@ def matrix_os_vm_from_template(
         labels=Template.generate_template_labels(**os_matrix[os_matrix_key]["template_labels"]),
         data_volume_template=data_volume_template,
         vm_dict=param_dict.get("vm_dict"),
+        cpu_model=cpu_model,
     )
 
 

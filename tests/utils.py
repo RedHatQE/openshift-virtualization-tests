@@ -32,7 +32,6 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     DISK_SERIAL,
-    HCO_DEFAULT_CPU_MODEL_KEY,
     NODE_HUGE_PAGES_1GI_KEY,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
@@ -59,7 +58,6 @@ from utilities.virt import (
     running_vm,
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
-    wait_for_updated_kv_value,
 )
 
 NUM_TEST_VMS = 3
@@ -77,6 +75,7 @@ def create_vms(
     client=None,
     ssh=True,
     node_selector_labels=None,
+    cpu_model=None,
 ):
     """
     Create n number of fedora vms.
@@ -88,6 +87,7 @@ def create_vms(
         node_selector_labels (str): Labels for node selector.
         client (DynamicClient): DynamicClient object
         ssh (bool): enable SSH on the VM
+        cpu_model (str): CPU model to be used for the VMs
 
     Returns:
         list: List of VirtualMachineForTests
@@ -104,6 +104,7 @@ def create_vms(
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             ssh=ssh,
             client=client,
+            cpu_model=cpu_model,
         ) as vm:
             vms_list.append(vm)
     return vms_list
@@ -252,23 +253,6 @@ def assert_restart_required_condition(vm, expected_message):
     except TimeoutExpiredError:
         LOGGER.error("No RestartRequired condition found on VM!")
         raise
-
-
-@contextmanager
-def update_cluster_cpu_model(admin_client, hco_namespace, hco_resource, cpu_model):
-    with ResourceEditorValidateHCOReconcile(
-        patches={hco_resource: {"spec": {HCO_DEFAULT_CPU_MODEL_KEY: cpu_model}}},
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        wait_for_updated_kv_value(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
-            path=["cpuModel"],
-            value=cpu_model,
-            timeout=30,
-        )
-        yield
 
 
 def get_vm_cpu_list(vm):
