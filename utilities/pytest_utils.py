@@ -9,6 +9,7 @@ import socket
 import sys
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
@@ -161,8 +162,8 @@ def reorder_early_fixtures(metafunc):
             break
 
 
-def stop_if_run_in_progress():
-    run_in_progress = run_in_progress_config_map()
+def stop_if_run_in_progress(client: DynamicClient) -> None:
+    run_in_progress = run_in_progress_config_map(client=client)
     if run_in_progress.exists:
         exit_pytest_execution(
             log_message=f"openshift-virtualization-tests run already in progress: \n{run_in_progress.instance.data}"
@@ -174,8 +175,8 @@ def stop_if_run_in_progress():
         )
 
 
-def deploy_run_in_progress_namespace():
-    run_in_progress_namespace = Namespace(name=CNV_TEST_RUN_IN_PROGRESS_NS)
+def deploy_run_in_progress_namespace(client: DynamicClient) -> Namespace:
+    run_in_progress_namespace = Namespace(client=client, name=CNV_TEST_RUN_IN_PROGRESS_NS)
     if not run_in_progress_namespace.exists:
         run_in_progress_namespace.deploy(wait=True)
         run_in_progress_namespace.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
@@ -183,12 +184,13 @@ def deploy_run_in_progress_namespace():
     return run_in_progress_namespace
 
 
-def deploy_run_in_progress_config_map(session):
-    run_in_progress_config_map(session=session).deploy()
+def deploy_run_in_progress_config_map(client: DynamicClient, session) -> None:
+    run_in_progress_config_map(client=client, session=session).deploy(wait=True)
 
 
-def run_in_progress_config_map(session=None):
+def run_in_progress_config_map(client: DynamicClient, session=None) -> ConfigMap:
     return ConfigMap(
+        client=client,
         name=CNV_TEST_RUN_IN_PROGRESS,
         namespace=CNV_TEST_RUN_IN_PROGRESS_NS,
         data=get_current_running_data(session=session) if session else None,
