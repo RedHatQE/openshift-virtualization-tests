@@ -4,17 +4,27 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.data_source import DataSource
+from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.template import Template
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from packaging.version import Version
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.infrastructure.golden_images.constants import (
     DEFAULT_FEDORA_REGISTRY_URL,
 )
-from utilities.constants import TIMEOUT_30SEC, WILDCARD_CRON_EXPRESSION
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_30SEC, WILDCARD_CRON_EXPRESSION
 from utilities.infra import generate_openshift_pull_secret_file
-from utilities.storage import RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL
+from utilities.ssp import (
+    get_data_import_crons,
+    matrix_auto_boot_data_import_cron_prefixes,
+)
+from utilities.storage import (
+    DATA_IMPORT_CRON_SUFFIX,
+    RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL,
+)
 from utilities.virt import get_oc_image_info
 
 LOGGER = logging.getLogger(__name__)
@@ -59,20 +69,21 @@ def template_labels(os):
 
 def get_all_dic_volume_names(client: DynamicClient, namespace: str) -> list[str]:
     """
-    Retrieve all volume names (PVCs and VolumeSnapshots) managed by DataImportCrons.
+    Retrieve all DataImportCron-managed volume names from a namespace.
 
-    Fetches PersistentVolumeClaims and VolumeSnapshots in the specified namespace
-    that are labeled as managed by DataImportCrons and returns their names.
+    The function fetches both PersistentVolumeClaims and VolumeSnapshots that are
+    managed by DataImportCron (identified by the appropriate label selector) and
+    returns their names.
 
     Args:
-        client: Kubernetes dynamic client for API operations.
-        namespace: Namespace to search for volumes.
+        client (DynamicClient): Dynamic client for resource queries.
+        namespace (str): The namespace to search for volumes.
 
     Returns:
-        List of volume names (strings) from both PVCs and VolumeSnapshots.
+        list[str]: Combined list of PVC and VolumeSnapshot names managed by DataImportCron.
     """
 
-    def _fetch_volume_names(resource_cls):
+    def _fetch_volume_names(resource_cls: type[PersistentVolumeClaim] | type[VolumeSnapshot]) -> list[str]:
         return [
             volume.name
             for volume in resource_cls.get(
@@ -147,3 +158,75 @@ def get_image_version(image: str) -> str | None:
     except ValueError | AttributeError | TypeError:  # type: ignore[misc]
         LOGGER.warning(f"No RHEL version was found from: {image}")
         return None
+
+
+def wait_for_existing_auto_update_data_import_crons(admin_client: DynamicClient, namespace: Namespace) -> None:
+    """
+    Wait for all expected auto-update DataImportCrons to be created in the namespace.
+
+    The function polls for the presence of DataImportCrons matching the expected
+    auto-boot prefixes and returns when all are found or raises TimeoutExpiredError
+    if any are missing after the timeout period.
+
+    Args:
+        admin_client (DynamicClient): Admin client for resource queries.
+        namespace (Namespace): The namespace to check for DataImportCrons.
+
+    Raises:
+        TimeoutExpiredError: If not all expected DataImportCrons are created within 2 minutes.
+    """
+
+    def _get_missing_data_import_crons(
+        _client: DynamicClient, _namespace: Namespace, _auto_boot_data_import_cron_prefixes: list[str]
+    ) -> list[str]:
+        data_import_crons = get_data_import_crons(admin_client=_client, namespace=_namespace)
+
+        extract_existing_dic_prefixes = {re.sub(DATA_IMPORT_CRON_SUFFIX, "", dic.name) for dic in data_import_crons}
+
+        return list(set(_auto_boot_data_import_cron_prefixes) - extract_existing_dic_prefixes)
+
+    sample = None
+    auto_boot_data_import_cron_prefixes = matrix_auto_boot_data_import_cron_prefixes()
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=_get_missing_data_import_crons,
+            _client=admin_client,
+            _namespace=namespace,
+            _auto_boot_data_import_cron_prefixes=auto_boot_data_import_cron_prefixes,
+        ):
+            if not sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Some dataImportCron resources are missing: {sample}")
+        raise
+
+
+def wait_for_created_volume_from_data_import_cron(custom_data_source: DataSource) -> None:
+    """
+    Wait for a DataImportCron to create a volume referenced by a DataSource.
+
+    The function polls the DataSource's source reference and waits until it exists,
+    indicating that the DataImportCron has successfully created the backing volume.
+
+    Args:
+        custom_data_source (DataSource): The DataSource resource to monitor for volume creation.
+
+    Raises:
+        TimeoutExpiredError: If the volume is not created within 5 minutes.
+    """
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_5MIN,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: custom_data_source.source.exists,
+        ):
+            if sample:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Volume was not created under {custom_data_source.namespace} namespace, "
+            f"DataSource conditions: {custom_data_source.instance.get('status', {}).get('conditions')}"
+        )
+        raise
