@@ -155,8 +155,7 @@ def threaded_get_vm_guest_data(vms: list[VirtualMachineForTests], commands: list
     return all_guest_data
 
 
-def verify_guest_data(input_tuple: tuple) -> None:
-    before, after = input_tuple
+def verify_guest_data(before: dict, after: dict) -> None:
     return_errors = []
 
     if not (before and after and before != after):
@@ -181,4 +180,4 @@ def threaded_verify_guest_data(before_list: list[dict], after_list: list[dict]) 
         "Guest data lists must be provided and be of equal length"
     )
     with ThreadPoolExecutor(max_workers=before_list_length) as executor:
-        return list(executor.map(verify_guest_data, list(zip(before_list, after_list, strict=True))))
+        return list(executor.map(verify_guest_data, before_list, after_list))

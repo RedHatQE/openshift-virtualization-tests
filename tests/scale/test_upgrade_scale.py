@@ -180,8 +180,7 @@ def vm_with_nginx_service_scope_module(upgrade_scale_namespace, admin_client, wo
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.usefixtures("vm_with_nginx_service_scope_module", "stress_ng_url_for_cirros", "vms_for_upgrade_test")
-def stopped_nginx_vm(vm_with_nginx_service_scope_module):
+def stopped_nginx_vm(vm_with_nginx_service_scope_module, stress_ng_url_for_cirros, vms_for_upgrade_test):
     vm_with_nginx_service_scope_module.stop(wait=True)
     yield
 
@@ -301,8 +300,7 @@ def idle_monitored_api_requests(monitor_api_requests_object):
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.usefixtures("vms_for_upgrade_test", "stopped_nginx_vm")
-def running_vms_with_load(vms_for_upgrade_test):
+def running_vms_with_load(vms_for_upgrade_test, stopped_nginx_vm):
     commands = "./stress-ng --iomix 1 --cpu 1 --cpu-load 20 --cpu-load-slice 0 --vm 1 --timeout 0 &>/dev/null &"
     threaded_run_vm_ssh_command(vms=vms_for_upgrade_test, commands=shlex.split(commands))
     yield vms_for_upgrade_test
