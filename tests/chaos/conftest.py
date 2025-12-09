@@ -277,8 +277,8 @@ def nginx_monitoring_process(
 @pytest.fixture()
 def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
-        chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        namespace=chaos_namespace,
+        client=admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
     )
@@ -287,8 +287,8 @@ def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, w
 @pytest.fixture()
 def vm_with_nginx_service_and_node_selector(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
-        chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        namespace=chaos_namespace,
+        client=admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
         node_selector_label=HOST_LABEL,
