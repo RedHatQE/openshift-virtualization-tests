@@ -27,7 +27,7 @@ def threaded_wait_for_accessible_vms(
     tcp_timeout: int = TIMEOUT_1MIN,
     sleep: int = TIMEOUT_10SEC,
 ) -> list[Any]:
-    assert vms, "No VMs provided {vms!r}"
+    assert vms, f"No VMs provided {vms!r}"
 
     def _wait_for_accessible_vm(_vm: VirtualMachineForTests) -> None:
         wait_for_ssh_connectivity(vm=_vm, timeout=timeout, tcp_timeout=tcp_timeout, sleep=sleep)
@@ -55,7 +55,7 @@ def threaded_wait_for_running_vms(
     Returns:
         dict: Data related to the running of the async function
     """
-    assert vms, "No VMs provided {vms!r}"
+    assert vms, f"No VMs provided {vms!r}"
 
     def _wait_running_vm(_vm: VirtualMachineForTests) -> None:
         try:
@@ -87,7 +87,7 @@ def threaded_wait_for_scheduled_vms(vms: list[VirtualMachine], wait_timeout=TIME
     Returns:
         dict: Data related to the running of the async function
     """
-    assert vms, "No VMs provided {vms!r}"
+    assert vms, f"No VMs provided {vms!r}"
 
     def _wait_for_scheduled_vm(_vm: VirtualMachine) -> None:
         def _get_virt_launcher_instance():
@@ -117,7 +117,7 @@ def threaded_wait_for_scheduled_vms(vms: list[VirtualMachine], wait_timeout=TIME
 def threaded_run_vm_ssh_command(
     vms: list[VirtualMachineForTests], commands: list[str], tcp_timeout=TIMEOUT_8MIN
 ) -> list:
-    assert vms, "No VMs provided {vms!r}"
+    assert vms, f"No VMs provided {vms!r}"
 
     def _run_ssh_commands(_vm: VirtualMachineForTests) -> list:
         return run_ssh_commands(

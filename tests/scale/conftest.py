@@ -15,9 +15,8 @@ from ocp_resources.resource import get_client
 from ocp_resources.ssp import SSP
 
 from tests.scale.utils import get_user_kubeconfig_context, label_mcps, pause_mcps
-from utilities.constants import TIMEOUT_20MIN, TIMEOUT_30SEC, UNPRIVILEGED_USER, VIRT_HANDLER
+from utilities.constants import TIMEOUT_20MIN, TIMEOUT_30SEC, UNPRIVILEGED_USER
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
-from utilities.infra import get_pods
 from utilities.operator import (
     get_machine_config_pool_by_name,
     get_machine_config_pools_conditions,
@@ -25,6 +24,7 @@ from utilities.operator import (
     wait_for_mcp_update_end,
     wait_for_mcp_update_start,
 )
+from utilities.virt import get_virt_handler_pods
 
 LOGGER = logging.getLogger(__name__)
 
@@ -97,11 +97,7 @@ def increased_open_file_limit(request):
 
 @pytest.fixture(scope="module")
 def virt_handler_pods(admin_client, hco_namespace):
-    return get_pods(
-        dyn_client=admin_client,
-        namespace=hco_namespace,
-        label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
-    )
+    return get_virt_handler_pods(client=admin_client, namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
@@ -115,34 +111,28 @@ def existing_pod_count(admin_client):
 
 
 @pytest.fixture(scope="module")
-def calculated_max_vms_per_virt_node(request, existing_pod_count, virt_handler_nodes):
+def calculated_max_pods_per_virt_node(request, existing_pod_count, virt_handler_nodes):
     assert virt_handler_nodes, "No virt-handler pods present"
 
+    default_pods_per_node = 250
     total_pod_count = existing_pod_count + request.param["total_vm_count"]
-    max_pods = total_pod_count / (len(virt_handler_nodes) - 1)
+    num_virt_handler_nodes = len(virt_handler_nodes)
 
-    total_cores = 0
-    existing_max_pods_per_node = {}
-    for node in virt_handler_nodes:
-        node_capacity = node.instance.status.capacity
-        total_cores += int(node_capacity.cpu)
-        existing_max_pods_per_node[node.name] = int(node_capacity.pods)
-
-    pods_per_core = (total_pod_count / total_cores) * 2
-
-    return dict(
-        max_pods=math.ceil(max_pods),
-        pods_per_core=math.ceil(pods_per_core),
-        min_existing_max_pods_per_node=min(existing_max_pods_per_node.values()),
+    max_pods = math.ceil(
+        total_pod_count / (num_virt_handler_nodes - 1) if num_virt_handler_nodes > 1 else total_pod_count
     )
+    if default_pods_per_node > max_pods:
+        max_pods = default_pods_per_node
+
+    min_existing_max_pods_per_node = min([int(node.instance.status.capacity.pods) for node in virt_handler_nodes])
+    if min_existing_max_pods_per_node > max_pods:
+        max_pods = min_existing_max_pods_per_node
+
+    return max_pods
 
 
 @pytest.fixture(scope="module")
-def created_kubeletconfigs_for_scale(request, calculated_max_vms_per_virt_node, workers, machine_config_pools):
-    max_pods = calculated_max_vms_per_virt_node["max_pods"]
-    pods_per_core = calculated_max_vms_per_virt_node["pods_per_core"]
-    calculated_max_vms_per_virt_node["min_existing_max_pods_per_node"]
-
+def created_kubeletconfigs_for_scale(request, calculated_max_pods_per_virt_node, workers, machine_config_pools):
     control_plane_mcp = get_machine_config_pool_by_name(mcp_name="master")
     worker_mcp = get_machine_config_pool_by_name(mcp_name="worker")
 
@@ -168,8 +158,7 @@ def created_kubeletconfigs_for_scale(request, calculated_max_vms_per_virt_node, 
                 "nodeStatusMaxImages": -1,
                 "kubeAPIQPS": KUBE_API_QPS,
                 "kubeAPIBurst": KUBE_API_BURST,
-                "maxPods": max_pods,
-                "podsPerCore": pods_per_core,
+                "maxPods": calculated_max_pods_per_virt_node,
             },
             machine_config_pool_selector={"matchLabels": {"custom-worker-kubelet": "enabled"}},
         ):

@@ -77,6 +77,7 @@ fcn_exclude_functions =
     multiprocessing,
     getrlimit,
     setrlimit,
+    ceil,
 
 nit_exclude_imports =
     os_params,

@@ -80,12 +80,12 @@ pytestmark = [
         "cache_key_scope_module",
         "increased_open_file_limit",
         "scale_client_configuration",
-        "calculated_max_vms_per_virt_node",
+        "calculated_max_pods_per_virt_node",
         "patched_hco_for_scale_testing",
         "created_kubeletconfigs_for_scale",
     ),
     pytest.mark.parametrize(
-        "cache_key_scope_module,increased_open_file_limit,scale_client_configuration,calculated_max_vms_per_virt_node",
+        "cache_key_scope_module,increased_open_file_limit,scale_client_configuration,calculated_max_pods_per_virt_node",
         [
             pytest.param(
                 "test_upgrade_scale",
