@@ -19,6 +19,8 @@ from utilities.virt import VirtualMachineForTests, vm_instance_from_template, wa
 LOGGER = logging.getLogger(__name__)
 TCP_TIMEOUT_SEC = 60
 
+pytestmark = [pytest.mark.ipv4]
+
 
 @pytest.fixture(scope="module")
 def rdp_vm(
