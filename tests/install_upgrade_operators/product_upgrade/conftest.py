@@ -322,7 +322,9 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 def eus_cnv_upgrade_path(eus_target_cnv_version):
     if eus_target_cnv_version is None:
         exit_pytest_execution(
-            message="EUS upgrade can not be performed from non-eus version", return_code=EUS_ERROR_CODE
+            log_message="EUS upgrade can not be performed from non-eus version",
+            return_code=EUS_ERROR_CODE,
+            filename="eus_upgrade_failure.txt",
         )
     # Get the shortest path to the target (EUS) version
     upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)

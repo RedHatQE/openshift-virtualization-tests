@@ -90,6 +90,7 @@ def write_to_file(file_name, content, base_directory, mode="w"):
     os.makedirs(base_directory, exist_ok=True)
     file_path = os.path.join(base_directory, file_name)
 
+    LOGGER.info(f"Writing data to file: {file_path}")
     try:
         with open(file_path, mode) as fd:
             fd.write(content)

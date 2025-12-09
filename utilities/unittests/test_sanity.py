@@ -279,7 +279,7 @@ class TestClusterSanity:
         mock_exit_pytest.assert_called_once()
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["filename"] == "cluster_sanity_failure.txt"
-        assert "Cluster is missing storage class" in call_args[1]["message"]
+        assert "Cluster is missing storage class" in call_args[1]["log_message"]
 
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.assert_nodes_in_healthy_condition")
@@ -316,7 +316,7 @@ class TestClusterSanity:
         mock_exit_pytest.assert_called_once()
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["filename"] == "cluster_sanity_failure.txt"
-        assert error_message in call_args[1]["message"]
+        assert error_message in call_args[1]["log_message"]
 
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.assert_nodes_in_healthy_condition")
@@ -353,7 +353,7 @@ class TestClusterSanity:
         mock_exit_pytest.assert_called_once()
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["filename"] == "cluster_sanity_failure.txt"
-        assert error_message in call_args[1]["message"]
+        assert error_message in call_args[1]["log_message"]
 
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.assert_nodes_in_healthy_condition")
@@ -390,7 +390,7 @@ class TestClusterSanity:
         mock_exit_pytest.assert_called_once()
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["filename"] == "cluster_sanity_failure.txt"
-        assert error_message in call_args[1]["message"]
+        assert error_message in call_args[1]["log_message"]
 
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.assert_nodes_in_healthy_condition")
@@ -433,8 +433,8 @@ class TestClusterSanity:
         mock_exit_pytest.assert_called_once()
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["filename"] == "cluster_sanity_failure.txt"
-        assert "Timed out waiting for all pods" in call_args[1]["message"]
-        assert "test-namespace" in call_args[1]["message"]
+        assert "Timed out waiting for all pods" in call_args[1]["log_message"]
+        assert "test-namespace" in call_args[1]["log_message"]
 
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.assert_nodes_in_healthy_condition")

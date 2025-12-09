@@ -143,6 +143,7 @@ def cluster_sanity(
     except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError, StorageSanityError) as ex:
         exit_pytest_execution(
             filename=exceptions_filename,
-            message=str(ex),
+            log_message=str(ex),
             junitxml_property=junitxml_property,
+            message="Cluster sanity checks failed.",
         )
