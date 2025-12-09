@@ -131,7 +131,7 @@ def threaded_run_vm_ssh_command(
 
 
 def threaded_get_vm_guest_data(vms: list[VirtualMachineForTests], commands: list[str]) -> list[Any]:
-    assert vms, "No VMs provided {vms!r}"
+    assert vms, f"No VMs provided {vms!r}"
     result = threaded_run_vm_ssh_command(vms=vms, commands=commands)
     all_guest_data = []
     for idx, entry in enumerate(result):
