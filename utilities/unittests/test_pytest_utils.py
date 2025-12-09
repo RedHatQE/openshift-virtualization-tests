@@ -458,7 +458,7 @@ class TestStopIfRunInProgress:
         stop_if_run_in_progress()
 
         mock_exit.assert_called_once()
-        assert "test_user" in mock_exit.call_args[1]["message"]
+        assert "test_user" in mock_exit.call_args[1]["log_message"]
         assert mock_exit.call_args[1]["return_code"] == 100
 
     @patch("utilities.pytest_utils.run_in_progress_config_map")
@@ -922,81 +922,81 @@ class TestExitPytestExecution:
     """Test cases for exit_pytest_execution function"""
 
     @patch("utilities.pytest_utils.pytest.exit")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
-    def test_exit_pytest_execution_basic(self, mock_get_dir, mock_pytest_exit):
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
+    def test_exit_pytest_execution_basic(self, mock_get_base_dir, mock_pytest_exit):
         """Test basic exit with message"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Test exit message"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Test exit message"
 
-        exit_pytest_execution(message, return_code=1)
+        exit_pytest_execution(log_message=log_message, return_code=1)
 
-        mock_pytest_exit.assert_called_once_with(reason=message, returncode=1)
+        mock_pytest_exit.assert_called_once_with(reason=log_message, returncode=1)
 
     @patch("utilities.pytest_utils.pytest.exit")
     @patch("utilities.pytest_utils.write_to_file")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
-    def test_exit_pytest_execution_with_filename(self, mock_get_dir, mock_write, mock_pytest_exit):
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
+    def test_exit_pytest_execution_with_filename(self, mock_get_base_dir, mock_write, mock_pytest_exit):
         """Test exit with filename for logging"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Test error"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Test error"
         filename = "test_error.log"
 
-        exit_pytest_execution(message, return_code=1, filename=filename)
+        exit_pytest_execution(log_message=log_message, return_code=1, filename=filename)
 
         mock_write.assert_called_once_with(
             file_name=filename,
-            content=message,
-            base_directory="/tmp/test/pytest_exit_errors",
+            content=log_message,
+            base_directory="/tmp/test/utilities/pytest_exit_errors",
         )
         mock_pytest_exit.assert_called_once()
 
     @patch("utilities.pytest_utils.pytest.exit")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
-    def test_exit_pytest_execution_with_junitxml(self, mock_get_dir, mock_pytest_exit):
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
+    def test_exit_pytest_execution_with_junitxml(self, mock_get_base_dir, mock_pytest_exit):
         """Test exit with junitxml_property"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Test exit"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Test exit"
         mock_junitxml = MagicMock()
 
-        exit_pytest_execution(message, return_code=5, junitxml_property=mock_junitxml)
+        exit_pytest_execution(log_message=log_message, return_code=5, junitxml_property=mock_junitxml)
 
         mock_junitxml.assert_called_once_with(name="exit_code", value=5)
         mock_pytest_exit.assert_called_once()
 
     @patch("utilities.pytest_utils.pytest.exit")
     @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
     @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
     @patch("utilities.pytest_utils.TIMEOUT_5MIN", 300)
     def test_exit_pytest_execution_sanity_failure_collects_must_gather(
-        self, mock_get_dir, mock_collect, mock_pytest_exit
+        self, mock_get_base_dir, mock_collect, mock_pytest_exit
     ):
         """Test must-gather collection on SANITY_TESTS_FAILURE"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Sanity test failure"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Sanity test failure"
 
-        exit_pytest_execution(message)
+        exit_pytest_execution(log_message=log_message)
 
         mock_collect.assert_called_once_with(
             since_time=300,
-            target_dir="/tmp/test/pytest_exit_errors",
+            target_dir="/tmp/test/utilities/pytest_exit_errors",
         )
         mock_pytest_exit.assert_called_once()
 
     @patch("utilities.pytest_utils.pytest.exit")
     @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
     @patch("utilities.pytest_utils.LOGGER")
     @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
     def test_exit_pytest_execution_must_gather_fails_silently(
-        self, mock_logger, mock_get_dir, mock_collect, mock_pytest_exit
+        self, mock_logger, mock_get_base_dir, mock_collect, mock_pytest_exit
     ):
         """Test that must-gather failure doesn't prevent exit"""
-        mock_get_dir.return_value = "/tmp/test"
+        mock_get_base_dir.return_value = "/tmp/test"
         mock_collect.side_effect = Exception("Must-gather failed")
-        message = "Sanity test failure"
+        log_message = "Sanity test failure"
 
-        exit_pytest_execution(message)
+        exit_pytest_execution(log_message=log_message)
 
         # Should log warning but still exit
         mock_logger.warning.assert_called_once()
@@ -1005,46 +1005,46 @@ class TestExitPytestExecution:
 
     @patch("utilities.pytest_utils.pytest.exit")
     @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
     @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
-    def test_exit_pytest_execution_custom_return_code(self, mock_get_dir, mock_collect, mock_pytest_exit):
+    def test_exit_pytest_execution_custom_return_code(self, mock_get_base_dir, mock_collect, mock_pytest_exit):
         """Test with non-SANITY_TESTS_FAILURE code (skips must-gather)"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Regular exit"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Regular exit"
 
-        exit_pytest_execution(message, return_code=5)
+        exit_pytest_execution(log_message=log_message, return_code=5)
 
         # Should not collect must-gather
         mock_collect.assert_not_called()
-        mock_pytest_exit.assert_called_once_with(reason=message, returncode=5)
+        mock_pytest_exit.assert_called_once_with(reason=log_message, returncode=5)
 
     @patch("utilities.pytest_utils.pytest.exit")
     @patch("utilities.pytest_utils.write_to_file")
     @patch("utilities.pytest_utils.collect_default_cnv_must_gather_with_vm_gather")
-    @patch("utilities.pytest_utils.get_data_collector_dir")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory")
     @patch("utilities.pytest_utils.SANITY_TESTS_FAILURE", 99)
     @patch("utilities.pytest_utils.TIMEOUT_5MIN", 300)
-    def test_exit_pytest_execution_all_options(self, mock_get_dir, mock_collect, mock_write, mock_pytest_exit):
+    def test_exit_pytest_execution_all_options(self, mock_get_base_dir, mock_collect, mock_write, mock_pytest_exit):
         """Test with all options provided"""
-        mock_get_dir.return_value = "/tmp/test"
-        message = "Complete failure"
+        mock_get_base_dir.return_value = "/tmp/test"
+        log_message = "Complete failure"
         filename = "error.log"
         mock_junitxml = MagicMock()
 
-        exit_pytest_execution(message, filename=filename, junitxml_property=mock_junitxml)
+        exit_pytest_execution(log_message=log_message, filename=filename, junitxml_property=mock_junitxml)
 
         # All components should be called
         mock_collect.assert_called_once_with(
             since_time=300,
-            target_dir="/tmp/test/pytest_exit_errors",
+            target_dir="/tmp/test/utilities/pytest_exit_errors",
         )
         mock_write.assert_called_once_with(
             file_name=filename,
-            content=message,
-            base_directory="/tmp/test/pytest_exit_errors",
+            content=log_message,
+            base_directory="/tmp/test/utilities/pytest_exit_errors",
         )
         mock_junitxml.assert_called_once_with(name="exit_code", value=99)
-        mock_pytest_exit.assert_called_once_with(reason=message, returncode=99)
+        mock_pytest_exit.assert_called_once_with(reason=log_message, returncode=99)
 
 
 class TestGetMatrixParamsAdditionalCoverage:

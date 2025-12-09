@@ -378,8 +378,9 @@ def network_sanity(
         err_msg = "\n".join(failure_msgs)
         LOGGER.error(f"Network cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
-            message=err_msg,
+            log_message=err_msg,
             return_code=91,
             filename="network_cluster_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            message="Network cluster verification failed",
         )
