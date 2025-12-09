@@ -82,5 +82,6 @@ def test_default_featuregates_by_resource(
     expected,
     resource_object_value_by_key,
 ):
-    error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key}"
-    assert expected == resource_object_value_by_key, error_message
+    resource_object_value_by_key_set = set(resource_object_value_by_key)
+    error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key_set}"
+    assert expected == resource_object_value_by_key_set, error_message
