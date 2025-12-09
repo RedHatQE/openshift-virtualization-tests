@@ -346,10 +346,11 @@ def kmp_down(cnao_down, kmp_deployment):
 
 
 @pytest.fixture()
-def cnao_down(cnao_deployment):
+def cnao_down(admin_client, cnao_deployment):
     with ResourceEditorValidateHCOReconcile(
         patches={cnao_deployment: {"spec": {"replicas": 0}}},
         list_resource_reconcile=[NetworkAddonsConfig],
+        admin_client=admin_client,
     ):
         cnao_deployment.wait_for_replicas(deployed=False)
         yield
