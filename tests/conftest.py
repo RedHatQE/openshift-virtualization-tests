@@ -584,6 +584,7 @@ def node_physical_nics(workers_utility_pods):
 
 @pytest.fixture(scope="session")
 def nodes_active_nics(
+    admin_client,
     workers,
     workers_utility_pods,
     node_physical_nics,
@@ -607,7 +608,7 @@ def nodes_active_nics(
     nodes_nics = {}
     for node in workers:
         nodes_nics[node.name] = {"available": [], "occupied": []}
-        nns = NodeNetworkState(name=node.name)
+        nns = NodeNetworkState(name=node.name, client=admin_client)
 
         for node_iface in nns.interfaces:
             iface_name = node_iface["name"]
@@ -961,7 +962,11 @@ def started_windows_vm(
 
 
 @pytest.fixture(scope="session")
-def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nodes):
+def worker_nodes_ipv4_false_secondary_nics(
+    admin_client,
+    nodes_available_nics,
+    schedulable_nodes,
+):
     """
     Function removes ipv4 from secondary nics.
     """
@@ -969,6 +974,7 @@ def worker_nodes_ipv4_false_secondary_nics(nodes_available_nics, schedulable_nod
         worker_nics = nodes_available_nics[worker_node.name]
         with EthernetNetworkConfigurationPolicy(
             name=f"disable-ipv4-{name_prefix(worker_node.name)}",
+            client=admin_client,
             node_selector=get_node_selector_dict(node_selector=worker_node.hostname),
             interfaces_name=worker_nics,
         ):
@@ -1016,8 +1022,8 @@ def worker_node3(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def sriov_namespace():
-    return Namespace(name=py_config["sriov_namespace"])
+def sriov_namespace(admin_client):
+    return Namespace(name=py_config["sriov_namespace"], client=admin_client)
 
 
 @pytest.fixture(scope="session")
@@ -1066,20 +1072,29 @@ def sriov_ifaces(sriov_nodes_states, workers_utility_pods):
 
 
 @pytest.fixture(scope="session")
-def sriov_node_policy(sriov_unused_ifaces, sriov_nodes_states, workers_utility_pods, sriov_namespace):
+def sriov_node_policy(
+    admin_client,
+    sriov_unused_ifaces,
+    sriov_nodes_states,
+    workers_utility_pods,
+    sriov_namespace,
+):
     yield from create_sriov_node_policy(
         nncp_name="test-sriov-policy",
         namespace=sriov_namespace.name,
         sriov_iface=sriov_unused_ifaces[0],
         sriov_nodes_states=sriov_nodes_states,
         sriov_resource_name="sriov_net",
+        client=admin_client,
     )
 
 
 @pytest.fixture(scope="session")
-def mac_pool(hco_namespace):
+def mac_pool(admin_client, hco_namespace):
     return MacPool(
-        kmp_range=ConfigMap(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG).instance["data"]
+        kmp_range=ConfigMap(
+            namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
+        ).instance["data"]
     )
 
 
@@ -1411,6 +1426,11 @@ def hostpath_provisioner_scope_session():
     yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
+@pytest.fixture(scope="session")
+def hpp_cr_installed(hostpath_provisioner_scope_session):
+    return hostpath_provisioner_scope_session.exists
+
+
 @pytest.fixture(scope="module")
 def cnv_pods(admin_client, hco_namespace):
     yield list(Pod.get(dyn_client=admin_client, namespace=hco_namespace.name))
@@ -1671,6 +1691,7 @@ def term_handler_scope_session():
 
 @pytest.fixture(scope="session")
 def upgrade_bridge_on_all_nodes(
+    admin_client,
     label_schedulable_nodes,
     hosts_common_available_ports,
 ):
@@ -1680,17 +1701,19 @@ def upgrade_bridge_on_all_nodes(
         interface_name="br1upgrade",
         node_selector_labels=NODE_TYPE_WORKER_LABEL,
         ports=[hosts_common_available_ports[0]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="session")
-def bridge_on_one_node(worker_node1):
+def bridge_on_one_node(admin_client, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="upgrade-br-marker",
         interface_name="upg-br-mark",
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
+        client=admin_client,
     ) as br:
         yield br
 
@@ -2226,8 +2249,8 @@ def disabled_default_sources_in_operatorhub_scope_module(admin_client, installin
 
 
 @pytest.fixture(scope="module")
-def kmp_deployment(hco_namespace):
-    return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER)
+def kmp_deployment(admin_client, hco_namespace):
+    return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER, client=admin_client)
 
 
 @pytest.fixture(scope="class")
