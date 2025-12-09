@@ -156,7 +156,8 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
                 nns = NodeNetworkState(
                     name=utilities.infra.get_node_selector_name(node_selector=self.node_selector)
                     if self.node_selector
-                    else self.nodes[0].name
+                    else self.nodes[0].name,
+                    client=self.client,
                 )
                 port_name = port["name"]
                 if self._does_port_match_type(nns=nns, port_name=port_name, port_type=BOND):
@@ -283,7 +284,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
                     port_name = iface["bridge"]["port"][0]["name"]
 
                     if self.mtu:
-                        nns = NodeNetworkState(name=self._nns_node.name)
+                        nns = NodeNetworkState(name=self._nns_node.name, client=self.client)
                         if BridgeNodeNetworkConfigurationPolicy._does_port_match_type(
                             nns=nns, port_name=port_name, port_type=BOND
                         ):
@@ -315,7 +316,8 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
                                 raise ValueError("node_selector is required for set_port_mac")
 
                             nns = NodeNetworkState(
-                                name=utilities.infra.get_node_selector_name(node_selector=self.node_selector)
+                                name=utilities.infra.get_node_selector_name(node_selector=self.node_selector),
+                                client=self.client,
                             )
                             port_mac = [iface["mac-address"] for iface in nns.interfaces if iface["name"] == port_name]
                             ovs_iface["mac-address"] = port_mac[0]
@@ -1024,6 +1026,7 @@ def enable_hyperconverged_ovs_annotations(
         patches={hyperconverged_resource: {"metadata": {"annotations": {DEPLOY_OVS: "true"}}}},
         list_resource_reconcile=[NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
+        admin_client=admin_client,
     ):
         wait_for_ovs_status(network_addons_config=network_addons_config, status=True)
         ovs_daemonset = wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
