@@ -454,9 +454,11 @@ class TestStopIfRunInProgress:
         mock_cm.namespace = "test-namespace"
         mock_cm.name = "test-configmap"
         mock_config_map.return_value = mock_cm
+        mock_client = MagicMock()
 
-        stop_if_run_in_progress()
+        stop_if_run_in_progress(client=mock_client)
 
+        mock_config_map.assert_called_once_with(client=mock_client)
         mock_exit.assert_called_once()
         assert "test_user" in mock_exit.call_args[1]["log_message"]
         assert mock_exit.call_args[1]["return_code"] == 100
@@ -468,9 +470,11 @@ class TestStopIfRunInProgress:
         mock_cm = MagicMock()
         mock_cm.exists = False
         mock_config_map.return_value = mock_cm
+        mock_client = MagicMock()
 
-        stop_if_run_in_progress()
+        stop_if_run_in_progress(client=mock_client)
 
+        mock_config_map.assert_called_once_with(client=mock_client)
         mock_exit.assert_not_called()
 
 
@@ -484,10 +488,12 @@ class TestDeployRunInProgressNamespace:
         mock_namespace = MagicMock()
         mock_namespace.exists = False
         mock_namespace_class.return_value = mock_namespace
+        mock_client = MagicMock()
 
-        result = deploy_run_in_progress_namespace()
+        result = deploy_run_in_progress_namespace(client=mock_client)
 
         assert result == mock_namespace
+        mock_namespace_class.assert_called_once_with(client=mock_client, name="cnv-tests-run-in-progress-ns")
         mock_namespace.deploy.assert_called_once_with(wait=True)
         mock_namespace.wait_for_status.assert_called_once()
         mock_resource_editor.assert_called_once()
@@ -498,10 +504,12 @@ class TestDeployRunInProgressNamespace:
         mock_namespace = MagicMock()
         mock_namespace.exists = True
         mock_namespace_class.return_value = mock_namespace
+        mock_client = MagicMock()
 
-        result = deploy_run_in_progress_namespace()
+        result = deploy_run_in_progress_namespace(client=mock_client)
 
         assert result == mock_namespace
+        mock_namespace_class.assert_called_once_with(client=mock_client, name="cnv-tests-run-in-progress-ns")
         mock_namespace.deploy.assert_not_called()
 
 
@@ -514,11 +522,12 @@ class TestDeployRunInProgressConfigMap:
         mock_cm = MagicMock()
         mock_config_map.return_value = mock_cm
         mock_session = MagicMock()
+        mock_client = MagicMock()
 
-        deploy_run_in_progress_config_map(mock_session)
+        deploy_run_in_progress_config_map(client=mock_client, session=mock_session)
 
-        mock_config_map.assert_called_once_with(session=mock_session)
-        mock_cm.deploy.assert_called_once()
+        mock_config_map.assert_called_once_with(client=mock_client, session=mock_session)
+        mock_cm.deploy.assert_called_once_with(wait=True)
 
 
 class TestRunInProgressConfigMap:
@@ -533,13 +542,17 @@ class TestRunInProgressConfigMap:
         mock_get_data.return_value = mock_data
         mock_cm = MagicMock()
         mock_config_map_class.return_value = mock_cm
+        mock_client = MagicMock()
 
-        result = run_in_progress_config_map(mock_session)
+        result = run_in_progress_config_map(client=mock_client, session=mock_session)
 
         assert result == mock_cm
         mock_get_data.assert_called_once_with(session=mock_session)
         mock_config_map_class.assert_called_once_with(
-            name="cnv-tests-run-in-progress", namespace="cnv-tests-run-in-progress-ns", data=mock_data
+            client=mock_client,
+            name="cnv-tests-run-in-progress",
+            namespace="cnv-tests-run-in-progress-ns",
+            data=mock_data,
         )
 
     @patch("utilities.pytest_utils.ConfigMap")
@@ -547,12 +560,16 @@ class TestRunInProgressConfigMap:
         """Test creating config map without session data"""
         mock_cm = MagicMock()
         mock_config_map_class.return_value = mock_cm
+        mock_client = MagicMock()
 
-        result = run_in_progress_config_map(None)
+        result = run_in_progress_config_map(client=mock_client, session=None)
 
         assert result == mock_cm
         mock_config_map_class.assert_called_once_with(
-            name="cnv-tests-run-in-progress", namespace="cnv-tests-run-in-progress-ns", data=None
+            client=mock_client,
+            name="cnv-tests-run-in-progress",
+            namespace="cnv-tests-run-in-progress-ns",
+            data=None,
         )
 
 
