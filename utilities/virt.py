@@ -2762,13 +2762,19 @@ def wait_for_virt_handler_pods_network_updated(
     return False
 
 
-def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, node, node_selector_label=None):
+def create_vm_with_nginx_service(
+    namespace: Namespace,
+    client: DynamicClient,
+    utility_pods: list[Pod],
+    node: Node,
+    node_selector_label: Optional[dict] = None,
+):
     name = "nginx"
     with VirtualMachineForTests(
-        namespace=chaos_namespace.name,
+        namespace=namespace.name,
         name=name,
         body=fedora_vm_body(name=name),
-        client=admin_client,
+        client=client,
         node_selector_labels=node_selector_label,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:
@@ -2783,7 +2789,7 @@ def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, no
         yield vm
 
 
-def verify_vm_service_reachable(utility_pods, node, url):
+def verify_vm_service_reachable(utility_pods: list[Pod], node: Node, url: str):
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -2800,7 +2806,7 @@ def verify_vm_service_reachable(utility_pods, node, url):
         raise
 
 
-def is_http_ok(utility_pods, node, url):
+def is_http_ok(utility_pods: list[Pod], node: Node, url: str):
     http_result = utilities.infra.ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
         command=f"curl -s --connect-timeout {TIMEOUT_10SEC} -w '%{{http_code}}' {url}  -o /dev/null"
     )
