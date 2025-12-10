@@ -34,10 +34,11 @@ DV_DICT = {
 
 
 @pytest.fixture()
-def machine_health_check_reboot(worker_machine1):
+def machine_health_check_reboot(admin_client, worker_machine1):
     with MachineHealthCheck(
         name="ha-vm-mhc",
         namespace=worker_machine1.namespace,
+        client=admin_client,
         cluster_name=worker_machine1.cluster_name,
         machineset_name=worker_machine1.machineset_name,
         unhealthy_timeout="60s",

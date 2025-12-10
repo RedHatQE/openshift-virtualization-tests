@@ -39,7 +39,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def enabled_vm_console_proxy_spec(hyperconverged_resource_scope_class):
+def enabled_vm_console_proxy_spec(admin_client, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: {
@@ -50,11 +50,13 @@ def enabled_vm_console_proxy_spec(hyperconverged_resource_scope_class):
         },
         list_resource_reconcile=[SSP],
         wait_for_reconcile_post_update=True,
+        admin_client=admin_client,
     ):
         yield
     vm_console_proxy_resources_object = get_vm_console_proxy_resource(
         resource_kind=RoleBinding,
         namespace=KUBE_SYSTEM_NAMESPACE,
+        client=admin_client,
     )
     if vm_console_proxy_resources_object.exists:
         vm_console_proxy_resources_object.clean_up()
@@ -67,13 +69,18 @@ def enabled_vm_console_proxy_spec(hyperconverged_resource_scope_class):
 
 @pytest.fixture(scope="class")
 def vm_console_proxy_cluster_resource(
+    admin_client,
     cnv_vm_console_proxy_cluster_resource_matrix__class__,
 ):
-    return get_vm_console_proxy_resource(resource_kind=cnv_vm_console_proxy_cluster_resource_matrix__class__)
+    return get_vm_console_proxy_resource(
+        client=admin_client,
+        resource_kind=cnv_vm_console_proxy_cluster_resource_matrix__class__,
+    )
 
 
 @pytest.fixture(scope="class")
 def vm_console_proxy_namespace_resource(
+    admin_client,
     cnv_vm_console_proxy_namespace_resource_matrix__class__,
 ):
     resource_namespace = (
@@ -82,20 +89,21 @@ def vm_console_proxy_namespace_resource(
         else py_config["hco_namespace"]
     )
     return get_vm_console_proxy_resource(
+        client=admin_client,
         resource_kind=cnv_vm_console_proxy_namespace_resource_matrix__class__,
         namespace=resource_namespace,
     )
 
 
 @pytest.fixture(scope="class")
-def vm_for_console_proxy(namespace, unprivileged_client):
+def vm_for_console_proxy(unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=f"rhel-{VM_CONSOLE_PROXY}",
         image=Images.Rhel.RHEL10_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE, client=unprivileged_client),
         os_flavor=OS_FLAVOR_RHEL,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
@@ -104,16 +112,17 @@ def vm_for_console_proxy(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_console_proxy_service_account(namespace):
-    with ServiceAccount(name=f"{VM_CONSOLE_PROXY_USER}1", namespace=namespace.name) as sa:
+def vm_console_proxy_service_account(admin_client, namespace):
+    with ServiceAccount(name=f"{VM_CONSOLE_PROXY_USER}1", namespace=namespace.name, client=admin_client) as sa:
         yield sa
 
 
 @pytest.fixture(scope="class")
-def vm_service_account_role_binding(namespace, vm_console_proxy_service_account):
+def vm_service_account_role_binding(admin_client, namespace, vm_console_proxy_service_account):
     with RoleBinding(
         name=f"{VM_CONSOLE_PROXY_USER}",
         namespace=namespace.name,
+        client=admin_client,
         subjects_kind=vm_console_proxy_service_account.kind,
         subjects_name=vm_console_proxy_service_account.name,
         subjects_namespace=namespace.name,
@@ -124,19 +133,20 @@ def vm_service_account_role_binding(namespace, vm_console_proxy_service_account)
 
 
 @pytest.fixture(scope="class")
-def vm_console_proxy_cluster_role_exists():
-    assert ClusterRole(name=VM_CONSOLE_PROXY_CLUSTER_ROLE).exists, (
+def vm_console_proxy_cluster_role_exists(admin_client):
+    assert ClusterRole(name=VM_CONSOLE_PROXY_CLUSTER_ROLE, client=admin_client).exists, (
         f"ClusterRole {VM_CONSOLE_PROXY_CLUSTER_ROLE} not found"
     )
 
 
 @pytest.fixture(scope="class")
 def vm_console_proxy_service_account_role_binding(
-    namespace, vm_console_proxy_cluster_role_exists, vm_console_proxy_service_account
+    admin_client, namespace, vm_console_proxy_cluster_role_exists, vm_console_proxy_service_account
 ):
     with RoleBinding(
         name=f"{VM_CONSOLE_PROXY_USER}-token-access",
         namespace=namespace.name,
+        client=admin_client,
         subjects_kind=vm_console_proxy_service_account.kind,
         subjects_name=vm_console_proxy_service_account.name,
         subjects_namespace=namespace.name,
