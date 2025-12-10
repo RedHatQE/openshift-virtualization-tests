@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.order("first")
-@pytest.mark.polarion("CNV-2990")  # noqa
+@pytest.mark.polarion("CNV-12451")
 def test_upgrade_install_plan_creation(
     admin_client,
     hco_namespace,
