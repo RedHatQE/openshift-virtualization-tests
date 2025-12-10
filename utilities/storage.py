@@ -704,8 +704,10 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
         TimeoutExpiredError: If SSH connectivity cannot be established
         SSHException: If SSH command execution fails
     """
+
     cmd = shlex.split(f"echo '{content}' > {filename} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+
 
 
 def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
