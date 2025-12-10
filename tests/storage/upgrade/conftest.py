@@ -81,7 +81,7 @@ def rhel_vm_for_upgrade_a(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=modern_cpu_for_migration,
-        rhel10_data_source_scope_session=rhel10_data_source_scope_session,
+        data_source=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
 
@@ -109,7 +109,7 @@ def rhel_vm_for_upgrade_b(
         client=admin_client,
         storage_class_for_snapshot=storage_class_for_snapshot,
         cpu_model=modern_cpu_for_migration,
-        rhel10_data_source_scope_session=rhel10_data_source_scope_session,
+        data_source=rhel10_data_source_scope_session,
     ) as vm:
         yield vm
 

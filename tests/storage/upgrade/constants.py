@@ -2,6 +2,8 @@
 Upgrade storage test constants
 """
 
-UPGRADE_STORAGE_TEST_FILE_NAME_A = "test_upgrade_a.txt"
-UPGRADE_STORAGE_TEST_FILE_NAME_B = "test_upgrade_b.txt"
-UPGRADE_STORAGE_TEST_FILE_CONTENT = "Test content for Upgrade Storage tests."
+# Upgrade snapshot test file constants
+UPGRADE_FIRST_FILE_NAME = "first-file.txt"
+UPGRADE_FIRST_FILE_CONTENT = "first-file"
+UPGRADE_SECOND_FILE_NAME = "second-file.txt"
+UPGRADE_SECOND_FILE_CONTENT = "second-file"

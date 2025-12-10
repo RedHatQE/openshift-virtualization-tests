@@ -5,7 +5,13 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
-from utilities.constants import OS_FLAVOR_RHEL, U1_SMALL
+from tests.storage.upgrade.constants import (
+    UPGRADE_FIRST_FILE_CONTENT,
+    UPGRADE_FIRST_FILE_NAME,
+    UPGRADE_SECOND_FILE_CONTENT,
+    UPGRADE_SECOND_FILE_NAME,
+)
+from utilities.constants import OS_FLAVOR_RHEL, RHEL10_PREFERENCE, U1_SMALL
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
@@ -17,7 +23,7 @@ def create_vm_for_snapshot_upgrade_tests(
     client,
     storage_class_for_snapshot,
     cpu_model,
-    rhel10_data_source_scope_session,
+    data_source,
 ):
     with VirtualMachineForTests(
         name=f"vm-{vm_name}",
@@ -25,20 +31,19 @@ def create_vm_for_snapshot_upgrade_tests(
         client=client,
         os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(client=client, name="rhel.10"),
+        vm_preference=VirtualMachineClusterPreference(client=client, name=RHEL10_PREFERENCE),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel10_data_source_scope_session,
+            data_source=data_source,
             storage_class=storage_class_for_snapshot,
         ),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_model,
     ) as vm:
         running_vm(vm=vm)
-        wait_for_ssh_connectivity(vm=vm)
         write_file_via_ssh(
             vm=vm,
-            filename="first-file.txt",
-            content="first-file",
+            filename=UPGRADE_FIRST_FILE_NAME,
+            content=UPGRADE_FIRST_FILE_CONTENT,
         )
         yield vm
 
@@ -53,10 +58,9 @@ def create_snapshot_for_upgrade(vm, client):
         client=client,
     ) as vm_snapshot:
         vm_snapshot.wait_snapshot_done()
-        wait_for_ssh_connectivity(vm=vm)
         write_file_via_ssh(
             vm=vm,
-            filename="second-file.txt",
-            content="second-file",
+            filename=UPGRADE_SECOND_FILE_NAME,
+            content=UPGRADE_SECOND_FILE_CONTENT,
         )
         yield vm_snapshot
