@@ -709,7 +709,6 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
-
 def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
     assert expected_result in output.strip(), (
