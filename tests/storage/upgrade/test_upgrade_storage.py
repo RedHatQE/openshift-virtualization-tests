@@ -19,7 +19,7 @@ from utilities.storage import (
     run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
-from utilities.virt import migrate_vm_and_verify
+from utilities.virt import migrate_vm_and_verify, wait_for_ssh_connectivity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -70,8 +70,10 @@ class TestUpgradeStorage:
             vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
         ) as vm_restore:
+            rhel_vm_for_upgrade_a.stop(wait=True)
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_a.start(wait=True)
+            wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_a)
             # Verify first file exists (created before snapshot)
             run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_a,
@@ -155,6 +157,7 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
+        wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_a)
         # Verify first file exists (created before snapshot, should still be there after upgrade)
         run_command_on_vm_and_check_output(
             vm=rhel_vm_for_upgrade_a,
@@ -187,8 +190,10 @@ class TestUpgradeStorage:
             vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
         ) as vm_restore:
+            rhel_vm_for_upgrade_b.stop(wait=True)
             vm_restore.wait_restore_done()
             rhel_vm_for_upgrade_b.start(wait=True)
+            wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_b)
 
             # Verify first file exists (created before snapshot)
             run_command_on_vm_and_check_output(
