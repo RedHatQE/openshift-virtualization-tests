@@ -12,6 +12,12 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
+from tests.storage.upgrade.constants import (
+    UPGRADE_FIRST_FILE_CONTENT,
+    UPGRADE_FIRST_FILE_NAME,
+    UPGRADE_SECOND_FILE_CONTENT,
+    UPGRADE_SECOND_FILE_NAME,
+)
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 from utilities.storage import (
     assert_disk_serial,
@@ -19,7 +25,7 @@ from utilities.storage import (
     run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
-from utilities.virt import migrate_vm_and_verify, wait_for_ssh_connectivity
+from utilities.virt import migrate_vm_and_verify, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,19 +78,18 @@ class TestUpgradeStorage:
         ) as vm_restore:
             rhel_vm_for_upgrade_a.stop(wait=True)
             vm_restore.wait_restore_done()
-            rhel_vm_for_upgrade_a.start(wait=True)
-            wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_a)
+            running_vm(vm=rhel_vm_for_upgrade_a)
             # Verify first file exists (created before snapshot)
             run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_a,
-                command="cat first-file.txt",
-                expected_result="first-file",
+                command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+                expected_result=UPGRADE_FIRST_FILE_CONTENT,
             )
 
             # Verify second file does NOT exist (created after snapshot)
             run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_a,
-                command="test ! -f second-file.txt && echo 'file not found'",
+                command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
                 expected_result="file not found",
             )
 
@@ -157,18 +162,19 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
-        wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_a)
+        
+        running_vm(vm=rhel_vm_for_upgrade_a)
         # Verify first file exists (created before snapshot, should still be there after upgrade)
         run_command_on_vm_and_check_output(
             vm=rhel_vm_for_upgrade_a,
-            command="cat first-file.txt",
-            expected_result="first-file",
+            command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+            expected_result=UPGRADE_FIRST_FILE_CONTENT,
         )
 
         # Verify second file does NOT exist (was created after snapshot, should not be present after restore)
         run_command_on_vm_and_check_output(
             vm=rhel_vm_for_upgrade_a,
-            command="test ! -f second-file.txt && echo 'file not found'",
+            command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
             expected_result="file not found",
         )
 
@@ -192,20 +198,20 @@ class TestUpgradeStorage:
         ) as vm_restore:
             rhel_vm_for_upgrade_b.stop(wait=True)
             vm_restore.wait_restore_done()
-            rhel_vm_for_upgrade_b.start(wait=True)
-            wait_for_ssh_connectivity(vm=rhel_vm_for_upgrade_b)
+            
+            running_vm(vm=rhel_vm_for_upgrade_b)
 
             # Verify first file exists (created before snapshot)
             run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_b,
-                command="cat first-file.txt",
-                expected_result="first-file",
+                command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+                expected_result=UPGRADE_FIRST_FILE_CONTENT,
             )
 
             # Verify second file does NOT exist (created after snapshot)
             run_command_on_vm_and_check_output(
                 vm=rhel_vm_for_upgrade_b,
-                command="test ! -f second-file.txt && echo 'file not found'",
+                command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
                 expected_result="file not found",
             )
 
