@@ -4,6 +4,7 @@ import logging
 from typing import Any, Type
 
 import requests
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.api_service import APIService
 from ocp_resources.resource import Resource
 
@@ -59,15 +60,17 @@ def create_vnc_console_token(
         raise
 
 
-def get_vm_console_proxy_resource(resource_kind: Type, namespace: str | None = None) -> Type:
+def get_vm_console_proxy_resource(resource_kind: Type, client: DynamicClient, namespace: str | None = None) -> Type:
     if namespace:
         vm_console_proxy_resource_object = resource_kind(
             name=VM_CONSOLE_PROXY,
             namespace=namespace,
+            client=client,
         )
     else:
         vm_console_proxy_resource_object = resource_kind(
-            name=f"{TOKEN_API_VERSION}.{TOKEN_ENDPOINT}" if resource_kind == APIService else VM_CONSOLE_PROXY
+            name=f"{TOKEN_API_VERSION}.{TOKEN_ENDPOINT}" if resource_kind == APIService else VM_CONSOLE_PROXY,
+            client=client,
         )
     return vm_console_proxy_resource_object
 
