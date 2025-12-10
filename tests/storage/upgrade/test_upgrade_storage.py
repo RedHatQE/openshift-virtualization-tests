@@ -3,6 +3,11 @@ import logging
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
+from tests.storage.upgrade.constants import (
+    UPGRADE_FIRST_FILE_CONTENT,
+    UPGRADE_FIRST_FILE_NAME,
+    UPGRADE_SECOND_FILE_NAME,
+)
 from tests.upgrade_params import (
     CDI_SCRATCH_PRESERVE_NODE_ID,
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
@@ -11,12 +16,6 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CHECK_AFTER_UPGRADE_ID,
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
-)
-from tests.storage.upgrade.constants import (
-    UPGRADE_FIRST_FILE_CONTENT,
-    UPGRADE_FIRST_FILE_NAME,
-    UPGRADE_SECOND_FILE_CONTENT,
-    UPGRADE_SECOND_FILE_NAME,
 )
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 from utilities.storage import (
@@ -162,7 +161,6 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
-        
         running_vm(vm=rhel_vm_for_upgrade_a)
         # Verify first file exists (created before snapshot, should still be there after upgrade)
         run_command_on_vm_and_check_output(
@@ -198,7 +196,7 @@ class TestUpgradeStorage:
         ) as vm_restore:
             rhel_vm_for_upgrade_b.stop(wait=True)
             vm_restore.wait_restore_done()
-            
+
             running_vm(vm=rhel_vm_for_upgrade_b)
 
             # Verify first file exists (created before snapshot)
