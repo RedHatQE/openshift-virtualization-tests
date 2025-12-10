@@ -13,7 +13,7 @@ from tests.storage.upgrade.constants import (
 )
 from utilities.constants import OS_FLAVOR_RHEL, RHEL10_PREFERENCE, U1_SMALL
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
+from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @contextmanager
