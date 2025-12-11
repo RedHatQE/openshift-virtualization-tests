@@ -2,17 +2,21 @@
 
 from kubernetes.dynamic import DynamicClient
 
-from libs.net.udn import udn_primary_network
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, udn_primary_network
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.vm import BaseVirtualMachine
 
 
 def udn_vm(
-    namespace_name: str, name: str, client: DynamicClient, template_labels: dict | None = None
+    namespace_name: str,
+    name: str,
+    client: DynamicClient,
+    template_labels: dict | None = None,
+    binding: str = UDN_BINDING_DEFAULT_PLUGIN_NAME,
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
-    iface, network = udn_primary_network(name="udn-primary")
+    iface, network = udn_primary_network(name="udn-primary", binding=binding)
     spec.template.spec.domain.devices.interfaces = [iface]  # type: ignore
     spec.template.spec.networks = [network]
     if template_labels:

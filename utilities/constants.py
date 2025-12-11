@@ -299,6 +299,7 @@ KUBEVIRT_CONSOLE_PLUGIN = "kubevirt-console-plugin"
 CNAO_OPERATOR = "cnao-operator"
 HYPERCONVERGED_CLUSTER = "hyperconverged-cluster"
 RESOURCE_REQUIREMENTS_KEY_HCO_CR = "resourceRequirements"
+PASST_BINDING_CNI = "passt-binding-cni"
 
 # CDI related constants
 CDI_LABEL = Resource.ApiGroup.CDI_KUBEVIRT_IO
