@@ -28,7 +28,7 @@ from tests.virt.utils import (
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
-    pause_optional_migrate_unpause_and_check_connectivity,
+    pause_unpause_vm_and_check_connectivity,
     running_vm,
     vm_instance_from_template,
 )
@@ -158,7 +158,7 @@ class TestVGPURHELGPUSSpec:
         Test VM with vGPU using GPUs spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
-            pause_optional_migrate_unpause_and_check_connectivity(vm=gpu_vma)
+            pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_rhel_vm"])
     @pytest.mark.polarion("CNV-4767")

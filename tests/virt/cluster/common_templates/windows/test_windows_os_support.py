@@ -15,7 +15,7 @@ from tests.virt.cluster.common_templates.utils import (
     validate_os_info_virtctl_vs_windows_os,
     validate_user_info_virtctl_vs_windows_os,
 )
-from tests.virt.utils import validate_pause_optional_migrate_unpause_windows_vm
+from tests.virt.utils import validate_pause_unpause_windows_vm
 from utilities.constants import OS_FLAVOR_WINDOWS
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
@@ -115,7 +115,7 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-3087")
     def test_pause_unpause_vm(self, matrix_windows_os_vm_from_template):
         """Test VM pause and unpause"""
-        validate_pause_optional_migrate_unpause_windows_vm(vm=matrix_windows_os_vm_from_template)
+        validate_pause_unpause_windows_vm(vm=matrix_windows_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
@@ -136,7 +136,7 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-5903")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(self, matrix_windows_os_vm_from_template, regedit_process_in_windows_os):
-        validate_pause_optional_migrate_unpause_windows_vm(
+        validate_pause_unpause_windows_vm(
             vm=matrix_windows_os_vm_from_template, pre_pause_pid=regedit_process_in_windows_os
         )
 

@@ -2479,23 +2479,18 @@ def assert_linux_efi(vm: VirtualMachineForTests) -> None:
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
 
 
-def pause_optional_migrate_unpause_and_check_connectivity(vm: VirtualMachineForTests, migrate: bool = False) -> None:
-    vmi = VirtualMachineInstance(client=get_client(), name=vm.vmi.name, namespace=vm.vmi.namespace)
-    vmi.pause(wait=True)
-    if migrate:
-        migrate_vm_and_verify(vm=vm, wait_for_interfaces=False)
-    vmi.unpause(wait=True)
+def pause_unpause_vm_and_check_connectivity(vm: VirtualMachineForTests) -> None:
+    vm.vmi.pause(wait=True)
+    vm.vmi.unpause(wait=True)
     LOGGER.info("Verify VM is running and ready after unpause")
-    wait_for_running_vm(vm=vm)
+    wait_for_ssh_connectivity(vm=vm, timeout=TIMEOUT_2MIN)
 
 
-def validate_pause_optional_migrate_unpause_linux_vm(
-    vm: VirtualMachineForTests, pre_pause_pid: int | None = None, migrate: bool = False
-) -> None:
+def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
     proc_name = OS_PROC_NAME["linux"]
     if not pre_pause_pid:
         pre_pause_pid = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=proc_name, args="localhost")
-    pause_optional_migrate_unpause_and_check_connectivity(vm=vm, migrate=migrate)
+    pause_unpause_vm_and_check_connectivity(vm=vm)
     post_pause_pid = fetch_pid_from_linux_vm(vm=vm, process_name=proc_name)
     kill_processes_by_name_linux(vm=vm, process_name=proc_name)
     assert post_pause_pid == pre_pause_pid, (
