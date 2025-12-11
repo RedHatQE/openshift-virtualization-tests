@@ -2,10 +2,11 @@ import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutExpiredError
 
 from tests.infrastructure.golden_images.constants import PVC_NOT_FOUND_ERROR
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, U1_SMALL, Images
+from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_1MIN, U1_SMALL, Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -22,6 +23,7 @@ def vm_from_golden_image_multi_storage(
     namespace,
     golden_image_data_source_multi_storage_scope_function,
 ):
+    source_spec = golden_image_data_source_multi_storage_scope_function.source.instance.to_dict()["spec"]
     with VirtualMachineForTests(
         name="vm-from-golden-image",
         namespace=namespace.name,
@@ -29,6 +31,7 @@ def vm_from_golden_image_multi_storage(
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_multi_storage_scope_function,
+            storage_class=source_spec.get("storageClassName") or source_spec.get("volumeSnapshotClassName"),
         ),
     ) as vm:
         running_vm(vm=vm)
@@ -146,10 +149,6 @@ def test_vm_dv_with_different_sc(
     running_vm(vm=fedora_vm_from_data_source)
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: VM is going into running state which it shouldn't, CNV-68779",
-    run=False,
-)
 @pytest.mark.parametrize(
     "fedora_vm_from_data_source",
     [
@@ -166,7 +165,8 @@ def test_vm_from_data_source_missing_default_storage_class(
     removed_default_storage_classes,
     fedora_vm_from_data_source,
 ):
-    fedora_vm_from_data_source.start()
+    with pytest.raises(TimeoutExpiredError):
+        fedora_vm_from_data_source.start(timeout=TIMEOUT_1MIN, wait=True)
     volume_status = fedora_vm_from_data_source.instance.status.volumeSnapshotStatuses[0]
     status_failing_reason = volume_status.reason
     assert not volume_status.enabled, "Volume creation succeeded, expected failure"
