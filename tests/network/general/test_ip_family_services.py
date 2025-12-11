@@ -12,7 +12,7 @@ from utilities.infra import get_node_selector_dict, run_virtctl_command
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-SINGLE_STACK_SERVICE_IP_FAMILY = "IPv4"
+SINGLE_STACK_SERVICE_IP_FAMILY = "IPv6"
 
 SERVICE_IP_FAMILY_POLICY_SINGLE_STACK = "SingleStack"
 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
@@ -35,10 +35,10 @@ def running_vm_for_exposure(
     worker_node1,
     namespace,
     unprivileged_client,
-    dual_stack_network_data,
+    ipv6_network_data,
 ):
     vm_name = "exposed-vm"
-    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=dual_stack_network_data)
+    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=ipv6_network_data)
 
     with VirtualMachineForTests(
         namespace=namespace.name,

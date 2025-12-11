@@ -6,7 +6,7 @@ import pytest
 
 from tests.network.connectivity.utils import get_masquerade_vm_ip, is_masquerade
 from tests.network.utils import assert_no_ping
-from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
+from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, get_vmi_ip_v6_by_name
 
 
 class TestConnectivityLinuxBridge:
@@ -66,7 +66,7 @@ class TestConnectivityLinuxBridge:
                 ipv6_testing=True,
             )
             if is_masquerade(vm=vm_linux_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_linux_bridge_attached_vmb_destination, name=bridge),
+            else get_vmi_ip_v6_by_name(vm=vm_linux_bridge_attached_vmb_destination, name=bridge),
         )
 
     @pytest.mark.post_upgrade
@@ -162,7 +162,7 @@ class TestConnectivityOVSBridge:
                 ipv6_testing=True,
             )
             if is_masquerade(vm=vm_ovs_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_ovs_bridge_attached_vmb_destination, name=bridge),
+            else get_vmi_ip_v6_by_name(vm=vm_ovs_bridge_attached_vmb_destination, name=bridge),
         )
 
     @pytest.mark.post_upgrade

@@ -6,6 +6,7 @@ Pytest conftest file for CNV network tests
 
 import logging
 import os
+from typing import Callable
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -96,17 +97,29 @@ def worker_node1_pod_executor(workers_utility_pods, worker_node1):
 
 
 @pytest.fixture(scope="module")
-def dual_stack_network_data(ipv6_supported_cluster):
-    if ipv6_supported_cluster:
-        return {
+def ipv6_network_data(ipv4_supported_cluster: bool, ipv6_supported_cluster: bool) -> Callable[[], dict[str, dict]]:
+    """
+    Factory fixture that generates IPv6 network data with primary interface.
+
+    Returns:
+        dict: Network data with ethernets configuration for cloud-init.
+    """
+
+    def _create_network_data() -> dict[str, dict]:
+        data = {
             "ethernets": {
                 "eth0": {
-                    "dhcp4": True,
                     "addresses": ["fd10:0:2::2/120"],
                     "gateway6": "fd10:0:2::1",
+                    "dhcp4": False if not ipv4_supported_cluster and ipv6_supported_cluster else True,
+                    "dhcp6": False,
                 },
             },
         }
+
+        return data
+
+    return _create_network_data
 
 
 @pytest.fixture(scope="session")
