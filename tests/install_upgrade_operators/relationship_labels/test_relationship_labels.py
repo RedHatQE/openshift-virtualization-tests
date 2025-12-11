@@ -14,7 +14,14 @@ from tests.install_upgrade_operators.relationship_labels.utils import (
 )
 from utilities.constants import VERSION_LABEL_KEY
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.sno,
+    pytest.mark.gating,
+    pytest.mark.arm64,
+    pytest.mark.s390x,
+    pytest.mark.conformance,
+]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -32,7 +39,6 @@ def expected_label_dictionary(hco_version_scope_class, request):
 
 
 class TestRelationshipLabels:
-    @pytest.mark.conformance
     @pytest.mark.parametrize(
         "expected_label_dictionary",
         [
@@ -59,7 +65,6 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
-    # TODO: mark as conformance - HPP should not be mandatory
     def test_verify_mismatch_relationship_labels_daemonsets(self, expected_label_dictionary, cnv_daemonset_by_name):
         verify_component_labels_by_resource(
             component=cnv_daemonset_by_name,
@@ -76,14 +81,13 @@ class TestRelationshipLabels:
         ],
         indirect=True,
     )
-    # TODO: mark as conformance - HPP should not be mandatory
-    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pod_by_name):
-        verify_component_labels_by_resource(
-            component=cnv_pod_by_name,
-            expected_component_labels=expected_label_dictionary,
-        )
+    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pods_by_type):
+        for pod in cnv_pods_by_type:
+            verify_component_labels_by_resource(
+                component=pod,
+                expected_component_labels=expected_label_dictionary,
+            )
 
-    @pytest.mark.conformance
     @pytest.mark.parametrize(
         "expected_label_dictionary",
         [
