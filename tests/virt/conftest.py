@@ -174,6 +174,7 @@ def virt_special_infra_sanity(
             filename="virt_special_infra_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
             message="Virt special_infra cluster verification failed",
+            admin_client=admin_client,
         )
 
 

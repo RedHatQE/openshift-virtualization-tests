@@ -378,18 +378,16 @@ class TestCollectDefaultCnvMustGatherWithVmGather:
     """Test cases for collect_default_cnv_must_gather_with_vm_gather function"""
 
     @patch("utilities.data_collector.utilities.hco.get_installed_hco_csv")
-    @patch("utilities.data_collector.get_client")
     @patch("utilities.data_collector.Namespace")
     @patch("utilities.data_collector.py_config", {"hco_namespace": "test-hco-ns"})
     @patch("utilities.data_collector.run_must_gather")
     @patch("utilities.data_collector.LOGGER")
     def test_collect_default_cnv_must_gather_with_vm_gather(
-        self, mock_logger, mock_run_must_gather, mock_namespace_class, mock_get_client, mock_get_csv
+        self, mock_logger, mock_run_must_gather, mock_namespace_class, mock_get_csv
     ):
         """Test collect_default_cnv_must_gather_with_vm_gather"""
         # Setup mocks
         mock_client = MagicMock()
-        mock_get_client.return_value = mock_client
 
         mock_namespace = MagicMock()
         mock_namespace_class.return_value = mock_namespace
@@ -409,9 +407,8 @@ class TestCollectDefaultCnvMustGatherWithVmGather:
         ]
         mock_get_csv.return_value = mock_csv
 
-        collect_default_cnv_must_gather_with_vm_gather(1800, "/target/dir")
+        collect_default_cnv_must_gather_with_vm_gather(1800, "/target/dir", admin_client=mock_client)
 
-        mock_get_client.assert_called_once()
         mock_namespace_class.assert_called_once_with(name="test-hco-ns")
         mock_get_csv.assert_called_once_with(admin_client=mock_client, hco_namespace=mock_namespace)
 
