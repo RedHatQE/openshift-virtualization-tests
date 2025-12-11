@@ -25,7 +25,7 @@ RESOURCE_TYPE_STR = "resource_type"
 RESOURCE_NAME_STR = "resource_name"
 RESOURCE_NAMESPACE_STR = "resource_namespace"
 KEY_NAME_STR = "key_name"
-EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
+EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "CPUManager",
     "Snapshot",
     "HotplugVolumes",
@@ -35,6 +35,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
     "NetworkBindingPlugins",
     "WithHostModelCPU",
     "HypervStrictCheck",
+    "VideoConfig",
     "VMExport",
     "KubevirtSeccompProfile",
     "DisableCustomSELinuxPolicy",
@@ -43,12 +44,12 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = [
     "DynamicPodInterfaceNaming",
     "VolumeMigration",
     "VolumesUpdateStrategy",
-]
-EXPECTED_CDI_HARDCODED_FEATUREGATES = [
+}
+EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
     "WebhookPvcRendering",
-]
+}
 HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
     DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
