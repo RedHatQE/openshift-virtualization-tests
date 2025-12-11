@@ -35,6 +35,7 @@ from utilities.infra import (
     wait_for_pods_running,
 )
 from utilities.network import (
+    DEFAULT_SRIOV_POLICY_NAME,
     get_cluster_cni_type,
     ip_version_data_from_matrix,
     network_nad,
@@ -314,11 +315,16 @@ def network_sanity(
                 failure_msgs.append(
                     "SRIOV tests require at least 2 SRIOV-capable worker nodes, but fewer were detected"
                 )
+            if not py_config.get("sriov_policy_name", DEFAULT_SRIOV_POLICY_NAME):
+                failure_msgs.append(
+                    f"SR-IOV policy {DEFAULT_SRIOV_POLICY_NAME} not found in namespace {py_config['sriov_namespace']}"
+                )
             else:
                 LOGGER.info(
                     "Validated SRIOV operator is running against a valid cluster with "
-                    f"'{py_config['sriov_namespace']}' namespace and "
-                    f"has {len(sriov_workers)} SRIOV-capable worker nodes"
+                    f"'{py_config['sriov_namespace']}' namespace, "
+                    f"has {len(sriov_workers)} SRIOV-capable worker nodes "
+                    f"and '{DEFAULT_SRIOV_POLICY_NAME}' SriovNetworkNodePolicy"
                 )
 
     def _verify_ip_family(family, is_supported_in_cluster):
