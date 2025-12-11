@@ -9,6 +9,7 @@ from tests.observability.metrics.utils import (
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
 )
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
 )
@@ -56,9 +57,10 @@ class TestMetricsWindows:
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
-    query_result = prometheus.query(query=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS)["data"]["result"]
-    assert str(query_result[0]["value"][1]) == "1", (
-        f"Metrics query: {KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS},  result: {query_result}"
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
+        expected_value="1",
     )
 
 
