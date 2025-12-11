@@ -60,11 +60,14 @@ def get_metrics_value_with_annotation(prometheus, query_string, component_name):
     return int(metric_results[0]["value"][1]) if metric_results else 0
 
 
-def filter_metric_by_component(metrics, metric_name, component_name):
+def filter_metric_by_component(metrics: list[dict], metric_name: str, component_name: str) -> int:
     annotation_name = get_annotation_name_for_component(component_name=component_name)
     for metric in metrics:
         if metric["metric"]["annotation_name"] == annotation_name and metric["metric"]["__name__"] == metric_name:
             return int(metric["value"][1])
+    raise ValueError(
+        f"Metric '{metric_name}' not found for component '{component_name}' with annotation '{annotation_name}'"
+    )
 
 
 def wait_for_metrics_value_update(prometheus, component_name, query_string, previous_value):
