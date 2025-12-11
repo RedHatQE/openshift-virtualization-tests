@@ -127,3 +127,6 @@ docs/source/rst
 
 # For local run (debug).
 ocp_resources
+
+# For scale testing
+tests/scale/stress-ng
