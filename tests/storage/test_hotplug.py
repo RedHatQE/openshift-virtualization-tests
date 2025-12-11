@@ -155,7 +155,6 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
         cpu_requests = 1
 
     with VirtualMachineForTests(
-        client=unprivileged_client,
         name=name,
         memory_requests=memory_requests,
         memory_limits=memory_requests,
@@ -167,11 +166,6 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
     ) as vm:
         running_vm(vm=vm)
         yield vm
-
-
-@pytest.fixture(scope="class")
-def storage_class_name_scope_class(storage_class_matrix__class__):
-    return [*storage_class_matrix__class__][0]
 
 
 @pytest.fixture(scope="class")
