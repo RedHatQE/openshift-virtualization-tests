@@ -50,6 +50,7 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
     )
 
 
+@pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.parametrize(
     "resource_quota_for_auto_resource_limits_test, vm_auto_resource_limits, expected_limits",
@@ -92,6 +93,7 @@ def test_auto_limits_set_one_resource(
             assert not getattr(pod_limits, resource), f"{resource} limits should not be set, \n {pod_limits}"
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "resource_quota_for_auto_resource_limits_test, vm_auto_resource_limits",
     [
