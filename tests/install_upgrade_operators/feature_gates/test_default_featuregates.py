@@ -82,8 +82,7 @@ def test_default_featuregates_by_resource(
     expected,
     resource_object_value_by_key,
 ):
+    if isinstance(resource_object_value_by_key, list):
+        resource_object_value_by_key = set(resource_object_value_by_key)
     error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key}"
-    if isinstance(expected, list):
-        assert sorted(expected) == sorted(resource_object_value_by_key), error_message
-    else:
-        assert expected == resource_object_value_by_key, error_message
+    assert expected == resource_object_value_by_key, error_message
