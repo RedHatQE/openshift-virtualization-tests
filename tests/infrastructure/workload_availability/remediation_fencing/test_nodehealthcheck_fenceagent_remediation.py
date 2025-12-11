@@ -25,8 +25,10 @@ pytestmark = [pytest.mark.destructive, pytest.mark.special_infra, pytest.mark.no
 
 
 @pytest.fixture(scope="session")
-def cluster_config_data(kube_system_namespace):
-    cluster_creation_config_map = ConfigMap(name="cluster-config-v1", namespace=kube_system_namespace.name)
+def cluster_config_data(admin_client, kube_system_namespace):
+    cluster_creation_config_map = ConfigMap(
+        name="cluster-config-v1", namespace=kube_system_namespace.name, client=admin_client
+    )
     if cluster_creation_config_map.exists:
         return yaml.safe_load(cluster_creation_config_map.instance["data"]["install-config"])
     raise ResourceNotFoundError("ConfigMap cluster-config-v1 not found")
@@ -60,10 +62,11 @@ def generated_node_parameters(extracted_bmc_nodes_ipmi_data):
 
 
 @pytest.fixture(scope="module")
-def far_remediation_template(generated_node_parameters):
+def far_remediation_template(admin_client, generated_node_parameters):
     with FenceAgentsRemediationTemplate(
         name="nhc-remediation-far",
         namespace=REMEDIATION_OPERATOR_NAMESPACE,
+        client=admin_client,
         agent="fence_ipmilan",
         node_parameters=generated_node_parameters,
         shared_parameters={"--lanplus": ""},
@@ -77,9 +80,10 @@ def far_remediation_template(generated_node_parameters):
 
 
 @pytest.fixture(scope="module")
-def created_nodehealthcheck_far_object(far_remediation_template):
+def created_nodehealthcheck_far_object(admin_client, far_remediation_template):
     with NodeHealthCheck(
         name="nhc-remediation-far",
+        client=admin_client,
         min_unhealthy=1,
         selector_match_expressions=SELECTOR_MATCH_EXPRESSIONS,
         unhealthy_conditions=UNHEALTHY_CONDITIONS,
