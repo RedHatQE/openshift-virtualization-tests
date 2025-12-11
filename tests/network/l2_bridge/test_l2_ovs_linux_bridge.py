@@ -6,9 +6,10 @@ from netaddr import IPNetwork
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
 from utilities.constants import TIMEOUT_2MIN
-from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, ping
+from utilities.network import assert_ping_successful, ping
 
 LOGGER = logging.getLogger(__name__)
 CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type and linux bridge
@@ -81,9 +82,10 @@ class TestL2LinuxBridge:
         current_ip = TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
             sleep=2,
-            func=get_vmi_ip_v4_by_name,
+            func=lookup_iface_status_ip,
             vm=l2_bridge_running_vm_b,
-            name=dhcp_nad.name,
+            iface_name=dhcp_nad.name,
+            ip_family=4,
         )
         for address in current_ip:
             if str(address) in IPNetwork(f"{DHCP_IP_RANGE_START}/24"):
@@ -101,7 +103,9 @@ class TestL2LinuxBridge:
         Test custom type field in ethernet header.
         """
         num_of_packets = 10
-        dst_ip = get_vmi_ip_v4_by_name(vm=l2_bridge_running_vm_b, name=custom_eth_type_llpd_nad.name)
+        dst_ip = lookup_iface_status_ip(
+            vm=l2_bridge_running_vm_b, iface_name=custom_eth_type_llpd_nad.name, ip_family=4
+        )
         out = run_ssh_commands(
             host=configured_l2_bridge_vm_a.ssh_exec,
             commands=[shlex.split(f"nping -e eth2 --ether-type {CUSTOM_ETH_PROTOCOL} {dst_ip} -c {num_of_packets} &")],

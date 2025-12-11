@@ -7,6 +7,7 @@ from collections import OrderedDict
 import pytest
 
 import utilities.network
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs import cloudinit as netcloud
 from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import get_node_selector_dict
@@ -14,7 +15,6 @@ from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
     assert_ping_successful,
     cloud_init_network_data,
-    get_vmi_ip_v4_by_name,
     network_nad,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
@@ -209,8 +209,9 @@ class TestBondConnectivity:
         src_vm, dst_vm = ovs_linux_bond_bridge_attached_vms
         assert_ping_successful(
             src_vm=src_vm,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=dst_vm,
-                name=ovs_linux_br1bond_nad.name,
+                iface_name=ovs_linux_br1bond_nad.name,
+                ip_family=4,
             ),
         )

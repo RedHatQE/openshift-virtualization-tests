@@ -12,6 +12,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_ssh_alive,
@@ -30,7 +31,6 @@ from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
     get_valid_ip_address,
-    get_vmi_ip_v4_by_name,
     network_device,
     network_nad,
 )
@@ -227,7 +227,7 @@ def http_service(namespace, running_vma, running_vmb):
 
 @pytest.fixture(scope="module")
 def ping_in_background(br1test_nad, running_vma, running_vmb):
-    dst_ip = get_vmi_ip_v4_by_name(vm=running_vmb, name=br1test_nad.name)
+    dst_ip = lookup_iface_status_ip(vm=running_vmb, iface_name=br1test_nad.name, ip_family=4)
     assert_ping_successful(src_vm=running_vma, dst_ip=dst_ip)
     LOGGER.info(f"Ping {dst_ip} from {running_vma.name} to {running_vmb.name}")
     run_ssh_commands(
@@ -295,7 +295,7 @@ def migrated_vmb_and_wait_for_success(running_vmb, http_service):
 
 @pytest.fixture(scope="module")
 def vma_ip_address(br1test_nad, running_vma):
-    return get_vmi_ip_v4_by_name(vm=running_vma, name=br1test_nad.name)
+    return lookup_iface_status_ip(vm=running_vma, iface_name=br1test_nad.name, ip_family=4)
 
 
 @pytest.fixture(scope="module")
@@ -361,7 +361,7 @@ def test_ssh_vm_migration(
     ssh_in_background,
     migrated_vmb_and_wait_for_success,
 ):
-    src_ip = str(get_vmi_ip_v4_by_name(vm=running_vma, name=br1test_nad.name))
+    src_ip = str(lookup_iface_status_ip(vm=running_vma, iface_name=br1test_nad.name, ip_family=4))
     assert_ssh_alive(ssh_vm=running_vma, src_ip=src_ip)
 
 
@@ -375,7 +375,7 @@ def test_cnv_bridge_ssh_vm_migration(
     brcnv_ssh_in_background,
     brcnv_migrated_vm,
 ):
-    src_ip = str(get_vmi_ip_v4_by_name(vm=brcnv_vma_with_vlan_1, name=brcnv_ovs_nad_vlan_1.name))
+    src_ip = str(lookup_iface_status_ip(vm=brcnv_vma_with_vlan_1, iface_name=brcnv_ovs_nad_vlan_1.name, ip_family=4))
     assert_ssh_alive(ssh_vm=brcnv_vma_with_vlan_1, src_ip=src_ip)
 
 
@@ -394,7 +394,7 @@ def test_connectivity_after_migration_and_restart(
 ):
     assert_ping_successful(
         src_vm=running_vma,
-        dst_ip=get_vmi_ip_v4_by_name(vm=running_vmb, name=br1test_nad.name),
+        dst_ip=lookup_iface_status_ip(vm=running_vmb, iface_name=br1test_nad.name, ip_family=4),
     )
 
 

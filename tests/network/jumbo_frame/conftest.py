@@ -3,13 +3,14 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.jumbo_frame.utils import (
     cloud_init_data_for_secondary_traffic,
     create_vm_for_jumbo_test,
 )
 from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.infra import get_node_selector_dict
-from utilities.network import get_vmi_ip_v4_by_name, network_device, network_nad
+from utilities.network import network_device, network_nad
 
 
 @pytest.fixture(scope="class")
@@ -139,9 +140,10 @@ def ping_over_secondary(
     running_vme_jumbo_primary_interface_and_secondary_interface,
     secondary_linux_bridge_nad,
 ):
-    dst_ip = get_vmi_ip_v4_by_name(
+    dst_ip = lookup_iface_status_ip(
         vm=running_vmd_jumbo_primary_interface_and_secondary_interface,
-        name=secondary_linux_bridge_nad.name,
+        iface_name=secondary_linux_bridge_nad.name,
+        ip_family=4,
     )
 
     run_ssh_commands(

@@ -1,3 +1,4 @@
+import ipaddress
 import random
 from functools import cache
 from typing import Final
@@ -40,3 +41,10 @@ def _random_octets(count: int) -> list[int]:
         list[int]: A list of unique random integers representing octet values.
     """
     return random.sample(range(1, 254), count)
+
+
+def next_ip(ip_list: list[str], ip_family: int) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    try:
+        return next(ip for ip_addr in ip_list if (ip := ipaddress.ip_address(ip_addr)).version == ip_family)
+    except StopIteration:
+        raise ValueError(f"No IPv{ip_family} address found in the list")

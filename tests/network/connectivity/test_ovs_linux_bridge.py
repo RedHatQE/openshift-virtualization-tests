@@ -4,9 +4,10 @@ VM to VM connectivity via secondary (bridged) interfaces.
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.connectivity.utils import get_masquerade_vm_ip, is_masquerade
 from tests.network.utils import assert_no_ping
-from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
+from utilities.network import assert_ping_successful
 
 
 class TestConnectivityLinuxBridge:
@@ -44,7 +45,7 @@ class TestConnectivityLinuxBridge:
                 ipv6_testing=False,
             )
             if is_masquerade(vm=vm_linux_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_linux_bridge_attached_vmb_destination, name=bridge),
+            else lookup_iface_status_ip(vm=vm_linux_bridge_attached_vmb_destination, iface_name=bridge, ip_family=4),
         )
 
     @pytest.mark.gating
@@ -66,7 +67,7 @@ class TestConnectivityLinuxBridge:
                 ipv6_testing=True,
             )
             if is_masquerade(vm=vm_linux_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_linux_bridge_attached_vmb_destination, name=bridge),
+            else lookup_iface_status_ip(vm=vm_linux_bridge_attached_vmb_destination, iface_name=bridge, ip_family=6),
         )
 
     @pytest.mark.post_upgrade
@@ -81,9 +82,10 @@ class TestConnectivityLinuxBridge:
     ):
         assert_ping_successful(
             src_vm=vm_linux_bridge_attached_vma_source,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vm_linux_bridge_attached_vmb_destination,
-                name=nad_linux_bridge_vlan_1.name,
+                iface_name=nad_linux_bridge_vlan_1.name,
+                ip_family=4,
             ),
         )
 
@@ -98,9 +100,10 @@ class TestConnectivityLinuxBridge:
     ):
         assert_no_ping(
             src_vm=vm_linux_bridge_attached_vma_source,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vm_linux_bridge_attached_vmb_destination,
-                name=nad_linux_bridge_vlan_3.name,
+                iface_name=nad_linux_bridge_vlan_3.name,
+                ip_family=4,
             ),
         )
 
@@ -140,7 +143,7 @@ class TestConnectivityOVSBridge:
                 ipv6_testing=False,
             )
             if is_masquerade(vm=vm_ovs_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_ovs_bridge_attached_vmb_destination, name=bridge),
+            else lookup_iface_status_ip(vm=vm_ovs_bridge_attached_vmb_destination, iface_name=bridge, ip_family=4),
         )
 
     @pytest.mark.gating
@@ -162,7 +165,7 @@ class TestConnectivityOVSBridge:
                 ipv6_testing=True,
             )
             if is_masquerade(vm=vm_ovs_bridge_attached_vmb_destination, bridge=bridge)
-            else get_vmi_ip_v4_by_name(vm=vm_ovs_bridge_attached_vmb_destination, name=bridge),
+            else lookup_iface_status_ip(vm=vm_ovs_bridge_attached_vmb_destination, iface_name=bridge, ip_family=6),
         )
 
     @pytest.mark.post_upgrade
@@ -177,9 +180,10 @@ class TestConnectivityOVSBridge:
     ):
         assert_ping_successful(
             src_vm=vm_ovs_bridge_attached_vma_source,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vm_ovs_bridge_attached_vmb_destination,
-                name=nad_ovs_bridge_vlan_1.name,
+                iface_name=nad_ovs_bridge_vlan_1.name,
+                ip_family=4,
             ),
         )
 
@@ -194,8 +198,9 @@ class TestConnectivityOVSBridge:
     ):
         assert_no_ping(
             src_vm=vm_ovs_bridge_attached_vma_source,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vm_ovs_bridge_attached_vmb_destination,
-                name=nad_ovs_bridge_vlan_3.name,
+                iface_name=nad_ovs_bridge_vlan_3.name,
+                ip_family=4,
             ),
         )

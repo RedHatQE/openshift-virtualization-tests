@@ -2,8 +2,9 @@ import logging
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.utils import assert_no_ping
-from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
+from utilities.network import assert_ping_successful
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class TestFlatOverlayConnectivity:
     def test_flat_overlay_basic_ping(self, flat_overlay_vma_vmb_nad, vma_flat_overlay, vmb_flat_overlay):
         assert_ping_successful(
             src_vm=vma_flat_overlay,
-            dst_ip=get_vmi_ip_v4_by_name(vm=vmb_flat_overlay, name=flat_overlay_vma_vmb_nad.name),
+            dst_ip=lookup_iface_status_ip(vm=vmb_flat_overlay, iface_name=flat_overlay_vma_vmb_nad.name, ip_family=4),
         )
 
     @pytest.mark.polarion("CNV-10159")
@@ -75,7 +76,7 @@ class TestFlatOverlayConnectivity:
         )
         assert_ping_successful(
             src_vm=vma_flat_overlay,
-            dst_ip=get_vmi_ip_v4_by_name(vm=vme_flat_overlay, name=flat_overlay_vma_vmb_nad.name),
+            dst_ip=lookup_iface_status_ip(vm=vme_flat_overlay, iface_name=flat_overlay_vma_vmb_nad.name, ip_family=4),
         )
 
     @pytest.mark.polarion("CNV-10173")
@@ -105,5 +106,7 @@ class TestFlatOverlayJumboConnectivity:
         assert_ping_successful(
             src_vm=vma_jumbo_flat_l2,
             packet_size=flat_l2_jumbo_frame_packet_size,
-            dst_ip=get_vmi_ip_v4_by_name(vm=vmb_jumbo_flat_l2, name=flat_overlay_jumbo_frame_nad.name),
+            dst_ip=lookup_iface_status_ip(
+                vm=vmb_jumbo_flat_l2, iface_name=flat_overlay_jumbo_frame_nad.name, ip_family=4
+            ),
         )

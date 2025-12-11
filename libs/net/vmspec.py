@@ -1,11 +1,14 @@
+import ipaddress
 from collections.abc import Callable
 from typing import Any, Final
 
 from kubernetes.dynamic.client import ResourceField
+from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.vm.spec import Devices, Network, SpecDisk, VMISpec, Volume
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.libs.ip import next_ip
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 WAIT_FOR_MISSING_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 120
@@ -30,7 +33,7 @@ def _default_interface_predicate(interface: ResourceField) -> bool:
 
 
 def lookup_iface_status(
-    vm: BaseVirtualMachine,
+    vm: VirtualMachine,
     iface_name: str,
     predicate: Callable[[Any], bool] = _default_interface_predicate,
     timeout: int = LOOKUP_IFACE_STATUS_TIMEOUT_SEC,
@@ -40,12 +43,12 @@ def lookup_iface_status(
     otherwise raises VMInterfaceStatusNotFoundError.
 
     Args:
-        vm (BaseVirtualMachine): VM in which to search for the network interface.
-        iface_name (str): The name of the requested interface.
-        predicate (Callable[[dict[str, Any]], bool]): A function that takes a network interface as an argument
+        vm: VM in which to search for the network interface.
+        iface_name: The name of the requested interface.
+        predicate: A function that takes a network interface as an argument
             and returns a boolean value. This function should define the condition that
             the interface needs to meet.
-        timeout (int): Lookup operation timeout
+        timeout: Lookup operation timeout
 
     Returns:
         iface (ResourceField): The requested interface.
@@ -69,17 +72,15 @@ def lookup_iface_status(
         raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
 
 
-def _lookup_iface_status(
-    vm: BaseVirtualMachine, iface_name: str, predicate: Callable[[Any], bool]
-) -> ResourceField | None:
+def _lookup_iface_status(vm: VirtualMachine, iface_name: str, predicate: Callable[[Any], bool]) -> ResourceField | None:
     """
     Returns the interface requested if found and the predicate function (to which the interface is
     sent) Else, returns None.
 
     Args:
-        vm (BaseVirtualMachine): VM in which to search for the network interface.
-        iface_name (str): The name of the requested interface.
-        predicate (Callable[[dict[str, Any]], bool]): A function that takes a network interface as an argument
+        vm: VM in which to search for the network interface.
+        iface_name: The name of the requested interface.
+        predicate: A function that takes a network interface as an argument
             and returns a boolean value. this function should define the condition that
             the interface needs to meet.
 
@@ -131,3 +132,16 @@ def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpe
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.domain.devices.disks.append(disk)
     return vmi_spec
+
+
+def lookup_iface_status_ip(
+    vm: VirtualMachine, iface_name: str, ip_family: int
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    iface = lookup_iface_status(
+        vm=vm,
+        iface_name=iface_name,
+        predicate=lambda iface: iface.get("ipAddresses")
+        and any(ipaddress.ip_address(ip_addr).version == ip_family for ip_addr in iface["ipAddresses"]),
+        timeout=120,
+    )
+    return next_ip(ip_list=iface["ipAddresses"], ip_family=ip_family)

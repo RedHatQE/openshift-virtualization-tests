@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_nncp_successfully_configured,
@@ -22,7 +23,6 @@ from utilities.infra import get_node_selector_dict, get_pod_by_name_prefix
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
-    get_vmi_ip_v4_by_name,
     is_destination_pingable_from_vm,
     network_device,
     network_nad,
@@ -170,14 +170,19 @@ def nmstate_linux_bridge_attached_running_vmb(nmstate_linux_bridge_attached_vmb)
 
 @pytest.fixture(scope="class")
 def vma_src_ip(nmstate_linux_nad, nmstate_linux_bridge_attached_running_vma):
-    return str(get_vmi_ip_v4_by_name(vm=nmstate_linux_bridge_attached_running_vma, name=nmstate_linux_nad.name))
+    return str(
+        lookup_iface_status_ip(
+            vm=nmstate_linux_bridge_attached_running_vma, iface_name=nmstate_linux_nad.name, ip_family=4
+        )
+    )
 
 
 @pytest.fixture(scope="class")
 def vmb_dst_ip(nmstate_linux_nad, nmstate_linux_bridge_attached_running_vmb):
-    return get_vmi_ip_v4_by_name(
+    return lookup_iface_status_ip(
         vm=nmstate_linux_bridge_attached_running_vmb,
-        name=nmstate_linux_nad.name,
+        iface_name=nmstate_linux_nad.name,
+        ip_family=4,
     )
 
 
