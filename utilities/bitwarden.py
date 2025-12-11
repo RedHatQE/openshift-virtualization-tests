@@ -4,6 +4,7 @@ import os
 from functools import cache
 from typing import Any
 
+from _pytest.main import Session
 from pyhelper_utils.shell import run_command
 
 from utilities.exceptions import MissingEnvironmentVariableError
@@ -56,18 +57,23 @@ def get_all_cnv_tests_secrets() -> dict[str, str]:
 
 
 @cache
-def get_cnv_tests_secret_by_name(secret_name: str) -> dict[str, Any]:
+def get_cnv_tests_secret_by_name(secret_name: str, session: Session | None = None) -> dict[str, Any]:
     """Pull a specific secret from Bitwarden Secret Manager by name.
 
     Args:
         secret_name: Bitwarden Secret Manager secret name
+        session: Pytest session object
 
     Returns:
-        dict[str, Any]: Value of the saved secret (parsed from JSON)
+        dict[str, Any]: Value of the saved secret (parsed from JSON) or empty dict if user passed `--disabled-bitwarden`
 
     Raises:
         ValueError: If secret is not found
     """
+    if session and session.config.getoption("--disabled-bitwarden"):
+        LOGGER.info("`--disabled-bitwarden` is set; skipping Bitwarden access.")
+        return {}
+
     secrets = get_all_cnv_tests_secrets()
 
     secret_id = secrets.get(secret_name)
