@@ -61,6 +61,7 @@ def test_vm_with_cpu_flag_negative(cpu_flag_vm_negative):
         cpu_flag_vm_negative.vmi.wait_until_running(timeout=TIMEOUT_1MIN)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1269")
 @pytest.mark.gating
 @pytest.mark.conformance
