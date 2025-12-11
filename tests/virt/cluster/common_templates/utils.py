@@ -24,6 +24,7 @@ from utilities.constants import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_15SEC,
+    TIMEOUT_90SEC,
 )
 from utilities.infra import (
     get_linux_guest_agent_version,
@@ -80,7 +81,7 @@ def validate_fs_info_virtctl_vs_linux_os(vm):
     orig_linux_info = get_linux_fs_info(ssh_exec=vm.ssh_exec)
     try:
         for virtctl_info in TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_15SEC, func=get_virtctl_fs_info, vm=vm
+            wait_timeout=TIMEOUT_90SEC, sleep=TIMEOUT_15SEC, func=get_virtctl_fs_info, vm=vm
         ):
             if virtctl_info:
                 orig_virtctl_info = virtctl_info.copy()
@@ -99,8 +100,20 @@ def validate_fs_info_virtctl_vs_linux_os(vm):
 
 def validate_user_info_virtctl_vs_linux_os(vm):
     data_mismatch = []
+    virtctl_info = None
     linux_info = get_linux_user_info(vm=vm)
-    virtctl_info = get_virtctl_user_info(vm=vm)
+    # Wait for virtctl to sync userlist data
+    # This is needed because the user info is not updated immediately after logging in
+    # (in linux test user loggin is done during test, unlike windows where user is logged in when OS is booted)
+    try:
+        for sampler in TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_15SEC, func=get_virtctl_user_info, vm=vm
+        ):
+            if virtctl_info := sampler:
+                break
+    except TimeoutExpiredError:
+        raise ValueError("Virtctl user info not updated with logged in user!")
+
     for user_param_name, user_param_value in virtctl_info.items():
         if user_param_value != linux_info.get(user_param_name):
             data_mismatch.append(f"User data mismatch - {user_param_name}")
@@ -336,12 +349,14 @@ def get_virtctl_user_info(vm):
     res, output, err = run_virtctl_command(command=cmd, namespace=vm.namespace)
     if not res:
         LOGGER.error(f"Failed to get guest-agent info via virtctl. Error: {err}")
-        return
+        return {}
     for user in json.loads(output)["items"]:
         return {
             "userName": user.get("userName"),
             "loginTime": int(user.get("loginTime", 0)),
         }
+    LOGGER.error("No user list found via virtctl")
+    return {}
 
 
 def get_cnv_user_info(vm):

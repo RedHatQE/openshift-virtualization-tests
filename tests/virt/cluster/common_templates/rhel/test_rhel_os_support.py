@@ -57,10 +57,14 @@ class TestCommonTemplatesRhel:
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-3266")
-    def test_start_vm(self, matrix_rhel_os_vm_from_template):
+    def test_start_vm(self, matrix_rhel_os_vm_from_template, rhel_os_matrix__class__):
         """Test CNV common templates VM initiation"""
 
         running_vm(vm=matrix_rhel_os_vm_from_template)
+        # QGA Service restart is needed because of bugs 1910326 and 1845127
+        # when test rhel7, we need to restart QGA to synchronize hostname to the kernel
+        if "rhel-7" in [*rhel_os_matrix__class__][0]:
+            restart_qemu_guest_agent_service(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.sno
@@ -138,11 +142,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
     @pytest.mark.polarion("CNV-4195")
-    def test_virtctl_guest_agent_os_info(self, matrix_rhel_os_vm_from_template, rhel_os_matrix__class__):
-        # QGA Service restart is needed because of bugs 1910326 and 1845127
-        # when test rhel7, we need to restart QGA to synchronize hostname to the kernel
-        if "rhel-7" in [*rhel_os_matrix__class__][0]:
-            restart_qemu_guest_agent_service(vm=matrix_rhel_os_vm_from_template)
+    def test_virtctl_guest_agent_os_info(self, matrix_rhel_os_vm_from_template):
         validate_os_info_virtctl_vs_linux_os(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
