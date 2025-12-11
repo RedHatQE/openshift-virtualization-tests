@@ -17,6 +17,7 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -33,7 +34,7 @@ from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_http_image_url,
+    get_http_image_url, get_test_artifact_server_url,
 )
 from utilities.constants import (
     CAPACITY,
@@ -692,14 +693,14 @@ def create_windows11_wsl2_vm(
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
+        client=client,
         name=dv_name,
         namespace=namespace,
-        storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        client=client,
         api_name="storage",
+        source="registry",
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        storage_class=storage_class,
+        url=f"{get_test_artifact_server_url(schema='registry')}/docker/windows-qe/win_11:virtio",
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
     )
