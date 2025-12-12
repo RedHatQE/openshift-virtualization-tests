@@ -649,7 +649,7 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     """
 
     cmd = shlex.split(f"echo '{content}' > {filename} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)    
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
 def run_command_on_vm_and_check_output(vm, command, expected_result):
