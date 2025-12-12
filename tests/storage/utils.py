@@ -122,7 +122,7 @@ def ensure_vm_running(vm, stop_vm=True):
     yield vm
     if stop_vm:
         vm.stop(wait=True)
-    
+
 
 def create_windows_vm_validate_guest_agent_info(
     dv,

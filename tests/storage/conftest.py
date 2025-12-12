@@ -40,10 +40,10 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     HttpService,
     check_snapshot_indication,
+    ensure_vm_running,
     get_hpp_daemonset,
     hpp_cr_suffix,
     is_hpp_cr_legacy,
-    ensure_vm_running,
 )
 from tests.utils import create_cirros_vm
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
@@ -68,11 +68,7 @@ from utilities.infra import (
     ExecCommandOnPod,
 )
 from utilities.jira import is_jira_open
-from utilities.storage import (
-    data_volume_template_with_source_ref_dict,
-    get_downloaded_artifact,
-    write_file_via_ssh
-)
+from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -502,11 +498,7 @@ def snapshot_with_content(
         index = idx + 1
         before_snap_index = f"before-snap-{index}"
         with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
-            write_file_via_ssh(
-                vm=vm, 
-                filename=f"{before_snap_index}.txt", 
-                content=before_snap_index
-            )
+            write_file_via_ssh(vm=vm, filename=f"{before_snap_index}.txt", content=before_snap_index)
         with VirtualMachineSnapshot(
             name=f"snapshot-{rhel_vm_for_snapshot.name}-number-{index}",
             namespace=rhel_vm_for_snapshot.namespace,
@@ -518,11 +510,7 @@ def snapshot_with_content(
             vm_snapshot.wait_snapshot_done()
             after_snap_index = f"after-snap-{index}"
             with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
-                write_file_via_ssh(
-                    vm=vm,
-                    filename=f"{after_snap_index}.txt", 
-                    content=after_snap_index
-                )
+                write_file_via_ssh(vm=vm, filename=f"{after_snap_index}.txt", content=after_snap_index)
     check_snapshot_indication(snapshot=vm_snapshot, is_online=is_online_test)
     yield vm_snapshots
 
