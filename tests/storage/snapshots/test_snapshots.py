@@ -24,9 +24,10 @@ from tests.storage.snapshots.utils import (
     fail_to_create_snapshot_no_permissions,
     start_windows_vm_after_restore,
 )
-from tests.storage.utils import assert_windows_directory_existence
+from tests.storage.utils import assert_windows_directory_existence, ensure_vm_running
 from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
-from utilities.storage import run_command_on_vm_and_check_output
+from tests.storage.snapshots.utils import run_command_on_vm_and_check_output
+from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -114,27 +115,30 @@ class TestRestoreSnapshots:
     )
     def test_restore_snapshots(
         self,
+        admin_client,
         rhel_vm_for_snapshot,
         snapshot_with_content,
         expected_results,
         snapshots_to_restore_idx,
     ):
+        if rhel_vm_for_snapshot.ready:
+            rhel_vm_for_snapshot.stop(wait=True)
         for idx in range(len(snapshots_to_restore_idx)):
             snap_idx = snapshots_to_restore_idx[idx]
             with VirtualMachineRestore(
+                client=admin_client,
                 name=f"restore-snapshot-{snap_idx}",
                 namespace=rhel_vm_for_snapshot.namespace,
                 vm_name=rhel_vm_for_snapshot.name,
                 snapshot_name=snapshot_with_content[snap_idx].name,
             ) as vm_restore:
                 vm_restore.wait_restore_done()
-                rhel_vm_for_snapshot.start(wait=True)
-                run_command_on_vm_and_check_output(
-                    vm=rhel_vm_for_snapshot,
-                    command=LS_COMMAND,
-                    expected_result=expected_results[idx],
-                )
-                rhel_vm_for_snapshot.stop(wait=True)
+                with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=True) as vm:
+                    run_command_on_vm_and_check_output(
+                        vm=vm,
+                        command=LS_COMMAND,
+                        expected_result=expected_results[idx],
+                    )
 
     @pytest.mark.parametrize(
         "rhel_vm_name, snapshot_with_content",
@@ -149,15 +153,17 @@ class TestRestoreSnapshots:
     )
     def test_restore_snapshot_while_vm_is_running(
         self,
+        admin_client,
         rhel_vm_for_snapshot,
         snapshot_with_content,
     ):
-        rhel_vm_for_snapshot.start(wait=True)
+        running_vm(vm=rhel_vm_for_snapshot)
 
         # snapshot restore with online VM should create vmstore object
         # with 'status.complete=False', 'status.conditions.ready="False"'
         # and 'status.conditions.progress="False"'
         with VirtualMachineRestore(
+            client=admin_client,
             name="restore-snapshot-cnv-5048",
             namespace=rhel_vm_for_snapshot.namespace,
             vm_name=rhel_vm_for_snapshot.name,
@@ -200,6 +206,8 @@ class TestRestoreSnapshots:
         snapshot_with_content,
         unprivileged_client,
     ):
+        if rhel_vm_for_snapshot.ready:
+            rhel_vm_for_snapshot.stop(wait=True)
         with pytest.raises(
             ApiException,
             match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
@@ -228,10 +236,14 @@ class TestRestoreSnapshots:
     )
     def test_restore_same_snapshot_twice(
         self,
+        admin_client,
         rhel_vm_for_snapshot,
         snapshot_with_content,
     ):
+        if rhel_vm_for_snapshot.ready:
+            rhel_vm_for_snapshot.stop(wait=True)
         with VirtualMachineRestore(
+            client=admin_client,
             name="restore-snapshot-cnv-5084-first",
             namespace=rhel_vm_for_snapshot.namespace,
             vm_name=rhel_vm_for_snapshot.name,
@@ -239,18 +251,19 @@ class TestRestoreSnapshots:
         ) as first_restore:
             first_restore.wait_restore_done()
             with VirtualMachineRestore(
+                client=admin_client,
                 name="restore-snapshot-cnv-5084-second",
                 namespace=rhel_vm_for_snapshot.namespace,
                 vm_name=rhel_vm_for_snapshot.name,
                 snapshot_name=snapshot_with_content[0].name,
             ) as second_restore:
                 second_restore.wait_restore_done()
-                rhel_vm_for_snapshot.start(wait=True)
-                run_command_on_vm_and_check_output(
-                    vm=rhel_vm_for_snapshot,
-                    command=LS_COMMAND,
-                    expected_result=expected_output_after_restore(1),
-                )
+                with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=False) as vm:
+                    run_command_on_vm_and_check_output(
+                        vm=vm,
+                        command=LS_COMMAND,
+                        expected_result=expected_output_after_restore(1),
+                    )
 
 
 @pytest.mark.parametrize(
@@ -268,6 +281,8 @@ def test_remove_vm_with_snapshots(
     rhel_vm_for_snapshot,
     snapshot_with_content,
 ):
+    if rhel_vm_for_snapshot.ready:
+        rhel_vm_for_snapshot.stop(wait=True)
     rhel_vm_for_snapshot.delete(wait=True)
     for snapshot in snapshot_with_content:
         assert snapshot.instance.status.readyToUse
@@ -290,7 +305,7 @@ def test_remove_snapshots_while_vm_is_running(
     snapshot_with_content,
     expected_result,
 ):
-    rhel_vm_for_snapshot.start(wait=True)
+    running_vm(vm=rhel_vm_for_snapshot)
     for idx in range(len(snapshot_with_content)):
         snapshot_with_content[idx].delete(wait=True)
         run_command_on_vm_and_check_output(
@@ -298,7 +313,7 @@ def test_remove_snapshots_while_vm_is_running(
             command=LS_COMMAND,
             expected_result=expected_result,
         )
-        rhel_vm_for_snapshot.restart(wait=True)
+        restart_vm_wait_for_running_vm(vm=rhel_vm_for_snapshot, check_ssh_connectivity=True)
         run_command_on_vm_and_check_output(
             vm=rhel_vm_for_snapshot,
             command=LS_COMMAND,
