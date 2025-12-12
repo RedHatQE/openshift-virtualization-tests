@@ -43,6 +43,7 @@ from tests.storage.utils import (
     get_hpp_daemonset,
     hpp_cr_suffix,
     is_hpp_cr_legacy,
+    ensure_vm_running,
 )
 from tests.utils import create_cirros_vm
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
@@ -51,7 +52,7 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
-    OS_FLAVOR_RHEL,
+    RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
@@ -70,9 +71,9 @@ from utilities.jira import is_jira_open
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
-    write_file,
+    write_file_via_ssh
 )
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
@@ -470,14 +471,15 @@ def rhel_vm_for_snapshot(
         name=rhel_vm_name,
         namespace=namespace.name,
         client=admin_client,
-        os_flavor=OS_FLAVOR_RHEL,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        os_flavor=RHEL10_PREFERENCE,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=rhel10_data_source_scope_session,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
+        running_vm(vm=vm)
         yield vm
 
 
@@ -491,21 +493,20 @@ def snapshot_with_content(
     """
     Creates a requested number of snapshots with content
     The default behavior of the fixture is creating an offline
-    snapshot unless {online_vm = True} declared in the test"""
+    snapshot unless {online_vm = True} declared in the test
+    """
     vm_snapshots = []
     is_online_test = request.param.get("online_vm", False)
+    stop_vm = not is_online_test
     for idx in range(request.param["number_of_snapshots"]):
-        # write_file check if the vm is running and if not, start the vm
-        # after the file have been written the function stops the vm
         index = idx + 1
         before_snap_index = f"before-snap-{index}"
-        write_file(
-            vm=rhel_vm_for_snapshot,
-            filename=f"{before_snap_index}.txt",
-            content=before_snap_index,
-        )
-        if is_online_test:
-            rhel_vm_for_snapshot.start(wait=True)
+        with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
+            write_file_via_ssh(
+                vm=vm, 
+                filename=f"{before_snap_index}.txt", 
+                content=before_snap_index
+            )
         with VirtualMachineSnapshot(
             name=f"snapshot-{rhel_vm_for_snapshot.name}-number-{index}",
             namespace=rhel_vm_for_snapshot.namespace,
@@ -516,11 +517,12 @@ def snapshot_with_content(
             vm_snapshots.append(vm_snapshot)
             vm_snapshot.wait_snapshot_done()
             after_snap_index = f"after-snap-{index}"
-            write_file(
-                vm=rhel_vm_for_snapshot,
-                filename=f"{after_snap_index}.txt",
-                content=after_snap_index,
-            )
+            with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
+                write_file_via_ssh(
+                    vm=vm,
+                    filename=f"{after_snap_index}.txt", 
+                    content=after_snap_index
+                )
     check_snapshot_indication(snapshot=vm_snapshot, is_online=is_online_test)
     yield vm_snapshots
 
