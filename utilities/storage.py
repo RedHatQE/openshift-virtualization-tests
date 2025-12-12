@@ -645,10 +645,9 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
 
     Raises:
         TimeoutExpiredError: If SSH connectivity cannot be established
-        SSHException: If SSH command execution fails
     """
 
-    cmd = shlex.split(f"echo '{content}' > {filename} && sync")
+    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
