@@ -30,7 +30,6 @@ from tests.storage.utils import (
 from utilities import console
 from utilities.constants import (
     OS_FLAVOR_RHEL,
-    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -177,15 +176,12 @@ def test_empty_url(namespace, storage_class_name_scope_module):
     ],
     indirect=True,
 )
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}:PVC missing/not found during operation. CNV-73536",
-    run=False,
-)
 def test_successful_import_image(
     dv_from_http_import,
     storage_class_name_scope_module,
     cluster_csi_drivers_names,
 ):
+    dv_from_http_import.pvc.wait()
     assert_use_populator(
         pvc=dv_from_http_import.pvc,
         storage_class=storage_class_name_scope_module,
