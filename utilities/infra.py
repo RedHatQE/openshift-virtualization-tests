@@ -839,7 +839,7 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
 @retry(
     wait_timeout=TIMEOUT_30SEC,
     sleep=TIMEOUT_10SEC,
-    exceptions_dict={RuntimeError: []},
+    exceptions_dict={RuntimeError: [], subprocess.TimeoutExpired: []},
 )
 def get_node_audit_log_entries(log, node, log_entry):
     # Patterns to match errors that should trigger a retry
@@ -850,9 +850,14 @@ def get_node_audit_log_entries(log, node, log_entry):
     ]
     error_patterns = re.compile("|".join(f"({pattern})" for pattern in error_patterns_list))
 
-    lines = subprocess.getoutput(
-        f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}"
-    ).splitlines()
+    result = subprocess.run(
+        f"{OC_ADM_LOGS_COMMAND} {node} {AUDIT_LOGS_PATH}/{log} | grep {shlex.quote(log_entry)}",
+        shell=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    lines = result.stdout.splitlines()
     has_errors = any(error_patterns.search(line) for line in lines)
     if has_errors:
         if any(line.strip().startswith("404 page not found") for line in lines):
