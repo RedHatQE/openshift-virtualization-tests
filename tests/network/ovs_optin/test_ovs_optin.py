@@ -26,24 +26,28 @@ def wait_for_ovs_removed(admin_client, ovs_daemonset, network_addons_config):
 
 @pytest.fixture()
 def hyperconverged_ovs_annotations_disabled(
+    admin_client,
     hyperconverged_resource_scope_function,
     hyperconverged_ovs_annotations_enabled_scope_session,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_function: {"metadata": {"annotations": {DEPLOY_OVS: "false"}}}},
         list_resource_reconcile=[NetworkAddonsConfig],
+        admin_client=admin_client,
     ):
         yield
 
 
 @pytest.fixture()
 def hyperconverged_ovs_annotations_removed(
+    admin_client,
     hyperconverged_resource_scope_function,
     hyperconverged_ovs_annotations_enabled_scope_session,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_function: {"metadata": {"annotations": {DEPLOY_OVS: None}}}},
         list_resource_reconcile=[NetworkAddonsConfig],
+        admin_client=admin_client,
     ):
         yield
 

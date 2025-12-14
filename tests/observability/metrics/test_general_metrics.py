@@ -108,7 +108,7 @@ class TestVirtHCOSingleStackIpv6:
     @pytest.mark.polarion("CNV-11740")
     def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_single_stack_cluster):
         if not ipv6_single_stack_cluster:
-            pytest.skip("The cluster is not ipv6 single stack")
+            pytest.fail("The cluster is not ipv6 single stack")
         validate_metrics_value(
             prometheus=prometheus,
             metric_name="kubevirt_hco_single_stack_ipv6",
