@@ -17,7 +17,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -34,7 +33,7 @@ from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_http_image_url, get_test_artifact_server_url,
+    get_test_artifact_server_url,
 )
 from utilities.constants import (
     CAPACITY,
@@ -49,6 +48,7 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
+    TIMEOUT_40MIN,
     USED,
     VIRT_HANDLER,
     Images,
@@ -710,11 +710,11 @@ def create_windows11_wsl2_vm(
         name=vm_name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.xlarge"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
         yield vm
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
