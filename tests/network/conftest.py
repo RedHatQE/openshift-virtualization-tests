@@ -145,6 +145,7 @@ def vlan_index_number(vlans_list):
 
 @pytest.fixture(scope="module")
 def brcnv_ovs_nad_vlan_1(
+    admin_client,
     hyperconverged_ovs_annotations_enabled_scope_session,
     namespace,
     vlan_index_number,
@@ -156,6 +157,7 @@ def brcnv_ovs_nad_vlan_1(
         nad_name=f"{BRCNV}-{vlan_tag}",
         interface_name=BRCNV,
         vlan=vlan_tag,
+        client=admin_client,
     ) as nad:
         yield nad
 
@@ -178,8 +180,8 @@ def brcnv_vma_with_vlan_1(
 
 
 @pytest.fixture(scope="session")
-def cluster_network_mtu():
-    network_resource = Network(name=CLUSTER)
+def cluster_network_mtu(admin_client):
+    network_resource = Network(name=CLUSTER, client=admin_client)
     if not network_resource.exists:
         raise ResourceNotFoundError(f"{CLUSTER} Network resource not found.")
 
@@ -213,8 +215,10 @@ def ovn_kubernetes_cluster(admin_client):
 
 
 @pytest.fixture(scope="session")
-def network_operator():
-    return Network(name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True)
+def network_operator(admin_client):
+    return Network(
+        name=CLUSTER, api_group=Network.ApiGroup.OPERATOR_OPENSHIFT_IO, ensure_exists=True, client=admin_client
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -266,7 +270,7 @@ def network_sanity(
         if any(test.get_closest_marker("dpdk") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running DPDK tests...")
             dpdk_performance_profile_name = "dpdk"
-            if not PerformanceProfile(name=dpdk_performance_profile_name).exists:
+            if not PerformanceProfile(name=dpdk_performance_profile_name, client=admin_client).exists:
                 failure_msgs.append(
                     f"DPDK is not configured, the {PerformanceProfile.kind}/{dpdk_performance_profile_name} "
                     "does not exist"
@@ -302,7 +306,7 @@ def network_sanity(
     def _verify_sriov():
         if any(test.get_closest_marker("sriov") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running SRIOV tests...")
-            if not Namespace(name=py_config["sriov_namespace"]).exists:
+            if not Namespace(name=py_config["sriov_namespace"], client=admin_client).exists:
                 failure_msgs.append(
                     f"SRIOV operator is not installed, the '{py_config['sriov_namespace']}' namespace does not exist"
                 )
@@ -374,8 +378,9 @@ def network_sanity(
         err_msg = "\n".join(failure_msgs)
         LOGGER.error(f"Network cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
-            message=err_msg,
+            log_message=err_msg,
             return_code=91,
             filename="network_cluster_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            message="Network cluster verification failed",
         )

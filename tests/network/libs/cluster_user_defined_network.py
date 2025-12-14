@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_user_defined_network import ClusterUserDefinedNetwork as Cudn
 
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
@@ -51,6 +52,7 @@ class Localnet:
     physicalNetworkName: str  # noqa: N815
     ipam: Ipam
     vlan: Vlan | None = None
+    mtu: int | None = None
 
 
 @dataclass
@@ -70,7 +72,12 @@ class ClusterUserDefinedNetwork(Cudn):
     """
 
     def __init__(
-        self, name: str, namespace_selector: LabelSelector, network: Network, label: dict[str, str] | None = None
+        self,
+        name: str,
+        namespace_selector: LabelSelector,
+        network: Network,
+        client: DynamicClient,
+        label: dict[str, str] | None = None,
     ):
         """
         Create and manage ClusterUserDefinedNetwork
@@ -83,12 +90,14 @@ class ClusterUserDefinedNetwork(Cudn):
             namespace_selector (NamespaceSelector): NamespaceSelector Label selector for which namespace network should
                 be available for.
             network (Network): Network is the user-defined-network spec.
+            client (DynamicClient): Dynamic client used to interact with the cluster.
             label (dict[str, str]): Optional labels to apply to the ClusterUserDefinedNetwork.
         """
         super().__init__(
             name=name,
             namespace_selector=asdict(namespace_selector, dict_factory=dict_normalization_for_dataclass),
             network=asdict(network, dict_factory=dict_normalization_for_dataclass),
+            client=client,
             label=label,
         )
 

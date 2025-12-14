@@ -20,8 +20,8 @@ pytestmark = pytest.mark.sno
 
 
 class ApplyNetworkPolicy(NetworkPolicy):
-    def __init__(self, name, namespace, ports=None, teardown=True):
-        super().__init__(name=name, namespace=namespace, teardown=teardown, pod_selector={})
+    def __init__(self, name, namespace, client, ports=None, teardown=True):
+        super().__init__(name=name, namespace=namespace, client=client, teardown=teardown, pod_selector={})
         self.ports = ports
 
     def to_dict(self):
@@ -54,29 +54,35 @@ def namespace_2(admin_client, unprivileged_client):
 
 
 @pytest.fixture()
-def deny_all_http_ports(namespace_1):
-    with ApplyNetworkPolicy(name="deny-all-http-ports", namespace=namespace_1.name) as np:
+def deny_all_http_ports(unprivileged_client, namespace_1):
+    with ApplyNetworkPolicy(name="deny-all-http-ports", namespace=namespace_1.name, client=unprivileged_client) as np:
         yield np
 
 
 @pytest.fixture()
-def allow_all_http_ports(namespace_1):
+def allow_all_http_ports(unprivileged_client, namespace_1):
     with ApplyNetworkPolicy(
         name="allow-all-http-ports",
         namespace=namespace_1.name,
         ports=[PORT_80, PORT_81],
+        client=unprivileged_client,
     ) as np:
         yield np
 
 
 @pytest.fixture()
-def allow_http80_port(namespace_1):
-    with ApplyNetworkPolicy(name="allow-http80-port", namespace=namespace_1.name, ports=[PORT_80]) as np:
+def allow_http80_port(unprivileged_client, namespace_1):
+    with ApplyNetworkPolicy(
+        name="allow-http80-port",
+        namespace=namespace_1.name,
+        ports=[PORT_80],
+        client=unprivileged_client,
+    ) as np:
         yield np
 
 
 @pytest.fixture(scope="module")
-def network_policy_vma(namespace_1, worker_node1, unprivileged_client):
+def network_policy_vma(unprivileged_client, worker_node1, namespace_1):
     name = "vma"
     with VirtualMachineForTests(
         namespace=namespace_1.name,
@@ -90,7 +96,7 @@ def network_policy_vma(namespace_1, worker_node1, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def network_policy_vmb(namespace_2, worker_node1, unprivileged_client):
+def network_policy_vmb(unprivileged_client, worker_node1, namespace_2):
     name = "vmb"
     with VirtualMachineForTests(
         namespace=namespace_2.name,

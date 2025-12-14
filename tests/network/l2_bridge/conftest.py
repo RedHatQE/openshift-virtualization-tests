@@ -53,6 +53,7 @@ def l2_bridge_device_name(index_number):
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_1(
+    admin_client,
     bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node1,
@@ -64,12 +65,14 @@ def l2_bridge_device_worker_1(
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_2(
+    admin_client,
     bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node2,
@@ -81,12 +84,14 @@ def l2_bridge_device_worker_2(
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def dhcp_nad(
+    admin_client,
     bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
@@ -101,12 +106,14 @@ def dhcp_nad(
         nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad-vlan-{vlan_tag}",
         interface_name=l2_bridge_device_name,
         vlan=vlan_tag,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def custom_eth_type_llpd_nad(
+    admin_client,
     bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
@@ -118,12 +125,14 @@ def custom_eth_type_llpd_nad(
         nad_type=bridge_device_matrix__class__,
         nad_name=f"{l2_bridge_device_name}-custom-eth-type-icmp-nad",
         interface_name=l2_bridge_device_name,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def mpls_nad(
+    admin_client,
     bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
@@ -135,12 +144,14 @@ def mpls_nad(
         nad_type=bridge_device_matrix__class__,
         nad_name=f"{l2_bridge_device_name}-mpls-nad",
         interface_name=l2_bridge_device_name,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="class")
 def dot1q_nad(
+    admin_client,
     bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
@@ -152,6 +163,7 @@ def dot1q_nad(
         nad_type=bridge_device_matrix__class__,
         nad_name=f"{l2_bridge_device_name}-dot1q-nad",
         interface_name=l2_bridge_device_name,
+        client=admin_client,
     ) as nad:
         yield nad
 

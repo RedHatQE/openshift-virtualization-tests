@@ -1,17 +1,19 @@
 # PR Title Labeler - Automatically adds/removes 'quarantine' label based on PR title
 #
 # Summary:
-# ┌──────────────────┬─────────────────────────┬───────────────┬──────────────────────┐
-# │ Event            │ Title                   │ Current Label │ Action               │
-# ├──────────────────┼─────────────────────────┼───────────────┼──────────────────────┤
-# │ PR opened        │ "Quarantine: test"      │ None          │ ✅ Add label         │
-# │ PR opened        │ "Quarantine: test"      │ Already has   │ ✅ No-op (safe)      │
-# │ Title edited     │ "Fix" → "Quarantine: x" │ None          │ ✅ Add label         │
-# │ Title edited     │ "Quarantine: x" → "Fix" │ Has label     │ ✅ Remove label      │
-# │ PR reopened      │ "Quarantine: test"      │ None          │ ✅ Add label         │
-# │ PR opened        │ "Fix test"              │ None          │ ✅ No action         │
-# │ New commit       │ Any                     │ Any           │ ⏭️  Does NOT run     │
-# └──────────────────┴─────────────────────────┴───────────────┴──────────────────────┘
+# ┌──────────────────┬────────────────────────────────────────┬───────────────┬──────────────────────┐
+# │ Event            │ Title                                  │ Current Label │ Action               │
+# ├──────────────────┼────────────────────────────────────────┼───────────────┼──────────────────────┤
+# │ PR opened        │ "Quarantine: test"                     │ None          │ ✅ Add label         │
+# │ PR opened        │ "CherryPicked: [cnv-4.20] Quarantine:" │ None          │ ✅ Add label         │
+# │ PR opened        │ "Quarantine: test"                     │ Already has   │ ✅ No-op (safe)      │
+# │ Title edited     │ "Fix" → "Quarantine: x"                │ None          │ ✅ Add label         │
+# │ Title edited     │ "Quarantine: x" → "Fix"                │ Has label     │ ✅ Remove label      │
+# │ PR reopened      │ "Quarantine: test"                     │ None          │ ✅ Add label         │
+# │ PR opened        │ "CherryPicked: [cnv-4.20] Fix test"    │ None          │ ✅ No action         │
+# │ PR opened        │ "Fix test"                             │ None          │ ✅ No action         │
+# │ New commit       │ Any                                    │ Any           │ ⏭️  Does NOT run     │
+# └──────────────────┴────────────────────────────────────────┴───────────────┴──────────────────────┘
 #
 
 name: "PR Title Labeler"
@@ -28,17 +30,25 @@ jobs:
   label-quarantine:
     runs-on: ubuntu-latest
     steps:
-      - name: Add quarantine label for PRs starting with "Quarantine:"
-        uses: actions/github-script@v7
+      - name: 'Add quarantine label for PRs starting with "Quarantine:" or "CherryPicked: [cnv-X.Y] Quarantine:"'
+        uses: actions/github-script@v8
         with:
           script: |
-            const title = context.payload.pull_request.title.toLowerCase();
+            const originalTitle = context.payload.pull_request.title;
             const prNumber = context.payload.pull_request.number;
 
-            console.log(`Processing PR #${prNumber}: "${context.payload.pull_request.title}"`);
+            console.log(`Processing PR #${prNumber}: "${originalTitle}"`);
 
             try {
-              // Check if title starts with "quarantine:" (case-insensitive)
+              // Strip "CherryPicked: [cnv-X.Y]" prefix if present (case-insensitive)
+              // Regex matches: CherryPicked: [cnv-4.20] or CherryPicked: [cnv-4.xy] etc.
+              let title = originalTitle.replace(/^CherryPicked:\s*\[cnv-\d+\.\d+\]\s*/i, '').toLowerCase();
+
+              if (title !== originalTitle.toLowerCase()) {
+                console.log(`Stripped cherry-pick prefix, effective title: "${title}"`);
+              }
+
+              // Check if effective title starts with "quarantine:" (case-insensitive)
               if (title.startsWith('quarantine:')) {
                 console.log(`Title starts with "quarantine:", adding label`);
 

@@ -1,4 +1,3 @@
-import http
 import logging
 import re
 import shlex
@@ -10,7 +9,6 @@ from typing import Generator, Optional
 import bitmath
 import requests
 import xmltodict
-from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
@@ -132,39 +130,10 @@ def wait_for_cr_labels_change(expected_value, component, timeout=TIMEOUT_10MIN):
         raise
 
 
-def validate_runbook_url_exists(url, alert_name=None, production=False):
-    response = requests.get(url, allow_redirects=False)
-    LOGGER.info(response)
-    if response.status_code != http.HTTPStatus.OK:
-        return f"{url} validation failed: {response}"
-    if production:
-        assert alert_name
-        url_link = f"#virt-runbook-{alert_name}"
-        if NOT_PUBLISHED_MESSAGE in response.text:
-            LOGGER.error(f"{url} found with message {NOT_PUBLISHED_MESSAGE}: {response.content}")
-            return f"{url} not published yet."
-        soup = BeautifulSoup(response.content)
-        for link in soup.findAll("a"):
-            url_str = link.get("href")
-            if url_str and url_str.endswith(url_link):
-                LOGGER.info(f"Alert link is found : {link}")
-                return
-        LOGGER.warning(f"Alert url {url} not found for alert {alert_name}")
-        return f"Alert url {url} not found"
-
-
 def get_image_from_csv(image_string, csv_related_images):
     for image in csv_related_images:
         if image_string in image["image"]:
             return image["image"]
-
-    raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
-
-
-def get_image_name_from_csv(image_string, csv_related_images):
-    for image in csv_related_images:
-        if image_string in image["name"]:
-            return image["name"]
 
     raise ResourceNotFoundError(f"no image with the string {image_string} was found in the csv_dict")
 

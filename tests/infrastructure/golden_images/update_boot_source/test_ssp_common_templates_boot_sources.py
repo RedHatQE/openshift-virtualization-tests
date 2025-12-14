@@ -31,8 +31,9 @@ def boot_source_os_from_data_source_dict(auto_update_data_source_matrix__functio
 
 
 @pytest.fixture()
-def matrix_data_source(auto_update_data_source_matrix__function__, golden_images_namespace):
+def matrix_data_source(unprivileged_client, auto_update_data_source_matrix__function__, golden_images_namespace):
     return DataSource(
+        client=unprivileged_client,
         name=[*auto_update_data_source_matrix__function__][0],
         namespace=golden_images_namespace.name,
     )

@@ -22,9 +22,7 @@ from utilities.constants import (
 )
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
-    SriovIfaceNotFound,
     cloud_init_network_data,
-    create_sriov_node_policy,
     network_nad,
     sriov_network_dict,
 )
@@ -88,34 +86,13 @@ def sriov_vm(
         yield vm
 
 
-@pytest.fixture(scope="session")
-def sriov_iface_with_vlan(sriov_unused_ifaces, vlan_base_iface):
-    for interface in sriov_unused_ifaces:
-        if interface["name"] == vlan_base_iface:
-            return interface
-    raise SriovIfaceNotFound(
-        f"No sriov interface with vlan found. vlan base iface is {vlan_base_iface}, "
-        f"sriov ifaces is {sriov_unused_ifaces}"
-    )
-
-
-@pytest.fixture(scope="session")
-def sriov_with_vlan_node_policy(sriov_nodes_states, sriov_iface_with_vlan, sriov_namespace):
-    yield from create_sriov_node_policy(
-        nncp_name="test-sriov-on-vlan-policy",
-        namespace=sriov_namespace.name,
-        sriov_iface=sriov_iface_with_vlan,
-        sriov_nodes_states=sriov_nodes_states,
-        sriov_resource_name="sriov_net_with_vlan",
-    )
-
-
 @pytest.fixture(scope="module")
-def sriov_network(sriov_node_policy, namespace, sriov_namespace):
+def sriov_network(admin_client, sriov_node_policy, namespace, sriov_namespace):
     """
     Create a SR-IOV network linked to SR-IOV policy.
     """
     with network_nad(
+        client=admin_client,
         nad_type=SRIOV,
         nad_name="sriov-test-network",
         sriov_resource_name=sriov_node_policy.resource_name,
@@ -126,17 +103,18 @@ def sriov_network(sriov_node_policy, namespace, sriov_namespace):
 
 
 @pytest.fixture(scope="class")
-def sriov_network_vlan(sriov_with_vlan_node_policy, namespace, sriov_namespace, vlan_index_number):
+def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespace, vlan_index_number):
     """
     Create a SR-IOV VLAN network linked to SR-IOV policy.
     """
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-test-network-vlan",
-        sriov_resource_name=sriov_with_vlan_node_policy.resource_name,
+        sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
         vlan=next(vlan_index_number),
+        client=admin_client,
     ) as sriov_network:
         yield sriov_network
 
@@ -272,13 +250,14 @@ def sriov_vm_migrate(index_number, unprivileged_client, namespace, sriov_network
 
 
 @pytest.fixture(scope="class")
-def dpdk_template(namespace, tmpdir_factory):
+def dpdk_template(admin_client, namespace, tmpdir_factory):
     template_dir = tmpdir_factory.mktemp("dpdk_template")
     with create_custom_template_from_url(
         url=f"{CNV_SUPPLEMENTAL_TEMPLATES_URL}/testpmd/resource-specs/sriov-vm1-template.yaml",
         template_name="dpdk_vm_template.yaml",
         template_dir=template_dir,
         namespace=namespace.name,
+        client=admin_client,
     ) as template:
         yield template
 

@@ -16,7 +16,7 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_SOURCE_NAME,
     DEFAULT_FEDORA_REGISTRY_URL,
 )
-from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names
+from tests.infrastructure.golden_images.update_boot_source.utils import get_all_dic_volume_names, get_image_version
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     TIMEOUT_1MIN,
@@ -189,7 +189,7 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
             exceptions_dict={IndexError: []},
         ):
             if sample:
-                created_dv = DataVolume(name=sample.name, namespace=sample.namespace)
+                created_dv = DataVolume(client=unprivileged_client, name=sample.name, namespace=sample.namespace)
                 created_dv.wait_for_dv_success()
                 yield sample
                 created_dv.clean_up()
@@ -217,6 +217,7 @@ def created_data_import_cron(
 ):
     cron_template_spec = golden_images_data_import_cron_spec.template.spec
     with DataImportCron(
+        client=unprivileged_client,
         name="data-import-cron-for-test",
         namespace=data_import_cron_namespace.name,
         managed_data_source=golden_images_data_import_cron_spec.managedDataSource,
@@ -479,7 +480,9 @@ def test_data_source_instancetype_preference_label(
             with create_vm_with_infer_from_volume(
                 client=unprivileged_client,
                 namespace=namespace,
-                data_source_for_test=DataSource(name=data_source_name, namespace=golden_images_namespace.name),
+                data_source_for_test=DataSource(
+                    client=unprivileged_client, name=data_source_name, namespace=golden_images_namespace.name
+                ),
             ):
                 pass
         except Exception as exp:
@@ -488,3 +491,16 @@ def test_data_source_instancetype_preference_label(
     assert not failed_data_source_list, (
         f"Could not create VMs with the following data sources: {failed_data_source_list}"
     )
+
+
+@pytest.mark.polarion("CNV-12414")
+def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_rhel_release_versions_dict, subtests):
+    for rhel_dic in [dic for dic in golden_images_data_import_crons_scope_class if "rhel" in dic.name.lower()]:
+        rhel_instance_dict = rhel_dic.instance
+        image_reference_version = get_image_version(
+            image=rhel_instance_dict.metadata.annotations.get("cdi.kubevirt.io/storage.import.imageStreamDockerRef")
+        )
+        with subtests.test(rhel_dic_name=rhel_dic.name, managed_data_source=rhel_instance_dict.spec.managedDataSource):
+            managed_data_source = rhel_instance_dict.spec.managedDataSource
+            assert managed_data_source, "spec.managedDataSource doesn't exists"
+            assert latest_rhel_release_versions_dict[managed_data_source] == image_reference_version

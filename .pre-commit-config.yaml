@@ -13,7 +13,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.6
+    rev: v0.14.8
     hooks:
       - id: ruff
         stages: [pre-commit]
@@ -60,12 +60,12 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: "v8.29.1"
+    rev: "v8.30.0"
     hooks:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.0
     hooks:
       - id: mypy
         exclude: "test_(.*).py$"

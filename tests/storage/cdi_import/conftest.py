@@ -46,22 +46,24 @@ def skip_non_shared_storage(storage_class_name_scope_function):
 
 
 @pytest.fixture()
-def bridge_on_node():
+def bridge_on_node(admin_client):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=BRIDGE_NAME,
         interface_name=BRIDGE_NAME,
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture()
-def linux_nad(namespace, bridge_on_node):
+def linux_nad(admin_client, namespace, bridge_on_node):
     with network_nad(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
         nad_name=f"{BRIDGE_NAME}-nad",
         interface_name=bridge_on_node.bridge_name,
+        client=admin_client,
     ) as nad:
         yield nad
 

@@ -58,7 +58,7 @@ from utilities.virt import (
     get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
-    pause_optional_migrate_unpause_and_check_connectivity,
+    pause_unpause_vm_and_check_connectivity,
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
     verify_vm_migrated,
@@ -283,11 +283,11 @@ def kill_processes_by_name_windows(vm, process_name):
     run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
 
 
-def validate_pause_optional_migrate_unpause_windows_vm(vm, pre_pause_pid=None, migrate=False):
+def validate_pause_unpause_windows_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
     proc_name = OS_PROC_NAME["windows"]
     if not pre_pause_pid:
         pre_pause_pid = start_and_fetch_processid_on_windows_vm(vm=vm, process_name=proc_name)
-    pause_optional_migrate_unpause_and_check_connectivity(vm=vm, migrate=migrate)
+    pause_unpause_vm_and_check_connectivity(vm=vm)
     post_pause_pid = fetch_pid_from_windows_vm(vm=vm, process_name=proc_name)
     kill_processes_by_name_windows(vm=vm, process_name=proc_name)
     assert post_pause_pid == pre_pause_pid, (
@@ -529,29 +529,20 @@ def get_or_create_golden_image_data_source(
 
 
 def get_data_volume_template_dict_with_default_storage_class(
-    data_source: DataSource, params: dict[str, Any] | None = None
+    data_source: DataSource, storage_class: str | None = None
 ) -> dict[str, dict]:
     """
     Generates a dataVolumeTemplate dict with the py_config based storage class.
 
     Args:
         data_source (DataSource): The data source object used to create the data volume template.
-        params (dict[str, Any], optional): dict of request.param passed to pytest fixture.
+        storage_class (str, optional): Storage class name.
 
     Returns:
         dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
     """
     data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-    if params and (storage_class_params := params.get("storage_class")):
-        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class_params["name"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [storage_class_params["access_mode"]]
-        data_volume_template["spec"]["storage"]["volumeMode"] = storage_class_params["volume_mode"]
-    else:
-        default_sc_config = py_config["default_storage_class_configuration"]
-        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [default_sc_config["access_mode"]]
-        data_volume_template["spec"]["storage"]["volumeMode"] = default_sc_config["volume_mode"]
-
+    data_volume_template["spec"]["storage"]["storageClassName"] = storage_class or py_config["default_storage_class"]
     return data_volume_template
 
 

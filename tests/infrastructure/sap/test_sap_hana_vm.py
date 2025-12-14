@@ -340,7 +340,7 @@ def sriov_network_node_policy(admin_client, sriov_namespace):
 
 
 @pytest.fixture(scope="class")
-def sriov_nads(namespace, sriov_network_node_policy, sriov_namespace):
+def sriov_nads(admin_client, namespace, sriov_network_node_policy, sriov_namespace):
     nads_list = []
     for idx in range(REQUIRED_NUMBER_OF_NETWORKS):
         with network_nad(
@@ -351,6 +351,7 @@ def sriov_nads(namespace, sriov_network_node_policy, sriov_namespace):
             sriov_network_namespace=namespace.name,
             macspoofchk="off",
             teardown=False,
+            client=admin_client,
         ) as nad:
             nads_list.append(nad)
     yield nads_list
@@ -474,7 +475,7 @@ def sap_hana_template_labels():
 
 
 @pytest.fixture(scope="module")
-def sap_hana_template(tmpdir_factory):
+def sap_hana_template(admin_client, tmpdir_factory):
     template_name = "sap_hana_template"
     template_dir = tmpdir_factory.mktemp(template_name)
     with create_custom_template_from_url(
@@ -482,6 +483,7 @@ def sap_hana_template(tmpdir_factory):
         template_name=f"{template_name}.yaml",
         template_dir=template_dir,
         namespace=NamespacesNames.OPENSHIFT,
+        client=admin_client,
     ) as template:
         yield template
 

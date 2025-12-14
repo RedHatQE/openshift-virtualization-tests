@@ -120,8 +120,8 @@ class NetworkAttachmentDefinition(NamespacedResource):
         name: str,
         namespace: str,
         config: NetConfig,
+        client: DynamicClient,
         resource_name: str | None = None,
-        client: DynamicClient | None = None,
     ):
         """
         Create and manage NetworkAttachmentDefinition
@@ -132,7 +132,7 @@ class NetworkAttachmentDefinition(NamespacedResource):
             config (NetConfig): Configuration body, as defined by the CNI spec.
             resource_name (str): Optional resource name marking
                 (set on the object annotations).
-            client: (DynamicClient): Optional DynamicClient to use.
+            client (DynamicClient): Dynamic client used to interact with the cluster.
         """
         super().__init__(
             name=name,

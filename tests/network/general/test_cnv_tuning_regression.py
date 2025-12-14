@@ -8,24 +8,26 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 @pytest.fixture()
-def linux_bridge_nad(namespace):
+def linux_bridge_nad(admin_client, namespace):
     with network_nad(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
         nad_name="br1-nad",
         interface_name="br1bridge",
         tuning=True,
+        client=admin_client,
     ) as nad:
         yield nad
 
 
 @pytest.fixture()
-def linux_bridge_device(worker_node1, linux_bridge_nad):
+def linux_bridge_device(admin_client, worker_node1, linux_bridge_nad):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="cnv-tuning-nncp",
         interface_name=linux_bridge_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        client=admin_client,
     ) as dev:
         yield dev
 

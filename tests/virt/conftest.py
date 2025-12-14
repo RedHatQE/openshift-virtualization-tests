@@ -169,10 +169,11 @@ def virt_special_infra_sanity(
         err_msg = "\n".join(failed_verifications_list)
         LOGGER.error(f"Special_infra cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
-            message=err_msg,
+            log_message=err_msg,
             return_code=98,
             filename="virt_special_infra_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            message="Virt special_infra cluster verification failed",
         )
 
 
@@ -333,7 +334,8 @@ def golden_image_data_source_for_test_scope_module(request, admin_client, golden
 @pytest.fixture(scope="module")
 def golden_image_data_volume_template_for_test_scope_module(request, golden_image_data_source_for_test_scope_module):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_module, params=getattr(request, "param", {})
+        data_source=golden_image_data_source_for_test_scope_module,
+        storage_class=getattr(request, "param", {}).get("storage_class"),
     )
 
 
@@ -347,7 +349,8 @@ def golden_image_data_source_for_test_scope_class(request, admin_client, golden_
 @pytest.fixture(scope="class")
 def golden_image_data_volume_template_for_test_scope_class(request, golden_image_data_source_for_test_scope_class):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_class, params=getattr(request, "param", {})
+        data_source=golden_image_data_source_for_test_scope_class,
+        storage_class=getattr(request, "param", {}).get("storage_class"),
     )
 
 
@@ -363,7 +366,8 @@ def golden_image_data_volume_template_for_test_scope_function(
     request, golden_image_data_source_for_test_scope_function
 ):
     return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_function, params=getattr(request, "param", {})
+        data_source=golden_image_data_source_for_test_scope_function,
+        storage_class=getattr(request, "param", {}).get("storage_class"),
     )
 
 
