@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from ocp_resources.storage_class import StorageClass
 
 from tests.install_upgrade_operators.product_install.constants import (
     CLUSTER_RESOURCE_ALLOWLIST,
@@ -17,15 +18,18 @@ from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
     PENDING_STR,
     TIMEOUT_10MIN,
+    StorageClassNames,
 )
 from utilities.exceptions import ResourceMismatch
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import wait_for_pods_running
+from utilities.jira import is_jira_open
 from utilities.monitoring import (
     validate_alerts,
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
 )
+from utilities.storage import set_default_sc, verify_boot_sources_reimported
 
 CNV_INSTALLATION_TEST = "test_cnv_installation"
 CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
@@ -168,6 +172,27 @@ def test_cnv_resources_installed_namespace_scoped(
     if mismatch_namespaced:
         LOGGER.error(f"Mismatched namespaced resources: {mismatch_namespaced}")
         raise ResourceMismatch(f"Unexpected namespaced resources found post cnv installation: {mismatch_namespaced}")
+
+
+@pytest.mark.polarion("CNV-12453")
+@pytest.mark.order(after=CNV_INSTALLATION_TEST)
+@pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
+def test_ocs_virt_default_storage_class(admin_client, golden_images_namespace):
+    ocs_virt_sc = StorageClass(client=admin_client, name=StorageClassNames.CEPH_RBD_VIRTUALIZATION, ensure_exists=True)
+    if (
+        ocs_virt_sc.instance.metadata.get("annotations", {}).get(StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS)
+        != "true"
+    ):
+        if is_jira_open(jira_id="CNV-75083"):
+            # if the bug is open, set the OCS Virt storage class as default for the smoke tests afterwards
+            for storage_class in StorageClass.get(client=admin_client):
+                is_default = True if storage_class.name == StorageClassNames.CEPH_RBD_VIRTUALIZATION else False
+                set_default_sc(default=is_default, storage_class=storage_class)
+        else:
+            pytest.fail(f"{ocs_virt_sc.name} is not marked as default storage class")
+    assert verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name), (
+        "Failed to re-import boot sources"
+    )
 
 
 @pytest.mark.polarion("CNV-10528")

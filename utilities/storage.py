@@ -1131,3 +1131,22 @@ def validate_file_exists_in_url(url):
         raise UrlNotFoundError(url_request=response)
 
     return True
+
+
+def update_default_sc_permanently(default: bool, storage_class: StorageClass) -> None:
+    is_default = str(default).lower()
+    editor = ResourceEditor(
+        patches={
+            storage_class: {
+                "metadata": {
+                    "annotations": {
+                        StorageClass.Annotations.IS_DEFAULT_CLASS: is_default,
+                        StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: is_default,
+                    },
+                    "name": storage_class.name,
+                },
+            }
+        }
+    )
+    # Apply the changes permanently without backup for restoration
+    editor.update(backup_resources=False)
