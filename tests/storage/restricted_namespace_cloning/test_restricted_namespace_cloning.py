@@ -57,7 +57,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
 @pytest.mark.parametrize(
     "namespace, data_volume_multi_storage_scope_module, "
     "permissions_datavolume_source, permissions_datavolume_destination, "
-    "dv_destination_cloned_from_pvc, create_vm",
+    "dv_destination_cloned_from_pvc, requested_verify_image_permissions",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -65,9 +65,9 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             {"dv_name": "cnv-2692"},
-            True,
+            {"verify_image_permissions": True},
             marks=pytest.mark.polarion("CNV-2692"),
-            id="full-permissions-dv-create-vm",
+            id="src_dv_and_dv_source_all_dest_dv_and_dv_source_all",
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -75,35 +75,26 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: CREATE},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: CREATE_DELETE_LIST_GET},
             {"dv_name": "cnv-2971"},
-            False,
+            {"verify_image_permissions": False},
             marks=pytest.mark.polarion("CNV-2971"),
-            id="limited-permissions-no-vm",
+            id="src_dv_source_create_dest_dv_create_delete_list_get",
         ),
     ],
-    indirect=[
-        "namespace",
-        "data_volume_multi_storage_scope_module",
-        "permissions_datavolume_source",
-        "permissions_datavolume_destination",
-        "dv_destination_cloned_from_pvc",
-    ],
+    indirect=True,
 )
 def test_user_permissions_positive(
-    namespace,
-    admin_client,
     unprivileged_client,
+    admin_client,
     storage_class_name_scope_module,
-    permissions_datavolume_destination,
+    permissions_pvc_destination,
     dv_destination_cloned_from_pvc,
-    create_vm,
+    requested_verify_image_permissions,
 ):
-    verify_snapshot_used_namespace_transfer(
-        cdv=dv_destination_cloned_from_pvc,
-        unprivileged_client=unprivileged_client,
-    )
-    if create_vm:
-        with create_vm_from_dv(client=admin_client, dv=dv_destination_cloned_from_pvc, start=True):
+    verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
+    if requested_verify_image_permissions:
+        with create_vm_from_dv(dv=dv_destination_cloned_from_pvc, client=admin_client):
             pass
+
 
 
 @pytest.mark.sno

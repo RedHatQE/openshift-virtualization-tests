@@ -253,19 +253,17 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 @pytest.mark.sno
 class TestVirtctlUploadExistingDV:
     @pytest.mark.polarion("CNV-3725")
-    def test_virtctl_image_upload_to_existing_dv_and_create_vm(
-        self, unprivileged_client, uploaded_dv_class_scope
-    ):
-        uploaded_dv_class_scope.wait_for_dv_success()
-        with create_vm_from_dv(dv=uploaded_dv_class_scope, client=unprivileged_client, start=True):
+    def test_virtctl_image_upload_to_existing_dv_and_create_vm(self, unprivileged_client, uploaded_dv_scope_class):
+        uploaded_dv_scope_class.wait_for_dv_success()
+        with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
             pass
 
     @pytest.mark.polarion("CNV-4033")
     def test_virtctl_image_upload_to_existing_dv_and_validate_populator(
-        self, uploaded_dv_class_scope, storage_class_name_scope_class, cluster_csi_drivers_names
+        self, uploaded_dv_scope_class, storage_class_name_scope_class, cluster_csi_drivers_names
     ):
         assert_use_populator(
-            pvc=uploaded_dv_class_scope.pvc,
+            pvc=uploaded_dv_scope_class.pvc,
             storage_class=storage_class_name_scope_class,
             cluster_csi_drivers_names=cluster_csi_drivers_names,
         )

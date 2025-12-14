@@ -155,6 +155,7 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
         cpu_requests = 1
 
     with VirtualMachineForTests(
+        client=unprivileged_client,
         name=name,
         memory_requests=memory_requests,
         memory_limits=memory_requests,

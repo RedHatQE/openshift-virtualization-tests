@@ -65,7 +65,7 @@ def uploaded_dv_with_immediate_binding(
 
 
 @pytest.fixture(scope="class")
-def uploaded_dv_class_scope(unprivileged_client, namespace, storage_class_name_scope_class):
+def uploaded_dv_scope_class(unprivileged_client, namespace, storage_class_name_scope_class):
     dv_name = f"upload-existing-dv-{str(uuid.uuid4())[:8]}"
     get_downloaded_artifact(
         remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}",
