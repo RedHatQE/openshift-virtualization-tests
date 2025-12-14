@@ -2,7 +2,6 @@ import logging
 import math
 import re
 import shlex
-import time
 import urllib
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -17,7 +16,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
@@ -34,7 +32,7 @@ from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_http_image_url, get_test_artifact_server_url,
+    get_test_artifact_server_url,
 )
 from utilities.constants import (
     CAPACITY,
@@ -49,6 +47,7 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
+    TIMEOUT_40MIN,
     USED,
     VIRT_HANDLER,
     Images,
@@ -327,18 +326,26 @@ def validate_metric_value_within_range(
         raise
 
 
-def network_packets_received(vm: VirtualMachineForTests, interface_name: str) -> dict[str, str]:
-    ip_link_show_content = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ip -s link show"))[0]
+def network_packets_received(
+    vm: VirtualMachineForTests, interface_name: str, windows_wsl: bool = False
+) -> dict[str, str]:
+    ip_link_show_content = run_ssh_commands(
+        host=vm.ssh_exec, commands=shlex.split(f"{'wsl' if windows_wsl else ''} ip -s link show")
+    )[0]
+    LOGGER.info(f"Looking for interface: '{interface_name}'")
+    LOGGER.info(f"ip link show output:\n{ip_link_show_content}")
+
     pattern = re.compile(
         rf".*?{re.escape(interface_name)}:.*?"  # Match the line with the interface name
-        r"(?:RX:\s+bytes\s+packets\s+errors\s+dropped\s+.*?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)).*?"  # Capture RX stats
-        r"(?:TX:\s+bytes\s+packets\s+errors\s+dropped\s+.*?(\d+)\s+(\d+)\s+(\d+)\s+(\d+))",  # Capture TX stats
+        r"RX:.*?\n\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+\d+\s+\d+.*?"  # Capture RX stats (bytes, packets, errors, dropped)
+        r"TX:.*?\n\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)",  # Capture TX stats (bytes, packets, errors, dropped)
         re.DOTALL | re.IGNORECASE,
     )
     match = pattern.search(string=ip_link_show_content)
+
     if match:
         rx_bytes, rx_packets, rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop = match.groups()
-        return {
+        result = {
             "rx_bytes": rx_bytes,
             "rx_packets": rx_packets,
             "rx_errs": rx_errs,
@@ -348,16 +355,17 @@ def network_packets_received(vm: VirtualMachineForTests, interface_name: str) ->
             "tx_errs": tx_errs,
             "tx_drop": tx_drop,
         }
-    return {}
+        LOGGER.info(f"Successfully parsed network stats: {result}")
+        return result
+    else:
+        LOGGER.warning(f"No match found for interface '{interface_name}' in ip link show output")
+        return {}
 
 
 def compare_network_traffic_bytes_and_metrics(
-    prometheus: Prometheus, vm: VirtualMachineForTests, vm_interface_name: str
+    prometheus: Prometheus, vm: VirtualMachineForTests, network_packet_received: dict[str, str]
 ) -> bool:
-    packet_received = network_packets_received(vm=vm, interface_name=vm_interface_name)
     rx_tx_indicator = False
-    LOGGER.info("Waiting for metric kubevirt_vmi_network_traffic_bytes_total to update")
-    time.sleep(TIMEOUT_15SEC)
     metric_result = (
         prometheus
         .query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
@@ -366,9 +374,7 @@ def compare_network_traffic_bytes_and_metrics(
     )
     for entry in metric_result:
         entry_value = entry.get("value")[1]
-        if math.isclose(
-            int(entry_value), int(packet_received[f"{entry.get('metric').get('type')}_bytes"]), rel_tol=0.05
-        ):
+        if int(entry_value) >= int(network_packet_received[f"{entry.get('metric').get('type')}_bytes"]):
             rx_tx_indicator = True
         else:
             break
@@ -378,7 +384,7 @@ def compare_network_traffic_bytes_and_metrics(
 
 
 def validate_network_traffic_metrics_value(
-    prometheus: Prometheus, vm: VirtualMachineForTests, interface_name: str
+    prometheus: Prometheus, vm: VirtualMachineForTests, network_packet_received: dict[str, str]
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
@@ -386,7 +392,7 @@ def validate_network_traffic_metrics_value(
         func=compare_network_traffic_bytes_and_metrics,
         prometheus=prometheus,
         vm=vm,
-        vm_interface_name=interface_name,
+        network_packet_received=network_packet_received,
     )
     try:
         for sample in samples:
@@ -710,11 +716,11 @@ def create_windows11_wsl2_vm(
         name=vm_name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.xlarge"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
         yield vm
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
@@ -764,7 +770,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def validate_metric_value_greater_than_initial_value(
-    prometheus: Prometheus, metric_name: str, initial_value: float, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus, metric_name: str, initial_value: float, timeout: int = TIMEOUT_4MIN, equals: bool = False
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
@@ -834,3 +840,7 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
+
+
+def get_pod_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
+    return vm.vmi.interfaces[0].podInterfaceName

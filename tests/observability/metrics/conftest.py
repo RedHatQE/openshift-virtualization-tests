@@ -31,9 +31,11 @@ from tests.observability.metrics.utils import (
     disk_file_system_info,
     enable_swap_fedora_vm,
     get_metric_sum_value,
+    get_pod_interface_name_from_vm,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     metric_result_output_dict_by_mountpoint,
+    network_packets_received,
     vnic_info_from_vm_or_vmi,
 )
 from tests.observability.utils import validate_metrics_value
@@ -229,17 +231,30 @@ def generated_network_traffic_windows_vm(windows_vm_for_test):
         src_vm=windows_vm_for_test,
         dst_ip=get_ip_from_vm_or_virt_handler_pod(family=IPV4_STR, vm=windows_vm_for_test),
         windows=True,
+        quiet_output=False,
     )
 
 
 @pytest.fixture(scope="class")
 def linux_vm_for_test_interface_name(vm_for_test):
-    return vm_for_test.vmi.interfaces[0].interfaceName
+    return get_pod_interface_name_from_vm(vm=vm_for_test)
 
 
 @pytest.fixture(scope="class")
 def windows_vm_for_test_interface_name(windows_vm_for_test):
-    return windows_vm_for_test.vmi.interfaces[0].interfaceName
+    return get_pod_interface_name_from_vm(vm=windows_vm_for_test)
+
+
+@pytest.fixture()
+def network_packet_received_windows_vm(windows_vm_for_test, windows_vm_for_test_interface_name):
+    return network_packets_received(
+        vm=windows_vm_for_test, interface_name=windows_vm_for_test_interface_name, windows_wsl=True
+    )
+
+
+@pytest.fixture()
+def network_packet_received_linux_vm(vm_for_test, linux_vm_for_test_interface_name):
+    return network_packets_received(vm=vm_for_test, interface_name=linux_vm_for_test_interface_name)
 
 
 @pytest.fixture(scope="class")
