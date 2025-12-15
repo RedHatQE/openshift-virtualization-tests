@@ -40,7 +40,6 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     HttpService,
     check_snapshot_indication,
-    ensure_vm_running,
     get_hpp_daemonset,
     hpp_cr_suffix,
     is_hpp_cr_legacy,
@@ -52,6 +51,7 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
+    OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
@@ -467,7 +467,7 @@ def rhel_vm_for_snapshot(
         name=rhel_vm_name,
         namespace=namespace.name,
         client=admin_client,
-        os_flavor=RHEL10_PREFERENCE,
+        os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
         data_volume_template=data_volume_template_with_source_ref_dict(
@@ -493,12 +493,13 @@ def snapshot_with_content(
     """
     vm_snapshots = []
     is_online_test = request.param.get("online_vm", False)
-    stop_vm = not is_online_test
     for idx in range(request.param["number_of_snapshots"]):
         index = idx + 1
         before_snap_index = f"before-snap-{index}"
-        with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
-            write_file_via_ssh(vm=vm, filename=f"{before_snap_index}.txt", content=before_snap_index)
+        running_vm(vm=rhel_vm_for_snapshot)
+        write_file_via_ssh(vm=rhel_vm_for_snapshot, filename=f"{before_snap_index}.txt", content=before_snap_index)
+        if not is_online_test:
+            rhel_vm_for_snapshot.stop(wait=True)
         with VirtualMachineSnapshot(
             name=f"snapshot-{rhel_vm_for_snapshot.name}-number-{index}",
             namespace=rhel_vm_for_snapshot.namespace,
@@ -509,8 +510,10 @@ def snapshot_with_content(
             vm_snapshots.append(vm_snapshot)
             vm_snapshot.wait_snapshot_done()
             after_snap_index = f"after-snap-{index}"
-            with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=stop_vm) as vm:
-                write_file_via_ssh(vm=vm, filename=f"{after_snap_index}.txt", content=after_snap_index)
+            running_vm(vm=rhel_vm_for_snapshot)
+            write_file_via_ssh(vm=rhel_vm_for_snapshot, filename=f"{after_snap_index}.txt", content=after_snap_index)
+            if not is_online_test:
+                rhel_vm_for_snapshot.stop(wait=True)
     check_snapshot_indication(snapshot=vm_snapshot, is_online=is_online_test)
     yield vm_snapshots
 

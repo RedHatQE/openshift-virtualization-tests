@@ -1,3 +1,5 @@
+import shlex
+
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
@@ -48,7 +50,19 @@ def start_windows_vm_after_restore(vm_restore, windows_vm):
 
 
 def run_command_on_vm_and_check_output(vm, command, expected_result):
-    """Run command on RHEL VM via SSH and verify expected result is in output."""
-    cmd_output = run_ssh_commands(host=vm.ssh_exec, commands=["bash", "-c", command])[0].strip()
+    """Run command on RHEL VM via SSH and verify expected result is in output.
+
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+
+    Raises:
+        AssertionError: If expected result is not in output.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+    )[0].strip()
     expected_result = expected_result.strip()
     assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"

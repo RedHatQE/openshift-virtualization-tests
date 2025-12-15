@@ -25,7 +25,7 @@ from tests.storage.snapshots.utils import (
     run_command_on_vm_and_check_output,
     start_windows_vm_after_restore,
 )
-from tests.storage.utils import assert_windows_directory_existence, ensure_vm_running
+from tests.storage.utils import assert_windows_directory_existence
 from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
@@ -133,12 +133,13 @@ class TestRestoreSnapshots:
                 snapshot_name=snapshot_with_content[snap_idx].name,
             ) as vm_restore:
                 vm_restore.wait_restore_done()
-                with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=True) as vm:
-                    run_command_on_vm_and_check_output(
-                        vm=vm,
-                        command=LS_COMMAND,
-                        expected_result=expected_results[idx],
-                    )
+                running_vm(vm=rhel_vm_for_snapshot)
+                run_command_on_vm_and_check_output(
+                    vm=rhel_vm_for_snapshot,
+                    command=LS_COMMAND,
+                    expected_result=expected_results[idx],
+                )
+                rhel_vm_for_snapshot.stop(wait=True)
 
     @pytest.mark.parametrize(
         "rhel_vm_name, snapshot_with_content",
@@ -258,12 +259,12 @@ class TestRestoreSnapshots:
                 snapshot_name=snapshot_with_content[0].name,
             ) as second_restore:
                 second_restore.wait_restore_done()
-                with ensure_vm_running(vm=rhel_vm_for_snapshot, stop_vm=False) as vm:
-                    run_command_on_vm_and_check_output(
-                        vm=vm,
-                        command=LS_COMMAND,
-                        expected_result=expected_output_after_restore(1),
-                    )
+                running_vm(vm=rhel_vm_for_snapshot)
+                run_command_on_vm_and_check_output(
+                    vm=rhel_vm_for_snapshot,
+                    command=LS_COMMAND,
+                    expected_result=expected_output_after_restore(1),
+                )
 
 
 @pytest.mark.parametrize(

@@ -116,14 +116,6 @@ def upload_token_request(storage_ns_name, pvc_name, data, client):
                 break
 
 
-@contextmanager
-def ensure_vm_running(vm, stop_vm=True):
-    running_vm(vm=vm)
-    yield vm
-    if stop_vm:
-        vm.stop(wait=True)
-
-
 def create_windows_vm_validate_guest_agent_info(
     dv,
     namespace,
