@@ -943,9 +943,10 @@ class TestExitPytestExecution:
     def test_exit_pytest_execution_basic(self, mock_get_base_dir, mock_pytest_exit):
         """Test basic exit with message"""
         mock_get_base_dir.return_value = "/tmp/test"
+        mock_admin_client = MagicMock()
         log_message = "Test exit message"
 
-        exit_pytest_execution(log_message=log_message, return_code=1)
+        exit_pytest_execution(log_message=log_message, return_code=1, admin_client=mock_admin_client)
 
         mock_pytest_exit.assert_called_once_with(reason=log_message, returncode=1)
 
@@ -956,9 +957,11 @@ class TestExitPytestExecution:
         """Test exit with filename for logging"""
         mock_get_base_dir.return_value = "/tmp/test"
         log_message = "Test error"
+        MagicMock()
         filename = "test_error.log"
+        mock_admin_client = MagicMock()
 
-        exit_pytest_execution(log_message=log_message, return_code=1, filename=filename)
+        exit_pytest_execution(log_message=log_message, return_code=1, filename=filename, admin_client=mock_admin_client)
 
         mock_write.assert_called_once_with(
             file_name=filename,
@@ -973,9 +976,12 @@ class TestExitPytestExecution:
         """Test exit with junitxml_property"""
         mock_get_base_dir.return_value = "/tmp/test"
         log_message = "Test exit"
+        mock_admin_client = MagicMock()
         mock_junitxml = MagicMock()
 
-        exit_pytest_execution(log_message=log_message, return_code=5, junitxml_property=mock_junitxml)
+        exit_pytest_execution(
+            log_message=log_message, return_code=5, junitxml_property=mock_junitxml, admin_client=mock_admin_client
+        )
 
         mock_junitxml.assert_called_once_with(name="exit_code", value=5)
         mock_pytest_exit.assert_called_once()
@@ -990,13 +996,18 @@ class TestExitPytestExecution:
     ):
         """Test must-gather collection on SANITY_TESTS_FAILURE"""
         mock_get_base_dir.return_value = "/tmp/test"
+        mock_admin_client = MagicMock()
         log_message = "Sanity test failure"
 
-        exit_pytest_execution(log_message=log_message)
+        exit_pytest_execution(
+            log_message=log_message,
+            admin_client=mock_admin_client,
+        )
 
         mock_collect.assert_called_once_with(
             since_time=300,
             target_dir="/tmp/test/utilities/pytest_exit_errors",
+            admin_client=mock_admin_client,
         )
         mock_pytest_exit.assert_called_once()
 
@@ -1012,8 +1023,10 @@ class TestExitPytestExecution:
         mock_get_base_dir.return_value = "/tmp/test"
         mock_collect.side_effect = Exception("Must-gather failed")
         log_message = "Sanity test failure"
+        mock_admin_client = MagicMock()
+        MagicMock()
 
-        exit_pytest_execution(log_message=log_message)
+        exit_pytest_execution(log_message=log_message, admin_client=mock_admin_client)
 
         # Should log warning but still exit
         mock_logger.warning.assert_called_once()
@@ -1028,8 +1041,13 @@ class TestExitPytestExecution:
         """Test with non-SANITY_TESTS_FAILURE code (skips must-gather)"""
         mock_get_base_dir.return_value = "/tmp/test"
         log_message = "Regular exit"
+        mock_admin_client = MagicMock()
 
-        exit_pytest_execution(log_message=log_message, return_code=5)
+        exit_pytest_execution(
+            log_message=log_message,
+            return_code=5,
+            admin_client=mock_admin_client,
+        )
 
         # Should not collect must-gather
         mock_collect.assert_not_called()
@@ -1045,15 +1063,22 @@ class TestExitPytestExecution:
         """Test with all options provided"""
         mock_get_base_dir.return_value = "/tmp/test"
         log_message = "Complete failure"
+        mock_admin_client = MagicMock()
         filename = "error.log"
         mock_junitxml = MagicMock()
 
-        exit_pytest_execution(log_message=log_message, filename=filename, junitxml_property=mock_junitxml)
+        exit_pytest_execution(
+            log_message=log_message,
+            filename=filename,
+            junitxml_property=mock_junitxml,
+            admin_client=mock_admin_client,
+        )
 
         # All components should be called
         mock_collect.assert_called_once_with(
             since_time=300,
             target_dir="/tmp/test/utilities/pytest_exit_errors",
+            admin_client=mock_admin_client,
         )
         mock_write.assert_called_once_with(
             file_name=filename,

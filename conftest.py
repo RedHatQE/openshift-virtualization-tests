@@ -893,6 +893,7 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                 collect_default_cnv_must_gather_with_vm_gather(
                     since_time=calculate_must_gather_timer(test_start_time=test_start_time),
                     target_dir=collection_dir,
+                    admin_client=utilities.cluster.cache_admin_client(),
                 )
                 if inspect_str := get_inspect_command_namespace_string(test_name=test_name, node=node):
                     target_dir = os.path.join(collection_dir, "inspect_collection")
