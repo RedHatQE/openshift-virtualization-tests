@@ -100,7 +100,9 @@ packages = ["*"]
 dev = [
     "ipdb>=0.13.13",
     "ipython>=8.12.3",
+    "pygithub>=2.5.0",
     "pytest-repeat>=0.9.4",
+    "python-simple-logger>=2.0.13",
 ]
 
 [tool.uv.sources]
