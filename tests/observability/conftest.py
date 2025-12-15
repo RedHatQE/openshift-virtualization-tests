@@ -3,6 +3,7 @@ import logging
 import pytest
 from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.utils import validate_initial_virt_operator_replicas_reverted
@@ -120,8 +121,8 @@ def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_re
 
 
 @pytest.fixture(scope="session")
-def vm_with_node_selector_namespace(admin_client):
-    yield from create_ns(admin_client=admin_client, name="test-outdated-vm-ns")
+def vm_with_node_selector_namespace(admin_client, unprivileged_client):
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="test-outdated-vm-ns")
 
 
 @pytest.fixture(scope="session")
@@ -136,3 +137,25 @@ def vm_with_node_selector_for_upgrade(vm_with_node_selector_namespace, unprivile
     ) as vm:
         running_vm(vm=vm)
         yield vm
+
+
+@pytest.fixture(scope="session")
+def outdated_vmis_count(admin_client):
+    """
+    Get the count of VMIs that have the kubevirt.io/outdatedLauncherImage label
+    """
+    vmis_with_outdated_label = list(
+        VirtualMachineInstance.get(
+            dyn_client=admin_client,
+            label_selector="kubevirt.io/outdatedLauncherImage",
+        )
+    )
+    return len(vmis_with_outdated_label)
+
+
+@pytest.fixture(scope="session")
+def kubevirt_resource_outdated_vmi_workloads_count(kubevirt_resource_scope_session):
+    """
+    Get the count of outdated VMI workloads from KubeVirt resource status
+    """
+    return kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads
