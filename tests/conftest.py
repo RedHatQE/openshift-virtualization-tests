@@ -469,6 +469,7 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
                 return_code=100,
                 message=f"{name} namespace already exists.",
                 filename="cnv_tests_utilities_ns_failure.txt",
+                admin_client=admin_client,
             )
 
         else:
@@ -2587,6 +2588,9 @@ def updated_default_storage_class_ocs_virt(
             exit_pytest_execution(
                 log_message=f"Failed to set {ocs_storage_class.name} as default storage class",
                 filename="default_storage_class_failure.txt",
+            )
+            exit_pytest_execution(
+                message=f"Failed to set {ocs_storage_class.name} as default storage class", admin_client=admin_client
             )
     else:
         yield

@@ -383,4 +383,5 @@ def network_sanity(
             filename="network_cluster_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
             message="Network cluster verification failed",
+            admin_client=admin_client,
         )

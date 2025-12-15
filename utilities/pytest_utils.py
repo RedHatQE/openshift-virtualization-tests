@@ -172,6 +172,7 @@ def stop_if_run_in_progress(client: DynamicClient) -> None:
             return_code=100,
             message="openshift-virtualization-tests run already in progress",
             filename="cnv_tests_run_in_progress_failure.txt",
+            admin_client=client,
         )
 
 
@@ -282,7 +283,12 @@ def get_tests_cluster_markers(items, filepath=None) -> None:
 
 
 def exit_pytest_execution(
-    log_message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None, message=None
+    admin_client,
+    log_message,
+    return_code=SANITY_TESTS_FAILURE,
+    filename=None,
+    junitxml_property=None,
+    message=None,
 ):
     """Exit pytest execution
 
@@ -290,19 +296,19 @@ def exit_pytest_execution(
     Optionally, log an error message to tests-collected-info/utilities/pytest_exit_errors/<filename>
 
     Args:
-        log_message (str):  Message to display upon exit and to log in errors file
+        log_message (str): Message to display upon exit and to log in errors file
         return_code (int. Default: 99): Exit return code
         filename (str, optional. Default: None): filename where the given message will be saved
         junitxml_property (pytest plugin): record_testsuite_property
-        message (str): Message to log in error file. If not provided, `log_message` will be used.
+        message (str): Message to log in an error file. If not provided, `log_message` will be used.
+        admin_client (DynamicClient): cluster admin client
     """
     target_location = os.path.join(get_data_collector_base_directory(), "utilities", "pytest_exit_errors")
     # collect must-gather for past 5 minutes:
     if return_code == SANITY_TESTS_FAILURE:
         try:
             collect_default_cnv_must_gather_with_vm_gather(
-                since_time=TIMEOUT_5MIN,
-                target_dir=target_location,
+                since_time=TIMEOUT_5MIN, target_dir=target_location, admin_client=admin_client
             )
         except Exception as current_exception:
             LOGGER.warning(f"Failed to collect logs cnv must-gather after cluster_sanity failure: {current_exception}")
