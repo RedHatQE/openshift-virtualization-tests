@@ -51,12 +51,18 @@ jobs:
               3. Analyze pytest-specific elements: fixtures (scope, dependencies), parametrization, markers, conftest changes
               4. Trace test dependencies through imports, shared utilities, and fixture inheritance
               5. Detect new tests introduced in the PR
+              6. **Smoke Test Impact Analysis:** Determine if any changes could affect smoke tests by checking:
+                 - Changes to files/functions used by tests marked with `@pytest.mark.smoke`
+                 - Changes to fixtures or utilities imported by smoke tests
+                 - Changes to conftest.py files that may affect smoke test execution
+                 - Changes to core infrastructure code (utilities/, libs/) that smoke tests depend on
 
               **Your deliverable:**
               Your change request comment will be based on the following requirements:
 
               **Test Execution Plan**
 
+              - **Run smoke tests: True / False** _(Based on your smoke test impact analysis - True if any changes may affect smoke tests)_
               - `path/to/test_file.py` - When the entire test file needs verification
               - `path/to/test_file.py::TestClass::test_method` - When specific test(s) needed
               - `path/to/test_file.py::test_function` - When specific test(s) needed

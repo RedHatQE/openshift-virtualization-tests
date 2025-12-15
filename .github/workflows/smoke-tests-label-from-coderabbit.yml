@@ -1,0 +1,50 @@
+# Smoke Tests Label Manager - Automatically adds/removes 'smoke-tests:pending' label based on CodeRabbit analysis
+# Created with Claude Code assistance
+#
+# Summary:
+# ┌─────────────────────────────────┬───────────────────────┬──────────────────────────────┐
+# │ CodeRabbit Comment Contains     │ Current Label         │ Action                       │
+# ├─────────────────────────────────┼───────────────────────┼──────────────────────────────┤
+# │ "Run smoke tests: True"         │ None                  │ ✅ Add 'smoke-tests:pending' │
+# │ "Run smoke tests: True"         │ Already has label     │ ✅ No-op (safe)              │
+# │ "Run smoke tests: False"        │ Has label             │ ✅ Remove label              │
+# │ "Run smoke tests: False"        │ None                  │ ✅ No action                 │
+# │ Neither pattern                 │ Any                   │ ⏭️ No action                 │
+# │ Comment not from CodeRabbit     │ Any                   │ ⏭️ Does NOT run              │
+# └─────────────────────────────────┴───────────────────────┴──────────────────────────────┘
+
+name: "Smoke Tests Label from CodeRabbit"
+
+on:
+  pull_request_review_comment:
+    types: [created, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  manage-smoke-tests-label:
+    name: Manage smoke-tests:pending label
+    # Only run for CodeRabbit comments
+    if: |
+      github.event.comment.user.login == 'coderabbitai' ||
+      github.event.comment.user.login == 'coderabbit-ai[bot]' ||
+      contains(github.event.comment.user.login, 'coderabbit')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Add smoke-tests:pending label
+        if: "contains(github.event.comment.body, 'Run smoke tests: True')"
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: smoke-tests:pending
+
+      - name: Remove smoke-tests:pending label
+        if: "contains(github.event.comment.body, 'Run smoke tests: False')"
+        uses: actions-ecosystem/action-remove-labels@v1
+        continue-on-error: true  # Ignore error if label doesn't exist
+        with:
+          labels: smoke-tests:pending
