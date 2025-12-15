@@ -45,6 +45,7 @@ from utilities.infra import (
 from utilities.virt import VirtualMachineForTests, create_vm_with_nginx_service, running_vm
 
 LOGGER = logging.getLogger(__name__)
+NGINX = "nginx"
 
 
 @pytest.fixture(scope="module")
@@ -277,6 +278,7 @@ def nginx_monitoring_process(
 @pytest.fixture()
 def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
+        name=NGINX,
         namespace=chaos_namespace,
         client=admin_client,
         utility_pods=workers_utility_pods,
@@ -287,6 +289,7 @@ def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, w
 @pytest.fixture()
 def vm_with_nginx_service_and_node_selector(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
+        name=NGINX,
         namespace=chaos_namespace,
         client=admin_client,
         utility_pods=workers_utility_pods,
