@@ -511,7 +511,8 @@ class TestVmiPhaseTransitionFromDeletion:
             initial_value=initial_metric_value,
         )
 
-class TestMyTest:
+
+class TestVmiPhaseTransitionFromDeletionBucket:
     @pytest.mark.parametrize(
         "initial_metric_value",
         [
@@ -530,6 +531,7 @@ class TestMyTest:
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
             initial_value=initial_metric_value,
         )
+
 
 class TestVmCreatedByPodTotal:
     @pytest.mark.parametrize(
