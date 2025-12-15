@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional
 
 import bitmath
 import jinja2
@@ -2769,13 +2769,13 @@ def wait_for_virt_handler_pods_network_updated(
 
 
 def create_vm_with_nginx_service(
+    name: str,
     namespace: Namespace,
     client: DynamicClient,
     utility_pods: list[Pod],
     node: Node,
-    node_selector_label: Optional[dict] = None,
-):
-    name = "nginx"
+    node_selector_label: dict | None = None,
+) -> Generator[VirtualMachine]:
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
@@ -2795,7 +2795,7 @@ def create_vm_with_nginx_service(
         yield vm
 
 
-def verify_vm_service_reachable(utility_pods: list[Pod], node: Node, url: str):
+def verify_vm_service_reachable(utility_pods: list[Pod], node: Node, url: str) -> None:
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -2812,7 +2812,7 @@ def verify_vm_service_reachable(utility_pods: list[Pod], node: Node, url: str):
         raise
 
 
-def is_http_ok(utility_pods: list[Pod], node: Node, url: str):
+def is_http_ok(utility_pods: list[Pod], node: Node, url: str) -> bool:
     http_result = utilities.infra.ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
         command=f"curl -s --connect-timeout {TIMEOUT_10SEC} -w '%{{http_code}}' {url}  -o /dev/null"
     )
