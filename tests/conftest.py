@@ -996,7 +996,7 @@ def worker_node3(schedulable_nodes):
 
 @pytest.fixture(scope="session")
 def sriov_namespace(admin_client):
-    return Namespace(name=py_config["sriov_namespace"], client=admin_client)
+    return Namespace(name="openshift-sriov-network-operator", client=admin_client)
 
 
 @pytest.fixture(scope="session")
