@@ -6,7 +6,6 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import validate_machine_type
 from utilities.hco import update_hco_annotations
-from utilities.jira import is_jira_open
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -33,12 +32,6 @@ def vm(request, cluster_cpu_model_scope_function, unprivileged_client, namespace
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)
         yield vm
-
-
-@pytest.fixture(scope="session")
-def xfail_if_jira_75031_is_open():
-    if is_jira_open(jira_id="CNV-75031"):
-        pytest.xfail(reason="Machine type is not reverted when removing HCO jsonpatch annotation. CNV-75031")
 
 
 @pytest.fixture()
@@ -140,6 +133,7 @@ def test_migrate_vm(machine_type_from_kubevirt_config, vm):
 )
 @pytest.mark.gating
 @pytest.mark.conformance
+@pytest.mark.usefixtures("xfail_if_jira_75031_is_open")
 def test_machine_type_after_vm_restart(
     machine_type_from_kubevirt_config,
     vm,
@@ -186,6 +180,7 @@ def test_machine_type_after_vm_migrate(
     indirect=True,
 )
 @pytest.mark.gating
+@pytest.mark.usefixtures("xfail_if_jira_75031_is_open")
 def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_type, vm):
     """Test machine type change in kubevirt_config; new VM gets new value"""
     validate_machine_type(vm=vm, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1)
