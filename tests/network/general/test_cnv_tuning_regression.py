@@ -21,12 +21,13 @@ def linux_bridge_nad(admin_client, namespace):
 
 
 @pytest.fixture()
-def linux_bridge_device(worker_node1, linux_bridge_nad):
+def linux_bridge_device(admin_client, worker_node1, linux_bridge_nad):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="cnv-tuning-nncp",
         interface_name=linux_bridge_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        client=admin_client,
     ) as dev:
         yield dev
 

@@ -35,6 +35,7 @@ pytestmark = [
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bond1_worker_1(
+    admin_client,
     cluster_hardware_mtu,
     index_number,
     worker_node1,
@@ -44,6 +45,7 @@ def jumbo_frame_bond1_worker_1(
     Create BOND if setup support BOND
     """
     with BondNodeNetworkConfigurationPolicy(
+        client=admin_client,
         name=f"jumbo-frame-bond{next(index_number)}-nncp",
         bond_name=BOND_NAME,
         bond_ports=nodes_available_nics[worker_node1.name][-2:],
@@ -55,6 +57,7 @@ def jumbo_frame_bond1_worker_1(
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bond1_worker_2(
+    admin_client,
     cluster_hardware_mtu,
     index_number,
     worker_node2,
@@ -64,6 +67,7 @@ def jumbo_frame_bond1_worker_2(
     Create BOND if setup support BOND
     """
     with BondNodeNetworkConfigurationPolicy(
+        client=admin_client,
         name=f"jumbo-frame-bond{next(index_number)}-nncp",
         bond_name=BOND_NAME,
         bond_ports=nodes_available_nics[worker_node2.name][-2:],
@@ -75,6 +79,7 @@ def jumbo_frame_bond1_worker_2(
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_on_bond_worker_1(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     jumbo_frame_bond1_worker_1,
@@ -89,12 +94,14 @@ def jumbo_frame_bridge_on_bond_worker_1(
         node_selector=jumbo_frame_bond1_worker_1.node_selector,
         ports=[jumbo_frame_bond1_worker_1.bond_name],
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_on_bond_worker_2(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     jumbo_frame_bond1_worker_2,
@@ -109,6 +116,7 @@ def jumbo_frame_bridge_on_bond_worker_2(
         node_selector=jumbo_frame_bond1_worker_2.node_selector,
         ports=[jumbo_frame_bond1_worker_2.bond_name],
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as br:
         yield br
 

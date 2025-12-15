@@ -93,6 +93,8 @@ class TestSMPeerAuthentication:
         peer_authentication_service_mesh_deployment,
         httpbin_service_service_mesh,
     ):
+        # Test Authentication Policy - The service (httpbin) shouldn't be reached from a VM that's outside the mesh
+        # The VM is in a namespace without istio-injection label and without sidecar injection annotation
         # We must specify the full service DNS name since the VM is outside the mesh in a different namespace
         # Format: http://<service_name>.<service_namespace>.svc.cluster.local
         result = run_console_command(

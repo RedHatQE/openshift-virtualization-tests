@@ -171,6 +171,7 @@ def update_hot_plug_config_in_vm(vm, interfaces, networks=None):
 def create_bridge_interface_for_hot_plug(
     bridge_name,
     bridge_port,
+    client,
     mtu=None,
 ):
     with network_device(
@@ -182,6 +183,7 @@ def create_bridge_interface_for_hot_plug(
         ipv4_dhcp=True,
         node_selector_labels=NODE_TYPE_WORKER_LABEL,
         mtu=mtu,
+        client=client,
     ) as br:
         yield br
 

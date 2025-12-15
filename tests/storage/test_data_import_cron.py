@@ -206,6 +206,7 @@ def second_object_cleanup(
     resource_class(namespace=namespace.name, name=second_object_name).clean_up()
 
 
+@pytest.mark.gating
 @pytest.mark.polarion("CNV-7602")
 @pytest.mark.s390x
 def test_data_import_cron_garbage_collection(

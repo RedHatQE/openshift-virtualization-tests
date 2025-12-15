@@ -19,6 +19,7 @@ def kubemacpool_bridge_device_name(index_number):
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_1(
+    admin_client,
     worker_node1,
     kubemacpool_bridge_device_name,
     nodes_available_nics,
@@ -29,12 +30,14 @@ def kubemacpool_bridge_device_worker_1(
         interface_name=kubemacpool_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
+        client=admin_client,
     ) as dev:
         yield dev
 
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_2(
+    admin_client,
     worker_node2,
     kubemacpool_bridge_device_name,
     nodes_available_nics,
@@ -45,6 +48,7 @@ def kubemacpool_bridge_device_worker_2(
         interface_name=kubemacpool_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
+        client=admin_client,
     ) as dev:
         yield dev
 
@@ -265,7 +269,7 @@ def restarted_vmi_b(vm_b):
 
 
 @pytest.fixture(scope="class")
-def disabled_ns_vm(unprivileged_client, disabled_ns, disabled_ns_nad, mac_pool):
+def disabled_ns_vm(admin_client, disabled_ns, disabled_ns_nad, mac_pool):
     networks = {disabled_ns_nad.name: disabled_ns_nad.name}
     name = f"{disabled_ns.name}-vm"
     with VirtualMachineForTests(
@@ -274,7 +278,7 @@ def disabled_ns_vm(unprivileged_client, disabled_ns, disabled_ns_nad, mac_pool):
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=admin_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)
@@ -284,7 +288,7 @@ def disabled_ns_vm(unprivileged_client, disabled_ns, disabled_ns_nad, mac_pool):
 
 
 @pytest.fixture(scope="class")
-def enabled_ns_vm(unprivileged_client, kmp_enabled_ns, enabled_ns_nad, mac_pool):
+def enabled_ns_vm(admin_client, kmp_enabled_ns, enabled_ns_nad, mac_pool):
     networks = {enabled_ns_nad.name: enabled_ns_nad.name}
     name = f"{kmp_enabled_ns.name}-vm"
     with VirtualMachineForTests(
@@ -293,7 +297,7 @@ def enabled_ns_vm(unprivileged_client, kmp_enabled_ns, enabled_ns_nad, mac_pool)
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=admin_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)
@@ -303,7 +307,7 @@ def enabled_ns_vm(unprivileged_client, kmp_enabled_ns, enabled_ns_nad, mac_pool)
 
 
 @pytest.fixture(scope="class")
-def no_label_ns_vm(unprivileged_client, no_label_ns, no_label_ns_nad, mac_pool):
+def no_label_ns_vm(admin_client, no_label_ns, no_label_ns_nad, mac_pool):
     networks = {no_label_ns_nad.name: no_label_ns_nad.name}
     name = f"{no_label_ns.name}-vm"
     with VirtualMachineForTests(
@@ -312,7 +316,7 @@ def no_label_ns_vm(unprivileged_client, no_label_ns, no_label_ns_nad, mac_pool):
         networks=networks,
         interfaces=networks.keys(),
         body=fedora_vm_body(name=name),
-        client=unprivileged_client,
+        client=admin_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         vm.start(wait=True)
@@ -342,10 +346,11 @@ def kmp_down(cnao_down, kmp_deployment):
 
 
 @pytest.fixture()
-def cnao_down(cnao_deployment):
+def cnao_down(admin_client, cnao_deployment):
     with ResourceEditorValidateHCOReconcile(
         patches={cnao_deployment: {"spec": {"replicas": 0}}},
         list_resource_reconcile=[NetworkAddonsConfig],
+        admin_client=admin_client,
     ):
         cnao_deployment.wait_for_replicas(deployed=False)
         yield
