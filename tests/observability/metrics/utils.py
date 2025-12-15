@@ -799,6 +799,7 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
 
     for metric_sample in TimeoutSampler(
         sleep=2,
+
         func=_get_metric_values,
         wait_timeout=TIMEOUT_1MIN,
     ):
