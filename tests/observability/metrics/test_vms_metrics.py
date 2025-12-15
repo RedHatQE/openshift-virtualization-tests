@@ -16,8 +16,9 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-    KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI, KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+    KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
@@ -524,7 +525,7 @@ class TestVmiPhaseTransitionFromDeletionBucket:
         indirect=True,
     )
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_bucket(
-            self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
+        self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
     ):
         validate_metric_value_greater_than_initial_value(
             prometheus=prometheus,
