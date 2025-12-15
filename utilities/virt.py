@@ -1535,13 +1535,13 @@ class ServiceForVirtualMachineForTests(Service):
 
 
 def wait_for_ssh_connectivity(
-    vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
+    vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN, sleep: int = TIMEOUT_5SEC
 ) -> None:
     LOGGER.info(f"Wait for {vm.name} SSH connectivity.")
 
     for sample in TimeoutSampler(
         wait_timeout=timeout,
-        sleep=5,
+        sleep=sleep,
         func=vm.ssh_exec.run_command,
         command=["exit"],
         tcp_timeout=tcp_timeout,
