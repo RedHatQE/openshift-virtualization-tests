@@ -75,6 +75,33 @@ jobs:
               - Use file path + test name if only specific tests are needed
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
-              - Do not add a follow-up comment in the PR, only the change request one
+
+              **CRITICAL WORKFLOW COMPLETION RULES:**
+
+              When responding to this test execution plan request, you MUST follow these rules EXACTLY:
+
+              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment on the Files Changed tab with the test execution plan
+              2. **THEN STOP IMMEDIATELY** - Do NOT generate any response in this PR discussion thread
+              3. **FALLBACK ONLY**: If posting the inline review fails after retrying, ONLY then post in the PR discussion thread
+              4. **SILENCE = SUCCESS**: After successfully posting the inline review comment, your task is complete. No confirmation needed.
+
+              **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
+              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
+              - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
+              - ❌ Do NOT add any follow-up comments in the PR discussion thread after posting the inline review
+              - ❌ Do NOT reply to confirm task completion
+              - ❌ Do NOT explain what you did - just do it and stop
+
+              **Remember**: The inline review comment on Files Changed is visible to users. Additional comments are redundant noise.
+
+              CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
+                - Trace the actual fixture dependency chain from smoke tests to changed fixtures
+                - Verify that smoke tests actually import/use changed utilities or functions
+                - Confirm the dependency path exists; do NOT assume based on scope or semantics
+                - Be conservative: Session-scoped fixtures or infrastructure-sounding names do NOT
+                  automatically mean smoke test impact. Only flag smoke test impact when you can
+                  demonstrate a concrete dependency path.
+                WRONG: "This session-scoped storage fixture might affect smoke tests"
+                RIGHT: "Smoke test X uses fixture Y, which depends on the changed fixture Z"
 
             </details>
