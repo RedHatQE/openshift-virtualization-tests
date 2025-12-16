@@ -140,3 +140,9 @@ def migration_policy_with_allow_auto_converge(namespace):
         allow_auto_converge=True,
     ):
         yield
+
+
+@pytest.fixture(scope="session")
+def xfail_if_jira_75031_is_open():
+    if is_jira_open(jira_id="CNV-75031"):
+        pytest.xfail(reason="Machine type is not reverted when removing HCO jsonpatch annotation. CNV-75031")
