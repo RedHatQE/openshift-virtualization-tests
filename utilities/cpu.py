@@ -4,6 +4,7 @@ from typing import Set
 
 from ocp_resources.node import Node
 from ocp_resources.resource import Resource
+from pytest_testconfig import config as py_config
 
 from utilities.constants import (
     CPU_MODEL_LABEL_PREFIX,
@@ -132,11 +133,14 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
         nodes: List of Node objects to extract architecture information from.
 
     Returns:
-        CPU architecture string (e.g., "x86_64", "arm64", "s390x").
+        CPU architecture string (e.g., "amd64", "arm64", "s390x").
 
     Raises:
-        AssertionError: If nodes have mixed CPU architectures.
+        ValueError: If nodes have mixed CPU architectures.
     """
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
-    assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
+
+    if len(nodes_cpu_arch) > 1 and not py_config.get("cpu_arch"):
+        raise ValueError("cpu-arch param should be set for multi-arch clusters!")
+
     return next(iter(nodes_cpu_arch))
