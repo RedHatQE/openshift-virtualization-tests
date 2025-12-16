@@ -165,6 +165,7 @@ def reconciled_cr_post_hco_update(
         resource=request.param["resource_class"],
         resource_name=request.param["resource_name"],
         resource_namespace=hco_namespace.name,
+        client=admin_client,
     )
 
     start_resource_version = get_resource_version_from_related_object(

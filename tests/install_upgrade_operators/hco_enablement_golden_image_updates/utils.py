@@ -90,8 +90,8 @@ def get_templates_by_type_from_hco_status(hco_status_templates, template_type=CO
     ]
 
 
-def get_data_import_cron_by_name(namespace, cron_name):
-    data_import_cron = DataImportCron(name=cron_name, namespace=namespace)
+def get_data_import_cron_by_name(namespace, cron_name, client):
+    data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=client)
     if data_import_cron.exists:
         return data_import_cron
     raise ResourceNotFoundError(f"DataImportCron: {data_import_cron} not found in namespace: {namespace}")

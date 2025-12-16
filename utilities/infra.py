@@ -1114,13 +1114,14 @@ def get_build_info_dict(version: str, channel: str = "stable") -> dict[str, str]
     }
 
 
-def get_deployment_by_name(namespace_name, deployment_name):
+def get_deployment_by_name(namespace_name, deployment_name, client):
     """
     Gets a deployment object by name
 
     Args:
         namespace_name (str): name of the associated namespace
         deployment_name (str): Name of the deployment
+        client (DynamicClient): Dynamic client object
 
     Returns:
         Deployment: Deployment object
@@ -1128,6 +1129,7 @@ def get_deployment_by_name(namespace_name, deployment_name):
     deployment = Deployment(
         namespace=namespace_name,
         name=deployment_name,
+        client=client,
     )
     if deployment.exists:
         return deployment

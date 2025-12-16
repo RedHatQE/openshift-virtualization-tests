@@ -28,13 +28,14 @@ def get_replica_set_by_name_prefix(dyn_client: DynamicClient, replica_set_prefix
     return replica_sets
 
 
-def wait_hco_csv_updated_virt_operator_httpget(namespace: str, updated_hco_field: str) -> None:
+def wait_hco_csv_updated_virt_operator_httpget(namespace: str, updated_hco_field: str, client: DynamicClient) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_deployment_by_name,
         namespace_name=namespace,
         deployment_name=VIRT_OPERATOR,
+        client=client,
     )
     httpget_path = None
     try:
