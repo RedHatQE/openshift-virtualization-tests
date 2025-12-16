@@ -35,7 +35,6 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "NetworkBindingPlugins",
     "WithHostModelCPU",
     "HypervStrictCheck",
-    "VideoConfig",
     "VMExport",
     "KubevirtSeccompProfile",
     "DisableCustomSELinuxPolicy",
