@@ -3,11 +3,11 @@ import logging
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.infrastructure.golden_images.update_boot_source.utils import (
+    get_all_dic_volume_names,
     template_labels,
 )
 from tests.infrastructure.golden_images.utils import (
@@ -50,18 +50,21 @@ def rhel9_data_source(golden_images_namespace):
 
 @pytest.fixture()
 def existing_data_source_volume(
-    golden_images_persistent_volume_claims_scope_function,
-    golden_images_volume_snapshot_scope_function,
+    admin_client,
+    golden_images_namespace,
     matrix_data_source,
 ):
+    existing_volume_names = get_all_dic_volume_names(
+        client=admin_client,
+        namespace=golden_images_namespace.name,
+    )
+
     source = matrix_data_source.source
-    if source.kind == PersistentVolumeClaim.kind:
-        cluster_volumes = golden_images_persistent_volume_claims_scope_function
-    else:
-        cluster_volumes = golden_images_volume_snapshot_scope_function
-    assert any([source.name in volume.name for volume in cluster_volumes]), (
+
+    assert any(source.name in name for name in existing_volume_names), (
         f"DataSource source {source.kind} {source.name} is missing"
     )
+
     return matrix_data_source
 
 
