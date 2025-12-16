@@ -9,7 +9,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_IMPORT_CRON_NAME,
     CUSTOM_DATA_SOURCE_NAME,
-    DEFAULT_FEDORA_REGISTRY_URL,
 )
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     get_all_dic_volume_names,
@@ -20,7 +19,7 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
+    TIMEOUT_5SEC, DEFAULT_FEDORA_REGISTRY_URL,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.ssp import (

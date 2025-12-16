@@ -375,16 +375,9 @@ class TestVmResourceLimits:
 
 class TestKubevirtVmiNonEvictable:
     @pytest.mark.parametrize(
-        "data_volume_scope_function, vm_from_template_with_existing_dv",
+        "non_evictable_vm_from_template",
         [
             pytest.param(
-                {
-                    "dv_name": "non-evictable-dv",
-                    "image": RHEL_LATEST["image_path"],
-                    "storage_class": py_config["default_storage_class"],
-                    "dv_size": RHEL_LATEST["dv_size"],
-                    "access_modes": DataVolume.AccessMode.RWO,
-                },
                 {
                     "vm_name": "non-evictable-vm",
                     "template_labels": FEDORA_LATEST_LABELS,
@@ -401,8 +394,7 @@ class TestKubevirtVmiNonEvictable:
     def test_kubevirt_vmi_non_evictable(
         self,
         prometheus,
-        data_volume_scope_function,
-        vm_from_template_with_existing_dv,
+        non_evictable_vm_from_template,
     ):
         validate_metrics_value(
             prometheus=prometheus,

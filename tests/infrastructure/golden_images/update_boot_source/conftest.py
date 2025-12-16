@@ -12,7 +12,6 @@ from ocp_resources.ssp import SSP
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.infrastructure.golden_images.constants import DEFAULT_FEDORA_REGISTRY_URL
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     generate_data_import_cron_dict,
     get_all_dic_volume_names,
@@ -24,7 +23,7 @@ from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    Images,
+    Images, DEFAULT_FEDORA_REGISTRY_URL,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
