@@ -1267,6 +1267,7 @@ class TestCreateCatalogSource:
     def test_create_catalog_source(self, mock_catalog_class, mock_config):
         """Test creating catalog source"""
         mock_config.__getitem__.return_value = "openshift-marketplace"
+        mock_client = MagicMock()
 
         mock_catalog = MagicMock()
         mock_catalog.__enter__ = MagicMock(return_value=mock_catalog)
@@ -1276,6 +1277,7 @@ class TestCreateCatalogSource:
         result = create_catalog_source(
             catalog_name="test-catalog",
             image="registry.io/catalog:latest",
+            client=mock_client,
         )
 
         assert result == mock_catalog
@@ -1351,10 +1353,12 @@ class TestCreateOperatorGroup:
         mock_og.__enter__ = MagicMock(return_value=mock_og)
         mock_og.__exit__ = MagicMock(return_value=False)
         mock_og_class.return_value = mock_og
+        mock_client = MagicMock()
 
         result = create_operator_group(
             operator_group_name="test-og",
             namespace_name="test-namespace",
+            client=mock_client,
         )
 
         assert result == mock_og
@@ -1363,6 +1367,7 @@ class TestCreateOperatorGroup:
             namespace="test-namespace",
             target_namespaces=None,
             teardown=False,
+            client=mock_client,
         )
 
     @patch("utilities.operator.OperatorGroup")
@@ -1372,10 +1377,12 @@ class TestCreateOperatorGroup:
         mock_og.__enter__ = MagicMock(return_value=mock_og)
         mock_og.__exit__ = MagicMock(return_value=False)
         mock_og_class.return_value = mock_og
+        mock_client = MagicMock()
 
         create_operator_group(
             operator_group_name="test-og",
             namespace_name="test-namespace",
+            client=mock_client,
             target_namespaces=["ns1", "ns2"],
         )
 
@@ -1391,6 +1398,7 @@ class TestCreateSubscription:
     def test_create_subscription_basic(self, mock_sub_class, mock_config):
         """Test creating subscription with default values"""
         mock_config.__getitem__.return_value = "openshift-marketplace"
+        mock_client = MagicMock()
 
         mock_sub = MagicMock()
         mock_sub.__enter__ = MagicMock(return_value=mock_sub)
@@ -1402,6 +1410,7 @@ class TestCreateSubscription:
             package_name="test-package",
             namespace_name="test-namespace",
             catalogsource_name="test-catalog",
+            client=mock_client,
         )
 
         assert result == mock_sub
@@ -1414,6 +1423,7 @@ class TestCreateSubscription:
     def test_create_subscription_custom(self, mock_sub_class, mock_config):
         """Test creating subscription with custom values"""
         mock_config.__getitem__.return_value = "openshift-marketplace"
+        mock_client = MagicMock()
 
         mock_sub = MagicMock()
         mock_sub.__enter__ = MagicMock(return_value=mock_sub)
@@ -1425,6 +1435,7 @@ class TestCreateSubscription:
             package_name="test-package",
             namespace_name="test-namespace",
             catalogsource_name="test-catalog",
+            client=mock_client,
             channel_name="candidate",
             install_plan_approval="Manual",
         )
@@ -1715,16 +1726,19 @@ class TestCreateOperator:
         mock_operator = MagicMock()
         mock_operator.exists = False
         mock_operator_class.return_value = mock_operator
+        mock_client = MagicMock()
 
         result = create_operator(
             mock_operator_class,
             "test-operator",
+            client=mock_client,
             namespace_name="test-namespace",
         )
 
         mock_operator_class.assert_called_once_with(
             name="test-operator",
             namespace="test-namespace",
+            client=mock_client,
         )
         mock_operator.deploy.assert_called_once_with(wait=True)
         assert result == mock_operator
@@ -1735,10 +1749,11 @@ class TestCreateOperator:
         mock_operator = MagicMock()
         mock_operator.exists = False
         mock_operator_class.return_value = mock_operator
+        mock_client = MagicMock()
 
-        create_operator(mock_operator_class, "test-operator")
+        create_operator(mock_operator_class, "test-operator", client=mock_client)
 
-        mock_operator_class.assert_called_once_with(name="test-operator")
+        mock_operator_class.assert_called_once_with(name="test-operator", client=mock_client)
         mock_operator.deploy.assert_called_once_with(wait=True)
 
     def test_create_operator_already_exists(self):
@@ -1747,10 +1762,12 @@ class TestCreateOperator:
         mock_operator = MagicMock()
         mock_operator.exists = True
         mock_operator_class.return_value = mock_operator
+        mock_client = MagicMock()
 
         result = create_operator(
             mock_operator_class,
             "test-operator",
+            client=mock_client,
             namespace_name="test-namespace",
         )
 

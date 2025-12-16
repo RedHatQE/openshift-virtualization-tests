@@ -115,7 +115,7 @@ def wait_for_pod_running_by_prefix(
 
 
 def validate_hpp_installation(admin_client, cnv_namespace, schedulable_nodes):
-    hpp_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=cnv_namespace.name)
+    hpp_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=cnv_namespace.name, client=admin_client)
     assert hpp_deployment.exists
     hpp_deployment.wait_for_replicas(timeout=TIMEOUT_15MIN)
     wait_for_pod_running_by_prefix(
