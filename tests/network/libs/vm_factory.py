@@ -9,7 +9,11 @@ from libs.vm.vm import BaseVirtualMachine
 
 
 def udn_vm(
-    namespace_name: str, name: str, client: DynamicClient, template_labels: dict | None = None
+    namespace_name: str,
+    name: str,
+    client: DynamicClient,
+    template_labels: dict | None = None,
+    anti_affinity_namespaces: list[str] | None = None,
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
     iface, network = udn_primary_network(name="udn-primary")
@@ -20,6 +24,6 @@ def udn_vm(
         spec.template.metadata.labels.update(template_labels)  # type: ignore
         # Use the first label key and first value as the anti-affinity label to use:
         label, *_ = template_labels.items()
-        spec.template.spec.affinity = new_pod_anti_affinity(label=label)
+        spec.template.spec.affinity = new_pod_anti_affinity(label=label, namespaces=anti_affinity_namespaces)
 
     return fedora_vm(namespace=namespace_name, name=name, client=client, spec=spec)
