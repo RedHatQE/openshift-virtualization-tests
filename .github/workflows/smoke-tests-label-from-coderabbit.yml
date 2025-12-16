@@ -31,20 +31,52 @@ jobs:
     # Only run for CodeRabbit comments
     if: |
       github.event.comment.user.login == 'coderabbitai' ||
-      github.event.comment.user.login == 'coderabbit-ai[bot]' ||
+      github.event.comment.user.login == 'coderabbitai[bot]' ||
       contains(github.event.comment.user.login, 'coderabbit')
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug - Log comment information
+        run: |
+          echo "=========================================="
+          echo "Comment Debug Information"
+          echo "=========================================="
+          echo "Comment Author: ${{ github.event.comment.user.login }}"
+          echo ""
+          echo "=========================================="
+          echo "Condition Matching Results"
+          echo "=========================================="
+          echo "Is author 'coderabbitai'? ${{ github.event.comment.user.login == 'coderabbitai' }}"
+          echo "Is author 'coderabbitai[bot]'? ${{ github.event.comment.user.login == 'coderabbitai[bot]' }}"
+          echo "Contains 'coderabbit' in author? ${{ contains(github.event.comment.user.login, 'coderabbit') }}"
+          echo ""
+          echo "Contains 'Run smoke tests: True'? ${{ contains(github.event.comment.body, 'Run smoke tests: True') }}"
+          echo "Contains 'Run smoke tests: False'? ${{ contains(github.event.comment.body, 'Run smoke tests: False') }}"
+          echo "=========================================="
+
       - name: Add smoke-tests:pending label
+        if: "contains(github.event.comment.body, 'Run smoke tests: True')"
+        run: echo "▶️ Adding 'smoke-tests:pending' label (comment indicates smoke tests should run)"
+
+      - name: Execute add label action
         if: "contains(github.event.comment.body, 'Run smoke tests: True')"
         uses: actions-ecosystem/action-add-labels@v1
         with:
           labels: smoke-tests:pending
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove smoke-tests:pending label
+        if: "contains(github.event.comment.body, 'Run smoke tests: False')"
+        run: echo "▶️ Removing 'smoke-tests:pending' label (comment indicates smoke tests should NOT run)"
+
+      - name: Execute remove label action
         if: "contains(github.event.comment.body, 'Run smoke tests: False')"
         uses: actions-ecosystem/action-remove-labels@v1
         continue-on-error: true  # Ignore error if label doesn't exist
         with:
           labels: smoke-tests:pending
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: No action needed
+        if: "!contains(github.event.comment.body, 'Run smoke tests: True') && !contains(github.event.comment.body, 'Run smoke tests: False')"
+        run: echo "⏭️ No action needed - comment does not contain smoke test directive"
