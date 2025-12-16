@@ -29,8 +29,9 @@ def tainted_node_for_vm_chaos_rhel9_with_dv_migration(chaos_vm_rhel9_with_dv_sta
 
 
 @pytest.fixture()
-def chaos_migration_policy():
+def chaos_migration_policy(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="chaos-migration-policy",
         bandwidth_per_migration="6Mi",
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
