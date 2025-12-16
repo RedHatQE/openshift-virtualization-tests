@@ -30,10 +30,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def resource_object_value_by_key(request):
+def resource_object_value_by_key(request, admin_client):
     resource_obj = get_resource_by_name(
         resource_kind=request.param.get(RESOURCE_TYPE_STR),
         name=request.param.get(RESOURCE_NAME_STR),
+        client=admin_client,
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     return get_resource_key_value(resource=resource_obj, key_name=request.param.get(KEY_NAME_STR))

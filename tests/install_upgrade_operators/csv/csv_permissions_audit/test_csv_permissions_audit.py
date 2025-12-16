@@ -43,15 +43,16 @@ def operators_from_csv(csv_permissions):
 
 
 @pytest.fixture(scope="module")
-def csv_permissions():
+def csv_permissions(admin_client):
     return get_csv_permissions(
         namespace=py_config["hco_namespace"],
         csv_name_starts_with=py_config["hco_cr_name"],
+        dyn_client=admin_client,
     )
 
 
 @pytest.fixture(scope="module")
-def csv_permissions_from_yaml(pytestconfig):
+def csv_permissions_from_yaml(pytestconfig, admin_client):
     file_path = get_yaml_file_path()
     if pytestconfig.option.update_csv:
         LOGGER.warning(f"Updating content for {file_path}.")
@@ -61,6 +62,7 @@ def csv_permissions_from_yaml(pytestconfig):
                     get_csv_permissions(
                         namespace=py_config["hco_namespace"],
                         csv_name_starts_with=py_config["hco_cr_name"],
+                        dyn_client=admin_client,
                     )
                 )
             )

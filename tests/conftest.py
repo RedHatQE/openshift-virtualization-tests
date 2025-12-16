@@ -314,17 +314,19 @@ def unprivileged_secret(admin_client, skip_unprivileged_client):
             name=HTTP_SECRET_NAME,
             namespace=NamespacesNames.OPENSHIFT_CONFIG,
             htpasswd=base64_encode_str(text=crypto_credentials),
+            client=admin_client,
         ) as secret:
             yield secret
 
         #  Wait for oauth-openshift deployment to update after removing htpass-secret
-        _wait_for_oauth_openshift_deployment()
+        _wait_for_oauth_openshift_deployment(admin_client=admin_client)
 
 
-def _wait_for_oauth_openshift_deployment():
+def _wait_for_oauth_openshift_deployment(admin_client):
     dp = get_deployment_by_name(
         deployment_name="oauth-openshift",
         namespace_name="openshift-authentication",
+        client=admin_client,
     )
 
     _log = f"Wait for {dp.name} -> Type: Progressing -> Reason:"
@@ -376,7 +378,7 @@ def identity_provider_with_htpasswd(skip_unprivileged_client, admin_client, iden
             }
         )
         identity_provider_config_editor.update(backup_resources=True)
-        _wait_for_oauth_openshift_deployment()
+        _wait_for_oauth_openshift_deployment(admin_client=admin_client)
         yield
         identity_provider_config_editor.restore()
 
@@ -459,9 +461,6 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
                 f"\nAfter verifying no one else is performing tests against the cluster, run:"
                 f"\n'oc delete namespace {name}'",
                 return_code=100,
-                message=f"{name} namespace already exists.",
-                filename="cnv_tests_utilities_ns_failure.txt",
-                admin_client=admin_client,
             )
 
         else:
@@ -2484,9 +2483,9 @@ def updated_default_storage_class_ocs_virt(
         )
         if not boot_source_imported_successfully:
             exit_pytest_execution(
+                admin_client=admin_client,
                 log_message=f"Failed to set {ocs_storage_class.name} as default storage class",
                 filename="default_storage_class_failure.txt",
-                admin_client=admin_client,
             )
     else:
         yield

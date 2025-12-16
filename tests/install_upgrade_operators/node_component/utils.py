@@ -424,9 +424,9 @@ def update_subscription_config(admin_client, hco_namespace, subscription, config
     )
 
 
-def pods_with_node_selector(namespace_name, node_selectors):
+def pods_with_node_selector(namespace_name, node_selectors, dyn_client):
     pods_with_labels = []
-    for pod in list(Pod.get(namespace=namespace_name)):
+    for pod in list(Pod.get(namespace=namespace_name, dyn_client=dyn_client)):
         node_selectors_from_pod = pod.instance.spec.get("nodeSelector", [])
         LOGGER.info(f"Node selector for pod {pod.name}: {node_selectors_from_pod}")
         if node_selectors_from_pod and (set(node_selectors_from_pod.keys()).intersection(node_selectors)):
@@ -434,7 +434,7 @@ def pods_with_node_selector(namespace_name, node_selectors):
     return pods_with_labels
 
 
-def wait_for_pod_node_selector_clean_up(namespace_name):
+def wait_for_pod_node_selector_clean_up(namespace_name, dyn_client):
     node_selectors = set(list(zip(*SELECTORS))[0])
     LOGGER.info(f"Looking for pods with nodeSelectors keys: {node_selectors}")
     samples = TimeoutSampler(
@@ -443,6 +443,7 @@ def wait_for_pod_node_selector_clean_up(namespace_name):
         func=pods_with_node_selector,
         namespace_name=namespace_name,
         node_selectors=node_selectors,
+        dyn_client=dyn_client,
         exceptions_dict={NotFoundError: []},
     )
     sample = None

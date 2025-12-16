@@ -35,6 +35,7 @@ class TestCertRotation:
     )
     def test_certificate_renewed_in_hco(
         self,
+        admin_client,
         hco_namespace,
         hyperconverged_resource_certconfig_change,
         tmpdir,
@@ -67,10 +68,12 @@ class TestCertRotation:
             initial_certificates_dates=initial_certificates_dates,
             secrets_to_skip=secrets_with_non_closed_bugs,
             tmpdir=tmpdir,
+            client=admin_client,
         )
         wait_for_certificates_renewal(
             hco_namespace=hco_namespace,
             initial_certificates_dates=initial_certificates_dates,
             secrets_to_skip=secrets_with_non_closed_bugs,
             tmpdir=tmpdir,
+            client=admin_client,
         )

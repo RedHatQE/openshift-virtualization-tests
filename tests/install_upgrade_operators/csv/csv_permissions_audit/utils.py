@@ -9,10 +9,10 @@ def get_yaml_file_path():
     return os.path.join(str(file_path), "csv-permissions.yaml")
 
 
-def get_csv_permissions(csv_name_starts_with, namespace):
+def get_csv_permissions(csv_name_starts_with, namespace, dyn_client):
     result_dict = {}
     service_account_name_str = "serviceAccountName"
-    csvs = list(ClusterServiceVersion.get(namespace=namespace))
+    csvs = list(ClusterServiceVersion.get(namespace=namespace, dyn_client=dyn_client))
     csv = [csv for csv in csvs if csv.name.startswith(csv_name_starts_with)]
     assert csv, f"CSV name starting with {csv_name_starts_with} not found under {namespace} namespace"
     csv_dict = csv[0].instance.to_dict()

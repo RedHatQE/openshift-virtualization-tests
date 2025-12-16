@@ -30,7 +30,9 @@ API_SERVICES = [
 ]
 
 
-def get_certificates_validity_period_and_checkend_result(hco_namespace_name, tmpdir, secrets_to_skip, seconds=0):
+def get_certificates_validity_period_and_checkend_result(
+    hco_namespace_name, tmpdir, secrets_to_skip, client, seconds=0
+):
     """
     Get CNV certificates dates
 
@@ -40,22 +42,25 @@ def get_certificates_validity_period_and_checkend_result(hco_namespace_name, tmp
         secrets_to_skip (tuple): names of secret entries that should not be checked due to open bugs
         seconds (int, default: 0): number of seconds to test whether the certificate will expire or not
             according to openssl -checkend command
+        client (DynamicClient): Dynamic client object
 
     Returns:
         dict: a dict with certificate data: key is the resource name, value is a dict containing the notbefore, notafter
         and the checkend response string
     """
+    secret_kwargs = {"namespace": hco_namespace_name, "client": client}
+    api_service_kwargs = {"client": client}
     certificates_to_check = dict(
         {
             os.path.join(tmpdir, secret): get_base64_decoded_certificate(
-                certificate_data=Secret(name=secret, namespace=hco_namespace_name).instance.data["tls.crt"]
+                certificate_data=Secret(name=secret, **secret_kwargs).instance.data["tls.crt"]
             )
             for secret in SECRETS
             if secret not in secrets_to_skip
         },
         **{
             os.path.join(tmpdir, api_service): get_base64_decoded_certificate(
-                certificate_data=APIService(name=api_service).instance.spec.caBundle
+                certificate_data=APIService(name=api_service, **api_service_kwargs).instance.spec.caBundle
             )
             for api_service in API_SERVICES
         },
@@ -101,7 +106,7 @@ def dump_certificates_to_files(certificates_filenames_dict):
             file_object.write(cert_data)
 
 
-def wait_for_certificates_renewal(hco_namespace, initial_certificates_dates, secrets_to_skip, tmpdir):
+def wait_for_certificates_renewal(hco_namespace, initial_certificates_dates, secrets_to_skip, tmpdir, client):
     """
     Wait for certificate renewal to occur, by practically comparing the actual certificates dates (notBefore/notAfter)
     to the initial certificate data.
@@ -111,6 +116,7 @@ def wait_for_certificates_renewal(hco_namespace, initial_certificates_dates, sec
         initial_certificates_dates (dict): dict with the initial certificates data
         secrets_to_skip (tuple): names of secret entries that should not be checked due to open bugs
         tmpdir (py.path.local): temporary folder in which the certificates files will reside
+        client (DynamicClient): Dynamic client object
 
     Raises:
         TimeoutExpiredError: raised if certificates renewal did not occur
@@ -125,6 +131,7 @@ def wait_for_certificates_renewal(hco_namespace, initial_certificates_dates, sec
         hco_namespace_name=hco_namespace.name,
         tmpdir=tmpdir,
         secrets_to_skip=secrets_to_skip,
+        client=client,
     )
     sample = None
     try:
@@ -151,6 +158,7 @@ def verify_certificates_dates_identical_to_initial_dates(
     initial_certificates_dates,
     secrets_to_skip,
     tmpdir,
+    client,
 ):
     """
     Verifies (in intervals) that the actual certificates dates are identical to the initial dates
@@ -160,6 +168,7 @@ def verify_certificates_dates_identical_to_initial_dates(
         initial_certificates_dates (dict): dict with the initial certificates data
         secrets_to_skip (tuple): names of secret entries that should not be checked due to open bugs
         tmpdir (py.path.local): temporary folder in which the certificates files will reside
+        client (DynamicClient): Dynamic client object
 
     Raises:
         AssertionError: raised if certificates' dates are not identical to the initial dates
@@ -174,6 +183,7 @@ def verify_certificates_dates_identical_to_initial_dates(
         hco_namespace_name=hco_namespace.name,
         tmpdir=tmpdir,
         secrets_to_skip=secrets_to_skip,
+        client=client,
     )
     try:
         for sample in samples:
