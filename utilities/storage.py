@@ -694,18 +694,13 @@ def write_file(vm, filename, content, stop_vm=True):
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection.
-
+    
     Args:
         vm: VirtualMachine instance with SSH connectivity
         filename: Path to the file to write in the VM
         content: Content to write to the file
-
-    Raises:
-        TimeoutExpiredError: If SSH connectivity cannot be established
-        SSHException: If SSH command execution fails
     """
-
-    cmd = shlex.split(f"echo '{content}' > {filename} && sync")
+    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
