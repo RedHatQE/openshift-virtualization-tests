@@ -830,23 +830,6 @@ def data_volume_scope_class(request, namespace, schedulable_nodes):
     )
 
 
-@pytest.fixture(scope="class")
-def golden_image_data_volume_scope_class(request, admin_client, golden_images_namespace, schedulable_nodes):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        schedulable_nodes=schedulable_nodes,
-        check_dv_exists=True,
-        admin_client=admin_client,
-    )
-
-
-@pytest.fixture(scope="class")
-def golden_image_data_source_scope_class(admin_client, golden_image_data_volume_scope_class):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_class)
-
-
 @pytest.fixture(scope="module")
 def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
@@ -2325,22 +2308,6 @@ def rhel_vm_with_instance_type_and_preference(
             vm_preference=vm_preference,
         ) as vm:
             yield vm
-
-
-@pytest.fixture(scope="class")
-def vm_from_template_scope_class(
-    request,
-    unprivileged_client,
-    namespace,
-    golden_image_data_source_scope_class,
-):
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
-    ) as vm:
-        yield vm
 
 
 @pytest.fixture(scope="session")
