@@ -463,10 +463,13 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
         name = "cnv-tests-utilities"
         if Namespace(client=admin_client, name=name).exists:
             exit_pytest_execution(
-                message=f"{name} namespace already exists."
+                log_message=f"{name} namespace already exists."
                 f"\nAfter verifying no one else is performing tests against the cluster, run:"
                 f"\n'oc delete namespace {name}'",
                 return_code=100,
+                message=f"{name} namespace already exists.",
+                filename="cnv_tests_utilities_ns_failure.txt",
+                admin_client=admin_client,
             )
 
         else:
@@ -2564,7 +2567,7 @@ def updated_default_storage_class_ocs_virt(
         and ocs_storage_class.instance.metadata.get("annotations", {}).get(
             StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         )
-        == "false"
+        != "true"
     ):
         boot_source_imported_successfully = False
         with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
@@ -2582,7 +2585,13 @@ def updated_default_storage_class_ocs_virt(
             namespace=golden_images_namespace.name,
         )
         if not boot_source_imported_successfully:
-            exit_pytest_execution(message=f"Failed to set {ocs_storage_class.name} as default storage class")
+            exit_pytest_execution(
+                log_message=f"Failed to set {ocs_storage_class.name} as default storage class",
+                filename="default_storage_class_failure.txt",
+            )
+            exit_pytest_execution(
+                message=f"Failed to set {ocs_storage_class.name} as default storage class", admin_client=admin_client
+            )
     else:
         yield
 
