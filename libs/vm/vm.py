@@ -2,22 +2,23 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import asdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dacite import from_dict
-from kubernetes.dynamic import DynamicClient
-from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
-from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
+from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Devices, Disk, Metadata, SpecDisk, VMISpec, VMSpec, Volume
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
-from utilities.cpu import get_nodes_cpu_architecture
 from utilities.network import IfaceNotFound
 from utilities.virt import get_oc_image_info, vm_console_run_commands
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -174,7 +175,7 @@ def container_image(base_image: str) -> str:
     image_info = get_oc_image_info(
         image=base_image,
         pull_secret=pull_secret,
-        architecture=get_nodes_cpu_architecture(nodes=list(Node.get())),
+        architecture=py_config["cpu_arch"],
     )
     return f"{base_image}@{image_info['digest']}"
 

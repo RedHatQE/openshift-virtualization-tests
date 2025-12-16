@@ -207,6 +207,23 @@ class TestGenerateOsMatrixDict:
         with pytest.raises(ValueError, match="windows is missing `UEFI_WIN_DIR` attribute"):
             generate_os_matrix_dict("windows", ["win-10"])
 
+    @patch("utilities.os_utils.ArchImages")
+    @patch("utilities.os_utils.Images")
+    def test_generate_os_matrix_dict_with_arch_adds_architecture_labels(
+        self, mock_images, mock_arch_images, mock_os_images
+    ):
+        """Test that passing arch adds architecture to template_labels and data source suffix"""
+        mock_images.Rhel = mock_os_images["rhel"]
+        # When arch is set, getattr(ArchImages, "AMD64") is used
+        mock_arch_images.AMD64 = mock_os_images["rhel"]
+
+        result = generate_os_matrix_dict("rhel", ["rhel-9-5"], arch="amd64")
+
+        assert len(result) == 1
+        rhel_config = result[0]["rhel-9-5"]
+        assert rhel_config["template_labels"]["architecture"] == "amd64"
+        assert rhel_config["data_source"] == "rhel9-amd64"
+
 
 class TestGenerateInstanceTypeRhelOsMatrix:
     """Test cases for generate_linux_instance_type_os_matrix function"""

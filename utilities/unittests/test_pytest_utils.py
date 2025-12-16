@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from utilities.exceptions import MissingEnvironmentVariableError
+from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
 from utilities.pytest_utils import (
@@ -17,6 +17,7 @@ from utilities.pytest_utils import (
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
+    get_cpu_arch_choices,
     get_current_running_data,
     get_matrix_params,
     get_tests_cluster_markers,
@@ -25,7 +26,108 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    validate_collected_tests_arch_params,
+    validate_cpu_arch_params,
 )
+
+
+class TestGetCpuArchChoices:
+    """Test cases for get_cpu_arch_choices function"""
+
+    def test_get_cpu_arch_choices_returns_all_combinations(self):
+        """Test returns comma-separated combinations of supported archs"""
+        result = get_cpu_arch_choices()
+        # SUPPORTED_CPU_ARCHITECTURES = ("amd64", "arm64", "s390x") -> 3 single + 3 pairs + 1 triple
+        assert "amd64" in result
+        assert "arm64" in result
+        assert "s390x" in result
+        assert "amd64,arm64" in result
+        assert "amd64,s390x" in result
+        assert "arm64,s390x" in result
+        assert "amd64,arm64,s390x" in result
+        assert len(result) == 7
+
+    def test_get_cpu_arch_choices_each_entry_valid(self):
+        """Test each choice contains only valid arch names"""
+        result = get_cpu_arch_choices()
+        valid = {"amd64", "arm64", "s390x"}
+        for choice in result:
+            for arch in choice.split(","):
+                assert arch in valid
+
+
+class TestValidateCpuArchParams:
+    """Test cases for validate_cpu_arch_params function"""
+
+    @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64"})
+    def test_homogeneous_cluster_no_option_ok(self, mock_get_cluster_arch):
+        """Test homogeneous cluster with no --cpu-arch option does not raise"""
+        validate_cpu_arch_params(cpu_arch_option="")
+        mock_get_cluster_arch.assert_called_once()
+
+    @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64"})
+    def test_homogeneous_cluster_with_option_raises(self, mock_get_cluster_arch):
+        """Test homogeneous cluster with --cpu-arch option raises"""
+        with pytest.raises(
+            UnsupportedCPUArchitectureError,
+            match="`--cpu-arch` cmdline arg shouldn't be passed for homogeneous cluster",
+        ):
+            validate_cpu_arch_params(cpu_arch_option="amd64")
+
+    @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64", "arm64"})
+    def test_heterogeneous_cluster_no_option_raises(self, mock_get_cluster_arch):
+        """Test heterogeneous cluster without --cpu-arch option raises"""
+        with pytest.raises(
+            UnsupportedCPUArchitectureError,
+            match="`--cpu-arch` cmdline arg must be provided for heterogeneous cluster",
+        ):
+            validate_cpu_arch_params(cpu_arch_option="")
+
+    @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64", "arm64"})
+    def test_heterogeneous_cluster_option_not_in_cluster_raises(self, mock_get_cluster_arch):
+        """Test --cpu-arch value not in cluster arch list raises"""
+        with pytest.raises(
+            UnsupportedCPUArchitectureError,
+            match="not in the cluster's arch list",
+        ):
+            validate_cpu_arch_params(cpu_arch_option="s390x")
+
+    @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64", "arm64"})
+    def test_heterogeneous_cluster_valid_option_ok(self, mock_get_cluster_arch):
+        """Test heterogeneous cluster with valid --cpu-arch option does not raise"""
+        validate_cpu_arch_params(cpu_arch_option="amd64")
+        validate_cpu_arch_params(cpu_arch_option="arm64")
+
+
+class TestValidateCollectedTestsArchParams:
+    """Test cases for validate_collected_tests_arch_params function"""
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": "amd64"})
+    def test_multiarch_marked_tests_on_homogeneous_cluster_raises(self):
+        """Test multiarch-marked tests on homogeneous cluster raises"""
+        session = MagicMock()
+        session.items = [MagicMock()]
+        session.items[0].get_closest_marker = MagicMock(return_value=MagicMock())  # has multiarch
+        session.config.getoption = MagicMock(return_value="")
+        with pytest.raises(
+            UnsupportedCPUArchitectureError,
+            match="Tests marked with `multiarch` are not allowed for homogeneous cluster",
+        ):
+            validate_collected_tests_arch_params(session)
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": "multiarch"})
+    def test_multi_arch_option_with_non_multiarch_tests_raises(self):
+        """Test multiple --cpu-arch values with tests not all multiarch raises"""
+        session = MagicMock()
+        item = MagicMock()
+        item.get_closest_marker = MagicMock(return_value=None)  # no multiarch
+        session.items = [item]
+        session.config.getoption = MagicMock(return_value="amd64,arm64")
+        with pytest.raises(
+            UnsupportedCPUArchitectureError,
+            match="Tests not marked with `multiarch` should not run with multiple values",
+        ):
+            validate_collected_tests_arch_params(session)
 
 
 class TestGetBaseMatrixName:

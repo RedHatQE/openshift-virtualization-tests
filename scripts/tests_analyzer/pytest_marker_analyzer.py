@@ -1305,7 +1305,7 @@ class MarkerTestAnalyzer:
 
         # Get current environment and add the required variable
         env = os.environ.copy()
-        env["OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"] = "x86_64"
+        env["OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"] = "amd64"
 
         logger.info(msg="Executing pytest command", extra={"cmd_args": " ".join(args)})
 
