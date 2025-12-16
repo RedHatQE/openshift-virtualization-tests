@@ -72,10 +72,10 @@ def get_src_pvc_default_name(template):
     raise ResourceMissingFieldError(f"Template {template.name} does not have a parameter {DATA_SOURCE_NAME}")
 
 
-def get_workload_update_migrations_list(namespaces):
+def get_workload_update_migrations_list(namespaces, admin_client):
     workload_migrations = {}
     for namespace in namespaces:
-        for migration_job in list(VirtualMachineInstanceMigration.get(namespace=namespace)):
+        for migration_job in list(VirtualMachineInstanceMigration.get(dyn_client=admin_client, namespace=namespace)):
             if migration_job.name.startswith("kubevirt-workload-update"):
                 job_instance = migration_job.instance
                 vmi_name = job_instance.spec.vmiName
@@ -96,8 +96,8 @@ def get_workload_update_migrations_list(namespaces):
     return list(workload_migrations.values())
 
 
-def vms_auto_migration_with_status_success(namespaces):
-    workload_migrations = get_workload_update_migrations_list(namespaces=namespaces)
+def vms_auto_migration_with_status_success(namespaces, admin_client):
+    workload_migrations = get_workload_update_migrations_list(namespaces=namespaces, admin_client=admin_client)
     return [
         migration_job.spec.vmiName
         for migration_job in workload_migrations
@@ -105,7 +105,7 @@ def vms_auto_migration_with_status_success(namespaces):
     ]
 
 
-def wait_for_automatic_vm_migrations(vm_list):
+def wait_for_automatic_vm_migrations(vm_list, admin_client):
     vm_names = [vm.name for vm in vm_list]
     vm_namespaces = list({vm.namespace for vm in vm_list})
     LOGGER.info(f"Checking VMIMs for vms: {vm_names}")
@@ -115,6 +115,7 @@ def wait_for_automatic_vm_migrations(vm_list):
         sleep=TIMEOUT_10SEC,
         func=vms_auto_migration_with_status_success,
         namespaces=vm_namespaces,
+        admin_client=admin_client,
     )
 
     sample = None

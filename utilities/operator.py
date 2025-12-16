@@ -291,8 +291,8 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
     collect_ocp_must_gather(since_time=since_time)
 
 
-def get_machine_config_pool_by_name(mcp_name):
-    mcp = MachineConfigPool(name=mcp_name)
+def get_machine_config_pool_by_name(mcp_name, client):
+    mcp = MachineConfigPool(name=mcp_name, client=client)
     if mcp.exists:
         return mcp
     raise ResourceNotFoundError(f"OperatorHub {mcp_name} not found")

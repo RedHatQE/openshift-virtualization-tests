@@ -681,10 +681,10 @@ def wait_for_hco_csv_creation(admin_client: DynamicClient, hco_namespace: str, h
         raise
 
 
-def wait_for_odf_update(target_version: str) -> None:
-    def _get_updated_odf_csv(_target_version: str) -> list[str]:
+def wait_for_odf_update(target_version: str, admin_client: DynamicClient) -> None:
+    def _get_updated_odf_csv(_target_version: str, _admin_client: DynamicClient) -> list[str]:
         csv_list = []
-        for csv in ClusterServiceVersion.get(namespace=NamespacesNames.OPENSHIFT_STORAGE):
+        for csv in ClusterServiceVersion.get(dyn_client=_admin_client, namespace=NamespacesNames.OPENSHIFT_STORAGE):
             if any(
                 csv_name in csv.name
                 for csv_name in [
@@ -706,6 +706,7 @@ def wait_for_odf_update(target_version: str) -> None:
         sleep=TIMEOUT_30SEC,
         func=_get_updated_odf_csv,
         _target_version=target_version,
+        _admin_client=admin_client,
     )
 
     for sample in upgrade_sampler:
