@@ -2,16 +2,17 @@
 # Created with Claude Code assistance
 #
 # Summary:
-# ┌─────────────────────────────────┬───────────────────────┬──────────────────────────────┐
-# │ CodeRabbit Comment Contains     │ Current Label         │ Action                       │
-# ├─────────────────────────────────┼───────────────────────┼──────────────────────────────┤
-# │ "Run smoke tests: True"         │ None                  │ ✅ Add 'smoke-tests:pending' │
-# │ "Run smoke tests: True"         │ Already has label     │ ✅ No-op (safe)              │
-# │ "Run smoke tests: False"        │ Has label             │ ✅ Remove label              │
-# │ "Run smoke tests: False"        │ None                  │ ✅ No action                 │
-# │ Neither pattern                 │ Any                   │ ⏭️ No action                 │
-# │ Comment not from CodeRabbit     │ Any                   │ ⏭️ Does NOT run              │
-# └─────────────────────────────────┴───────────────────────┴──────────────────────────────┘
+# ┌──────────────────────────────────────────────────────────────┬───────────────────────┬──────────────────────────────┐
+# │ CodeRabbit Comment Contains                                  │ Current Label         │ Action                       │
+# ├──────────────────────────────────────────────────────────────┼───────────────────────┼──────────────────────────────┤
+# │ "Run smoke tests: True" AND "Test Execution Plan"           │ None                  │ ✅ Add 'smoke-tests:pending' │
+# │ "Run smoke tests: True" AND "Test Execution Plan"           │ Already has label     │ ✅ No-op (safe)              │
+# │ "Run smoke tests: False" AND "Test Execution Plan"          │ Has label             │ ✅ Remove label              │
+# │ "Run smoke tests: False" AND "Test Execution Plan"          │ None                  │ ✅ No action                 │
+# │ Missing "Test Execution Plan"                                │ Any                   │ ⏭️ No action                 │
+# │ Neither pattern                                              │ Any                   │ ⏭️ No action                 │
+# │ Comment not from CodeRabbit                                  │ Any                   │ ⏭️ Does NOT run              │
+# └──────────────────────────────────────────────────────────────┴───────────────────────┴──────────────────────────────┘
 
 name: "Smoke Tests Label from CodeRabbit"
 
@@ -43,34 +44,41 @@ jobs:
           echo "=========================================="
           echo "Comment Author: ${{ github.event.comment.user.login }}"
           echo ""
+          echo "Comment Body (first 100 chars):"
+          echo "${{ github.event.comment.body }}" | head -c 100
+          echo ""
           echo "=========================================="
           echo "Condition Matching Results"
           echo "=========================================="
-          echo "Is author 'coderabbitai'? ${{ github.event.comment.user.login == 'coderabbitai' }}"
-          echo "Is author 'coderabbitai[bot]'? ${{ github.event.comment.user.login == 'coderabbitai[bot]' }}"
-          echo "Contains 'coderabbit' in author? ${{ contains(github.event.comment.user.login, 'coderabbit') }}"
-          echo ""
+          echo "Contains 'Test Execution Plan'? ${{ contains(github.event.comment.body, 'Test Execution Plan') }}"
           echo "Contains 'Run smoke tests: True'? ${{ contains(github.event.comment.body, 'Run smoke tests: True') }}"
           echo "Contains 'Run smoke tests: False'? ${{ contains(github.event.comment.body, 'Run smoke tests: False') }}"
+          echo ""
+          echo "=========================================="
+          echo "Action Determination"
+          echo "=========================================="
+          HAS_TEST_PLAN="${{ contains(github.event.comment.body, 'Test Execution Plan') }}"
+          HAS_RUN_TRUE="${{ contains(github.event.comment.body, 'Run smoke tests: True') }}"
+          HAS_RUN_FALSE="${{ contains(github.event.comment.body, 'Run smoke tests: False') }}"
+
+          if [ "$HAS_TEST_PLAN" = "true" ] && [ "$HAS_RUN_TRUE" = "true" ]; then
+            echo "ACTION: ✅ Will ADD smoke-tests:pending label"
+          elif [ "$HAS_TEST_PLAN" = "true" ] && [ "$HAS_RUN_FALSE" = "true" ]; then
+            echo "ACTION: ✅ Will REMOVE smoke-tests:pending label"
+          else
+            echo "ACTION: ⏭️ No label change (missing Test Execution Plan or smoke test directive)"
+          fi
           echo "=========================================="
 
       - name: Add smoke-tests:pending label
-        if: "contains(github.event.comment.body, 'Run smoke tests: True')"
-        run: echo "▶️ Adding 'smoke-tests:pending' label (comment indicates smoke tests should run)"
-
-      - name: Execute add label action
-        if: "contains(github.event.comment.body, 'Run smoke tests: True')"
+        if: "contains(github.event.comment.body, 'Run smoke tests: True') && contains(github.event.comment.body, 'Test Execution Plan')"
         uses: actions-ecosystem/action-add-labels@v1
         with:
           labels: smoke-tests:pending
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove smoke-tests:pending label
-        if: "contains(github.event.comment.body, 'Run smoke tests: False')"
-        run: echo "▶️ Removing 'smoke-tests:pending' label (comment indicates smoke tests should NOT run)"
-
-      - name: Execute remove label action
-        if: "contains(github.event.comment.body, 'Run smoke tests: False')"
+        if: "contains(github.event.comment.body, 'Run smoke tests: False') && contains(github.event.comment.body, 'Test Execution Plan')"
         uses: actions-ecosystem/action-remove-labels@v1
         continue-on-error: true  # Ignore error if label doesn't exist
         with:
@@ -78,5 +86,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: No action needed
-        if: "!contains(github.event.comment.body, 'Run smoke tests: True') && !contains(github.event.comment.body, 'Run smoke tests: False')"
-        run: echo "⏭️ No action needed - comment does not contain smoke test directive"
+        if: |
+          !contains(github.event.comment.body, 'Test Execution Plan') ||
+          (!contains(github.event.comment.body, 'Run smoke tests: True') && !contains(github.event.comment.body, 'Run smoke tests: False'))
+        run: echo "⏭️ No action needed - comment does not contain smoke test directive or Test Execution Plan"

@@ -76,13 +76,23 @@ jobs:
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
 
-              When responding to test execution plan request:
-                - Post ONLY an inline review comment on the Files Changed tab with the test plan
-                - ONLY! if you fail to add a review comment, add a comment in the PR discussion thread
-                - Do NOT add any follow-up comments in the PR discussion thread
-                - Do not add a follow-up comment in the PR
-                - Do NOT add acknowledgment comments like "I've successfully posted..."
-                - After posting the review comment, consider the task complete and do not generate any additional replies
+              **CRITICAL WORKFLOW COMPLETION RULES:**
+
+              When responding to this test execution plan request, you MUST follow these rules EXACTLY:
+
+              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment on the Files Changed tab with the test execution plan
+              2. **THEN STOP IMMEDIATELY** - Do NOT generate any response in this PR discussion thread
+              3. **FALLBACK ONLY**: If posting the inline review fails after retrying, ONLY then post in the PR discussion thread
+              4. **SILENCE = SUCCESS**: After successfully posting the inline review comment, your task is complete. No confirmation needed.
+
+              **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
+              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
+              - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
+              - ❌ Do NOT add any follow-up comments in the PR discussion thread after posting the inline review
+              - ❌ Do NOT reply to confirm task completion
+              - ❌ Do NOT explain what you did - just do it and stop
+
+              **Remember**: The inline review comment on Files Changed is visible to users. Additional comments are redundant noise.
 
               CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
                 - Trace the actual fixture dependency chain from smoke tests to changed fixtures
