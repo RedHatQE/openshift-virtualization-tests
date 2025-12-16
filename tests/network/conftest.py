@@ -5,7 +5,6 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
-import os
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -340,26 +339,6 @@ def network_sanity(
             else:
                 LOGGER.info(f"Validated network lane is running against an {family} supported cluster")
 
-    def _verify_bgp_env_vars():
-        """Verify if the cluster supports running BGP tests.
-
-        Requires the following environment variables to be set:
-        PRIMARY_NODE_NETWORK_VLAN_TAG: expected VLAN number on the node br-ex interface.
-        EXTERNAL_FRR_STATIC_IPV4: reserved IP in CIDR format for the external FRR pod inside
-                                  PRIMARY_NODE_NETWORK_VLAN_TAG network.
-        """
-        if any(test.get_closest_marker("bgp") and not test.get_closest_marker("xfail") for test in collected_tests):
-            LOGGER.info("Verifying if the cluster supports running BGP tests...")
-            required_env_vars = [
-                "PRIMARY_NODE_NETWORK_VLAN_TAG",
-                "EXTERNAL_FRR_STATIC_IPV4",
-            ]
-            missing_env_vars = [var for var in required_env_vars if not os.getenv(var)]
-
-            if missing_env_vars:
-                failure_msgs.append(f"BGP tests require the following environment variables: {missing_env_vars}")
-                return
-
     def _verify_nmstate_running_pods(_admin_client, namespace):
         # TODO: Only test if nmstate is required by the test(s)
         if not namespace:
@@ -395,7 +374,6 @@ def network_sanity(
     _verify_sriov()
     _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster)
     _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
-    _verify_bgp_env_vars()
     _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
     _verify_mtv_installed()
 
