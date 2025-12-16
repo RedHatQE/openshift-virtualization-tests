@@ -27,3 +27,5 @@ SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE = f"{STORAGE_NODE_ID_PREFIX}::test_vm_snap
 HOTPLUG_VM_AFTER_UPGRADE_NODE_ID = f"{STORAGE_NODE_ID_PREFIX}::test_vm_with_hotplug_after_upgrade"
 SNAPSHOT_RESTORE_CHECK_AFTER_UPGRADE_ID = f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_restore_check_after_upgrade"
 CDI_SCRATCH_PRESERVE_NODE_ID = f"{STORAGE_NODE_ID_PREFIX}::test_cdiconfig_scratch_preserved_after_upgrade"
+SCALE_NODE_ID_PREFIX = "tests/scale/test_upgrade_scale.py::TestUpgradeScale"
+SCALE_VM_LOAD_RUNNING_AFTER_UPGRADE_ID = f"{SCALE_NODE_ID_PREFIX}::test_load_running_after_upgrade"
