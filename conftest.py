@@ -56,6 +56,7 @@ from utilities.pytest_utils import (
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
+    get_cpu_arch_choices,
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
@@ -65,6 +66,8 @@ from utilities.pytest_utils import (
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
     update_latest_os_config,
+    update_cpu_arch_related_config,
+    validate_collected_tests_arch_params,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -85,6 +88,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "numa",
     "cclm",
     "mtv",
+    "multiarch",
 ]
 
 TEAM_MARKERS = {
@@ -113,6 +117,7 @@ INSPECT_BASE_COMMAND = "oc adm inspect"
 def pytest_addoption(parser):
     matrix_group = parser.getgroup(name="Matrix")
     os_group = parser.getgroup(name="OS")
+    arch_group = parser.getgroup(name="Architecture")
     install_upgrade_group = parser.getgroup(name="Upgrade")
     storage_group = parser.getgroup(name="Storage")
     cluster_sanity_group = parser.getgroup(name="ClusterSanity")
@@ -214,6 +219,16 @@ def pytest_addoption(parser):
         "--latest-centos",
         action="store_true",
         help="Run matrix tests with latest CentOS",
+    )
+
+    arch_group.addoption(
+        "--cpu-arch",
+        choices=get_cpu_arch_choices(),
+        help="""
+             CPU architecture to use when running tests on heterogeneous clusters.
+             Single arch (e.g. amd64) or comma-separated combination (e.g. amd64,arm64).
+             Defines what OS matrix params to use and what CPU architecture to use for VMs.
+             """,
     )
 
     # Storage addoption
@@ -774,7 +789,7 @@ def pytest_sessionstart(session):
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
 
-    generate_os_matrix_dicts(os_dict=py_config)
+    update_cpu_arch_related_config(cpu_arch_option=session.config.getoption("--cpu-arch") or "")
     update_latest_os_config(session_config=session.config)
 
     matrix_addoptions = [matrix for matrix in session.config.invocation_params.args if "-matrix=" in matrix]
@@ -822,6 +837,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_finish(session):
+    validate_collected_tests_arch_params(session=session)
     if session.config.getoption("--collect-tests-markers"):
         get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))
         pytest.exit(reason="Run with --collect-tests-markers. no tests are executed", returncode=0)

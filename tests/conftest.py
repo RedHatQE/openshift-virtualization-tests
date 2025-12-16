@@ -130,7 +130,6 @@ from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
     get_host_model_cpu,
-    get_nodes_cpu_architecture,
     get_nodes_cpu_model,
 )
 from utilities.data_utils import base64_encode_str, name_prefix
@@ -1030,8 +1029,8 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 
 
 @pytest.fixture(scope="session")
-def nodes_cpu_architecture(nodes):
-    return get_nodes_cpu_architecture(nodes=nodes)
+def nodes_cpu_architecture():
+    return py_config["cpu_arch"]
 
 
 @pytest.fixture(scope="session")
