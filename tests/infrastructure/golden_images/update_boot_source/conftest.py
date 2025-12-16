@@ -19,11 +19,12 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 )
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
+    DEFAULT_FEDORA_REGISTRY_URL,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    Images, DEFAULT_FEDORA_REGISTRY_URL,
+    Images,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,

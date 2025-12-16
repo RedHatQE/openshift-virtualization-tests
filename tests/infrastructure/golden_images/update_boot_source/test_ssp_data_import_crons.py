@@ -17,9 +17,10 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
     wait_for_existing_auto_update_data_import_crons,
 )
 from utilities.constants import (
+    DEFAULT_FEDORA_REGISTRY_URL,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_5SEC, DEFAULT_FEDORA_REGISTRY_URL,
+    TIMEOUT_5SEC,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.ssp import (

@@ -3,13 +3,11 @@ from datetime import datetime, timezone
 
 import bitmath
 import pytest
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
@@ -27,7 +25,7 @@ from tests.observability.metrics.utils import (
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.os_params import FEDORA_LATEST_LABELS, RHEL_LATEST
+from tests.os_params import FEDORA_LATEST_LABELS
 from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,

@@ -2,9 +2,9 @@ import logging
 import shlex
 
 import bitmath
-from ocp_resources.datavolume import DataVolume
 import pytest
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -78,7 +78,8 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    running_vm, vm_instance_from_template,
+    running_vm,
+    vm_instance_from_template,
 )
 from utilities.vnc_utils import VNCConnection
 
