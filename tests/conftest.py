@@ -2567,7 +2567,7 @@ def updated_default_storage_class_ocs_virt(
         and ocs_storage_class.instance.metadata.get("annotations", {}).get(
             StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         )
-        == "false"
+        != "true"
     ):
         boot_source_imported_successfully = False
         with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
