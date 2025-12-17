@@ -45,7 +45,7 @@ class TestCCLMvmFromTemplateWithDataSource:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-00000")
+    @pytest.mark.polarion("CNV-12038")
     def test_compute_live_migrate_vms_after_cclm(self, admin_client, namespace, vms_for_cclm):
         vms_failed_migration = {}
         for vm in vms_for_cclm:
@@ -71,7 +71,7 @@ class TestCCLMvmFromTemplateWithDataSource:
     indirect=True,
 )
 class TestCCLMvmWithInstanceType:
-    @pytest.mark.polarion("CNV-00001")
+    @pytest.mark.polarion("CNV-12013")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE}::test_migrate_vm_from_remote_to_local_cluster"
     )
@@ -89,7 +89,7 @@ class TestCCLMvmWithInstanceType:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-00002")
+    @pytest.mark.polarion("CNV-12474")
     def test_compute_live_migrate_vms_after_cclm(self, admin_client, namespace, vms_for_cclm):
         vms_failed_migration = {}
         for vm in vms_for_cclm:
