@@ -1,6 +1,9 @@
+import shlex
+
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS
 from utilities.constants import TIMEOUT_10MIN
@@ -44,3 +47,22 @@ def fail_to_create_snapshot_no_permissions(snapshot_name, namespace, vm_name, cl
 def start_windows_vm_after_restore(vm_restore, windows_vm):
     vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
     running_vm(vm=windows_vm)
+
+
+def run_command_on_vm_and_check_output(vm, command, expected_result):
+    """Run command on RHEL VM via SSH and verify expected result is in output.
+
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+
+    Raises:
+        AssertionError: If expected result is not in output.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+    )[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"

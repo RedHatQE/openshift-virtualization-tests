@@ -21,6 +21,12 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -45,9 +51,12 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
+    OS_FLAVOR_RHEL,
+    RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    U1_SMALL,
     Images,
 )
 from utilities.hco import (
@@ -59,12 +68,8 @@ from utilities.infra import (
     ExecCommandOnPod,
 )
 from utilities.jira import is_jira_open
-from utilities.storage import (
-    create_cirros_dv_for_snapshot_dict,
-    get_downloaded_artifact,
-    write_file,
-)
-from utilities.virt import VirtualMachineForTests
+from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
@@ -419,7 +424,7 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 
 
 @pytest.fixture()
-def cirros_vm_name(request):
+def rhel_vm_name(request):
     return request.param["vm_name"]
 
 
@@ -450,53 +455,36 @@ def artifactory_config_map_scope_module(namespace):
 
 
 @pytest.fixture()
-def cirros_dv_for_snapshot_dict(
-    namespace,
-    cirros_vm_name,
-    storage_class_matrix_snapshot_matrix__module__,
-    artifactory_secret_scope_module,
-    artifactory_config_map_scope_module,
-):
-    yield create_cirros_dv_for_snapshot_dict(
-        name=cirros_vm_name,
-        namespace=namespace.name,
-        storage_class=[*storage_class_matrix_snapshot_matrix__module__][0],
-        artifactory_secret=artifactory_secret_scope_module,
-        artifactory_config_map=artifactory_config_map_scope_module,
-    )
-
-
-@pytest.fixture()
-def cirros_vm_for_snapshot(
+def rhel_vm_for_snapshot(
     admin_client,
     namespace,
-    cirros_vm_name,
-    cirros_dv_for_snapshot_dict,
+    rhel_vm_name,
+    rhel10_data_source_scope_session,
+    snapshot_storage_class_name_scope_module,
 ):
-    """
-    Create a VM with a DV that supports snapshots
-    """
-    dv_metadata = cirros_dv_for_snapshot_dict["metadata"]
+    """Create a RHEL VM with using DataSource that supports snapshots"""
     with VirtualMachineForTests(
+        name=rhel_vm_name,
+        namespace=namespace.name,
         client=admin_client,
-        name=cirros_vm_name,
-        namespace=dv_metadata["namespace"],
-        os_flavor=Images.Cirros.OS_FLAVOR,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        data_volume_template={
-            "metadata": dv_metadata,
-            "spec": cirros_dv_for_snapshot_dict["spec"],
-        },
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_session,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
     ) as vm:
+        running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture()
-def snapshots_with_content(
+def snapshot_with_content(
     request,
     namespace,
     admin_client,
-    cirros_vm_for_snapshot,
+    rhel_vm_for_snapshot,
 ):
     """
     Creates a requested number of snapshots with content
@@ -506,32 +494,26 @@ def snapshots_with_content(
     vm_snapshots = []
     is_online_test = request.param.get("online_vm", False)
     for idx in range(request.param["number_of_snapshots"]):
-        # write_file check if the vm is running and if not, start the vm
-        # after the file have been written the function stops the vm
         index = idx + 1
         before_snap_index = f"before-snap-{index}"
-        write_file(
-            vm=cirros_vm_for_snapshot,
-            filename=f"{before_snap_index}.txt",
-            content=before_snap_index,
-        )
-        if is_online_test:
-            cirros_vm_for_snapshot.start(wait=True)
+        running_vm(vm=rhel_vm_for_snapshot)
+        write_file_via_ssh(vm=rhel_vm_for_snapshot, filename=f"{before_snap_index}.txt", content=before_snap_index)
+        if not is_online_test:
+            rhel_vm_for_snapshot.stop(wait=True)
         with VirtualMachineSnapshot(
-            name=f"snapshot-{cirros_vm_for_snapshot.name}-number-{index}",
-            namespace=cirros_vm_for_snapshot.namespace,
-            vm_name=cirros_vm_for_snapshot.name,
+            name=f"snapshot-{rhel_vm_for_snapshot.name}-number-{index}",
+            namespace=rhel_vm_for_snapshot.namespace,
+            vm_name=rhel_vm_for_snapshot.name,
             client=admin_client,
             teardown=False,
         ) as vm_snapshot:
             vm_snapshots.append(vm_snapshot)
             vm_snapshot.wait_snapshot_done()
             after_snap_index = f"after-snap-{index}"
-            write_file(
-                vm=cirros_vm_for_snapshot,
-                filename=f"{after_snap_index}.txt",
-                content=after_snap_index,
-            )
+            running_vm(vm=rhel_vm_for_snapshot)
+            write_file_via_ssh(vm=rhel_vm_for_snapshot, filename=f"{after_snap_index}.txt", content=after_snap_index)
+            if not is_online_test:
+                rhel_vm_for_snapshot.stop(wait=True)
     check_snapshot_indication(snapshot=vm_snapshot, is_online=is_online_test)
     yield vm_snapshots
 
