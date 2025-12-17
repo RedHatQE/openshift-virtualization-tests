@@ -684,6 +684,19 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
+def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
+    """
+    Write content to a file in VM using SSH connection.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+    """
+    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+
+
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
     with console.Console(vm=vm) as vm_console:
         vm_console.sendline(command)
@@ -802,22 +815,6 @@ def is_snapshot_supported_by_sc(sc_name, client):
         if vsc.instance.get("driver") == sc_instance.get("provisioner"):
             return True
     return False
-
-
-def create_cirros_dv_for_snapshot_dict(name, namespace, storage_class, artifactory_secret, artifactory_config_map):
-    dv = DataVolume(
-        api_name="storage",
-        name=f"dv-{name}",
-        namespace=namespace,
-        source="http",
-        url=utilities.infra.get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    return dv.res
 
 
 def check_disk_count_in_vm(vm):
