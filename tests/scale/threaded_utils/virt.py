@@ -26,14 +26,23 @@ def threaded_wait_for_accessible_vms(
     timeout: int = TIMEOUT_2MIN,
     tcp_timeout: int = TIMEOUT_1MIN,
     sleep: int = TIMEOUT_10SEC,
-) -> list[Any]:  # skip-unused-code
+) -> None:  # skip-unused-code
+    """
+    Asyncronously wait for accessible VMs
+
+    Args:
+        vms (list[VirtualMachineForTests]): List of VMs to wait for
+        timeout (int): Timeout to wait for SSH connectivity
+        tcp_timeout (int): TCP timeout
+        sleep (int): Sleep between checks
+    """
     assert vms, f"No VMs provided {vms!r}"
 
     def _wait_for_accessible_vm(_vm: VirtualMachineForTests) -> None:
         wait_for_ssh_connectivity(vm=_vm, timeout=timeout, tcp_timeout=tcp_timeout, sleep=sleep)
 
     with ThreadPoolExecutor(max_workers=len(vms)) as executor:
-        return list(executor.map(_wait_for_accessible_vm, vms))
+        list(executor.map(_wait_for_accessible_vm, vms))
 
 
 def threaded_wait_for_running_vms(
@@ -50,10 +59,15 @@ def threaded_wait_for_running_vms(
 
     Args:
         vms (list): List of VirtualMachines
+        wait_for_interfaces (bool): Wait for VM interfaces
+        check_ssh_connectivity (bool): Check for SSH connectivity
         wait_for_cloud_init (bool, optional): Wait for VM cloud-init completion
+        wait_until_running_timeout (int): Time to wait until running
+        ssh_timeout (int): SSH Timeout
+        cloud_init_timeout (int): Time to wait for cloud init
 
     Returns:
-        dict: Data related to the running of the async function
+        list: Data related to the running of the async function
     """
     assert vms, f"No VMs provided {vms!r}"
 
@@ -85,9 +99,10 @@ def threaded_wait_for_scheduled_vms(
 
     Args:
         vms (list): List of VirtualMachines
+        wait_timeout (int): Time to wait for a single VM to be scheduled
 
     Returns:
-        dict: Data related to the running of the async function
+        list: Data related to the running of the async function
     """
     assert vms, f"No VMs provided {vms!r}"
 
@@ -106,7 +121,7 @@ def threaded_wait_for_scheduled_vms(
             sample = None
             for sample in sampler:
                 if sample and sample.spec.nodeName:
-                    break
+                    return
         except TimeoutExpiredError:
             LOGGER.error(f"VM: {_vm.name} Status: {_vm.instance.status} virt-launcher: {sample}")
 
@@ -119,6 +134,17 @@ def threaded_wait_for_scheduled_vms(
 def threaded_run_vm_ssh_command(
     vms: list[VirtualMachineForTests], commands: list[str], tcp_timeout=TIMEOUT_8MIN
 ) -> list:  # skip-unused-code
+    """
+    Asynchronously run SSH commands on VMs
+
+    Args:
+        vms (list): List of VirtualMachines
+        commands (list[str]): Commands to run
+        tcp_timeout (int): TCP timeout
+
+    Returns:
+        list: Data related to the running of the async function
+    """
     assert vms, f"No VMs provided {vms!r}"
 
     def _run_ssh_commands(_vm: VirtualMachineForTests) -> list:
@@ -133,6 +159,16 @@ def threaded_run_vm_ssh_command(
 
 
 def threaded_get_vm_guest_data(vms: list[VirtualMachineForTests], commands: list[str]) -> list[Any]:  # skip-unused-code
+    """
+    Asynchronously run commands from GUEST_DATA_COMMAND_LIST in VMs to pull guest data
+
+    Args:
+        vms (list): List of VirtualMachines
+        commands (list[str]): Commands to run from GUEST_DATA_COMMAND_LIST
+
+    Returns:
+        list: Data related to the running of the async function
+    """
     assert vms, f"No VMs provided {vms!r}"
     result = threaded_run_vm_ssh_command(vms=vms, commands=commands)
     all_guest_data = []
@@ -157,29 +193,48 @@ def threaded_get_vm_guest_data(vms: list[VirtualMachineForTests], commands: list
     return all_guest_data
 
 
-def verify_guest_data(before: dict, after: dict) -> None:  # skip-unused-code
+def verify_guest_data(data_before_action: dict, data_after_action: dict) -> None:  # skip-unused-code
+    """
+    Verify data gathered using GUEST_DATA_COMMAND_LIST before and after an event or action
+
+    Args:
+        data_before_action (dict): Data before event or action
+        data_after_action (dict): Data after event or action
+    """
     return_errors = []
 
-    if not (before and after and before != after):
-        raise ValueError(f"invalid input: before:{before!r} after:{after!r}")
+    if not (data_before_action and data_after_action and data_before_action != data_after_action):
+        raise ValueError(f"invalid input: before:{data_before_action!r} after:{data_after_action!r}")
 
-    for name in before:
+    for name in data_before_action:
         if name == "datetime":
-            if before[name] >= after[name]:
+            if data_before_action[name] >= data_after_action[name]:
                 return_errors.append(
-                    f"Before datetime is not before after datetime. before: {before[name]} after: {after[name]}"
+                    "Before datetime is not before after datetime. "
+                    "before: {data_before_action[name]} after: {data_after_action[name]}"
                 )
         elif name == "btime":
-            if before[name] != after[name]:
-                return_errors.append(f"Boot times do not match. before: {before[name]} after: {after[name]}")
+            if data_before_action[name] != data_after_action[name]:
+                return_errors.append(
+                    f"Boot times do not match. before: {data_before_action[name]} after: {data_after_action[name]}"
+                )
 
     assert not return_errors, return_errors
 
 
-def threaded_verify_guest_data(before_list: list[dict], after_list: list[dict]) -> list[Any]:  # skip-unused-code
-    before_list_length = len(before_list)
-    assert before_list and after_list and before_list_length == len(after_list), (
+def threaded_verify_guest_data(
+    data_before_action_list: list[dict], data_after_action_list: list[dict]
+) -> None:  # skip-unused-code
+    """
+    Threaded verify data gathered using GUEST_DATA_COMMAND_LIST from multiple VMs before and after an event or action
+
+    Args:
+        data_before_action_list (list[dict]): List of data before event or action
+        data_after_action_list (list[dict]): List of data after event or action
+    """
+    before_list_length = len(data_before_action_list)
+    assert data_before_action_list and data_after_action_list and before_list_length == len(data_after_action_list), (
         "Guest data lists must be provided and be of equal length"
     )
     with ThreadPoolExecutor(max_workers=before_list_length) as executor:
-        return list(executor.map(verify_guest_data, before_list, after_list))
+        list(executor.map(verify_guest_data, data_before_action_list, data_after_action_list))

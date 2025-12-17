@@ -19,4 +19,8 @@ class LocalThreadedScaleResources(ThreadedScaleResources):  # skip-unused-code
 
         collect_alerts_data()
         collect_ocp_must_gather(since_time=int(time.time() - start_time))
-        collect_default_cnv_must_gather_with_vm_gather(since_time=int(time.time() - start_time), target_dir=target_dir)
+        admin_client = getattr(self, "admin_client", None)
+        if admin_client:
+            collect_default_cnv_must_gather_with_vm_gather(
+                since_time=int(time.time() - start_time), target_dir=target_dir, admin_client=admin_client
+            )
