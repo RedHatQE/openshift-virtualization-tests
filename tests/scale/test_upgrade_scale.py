@@ -172,15 +172,16 @@ def created_post_copy_migration_policy_for_upgrade(admin_client, upgrade_scale_n
 @pytest.fixture(scope="module")
 def vm_with_nginx_service_scope_module(upgrade_scale_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
-        chaos_namespace=upgrade_scale_namespace,
-        admin_client=admin_client,
+        name="nginx-vm",
+        namespace=upgrade_scale_namespace,
+        client=admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
     )
 
 
 @pytest.fixture(scope="module")
-def stopped_nginx_vm(vm_with_nginx_service_scope_module, stress_ng_url_for_cirros, vms_for_upgrade_test):
+def stopped_nginx_vm(vm_with_nginx_service_scope_module, stress_ng_url_for_cirros, running_vms_for_upgrade_test):
     vm_with_nginx_service_scope_module.stop(wait=True)
     yield
 
@@ -210,16 +211,15 @@ def vms_for_upgrade_test(
     request,
     scale_unprivileged_client,
     upgrade_scale_namespace,
-    prometheus,
-    cache_key_scope_module,
     created_data_source_for_scale,
-    stress_ng_url_for_cirros,
     created_post_copy_migration_policy_for_upgrade,
 ):
     vms = []
     for entry in request.param:
-        vm_instancetype = VirtualMachineClusterInstancetype(name=entry["vm_instancetype"])
-        vm_preference = VirtualMachineClusterPreference(name=entry["vm_preference"])
+        vm_instancetype = VirtualMachineClusterInstancetype(
+            client=scale_unprivileged_client, name=entry["vm_instancetype"]
+        )
+        vm_preference = VirtualMachineClusterPreference(client=scale_unprivileged_client, name=entry["vm_preference"])
         cloud_init_data = None
         if entry.get("runcmd"):
             cloud_init_data = prepare_cloud_init_user_data(section="runcmd", data=entry["runcmd"])
@@ -244,31 +244,37 @@ def vms_for_upgrade_test(
             )
             for index in range(entry["vm_count"])
         ])
+
+
+@pytest.fixture(scope="module")
+def running_vms_for_upgrade_test(
+    request, prometheus, cache_key_scope_module, stress_ng_url_for_cirros, vms_for_upgrade_test
+):
     monitor_api_requests = MonitorResourceAPIServerRequests(
         prometheus=prometheus,
         resource_class=VirtualMachine,
-        idle_requests_value=VIRT_HANDLER_API_IDLE_STATE * len(vms),
+        idle_requests_value=VIRT_HANDLER_API_IDLE_STATE * len(vms_for_upgrade_test),
     )
 
     monitor_api_requests.wait_for_idle()
-    with LocalThreadedScaleResources(resources=vms, cache_key_prefix=cache_key_scope_module):
+    with LocalThreadedScaleResources(resources=vms_for_upgrade_test, cache_key_prefix=cache_key_scope_module):
         capture_func_elapsed(
             cache=request.config.cache,
             cache_key_prefix=cache_key_scope_module,
             func=threaded_wait_for_scheduled_vms,
-            vms=vms,
+            vms=vms_for_upgrade_test,
         )
         capture_func_elapsed(
             cache=request.config.cache,
             cache_key_prefix=cache_key_scope_module,
             func=threaded_wait_for_running_vms,
-            vms=vms,
+            vms=vms_for_upgrade_test,
         )
         capture_func_elapsed(
             cache=request.config.cache,
             cache_key_prefix=cache_key_scope_module,
             func=threaded_wait_for_accessible_vms,
-            vms=vms,
+            vms=vms_for_upgrade_test,
             timeout=TIMEOUT_30MIN,
             tcp_timeout=TIMEOUT_5MIN,
         )
@@ -276,12 +282,12 @@ def vms_for_upgrade_test(
             cache=request.config.cache,
             cache_key_prefix=cache_key_scope_module,
             func=threaded_run_vm_ssh_command,
-            vms=vms,
+            vms=vms_for_upgrade_test,
             commands=shlex.split(
                 f"curl -LO {stress_ng_url_for_cirros} && chmod 0755 stress-ng && ./stress-ng --version"
             ),
         )
-        yield vms
+        yield vms_for_upgrade_test
     monitor_api_requests.wait_for_idle()
 
 
@@ -300,11 +306,11 @@ def idle_monitored_api_requests(monitor_api_requests_object):
 
 
 @pytest.fixture(scope="module")
-def running_vms_with_load(vms_for_upgrade_test, stopped_nginx_vm):
+def running_vms_with_load(running_vms_for_upgrade_test, stopped_nginx_vm):
     commands = "./stress-ng --iomix 1 --cpu 1 --cpu-load 20 --cpu-load-slice 0 --vm 1 --timeout 0 &>/dev/null &"
-    threaded_run_vm_ssh_command(vms=vms_for_upgrade_test, commands=shlex.split(commands))
+    threaded_run_vm_ssh_command(vms=running_vms_for_upgrade_test, commands=shlex.split(commands))
     yield vms_for_upgrade_test
-    threaded_run_vm_ssh_command(vms=vms_for_upgrade_test, commands=shlex.split("killall -9 stress-ng"))
+    threaded_run_vm_ssh_command(vms=running_vms_for_upgrade_test, commands=shlex.split("killall -9 stress-ng"))
 
 
 @pytest.fixture()
@@ -370,7 +376,9 @@ def test_scale(
 ):
     guest_data_list = threaded_get_vm_guest_data(vms=running_vms_with_load, commands=GUEST_DATA_COMMANDS)
     request.config.cache.set(f"{cache_key_scope_func}::guest_data_list", guest_data_list)
-    threaded_verify_guest_data(before_list=get_vm_guest_data_scope_func, after_list=guest_data_list)
+    threaded_verify_guest_data(
+        data_before_action_list=get_vm_guest_data_scope_func, data_after_action_list=guest_data_list
+    )
 
 
 @pytest.mark.usefixtures("stress_ng_url_for_cirros")
@@ -413,7 +421,9 @@ class TestUpgradeScale:
     ):
         before_upgrade_list = threaded_get_vm_guest_data(vms=running_vms_with_load, commands=GUEST_DATA_COMMANDS)
         request.config.cache.set(f"{cache_key_scope_class}::before_upgrade_list", before_upgrade_list)
-        threaded_verify_guest_data(before_list=get_vm_guest_data_scope_class, after_list=before_upgrade_list)
+        threaded_verify_guest_data(
+            data_before_action_list=get_vm_guest_data_scope_class, data_after_action_list=before_upgrade_list
+        )
 
     """ Post-upgrade tests """
 
@@ -438,6 +448,6 @@ class TestUpgradeScale:
         after_upgrade_list = threaded_get_vm_guest_data(vms=running_vms_with_load, commands=GUEST_DATA_COMMANDS)
         request.config.cache.set(f"{cache_key_scope_class}::after_upgrade_list", after_upgrade_list)
         threaded_verify_guest_data(
-            before_list=get_vm_guest_data_scope_class,
-            after_list=after_upgrade_list,
+            data_before_action_list=get_vm_guest_data_scope_class,
+            data_after_action_list=after_upgrade_list,
         )
