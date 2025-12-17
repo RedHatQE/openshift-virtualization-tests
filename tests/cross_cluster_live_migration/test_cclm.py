@@ -1,7 +1,7 @@
 import pytest
 
+from tests.cross_cluster_live_migration.utils import verify_compute_live_migration_after_cclm
 from utilities.constants import TIMEOUT_10MIN
-from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify
 
 TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE = "CCLMvmFromTemplateWithDataSource"
 TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE = "CCLMvmWithInstanceType"
@@ -47,18 +47,7 @@ class TestCCLMvmFromTemplateWithDataSource:
     )
     @pytest.mark.polarion("CNV-12038")
     def test_compute_live_migrate_vms_after_cclm(self, admin_client, namespace, vms_for_cclm):
-        vms_failed_migration = {}
-        for vm in vms_for_cclm:
-            local_vm = VirtualMachineForTests(
-                name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
-            )
-            local_vm.username = vm.username
-            local_vm.password = vm.password
-            try:
-                migrate_vm_and_verify(vm=local_vm, check_ssh_connectivity=True)
-            except Exception as migration_exception:
-                vms_failed_migration[local_vm.name] = migration_exception
-        assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
+        verify_compute_live_migration_after_cclm(client=admin_client, namespace=namespace, vms_list=vms_for_cclm)
 
 
 @pytest.mark.parametrize(
@@ -91,15 +80,4 @@ class TestCCLMvmWithInstanceType:
     )
     @pytest.mark.polarion("CNV-12474")
     def test_compute_live_migrate_vms_after_cclm(self, admin_client, namespace, vms_for_cclm):
-        vms_failed_migration = {}
-        for vm in vms_for_cclm:
-            local_vm = VirtualMachineForTests(
-                name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
-            )
-            local_vm.username = vm.username
-            local_vm.password = vm.password
-            try:
-                migrate_vm_and_verify(vm=local_vm, check_ssh_connectivity=True)
-            except Exception as migration_exception:
-                vms_failed_migration[local_vm.name] = migration_exception
-        assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
+        verify_compute_live_migration_after_cclm(client=admin_client, namespace=namespace, vms_list=vms_for_cclm)
