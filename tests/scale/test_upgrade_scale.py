@@ -245,6 +245,8 @@ def vms_for_upgrade_test(
             for index in range(entry["vm_count"])
         ])
 
+    yield vms
+
 
 @pytest.fixture(scope="module")
 def running_vms_for_upgrade_test(
@@ -309,7 +311,7 @@ def idle_monitored_api_requests(monitor_api_requests_object):
 def running_vms_with_load(running_vms_for_upgrade_test, stopped_nginx_vm):
     commands = "./stress-ng --iomix 1 --cpu 1 --cpu-load 20 --cpu-load-slice 0 --vm 1 --timeout 0 &>/dev/null &"
     threaded_run_vm_ssh_command(vms=running_vms_for_upgrade_test, commands=shlex.split(commands))
-    yield vms_for_upgrade_test
+    yield running_vms_for_upgrade_test
     threaded_run_vm_ssh_command(vms=running_vms_for_upgrade_test, commands=shlex.split("killall -9 stress-ng"))
 
 

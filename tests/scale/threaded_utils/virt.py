@@ -211,7 +211,7 @@ def verify_guest_data(data_before_action: dict, data_after_action: dict) -> None
             if data_before_action[name] >= data_after_action[name]:
                 return_errors.append(
                     "Before datetime is not before after datetime. "
-                    "before: {data_before_action[name]} after: {data_after_action[name]}"
+                    f"before: {data_before_action[name]} after: {data_after_action[name]}"
                 )
         elif name == "btime":
             if data_before_action[name] != data_after_action[name]:
