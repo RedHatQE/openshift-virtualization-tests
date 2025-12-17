@@ -14,15 +14,11 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import get_client
 from ocp_resources.ssp import SSP
 
-from tests.scale.utils import get_user_kubeconfig_context, label_mcps, pause_mcps
+from tests.scale.utils import MachineConfigPoolConfiguration, get_user_kubeconfig_context
 from utilities.constants import TIMEOUT_20MIN, TIMEOUT_30SEC, UNPRIVILEGED_USER
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.operator import (
     get_machine_config_pool_by_name,
-    get_machine_config_pools_conditions,
-    get_mcp_updating_transition_times,
-    wait_for_mcp_update_end,
-    wait_for_mcp_update_start,
 )
 from utilities.virt import get_virt_handler_pods
 
@@ -134,18 +130,12 @@ def calculated_max_pods_per_virt_node(request, existing_pod_count, virt_handler_
 
 
 @pytest.fixture(scope="module")
-def created_kubeletconfigs_for_scale(
-    request, calculated_max_pods_per_virt_node, workers, machine_config_pools
-):  # skip-unused-code
+def created_kubeletconfigs_for_scale(calculated_max_pods_per_virt_node, workers):  # skip-unused-code
     control_plane_mcp = get_machine_config_pool_by_name(mcp_name="master")
     worker_mcp = get_machine_config_pool_by_name(mcp_name="worker")
 
-    initial_updating_transition_times = get_mcp_updating_transition_times(
-        mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
-    )
-
-    pause_mcps(paused=True, mcps=machine_config_pools)
-    with KubeletConfig(
+    control_plane_mcp_labels = {"custom-control-plane-kubelet": "enabled"}
+    control_plane_kubelet_config = KubeletConfig(
         name="test-custom-control-plane-kubelet-config",
         auto_sizing_reserved=True,
         kubelet_config={
@@ -153,45 +143,28 @@ def created_kubeletconfigs_for_scale(
             "kubeAPIQPS": KUBE_API_QPS,
             "kubeAPIBurst": KUBE_API_BURST,
         },
-        machine_config_pool_selector={"matchLabels": {"custom-control-plane-kubelet": "enabled"}},
-    ):
-        with KubeletConfig(
-            name="test-custom-worker-kubelet-config",
-            auto_sizing_reserved=True,
-            kubelet_config={
-                "nodeStatusMaxImages": -1,
-                "kubeAPIQPS": KUBE_API_QPS,
-                "kubeAPIBurst": KUBE_API_BURST,
-                "maxPods": calculated_max_pods_per_virt_node,
-            },
-            machine_config_pool_selector={"matchLabels": {"custom-worker-kubelet": "enabled"}},
-        ):
-            with label_mcps([control_plane_mcp], {"custom-control-plane-kubelet": "enabled"}):
-                with label_mcps([worker_mcp], {"custom-worker-kubelet": "enabled"}):
-                    pause_mcps(paused=False, mcps=machine_config_pools)
-                    wait_for_mcp_update_start(
-                        machine_config_pools_list=machine_config_pools,
-                        initial_transition_times=initial_updating_transition_times,
-                    )
-                    wait_for_mcp_update_end(
-                        machine_config_pools_list=machine_config_pools,
-                        timeout=TIMEOUT_20MIN * len(workers),
-                        sleep=TIMEOUT_30SEC,
-                    )
-
-                    yield
-                    teardown_updating_transition_times = get_mcp_updating_transition_times(
-                        mcp_conditions=get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
-                    )
-                    pause_mcps(paused=True, mcps=machine_config_pools)
-
-    pause_mcps(paused=False, mcps=machine_config_pools)
-    wait_for_mcp_update_start(
-        machine_config_pools_list=machine_config_pools,
-        initial_transition_times=teardown_updating_transition_times,
+        machine_config_pool_selector={"matchLabels": control_plane_mcp_labels},
     )
-    wait_for_mcp_update_end(
-        machine_config_pools_list=machine_config_pools,
+    worker_mcp_labels = {"custom-worker-kubelet": "enabled"}
+    worker_kubelet_config = KubeletConfig(
+        name="test-custom-worker-kubelet-config",
+        auto_sizing_reserved=True,
+        kubelet_config={
+            "nodeStatusMaxImages": -1,
+            "kubeAPIQPS": KUBE_API_QPS,
+            "kubeAPIBurst": KUBE_API_BURST,
+            "maxPods": calculated_max_pods_per_virt_node,
+        },
+        machine_config_pool_selector={"matchLabels": worker_mcp_labels},
+    )
+
+    with MachineConfigPoolConfiguration(
+        resources=[control_plane_kubelet_config, worker_kubelet_config],
+        mcp_labels={
+            control_plane_mcp: control_plane_mcp_labels,
+            worker_mcp: worker_mcp_labels,
+        },
         timeout=TIMEOUT_20MIN * len(workers),
         sleep=TIMEOUT_30SEC,
-    )
+    ):
+        yield
