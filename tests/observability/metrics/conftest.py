@@ -599,7 +599,7 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
 
 
 @pytest.fixture()
-def non_evictable_data_volume(namespace, unprivileged_client):
+def fedora_rwo_dv(namespace, unprivileged_client):
     """
     Create a DataVolume with RWO access mode from a container registry.
     Used for testing non-evictable VMs (RWO + LiveMigrate = non-evictable).
@@ -620,15 +620,15 @@ def non_evictable_data_volume(namespace, unprivileged_client):
 
 
 @pytest.fixture()
-def non_evictable_vm_from_template(request, unprivileged_client, namespace, non_evictable_data_volume):
+def non_evictable_vm_from_template(request, unprivileged_client, namespace, fedora_rwo_dv):
     """
-    Create a VM from template using the non_evictable_data_volume.
+    Create a VM from template using the fedora_rwo_dv DataVolume.
     This VM will have LiveMigrate eviction strategy with RWO storage, making it non-evictable.
     """
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        existing_data_volume=non_evictable_data_volume,
+        existing_data_volume=fedora_rwo_dv,
     ) as vm:
         yield vm
