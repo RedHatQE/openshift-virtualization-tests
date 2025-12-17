@@ -11,6 +11,19 @@ from ocp_resources.resource import ResourceEditor
 
 
 def get_user_kubeconfig_context(kubeconfig_filename: str, username: str) -> str:  # skip-unused-code
+    """
+    In order to modify the kubeconfig client configuration with additional args,
+    the context that is required for a specific user must be specified when calling get_client()
+
+    eg:
+        client_configuration = kubernetes.client.Configuration()
+        client_configuration.connection_pool_maxsize = request.param["connection_pool_maxsize"]
+        get_client(
+            client_configuration=deepcopy(client_configuration),
+            config_file=exported_kubeconfig,
+            context=get_user_kubeconfig_context(kubeconfig_filename=exported_kubeconfig, username=UNPRIVILEGED_USER),
+        )
+    """
     with open(kubeconfig_filename, "r") as file:
         kubeconfig_content = yaml.safe_load(file)
 
