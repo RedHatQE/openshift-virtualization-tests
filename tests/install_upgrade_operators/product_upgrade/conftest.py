@@ -456,12 +456,12 @@ def machine_config_pools_conditions(active_machine_config_pools):
 
 @pytest.fixture(scope="session")
 def master_machine_config_pools(admin_client):
-    return [get_machine_config_pool_by_name(mcp_name="master", client=admin_client)]
+    return [get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="session")
 def worker_machine_config_pools(admin_client):
-    return [get_machine_config_pool_by_name(mcp_name="worker", client=admin_client)]
+    return [get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="module")

@@ -214,7 +214,7 @@ class TestGetMachineConfigPoolByName:
         mock_mcp_class.return_value = mock_mcp
         mock_client = MagicMock()
 
-        result = get_machine_config_pool_by_name("worker", client=mock_client)
+        result = get_machine_config_pool_by_name("worker", admin_client=mock_client)
 
         assert result == mock_mcp
         mock_mcp_class.assert_called_once_with(name="worker", client=mock_client)
@@ -228,7 +228,7 @@ class TestGetMachineConfigPoolByName:
         mock_client = MagicMock()
 
         with pytest.raises(ResourceNotFoundError, match="OperatorHub nonexistent not found"):
-            get_machine_config_pool_by_name("nonexistent", client=mock_client)
+            get_machine_config_pool_by_name("nonexistent", admin_client=mock_client)
 
     @patch("utilities.operator.MachineConfigPool")
     def test_get_mcp_master_pool(self, mock_mcp_class):
@@ -239,7 +239,7 @@ class TestGetMachineConfigPoolByName:
         mock_mcp_class.return_value = mock_mcp
         mock_client = MagicMock()
 
-        result = get_machine_config_pool_by_name("master", client=mock_client)
+        result = get_machine_config_pool_by_name("master", admin_client=mock_client)
 
         assert result == mock_mcp
 

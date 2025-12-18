@@ -8,6 +8,7 @@ from datetime import datetime
 from pprint import pformat
 
 import yaml
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cluster_operator import ClusterOperator
@@ -291,8 +292,8 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
     collect_ocp_must_gather(since_time=since_time)
 
 
-def get_machine_config_pool_by_name(mcp_name, client):
-    mcp = MachineConfigPool(name=mcp_name, client=client)
+def get_machine_config_pool_by_name(mcp_name: str, admin_client: DynamicClient) -> MachineConfigPool:
+    mcp = MachineConfigPool(name=mcp_name, client=admin_client)
     if mcp.exists:
         return mcp
     raise ResourceNotFoundError(f"OperatorHub {mcp_name} not found")
