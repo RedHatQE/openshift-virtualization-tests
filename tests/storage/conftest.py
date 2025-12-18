@@ -68,8 +68,6 @@ from utilities.infra import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-
-from utilities.jira import is_jira_open
 from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
 
