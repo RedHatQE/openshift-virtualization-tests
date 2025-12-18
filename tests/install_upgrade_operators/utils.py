@@ -263,18 +263,20 @@ def get_resource_from_module_name(related_obj, ocp_resources_submodule_list, adm
     )
 
 
-def get_resource_by_name(resource_kind, name, client, namespace=None):
+def get_resource_by_name(
+    resource_kind: Resource, name: str, admin_client: DynamicClient, namespace: str | None = None
+) -> Resource:
     kwargs = {"name": name}
     if namespace:
         kwargs["namespace"] = namespace
-    kwargs["client"] = client
+    kwargs["client"] = admin_client
     resource = resource_kind(**kwargs)
     if resource.exists:
         return resource
     raise ResourceNotFoundError(f"{resource_kind} {name} not found.")
 
 
-def get_resource_key_value(resource, key_name):
+def get_resource_key_value(resource: Resource, key_name: str) -> Any:
     return benedict(
         resource.instance.to_dict()["spec"],
         keypath_separator=KEY_PATH_SEPARATOR,

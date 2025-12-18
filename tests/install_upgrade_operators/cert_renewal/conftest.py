@@ -66,7 +66,7 @@ def initial_certificates_dates(admin_client, hco_namespace, tmpdir, secrets_with
         hco_namespace_name=hco_namespace.name,
         tmpdir=tmpdir,
         secrets_to_skip=secrets_with_non_closed_bugs,
-        client=admin_client,
+        admin_client=admin_client,
         seconds=TIMEOUT_11MIN,
     )
 

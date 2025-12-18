@@ -94,7 +94,9 @@ def csv_scope_class(admin_client, hco_namespace, installing_cnv):
 
 @pytest.fixture(scope="module")
 def virt_operator_deployment(admin_client, hco_namespace):
-    return get_deployment_by_name(deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name, client=admin_client)
+    return get_deployment_by_name(
+        deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="module")

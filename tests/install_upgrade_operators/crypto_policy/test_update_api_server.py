@@ -45,7 +45,7 @@ def test_update_api_server(
         crypto_policy=cnv_crypto_policy_matrix__function__,
         hco_namespace=hco_namespace.name,
         hco_name=py_config["hco_cr_name"],
-        client=admin_client,
+        admin_client=admin_client,
     )
 
     # Old profile works only on non-FIPS cluster

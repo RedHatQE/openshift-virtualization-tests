@@ -31,7 +31,7 @@ def updated_hco_tls_custom_policy(hyperconverged_resource_scope_function):
 def expected_all_managed_crs_crypto_policies(resources_dict, admin_client):
     return get_resources_crypto_policy_dict(
         resources_dict=resources_dict,
-        client=admin_client,
+        admin_client=admin_client,
     )
 
 
@@ -64,7 +64,7 @@ def test_hco_overriding_apiserver_crypto_policy(
         sleep=TIMEOUT_10SEC,
         func=get_resources_crypto_policy_dict,
         resources_dict=resources_dict,
-        client=admin_client,
+        admin_client=admin_client,
     )
     try:
         for sample in sampler:

@@ -66,7 +66,7 @@ def resource_crypto_policy_settings(request, admin_client):
         resource=request.param.get(RESOURCE_TYPE_STR),
         name=request.param.get(RESOURCE_NAME_STR),
         key_name=request.param.get(KEY_NAME_STR),
-        client=admin_client,
+        admin_client=admin_client,
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
 

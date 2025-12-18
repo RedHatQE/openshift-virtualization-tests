@@ -24,7 +24,7 @@ def hco_crypto_policy(hco_namespace, admin_client):
         resource=HyperConverged,
         name=py_config["hco_cr_name"],
         key_name=TLS_SECURITY_PROFILE,
-        client=admin_client,
+        admin_client=admin_client,
         namespace=hco_namespace.name,
     )
 

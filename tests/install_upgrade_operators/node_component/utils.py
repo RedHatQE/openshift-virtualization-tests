@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 
 from kubernetes.client.rest import ApiException
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -424,9 +425,9 @@ def update_subscription_config(admin_client, hco_namespace, subscription, config
     )
 
 
-def pods_with_node_selector(namespace_name, node_selectors, dyn_client):
+def pods_with_node_selector(namespace_name: str, node_selectors: set[str], admin_client: DynamicClient) -> list[str]:
     pods_with_labels = []
-    for pod in list(Pod.get(namespace=namespace_name, dyn_client=dyn_client)):
+    for pod in list(Pod.get(namespace=namespace_name, dyn_client=admin_client)):
         node_selectors_from_pod = pod.instance.spec.get("nodeSelector", [])
         LOGGER.info(f"Node selector for pod {pod.name}: {node_selectors_from_pod}")
         if node_selectors_from_pod and (set(node_selectors_from_pod.keys()).intersection(node_selectors)):
@@ -434,7 +435,7 @@ def pods_with_node_selector(namespace_name, node_selectors, dyn_client):
     return pods_with_labels
 
 
-def wait_for_pod_node_selector_clean_up(namespace_name, dyn_client):
+def wait_for_pod_node_selector_clean_up(namespace_name: str, admin_client: DynamicClient) -> None:
     node_selectors = set(list(zip(*SELECTORS))[0])
     LOGGER.info(f"Looking for pods with nodeSelectors keys: {node_selectors}")
     samples = TimeoutSampler(
@@ -443,7 +444,7 @@ def wait_for_pod_node_selector_clean_up(namespace_name, dyn_client):
         func=pods_with_node_selector,
         namespace_name=namespace_name,
         node_selectors=node_selectors,
-        dyn_client=dyn_client,
+        admin_client=admin_client,
         exceptions_dict={NotFoundError: []},
     )
     sample = None
