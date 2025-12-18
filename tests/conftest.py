@@ -2270,6 +2270,20 @@ def running_metric_vm(namespace, unprivileged_client):
         yield vm
 
 
+@pytest.fixture
+def running_metric_vm_scope_function(namespace, unprivileged_client):
+    name = "running-metrics-vm"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        client=unprivileged_client,
+        network_model=VIRTIO,
+    ) as vm:
+        running_vm(vm=vm, wait_for_cloud_init=True)
+        yield vm
+
+
 @pytest.fixture()
 def vm_from_template_with_existing_dv(
     request,
