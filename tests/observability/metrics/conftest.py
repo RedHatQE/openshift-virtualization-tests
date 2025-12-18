@@ -17,10 +17,11 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
-    KUBEVIRT_VMI_STATUS_ADDRESSES,
-    KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI, KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+    KUBEVIRT_VMI_STATUS_ADDRESSES,
+    KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -600,6 +601,7 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
             prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         )
     )
+
 
 @pytest.fixture(scope="class")
 def initial_vmi_deletion_metrics_values(prometheus):
