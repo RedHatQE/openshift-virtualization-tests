@@ -250,7 +250,12 @@ def vms_for_upgrade_test(
 
 @pytest.fixture(scope="module")
 def running_vms_for_upgrade_test(
-    request, prometheus, cache_key_scope_module, stress_ng_url_for_cirros, vms_for_upgrade_test
+    request,
+    admin_client,
+    prometheus,
+    cache_key_scope_module,
+    stress_ng_url_for_cirros,
+    vms_for_upgrade_test,
 ):
     monitor_api_requests = MonitorResourceAPIServerRequests(
         prometheus=prometheus,
@@ -259,7 +264,9 @@ def running_vms_for_upgrade_test(
     )
 
     monitor_api_requests.wait_for_idle()
-    with LocalThreadedScaleResources(resources=vms_for_upgrade_test, cache_key_prefix=cache_key_scope_module):
+    with LocalThreadedScaleResources(
+        resources=vms_for_upgrade_test, cache_key_prefix=cache_key_scope_module, admin_client=admin_client
+    ):
         capture_func_elapsed(
             cache=request.config.cache,
             cache_key_prefix=cache_key_scope_module,
