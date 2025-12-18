@@ -607,6 +607,43 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     return dv.res
 
 
+def data_volume_template_with_unique_name(data_source, storage_class=None, name_suffix=None):
+    """Create DataVolume template with unique name to avoid conflicts.
+
+    Args:
+        data_source: The data source to use
+        storage_class: Optional storage class override
+        name_suffix: Optional suffix for the name (defaults to timestamp)
+    """
+
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+
+    # Generate unique name
+    if name_suffix:
+        unique_name = f"{data_source.name}-{name_suffix}"
+    else:
+        unique_name = utilities.infra.unique_name(name=data_source.name)
+
+    dv = DataVolume(
+        name=unique_name,
+        namespace=data_source.namespace,
+        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
+        or source_dict.get("status", {}).get("restoreSize"),
+        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        api_name="storage",
+        source_ref={
+            "kind": data_source.kind,
+            "name": data_source.name,
+            "namespace": data_source.namespace,
+        },
+    )
+    dv.to_dict()
+    # dataVolumeTemplate is not required to have the namespace explicitly set
+    dv.res["metadata"].pop("namespace", None)
+    return dv.res
+
+
 def get_test_artifact_server_url(schema="https"):
     """
     Verify https server server connectivity (regardless of schema).
@@ -704,11 +741,21 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
-def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
-    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(command))[0]
-    assert expected_result in output.strip(), (
-        f"Expected '{expected_result}' not found in command output: '{output.strip()}'"
-    )
+def run_command_on_vm_and_check_output(vm, command, expected_result):
+    """Run command on RHEL VM via SSH and verify expected result is in output.
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+    Raises:
+        AssertionError: If expected result is not in output.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+    )[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
 
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
