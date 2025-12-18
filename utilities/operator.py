@@ -350,7 +350,7 @@ def wait_for_catalog_source_disabled(catalog_name):
 def create_catalog_source(
     catalog_name,
     image,
-    client,
+    admin_client,
     display_name="OpenShift Virtualization Index Image",
 ):
     LOGGER.info(f"Create catalog source {catalog_name}")
@@ -362,7 +362,7 @@ def create_catalog_source(
         image=image,
         publisher="Red Hat",
         teardown=False,
-        client=client,
+        client=admin_client,
     ) as catalog_source:
         return catalog_source
 
@@ -401,7 +401,7 @@ def wait_for_catalogsource_ready(admin_client, catalog_name):
         raise
 
 
-def create_operator_group(operator_group_name, namespace_name, client, target_namespaces=None):
+def create_operator_group(operator_group_name, namespace_name, admin_client, target_namespaces=None):
     """
         Create specified Operator group.
 
@@ -420,7 +420,7 @@ def create_operator_group(operator_group_name, namespace_name, client, target_na
         namespace=namespace_name,
         target_namespaces=target_namespaces,
         teardown=False,
-        client=client,
+        client=admin_client,
     ) as operator_group:
         return operator_group
 
@@ -430,7 +430,7 @@ def create_subscription(
     package_name,
     namespace_name,
     catalogsource_name,
-    client,
+    admin_client,
     channel_name="stable",
     install_plan_approval="Automatic",
 ):
@@ -447,7 +447,7 @@ def create_subscription(
         source=catalogsource_name,
         source_namespace=py_config["marketplace_namespace"],
         teardown=False,
-        client=client,
+        client=admin_client,
     ) as subscription:
         return subscription
 
@@ -565,14 +565,14 @@ def get_mcp_updating_transition_times(mcp_conditions):
     return updating_transition_times
 
 
-def create_operator(operator_class, operator_name, client, namespace_name=None):
+def create_operator(operator_class, operator_name, admin_client, namespace_name=None):
     """
     ### unused_code: ignore ###
     """
     if namespace_name:
-        operator = operator_class(name=operator_name, namespace=namespace_name, client=client)
+        operator = operator_class(name=operator_name, namespace=namespace_name, client=admin_client)
     else:
-        operator = operator_class(name=operator_name, client=client)
+        operator = operator_class(name=operator_name, client=admin_client)
     if operator.exists:
         LOGGER.warning(f"Operator: {operator_name} already exists in namespace: {namespace_name}")
         return
@@ -610,7 +610,7 @@ def update_image_in_catalog_source(dyn_client, image, catalog_source_name, cr_na
         create_catalog_source(
             catalog_name=catalog_source_name,
             image=image,
-            client=dyn_client,
+            admin_client=dyn_client,
         )
         LOGGER.info(f"Waiting for {cr_name} packagemanifest associated with {catalog_source_name} to appear")
         wait_for_package_manifest_to_exist(dyn_client=dyn_client, catalog_name=catalog_source_name, cr_name=cr_name)

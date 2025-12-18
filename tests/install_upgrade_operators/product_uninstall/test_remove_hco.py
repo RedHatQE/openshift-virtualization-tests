@@ -41,7 +41,7 @@ def assert_expected_strategy(resource_objects, expected_strategy):
     )
 
 
-def delete_cdi_configmap_and_secret(hco_namespace_name, client):
+def delete_cdi_configmap_and_secret(hco_namespace_name, admin_client):
     cdi_configmaps = [
         "cdi-apiserver-signer-bundle",
         "cdi-uploadproxy-signer-bundle",
@@ -49,14 +49,14 @@ def delete_cdi_configmap_and_secret(hco_namespace_name, client):
         "cdi-uploadserver-signer-bundle",
     ]
     secret_objects = [
-        Secret(name=_secret, namespace=hco_namespace_name, client=client)
+        Secret(name=_secret, namespace=hco_namespace_name, client=admin_client)
         for _secret in CDI_SECRETS
-        if Secret(name=_secret, namespace=hco_namespace_name, client=client).exists
+        if Secret(name=_secret, namespace=hco_namespace_name, client=admin_client).exists
     ]
     configmap_objects = [
-        ConfigMap(name=_cm, namespace=hco_namespace_name, client=client)
+        ConfigMap(name=_cm, namespace=hco_namespace_name, client=admin_client)
         for _cm in cdi_configmaps
-        if ConfigMap(name=_cm, namespace=hco_namespace_name, client=client).exists
+        if ConfigMap(name=_cm, namespace=hco_namespace_name, client=admin_client).exists
     ]
 
     for resource in secret_objects + configmap_objects:
@@ -167,7 +167,7 @@ def stopped_fedora_vm(hco_fedora_vm):
 @pytest.fixture(scope="function")
 def removed_hco(admin_client, hco_namespace, hyperconverged_resource_scope_function):
     hyperconverged_resource_scope_function.delete(wait=True, timeout=TIMEOUT_10MIN)
-    delete_cdi_configmap_and_secret(hco_namespace_name=hco_namespace.name, client=admin_client)
+    delete_cdi_configmap_and_secret(hco_namespace_name=hco_namespace.name, admin_client=admin_client)
     yield
 
     # Recreate HCO, if it doesn't exist

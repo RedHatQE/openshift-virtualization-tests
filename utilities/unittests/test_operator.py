@@ -1277,7 +1277,7 @@ class TestCreateCatalogSource:
         result = create_catalog_source(
             catalog_name="test-catalog",
             image="registry.io/catalog:latest",
-            client=mock_client,
+            admin_client=mock_client,
         )
 
         assert result == mock_catalog
@@ -1358,7 +1358,7 @@ class TestCreateOperatorGroup:
         result = create_operator_group(
             operator_group_name="test-og",
             namespace_name="test-namespace",
-            client=mock_client,
+            admin_client=mock_client,
         )
 
         assert result == mock_og
@@ -1382,7 +1382,7 @@ class TestCreateOperatorGroup:
         create_operator_group(
             operator_group_name="test-og",
             namespace_name="test-namespace",
-            client=mock_client,
+            admin_client=mock_client,
             target_namespaces=["ns1", "ns2"],
         )
 
@@ -1410,7 +1410,7 @@ class TestCreateSubscription:
             package_name="test-package",
             namespace_name="test-namespace",
             catalogsource_name="test-catalog",
-            client=mock_client,
+            admin_client=mock_client,
         )
 
         assert result == mock_sub
@@ -1435,7 +1435,7 @@ class TestCreateSubscription:
             package_name="test-package",
             namespace_name="test-namespace",
             catalogsource_name="test-catalog",
-            client=mock_client,
+            admin_client=mock_client,
             channel_name="candidate",
             install_plan_approval="Manual",
         )
@@ -1731,7 +1731,7 @@ class TestCreateOperator:
         result = create_operator(
             mock_operator_class,
             "test-operator",
-            client=mock_client,
+            admin_client=mock_client,
             namespace_name="test-namespace",
         )
 
@@ -1751,7 +1751,7 @@ class TestCreateOperator:
         mock_operator_class.return_value = mock_operator
         mock_client = MagicMock()
 
-        create_operator(mock_operator_class, "test-operator", client=mock_client)
+        create_operator(mock_operator_class, "test-operator", admin_client=mock_client)
 
         mock_operator_class.assert_called_once_with(name="test-operator", client=mock_client)
         mock_operator.deploy.assert_called_once_with(wait=True)
@@ -1767,7 +1767,7 @@ class TestCreateOperator:
         result = create_operator(
             mock_operator_class,
             "test-operator",
-            client=mock_client,
+            admin_client=mock_client,
             namespace_name="test-namespace",
         )
 

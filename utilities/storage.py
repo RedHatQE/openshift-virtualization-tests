@@ -820,11 +820,11 @@ def add_dv_to_vm(vm, dv_name=None, template_dv=None):
 
 def create_hpp_storage_class(
     storage_class_name,
-    client,
+    admin_client,
 ):
     storage_class = HppCsiStorageClass(
         name=storage_class_name,
-        client=client,
+        client=admin_client,
     )
     storage_class.deploy()
 

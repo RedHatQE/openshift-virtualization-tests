@@ -139,7 +139,7 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
     catalog_source = create_catalog_source(
         catalog_name=HCO_CATALOG_SOURCE,
         image=cnv_image_url,
-        client=admin_client,
+        admin_client=admin_client,
     )
     wait_for_catalogsource_ready(
         admin_client=admin_client,
@@ -168,7 +168,7 @@ def created_cnv_operator_group(admin_client, created_cnv_namespace):
     return create_operator_group(
         namespace_name=cnv_namespace_name,
         operator_group_name="openshift-cnv-group",
-        client=admin_client,
+        admin_client=admin_client,
         target_namespaces=[cnv_namespace_name],
     )
 
@@ -186,7 +186,7 @@ def installed_cnv_subscription(
         package_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
         catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name,
-        client=admin_client,
+        admin_client=admin_client,
         channel_name=cnv_version_to_install_info["channel"],
     )
 
@@ -237,7 +237,7 @@ def created_hco_cr(admin_client, created_cnv_namespace, installed_openshift_virt
     return create_operator(
         operator_class=HyperConverged,
         operator_name=py_config["hco_cr_name"],
-        client=admin_client,
+        admin_client=admin_client,
         namespace_name=created_cnv_namespace.name,
     )
 
@@ -296,11 +296,11 @@ def installed_hpp(admin_client, cluster_backend_storage, hpp_volume_size):
     hpp_cr.deploy(wait=True)
     create_hpp_storage_class(
         storage_class_name=HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC,
-        client=admin_client,
+        admin_client=admin_client,
     )
     create_hpp_storage_class(
         storage_class_name=HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK,
-        client=admin_client,
+        admin_client=admin_client,
     )
 
 
