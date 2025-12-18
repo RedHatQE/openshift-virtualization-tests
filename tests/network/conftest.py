@@ -21,8 +21,6 @@ from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    IPV4_STR,
-    IPV6_STR,
     ISTIO_SYSTEM_DEFAULT_NS,
     OVS_BRIDGE,
     VIRT_HANDLER,
@@ -36,7 +34,6 @@ from utilities.infra import (
 )
 from utilities.network import (
     get_cluster_cni_type,
-    ip_version_data_from_matrix,
     network_nad,
 )
 from utilities.pytest_utils import exit_pytest_execution
@@ -70,24 +67,6 @@ def virt_handler_pod(admin_client):
 @pytest.fixture(scope="session")
 def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv4_supported_cluster and ipv6_supported_cluster
-
-
-@pytest.fixture()
-def fail_if_not_ipv4_supported_cluster_from_mtx(
-    request,
-    ipv4_supported_cluster,
-):
-    if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster:
-        pytest.fail(reason="IPv4 is not supported in this cluster")
-
-
-@pytest.fixture()
-def fail_if_not_ipv6_supported_cluster_from_mtx(
-    request,
-    ipv6_supported_cluster,
-):
-    if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster:
-        pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
 @pytest.fixture()

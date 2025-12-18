@@ -399,23 +399,23 @@ def test_connectivity_after_migration_and_restart(
     )
 
 
-@pytest.mark.polarion("CNV-2061")
 @pytest.mark.s390x
+@pytest.mark.usefixtures("http_service", "migrated_vmb_and_wait_for_success")
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param("ipv4", marks=[pytest.mark.ipv4, pytest.mark.polarion("CNV-12508")]),
+        pytest.param("ipv6", marks=[pytest.mark.ipv6, pytest.mark.polarion("CNV-12509")]),
+    ],
+)
 def test_migration_with_masquerade(
-    ip_stack_version_matrix__module__,
-    admin_client,
-    fail_if_not_ipv4_supported_cluster_from_mtx,
-    fail_if_not_ipv6_supported_cluster_from_mtx,
-    vma,
-    vmb,
     running_vma,
     running_vmb,
-    migrated_vmb_and_wait_for_success,
+    ip_family,
 ):
-    LOGGER.info(f"Testing HTTP service after migration on node {running_vmb.vmi.node.name}")
     http_port_accessible(
         vm=running_vma,
-        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_stack_version_matrix__module__),
+        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_family),
         server_port=running_vmb.custom_service.service_port,
     )
 
