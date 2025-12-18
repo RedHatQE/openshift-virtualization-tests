@@ -2,6 +2,7 @@ import logging
 import os
 
 import bitmath
+from ocp_resources.storage_class import StorageClass
 import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
@@ -320,3 +321,10 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
     if not latest_z_stream:
         pytest.exit(reason="CNV version can't be determined for this run", returncode=INSTALLATION_VERSION_MISMATCH)
     return latest_z_stream
+
+@pytest.fixture
+def storage_class_ocs_virt(admin_client):
+    # if its not on the matrix - we dont need to test it
+    if StorageClassNames.CEPH_RBD_VIRTUALIZATION not in py_config["storage_class_matrix"]:
+        pytest.xfail(f"Storage class {StorageClassNames.CEPH_RBD_VIRTUALIZATION} not found in the storage class matrix")
+    return StorageClass(client=admin_client, name=StorageClassNames.CEPH_RBD_VIRTUALIZATION, ensure_exists=True)
