@@ -71,10 +71,6 @@ pytestmark = [
     pytest.mark.destructive,
     pytest.mark.threaded,
     pytest.mark.cpu_manager,
-    pytest.mark.upgrade,
-    pytest.mark.ocp_upgrade,
-    pytest.mark.cnv_upgrade,
-    pytest.mark.eus_upgrade,
     pytest.mark.usefixtures(
         "fail_if_no_stress_ng",
         "cache_key_scope_module",
@@ -390,6 +386,10 @@ def test_scale(
     )
 
 
+@pytest.mark.upgrade
+@pytest.mark.ocp_upgrade
+@pytest.mark.cnv_upgrade
+@pytest.mark.eus_upgrade
 @pytest.mark.usefixtures("stress_ng_url_for_cirros")
 @pytest.mark.parametrize(
     "cache_key_scope_class,created_data_source_for_scale,vms_for_upgrade_test",
