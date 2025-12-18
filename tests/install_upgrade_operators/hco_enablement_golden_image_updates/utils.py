@@ -1,6 +1,7 @@
 import logging
 import re
 
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
 
@@ -90,8 +91,8 @@ def get_templates_by_type_from_hco_status(hco_status_templates, template_type=CO
     ]
 
 
-def get_data_import_cron_by_name(namespace, cron_name, client):
-    data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=client)
+def get_data_import_cron_by_name(namespace: str, cron_name: str, admin_client: DynamicClient) -> DataImportCron:
+    data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=admin_client)
     if data_import_cron.exists:
         return data_import_cron
     raise ResourceNotFoundError(f"DataImportCron: {data_import_cron} not found in namespace: {namespace}")

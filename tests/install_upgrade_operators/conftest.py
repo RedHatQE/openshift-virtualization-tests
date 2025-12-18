@@ -57,7 +57,7 @@ def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_de
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
         deployment_name=deployment_name,
-        client=admin_client,
+        admin_client=admin_client,
     )
 
 
@@ -228,7 +228,7 @@ def updated_resource(
     cr = get_resource_by_name(
         resource_kind=cr_kind,
         name=request.param.get(RESOURCE_NAME_STR),
-        client=admin_client,
+        admin_client=admin_client,
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     with ResourceEditorValidateHCOReconcile(

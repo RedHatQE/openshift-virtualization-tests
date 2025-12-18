@@ -3,8 +3,9 @@ from contextlib import contextmanager
 
 import deepdiff
 from benedict import benedict
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor
 from packaging.version import Version
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -35,7 +36,9 @@ from utilities.operator import wait_for_cluster_operator_stabilize
 LOGGER = logging.getLogger(__name__)
 
 
-def get_resource_crypto_policy(resource, name, key_name, client, namespace=None):
+def get_resource_crypto_policy(
+    resource: Resource, name: str, key_name: str, admin_client: DynamicClient, namespace: str | None = None
+) -> dict | None:
     """
     This function is used to get crypto policy settings associated with a resource
 
@@ -44,18 +47,22 @@ def get_resource_crypto_policy(resource, name, key_name, client, namespace=None)
         name (str): name of a resource
         key_name (str): full key path with separator
         namespace (str, optional): namespace for the resource
-        client (DynamicClient): Dynamic client object
+        admin_client (DynamicClient): Dynamic client object
 
     Returns:
-        dict: crypto policy settings value associated with the resource
+        dict | None: crypto policy settings value associated with the resource
     """
     return get_resource_key_value(
         key_name=key_name,
-        resource=get_resource_by_name(resource_kind=resource, name=name, namespace=namespace, client=client),
+        resource=get_resource_by_name(
+            resource_kind=resource, name=name, admin_client=admin_client, namespace=namespace
+        ),
     )
 
 
-def get_resources_crypto_policy_dict(resources_dict, client, resources=MANAGED_CRS_LIST):
+def get_resources_crypto_policy_dict(
+    resources_dict: dict, admin_client: DynamicClient, resources: list[Resource] = MANAGED_CRS_LIST
+) -> dict:
     """
     This function collects crypto policy corresponding to each resources in the list
     'resources'
@@ -63,7 +70,7 @@ def get_resources_crypto_policy_dict(resources_dict, client, resources=MANAGED_C
     Args:
         resources_dict (dict): Dict containing resource name, key_name, namespace
         resources (list): List of resource objects whose TLS policies are required
-        client (DynamicClient, optional): Dynamic client object
+        admin_client (DynamicClient): Dynamic client object
 
     Returns:
         dict: crypto policy settings value for each resource in 'resources'
@@ -73,14 +80,21 @@ def get_resources_crypto_policy_dict(resources_dict, client, resources=MANAGED_C
             resource=resource,
             name=resources_dict[resource][RESOURCE_NAME_STR],
             key_name=resources_dict[resource][KEY_NAME_STR],
-            client=client,
+            admin_client=admin_client,
             namespace=resources_dict[resource].get(RESOURCE_NAMESPACE_STR),
         )
         for resource in resources
     }
 
 
-def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, key_name, expected_policy, client):
+def wait_for_crypto_policy_update(
+    resource: Resource,
+    resource_namespace: str,
+    resource_name: str,
+    key_name: str,
+    expected_policy: dict,
+    admin_client: DynamicClient,
+) -> str | None:
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=2,
@@ -88,7 +102,7 @@ def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, k
         resource=resource,
         name=resource_name,
         key_name=key_name,
-        client=client,
+        admin_client=admin_client,
         namespace=resource_namespace,
     )
     sample = None
@@ -101,21 +115,22 @@ def wait_for_crypto_policy_update(resource, resource_namespace, resource_name, k
                 expected_policy,
                 ignore_type_in_groups=[(benedict, dict)],
             ):
-                return
+                return None
     except TimeoutExpiredError:
         error_message = (
             f"For resource {resource} {resource_name}, expected policy {expected_policy}, did not match {sample} "
         )
         LOGGER.error(error_message)
         return error_message
+    return None
 
 
 def assert_crypto_policy_propagated_to_components(
-    crypto_policy,
-    resources_dict,
-    updated_resource_kind,
-    client,
-):
+    crypto_policy: str,
+    resources_dict: dict,
+    updated_resource_kind: str,
+    admin_client: DynamicClient,
+) -> None:
     """
     This function is used to assert whether the updated crypto policy settings
     propagated to all CNV components - CDI, KubeVirt, CNAO & SSP
@@ -126,7 +141,7 @@ def assert_crypto_policy_propagated_to_components(
                                in dict
         updated_resource_kind (str): Resource kind of the updated resource
             ( HyperConverged or APIServer )
-        client (DynamicClient): Dynamic client object
+        admin_client (DynamicClient): Dynamic client object
 
     Raises:
         AssertionError: When TLS crypto policy of HCO managed CRs(KubeVirt, SSP, CNAO
@@ -141,7 +156,7 @@ def assert_crypto_policy_propagated_to_components(
             resource_name=resources_dict[resource][RESOURCE_NAME_STR],
             key_name=resources_dict[resource][KEY_NAME_STR],
             expected_policy=expected_value,
-            client=client,
+            admin_client=admin_client,
         )
         if error_message:
             conflicting_resources.append(resource.kind)
@@ -151,12 +166,14 @@ def assert_crypto_policy_propagated_to_components(
     )
 
 
-def assert_no_crypto_policy_in_hco(crypto_policy, hco_namespace, hco_name, client):
+def assert_no_crypto_policy_in_hco(
+    crypto_policy: str, hco_namespace: str, hco_name: str, admin_client: DynamicClient
+) -> None:
     hco_crypto_policy = get_resource_crypto_policy(
         resource=HyperConverged,
         name=hco_name,
         key_name=TLS_SECURITY_PROFILE,
-        client=client,
+        admin_client=admin_client,
         namespace=hco_namespace,
     )
     assert not hco_crypto_policy, (

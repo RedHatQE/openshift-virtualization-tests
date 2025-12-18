@@ -326,7 +326,7 @@ def _wait_for_oauth_openshift_deployment(admin_client):
     dp = get_deployment_by_name(
         deployment_name="oauth-openshift",
         namespace_name="openshift-authentication",
-        client=admin_client,
+        admin_client=admin_client,
     )
 
     _log = f"Wait for {dp.name} -> Type: Progressing -> Reason:"
@@ -457,10 +457,13 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
         name = "cnv-tests-utilities"
         if Namespace(client=admin_client, name=name).exists:
             exit_pytest_execution(
+                admin_client=admin_client,
                 log_message=f"{name} namespace already exists."
                 f"\nAfter verifying no one else is performing tests against the cluster, run:"
                 f"\n'oc delete namespace {name}'",
                 return_code=100,
+                filename="cnv_tests_utilities_ns_failure.txt",
+                message=f"{name} namespace already exists.",
             )
 
         else:

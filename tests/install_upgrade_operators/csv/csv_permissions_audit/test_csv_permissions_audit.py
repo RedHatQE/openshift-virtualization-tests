@@ -47,7 +47,7 @@ def csv_permissions(admin_client):
     return get_csv_permissions(
         namespace=py_config["hco_namespace"],
         csv_name_starts_with=py_config["hco_cr_name"],
-        dyn_client=admin_client,
+        admin_client=admin_client,
     )
 
 
@@ -62,7 +62,7 @@ def csv_permissions_from_yaml(pytestconfig, admin_client):
                     get_csv_permissions(
                         namespace=py_config["hco_namespace"],
                         csv_name_starts_with=py_config["hco_cr_name"],
-                        dyn_client=admin_client,
+                        admin_client=admin_client,
                     )
                 )
             )
