@@ -554,11 +554,6 @@ def deleted_vmi(running_metric_vm, initial_vmi_deletion_metrics_values):
 
 
 @pytest.fixture()
-def deleted_vmi_scope_function(running_metric_vm_scope_function):
-    running_metric_vm_scope_function.delete(wait=True)
-
-
-@pytest.fixture()
 def deleted_windows_vmi(windows_vm_for_test):
     windows_vm_for_test.delete(wait=True)
 
