@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Add quarantine label for PRs starting with "Quarantine:" or "CherryPicked: [cnv-X.Y] Quarantine:"'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const originalTitle = context.payload.pull_request.title;
