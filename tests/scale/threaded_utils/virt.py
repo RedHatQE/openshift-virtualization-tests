@@ -28,7 +28,7 @@ def threaded_wait_for_accessible_vms(
     sleep: int = TIMEOUT_10SEC,
 ) -> None:  # skip-unused-code
     """
-    Asyncronously wait for accessible VMs
+    Asynchronously wait for accessible VMs
 
     Args:
         vms (list[VirtualMachineForTests]): List of VMs to wait for
