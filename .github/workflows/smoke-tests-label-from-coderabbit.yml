@@ -5,12 +5,12 @@
 # ┌──────────────────────────────────────────────────────────────┬───────────────────────────────┬────────────────────────────────────────┐
 # │ CodeRabbit Comment Contains                                  │ Current Label                 │ Action                                 │
 # ├──────────────────────────────────────────────────────────────┼───────────────────────────────┼────────────────────────────────────────┤
-# │ "Run smoke tests: True" AND "**Test Execution Plan**"       │ None                          │ ✅ Add 'smoke-tests:pending-analysis'  │
-# │ "Run smoke tests: True" AND "**Test Execution Plan**"       │ Already has label             │ ✅ No-op (safe)                        │
-# │ "Run smoke tests: False" AND "**Test Execution Plan**"      │ Has label                     │ ✅ Remove label                        │
-# │ "Run smoke tests: False" AND "**Test Execution Plan**"      │ None                          │ ✅ No action                           │
+# │ "**Run smoke tests: True**" AND "## Test Execution Plan"    │ None                          │ ✅ Add 'smoke-tests:pending-analysis'  │
+# │ "**Run smoke tests: True**" AND "## Test Execution Plan"    │ Already has label             │ ✅ No-op (safe)                        │
+# │ "**Run smoke tests: False**" AND "## Test Execution Plan"   │ Has label                     │ ✅ Remove label                        │
+# │ "**Run smoke tests: False**" AND "## Test Execution Plan"   │ None                          │ ✅ No action                           │
 # │ New commit pushed (PR opened/sync/reopened)                 │ Has label                     │ ✅ Remove label                        │
-# │ Missing "**Test Execution Plan**"                            │ Any                           │ ⏭️ No action                           │
+# │ Missing "## Test Execution Plan"                             │ Any                           │ ⏭️ No action                           │
 # │ Neither pattern                                              │ Any                           │ ⏭️ No action                           │
 # │ Comment not from CodeRabbit                                  │ Any                           │ ⏭️ Does NOT run                        │
 # └──────────────────────────────────────────────────────────────┴───────────────────────────────┴────────────────────────────────────────┘
@@ -34,18 +34,12 @@ permissions:
 
 jobs:
   reset-on-push:
-    name: Reset label on new commit
+    name: Reset label on push
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Debug - Log push event
-        run: |
-          echo ""
-          echo "ACTION: Removing smoke-tests:pending-analysis label (if exists)"
-          echo "=========================================="
-
-      - name: Remove smoke-tests:pending-analysis label
+      - name: Remove label
         uses: actions-ecosystem/action-remove-labels@v1
         continue-on-error: true
         with:
@@ -53,53 +47,61 @@ jobs:
           labels: smoke-tests:pending-analysis
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Completion message
-        run: echo "✅ Label removed (if it existed) - waiting for new CodeRabbit analysis"
-
   manage-smoke-tests-label:
-    name: Manage smoke-tests:pending-analysis label
+    name: Manage label from CodeRabbit
     # Only run for CodeRabbit comments
     if: |
       github.event_name != 'pull_request_target' &&
-      github.event.comment != null &&
-      (github.event.comment.user.login == 'coderabbitai' || github.event.comment.user.login == 'coderabbitai[bot]')
+      (
+        (github.event_name == 'issue_comment' &&
+         (github.event.comment.user.login == 'coderabbitai' || github.event.comment.user.login == 'coderabbitai[bot]')) ||
+        (github.event_name == 'pull_request_review_comment' &&
+         (github.event.review_comment.user.login == 'coderabbitai' || github.event.review_comment.user.login == 'coderabbitai[bot]'))
+      )
     runs-on: ubuntu-latest
 
     steps:
-      - name: Debug - Log comment information
+      - name: Determine label action
+        id: flow
+        env:
+          COMMENT_BODY: ${{ github.event_name == 'pull_request_review_comment' && github.event.review_comment.body || github.event.comment.body }}
         run: |
-          echo "=========================================="
-          echo "Comment Debug Information"
-          echo "=========================================="
-          echo "Comment Author: ${{ github.event.comment.user.login }}"
-          echo "=========================================="
-          echo "Condition Matching Results"
-          echo "=========================================="
-          echo "Contains '**Test Execution Plan**'? ${{ contains(github.event.comment.body, '**Test Execution Plan**') }}"
-          echo "Contains 'Run smoke tests: True'? ${{ contains(github.event.comment.body, 'Run smoke tests: True') }}"
-          echo "Contains 'Run smoke tests: False'? ${{ contains(github.event.comment.body, 'Run smoke tests: False') }}"
-          echo ""
-          echo "=========================================="
+          [ -z "$COMMENT_BODY" ] && { echo "ERROR: Empty comment body"; exit 1; }
 
-      - name: Add smoke-tests:pending-analysis label
-        if: "contains(github.event.comment.body, 'Run smoke tests: True') && contains(github.event.comment.body, '**Test Execution Plan**')"
+          # Strip <details> and <summary> blocks to avoid matching patterns in analysis chain scripts
+          COMMENT_STRIPPED=$(sed -e '/<details>/,/<\/details>/d' -e '/<summary>/,/<\/summary>/d' <<< "$COMMENT_BODY")
+
+          HAS_TEST_PLAN=$(grep -qF '## Test Execution Plan' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_TRUE=$(grep -qF '**Run smoke tests: True**' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_FALSE=$(grep -qF '**Run smoke tests: False**' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+
+          FLOW_ADD="false"
+          FLOW_REMOVE="false"
+
+          if [ "$HAS_TEST_PLAN" = "true" ] && [ "$HAS_RUN_TRUE" = "true" ]; then
+            FLOW_ADD="true"
+          elif [ "$HAS_TEST_PLAN" = "true" ] && [ "$HAS_RUN_FALSE" = "true" ]; then
+            FLOW_REMOVE="true"
+          # Note: If both TRUE and FALSE are present, no action is taken (edge case)
+          fi
+
+          echo "flow_add=$FLOW_ADD" >> $GITHUB_OUTPUT
+          echo "flow_remove=$FLOW_REMOVE" >> $GITHUB_OUTPUT
+
+      - name: Add label
+        if: steps.flow.outputs.flow_add == 'true'
         uses: actions-ecosystem/action-add-labels@v1
-        with:
-          number: ${{ github.event.issue.number || github.event.pull_request.number }}
-          labels: smoke-tests:pending-analysis
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Remove smoke-tests:pending-analysis label
-        if: "contains(github.event.comment.body, 'Run smoke tests: False') && contains(github.event.comment.body, '**Test Execution Plan**')"
-        uses: actions-ecosystem/action-remove-labels@v1
         continue-on-error: true
         with:
           number: ${{ github.event.issue.number || github.event.pull_request.number }}
           labels: smoke-tests:pending-analysis
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: No action needed
-        if: |
-          !contains(github.event.comment.body, '**Test Execution Plan**') ||
-          (!contains(github.event.comment.body, 'Run smoke tests: True') && !contains(github.event.comment.body, 'Run smoke tests: False'))
-        run: echo "⏭️ No action needed - comment does not contain smoke test directive or **Test Execution Plan**"
+      - name: Remove label
+        if: steps.flow.outputs.flow_remove == 'true'
+        uses: actions-ecosystem/action-remove-labels@v1
+        continue-on-error: true
+        with:
+          number: ${{ github.event.issue.number || github.event.pull_request.number }}
+          labels: smoke-tests:pending-analysis
+          github_token: ${{ secrets.GITHUB_TOKEN }}
