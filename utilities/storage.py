@@ -589,6 +589,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
+<<<<<<< HEAD
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class or source_dict["spec"].get("storageClassName"),
@@ -625,6 +626,8 @@ def data_volume_template_with_unique_name(data_source, storage_class=None, name_
 
     dv = DataVolume(
         name=unique_name,
+=======
+>>>>>>> 79e60cd (Fix PR's comments for DV names and restore vm)
         namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
