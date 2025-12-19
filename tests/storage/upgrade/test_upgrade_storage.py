@@ -75,7 +75,8 @@ class TestUpgradeStorage:
             vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
         ) as vm_restore:
-            rhel_vm_for_upgrade_a.stop(wait=True)
+            if rhel_vm_for_upgrade_a.ready:
+                rhel_vm_for_upgrade_a.stop(wait=True)
             vm_restore.wait_restore_done()
             running_vm(vm=rhel_vm_for_upgrade_a)
             # Verify first file exists (created before snapshot)
@@ -194,7 +195,8 @@ class TestUpgradeStorage:
             vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
         ) as vm_restore:
-            rhel_vm_for_upgrade_b.stop(wait=True)
+            if rhel_vm_for_upgrade_b.ready:
+                rhel_vm_for_upgrade_b.stop(wait=True)
             vm_restore.wait_restore_done()
 
             running_vm(vm=rhel_vm_for_upgrade_b)
