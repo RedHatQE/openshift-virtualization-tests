@@ -92,10 +92,6 @@ def get_matrix_params(pytest_config, matrix_name):
             matrix_func = getattr(pytest_matrix_utils, _matrix_func_name, None)
             return matrix_func(matrix=_base_matrix_params)
 
-    if not _matrix_params and not _skip_if_pytest_flags_exists:
-        LOGGER.warning(missing_matrix_error)
-        return []
-
     return _matrix_params if isinstance(_matrix_params, list) else [_matrix_params]
 
 
@@ -228,18 +224,32 @@ def skip_if_pytest_flags_exists(pytest_config):
     )
 
 
-def get_artifactory_server_url(cluster_host_url):
+def get_artifactory_server_url(cluster_host_url, session):
     LOGGER.info(f"Getting artifactory server information using cluster host url: {cluster_host_url}")
     if artifactory_server := os.environ.get("ARTIFACTORY_SERVER"):
         LOGGER.info(f"Using user requested `ARTIFACTORY_SERVER` environment variable: {artifactory_server}")
         return artifactory_server
     else:
-        servers = get_cnv_tests_secret_by_name(secret_name="artifactory_servers")
+        if session and session.config.getoption("--disabled-bitwarden"):
+            raise MissingEnvironmentVariableError(
+                "Bitwarden access is disabled (`--disabled-bitwarden`) and `ARTIFACTORY_SERVER` env var is not set. "
+                "Please set `ARTIFACTORY_SERVER` or remove `--disabled-bitwarden`."
+            )
+
+        servers = get_cnv_tests_secret_by_name(secret_name="artifactory_servers", session=session)
         matching_server = [servers[domain_key] for domain_key in servers if domain_key in cluster_host_url]
         if matching_server:
             artifactory_server = matching_server[0]
         else:
-            artifactory_server = get_cnv_tests_secret_by_name(secret_name="default_artifactory_server")["server"]
+            default_server_data = get_cnv_tests_secret_by_name(
+                secret_name="default_artifactory_server", session=session
+            )
+            if not default_server_data or "server" not in default_server_data:
+                raise MissingEnvironmentVariableError(
+                    "Could not retrieve default artifactory server from Bitwarden. "
+                    "Please set ARTIFACTORY_SERVER environment variable."
+                )
+            artifactory_server = default_server_data["server"]
     LOGGER.info(f"Using artifactory server: {artifactory_server}")
     return artifactory_server
 
