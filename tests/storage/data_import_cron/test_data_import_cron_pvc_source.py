@@ -2,9 +2,15 @@ import logging
 
 import pytest
 
+from utilities.constants import QUARANTINED
+
 LOGGER = logging.getLogger(__name__)
 
 
+@pytest.mark.xfail(
+    reason=(f"{QUARANTINED}: Change in behavior caused setup to fail. tracked in CNV-75576"),
+    run=False,
+)
 class TestDataImportCronPvcSource:
     @pytest.mark.polarion("CNV-11842")
     def test_data_import_cron_with_pvc_source_ready(
