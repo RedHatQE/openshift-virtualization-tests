@@ -297,6 +297,7 @@ def user_has_get_permissions_in_source_namespace(
         namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
     ).instance
 
+
 @pytest.fixture()
 def requested_verify_image_permissions(request):
     return request.param.get("verify_image_permissions")

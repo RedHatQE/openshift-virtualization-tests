@@ -96,7 +96,6 @@ def test_user_permissions_positive(
             pass
 
 
-
 @pytest.mark.sno
 @pytest.mark.parametrize(
     "namespace, data_volume_multi_storage_scope_module, "
