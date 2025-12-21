@@ -330,6 +330,12 @@ def pytest_addoption(parser):
         "--tests-markers-file",
         help="Full filepath to store collected test markers.",
     )
+    ci_group.addoption(
+        "--disabled-bitwarden",
+        help="Disable Bitwarden secret fetching; use local/environment secrets instead.",
+        action="store_true",
+        default=False,
+    )
 
 
 def pytest_cmdline_main(config):
@@ -793,12 +799,12 @@ def pytest_sessionstart(session):
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
-                cluster_host_url=admin_client.configuration.host
+                cluster_host_url=admin_client.configuration.host, session=session
             )
             py_config["servers"] = {
                 name: _server.format(server=py_config["server_url"]) for name, _server in py_config["servers"].items()
             }
-            py_config["os_login_param"] = get_cnv_tests_secret_by_name(secret_name="os_login")
+            py_config["os_login_param"] = get_cnv_tests_secret_by_name(secret_name="os_login", session=session)
 
         # must be at the end to make sure we create it only after all pytest_sessionstart checks pass.
         stop_if_run_in_progress(client=admin_client)
