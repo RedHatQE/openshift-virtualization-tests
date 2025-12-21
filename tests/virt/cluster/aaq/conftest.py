@@ -19,7 +19,7 @@ from tests.virt.cluster.aaq.utils import (
     wait_for_aacrq_object_created,
 )
 from tests.virt.constants import ACRQ_NAMESPACE_LABEL, ACRQ_TEST
-from tests.virt.utils import wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
+from tests.virt.utils import update_hco_memory_overcommit, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
     POD_CONTAINER_SPEC,
@@ -75,18 +75,7 @@ def updated_aaq_allocation_method(hyperconverged_resource_scope_class, aaq_alloc
 
 @pytest.fixture()
 def updated_hco_memory_overcommit(hyperconverged_resource_scope_class):
-    with ResourceEditorValidateHCOReconcile(
-        patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {
-                    "higherWorkloadDensity": {"memoryOvercommitPercentage": 50},
-                }
-            }
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
+    yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=50)
 
 
 @pytest.fixture(scope="class")
@@ -300,6 +289,7 @@ def vm_for_aaq_allocation_methods_test(namespace, cpu_for_migration, aaq_allocat
         namespace=namespace.name,
         cpu_limits=1,
         memory_limits="1Gi",
+        memory_requests="1Gi",
         body=fedora_vm_body(name=vm_name),
         cpu_model=cpu_for_migration,
     ) as vm:
