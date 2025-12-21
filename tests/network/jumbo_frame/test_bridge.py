@@ -34,6 +34,7 @@ def jumbo_frame_bridge_device_name(index_number):
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_device_worker_1(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     worker_node1,
@@ -47,12 +48,14 @@ def jumbo_frame_bridge_device_worker_1(
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_device_worker_2(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     worker_node2,
@@ -66,12 +69,14 @@ def jumbo_frame_bridge_device_worker_2(
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
 def br1test_bridge_nad(
+    admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
     namespace,
@@ -85,6 +90,7 @@ def br1test_bridge_nad(
         nad_name=f"{jumbo_frame_bridge_device_name}-nad",
         interface_name=jumbo_frame_bridge_device_name,
         mtu=cluster_hardware_mtu,
+        client=admin_client,
     ) as nad:
         yield nad
 

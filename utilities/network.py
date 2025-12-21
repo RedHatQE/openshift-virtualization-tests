@@ -65,6 +65,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
         bridge_name,
         bridge_type,
         stp_config,
+        client,
         ports=None,
         mtu=None,
         node_selector=None,
@@ -91,6 +92,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             bridge_name (str): Bridge name.
             bridge_type (str): Bridge type (Linux Bridge, OVS)
             stp_config (bool): Spanning Tree enabled/disabled.
+            client (DynamicClient): Dynamic client used to interact with the cluster.
             ports (list): The bridge's port(s).
             mtu (int): MTU size
             ipv4_dhcp: determines if ipv4_dhcp should be used
@@ -115,6 +117,7 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             routes=routes,
             dns_resolver=dns_resolver,
             state=bridge_state,
+            client=client,
         )
         self.ovs_bridge_type = OVS_BRIDGE
         self.linux_bridge_type = LINUX_BRIDGE
@@ -153,7 +156,8 @@ class BridgeNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
                 nns = NodeNetworkState(
                     name=utilities.infra.get_node_selector_name(node_selector=self.node_selector)
                     if self.node_selector
-                    else self.nodes[0].name
+                    else self.nodes[0].name,
+                    client=self.client,
                 )
                 port_name = port["name"]
                 if self._does_port_match_type(nns=nns, port_name=port_name, port_type=BOND):
@@ -176,6 +180,7 @@ class LinuxBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPo
         self,
         name,
         bridge_name,
+        client,
         stp_config=False,
         ports=None,
         mtu=None,
@@ -199,6 +204,7 @@ class LinuxBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPo
             bridge_name=bridge_name,
             bridge_type=LINUX_BRIDGE,
             stp_config=stp_config,
+            client=client,
             ports=ports,
             set_ipv4=set_ipv4,
             set_ipv6=set_ipv6,
@@ -224,6 +230,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
         name,
         bridge_name,
         ports,
+        client,
         stp_config=False,
         mtu=None,
         node_selector=None,
@@ -240,6 +247,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
             bridge_name=bridge_name,
             bridge_type=OVS_BRIDGE,
             stp_config=stp_config,
+            client=client,
             ports=ports,
             mtu=mtu,
             node_selector=node_selector,
@@ -276,7 +284,7 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
                     port_name = iface["bridge"]["port"][0]["name"]
 
                     if self.mtu:
-                        nns = NodeNetworkState(name=self._nns_node.name)
+                        nns = NodeNetworkState(name=self._nns_node.name, client=self.client)
                         if BridgeNodeNetworkConfigurationPolicy._does_port_match_type(
                             nns=nns, port_name=port_name, port_type=BOND
                         ):
@@ -308,7 +316,8 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
                                 raise ValueError("node_selector is required for set_port_mac")
 
                             nns = NodeNetworkState(
-                                name=utilities.infra.get_node_selector_name(node_selector=self.node_selector)
+                                name=utilities.infra.get_node_selector_name(node_selector=self.node_selector),
+                                client=self.client,
                             )
                             port_mac = [iface["mac-address"] for iface in nns.interfaces if iface["name"] == port_name]
                             ovs_iface["mac-address"] = port_mac[0]
@@ -334,6 +343,7 @@ class VLANInterfaceNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy
         iface_state,
         base_iface,
         tag,
+        client,
         name=None,
         node_selector=None,
         ipv4_enable=False,
@@ -357,6 +367,7 @@ class VLANInterfaceNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy
             ipv6_enable=ipv6_enable,
             dry_run=dry_run,
             node_selector_labels=node_selector_labels,
+            client=client,
         )
         self.iface_state = iface_state
         self.base_iface = base_iface
@@ -381,6 +392,7 @@ class BondNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
         name,
         bond_name,
         bond_ports,
+        client,
         mode=ACTIVE_BACKUP,
         mtu=None,
         primary_bond_port=None,
@@ -405,6 +417,7 @@ class BondNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             dry_run=dry_run,
             success_timeout=success_timeout,
             teardown_absent_ifaces=teardown_absent_ifaces,
+            client=client,
         )
         self.bond_name = bond_name
         self.bond_ports = bond_ports
@@ -523,6 +536,7 @@ def network_nad(
     nad_type,
     nad_name,
     namespace,
+    client,
     interface_name=None,
     tuning=None,
     vlan=None,
@@ -541,6 +555,7 @@ def network_nad(
         "namespace": namespace.name,
         "teardown": teardown,
         "vlan": vlan,
+        "client": client,
     }
     if nad_type == LINUX_BRIDGE:
         kwargs["cni_type"] = py_config["linux_bridge_cni"]
@@ -573,6 +588,7 @@ class EthernetNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
     def __init__(
         self,
         name,
+        client,
         interfaces_name=None,
         iface_state=NodeNetworkConfigurationPolicy.Interface.State.UP,
         node_selector=None,
@@ -608,6 +624,7 @@ class EthernetNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
             routes=routes,
             dry_run=dry_run,
             success_timeout=success_timeout,
+            client=client,
         )
         self.interfaces_name = interfaces_name
         self.ipv4_auto_dns = ipv4_auto_dns
@@ -958,6 +975,7 @@ def wait_for_ovs_daemonset_resource(admin_client, hco_namespace):
 def network_device(
     interface_type,
     nncp_name,
+    client,
     interface_name=None,
     ports=None,
     mtu=None,
@@ -973,6 +991,7 @@ def network_device(
     kwargs = {
         "name": nncp_name,
         "mtu": mtu,
+        "client": client,
     }
     if interface_type == SRIOV:
         kwargs["namespace"] = namespace
@@ -1007,6 +1026,7 @@ def enable_hyperconverged_ovs_annotations(
         patches={hyperconverged_resource: {"metadata": {"annotations": {DEPLOY_OVS: "true"}}}},
         list_resource_reconcile=[NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
+        admin_client=admin_client,
     ):
         wait_for_ovs_status(network_addons_config=network_addons_config, status=True)
         ovs_daemonset = wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
@@ -1063,6 +1083,7 @@ def create_sriov_node_policy(
     sriov_iface,
     sriov_nodes_states,
     sriov_resource_name,
+    client,
     mtu=MTU_9000,
 ):
     with network_device(
@@ -1074,6 +1095,7 @@ def create_sriov_node_policy(
         # sriov operator doesnt pass the mtu to the VFs when using vfio-pci device driver (the one we are using)
         # so the mtu parameter only affects the PF. we need to change the mtu manually on the VM.
         mtu=mtu,
+        client=client,
     ) as policy:
         wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
         yield policy

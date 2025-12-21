@@ -32,10 +32,11 @@ SERVICE_MESH_INJECT_ANNOTATION = "sidecar.istio.io/inject"
 
 
 class ServiceMeshDeploymentService(Service):
-    def __init__(self, app_name, namespace, port, port_name=None):
+    def __init__(self, app_name, namespace, port, client, port_name=None):
         super().__init__(
             name=app_name,
             namespace=namespace,
+            client=client,
         )
         self.port = port
         self.app_name = app_name
@@ -85,6 +86,7 @@ class ServiceMeshDeployments(Deployment):
         namespace,
         version,
         image,
+        client,
         replicas=1,
         command=None,
         strategy=None,
@@ -106,7 +108,7 @@ class ServiceMeshDeployments(Deployment):
             },
         }
 
-        super().__init__(name=self.name, namespace=namespace, template=template, selector=selector)
+        super().__init__(name=self.name, namespace=namespace, template=template, selector=selector, client=client)
         self.version = version
         self.replicas = replicas
         self.image = image
@@ -183,7 +185,7 @@ def wait_for_address_on_iface(worker_pod, iface_name):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
-        func=NodeNetworkState(worker_pod.node.name).ipv4,
+        func=NodeNetworkState(name=worker_pod.node.name, client=worker_pod.client).ipv4,
         iface=iface_name,
     )
     try:
@@ -323,8 +325,8 @@ def basic_expose_command(
     )
 
 
-def get_service(name, namespace):
-    service = Service(name=name, namespace=namespace)
+def get_service(name, namespace, client):
+    service = Service(name=name, namespace=namespace, client=client)
     if service.exists:
         return service
 

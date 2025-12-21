@@ -64,6 +64,7 @@ def http_port_accessible(vm, server_ip, server_port):
 
 @pytest.fixture(scope="module")
 def bridge_worker_1(
+    admin_client,
     worker_node1,
     nodes_available_nics,
 ):
@@ -73,12 +74,14 @@ def bridge_worker_1(
         interface_name="migration-br",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         ports=[nodes_available_nics[worker_node1.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="module")
 def bridge_worker_2(
+    admin_client,
     worker_node2,
     nodes_available_nics,
     bridge_worker_1,
@@ -89,17 +92,19 @@ def bridge_worker_2(
         interface_name=bridge_worker_1.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[nodes_available_nics[worker_node2.name][-1]],
+        client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="module")
-def br1test_nad(namespace, bridge_worker_1, bridge_worker_2):
+def br1test_nad(admin_client, namespace, bridge_worker_1, bridge_worker_2):
     with network_nad(
         nad_type=bridge_worker_1.bridge_type,
         nad_name="network-migration-nad",
         interface_name=bridge_worker_1.bridge_name,
         namespace=namespace,
+        client=admin_client,
     ) as nad:
         yield nad
 

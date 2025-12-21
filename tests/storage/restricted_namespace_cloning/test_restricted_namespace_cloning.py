@@ -32,6 +32,7 @@ pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available
 
 
 @pytest.mark.sno
+@pytest.mark.gating
 @pytest.mark.parametrize(
     "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_source, "
     "dv_cloned_by_unprivileged_user_in_the_same_namespace",

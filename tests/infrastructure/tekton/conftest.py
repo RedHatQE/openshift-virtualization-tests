@@ -159,6 +159,7 @@ def tasks_yaml_files(tekton_manifests_dir):
 
 @pytest.fixture(scope="module")
 def processed_yaml_files(
+    admin_client,
     custom_pipeline_namespace,
     tekton_manifests_dir,
     datavolume_image_reference,
@@ -188,6 +189,7 @@ def processed_yaml_files(
 
     for resource_kind, config in tekton_resources_dict.items():
         resources[resource_kind] = process_yaml_files(
+            client=admin_client,
             file_paths=config["files"],
             replacements=config["replacements"],
             resource_kind=resource_kind,
@@ -198,16 +200,19 @@ def processed_yaml_files(
 
     for kind, kind_resources in resources.items():
         for resource in kind_resources:
-            kind(name=resource.metadata.name, namespace=custom_pipeline_namespace.name).delete(wait=True)
+            kind(client=admin_client, name=resource.metadata.name, namespace=custom_pipeline_namespace.name).delete(
+                wait=True
+            )
 
 
 @pytest.fixture(scope="module")
 def resource_editor_efi_pipelines(
+    admin_client,
     custom_pipeline_namespace,
     artifactory_secret_custom_pipeline_namespace,
     artifactory_config_map_custom_pipeline_namespace,
 ):
-    pipeline = Pipeline(name=WINDOWS_EFI_INSTALLER_STR, namespace=custom_pipeline_namespace.name)
+    pipeline = Pipeline(client=admin_client, name=WINDOWS_EFI_INSTALLER_STR, namespace=custom_pipeline_namespace.name)
     pipeline_dict = pipeline.instance.to_dict()
 
     for task in pipeline_dict["spec"]["tasks"]:
@@ -310,10 +315,11 @@ def pipelinerun_from_pipeline_template(
 
 
 @pytest.fixture(scope="module")
-def quay_disk_uploader_secret(custom_pipeline_namespace):
+def quay_disk_uploader_secret(admin_client, custom_pipeline_namespace):
     with Secret(
         name="quay-disk-uploader-secret",
         namespace=custom_pipeline_namespace.name,
+        client=admin_client,
         accesskeyid=base64_encode_str(os.environ["QUAY_ACCESS_KEY_TEKTON_TASKS"]),
         secretkey=base64_encode_str(os.environ["QUAY_SECRET_KEY_TEKTON_TASKS"]),
     ) as quay_disk_uploader_secret:
@@ -321,13 +327,15 @@ def quay_disk_uploader_secret(custom_pipeline_namespace):
 
 
 @pytest.fixture(scope="module")
-def vm_for_disk_uploader(admin_client, custom_pipeline_namespace, golden_images_namespace):
+def vm_for_disk_uploader(unprivileged_client, custom_pipeline_namespace, golden_images_namespace):
     with VirtualMachineForTests(
         name="fedora-vm-diskuploader",
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=unprivileged_client,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
+            ),
             storage_class=py_config["default_storage_class"],
         ),
         vm_instance_type_infer=True,

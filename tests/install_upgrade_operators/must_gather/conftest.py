@@ -149,24 +149,26 @@ def kubevirt_crd_by_type(cnv_crd_matrix__function__, kubevirt_crd_resources, kub
 
 
 @pytest.fixture(scope="package")
-def must_gather_nad(must_gather_bridge, node_gather_unprivileged_namespace, worker_node1):
+def must_gather_nad(admin_client, must_gather_bridge, node_gather_unprivileged_namespace, worker_node1):
     with network_nad(
         nad_type=must_gather_bridge.bridge_type,
         nad_name=must_gather_bridge.bridge_name,
         interface_name=must_gather_bridge.bridge_name,
         namespace=node_gather_unprivileged_namespace,
+        client=admin_client,
     ) as must_gather_nad:
         wait_for_node_marked_by_bridge(bridge_nad=must_gather_nad, node=worker_node1)
         yield must_gather_nad
 
 
 @pytest.fixture(scope="package")
-def must_gather_bridge(worker_node1):
+def must_gather_bridge(admin_client, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="must-gather-br",
         interface_name="mg-br1",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        client=admin_client,
     ) as br:
         yield br
 

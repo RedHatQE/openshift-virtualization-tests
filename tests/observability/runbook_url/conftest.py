@@ -13,10 +13,14 @@ def cnv_prometheus_rules_names(hco_namespace):
 
 
 @pytest.fixture()
-def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__):
+def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__, hpp_cr_installed):
+    rule_name = cnv_prometheus_rules_matrix__function__
+    if rule_name == "prometheus-hpp-rules" and not hpp_cr_installed:
+        pytest.xfail(f"Rule {rule_name} should not be present if HPP CR is not installed")
+
     cnv_prometheus_rule_by_name = PrometheusRule(
         namespace=py_config["hco_namespace"],
-        name=cnv_prometheus_rules_matrix__function__,
+        name=rule_name,
     )
     LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
     return {

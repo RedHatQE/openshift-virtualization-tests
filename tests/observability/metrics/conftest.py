@@ -11,12 +11,13 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
@@ -373,8 +374,8 @@ def storage_class_labels_for_testing(admin_client):
 
 
 @pytest.fixture(scope="class")
-def template_validator_finalizer(hco_namespace):
-    deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name)
+def template_validator_finalizer(admin_client, hco_namespace):
+    deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name, client=admin_client)
     with ResourceEditorValidateHCOReconcile(
         patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}}
     ):
@@ -404,7 +405,9 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
+            ),
             storage_class=py_config["default_storage_class"],
         ),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
@@ -492,21 +495,23 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration):
 
 
 @pytest.fixture()
-def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
+def vm_migration_metrics_vmim(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
     ) as vmim:
         yield vmim
 
 
 @pytest.fixture(scope="class")
-def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
+def vm_migration_metrics_vmim_scope_class(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
@@ -527,11 +532,12 @@ def vm_with_node_selector(namespace, worker_node1):
 
 
 @pytest.fixture()
-def vm_with_node_selector_vmim(vm_with_node_selector):
+def vm_with_node_selector_vmim(admin_client, vm_with_node_selector):
     with VirtualMachineInstanceMigration(
         name="vm-with-node-selector-vmim",
         namespace=vm_with_node_selector.namespace,
         vmi_name=vm_with_node_selector.vmi.name,
+        client=admin_client,
     ) as vmim:
         yield vmim
 
@@ -619,16 +625,24 @@ def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
     LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
     guest_agent_version_str = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
     LOGGER.info(f"qemu-guest-agent version: {guest_agent_version_str}")
-    try:
-        guest_agent_version = Version(version=guest_agent_version_str)
-    except InvalidVersion as e:
-        raise ValueError(f"Unable to parse qemu-guest-agent version from: {guest_agent_version_str}") from e
-    if guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS):
-        return
-    raise ValueError(
+    guest_agent_version = Version(version=guest_agent_version_str)
+    assert guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS), (
         f"qemu-guest-agent version {guest_agent_version} is less than required "
         f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
     )
+
+
+@pytest.fixture(scope="class")
+def initial_guest_load_metrics_values(prometheus, fedora_vm_with_stress_ng):
+    """Capture initial values for all guest load metrics before stressing the VM."""
+
+    return {
+        metric: get_metrics_value(
+            prometheus=prometheus,
+            metrics_name=f"{metric}{{name='{fedora_vm_with_stress_ng.name}'}}",
+        )
+        for metric in GUEST_LOAD_TIME_PERIODS
+    }
 
 
 @pytest.fixture(scope="class")

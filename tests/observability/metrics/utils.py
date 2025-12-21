@@ -673,8 +673,22 @@ def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) 
 
 @contextmanager
 def create_windows11_wsl2_vm(
-    dv_name: str, namespace: str, client: DynamicClient, vm_name: str, storage_class: str
+    dv_name: str,
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    storage_class: str,
 ) -> Generator:
+    """
+    Create a Windows 11 WSL2 VM with a DataVolume template
+
+    Args:
+        dv_name (str): The name of the DataVolume
+        namespace (str): The namespace of the VM
+        client (DynamicClient): Client to use to create the VM.
+        vm_name (str): The name of the VM
+        storage_class (str): The storage class to use for the DataVolume
+    """
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
@@ -695,8 +709,8 @@ def create_windows11_wsl2_vm(
         name=vm_name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.xlarge"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.xlarge"),
+        vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
         running_vm(vm=vm)
@@ -741,6 +755,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
                 PersistentVolumeClaim(
                     name=vm_dv_templates[0].metadata.name,
                     namespace=vm.namespace,
+                    client=vm.client,
                 ).instance.spec.resources.requests.storage
             ).Byte.bytes
         )
@@ -748,7 +763,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def validate_metric_value_greater_than_initial_value(
-    prometheus: Prometheus, metric_name: str, initial_value: int, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus, metric_name: str, initial_value: float, timeout: int = TIMEOUT_4MIN
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,

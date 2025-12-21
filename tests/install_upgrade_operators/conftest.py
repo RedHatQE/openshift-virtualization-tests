@@ -21,14 +21,13 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HCO_BEARER_AUTH, HPP_POOL
+from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
     get_pod_by_name_prefix,
 )
-from utilities.jira import is_jira_open
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
     get_machine_config_pools_conditions,
@@ -40,20 +39,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def cnv_deployment_by_name_no_hpp(
-    admin_client,
-    hco_namespace,
-    cnv_deployment_no_hpp_matrix__function__,
-):
-    return get_deployment_by_name(
-        namespace_name=hco_namespace.name,
-        deployment_name=cnv_deployment_no_hpp_matrix__function__,
-    )
-
-
-@pytest.fixture()
-def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_matrix__function__, conformance_tests):
-    if cnv_deployment_matrix__function__ == HPP_POOL:
+def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_deployment_matrix__function__):
+    deployment_name = cnv_deployment_matrix__function__
+    if deployment_name == HPP_POOL:
+        if not hpp_cr_installed:
+            pytest.xfail(f"{deployment_name} deployment shouldn't be present on the cluster if HPP CR is not installed")
         hpp_pool_deployments = list(
             Deployment.get(
                 dyn_client=admin_client,
@@ -61,17 +51,12 @@ def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_
                 label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
             )
         )
-        # `conformance` tests can run on clusters without hpp-pool
-        if not hpp_pool_deployments:
-            if conformance_tests:
-                pytest.skip("Running conformance tests, HPP pool is not mandatory")
-            else:
-                pytest.fail("HPP pool deployment not found on this cluster")
+        assert hpp_pool_deployments, "HPP pool deployment not found on this cluster"
         return hpp_pool_deployments[0]
 
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
-        deployment_name=cnv_deployment_matrix__function__,
+        deployment_name=deployment_name,
     )
 
 
@@ -79,26 +64,36 @@ def cnv_deployment_by_name(request, admin_client, hco_namespace, cnv_deployment_
 def cnv_daemonset_by_name(
     admin_client,
     hco_namespace,
+    hpp_cr_installed,
     cnv_daemonset_matrix__function__,
 ):
+    daemonset_name = cnv_daemonset_matrix__function__
+    if daemonset_name == HOSTPATH_PROVISIONER_CSI and not hpp_cr_installed:
+        pytest.xfail(f"{daemonset_name} daemonset shouldn't be present on the cluster if HPP CR is not installed")
     return get_daemonset_by_name(
         admin_client=admin_client,
         namespace_name=hco_namespace.name,
-        daemonset_name=cnv_daemonset_matrix__function__,
+        daemonset_name=daemonset_name,
     )
 
 
 @pytest.fixture()
-def cnv_pod_by_name(
+def cnv_pods_by_type(
     admin_client,
     hco_namespace,
+    hpp_cr_installed,
     cnv_pod_matrix__function__,
 ):
-    return get_pod_by_name_prefix(
+    pod_prefix = cnv_pod_matrix__function__
+    if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
+        pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
+    pod_list = get_pod_by_name_prefix(
         dyn_client=admin_client,
         namespace=hco_namespace.name,
-        pod_prefix=cnv_pod_matrix__function__,
+        pod_prefix=pod_prefix,
+        get_all=True,
     )
+    return pod_list
 
 
 @pytest.fixture(scope="session")
@@ -206,7 +201,6 @@ def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_obj
 
 @pytest.fixture()
 def related_object_from_hco_status(
-    is_jira_71823_open,
     hco_status_related_objects,
     cnv_related_object_matrix__function__,
 ):
@@ -214,8 +208,6 @@ def related_object_from_hco_status(
     kind_name = list(cnv_related_object_matrix__function__.values())[0]
     related_object_name = list(cnv_related_object_matrix__function__.keys())[0]
 
-    if related_object_name == HCO_BEARER_AUTH and is_jira_71823_open:
-        pytest.xfail(f"Skipping related object {related_object_name}, kind {kind_name} because of CNV-71823")
     LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
     for obj in hco_status_related_objects:
         if obj.name == related_object_name and obj.kind == kind_name:
@@ -243,8 +235,3 @@ def updated_resource(
         wait_for_reconcile_post_update=True,
     ):
         yield cr
-
-
-@pytest.fixture(scope="session")
-def is_jira_71823_open():
-    return is_jira_open(jira_id="CNV-71823")

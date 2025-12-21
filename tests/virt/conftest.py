@@ -169,10 +169,12 @@ def virt_special_infra_sanity(
         err_msg = "\n".join(failed_verifications_list)
         LOGGER.error(f"Special_infra cluster verification failed! Missing components:\n{err_msg}")
         exit_pytest_execution(
-            message=err_msg,
+            log_message=err_msg,
             return_code=98,
             filename="virt_special_infra_sanity_failure.txt",
             junitxml_property=junitxml_plugin,
+            message="Virt special_infra cluster verification failed",
+            admin_client=admin_client,
         )
 
 

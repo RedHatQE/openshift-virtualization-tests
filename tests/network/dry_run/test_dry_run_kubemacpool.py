@@ -32,23 +32,25 @@ def create_dry_run_vm(name, namespace, networks, unprivileged_client, macs=None)
 
 
 @pytest.fixture()
-def bridge_on_all_nodes():
+def bridge_on_all_nodes(admin_client):
     bridge_name = "br-dry-run-test"
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"{bridge_name}-nncp",
         interface_name=bridge_name,
+        client=admin_client,
     ) as dev:
         yield dev
 
 
 @pytest.fixture()
-def linux_bridge_network_nad(namespace, bridge_on_all_nodes):
+def linux_bridge_network_nad(admin_client, namespace, bridge_on_all_nodes):
     with network_nad(
         nad_type=bridge_on_all_nodes.bridge_type,
         nad_name=f"{bridge_on_all_nodes.bridge_name}-nad",
         interface_name=bridge_on_all_nodes.bridge_name,
         namespace=namespace,
+        client=admin_client,
     ) as dry_run_nad:
         yield dry_run_nad
 

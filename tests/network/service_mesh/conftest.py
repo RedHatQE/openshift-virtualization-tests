@@ -36,19 +36,20 @@ from tests.network.utils import (
     ServiceMeshDeployments,
     ServiceMeshDeploymentService,
 )
-from utilities.constants import PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
+from utilities.constants import OS_FLAVOR_FEDORA, PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
-from utilities.virt import vm_console_run_commands
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
 
 
 class GatewayForTests(Gateway):
-    def __init__(self, app_name, namespace, hosts):
+    def __init__(self, app_name, namespace, hosts, client):
         self.name = unique_name(name=app_name, service_type=GATEWAY_TYPE)
         super().__init__(
             name=self.name,
             namespace=namespace,
+            client=client,
         )
         self.hosts = hosts
 
@@ -69,11 +70,12 @@ class GatewayForTests(Gateway):
 
 
 class DestinationRuleForTests(DestinationRule):
-    def __init__(self, app_name, namespace, versions):
+    def __init__(self, app_name, namespace, versions, client):
         self.name = unique_name(name=app_name, service_type=DESTINATION_RULE_TYPE)
         super().__init__(
             name=self.name,
             namespace=namespace,
+            client=client,
         )
         self.app_name = app_name
         self.versions = versions
@@ -101,11 +103,13 @@ class VirtualServiceForTests(VirtualService):
         gateways,
         subset,
         port,
+        client,
     ):
         self.name = unique_name(name=app_name, service_type=VIRTUAL_SERVICE_TYPE)
         super().__init__(
             name=self.name,
             namespace=namespace,
+            client=client,
         )
         self.hosts = hosts
         self.gateways = gateways
@@ -141,11 +145,12 @@ class VirtualServiceForTests(VirtualService):
 
 
 class PeerAuthenticationForTests(PeerAuthentication):
-    def __init__(self, name, namespace):
+    def __init__(self, name, namespace, client):
         self.name = unique_name(name=name, service_type=PEER_AUTHENTICATION_TYPE)
         super().__init__(
             name=self.name,
             namespace=namespace,
+            client=client,
         )
 
     def to_dict(self):
@@ -183,7 +188,7 @@ def service_mesh_tests_namespace(namespace, admin_client):
 
 
 @pytest.fixture(scope="class")
-def httpbin_deployment_service_mesh(service_mesh_tests_namespace):
+def httpbin_deployment_service_mesh(unprivileged_client, service_mesh_tests_namespace):
     with ServiceMeshDeployments(
         name="httpbin",
         namespace=service_mesh_tests_namespace.name,
@@ -193,15 +198,17 @@ def httpbin_deployment_service_mesh(service_mesh_tests_namespace):
         port=SERVICE_MESH_PORT,
         service_port=SERVICE_MESH_PORT,
         service_account=True,
+        client=unprivileged_client,
     ) as dp:
         yield dp
 
 
 @pytest.fixture(scope="class")
-def httpbin_service_account_service_mesh(httpbin_deployment_service_mesh):
+def httpbin_service_account_service_mesh(unprivileged_client, httpbin_deployment_service_mesh):
     with ServiceAccount(
         name=httpbin_deployment_service_mesh.app_name,
         namespace=httpbin_deployment_service_mesh.namespace,
+        client=unprivileged_client,
     ) as sa:
         add_scc_to_service_account(
             namespace=httpbin_deployment_service_mesh.namespace,
@@ -212,11 +219,14 @@ def httpbin_service_account_service_mesh(httpbin_deployment_service_mesh):
 
 
 @pytest.fixture(scope="class")
-def httpbin_service_service_mesh(httpbin_deployment_service_mesh, httpbin_service_account_service_mesh):
+def httpbin_service_service_mesh(
+    unprivileged_client, httpbin_deployment_service_mesh, httpbin_service_account_service_mesh
+):
     with ServiceMeshDeploymentService(
         namespace=httpbin_deployment_service_mesh.namespace,
         app_name=httpbin_deployment_service_mesh.app_name,
         port=httpbin_deployment_service_mesh.service_port,
+        client=unprivileged_client,
     ) as sv:
         yield sv
 
@@ -247,10 +257,12 @@ def outside_mesh_vm_fedora_with_service_mesh_annotation(
     ns_outside_of_service_mesh,
 ):
     vm_name = "out-service-mesh-vm"
-    with FedoraVirtualMachineForServiceMesh(
+    with VirtualMachineForTests(
         client=admin_client,
         name=vm_name,
         namespace=ns_outside_of_service_mesh.name,
+        os_flavor=OS_FLAVOR_FEDORA,
+        body=fedora_vm_body(name=vm_name),
     ) as vm:
         vm.custom_service_enable(
             service_name=vm_name,
@@ -262,7 +274,7 @@ def outside_mesh_vm_fedora_with_service_mesh_annotation(
 
 
 @pytest.fixture(scope="class")
-def server_deployment_v1(service_mesh_tests_namespace):
+def server_deployment_v1(unprivileged_client, service_mesh_tests_namespace):
     with ServiceMeshDeployments(
         name=SERVER_DEMO_NAME,
         namespace=service_mesh_tests_namespace.name,
@@ -271,12 +283,13 @@ def server_deployment_v1(service_mesh_tests_namespace):
         strategy=SERVER_DEPLOYMENT_STRATEGY,
         host=SERVER_DEMO_HOST,
         service_port=SERVICE_MESH_PORT,
+        client=unprivileged_client,
     ) as dp:
         yield dp
 
 
 @pytest.fixture(scope="class")
-def server_deployment_v2(server_deployment_v1):
+def server_deployment_v2(unprivileged_client, server_deployment_v1):
     with ServiceMeshDeployments(
         name=server_deployment_v1.app_name,
         namespace=server_deployment_v1.namespace,
@@ -285,32 +298,35 @@ def server_deployment_v2(server_deployment_v1):
         strategy=server_deployment_v1.strategy,
         host=server_deployment_v1.host,
         service_port=server_deployment_v1.service_port,
+        client=unprivileged_client,
     ) as dp:
         yield dp
 
 
 @pytest.fixture(scope="class")
-def server_service_service_mesh(server_deployment_v1):
+def server_service_service_mesh(unprivileged_client, server_deployment_v1):
     with ServiceMeshDeploymentService(
         app_name=server_deployment_v1.app_name,
         namespace=server_deployment_v1.namespace,
         port=server_deployment_v1.service_port,
+        client=unprivileged_client,
     ) as sv:
         yield sv
 
 
 @pytest.fixture(scope="class")
-def gateway_service_mesh(server_deployment_v1):
+def gateway_service_mesh(unprivileged_client, server_deployment_v1):
     with GatewayForTests(
         app_name=server_deployment_v1.app_name,
         namespace=server_deployment_v1.namespace,
         hosts=[server_deployment_v1.host],
+        client=unprivileged_client,
     ) as gw:
         yield gw
 
 
 @pytest.fixture(scope="class")
-def virtual_service_mesh_service(server_deployment_v1, gateway_service_mesh):
+def virtual_service_mesh_service(unprivileged_client, server_deployment_v1, gateway_service_mesh):
     with VirtualServiceForTests(
         app_name=server_deployment_v1.app_name,
         namespace=server_deployment_v1.namespace,
@@ -318,16 +334,18 @@ def virtual_service_mesh_service(server_deployment_v1, gateway_service_mesh):
         gateways=[gateway_service_mesh.name],
         subset=server_deployment_v1.version,
         port=server_deployment_v1.service_port,
+        client=unprivileged_client,
     ) as vsv:
         yield vsv
 
 
 @pytest.fixture(scope="class")
-def destination_rule_service_mesh(server_deployment_v1, server_deployment_v2):
+def destination_rule_service_mesh(unprivileged_client, server_deployment_v1, server_deployment_v2):
     with DestinationRuleForTests(
         app_name=server_deployment_v1.app_name,
         namespace=server_deployment_v1.namespace,
         versions=[server_deployment_v1.version, server_deployment_v2.version],
+        client=unprivileged_client,
     ) as dr:
         yield dr
 
@@ -397,10 +415,11 @@ def change_routing_to_v2(
 
 
 @pytest.fixture(scope="class")
-def peer_authentication_strict_service_mesh(service_mesh_tests_namespace):
+def peer_authentication_strict_service_mesh(unprivileged_client, service_mesh_tests_namespace):
     with PeerAuthenticationForTests(
         name="default",
         namespace=service_mesh_tests_namespace.name,
+        client=unprivileged_client,
     ) as pa:
         yield pa
 

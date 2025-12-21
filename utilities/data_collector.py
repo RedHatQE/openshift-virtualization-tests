@@ -5,7 +5,6 @@ import shlex
 from functools import cache
 
 from ocp_resources.namespace import Namespace
-from ocp_resources.resource import get_client
 from ocp_utilities.monitoring import Prometheus
 from pytest_testconfig import config as py_config
 
@@ -90,6 +89,7 @@ def write_to_file(file_name, content, base_directory, mode="w"):
     os.makedirs(base_directory, exist_ok=True)
     file_path = os.path.join(base_directory, file_name)
 
+    LOGGER.info(f"Writing data to file: {file_path}")
     try:
         with open(file_path, mode) as fd:
             fd.write(content)
@@ -125,9 +125,9 @@ def collect_ocp_must_gather(since_time):
     run_must_gather(target_base_dir=base_directory, since=f"{since_time}s", timeout=f"{TIMEOUT_20MIN}s")
 
 
-def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir):
+def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir, admin_client):
     cnv_csv = utilities.hco.get_installed_hco_csv(
-        admin_client=get_client(), hco_namespace=Namespace(name=py_config["hco_namespace"])
+        admin_client=admin_client, hco_namespace=Namespace(name=py_config["hco_namespace"])
     )
     LOGGER.info(f"Collecting cnv-must gather using CSV: {cnv_csv.name}")
     must_gather_image = [
