@@ -2588,9 +2588,7 @@ def updated_default_storage_class_ocs_virt(
             exit_pytest_execution(
                 log_message=f"Failed to set {ocs_storage_class.name} as default storage class",
                 filename="default_storage_class_failure.txt",
-            )
-            exit_pytest_execution(
-                message=f"Failed to set {ocs_storage_class.name} as default storage class", admin_client=admin_client
+                admin_client=admin_client,
             )
     else:
         yield
