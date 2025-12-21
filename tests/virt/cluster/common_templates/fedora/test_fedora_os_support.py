@@ -174,6 +174,7 @@ class TestCommonTemplatesFedora:
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-3574")
+    @pytest.mark.jira("CNV-75228", run=False)
     def test_virtctl_guest_agent_fs_info(self, matrix_fedora_os_vm_from_template):
         validate_fs_info_virtctl_vs_linux_os(vm=matrix_fedora_os_vm_from_template)
 
