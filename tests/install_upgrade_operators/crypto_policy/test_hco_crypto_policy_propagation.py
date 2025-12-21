@@ -55,8 +55,8 @@ def test_set_hco_crypto_policy(
         f"Expected HCO crypto policy: '{expected_hco_crypto_policy}'\n"
     )
     assert_crypto_policy_propagated_to_components(
-        resources_dict=resources_dict,
         crypto_policy=cnv_crypto_policy_matrix__function__,
+        resources_dict=resources_dict,
         updated_resource_kind=HyperConverged.kind,
-        client=admin_client,
+        admin_client=admin_client,
     )

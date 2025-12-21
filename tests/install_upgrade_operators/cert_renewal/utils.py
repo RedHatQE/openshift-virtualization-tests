@@ -47,7 +47,7 @@ def get_certificates_validity_period_and_checkend_result(
         hco_namespace_name (str): HCO namespace string
         tmpdir (py._path.local.LocalPath): temporary folder in which the certificates files will reside
         secrets_to_skip (tuple): names of secret entries that should not be checked due to open bugs
-        client (DynamicClient): Dynamic client object
+        admin_client (DynamicClient): Dynamic client object
         seconds (int, default: 0): number of seconds to test whether the certificate will expire or not
             according to openssl -checkend command
 
@@ -187,7 +187,7 @@ def verify_certificates_dates_identical_to_initial_dates(
         hco_namespace (Namespace): HCO namespace
         initial_certificates_dates (dict[str, dict[str, str]]): dict with the initial certificates data
         secrets_to_skip (tuple): names of secret entries that should not be checked due to open bugs
-        tmpdir (py.path.local): temporary folder in which the certificates files will reside
+        tmpdir (py._path.local.LocalPath): temporary folder in which the certificates files will reside
         admin_client (DynamicClient): Dynamic client object
 
     Raises:

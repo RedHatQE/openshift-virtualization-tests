@@ -39,7 +39,7 @@ def test_update_api_server(
         crypto_policy=cnv_crypto_policy_matrix__function__,
         resources_dict=resources_dict,
         updated_resource_kind=APIServer.kind,
-        client=admin_client,
+        admin_client=admin_client,
     )
     assert_no_crypto_policy_in_hco(
         crypto_policy=cnv_crypto_policy_matrix__function__,
