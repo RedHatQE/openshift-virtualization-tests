@@ -268,11 +268,10 @@ def wait_for_resource_version_update(resource, pre_update_resource_version):
 def get_resource_object(
     resource: type[Resource], resource_name: str, resource_namespace: str, admin_client: DynamicClient
 ) -> Resource:
-    kwargs = {"client": admin_client}
     if "NamespacedResource" in str(resource.__base__):
-        resource = resource(name=resource_name, namespace=resource_namespace, **kwargs)
+        resource = resource(name=resource_name, namespace=resource_namespace, client=admin_client)
     else:
-        resource = resource(name=resource_name, **kwargs)
+        resource = resource(name=resource_name, client=admin_client)
     assert resource.exists, f"Resource: {resource_name} not found."
     return resource
 
