@@ -16,7 +16,6 @@ from tests.storage.constants import (
 )
 from tests.storage.utils import (
     clean_up_multiprocess,
-    create_cirros_dv,
     create_pod_for_pvc,
     get_file_url,
     wait_for_processes_exit_successfully,
@@ -131,21 +130,6 @@ def running_pod_with_dv_pvc(
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
     ) as pod:
         yield pod
-
-
-@pytest.fixture(scope="module")
-def cirros_dv_unprivileged(
-    namespace,
-    storage_class_name_scope_module,
-    unprivileged_client,
-):
-    yield from create_cirros_dv(
-        namespace=namespace.name,
-        name=f"cirros-dv-{storage_class_name_scope_module}",
-        storage_class=storage_class_name_scope_module,
-        client=unprivileged_client,
-        dv_size=DEFAULT_DV_SIZE,
-    )
 
 
 @pytest.fixture()

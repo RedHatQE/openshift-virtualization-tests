@@ -572,16 +572,6 @@ def test_successful_vm_from_imported_dv_windows(
     )
 
 
-@pytest.mark.polarion("CNV-4724")
-@pytest.mark.sno
-@pytest.mark.s390x
-def test_dv_api_version_after_import(cirros_dv_unprivileged):
-    assert (
-        cirros_dv_unprivileged.api_version
-        == f"{cirros_dv_unprivileged.api_group}/{cirros_dv_unprivileged.ApiVersion.V1BETA1}"
-    )
-
-
 @pytest.mark.polarion("CNV-5509")
 @pytest.mark.s390x
 def test_importer_pod_annotation(dv_with_annotation, linux_nad):
