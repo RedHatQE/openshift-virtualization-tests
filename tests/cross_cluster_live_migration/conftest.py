@@ -368,9 +368,6 @@ def remote_cluster_source_test_namespace(remote_admin_client, unique_suffix):
 
 @pytest.fixture(scope="class")
 def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden_images_namespace):
-    """
-    Fixture that provides a RHEL DataSource from the remote cluster's golden images namespace.
-    """
     return DataSource(
         namespace=remote_cluster_golden_images_namespace.name,
         name=RHEL10_STR,
