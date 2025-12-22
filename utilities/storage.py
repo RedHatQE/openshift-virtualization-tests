@@ -584,7 +584,7 @@ def data_volume_dict_modify_to_source_ref(dv, data_source):
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     data_source_pvc_dict_spec = data_source.source.instance.to_dict()["spec"]
     dv = DataVolume(
-        name=data_source.name,
+        name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=data_source_pvc_dict_spec.get("resources", {}).get("requests", {}).get("storage"),
         storage_class=storage_class or data_source_pvc_dict_spec.get("storageClassName"),
