@@ -23,6 +23,18 @@ def vm_with_common_cpu_model_scope_function(
         yield vm_from_template
 
 
+@pytest.fixture(scope="session")
+def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
+    """
+    Skip test if no odf cephfs storage class available
+    """
+    if StorageClassNames.CEPHFS not in cluster_storage_classes_names:
+        pytest.xfail(
+            f"Cannot execute test, {StorageClassNames.CEPHFS} storage class is not deployed,"
+            f"deployed storage classes: {cluster_storage_classes_names}"
+        )
+
+
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_function,"
     "golden_image_data_volume_template_for_test_scope_function,"
@@ -37,7 +49,5 @@ def vm_with_common_cpu_model_scope_function(
     ],
     indirect=True,
 )
-def test_vm_with_odf_cephfs_storage_class_migrates(
-    skip_test_if_no_odf_cephfs_sc, vm_with_common_cpu_model_scope_function
-):
+def test_vm_with_odf_cephfs_storage_class_migrates(xfail_if_no_odf_cephfs_sc, vm_with_common_cpu_model_scope_function):
     migrate_vm_and_verify(vm=vm_with_common_cpu_model_scope_function)

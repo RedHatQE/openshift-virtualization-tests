@@ -77,7 +77,6 @@ from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
-    AMD,
     ARM_64,
     ARQ_QUOTA_HARD_SPEC,
     AUDIT_LOGS_PATH,
@@ -91,7 +90,6 @@ from utilities.constants import (
     HCO_SUBSCRIPTION,
     HOTFIX_STR,
     INSTANCE_TYPE_STR,
-    INTEL,
     KMP_ENABLED_LABEL,
     KMP_VM_ASSIGNMENT_LABEL,
     KUBECONFIG,
@@ -106,15 +104,12 @@ from utilities.constants import (
     OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
     PREFERENCE_STR,
-    RHEL9_PREFERENCE,
     RHEL9_STR,
-    RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    U1_SMALL,
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
     UTILITY,
@@ -197,9 +192,7 @@ from utilities.storage import (
     verify_boot_sources_reimported,
 )
 from utilities.virt import (
-    VirtualMachineForCloning,
     VirtualMachineForTests,
-    create_vm_cloning_job,
     fedora_vm_body,
     get_all_virt_pods_with_running_status,
     get_base_templates_list,
@@ -209,7 +202,6 @@ from utilities.virt import (
     kubernetes_taint_exists,
     running_vm,
     start_and_fetch_processid_on_linux_vm,
-    target_vm_from_cloning_job,
     vm_instance_from_template,
     wait_for_kv_stabilize,
     wait_for_windows_vm,
@@ -747,11 +739,6 @@ def workers_type(workers_utility_pods, installing_cnv):
     return virtual
 
 
-@pytest.fixture(scope="session")
-def is_psi_cluster():
-    return Infrastructure(name="cluster").instance.status.platform == "OpenStack"
-
-
 @pytest.fixture()
 def data_volume_multi_storage_scope_function(
     request,
@@ -1114,16 +1101,6 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="class")
 def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)
-
-
-@pytest.fixture(scope="session")
-def nodes_cpu_vendor(schedulable_nodes):
-    if schedulable_nodes[0].labels.get(f"cpu-vendor.node.kubevirt.io/{AMD}"):
-        return AMD
-    elif schedulable_nodes[0].labels.get(f"cpu-vendor.node.kubevirt.io/{INTEL}"):
-        return INTEL
-    else:
-        return None
 
 
 @pytest.fixture(scope="session")
@@ -2370,11 +2347,6 @@ def migration_policy_with_bandwidth_scope_class():
 
 
 @pytest.fixture(scope="session")
-def gpu_nodes(nodes):
-    return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
-
-
-@pytest.fixture(scope="session")
 def worker_machine1(worker_node1):
     machine = Machine(
         name=worker_node1.machine_name,
@@ -2424,21 +2396,6 @@ def vm_for_test(request, namespace, unprivileged_client):
         name=vm_name,
         body=fedora_vm_body(name=vm_name),
         namespace=namespace.name,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client):
-    with VirtualMachineForCloning(
-        name=RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=RHEL9_PREFERENCE),
-        os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -2495,25 +2452,6 @@ def hyperconverged_status_templates_scope_class(
     hyperconverged_resource_scope_class,
 ):
     return hyperconverged_resource_scope_class.instance.status.dataImportCronTemplates
-
-
-@pytest.fixture()
-def cloning_job_scope_function(request, unprivileged_client, namespace):
-    with create_vm_cloning_job(
-        name=f"clone-job-{request.param['source_name']}",
-        client=unprivileged_client,
-        namespace=namespace.name,
-        source_name=request.param["source_name"],
-        label_filters=request.param.get("label_filters"),
-        annotation_filters=request.param.get("annotation_filters"),
-    ) as vmc:
-        yield vmc
-
-
-@pytest.fixture()
-def target_vm_scope_function(unprivileged_client, cloning_job_scope_function):
-    with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=cloning_job_scope_function) as target_vm:
-        yield target_vm
 
 
 @pytest.fixture(scope="module")
@@ -2654,18 +2592,6 @@ def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migra
 @pytest.fixture(scope="class")
 def ssp_resource_scope_class(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_odf_cephfs_sc(cluster_storage_classes_names):
-    """
-    Skip test if no odf cephfs storage class available
-    """
-    if StorageClassNames.CEPHFS not in cluster_storage_classes_names:
-        pytest.skip(
-            f"Skipping test, {StorageClassNames.CEPHFS} storage class is not deployed,"
-            f"deployed storage classes: {cluster_storage_classes_names}"
-        )
 
 
 @pytest.fixture(scope="session")

@@ -7,6 +7,7 @@ import pytest
 from bitmath import parse_string_unsafe
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
@@ -30,7 +31,7 @@ from tests.virt.utils import (
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, label_nodes
+from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
@@ -42,7 +43,6 @@ def virt_special_infra_sanity(
     request,
     admin_client,
     junitxml_plugin,
-    is_psi_cluster,
     schedulable_nodes,
     gpu_nodes,
     nodes_with_supported_gpus,
@@ -54,9 +54,9 @@ def virt_special_infra_sanity(
 ):
     """Performs verification that cluster has all required capabilities based on collected tests."""
 
-    def _verify_not_psi_cluster(_is_psi_cluster):
+    def _verify_not_psi_cluster():
         LOGGER.info("Verifying tests run on BM cluster")
-        if _is_psi_cluster:
+        if Infrastructure(name="cluster").instance.status.platform == "OpenStack":
             failed_verifications_list.append("Cluster should be BM and not PSI")
 
     def _verify_cpumanager_workers(_schedulable_nodes):
@@ -143,7 +143,7 @@ def virt_special_infra_sanity(
     if not request.session.config.getoption(skip_virt_sanity_check):
         LOGGER.info("Verifying that cluster has all required capabilities for special_infra marked tests")
         if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
-            _verify_not_psi_cluster(_is_psi_cluster=is_psi_cluster)
+            _verify_not_psi_cluster()
             _verify_hw_virtualization(
                 _schedulable_nodes=schedulable_nodes, _nodes_cpu_virt_extension=nodes_cpu_virt_extension
             )
@@ -391,3 +391,18 @@ def vm_for_test_from_template_scope_class(
 @pytest.fixture(scope="class")
 def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
     yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=200)
+
+
+@pytest.fixture(scope="session")
+def gpu_nodes(nodes):
+    return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
+
+
+@pytest.fixture(scope="session")
+def nodes_cpu_vendor(schedulable_nodes):
+    if schedulable_nodes[0].labels.get(f"cpu-vendor.node.kubevirt.io/{AMD}"):
+        return AMD
+    elif schedulable_nodes[0].labels.get(f"cpu-vendor.node.kubevirt.io/{INTEL}"):
+        return INTEL
+    else:
+        return None
