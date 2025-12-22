@@ -78,8 +78,8 @@ jobs:
           # These patterns require the text to appear at the start of a line, matching the actual
           # Test Execution Plan format instead of matching when CodeRabbit explains how it works
           HAS_TEST_PLAN=$(grep -qE '^## Test Execution Plan' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
-          HAS_RUN_TRUE=$(grep -qE '^- \*\*Run smoke tests: True\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
-          HAS_RUN_FALSE=$(grep -qE '^- \*\*Run smoke tests: False\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_TRUE=$(grep -qE '^\*\*Run smoke tests: True\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_FALSE=$(grep -qE '^\*\*Run smoke tests: False\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
 
           FLOW_ADD="false"
           FLOW_REMOVE="false"
