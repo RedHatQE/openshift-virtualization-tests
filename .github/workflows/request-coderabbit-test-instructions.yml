@@ -37,13 +37,12 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
-              CRITICAL: You MUST submit a formal pull request review using the "Request changes" review type.
-              This will block the PR from merging until the author addresses the test execution plan.
-              Use the GitHub review submission feature (not inline comments) so it triggers the pull_request_review event.
-              The review body should contain the Test Execution Plan with the smoke tests recommendation.
+              CRITICAL: You MUST post an inline review comment on the first changed line of the first file.
+              The inline comment should contain the Test Execution Plan with the smoke tests recommendation.
+              Do NOT submit a formal review - just post the inline comment directly.
 
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
-              You will submit a pull request review with the test execution plan in the review body.
+              You will post an inline review comment with the test execution plan on the first changed file.
               If you fail to run or post a comment, retry.
 
               **Analysis Requirements:**
@@ -82,7 +81,7 @@ jobs:
 
               When responding to this test execution plan request, you MUST follow these rules EXACTLY:
 
-              1. **YOUR ONLY DELIVERABLE**: Submit a formal pull request review with the test execution plan in the review body
+              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment containing the test execution plan on the first changed line
               2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
               3. **FALLBACK ONLY**: If submitting the review fails after retrying, post as a regular PR comment
               4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
