@@ -832,23 +832,6 @@ def get_valid_ip_address(dst_ip, family):
         return
 
 
-def ip_version_data_from_matrix(request):
-    """
-    Check if fixture ip_stack_version_matrix__<scope>__ is used in the flow, to indicate whether
-    it's a dual-stack test or not.
-
-    Args:
-        request (fixtures.SubRequest): Test's parameterized request.
-
-    Returns:
-        str: The IP family (IPv4 or IPv6) if the matrix fixture is used, else None.
-    """
-    ip_stack_matrix_fixture = [fix_name for fix_name in request.fixturenames if "ip_stack_version_matrix__" in fix_name]
-    if not ip_stack_matrix_fixture:
-        return
-    return request.getfixturevalue(ip_stack_matrix_fixture[0])
-
-
 def compose_cloud_init_data_dict(network_data=None, ipv6_network_data=None):
     init_data = {}
     interfaces_data = {"ethernets": {}}
