@@ -25,6 +25,7 @@ from utilities.constants import (
     TIMEOUT_40MIN,
     Images,
 )
+from utilities.infra import create_ns
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
@@ -36,11 +37,22 @@ from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     fedora_vm_body,
     get_base_templates_list,
-    get_vm_boot_time,
     running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def virt_upgrade_namespace(admin_client, unprivileged_client):
+    """
+    Namespace for optin test VMs with no node selectors/special resources in spec that may block live migration.
+    """
+    yield from create_ns(
+        unprivileged_client=unprivileged_client,
+        admin_client=admin_client,
+        name="test-virt-upgrade-namespace",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -65,7 +77,7 @@ def datasources_for_upgrade(admin_client, dvs_for_upgrade):
 @pytest.fixture(scope="session")
 def vms_for_upgrade(
     unprivileged_client,
-    upgrade_namespace_scope_session,
+    virt_upgrade_namespace,
     datasources_for_upgrade,
     cpu_for_migration,
     rhel_latest_os_params,
@@ -79,7 +91,7 @@ def vms_for_upgrade(
             for data_source in datasources_for_upgrade:
                 vm = VirtualMachineForTestsFromTemplate(
                     name=data_source.name.replace("ds", "vm")[0:26],
-                    namespace=upgrade_namespace_scope_session.name,
+                    namespace=virt_upgrade_namespace.name,
                     client=unprivileged_client,
                     labels=Template.generate_template_labels(**rhel_latest_os_params["rhel_template_labels"]),
                     data_source=data_source,
@@ -121,7 +133,7 @@ def vm_cluster_instancetype_for_upgrade(cluster_common_node_cpu):
 @pytest.fixture(scope="session")
 def vm_with_instancetypes_for_upgrade(
     unprivileged_client,
-    upgrade_namespace_scope_session,
+    virt_upgrade_namespace,
     vm_cluster_instancetype_for_upgrade,
     vm_cluster_preference_for_upgrade,
     datasources_for_upgrade,
@@ -129,7 +141,7 @@ def vm_with_instancetypes_for_upgrade(
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-instance-type",
-        namespace=upgrade_namespace_scope_session.name,
+        namespace=virt_upgrade_namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=vm_cluster_instancetype_for_upgrade,
         vm_preference=vm_cluster_preference_for_upgrade,
@@ -147,14 +159,16 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 
 
 @pytest.fixture()
-def unupdated_vmi_pods_names(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, migratable_vms):
-    wait_for_automatic_vm_migrations(vm_list=migratable_vms)
+def unupdated_vmi_pods_names(
+    admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, virt_migratable_vms
+):
+    wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms)
 
     return validate_vms_pod_updated(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
         hco_target_csv_name=hco_target_csv_name or eus_hco_target_csv_name,
-        vm_list=migratable_vms,
+        vm_list=virt_migratable_vms,
     )
 
 
@@ -223,7 +237,7 @@ def running_always_run_strategy_vm(always_run_strategy_vm):
 def windows_vm(
     admin_client,
     unprivileged_client,
-    upgrade_namespace_scope_session,
+    virt_upgrade_namespace,
     modern_cpu_for_migration,
 ):
     latest_windows_dict = py_config["latest_windows_os_dict"]
@@ -246,7 +260,7 @@ def windows_vm(
         ) as ds:
             with vm_from_template(
                 vm_name="windows-vm",
-                namespace=upgrade_namespace_scope_session.name,
+                namespace=virt_upgrade_namespace.name,
                 client=unprivileged_client,
                 template_labels=latest_windows_dict["template_labels"],
                 data_source=ds,
@@ -273,22 +287,23 @@ def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_imag
 
 
 @pytest.fixture(scope="session")
-def virt_migratable_vms(vms_for_upgrade):
-    def _vm_is_migrateable(vm):
-        vm_spec = vm.instance.spec
-        vm_access_modes = (
-            vm.get_storage_configuration()
-            if (vm_spec.get("instancetype") or vm_spec.get("preference"))
-            else vm.access_modes
-        )
-        if DataVolume.AccessMode.RWO in vm_access_modes:
-            return False
-        return True
+def virt_migratable_vms(admin_client, virt_upgrade_namespace):
+    migratable_vms = []
+    for vm in VirtualMachine.get(client=admin_client, namespace=virt_upgrade_namespace.name):
+        if vm.ready and any(
+            condition.type == "LiveMigratable" and condition.status == "True"
+            for condition in vm.vmi.instance.status.conditions
+        ):
+            migratable_vms.append(vm)
 
-    migratable_vms = [vm for vm in vms_for_upgrade if _vm_is_migrateable(vm=vm)]
-
-    LOGGER.info(f"VIRT migratable vms: {[vm.name for vm in migratable_vms]}")
     return migratable_vms
+
+
+@pytest.fixture(scope="session")
+def virt_migratable_vms_names(virt_migratable_vms):
+    vm_names = [vm.name for vm in virt_migratable_vms]
+    LOGGER.info(f"All migratable vms: {vm_names}")
+    return vm_names
 
 
 @pytest.fixture(scope="session")
@@ -298,7 +313,7 @@ def linux_boot_time_before_upgrade(vms_for_upgrade):
 
 @pytest.fixture(scope="session")
 def windows_boot_time_before_upgrade(windows_vm):
-    yield get_vm_boot_time(vm=windows_vm)
+    return get_boot_time_for_multiple_vms(vm_list=[windows_vm])
 
 
 @pytest.fixture(scope="session")
@@ -316,11 +331,11 @@ def post_copy_migration_policy_for_upgrade(admin_client):
 
 
 @pytest.fixture(scope="session")
-def vm_for_post_copy_upgrade(upgrade_namespace_scope_session, unprivileged_client, cpu_for_migration):
+def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_for_migration):
     vm_name = "vm-for-post-copy-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
-        namespace=upgrade_namespace_scope_session.name,
+        namespace=virt_upgrade_namespace.name,
         body=fedora_vm_body(name=vm_name),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,

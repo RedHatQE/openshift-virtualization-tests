@@ -53,7 +53,6 @@ from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_state import SriovNetworkNodeState
 from ocp_resources.storage_class import StorageClass
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -1871,21 +1870,6 @@ def upgrade_namespace_scope_session(admin_client, unprivileged_client):
         admin_client=admin_client,
         name="test-upgrade-namespace",
     )
-
-
-@pytest.fixture(scope="session")
-def migratable_vms(admin_client, upgrade_namespace_scope_session, kmp_enabled_namespace):
-    migratable_vms = []
-    for ns in [kmp_enabled_namespace, upgrade_namespace_scope_session]:
-        for vm in VirtualMachine.get(client=admin_client, namespace=ns.name):
-            if vm.ready and any(
-                condition.type == "LiveMigratable" and condition.status == "True"
-                for condition in vm.vmi.instance.status.conditions
-            ):
-                migratable_vms.append(vm)
-
-    LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
-    return migratable_vms
 
 
 @pytest.fixture(scope="session")

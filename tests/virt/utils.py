@@ -417,7 +417,7 @@ def get_boot_time_for_multiple_vms(vm_list):
     return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
 
 
-def verify_linux_boot_time(vm_list, initial_boot_time):
+def verify_guest_boot_time(vm_list, initial_boot_time):
     rebooted_vms = {}
     for vm in vm_list:
         current_boot_time = get_vm_boot_time(vm=vm)
