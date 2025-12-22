@@ -34,7 +34,6 @@ ANNOTATION_TO_COPY_STR = "annotation-to-copy"
 ANNOTATION_TO_EXCLUDE_STR = "annotation-to-exclude"
 
 NEW_MAC_ADDRESS_CLONE_STR = "02-03-04-05-06-07"
-NEW_SMBIOS_SERIAL_CLONE_STR = "target-serial"
 
 RHEL_VM_WITH_TWO_PVC = "rhel-vm-with-two-pvc"
 WINDOWS_VM_FOR_CLONING = "win-vm-for-cloning"
@@ -94,7 +93,6 @@ def cloning_job_fedora_vm(request, unprivileged_client, namespace):
         label_filters=request.param["label_filters"],
         annotation_filters=request.param["annotation_filters"],
         new_mac_addresses={"default": request.param["new_mac_addresses"]},
-        new_smbios_serial=request.param["new_smbios_serial"],
     ) as vmc:
         yield vmc
 
@@ -216,7 +214,6 @@ def test_clone_windows_vm(
                     ANNOTATION_TO_COPY_STR: "annotation1",
                     ANNOTATION_TO_EXCLUDE_STR: "annotation2",
                 },
-                "smbios_serial": "source-serial",
             },
             {
                 "source_name": FEDORA_VM_FOR_CLONING,
@@ -224,7 +221,6 @@ def test_clone_windows_vm(
                 "label_filters": ["*", f"!{LABEL_TO_EXCLUDE_STR}/*"],
                 "annotation_filters": ["*", f"!{ANNOTATION_TO_EXCLUDE_STR}/*"],
                 "new_mac_addresses": NEW_MAC_ADDRESS_CLONE_STR,
-                "new_smbios_serial": NEW_SMBIOS_SERIAL_CLONE_STR,
             },
         )
     ],
@@ -273,12 +269,12 @@ class TestVMCloneAndMigrate:
                 f"MAC Address on the target VM is not correct: {iface.macAddress}"
             )
 
-    @pytest.mark.polarion("CNV-10355")
-    def test_check_new_smbios_serial_on_clone(self, fedora_target_vm_instance):
-        current_serial = fedora_target_vm_instance.spec.template.spec.domain.get("firmware", {}).get("serial")
-        assert current_serial == NEW_SMBIOS_SERIAL_CLONE_STR, (
-            f"SMBIOS Serial is not correct on the target VM. Current: {current_serial}, "
-            f"Expected: {NEW_SMBIOS_SERIAL_CLONE_STR}"
+    @pytest.mark.polarion("CNV-12507")
+    def test_check_unique_smbios_serial_on_clone(self, fedora_vm_for_cloning, fedora_target_vm_instance):
+        assert fedora_vm_for_cloning.instance.spec.template.spec.domain.get("firmware", {}).get(
+            "serial"
+        ) != fedora_target_vm_instance.spec.template.spec.domain.get("firmware", {}).get("serial"), (
+            "Cloned VM has identical serial to source! Uniqueness failed."
         )
 
     @pytest.mark.polarion("CNV-10320")

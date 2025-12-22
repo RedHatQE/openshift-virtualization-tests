@@ -37,11 +37,13 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
-              CRITICAL: You MUST respond with a review comment on the Files Changed tab, NOT as a regular PR comment.
-              If it cannot be on the 1st line of the 1st file, add it to any other changed file.
+              CRITICAL: You MUST submit a formal pull request review using the "Request changes" review type.
+              This will block the PR from merging until the author addresses the test execution plan.
+              Use the GitHub review submission feature (not inline comments) so it triggers the pull_request_review event.
+              The review body should contain the Test Execution Plan with the smoke tests recommendation.
 
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
-              You will create a change request comment on the 1st line of the 1st file in the pr with the test execution plan.
+              You will submit a pull request review with the test execution plan in the review body.
               If you fail to run or post a comment, retry.
 
               **Analysis Requirements:**
@@ -51,12 +53,18 @@ jobs:
               3. Analyze pytest-specific elements: fixtures (scope, dependencies), parametrization, markers, conftest changes
               4. Trace test dependencies through imports, shared utilities, and fixture inheritance
               5. Detect new tests introduced in the PR
+              6. **Smoke Test Impact Analysis:** Determine if any changes could affect smoke tests by checking:
+                 - Changes to files/functions used by tests marked with `@pytest.mark.smoke`
+                 - Changes to fixtures or utilities imported by smoke tests
+                 - Changes to conftest.py files that may affect smoke test execution
+                 - Changes to core infrastructure code (utilities/, libs/) that smoke tests depend on
 
               **Your deliverable:**
               Your change request comment will be based on the following requirements:
 
               **Test Execution Plan**
 
+              - **Run smoke tests: True / False** _(Based on your smoke test impact analysis - True if any changes may affect smoke tests)_
               - `path/to/test_file.py` - When the entire test file needs verification
               - `path/to/test_file.py::TestClass::test_method` - When specific test(s) needed
               - `path/to/test_file.py::test_function` - When specific test(s) needed
@@ -69,6 +77,33 @@ jobs:
               - Use file path + test name if only specific tests are needed
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
-              - Do not add a follow-up comment in the PR, only the change request one
+
+              **CRITICAL WORKFLOW COMPLETION RULES:**
+
+              When responding to this test execution plan request, you MUST follow these rules EXACTLY:
+
+              1. **YOUR ONLY DELIVERABLE**: Submit a formal pull request review with the test execution plan in the review body
+              2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
+              3. **FALLBACK ONLY**: If submitting the review fails after retrying, post as a regular PR comment
+              4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
+
+              **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
+              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
+              - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
+              - ❌ Do NOT add any follow-up comments after submitting the review
+              - ❌ Do NOT reply to confirm task completion
+              - ❌ Do NOT explain what you did - just do it and stop
+
+              **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
+
+              CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
+                - Trace the actual fixture dependency chain from smoke tests to changed fixtures
+                - Verify that smoke tests actually import/use changed utilities or functions
+                - Confirm the dependency path exists; do NOT assume based on scope or semantics
+                - Be conservative: Session-scoped fixtures or infrastructure-sounding names do NOT
+                  automatically mean smoke test impact. Only flag smoke test impact when you can
+                  demonstrate a concrete dependency path.
+                WRONG: "This session-scoped storage fixture might affect smoke tests"
+                RIGHT: "Smoke test X uses fixture Y, which depends on the changed fixture Z"
 
             </details>
