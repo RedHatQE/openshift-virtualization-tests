@@ -170,11 +170,6 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
 
 
 @pytest.fixture(scope="class")
-def storage_class_name_scope_class(storage_class_matrix__class__):
-    return [*storage_class_matrix__class__][0]
-
-
-@pytest.fixture(scope="class")
 def blank_disk_dv_multi_storage_scope_class(
     unprivileged_client, namespace, param_substring_scope_class, storage_class_name_scope_class
 ):

@@ -567,6 +567,11 @@ def storage_class_name_immediate_binding_scope_module(storage_class_matrix_immed
     return [*storage_class_matrix_immediate_matrix__module__][0]
 
 
+@pytest.fixture(scope="class")
+def storage_class_name_scope_class(storage_class_matrix__class__):
+    return [*storage_class_matrix__class__][0]
+
+
 @pytest.fixture(scope="session")
 def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
