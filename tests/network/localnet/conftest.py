@@ -303,8 +303,9 @@ def ovs_bridge_localnet_running_vms_one_with_interface_down(
     lookup_iface_status(
         vm=vm_ovs_bridge_localnet_link_down,
         iface_name=LOCALNET_OVS_BRIDGE_INTERFACE,
-        predicate=lambda interface: "guest-agent" in interface["infoSource"]
-        and interface["linkState"] == LINK_STATE_DOWN,
+        predicate=lambda interface: (
+            "guest-agent" in interface["infoSource"] and interface["linkState"] == LINK_STATE_DOWN
+        ),
     )
     yield vm1, vm2
 

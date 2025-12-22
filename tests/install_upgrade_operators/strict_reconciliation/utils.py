@@ -62,9 +62,11 @@ def verify_specs(
     )
     verify_spec(
         expected_spec=kubevirt_hyperconverged_spec_scope_function,
-        get_spec_func=lambda: get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
-        .instance.to_dict()
-        .get("spec"),
+        get_spec_func=lambda: (
+            get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+            .instance.to_dict()
+            .get("spec")
+        ),
     )
     verify_spec(
         expected_spec=cdi_spec,
