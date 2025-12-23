@@ -73,6 +73,7 @@ def test_cnv_deployment_priority_class_name(
         )
 
 
+@pytest.mark.skip_must_gather_collection
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8289")
 def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
