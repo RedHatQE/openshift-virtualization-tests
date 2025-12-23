@@ -10,13 +10,13 @@ import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
     ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
+    ERROR_MSG_VM_IS_RUNNING,
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
@@ -26,7 +26,7 @@ from tests.storage.snapshots.utils import (
     run_command_on_vm_and_check_output,
     start_windows_vm_after_restore,
 )
-from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
+from utilities.constants import LS_COMMAND
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -158,35 +158,17 @@ class TestRestoreSnapshots:
         snapshot_with_content,
     ):
         running_vm(vm=rhel_vm_for_snapshot)
-
-        # snapshot restore with online VM should create vmstore object
-        # with 'status.complete=False', 'status.conditions.ready="False"'
-        # and 'status.conditions.progress="False"'
-        with VirtualMachineRestore(
-            client=admin_client,
-            name="restore-snapshot-cnv-5048",
-            namespace=rhel_vm_for_snapshot.namespace,
-            vm_name=rhel_vm_for_snapshot.name,
-            snapshot_name=snapshot_with_content[0].name,
-        ) as vmrestore:
-            try:
-                for sampler in TimeoutSampler(
-                    wait_timeout=TIMEOUT_1MIN,
-                    sleep=TIMEOUT_10SEC,
-                    func=lambda: (
-                        not vmrestore.instance.status.get("complete")
-                        and vmrestore.instance.status.get("conditions")[0].get("status") == "False"
-                        and vmrestore.instance.status.get("conditions")[1].get("status") == "False"
-                    ),
-                ):
-                    if sampler:
-                        break
-            except TimeoutExpiredError:
-                LOGGER.error("Snapshot restore should not succeed with running VM")
-                raise
-            # Snapshot restore should be successful once the VM is stopped
-            rhel_vm_for_snapshot.stop(wait=True)
-            vmrestore.wait_restore_done()
+        with pytest.raises(
+            ApiException,
+            match=ERROR_MSG_VM_IS_RUNNING,
+        ):
+            with VirtualMachineRestore(
+                name="restore-snapshot-cnv-5048",
+                namespace=rhel_vm_for_snapshot.namespace,
+                vm_name=rhel_vm_for_snapshot.name,
+                snapshot_name=snapshot_with_content[0].name,
+            ):
+                return
 
     @pytest.mark.parametrize(
         "rhel_vm_name, snapshot_with_content, namespace",
