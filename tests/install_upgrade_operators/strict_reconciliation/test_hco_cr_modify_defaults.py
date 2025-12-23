@@ -339,11 +339,11 @@ class TestOperatorsModify:
         if expected["kubevirt_spec"]:
             wait_for_spec_change(
                 expected=expected["kubevirt_spec"]["expected"],
-                get_spec_func=lambda: get_hyperconverged_kubevirt(
-                    admin_client=admin_client, hco_namespace=hco_namespace
-                )
-                .instance.to_dict()
-                .get("spec"),
+                get_spec_func=lambda: (
+                    get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+                    .instance.to_dict()
+                    .get("spec")
+                ),
                 base_path=expected["kubevirt_spec"]["base_path"],
             )
         if expected["cdi_spec"]:
@@ -355,8 +355,8 @@ class TestOperatorsModify:
         if expected["cnao_spec"]:
             wait_for_spec_change(
                 expected=expected["cnao_spec"],
-                get_spec_func=lambda: get_network_addon_config(admin_client=admin_client)
-                .instance.to_dict()
-                .get("spec"),
+                get_spec_func=lambda: (
+                    get_network_addon_config(admin_client=admin_client).instance.to_dict().get("spec")
+                ),
                 base_path=[CNAO_CR_CERT_CONFIG_KEY],
             )

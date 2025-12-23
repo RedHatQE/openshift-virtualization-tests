@@ -573,9 +573,9 @@ def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]
     assert upgrade_paths, f"Couldn't find upgrade path for {target_version} version"
     upgrade_path = max(
         upgrade_paths,
-        key=lambda path: Version(version="0")
-        if "-hotfix" in path["startVersion"]
-        else Version(version=str(path["startVersion"])),
+        key=lambda path: (
+            Version(version="0") if "-hotfix" in path["startVersion"] else Version(version=str(path["startVersion"]))
+        ),
     )
     return upgrade_path
 

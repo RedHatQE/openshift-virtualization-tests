@@ -309,7 +309,8 @@ def get_hco_version(client, hco_ns_name):
         str: hyperconverged operator version
     """
     return (
-        utilities.infra.get_hyperconverged_resource(client=client, hco_ns_name=hco_ns_name)
+        utilities.infra
+        .get_hyperconverged_resource(client=client, hco_ns_name=hco_ns_name)
         .instance.status.versions[0]
         .version
     )

@@ -178,7 +178,7 @@ class TestSetupLogging:
         """Test that setup_logging properly configures basic and root loggers"""
         mock_basic_logger = MagicMock()
         mock_root_logger = MagicMock()
-        mock_get_logger.side_effect = lambda name="": (mock_basic_logger if name == "basic" else mock_root_logger)
+        mock_get_logger.side_effect = lambda name="": mock_basic_logger if name == "basic" else mock_root_logger
 
         with (
             patch("logger.multiprocessing.Queue"),
