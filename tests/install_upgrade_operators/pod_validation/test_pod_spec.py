@@ -39,6 +39,7 @@ def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function
     return pod_list
 
 
+@pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
 def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
     all_pods = ALL_CNV_PODS.copy()
