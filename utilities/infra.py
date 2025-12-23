@@ -57,6 +57,8 @@ from utilities.constants import (
     PROMETHEUS_K8S,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
+    TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
@@ -837,9 +839,9 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
 
 
 @retry(
-    wait_timeout=TIMEOUT_30SEC,
+    wait_timeout=TIMEOUT_4MIN,
     sleep=TIMEOUT_10SEC,
-    exceptions_dict={RuntimeError: [], subprocess.TimeoutExpired: []},
+    exceptions_dict={RuntimeError: []},
 )
 def get_node_audit_log_entries(log, node, log_entry):
     # Patterns to match errors that should trigger a retry
@@ -855,7 +857,7 @@ def get_node_audit_log_entries(log, node, log_entry):
         shell=True,
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=TIMEOUT_3MIN,
     )
     lines = result.stdout.splitlines()
     has_errors = any(error_patterns.search(line) for line in lines)
