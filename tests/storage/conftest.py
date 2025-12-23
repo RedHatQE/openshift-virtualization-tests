@@ -62,8 +62,6 @@ from utilities.hco import (
 from utilities.infra import (
     INTERNAL_HTTP_SERVER_ADDRESS,
     ExecCommandOnPod,
-    get_artifactory_config_map,
-    get_artifactory_secret,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -401,6 +399,11 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 
 
 @pytest.fixture()
+def cirros_vm_name(request):
+    return request.param["vm_name"]
+
+
+@pytest.fixture()
 def rhel_vm_name(request):
     return request.param["vm_name"]
 
@@ -413,22 +416,6 @@ def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes)
     for storage_class in cluster_storage_classes:
         if storage_class.name in HPP_STORAGE_CLASSES:
             return storage_class
-
-
-@pytest.fixture(scope="module")
-def artifactory_secret_scope_module(namespace):
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
-    yield artifactory_secret
-    if artifactory_secret:
-        artifactory_secret.clean_up()
-
-
-@pytest.fixture(scope="module")
-def artifactory_config_map_scope_module(namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
-    yield artifactory_config_map
-    if artifactory_config_map:
-        artifactory_config_map.clean_up()
 
 
 @pytest.fixture()
