@@ -16,6 +16,8 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -475,23 +477,16 @@ class TestVmVnicInfo:
 
 
 class TestVmiPhaseTransitionFromDeletion:
-    @pytest.mark.parametrize(
-        "initial_metric_value",
-        [
-            pytest.param(
-                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-                marks=pytest.mark.polarion("CNV-12067"),
-            )
-        ],
-        indirect=True,
-    )
+    @pytest.mark.polarion("CNV-12067")
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_linux(
-        self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
+        self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi
     ):
         validate_metric_value_greater_than_initial_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-            initial_value=initial_metric_value,
+            initial_value=initial_vmi_deletion_metrics_values[
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED
+            ],
         )
 
     @pytest.mark.parametrize(
@@ -511,6 +506,33 @@ class TestVmiPhaseTransitionFromDeletion:
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             initial_value=initial_metric_value,
+        )
+
+    @pytest.mark.polarion("CNV-12459")
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_bucket(
+        self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi
+    ):
+        validate_metric_value_greater_than_initial_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+            initial_value=initial_vmi_deletion_metrics_values[
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED
+            ],
+        )
+
+    @pytest.mark.polarion("CNV-12469")
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_count(
+        self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi
+    ):
+        validate_metrics_value(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
+            expected_value=str(
+                initial_vmi_deletion_metrics_values[
+                    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED
+                ]
+                + 1
+            ),
         )
 
 
