@@ -163,6 +163,7 @@ class TestRestoreSnapshots:
             match=ERROR_MSG_VM_IS_RUNNING,
         ):
             with VirtualMachineRestore(
+                client=admin_client,
                 name="restore-snapshot-cnv-5048",
                 namespace=rhel_vm_for_snapshot.namespace,
                 vm_name=rhel_vm_for_snapshot.name,
