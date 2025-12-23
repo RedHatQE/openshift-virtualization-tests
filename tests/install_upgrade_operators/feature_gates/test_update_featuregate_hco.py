@@ -12,7 +12,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 
 FEATUREGATE_NAME_KEY_STR = "featuregate_name"
 
-pytestmark = pytest.mark.s390x
+pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.fixture()
