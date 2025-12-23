@@ -8,14 +8,22 @@ from utilities.infra import get_related_images_name_and_version
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures(
+        "nodes_taints_before_upgrade",
+        "nodes_labels_before_upgrade",
+    ),
+    pytest.mark.product_upgrade_test,
+    pytest.mark.sno,
+    pytest.mark.upgrade,
+    pytest.mark.upgrade_custom,
+    pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID),
+]
 
-@pytest.mark.product_upgrade_test
-@pytest.mark.upgrade
-@pytest.mark.upgrade_custom
+
 @pytest.mark.eus_upgrade
 class TestEUSToEUSUpgrade:
     @pytest.mark.polarion("CNV-9509")
-    @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_eus_upgrade_process(
         self,
         admin_client,
