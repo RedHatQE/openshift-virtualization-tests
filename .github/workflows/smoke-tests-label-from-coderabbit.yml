@@ -101,7 +101,7 @@ jobs:
         with:
           number: ${{ github.event.issue.number || github.event.pull_request.number }}
           labels: smoke-tests:pending-analysis
-          github_token: ${{ secrets.BOT3_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove label
         if: steps.flow.outputs.flow_remove == 'true'
@@ -110,4 +110,4 @@ jobs:
         with:
           number: ${{ github.event.issue.number || github.event.pull_request.number }}
           labels: smoke-tests:pending-analysis
-          github_token: ${{ secrets.BOT3_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
