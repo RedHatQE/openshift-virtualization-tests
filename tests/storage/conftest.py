@@ -401,6 +401,11 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module):
 
 
 @pytest.fixture()
+def cirros_vm_name(request):
+    return request.param["vm_name"]
+
+
+@pytest.fixture()
 def rhel_vm_name(request):
     return request.param["vm_name"]
 
