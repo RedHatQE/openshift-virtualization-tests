@@ -14,6 +14,8 @@
 # │ Neither pattern                                              │ Any                           │ ⏭️ No action                           │
 # │ Comment not from CodeRabbit                                  │ Any                           │ ⏭️ Does NOT run                        │
 # └──────────────────────────────────────────────────────────────┴───────────────────────────────┴────────────────────────────────────────┘
+#
+# CodeRabbit comments trigger via: pull_request_review_comment (inline comments) or issue_comment (PR comments)
 
 name: "Smoke Tests Label from CodeRabbit"
 
@@ -21,6 +23,7 @@ on:
   # WARNING: pull_request_target runs with write permissions on base repo
   # Safe here because we only manipulate labels without executing PR code
   # NEVER add steps that checkout or execute code from the PR branch
+  # Event types: pull_request_target (reset), pull_request_review_comment/issue_comment (CodeRabbit)
   pull_request_target:
     types: [opened, synchronize, reopened]
   pull_request_review_comment:
@@ -56,7 +59,7 @@ jobs:
         (github.event_name == 'issue_comment' &&
          (github.event.comment.user.login == 'coderabbitai' || github.event.comment.user.login == 'coderabbitai[bot]')) ||
         (github.event_name == 'pull_request_review_comment' &&
-         (github.event.review_comment.user.login == 'coderabbitai' || github.event.review_comment.user.login == 'coderabbitai[bot]'))
+         (github.event.comment.user.login == 'coderabbitai' || github.event.comment.user.login == 'coderabbitai[bot]'))
       )
     runs-on: ubuntu-latest
 
@@ -64,16 +67,19 @@ jobs:
       - name: Determine label action
         id: flow
         env:
-          COMMENT_BODY: ${{ github.event_name == 'pull_request_review_comment' && github.event.review_comment.body || github.event.comment.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           [ -z "$COMMENT_BODY" ] && { echo "ERROR: Empty comment body"; exit 1; }
 
           # Strip <details> and <summary> blocks to avoid matching patterns in analysis chain scripts
           COMMENT_STRIPPED=$(sed -e '/<details>/,/<\/details>/d' -e '/<summary>/,/<\/summary>/d' <<< "$COMMENT_BODY")
 
-          HAS_TEST_PLAN=$(grep -qF '## Test Execution Plan' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
-          HAS_RUN_TRUE=$(grep -qF '**Run smoke tests: True**' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
-          HAS_RUN_FALSE=$(grep -qF '**Run smoke tests: False**' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          # Use line-anchored patterns to avoid matching meta-discussions about the workflow
+          # These patterns require the text to appear at the start of a line, matching the actual
+          # Test Execution Plan format instead of matching when CodeRabbit explains how it works
+          HAS_TEST_PLAN=$(grep -qE '^## Test Execution Plan' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_TRUE=$(grep -qE '^\*\*Run smoke tests: True\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
+          HAS_RUN_FALSE=$(grep -qE '^\*\*Run smoke tests: False\*\*' <<< "$COMMENT_STRIPPED" && echo "true" || echo "false")
 
           FLOW_ADD="false"
           FLOW_REMOVE="false"
@@ -95,7 +101,7 @@ jobs:
         with:
           number: ${{ github.event.issue.number || github.event.pull_request.number }}
           labels: smoke-tests:pending-analysis
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.BOT3_TOKEN }}
 
       - name: Remove label
         if: steps.flow.outputs.flow_remove == 'true'
@@ -104,4 +110,4 @@ jobs:
         with:
           number: ${{ github.event.issue.number || github.event.pull_request.number }}
           labels: smoke-tests:pending-analysis
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.BOT3_TOKEN }}

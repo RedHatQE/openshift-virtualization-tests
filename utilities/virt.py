@@ -2426,8 +2426,9 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
         for sample in TimeoutSampler(
             wait_timeout=timeout,
             sleep=TIMEOUT_5SEC,
-            func=lambda: vm.vmi.node.name != initial_node.name
-            and vm.vmi.status == VirtualMachineInstance.Status.RUNNING,
+            func=lambda: (
+                vm.vmi.node.name != initial_node.name and vm.vmi.status == VirtualMachineInstance.Status.RUNNING
+            ),
         ):
             if sample:
                 LOGGER.info(

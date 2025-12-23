@@ -64,9 +64,9 @@ def wait_for_tekton_resource_availability(tekton_namespace, tekton_resource_kind
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_10SEC,
             sleep=TIMEOUT_5SEC,
-            func=lambda: tekton_resource_kind(
-                namespace=tekton_namespace.name, name=resource_name, client=client
-            ).exists,
+            func=lambda: (
+                tekton_resource_kind(namespace=tekton_namespace.name, name=resource_name, client=client).exists
+            ),
         ):
             if sample:
                 return True

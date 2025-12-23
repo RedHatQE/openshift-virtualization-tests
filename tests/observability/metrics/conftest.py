@@ -47,6 +47,7 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
+    REGISTRY_STR,
     SSP_OPERATOR,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -602,12 +603,11 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
 def fedora_rwo_dv(namespace, unprivileged_client):
     """
     Create a DataVolume with RWO access mode from a container registry.
-    Used for testing non-evictable VMs (RWO + LiveMigrate = non-evictable).
     """
     with DataVolume(
         client=unprivileged_client,
-        source="registry",
-        name="non-evictable-dv",
+        source=REGISTRY_STR,
+        name="non-evictable-vm-dv-for-test",
         namespace=namespace.name,
         url=DEFAULT_FEDORA_REGISTRY_URL,
         size=Images.Fedora.DEFAULT_DV_SIZE,

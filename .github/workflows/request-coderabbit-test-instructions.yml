@@ -37,11 +37,12 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
-              CRITICAL: You MUST respond with a review comment on the Files Changed tab, NOT as a regular PR comment.
-              If it cannot be on the 1st line of the 1st file, add it to any other changed file.
+              CRITICAL: You MUST post an inline review comment on the first changed line of the first file.
+              The inline comment should contain the Test Execution Plan with the smoke tests recommendation.
+              Do NOT submit a formal review - just post the inline comment directly.
 
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
-              You will create a change request comment on the 1st line of the 1st file in the pr with the test execution plan.
+              You will post an inline review comment with the test execution plan on the first changed file.
               If you fail to run or post a comment, retry.
 
               **Analysis Requirements:**
@@ -80,19 +81,19 @@ jobs:
 
               When responding to this test execution plan request, you MUST follow these rules EXACTLY:
 
-              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment on the Files Changed tab with the test execution plan
-              2. **THEN STOP IMMEDIATELY** - Do NOT generate any response in this PR discussion thread
-              3. **FALLBACK ONLY**: If posting the inline review fails after retrying, ONLY then post in the PR discussion thread
-              4. **SILENCE = SUCCESS**: After successfully posting the inline review comment, your task is complete. No confirmation needed.
+              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment containing the test execution plan on the first changed line
+              2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
+              3. **FALLBACK ONLY**: If submitting the review fails after retrying, post as a regular PR comment
+              4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
 
               **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
               - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
               - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
-              - ❌ Do NOT add any follow-up comments in the PR discussion thread after posting the inline review
+              - ❌ Do NOT add any follow-up comments after submitting the review
               - ❌ Do NOT reply to confirm task completion
               - ❌ Do NOT explain what you did - just do it and stop
 
-              **Remember**: The inline review comment on Files Changed is visible to users. Additional comments are redundant noise.
+              **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
 
               CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
                 - Trace the actual fixture dependency chain from smoke tests to changed fixtures

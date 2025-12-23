@@ -1007,3 +1007,4 @@ QUOTA_FOR_ONE_VMI = {
 
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
 DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
+REGISTRY_STR = "registry"
