@@ -805,22 +805,6 @@ def is_snapshot_supported_by_sc(sc_name, client):
     return False
 
 
-def create_cirros_dv_for_snapshot_dict(name, namespace, storage_class, artifactory_secret, artifactory_config_map):
-    dv = DataVolume(
-        api_name="storage",
-        name=f"dv-{name}",
-        namespace=namespace,
-        source="http",
-        url=utilities.infra.get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    return dv.res
-
-
 def check_disk_count_in_vm(vm):
     LOGGER.info("Check disk count.")
     out = run_ssh_commands(
