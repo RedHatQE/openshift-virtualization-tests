@@ -600,11 +600,14 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
 
 
 @pytest.fixture()
-def fedora_rwo_dv(namespace, unprivileged_client):
+def non_evictable_vm_from_template(request, unprivileged_client, namespace):
     """
-    Create a DataVolume with RWO access mode from a container registry.
+    Create a VM from template with RWO DataVolume created via data_volume_template.
+    This VM will have LiveMigrate eviction strategy with RWO storage, making it non-evictable.
+    The DataVolume is created by the VM itself, which works correctly with WaitForFirstConsumer storage classes.
     """
-    with DataVolume(
+    # Create a DataVolume template (not deployed yet - VM will create it)
+    dv = DataVolume(
         client=unprivileged_client,
         source=REGISTRY_STR,
         name="non-evictable-vm-dv-for-test",
@@ -614,21 +617,13 @@ def fedora_rwo_dv(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
         access_modes=DataVolume.AccessMode.RWO,
         api_name="storage",
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
-@pytest.fixture()
-def non_evictable_vm_from_template(request, unprivileged_client, namespace, fedora_rwo_dv):
-    """
-    Create a VM from template using the fedora_rwo_dv DataVolume.
-    This VM will have LiveMigrate eviction strategy with RWO storage, making it non-evictable.
-    """
+    )
+    dv.to_dict()
+    dv_res = dv.res
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        existing_data_volume=fedora_rwo_dv,
+        data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
     ) as vm:
         yield vm
