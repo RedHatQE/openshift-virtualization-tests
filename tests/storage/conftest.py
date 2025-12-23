@@ -16,7 +16,6 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
 from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
-from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
@@ -29,7 +28,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutSampler
 
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
@@ -53,8 +52,6 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
     U1_SMALL,
     Images,
 )
@@ -70,12 +67,6 @@ from utilities.infra import (
 )
 from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
-from utilities.storage import (
-    create_cirros_dv_for_snapshot_dict,
-    get_downloaded_artifact,
-    write_file,
-)
-from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
@@ -558,8 +549,8 @@ def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
 
 
-@pytest.fixture(scope="module")
-def rhel10_data_source_scope_module(golden_images_namespace):
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
     return DataSource(
         namespace=golden_images_namespace.name,
         name="rhel10",
