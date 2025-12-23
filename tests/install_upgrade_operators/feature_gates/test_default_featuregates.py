@@ -24,7 +24,7 @@ from tests.install_upgrade_operators.utils import (
 )
 from utilities.constants import CDI_KUBEVIRT_HYPERCONVERGED, KUBEVIRT_HCO_NAME
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 LOGGER = logging.getLogger(__name__)
 

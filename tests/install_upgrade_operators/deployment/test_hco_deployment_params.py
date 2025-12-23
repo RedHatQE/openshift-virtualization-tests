@@ -78,6 +78,7 @@ def test_cnv_deployment_priority_class_name(
         )
 
 
+@pytest.mark.skip_must_gather_collection
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-8289")
