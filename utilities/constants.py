@@ -435,6 +435,7 @@ KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
 KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
 KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
+MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -501,7 +502,6 @@ ALL_HCO_RELATED_OBJECTS = [
     {HCO_BEARER_AUTH: SECRET_STR},
     {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
     {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
-    {"migcontroller-kubevirt-hyperconverged": "MigController"},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,

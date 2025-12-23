@@ -16,12 +16,16 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_resource_version_update,
 )
 from tests.utils import wait_for_cr_labels_change
-from utilities.constants import HCO_BEARER_AUTH, TIMEOUT_1MIN, VERSION_LABEL_KEY
+from utilities.constants import HCO_BEARER_AUTH, MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED, TIMEOUT_1MIN, VERSION_LABEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
+LABELS_RECONCILE_BUGS_DICT = {
+    HCO_BEARER_AUTH: "CNV-71826",
+    MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED: "CNV-75592",
+}
 
 
 @pytest.fixture()
@@ -208,12 +212,8 @@ def updated_resource_labels(ocp_resource_by_name):
         yield expected_labels
 
 
-@pytest.fixture(scope="package")
-def is_jira_71826_open():
-    return is_jira_open(jira_id="CNV-71826")
-
-
 @pytest.fixture()
-def skip_if_hco_bearer_token_bug_open(is_jira_71826_open, ocp_resource_by_name):
-    if is_jira_71826_open and ocp_resource_by_name.name == HCO_BEARER_AUTH:
-        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 71826 bug")
+def skip_if_resource_with_labels_reconcile_bug(ocp_resource_by_name):
+    jira_id = LABELS_RECONCILE_BUGS_DICT.get(ocp_resource_by_name.name)
+    if jira_id and is_jira_open(jira_id=jira_id):
+        pytest.skip(f"{ocp_resource_by_name.name} resource labels doesn't reconcile due to {jira_id} bug")
