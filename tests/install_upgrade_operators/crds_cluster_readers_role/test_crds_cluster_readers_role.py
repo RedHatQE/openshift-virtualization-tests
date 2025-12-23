@@ -12,7 +12,13 @@ from utilities.constants import BASE_EXCEPTIONS_DICT, TIMEOUT_3MIN, TIMEOUT_10SE
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.conformance]
+pytestmark = [
+    pytest.mark.sno,
+    pytest.mark.gating,
+    pytest.mark.arm64,
+    pytest.mark.conformance,
+    pytest.mark.skip_must_gather_collection,
+]
 
 
 @retry(

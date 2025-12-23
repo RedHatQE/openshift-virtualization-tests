@@ -1,6 +1,6 @@
 import pytest
 
-pytestmark = pytest.mark.sno
+pytestmark = [pytest.mark.sno, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.mark.polarion("CNV-7169")

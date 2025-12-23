@@ -9,7 +9,13 @@ from tests.install_upgrade_operators.resource_params.utils import (
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import get_hyperconverged_resource
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.sno,
+    pytest.mark.gating,
+    pytest.mark.arm64,
+    pytest.mark.skip_must_gather_collection,
+]
 LOGGER = logging.getLogger(__name__)
 
 
