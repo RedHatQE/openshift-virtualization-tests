@@ -83,6 +83,5 @@ def rhel_8_10_vm(unprivileged_client, namespace, golden_image_data_volume_templa
     ],
     indirect=["golden_image_data_source_for_test_scope_function"],
 )
-@pytest.mark.usefixtures("xfail_if_jira_75031_is_open")
 def test_legacy_machine_type(updated_hco_emulated_machine_i440fx, rhel_8_10_vm, expected_machine_type):
     validate_machine_type(vm=rhel_8_10_vm, expected_machine_type=expected_machine_type)
