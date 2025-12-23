@@ -56,6 +56,7 @@ def pod_security_violations_apis_calls(audit_logs, hco_namespace):
     return failed_api_calls
 
 
+@pytest.mark.tier3
 @pytest.mark.polarion("CNV-9115")
 def test_cnv_pod_security_violation_audit_logs(pod_security_violations_apis_calls):
     LOGGER.info("Test pod security violations API calls:")
