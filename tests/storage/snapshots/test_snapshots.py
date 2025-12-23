@@ -10,13 +10,13 @@ import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
     ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
-    ERROR_MSG_VM_IS_RUNNING,
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
@@ -26,7 +26,6 @@ from tests.storage.snapshots.utils import (
     run_command_on_vm_and_check_output,
     start_windows_vm_after_restore,
 )
-from tests.storage.utils import assert_windows_directory_existence
 from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 

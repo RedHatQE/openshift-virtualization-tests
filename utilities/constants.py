@@ -688,6 +688,7 @@ OUTDATED = "Outdated"
 
 RHEL_WITH_INSTANCETYPE_AND_PREFERENCE = "rhel-with-instancetype-and-preference"
 RHEL9_PREFERENCE = "rhel.9"
+RHEL10_PREFERENCE = "rhel.10"
 U1_SMALL = "u1.small"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"

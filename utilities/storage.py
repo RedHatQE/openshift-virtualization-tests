@@ -3,6 +3,7 @@ import math
 import os
 import shlex
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import kubernetes
 import requests
@@ -50,6 +51,9 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -666,7 +670,7 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
-def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
+def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection.
 

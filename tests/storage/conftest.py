@@ -14,6 +14,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
+from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
@@ -51,8 +52,6 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
     U1_SMALL,
     Images,
 )
@@ -548,3 +547,13 @@ def storage_class_name_immediate_binding_scope_module(storage_class_matrix_immed
 @pytest.fixture(scope="session")
 def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+
+
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
