@@ -37,6 +37,7 @@ CLUSTER_RESOURCE_ALLOWLIST = {
         "olm.og.openshift-cnv-",
         "kubevirt-ipam-controller-manager-role",
         "kubevirt-synchronization-controller",
+        "kubevirt-migration-controller",
     ],
     "ClusterRoleBinding": [
         "hostpath-provisioner-operator-service-system:auth-delegator",
@@ -60,6 +61,7 @@ CLUSTER_RESOURCE_ALLOWLIST = {
         "olm.og.openshift-cnv-kubevirt-ipam-controller-manager-rolebinding",
         "kubevirt-synchronization-controller",
         "kubevirt-ipam-controller-manager-rolebinding",
+        "kubevirt-migration-sa",
     ],
     "Namespace": ["openshift-cnv", "openshift-virtualization-os-images"],
     "Project": ["openshift-cnv", "openshift-virtualization-os-images"],

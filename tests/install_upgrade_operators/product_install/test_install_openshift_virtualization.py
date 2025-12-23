@@ -2,7 +2,6 @@ import logging
 
 import pytest
 from ocp_resources.storage_class import StorageClass
-from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
     CLUSTER_RESOURCE_ALLOWLIST,
@@ -19,7 +18,6 @@ from utilities.constants import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
     PENDING_STR,
     TIMEOUT_10MIN,
-    StorageClassNames,
 )
 from utilities.exceptions import ResourceMismatch
 from utilities.hco import wait_for_hco_conditions
@@ -179,7 +177,9 @@ def test_cnv_resources_installed_namespace_scoped(
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
 def test_ocs_virt_default_storage_class(admin_client, golden_images_namespace, storage_class_ocs_virt):
     if (
-        storage_class_ocs_virt.instance.metadata.get("annotations", {}).get(StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS)
+        storage_class_ocs_virt.instance.metadata.get("annotations", {}).get(
+            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
+        )
         != "true"
     ):
         # set the OCS Virt storage class as default for the smoke tests afterwards

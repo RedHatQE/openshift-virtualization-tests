@@ -2,13 +2,13 @@ import logging
 import os
 
 import bitmath
-from ocp_resources.storage_class import StorageClass
 import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
+from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
@@ -321,6 +321,7 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
     if not latest_z_stream:
         pytest.exit(reason="CNV version can't be determined for this run", returncode=INSTALLATION_VERSION_MISMATCH)
     return latest_z_stream
+
 
 @pytest.fixture
 def storage_class_ocs_virt(admin_client):
