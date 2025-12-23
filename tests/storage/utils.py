@@ -273,12 +273,15 @@ def wait_for_importer_container_message(importer_pod, msg):
         sampled_msg = TimeoutSampler(
             wait_timeout=120,
             sleep=5,
-            func=lambda: importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
-            and msg
-            in importer_pod.instance.status.containerStatuses[0]
-            .get("lastState", {})
-            .get("terminated", {})
-            .get("message", ""),
+            func=lambda: (
+                importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
+                and msg
+                in importer_pod.instance.status
+                .containerStatuses[0]
+                .get("lastState", {})
+                .get("terminated", {})
+                .get("message", "")
+            ),
         )
         for sample in sampled_msg:
             if sample:

@@ -50,8 +50,10 @@ def assert_first_imported_object_was_deleted(namespace, name):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_3MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: PersistentVolumeClaim(namespace=namespace, name=name).exists
-        or VolumeSnapshot(namespace=namespace, name=name).exists,
+        func=lambda: (
+            PersistentVolumeClaim(namespace=namespace, name=name).exists
+            or VolumeSnapshot(namespace=namespace, name=name).exists
+        ),
     )
     try:
         for sample in samples:

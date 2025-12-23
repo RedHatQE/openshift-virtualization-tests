@@ -67,8 +67,10 @@ class TestLauncherUpdateResetFields:
         )
         wait_for_spec_change(
             expected=expected,
-            get_spec_func=lambda: get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
-            .instance.to_dict()
-            .get("spec"),
+            get_spec_func=lambda: (
+                get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+                .instance.to_dict()
+                .get("spec")
+            ),
             base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )

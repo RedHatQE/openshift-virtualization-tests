@@ -42,8 +42,9 @@ def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     lookup_iface_status(
         vm=vm1_with_initial_link_down,
         iface_name=LOCALNET_OVS_BRIDGE_INTERFACE,
-        predicate=lambda interface: "guest-agent" in interface["infoSource"]
-        and interface["linkState"] == LINK_STATE_UP,
+        predicate=lambda interface: (
+            "guest-agent" in interface["infoSource"] and interface["linkState"] == LINK_STATE_UP
+        ),
     )
 
     with client_server_active_connection(
