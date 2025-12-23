@@ -9,13 +9,16 @@ from ocp_resources.resource import Resource
 from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
+pytestmark = [
+    pytest.mark.sno,
+    pytest.mark.gating,
+    pytest.mark.skip_must_gather_collection,
+]
+
 MTV_VOLUME_POPULATOR_CRDS = [
     f"openstackvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
     f"ovirtvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
 ]
-
-
-pytestmark = [pytest.mark.sno, pytest.mark.gating]
 
 
 @pytest.fixture()

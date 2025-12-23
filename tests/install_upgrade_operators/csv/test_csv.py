@@ -3,7 +3,11 @@ from base64 import b64decode
 import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.sno,
+    pytest.mark.skip_must_gather_collection,
+]
 
 # Check CSV properties like keywords, title, provided by, links etc.
 

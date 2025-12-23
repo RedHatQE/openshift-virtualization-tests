@@ -17,7 +17,12 @@ from utilities.constants import (
     PASST_BINDING_CNI,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.sno,
+    pytest.mark.gating,
+    pytest.mark.skip_must_gather_collection,
+]
 
 
 LOGGER = logging.getLogger(__name__)

@@ -6,7 +6,11 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
 )
 from utilities.constants import ALL_HCO_RELATED_OBJECTS
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.sno,
+    pytest.mark.skip_must_gather_collection,
+]
 
 
 class TestRelatedObjects:

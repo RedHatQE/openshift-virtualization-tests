@@ -1,7 +1,7 @@
 import pytest
 from ocp_resources.resource import Resource
 
-pytestmark = pytest.mark.sno
+pytestmark = [pytest.mark.sno, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.mark.polarion("CNV-5832")
