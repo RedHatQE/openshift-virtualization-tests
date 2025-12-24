@@ -590,46 +590,6 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_spec_dict = source_dict["spec"]
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
-<<<<<<< HEAD
-        namespace=data_source.namespace,
-        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
-        or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
-        api_name="storage",
-        source_ref={
-            "kind": data_source.kind,
-            "name": data_source.name,
-            "namespace": data_source.namespace,
-        },
-    )
-    dv.to_dict()
-    # dataVolumeTemplate is not required to have the namespace explicitly set
-    dv.res["metadata"].pop("namespace", None)
-    return dv.res
-
-
-def data_volume_template_with_unique_name(data_source, storage_class=None, name_suffix=None):
-    """Create DataVolume template with unique name to avoid conflicts.
-
-    Args:
-        data_source: The data source to use
-        storage_class: Optional storage class override
-        name_suffix: Optional suffix for the name (defaults to timestamp)
-    """
-
-    source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-
-    # Generate unique name
-    if name_suffix:
-        unique_name = f"{data_source.name}-{name_suffix}"
-    else:
-        unique_name = utilities.infra.unique_name(name=data_source.name)
-
-    dv = DataVolume(
-        name=unique_name,
-=======
->>>>>>> 79e60cd (Fix PR's comments for DV names and restore vm)
         namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
