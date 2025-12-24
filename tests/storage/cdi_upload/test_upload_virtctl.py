@@ -275,6 +275,7 @@ def empty_pvc(
     storage_class_matrix__module__,
     storage_class_name_scope_module,
     worker_node1,
+    storage_profile_minimum_supported_pvc_size,
 ):
     with PersistentVolumeClaim(
         name="empty-pvc",
@@ -282,7 +283,7 @@ def empty_pvc(
         storage_class=storage_class_name_scope_module,
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size=DEFAULT_DV_SIZE,
+        size=storage_profile_minimum_supported_pvc_size,
         hostpath_node=worker_node1.name
         if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
         else None,

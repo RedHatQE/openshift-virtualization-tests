@@ -7,6 +7,7 @@ import uuid
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.storage_profile import StorageProfile
 
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, Images
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
@@ -91,3 +92,10 @@ def uploaded_dv_scope_class(unprivileged_client, namespace, storage_class_name_s
         ) as upload_result:
             check_upload_virtctl_result(result=upload_result)
             yield dv
+
+
+@pytest.fixture()
+def storage_profile_minimum_supported_pvc_size(storage_class_name_scope_function):
+    storage_profile = StorageProfile(name=storage_class_name_scope_function)
+    annotations = getattr(storage_profile.instance.metadata, "annotations", {}) or {}
+    return annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize", "1Gi")
