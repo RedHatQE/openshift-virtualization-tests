@@ -30,3 +30,5 @@ KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED = (
 )
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
+
+KUBEVIRT_VMI_NODE_CPU_AFFINITY = "kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
