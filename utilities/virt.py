@@ -2426,8 +2426,9 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
         for sample in TimeoutSampler(
             wait_timeout=timeout,
             sleep=TIMEOUT_5SEC,
-            func=lambda: vm.vmi.node.name != initial_node.name
-            and vm.vmi.status == VirtualMachineInstance.Status.RUNNING,
+            func=lambda: (
+                vm.vmi.node.name != initial_node.name and vm.vmi.status == VirtualMachineInstance.Status.RUNNING
+            ),
         ):
             if sample:
                 LOGGER.info(
@@ -2498,6 +2499,9 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -
         "product": smbios_vm_dict["product"] == cm_values["product"],
         "family": smbios_vm_dict["family"] == cm_values["family"],
         "version": smbios_vm_dict["version"] == cm_values["version"],
+        "sku": smbios_vm_dict["sku"] == cm_values["sku"],
+        "serial": smbios_vm_dict.get("serial"),
+        "uuid": smbios_vm_dict.get("uuid"),
     }
     LOGGER.info(f"Results: {results}")
     assert all(results.values())

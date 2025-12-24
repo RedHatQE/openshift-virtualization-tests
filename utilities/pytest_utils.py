@@ -92,10 +92,6 @@ def get_matrix_params(pytest_config, matrix_name):
             matrix_func = getattr(pytest_matrix_utils, _matrix_func_name, None)
             return matrix_func(matrix=_base_matrix_params)
 
-    if not _matrix_params and not _skip_if_pytest_flags_exists:
-        LOGGER.warning(missing_matrix_error)
-        return []
-
     return _matrix_params if isinstance(_matrix_params, list) else [_matrix_params]
 
 
@@ -172,6 +168,7 @@ def stop_if_run_in_progress(client: DynamicClient) -> None:
             return_code=100,
             message="openshift-virtualization-tests run already in progress",
             filename="cnv_tests_run_in_progress_failure.txt",
+            admin_client=client,
         )
 
 
@@ -227,18 +224,32 @@ def skip_if_pytest_flags_exists(pytest_config):
     )
 
 
-def get_artifactory_server_url(cluster_host_url):
+def get_artifactory_server_url(cluster_host_url, session):
     LOGGER.info(f"Getting artifactory server information using cluster host url: {cluster_host_url}")
     if artifactory_server := os.environ.get("ARTIFACTORY_SERVER"):
         LOGGER.info(f"Using user requested `ARTIFACTORY_SERVER` environment variable: {artifactory_server}")
         return artifactory_server
     else:
-        servers = get_cnv_tests_secret_by_name(secret_name="artifactory_servers")
+        if session and session.config.getoption("--disabled-bitwarden"):
+            raise MissingEnvironmentVariableError(
+                "Bitwarden access is disabled (`--disabled-bitwarden`) and `ARTIFACTORY_SERVER` env var is not set. "
+                "Please set `ARTIFACTORY_SERVER` or remove `--disabled-bitwarden`."
+            )
+
+        servers = get_cnv_tests_secret_by_name(secret_name="artifactory_servers", session=session)
         matching_server = [servers[domain_key] for domain_key in servers if domain_key in cluster_host_url]
         if matching_server:
             artifactory_server = matching_server[0]
         else:
-            artifactory_server = get_cnv_tests_secret_by_name(secret_name="default_artifactory_server")["server"]
+            default_server_data = get_cnv_tests_secret_by_name(
+                secret_name="default_artifactory_server", session=session
+            )
+            if not default_server_data or "server" not in default_server_data:
+                raise MissingEnvironmentVariableError(
+                    "Could not retrieve default artifactory server from Bitwarden. "
+                    "Please set ARTIFACTORY_SERVER environment variable."
+                )
+            artifactory_server = default_server_data["server"]
     LOGGER.info(f"Using artifactory server: {artifactory_server}")
     return artifactory_server
 
@@ -282,7 +293,12 @@ def get_tests_cluster_markers(items, filepath=None) -> None:
 
 
 def exit_pytest_execution(
-    log_message, return_code=SANITY_TESTS_FAILURE, filename=None, junitxml_property=None, message=None
+    admin_client,
+    log_message,
+    return_code=SANITY_TESTS_FAILURE,
+    filename=None,
+    junitxml_property=None,
+    message=None,
 ):
     """Exit pytest execution
 
@@ -290,19 +306,19 @@ def exit_pytest_execution(
     Optionally, log an error message to tests-collected-info/utilities/pytest_exit_errors/<filename>
 
     Args:
-        log_message (str):  Message to display upon exit and to log in errors file
+        log_message (str): Message to display upon exit and to log in errors file
         return_code (int. Default: 99): Exit return code
         filename (str, optional. Default: None): filename where the given message will be saved
         junitxml_property (pytest plugin): record_testsuite_property
-        message (str): Message to log in error file. If not provided, `log_message` will be used.
+        message (str): Message to log in an error file. If not provided, `log_message` will be used.
+        admin_client (DynamicClient): cluster admin client
     """
     target_location = os.path.join(get_data_collector_base_directory(), "utilities", "pytest_exit_errors")
     # collect must-gather for past 5 minutes:
     if return_code == SANITY_TESTS_FAILURE:
         try:
             collect_default_cnv_must_gather_with_vm_gather(
-                since_time=TIMEOUT_5MIN,
-                target_dir=target_location,
+                since_time=TIMEOUT_5MIN, target_dir=target_location, admin_client=admin_client
             )
         except Exception as current_exception:
             LOGGER.warning(f"Failed to collect logs cnv must-gather after cluster_sanity failure: {current_exception}")

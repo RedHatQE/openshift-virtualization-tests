@@ -146,4 +146,5 @@ def cluster_sanity(
             log_message=str(ex),
             junitxml_property=junitxml_property,
             message="Cluster sanity checks failed.",
+            admin_client=admin_client,
         )

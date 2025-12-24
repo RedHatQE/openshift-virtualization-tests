@@ -130,8 +130,9 @@ def chaos_vm_rhel9_with_dv_started(chaos_dv_rhel9, chaos_vm_rhel9_with_dv):
 
 
 @pytest.fixture()
-def downscaled_storage_provisioner_deployment(request):
+def downscaled_storage_provisioner_deployment(request, admin_client):
     deployment = Deployment(
+        client=admin_client,
         namespace=NamespacesNames.OPENSHIFT_STORAGE,
         name=request.param["storage_provisioner_deployment"],
     )

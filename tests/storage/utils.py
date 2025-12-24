@@ -247,15 +247,6 @@ def set_permissions(
             yield
 
 
-def verify_vm_disk_image_permission(vm: VirtualMachineForTests) -> None:
-    v_pod = vm.vmi.virt_launcher_pod
-    LOGGER.debug("Check image exist, permission and ownership")
-    output = v_pod.execute(command=["ls", "-l", "/var/run/kubevirt-private/vmi-disks/dv-disk"])
-    assert "disk.img" in output
-    assert "-rw-rw----." in output
-    assert "qemu qemu" in output
-
-
 def get_importer_pod(
     dyn_client,
     namespace,
@@ -282,12 +273,15 @@ def wait_for_importer_container_message(importer_pod, msg):
         sampled_msg = TimeoutSampler(
             wait_timeout=120,
             sleep=5,
-            func=lambda: importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
-            and msg
-            in importer_pod.instance.status.containerStatuses[0]
-            .get("lastState", {})
-            .get("terminated", {})
-            .get("message", ""),
+            func=lambda: (
+                importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
+                and msg
+                in importer_pod.instance.status
+                .containerStatuses[0]
+                .get("lastState", {})
+                .get("terminated", {})
+                .get("message", "")
+            ),
         )
         for sample in sampled_msg:
             if sample:

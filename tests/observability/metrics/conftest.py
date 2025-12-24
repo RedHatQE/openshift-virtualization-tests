@@ -365,8 +365,8 @@ def storage_class_labels_for_testing(admin_client):
 
 
 @pytest.fixture(scope="class")
-def template_validator_finalizer(hco_namespace):
-    deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name)
+def template_validator_finalizer(admin_client, hco_namespace):
+    deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name, client=admin_client)
     with ResourceEditorValidateHCOReconcile(
         patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}}
     ):
@@ -396,7 +396,9 @@ def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_i
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
+            ),
             storage_class=py_config["default_storage_class"],
         ),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
@@ -484,21 +486,23 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration):
 
 
 @pytest.fixture()
-def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
+def vm_migration_metrics_vmim(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
     ) as vmim:
         yield vmim
 
 
 @pytest.fixture(scope="class")
-def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
+def vm_migration_metrics_vmim_scope_class(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,
         vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
@@ -519,11 +523,12 @@ def vm_with_node_selector(namespace, worker_node1):
 
 
 @pytest.fixture()
-def vm_with_node_selector_vmim(vm_with_node_selector):
+def vm_with_node_selector_vmim(admin_client, vm_with_node_selector):
     with VirtualMachineInstanceMigration(
         name="vm-with-node-selector-vmim",
         namespace=vm_with_node_selector.namespace,
         vmi_name=vm_with_node_selector.vmi.name,
+        client=admin_client,
     ) as vmim:
         yield vmim
 
@@ -588,3 +593,16 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
             prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         )
     )
+
+
+@pytest.fixture(scope="class")
+def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
+    """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
+    # Calculate VM CPU count
+    vm_cpu = vm_with_cpu_spec.vmi.instance.spec.domain.cpu
+    cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
+    # Get node CPU capacity
+    cpu_count_from_vm_node = int(vm_with_cpu_spec.privileged_vmi.node.instance.status.capacity.cpu)
+
+    # return multiplication for multi-CPU VMs
+    return str(cpu_count_from_vm_node * cpu_count_from_vm)
