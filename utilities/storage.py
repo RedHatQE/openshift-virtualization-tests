@@ -56,9 +56,6 @@ from utilities.exceptions import UrlNotFoundError
 if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
 
-if TYPE_CHECKING:
-    from utilities.virt import VirtualMachineForTests
-
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
 RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL = f"{NamespacedResource.ApiGroup.CDI_KUBEVIRT_IO}/dataImportCron"
@@ -719,12 +716,6 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
-
-
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
