@@ -17,7 +17,7 @@ from pytest_testconfig import config as py_config
 from libs.net.udn import create_udn_namespace
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
-from tests.network.vm_import.source_provider import SourceHypervisorProvider
+from tests.network.provider_migration.libprovider import SourceHypervisorProvider
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 
 CUDN_LABEL: Final[dict] = {"cudn": "mtv"}
