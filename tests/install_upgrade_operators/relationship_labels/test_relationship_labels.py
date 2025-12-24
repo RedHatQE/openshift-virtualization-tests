@@ -21,6 +21,7 @@ pytestmark = [
     pytest.mark.arm64,
     pytest.mark.s390x,
     pytest.mark.conformance,
+    pytest.mark.skip_must_gather_collection,
 ]
 LOGGER = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from utilities.constants import ALL_CNV_DEPLOYMENTS, HPP_POOL
 REQUIRED_SCC_ANNOTATION = "openshift.io/required-scc"
 REQUIRED_SCC_VALUE = "restricted-v2"
 
-pytestmark = pytest.mark.s390x
+pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.fixture(scope="module")
