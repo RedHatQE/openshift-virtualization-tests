@@ -595,6 +595,12 @@ def overhead_size_for_dv(image_size, overhead_value):
     return f"{math.ceil(dv_size)}Mi"
 
 
+def get_storage_profile_minimum_supported_pvc_size(storage_class_name, client):
+    storage_profile = StorageProfile(name=storage_class_name, client=client, ensure_exists=True)
+    annotations = getattr(storage_profile.instance.metadata, "annotations", {}) or {}
+    return annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize")
+
+
 def cdi_feature_gate_list_with_added_feature(feature):
     return [
         *CDIConfig(name="config").instance.to_dict().get("spec", {}).get("featureGates", []),

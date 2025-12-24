@@ -22,6 +22,7 @@ from utilities.storage import (
     create_dummy_first_consumer_pod,
     create_vm_from_dv,
     get_downloaded_artifact,
+    get_storage_profile_minimum_supported_pvc_size,
     sc_is_hpp_with_immediate_volume_binding,
     sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
@@ -275,14 +276,18 @@ def empty_pvc(
     storage_class_matrix__module__,
     storage_class_name_scope_module,
     worker_node1,
+    admin_client,
 ):
+    storage_profile_minimum_supported_pvc_size = get_storage_profile_minimum_supported_pvc_size(
+        storage_class_name=storage_class_name_scope_module, client=admin_client
+    )
     with PersistentVolumeClaim(
         name="empty-pvc",
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size=DEFAULT_DV_SIZE,
+        size=storage_profile_minimum_supported_pvc_size or DEFAULT_DV_SIZE,
         hostpath_node=worker_node1.name
         if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
         else None,

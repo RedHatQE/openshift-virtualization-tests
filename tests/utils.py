@@ -46,6 +46,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
+from utilities.storage import get_storage_profile_minimum_supported_pvc_size
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -521,7 +522,8 @@ def create_cirros_vm(
         source="http",
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size=get_storage_profile_minimum_supported_pvc_size(storage_class_name=storage_class, client=client)
+        or Images.Cirros.DEFAULT_DV_SIZE,
         api_name="storage",
         volume_mode=volume_mode,
         secret=artifactory_secret,

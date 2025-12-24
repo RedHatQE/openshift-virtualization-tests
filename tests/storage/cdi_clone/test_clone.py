@@ -2,6 +2,7 @@
 Clone tests
 """
 
+import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 
@@ -23,7 +24,6 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     data_volume_template_dict,
-    overhead_size_for_dv,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -278,8 +278,9 @@ def test_clone_from_block_to_fs_using_dv_template(
     namespace,
     cirros_dv_with_block_volume_mode,
     storage_class_with_filesystem_volume_mode,
-    default_fs_overhead,
 ):
+    source_pvc = cirros_dv_with_block_volume_mode.pvc
+    pvc_size = bitmath.parse_string_unsafe(s=source_pvc.instance.spec.resources.requests.storage)
     create_vm_from_clone_dv_template(
         vm_name="vm-5608",
         dv_name="dv-5608",
@@ -287,10 +288,6 @@ def test_clone_from_block_to_fs_using_dv_template(
         source_dv=cirros_dv_with_block_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
-        # add fs overhead and round up the result
-        size=overhead_size_for_dv(
-            image_size=int(cirros_dv_with_block_volume_mode.size[:-2]),
-            overhead_value=default_fs_overhead,
-        ),
+        size=f"{int(pvc_size.to_GiB().value)}Gi",
         storage_class=storage_class_with_filesystem_volume_mode,
     )

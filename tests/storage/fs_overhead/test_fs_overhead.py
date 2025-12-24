@@ -13,13 +13,13 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from tests.utils import create_cirros_vm
 from utilities.constants import Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.storage import virtctl_upload_dv
+from utilities.storage import get_storage_profile_minimum_supported_pvc_size, virtctl_upload_dv
 
 FS_OVERHEAD_20 = 0.2
 
 
 def get_pvc_size_gib(pvc):
-    return bitmath.Byte(int(pvc.instance.spec.resources.requests.storage)).to_GiB()
+    return bitmath.parse_string_unsafe(s=pvc.instance.spec.resources.requests.storage).to_GiB()
 
 
 def assert_fs_overhead_added(actual_size: bitmath.Bitmath, requested_size: bitmath.Bitmath) -> None:
@@ -80,6 +80,7 @@ def uploaded_cirros_dv(
         image_path=downloaded_cirros_image_full_path,
         storage_class=storage_class_with_filesystem_volume_mode,
         volume_mode=DataVolume.VolumeMode.FILE,
+        access_mode=DataVolume.AccessMode.RWO,
         insecure=True,
     ):
         yield DataVolume(name=dv_name, namespace=namespace.name)
@@ -106,8 +107,18 @@ def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_
 def test_upload_dv_with_specify_fs_overhead(
     updated_fs_overhead_20_with_hco,
     uploaded_cirros_dv,
+    storage_class_with_filesystem_volume_mode,
+    admin_client,
 ):
+
+    requested_size_str = (
+        get_storage_profile_minimum_supported_pvc_size(
+            storage_class_name=storage_class_with_filesystem_volume_mode, client=admin_client
+        )
+        or Images.Cirros.DEFAULT_DV_SIZE
+    )
+
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
-        requested_size=bitmath.GiB(int(bitmath.parse_string_unsafe(Images.Cirros.DEFAULT_DV_SIZE).value)),
+        requested_size=bitmath.GiB(int(bitmath.parse_string_unsafe(s=requested_size_str).value)),
     )
