@@ -358,7 +358,8 @@ def compare_network_traffic_bytes_and_metrics(
     LOGGER.info("Waiting for metric kubevirt_vmi_network_traffic_bytes_total to update")
     time.sleep(TIMEOUT_15SEC)
     metric_result = (
-        prometheus.query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
+        prometheus
+        .query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
         .get("data")
         .get("result")
     )
@@ -447,9 +448,8 @@ def metric_result_output_dict_by_mountpoint(
 ) -> dict[str, str]:
     return {
         entry["metric"]["mount_point"]: entry["value"][1]
-        for entry in prometheus.query(
-            query=KUBEVIRT_VMI_FILESYSTEM_BYTES.format(capacity_or_used=capacity_or_used, vm_name=vm_name)
-        )
+        for entry in prometheus
+        .query(query=KUBEVIRT_VMI_FILESYSTEM_BYTES.format(capacity_or_used=capacity_or_used, vm_name=vm_name))
         .get("data")
         .get("result")
     }
@@ -647,14 +647,14 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_30SEC,
-        func=prometheus.query_sampler,
+        func=prometheus.query,
         query=metric_name,
     )
     sample = None
     try:
         for sample in samples:
-            if sample and sample[0].get("metric"):
-                vnic_info_metric_result = sample[0].get("metric")
+            if sample and sample.get("data") and sample.get("data").get("result"):
+                vnic_info_metric_result = sample.get("data").get("result")[0].get("metric")
                 break
     except TimeoutExpiredError:
         LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
