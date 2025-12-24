@@ -661,3 +661,16 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
             prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         )
     )
+
+
+@pytest.fixture(scope="class")
+def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
+    """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
+    # Calculate VM CPU count
+    vm_cpu = vm_with_cpu_spec.vmi.instance.spec.domain.cpu
+    cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
+    # Get node CPU capacity
+    cpu_count_from_vm_node = int(vm_with_cpu_spec.privileged_vmi.node.instance.status.capacity.cpu)
+
+    # return multiplication for multi-CPU VMs
+    return str(cpu_count_from_vm_node * cpu_count_from_vm)

@@ -37,3 +37,5 @@ GUEST_LOAD_TIME_PERIODS = [
     f"{KUBEVIRT_VMI_GUEST_LOAD_METRIC}_5m",
     f"{KUBEVIRT_VMI_GUEST_LOAD_METRIC}_15m",
 ]
+
+KUBEVIRT_VMI_NODE_CPU_AFFINITY = "kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"

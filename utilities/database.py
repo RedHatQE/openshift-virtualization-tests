@@ -41,7 +41,8 @@ class Database:
     def get_test_start_time(self, test_name: str) -> int:
         with Session(bind=self.engine) as db_session:
             return (
-                db_session.query(CnvTestTable)
+                db_session
+                .query(CnvTestTable)
                 .with_entities(CnvTestTable.start_time)
                 .filter_by(test_name=test_name)
                 .one()[0]
