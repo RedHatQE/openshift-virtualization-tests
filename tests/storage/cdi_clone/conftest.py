@@ -1,10 +1,17 @@
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import create_cirros_dv
 from utilities.constants import OS_FLAVOR_FEDORA
 from utilities.storage import data_volume
+
+
+def get_storage_profile_minimum_supported_pvc_size(storage_class_name, admin_client):
+    storage_profile = StorageProfile(name=storage_class_name, client=admin_client)
+    annotations = getattr(storage_profile.instance.metadata, "annotations", {}) or {}
+    return annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize")
 
 
 @pytest.fixture(scope="module")
@@ -25,6 +32,7 @@ def cirros_dv_with_filesystem_volume_mode(
 @pytest.fixture(scope="module")
 def cirros_dv_with_block_volume_mode(
     unprivileged_client,
+    admin_client,
     namespace,
     storage_class_with_block_volume_mode,
 ):
