@@ -2129,24 +2129,33 @@ def get_template_by_labels(admin_client, template_labels):
     return template[0]
 
 
-def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=15):
+def wait_for_updated_kv_value(admin_client, hco_namespace, path, value=None, timeout=15, check_path_exists=False):
     """
-    Waits for updated values in KV CR configuration
+    Waits for updated values in KV CR configuration or checks if a path exists.
 
     Args:
         admin_client (:obj:`DynamicClient`): DynamicClient object
         hco_namespace (:obj:`Namespace`): HCO namespace object
         path (list): list of nested keys to be looked up in KV CR configuration dict
-        value (any): the expected value of the last key in path
+        value (any, optional): the expected value of the last key in path. Required if check_path_exists=False.
         timeout (int): timeout in seconds
+        check_path_exists (bool): if True, only validate that the path exists (value is ignored).
+        If False, validate value matches.
 
     Example:
-        path - ['cpuModel'], value - 'Haswell-noTSX'
+        # Check for specific value
+        path = ['cpuModel'], value = 'Haswell-noTSX'
         {"configuration": {"cpuModel": "Haswell-noTSX"}} will be matched against KV CR spec.
+
+        # Check if path exists (any value)
+        path = ['network', 'binding', 'passt'], check_path_exists=True
+        Will check that {"configuration": {"network": {"binding": {"passt": {...}}}}} exists.
 
     Raises:
         TimeoutExpiredError: After timeout is reached if the expected key value does not match the actual value
+            or if the path does not exist (when check_path_exists=True)
     """
+
     base_path = ["configuration"]
     base_path.extend(path)
     samples = TimeoutSampler(
@@ -2159,13 +2168,20 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
     )
     try:
         for sample in samples:
-            if sample == value:
+            if check_path_exists and sample is not None:
+                break
+            if not check_path_exists and sample == value:
                 break
     except TimeoutExpiredError:
         hco_annotations = utilities.infra.get_hyperconverged_resource(
             client=admin_client, hco_ns_name=hco_namespace.name
         ).instance.metadata.annotations
-        LOGGER.error(f"KV CR is not updated, path: {path}, expected value: {value}, HCO annotations: {hco_annotations}")
+        if check_path_exists:
+            LOGGER.error(f"KV CR path does not exist, path: {path}, HCO annotations: {hco_annotations}")
+        else:
+            LOGGER.error(
+                f"KV CR is not updated, path: {path}, expected value: {value}, HCO annotations: {hco_annotations}"
+            )
         raise
     # After updating KV need to be sure HCO is stable
     wait_for_hco_conditions(
