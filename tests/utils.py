@@ -67,6 +67,7 @@ def create_vms(
     client=None,
     ssh=True,
     node_selector_labels=None,
+    cpu_model=None,
 ):
     """
     Create n number of fedora vms.
@@ -94,6 +95,7 @@ def create_vms(
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             ssh=ssh,
             client=client,
+            cpu_model=cpu_model,
         ) as vm:
             vms_list.append(vm)
     return vms_list

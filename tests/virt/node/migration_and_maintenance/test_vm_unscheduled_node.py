@@ -13,7 +13,7 @@ from utilities.virt import (
 @pytest.fixture()
 def unscheduled_node_vm(
     request,
-    cluster_cpu_model_scope_function,
+    cpu_for_migration,
     worker_node1,
     unprivileged_client,
     namespace,
@@ -23,6 +23,7 @@ def unscheduled_node_vm(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
+        cpu_model=cpu_for_migration,
         data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         vm_affinity=build_node_affinity_dict(values=[worker_node1.hostname]),
     ) as vm:

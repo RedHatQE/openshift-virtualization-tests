@@ -62,11 +62,12 @@ def node_filter(pod, schedulable_nodes):
 
 
 @pytest.fixture()
-def vm_container_disk_fedora(cluster_cpu_model_scope_module, namespace, unprivileged_client):
+def vm_container_disk_fedora(cpu_for_migration, namespace, unprivileged_client):
     name = f"vm-nodemaintenance-{random.randrange(99999)}"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        cpu_model=cpu_for_migration,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
