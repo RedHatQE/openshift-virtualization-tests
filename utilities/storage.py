@@ -589,49 +589,9 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
-<<<<<<< HEAD
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class or source_dict["spec"].get("storageClassName"),
-        api_name="storage",
-        source_ref={
-            "kind": data_source.kind,
-            "name": data_source.name,
-            "namespace": data_source.namespace,
-        },
-    )
-    dv.to_dict()
-    # dataVolumeTemplate is not required to have the namespace explicitly set
-    dv.res["metadata"].pop("namespace", None)
-    return dv.res
-
-
-def data_volume_template_with_unique_name(data_source, storage_class=None, name_suffix=None):
-    """Create DataVolume template with unique name to avoid conflicts.
-
-    Args:
-        data_source: The data source to use
-        storage_class: Optional storage class override
-        name_suffix: Optional suffix for the name (defaults to timestamp)
-    """
-
-    source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-
-    # Generate unique name
-    if name_suffix:
-        unique_name = f"{data_source.name}-{name_suffix}"
-    else:
-        unique_name = utilities.infra.unique_name(name=data_source.name)
-
-    dv = DataVolume(
-        name=unique_name,
-=======
->>>>>>> 79e60cd (Fix PR's comments for DV names and restore vm)
-        namespace=data_source.namespace,
-        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
-        or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -757,18 +717,6 @@ def run_command_on_vm_and_check_output(vm, command, expected_result):
     )[0].strip()
     expected_result = expected_result.strip()
     assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
-
-def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
-    """
-    Write content to a file in VM using SSH connection.
-
-    Args:
-        vm: VirtualMachine instance with SSH connectivity
-        filename: Path to the file to write in the VM
-        content: Content to write to the file
-    """
-    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
