@@ -2,19 +2,15 @@ import logging
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
+from ocp_resources.data_source import DataSource
 from ocp_resources.template import Template
 
 from tests.virt.constants import MachineTypesNames
-from tests.virt.utils import validate_machine_type
+from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class, validate_machine_type
 from utilities.constants import (
-    DATA_SOURCE_STR,
-    DV_SIZE_STR,
     FLAVOR_STR,
-    IMAGE_PATH_STR,
     OS_STR,
-    TEMPLATE_LABELS_STR,
     WORKLOAD_STR,
-    Images,
 )
 from utilities.hco import is_hco_tainted, update_hco_annotations
 from utilities.virt import (
@@ -31,15 +27,10 @@ pytestmark = pytest.mark.post_upgrade
 LOGGER = logging.getLogger(__name__)
 
 
-RHEL_8_10 = {
-    IMAGE_PATH_STR: f"{Images.Rhel.DIR}/{Images.Rhel.RHEL8_10_IMG}",
-    DV_SIZE_STR: "20Gi",
-    TEMPLATE_LABELS_STR: {
-        OS_STR: "rhel8.10",
-        WORKLOAD_STR: "server",
-        FLAVOR_STR: "tiny",
-    },
-    DATA_SOURCE_STR: "rhel8",
+RHEL_8_10_TEMPLATE_LABELS = {
+    OS_STR: "rhel8.10",
+    WORKLOAD_STR: "server",
+    FLAVOR_STR: "tiny",
 }
 
 
@@ -59,15 +50,15 @@ def vm_for_machine_type_test(request, cluster_cpu_model_scope_class, unprivilege
 
 
 @pytest.fixture()
-def vm_for_legacy_machine_type_test(
-    unprivileged_client, namespace, golden_image_data_volume_template_for_test_scope_function
-):
+def vm_for_legacy_machine_type_test(admin_client, unprivileged_client, namespace, golden_images_namespace):
     with VirtualMachineForTestsFromTemplate(
         name="vm-legacy-machine-type-test",
         namespace=namespace.name,
         client=unprivileged_client,
-        labels=Template.generate_template_labels(**RHEL_8_10["template_labels"]),
-        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
+        labels=Template.generate_template_labels(**RHEL_8_10_TEMPLATE_LABELS),
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            DataSource(client=admin_client, name="rhel8", namespace=golden_images_namespace.name)
+        ),
         machine_type=MachineTypesNames.pc_i440fx_rhel7_6,
     ) as vm:
         running_vm(vm=vm)
@@ -238,10 +229,9 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_function, updated_kubevirt_config_machine_type",
+    "updated_kubevirt_config_machine_type",
     [
         pytest.param(
-            {"os_dict": RHEL_8_10},
             {"emulatedMachines": ["q35*", "pc-q35*", MachineTypesNames.pc_i440fx_rhel7_6]},
             marks=pytest.mark.polarion("CNV-7311"),
         )
