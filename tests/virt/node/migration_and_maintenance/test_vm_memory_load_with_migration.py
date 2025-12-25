@@ -7,9 +7,10 @@ from tests.os_params import (
     FEDORA_LATEST_LABELS,
     WINDOWS_10_TEMPLATE_LABELS,
 )
-from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND, WINDOWS_10_WSL
-from tests.virt.utils import get_stress_ng_pid, start_stress_on_vm, verify_stress_ng_pid_not_changed
-from utilities.constants import TIMEOUT_20MIN, Images
+from tests.utils import start_stress_on_vm
+from tests.virt.constants import WINDOWS_10_WSL
+from tests.virt.utils import get_stress_ng_pid, verify_stress_ng_pid_not_changed
+from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TIMEOUT_20MIN, Images
 from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)

@@ -11,8 +11,8 @@ import pytest
 from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 
+from tests.utils import verify_wsl2_guest_works
 from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
-from tests.virt.utils import verify_wsl2_guest_works
 from utilities.constants import TCP_TIMEOUT_30SEC, Images
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
