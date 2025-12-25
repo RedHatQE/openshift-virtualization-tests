@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import shlex
 from contextlib import contextmanager
 from typing import Any, Generator
@@ -30,12 +29,9 @@ from utilities.constants import (
     OS_FLAVOR_WINDOWS,
     OS_PROC_NAME,
     TCP_TIMEOUT_30SEC,
-    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
     TIMEOUT_5SEC,
-    TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
@@ -127,69 +123,6 @@ def verify_stress_ng_pid_not_changed(vm, initial_pid, windows=False):
     )
     assert initial_pid == current_stress_ng_pid, (
         f"stress-ng pid changed. Before: {initial_pid}. Current: {current_stress_ng_pid}"
-    )
-
-
-def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
-    def _get_wsl2_running_status():
-        guests_status = run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split("powershell.exe -command wsl -l -v"),
-            tcp_timeout=TCP_TIMEOUT_30SEC,
-        )[0]
-        guests_status = guests_status.replace("\x00", "")
-        LOGGER.info(guests_status)
-        return re.search(r".*(Running).*\n", guests_status) is not None
-
-    sampler = TimeoutSampler(wait_timeout=timeout, sleep=TIMEOUT_5SEC, func=_get_wsl2_running_status)
-    try:
-        for sample in sampler:
-            if sample:
-                return True
-    except TimeoutExpiredError:
-        LOGGER.error("WSL2 guest is not running in the VM!")
-        raise
-
-
-def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
-    """
-    Verifies that WSL2 is functioning on windows vm.
-    Args:
-        vm: An instance of `VirtualMachineForTests`
-    Raises:
-        TimeoutExpiredError: If WSL2 fails to return the expected output within
-            the specified timeout period.
-    """
-    echo_string = "TEST"
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_15SEC,
-        func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=shlex.split(f"wsl echo {echo_string}"),
-    )
-    try:
-        for sample in samples:
-            if sample and echo_string in sample[0]:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} failed to start WSL2")
-        raise
-
-
-def start_stress_on_vm(vm, stress_command):
-    LOGGER.info(f"Running memory load in VM {vm.name}")
-    if "windows" in vm.name:
-        verify_wsl2_guest_running(vm=vm)
-        verify_wsl2_guest_works(vm=vm)
-        command = f"wsl nohup bash -c '{stress_command}'"
-    else:
-        run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo dnf install -y stress-ng"))
-        command = stress_command
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split(command),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
     )
 
 
