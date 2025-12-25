@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.constants import BRCNV
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import vm_for_brcnv_tests
@@ -10,7 +11,6 @@ from utilities.infra import get_node_selector_dict
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
-    get_vmi_ip_v4_by_name,
     network_nad,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
@@ -192,7 +192,7 @@ def test_vlan_1_over_bridge_with_primary_and_secondary_ifaces(
 ):
     assert_ping_successful(
         src_vm=brcnv_vmb_with_vlan_1,
-        dst_ip=get_vmi_ip_v4_by_name(vm=brcnv_vmc_with_vlans_1_2, name=brcnv_ovs_nad_vlan_1.name),
+        dst_ip=lookup_iface_status_ip(vm=brcnv_vmc_with_vlans_1_2, iface_name=brcnv_ovs_nad_vlan_1.name, ip_family=4),
     )
 
 
@@ -206,7 +206,7 @@ def test_cnv_bridge_vlan_1_connectivity_same_node(
 ):
     assert_ping_successful(
         src_vm=brcnv_vma_with_vlan_1,
-        dst_ip=get_vmi_ip_v4_by_name(vm=brcnv_vmb_with_vlan_1, name=brcnv_ovs_nad_vlan_1.name),
+        dst_ip=lookup_iface_status_ip(vm=brcnv_vmb_with_vlan_1, iface_name=brcnv_ovs_nad_vlan_1.name, ip_family=4),
     )
 
 
@@ -222,7 +222,9 @@ class TestBRCNVSeperateNodes:
     ):
         assert_ping_successful(
             src_vm=brcnv_vma_with_vlan_1,
-            dst_ip=get_vmi_ip_v4_by_name(vm=brcnv_vmc_with_vlans_1_2, name=brcnv_ovs_nad_vlan_1.name),
+            dst_ip=lookup_iface_status_ip(
+                vm=brcnv_vmc_with_vlans_1_2, iface_name=brcnv_ovs_nad_vlan_1.name, ip_family=4
+            ),
         )
 
     @pytest.mark.ipv4
@@ -236,5 +238,7 @@ class TestBRCNVSeperateNodes:
         with pytest.raises(AssertionError):
             assert_ping_successful(
                 src_vm=brcnv_vma_with_vlan_1,
-                dst_ip=get_vmi_ip_v4_by_name(vm=brcnv_vmc_with_vlans_1_2, name=brcnv_ovs_nad_vlan_2.name),
+                dst_ip=lookup_iface_status_ip(
+                    vm=brcnv_vmc_with_vlans_1_2, iface_name=brcnv_ovs_nad_vlan_2.name, ip_family=4
+                ),
             )

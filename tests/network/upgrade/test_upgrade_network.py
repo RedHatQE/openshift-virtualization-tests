@@ -4,6 +4,7 @@ from ipaddress import ip_interface
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.upgrade.utils import (
     assert_bridge_and_vms_on_same_node,
     assert_label_in_namespace,
@@ -21,7 +22,6 @@ from utilities.constants import (
 )
 from utilities.network import (
     assert_ping_successful,
-    get_vmi_ip_v4_by_name,
     get_vmi_mac_address_by_iface_name,
     verify_ovs_installed_with_annotations,
 )
@@ -88,7 +88,9 @@ class TestUpgradeNetwork:
     ):
         assert_ping_successful(
             src_vm=running_vm_upgrade_a,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_vm_upgrade_b, name=upgrade_bridge_marker_nad.name),
+            dst_ip=lookup_iface_status_ip(
+                vm=running_vm_upgrade_b, iface_name=upgrade_bridge_marker_nad.name, ip_family=4
+            ),
         )
 
     @pytest.mark.sno
@@ -154,9 +156,10 @@ class TestUpgradeNetwork:
         """
         assert_ping_successful(
             src_vm=vma_upgrade_mac_spoof,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vmb_upgrade_mac_spoof,
-                name=vmb_upgrade_mac_spoof.interfaces[0],
+                iface_name=vmb_upgrade_mac_spoof.interfaces[0],
+                ip_family=4,
             ),
         )
 
@@ -318,8 +321,9 @@ class TestUpgradeNetwork:
         """
         assert_ping_successful(
             src_vm=vma_upgrade_mac_spoof,
-            dst_ip=get_vmi_ip_v4_by_name(
+            dst_ip=lookup_iface_status_ip(
                 vm=vmb_upgrade_mac_spoof,
-                name=vmb_upgrade_mac_spoof.interfaces[0],
+                iface_name=vmb_upgrade_mac_spoof.interfaces[0],
+                ip_family=4,
             ),
         )

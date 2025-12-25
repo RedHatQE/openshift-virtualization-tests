@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.multi_network_policy import MultiNetworkPolicy
 from ocp_resources.resource import ResourceEditor
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.flat_overlay.constants import (
     CONNECTION_REQUESTS,
     HTTP_SUCCESS_RESPONSE_STR,
@@ -23,7 +24,7 @@ from tests.network.flat_overlay.utils import (
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import FLAT_OVERLAY_STR
 from utilities.infra import create_ns
-from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name, network_nad
+from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
 
 LOGGER = logging.getLogger(__name__)
@@ -260,7 +261,7 @@ def flat_l2_jumbo_frame_packet_size(cluster_network_mtu):
 
 @pytest.fixture(scope="class")
 def vmc_flat_overlay_ip_address(vmc_flat_overlay, flat_overlay_vmc_vmd_nad):
-    return get_vmi_ip_v4_by_name(vm=vmc_flat_overlay, name=flat_overlay_vmc_vmd_nad.name)
+    return lookup_iface_status_ip(vm=vmc_flat_overlay, iface_name=flat_overlay_vmc_vmd_nad.name, ip_family=4)
 
 
 @pytest.fixture()
@@ -278,12 +279,12 @@ def migrated_vmc_flat_overlay(vmc_flat_overlay):
 
 @pytest.fixture(scope="class")
 def vmb_flat_overlay_ip_address(vmb_flat_overlay, flat_overlay_vma_vmb_nad):
-    return get_vmi_ip_v4_by_name(vm=vmb_flat_overlay, name=flat_overlay_vma_vmb_nad.name)
+    return lookup_iface_status_ip(vm=vmb_flat_overlay, iface_name=flat_overlay_vma_vmb_nad.name, ip_family=4)
 
 
 @pytest.fixture(scope="class")
 def vmd_flat_overlay_ip_address(vmd_flat_overlay, flat_overlay_vmc_vmd_nad):
-    return get_vmi_ip_v4_by_name(vm=vmd_flat_overlay, name=flat_overlay_vmc_vmd_nad.name)
+    return lookup_iface_status_ip(vm=vmd_flat_overlay, iface_name=flat_overlay_vmc_vmd_nad.name, ip_family=4)
 
 
 @pytest.fixture()
