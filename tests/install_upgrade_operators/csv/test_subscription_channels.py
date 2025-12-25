@@ -1,6 +1,6 @@
 import pytest
 
-pytestmark = [pytest.mark.sno, pytest.mark.s390x]
+pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.mark.polarion("CNV-7169")

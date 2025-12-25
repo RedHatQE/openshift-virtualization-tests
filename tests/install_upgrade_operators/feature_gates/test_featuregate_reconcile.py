@@ -19,7 +19,7 @@ from utilities.constants import (
     KUBEVIRT_KUBEVIRT_HYPERCONVERGED,
 )
 
-pytestmark = [pytest.mark.sno, pytest.mark.s390x]
+pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
 class TestHardcodedFeatureGates:
