@@ -319,6 +319,7 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
 @pytest.fixture
 def storage_class_ocs_virt(admin_client):
     # if its not on the matrix - we dont need to test it
-    if StorageClassNames.CEPH_RBD_VIRTUALIZATION not in py_config["storage_class_matrix"]:
+    storage_class_names = [list(sc.keys())[0] for sc in py_config["storage_class_matrix"]]
+    if StorageClassNames.CEPH_RBD_VIRTUALIZATION not in storage_class_names:
         pytest.xfail(f"Storage class {StorageClassNames.CEPH_RBD_VIRTUALIZATION} not found in the storage class matrix")
     return StorageClass(client=admin_client, name=StorageClassNames.CEPH_RBD_VIRTUALIZATION, ensure_exists=True)
