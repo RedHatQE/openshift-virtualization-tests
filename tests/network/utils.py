@@ -9,6 +9,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.constants import BRCNV
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
@@ -22,7 +23,6 @@ from utilities.constants import (
 from utilities.network import (
     compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
-    get_vmi_ip_v4_by_name,
     ping,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
@@ -230,8 +230,8 @@ def run_ssh_in_background(nad, src_vm, dst_vm, dst_vm_user, dst_vm_password):
     """
     Start ssh connection to the vm
     """
-    dst_ip = get_vmi_ip_v4_by_name(vm=dst_vm, name=nad.name)
-    src_ip = str(get_vmi_ip_v4_by_name(vm=src_vm, name=nad.name))
+    dst_ip = lookup_iface_status_ip(vm=dst_vm, iface_name=nad.name, ip_family=4)
+    src_ip = str(lookup_iface_status_ip(vm=src_vm, iface_name=nad.name, ip_family=4))
     LOGGER.info(f"Start ssh connection to {dst_vm.name} from {src_vm.name}")
     run_ssh_commands(
         host=src_vm.ssh_exec,

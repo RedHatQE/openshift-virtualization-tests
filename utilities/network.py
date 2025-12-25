@@ -27,7 +27,6 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-import utilities.virt
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -37,7 +36,6 @@ from utilities.constants import (
     MTU_9000,
     OVS_BRIDGE,
     SRIOV,
-    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
@@ -485,50 +483,6 @@ NAD_TYPE = {
     SRIOV: SriovNetwork,
     FLAT_OVERLAY_STR: OVNOverlayNetworkAttachmentDefinition,
 }
-
-
-def get_vmi_ip_v4_by_name(vm, name):
-    vmi = vm.vmi
-
-    def _get_iface_by_name(vmi_interfaces):
-        iface = [_iface for _iface in vmi_interfaces if _iface.name == name]
-        if not iface:
-            raise IfaceNotFound(name=name)
-        return iface[0]
-
-    def _extract_interface_ips():
-        vmi_interfaces = vm.vmi.interfaces
-        iface_ips = _get_iface_by_name(vmi_interfaces=vmi_interfaces).ipAddresses
-        if iface_ips:
-            return iface_ips
-        return []
-
-    def _get_interface_ips():
-        vmi_ips = _extract_interface_ips()
-        if vmi_ips:
-            return vmi_ips
-
-        utilities.virt.wait_for_vm_interfaces(vmi=vmi)
-        return _extract_interface_ips()
-
-    sampler = TimeoutSampler(wait_timeout=TIMEOUT_2MIN, sleep=1, func=_get_interface_ips)
-    try:
-        for ip_addresses in sampler:
-            for ip_address in ip_addresses:
-                ip = ipaddress.ip_interface(address=ip_address)
-                if ip.version == 4:
-                    return ip.ip
-
-    except TimeoutExpiredError:
-        raise IpNotFound(name)
-
-
-class IpNotFound(Exception):
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return f"IP address not found for interface {self.name}"
 
 
 @contextlib.contextmanager
