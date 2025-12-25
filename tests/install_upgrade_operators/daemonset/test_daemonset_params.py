@@ -17,7 +17,6 @@ def cnv_daemonset_names(admin_client, hco_namespace):
     return [daemonset.name for daemonset in get_daemonsets(admin_client=admin_client, namespace=hco_namespace.name)]
 
 
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-8509")
 # Not marked as `conformance` as this is a "utility" test to match against test matrix
 def test_no_new_cnv_daemonset_added(hpp_cr_installed, cnv_daemonset_names):
