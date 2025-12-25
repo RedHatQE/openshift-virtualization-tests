@@ -4,7 +4,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.constants import ARM_64, HCO_DEFAULT_CPU_MODEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, migrate_vm_and_verify, running_vm
 
 KUBEVIRT_CPU_MODEL_KEY = "cpuModel"
 HOST_PASSTHROUGH = "host-passthrough"
@@ -152,6 +152,7 @@ def test_set_hco_default_cpu_model_with_existing_vm(
     kubevirt_resource,
     default_vmi_cpu_model,
     updated_vmi_cpu_model,
+    schedulable_nodes,
 ):
     """
     When HCO defaultCPUModel is set, it should reflect in kubevirt
@@ -176,3 +177,9 @@ def test_set_hco_default_cpu_model_with_existing_vm(
         vmi_resource=fedora_vm_scope_module,
         expected_cpu_model=updated_vmi_cpu_model,
     )
+    if len(schedulable_nodes) >= 2:
+        migrate_vm_and_verify(vm=fedora_vm_scope_module)
+        assert_vmi_cpu_model(
+            vmi_resource=fedora_vm_scope_module,
+            expected_cpu_model=updated_vmi_cpu_model,
+        )

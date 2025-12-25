@@ -24,7 +24,7 @@ def vm_with_fio(
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
-        cpu_model=cpu_for_migration,
+        vm_cpu_model=cpu_for_migration,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm_with_fio:
