@@ -8,11 +8,16 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
+from packaging.version import Version
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
@@ -31,7 +36,7 @@ from tests.observability.metrics.utils import (
     vnic_info_from_vm_or_vmi,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms
+from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
@@ -45,6 +50,7 @@ from utilities.constants import (
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     SSP_OPERATOR,
+    STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -53,12 +59,14 @@ from utilities.constants import (
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
+    U1_MEDIUM_STR,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
+    get_linux_guest_agent_version,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     is_jira_open,
@@ -91,6 +99,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
+MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
 
 
 @pytest.fixture(scope="module")
@@ -578,3 +587,62 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
         for key, value in resource_used.items()
     }
     return formatted_hard_limit, formatted_used_value
+
+
+@pytest.fixture(scope="class")
+def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="fedora-vm-test-with-stress-ng",
+        namespace=namespace.name,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA,
+                namespace=golden_images_namespace.name,
+            ),
+            storage_class=py_config["default_storage_class"],
+        ),
+    ) as vm:
+        running_vm(vm=vm)
+        LOGGER.info(f"Installing stress-ng on VM: {vm.name}")
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("sudo dnf install stress-ng -y"),
+        )
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
+    LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
+    guest_agent_version_str = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
+    LOGGER.info(f"qemu-guest-agent version: {guest_agent_version_str}")
+    guest_agent_version = Version(version=guest_agent_version_str)
+    assert guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS), (
+        f"qemu-guest-agent version {guest_agent_version} is less than required "
+        f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
+    )
+
+
+@pytest.fixture(scope="class")
+def initial_guest_load_metrics_values(prometheus, fedora_vm_with_stress_ng):
+    """Capture initial values for all guest load metrics before stressing the VM."""
+
+    return {
+        metric: get_metrics_value(
+            prometheus=prometheus,
+            metrics_name=f"{metric}{{name='{fedora_vm_with_stress_ng.name}'}}",
+        )
+        for metric in GUEST_LOAD_TIME_PERIODS
+    }
+
+
+@pytest.fixture(scope="class")
+def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
+    LOGGER.info(f"Starting CPU stress test on VM: {fedora_vm_with_stress_ng.name}")
+    start_stress_on_vm(
+        vm=fedora_vm_with_stress_ng,
+        stress_command=STRESS_CPU_MEM_IO_COMMAND.format(workers="2", memory="50%", timeout="30m"),
+    )
