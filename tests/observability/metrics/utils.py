@@ -653,8 +653,8 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
     sample = None
     try:
         for sample in samples:
-            if sample and sample.get("data") and sample.get("data").get("result"):
-                vnic_info_metric_result = sample.get("data").get("result")[0].get("metric")
+            if sample and (result := sample.get("data", {}).get("result")):
+                vnic_info_metric_result = result[0].get("metric")
                 break
     except TimeoutExpiredError:
         LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
