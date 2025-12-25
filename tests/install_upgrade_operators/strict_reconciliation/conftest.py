@@ -209,6 +209,6 @@ def updated_resource_labels(ocp_resource_by_name):
 
 
 @pytest.fixture()
-def skip_if_hco_bearer_token_bug_open(ocp_resource_by_name):
+def xfail_if_hco_bearer_token_bug_open(ocp_resource_by_name):
     if ocp_resource_by_name.name == HCO_BEARER_AUTH and is_jira_open(jira_id="CNV-71826"):
-        pytest.skip(f"skipping {HCO_BEARER_AUTH} resource due to 71826 bug")
+        pytest.xfail(f"{HCO_BEARER_AUTH} resource is not reconciled due to CNV-71826 bug")
