@@ -46,6 +46,7 @@ from utilities.storage import (
     create_dv,
     create_or_update_data_source,
     data_volume_template_with_source_ref_dict,
+    get_storage_class_dict_from_matrix,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -475,7 +476,18 @@ def get_data_volume_template_dict_with_default_storage_class(
         dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
     """
     data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-    data_volume_template["spec"]["storage"]["storageClassName"] = storage_class or py_config["default_storage_class"]
+
+    # access modes is needed to correctly set eviction strategy in VMs from template
+    # (see to_dict method in VirtualMachineForTestsFromTemplate class)
+    # TODO: remove access modes after the logic in VirtualMachineForTestsFromTemplate is updated
+    if storage_class:
+        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class
+        data_volume_template["spec"]["storage"]["accessModes"] = [
+            get_storage_class_dict_from_matrix(storage_class=storage_class)[storage_class]["access_mode"]
+        ]
+    else:
+        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [py_config["default_access_mode"]]
     return data_volume_template
 
 
