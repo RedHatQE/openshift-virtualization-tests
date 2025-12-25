@@ -13,9 +13,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
-from tests.virt.constants import STRESS_CPU_MEM_IO_COMMAND, WINDOWS_10_WSL
-from tests.virt.utils import start_stress_on_vm
-from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
+from tests.utils import start_stress_on_vm
+from tests.virt.constants import WINDOWS_10_WSL
+from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.tier3
