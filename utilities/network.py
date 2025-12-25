@@ -1,7 +1,6 @@
 import contextlib
 import ipaddress
 import logging
-import os
 import random
 import re
 import shlex
@@ -29,7 +28,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 import utilities.infra
 import utilities.virt
 from utilities.constants import (
-    ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
     IPV4_STR,
     IPV6_STR,
@@ -41,7 +39,6 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
-    WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
@@ -384,94 +381,6 @@ class VLANInterfaceNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy
         vlan_spec = {"vlan": {"base-iface": self.base_iface, "id": self.tag}}
         self.iface.update(vlan_spec)
         super().to_dict()
-
-
-class BondNodeNetworkConfigurationPolicy(NodeNetworkConfigurationPolicy):
-    def __init__(
-        self,
-        name,
-        bond_name,
-        bond_ports,
-        client,
-        mode=ACTIVE_BACKUP,
-        mtu=None,
-        primary_bond_port=None,
-        node_selector=None,
-        teardown=True,
-        ipv4_enable=False,
-        ipv4_dhcp=False,
-        ipv6_enable=False,
-        options=None,
-        dry_run=None,
-        success_timeout=TIMEOUT_8MIN,
-        teardown_absent_ifaces=True,
-    ):
-        super().__init__(
-            name=name,
-            node_selector=node_selector,
-            teardown=teardown,
-            mtu=mtu,
-            ipv4_enable=ipv4_enable,
-            ipv4_dhcp=ipv4_dhcp,
-            ipv6_enable=ipv6_enable,
-            dry_run=dry_run,
-            success_timeout=success_timeout,
-            teardown_absent_ifaces=teardown_absent_ifaces,
-            client=client,
-        )
-        self.bond_name = bond_name
-        self.bond_ports = bond_ports
-        self.mode = mode
-        self.primary_bond_port = primary_bond_port
-        self.ports = self.bond_ports
-        self.options = options
-        # PSI MTU cannot be greater than 1450
-        if os.environ.get(WORKERS_TYPE) == utilities.infra.ClusterHosts.Type.VIRTUAL and not self.mtu:
-            self.mtu = 1450
-
-    def create_interface(self):
-        options_dic = self.options or {}
-        options_dic.update({"miimon": "120"})
-        if self.mode == ACTIVE_BACKUP and self.primary_bond_port is not None:
-            options_dic.update({"primary": self.primary_bond_port})
-
-        self.iface = {
-            "name": self.bond_name,
-            "type": BOND,
-            "state": NodeNetworkConfigurationPolicy.Interface.State.UP,
-            "link-aggregation": {
-                "mode": self.mode,
-                "port": self.bond_ports,
-                "options": options_dic,
-            },
-        }
-
-    def configure_mtu_on_ports(self):
-        if self.mtu:
-            self.iface["mtu"] = self.mtu
-        for port in self.ports:
-            _port = {
-                "name": port,
-                "type": "ethernet",
-                "state": NodeNetworkConfigurationPolicy.Interface.State.UP,
-            }
-            if self.mtu:
-                _port["mtu"] = self.mtu
-            self.set_interface(interface=_port)
-
-    def to_dict(self):
-        super().to_dict()
-        if not self.iface:
-            self.create_interface()
-            self.add_interface(
-                iface=self.iface,
-                ipv4_enable=self.ipv4_enable,
-                ipv4_dhcp=self.ipv4_dhcp,
-                ipv6_enable=self.ipv6_enable,
-            )
-
-            if self.mtu:
-                self.configure_mtu_on_ports()
 
 
 NETWORK_DEVICE_TYPE = {

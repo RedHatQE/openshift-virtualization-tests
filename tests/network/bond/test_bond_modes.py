@@ -8,10 +8,10 @@ from contextlib import contextmanager
 
 import pytest
 
+from tests.network.libs.bondnodenetworkconfigurationpolicy import BondNodeNetworkConfigurationPolicy
 from utilities.constants import TIMEOUT_9MIN
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict, get_node_selector_name
 from utilities.network import (
-    BondNodeNetworkConfigurationPolicy,
     network_device,
     network_nad,
 )

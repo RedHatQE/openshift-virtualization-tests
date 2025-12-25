@@ -8,10 +8,10 @@ import pytest
 
 import utilities.network
 from tests.network.libs import cloudinit as netcloud
+from tests.network.libs.bondnodenetworkconfigurationpolicy import BondNodeNetworkConfigurationPolicy
 from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
-    BondNodeNetworkConfigurationPolicy,
     assert_ping_successful,
     cloud_init_network_data,
     get_vmi_ip_v4_by_name,
