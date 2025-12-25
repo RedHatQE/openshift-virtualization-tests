@@ -4,6 +4,7 @@ import pytest
 
 from tests.observability.metrics.constants import GUEST_LOAD_TIME_PERIODS
 from tests.observability.metrics.utils import validate_metric_value_greater_than_initial_value
+
 LOGGER = logging.getLogger(__name__)
 
 
