@@ -14,6 +14,7 @@ FEATUREGATE_NAME_KEY_STR = "featuregate_name"
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
+
 @pytest.fixture()
 def updated_fg_hco(
     request,

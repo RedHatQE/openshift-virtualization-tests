@@ -13,6 +13,7 @@ REQUIRED_SCC_VALUE = "restricted-v2"
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
+
 @pytest.fixture(scope="module")
 def required_scc_deployment_check(admin_client, hco_namespace):
     missing_required_scc_annotation = []
