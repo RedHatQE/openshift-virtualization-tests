@@ -688,7 +688,7 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
-def run_command_on_vm_and_check_output(vm, command, expected_result):
+def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
     """Run command on RHEL VM via SSH and verify expected result is in output.
     Args:
         vm (VirtualMachineForTests): VM to run command on.
