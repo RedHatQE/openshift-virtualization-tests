@@ -35,6 +35,26 @@ def vm(request, cluster_cpu_model_scope_function, unprivileged_client, namespace
 
 
 @pytest.fixture()
+def explicit_machine_type(is_s390x_cluster):
+    return MachineTypesNames.s390_ccw_virtio if is_s390x_cluster else MachineTypesNames.pc_q35_rhel7_6
+
+
+@pytest.fixture()
+def vm_with_explicit_machine_type(unprivileged_client, namespace, explicit_machine_type):
+    name = "vm-custom-machine-type"
+
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        body=fedora_vm_body(name=name),
+        client=unprivileged_client,
+        machine_type=explicit_machine_type,
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)
+        yield vm
+
+
+@pytest.fixture()
 def updated_kubevirt_config_machine_type(
     request,
     hyperconverged_resource_scope_function,
@@ -71,6 +91,7 @@ def migrated_vm(vm, machine_type_from_kubevirt_config):
 
 
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "vm",
     [
@@ -85,19 +106,10 @@ def test_default_machine_type(machine_type_from_kubevirt_config, vm):
     validate_machine_type(vm=vm, expected_machine_type=machine_type_from_kubevirt_config)
 
 
-@pytest.mark.parametrize(
-    "vm, expected",
-    [
-        pytest.param(
-            {"vm_name": "pc-q35", "machine_type": MachineTypesNames.pc_q35_rhel7_6},
-            MachineTypesNames.pc_q35_rhel7_6,
-            marks=pytest.mark.polarion("CNV-3311"),
-        )
-    ],
-    indirect=["vm"],
-)
-def test_pc_q35_vm_machine_type(vm, expected):
-    validate_machine_type(vm=vm, expected_machine_type=expected)
+@pytest.mark.polarion("CNV-3311")
+@pytest.mark.s390x
+def test_vm_machine_type(explicit_machine_type, vm_with_explicit_machine_type):
+    validate_machine_type(vm=vm_with_explicit_machine_type, expected_machine_type=explicit_machine_type)
 
 
 @pytest.mark.parametrize(
@@ -114,9 +126,10 @@ def test_pc_q35_vm_machine_type(vm, expected):
 @pytest.mark.rwx_default_storage
 @pytest.mark.gating
 @pytest.mark.conformance
+@pytest.mark.s390x
 def test_migrate_vm(machine_type_from_kubevirt_config, vm):
+    """Migrate VM and check machine type is same"""
     migrate_vm_and_verify(vm=vm)
-
     validate_machine_type(vm=vm, expected_machine_type=machine_type_from_kubevirt_config)
 
 
@@ -183,6 +196,7 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
     validate_machine_type(vm=vm, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1)
 
 
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-3688")
 def test_unsupported_machine_type(namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"

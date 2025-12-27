@@ -844,9 +844,52 @@ POD_CONTAINER_SPEC = {
         "capabilities": {"drop": ["ALL"]},
     },
 }
+
+EXCLUDED_CPU_MODELS_S390x = [
+    # -------------------------------------------------------------------------
+    # Legacy Models (RHEL 9 ALS Violation)
+    # Below are deprecated & usable models, but as RHEL 9 defines an Architecture Level Set (ALS) of z14.
+    # Models older than z14 will cause the guest to crash with a disabled-wait state.
+    # Ref: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/automatically_installing_rhel/preparing-a-rhel-installation-on-64-bit-ibm-z_rhel-installer#planning-for-installation-on-ibm-z_preparing-a-rhel-installation-on-64-bit-ibm-z # noqa: E501
+    # -------------------------------------------------------------------------
+    "z114",
+    "z114-base",
+    "z13",
+    "z13-base",
+    "z13.2",
+    "z13.2-base",
+    "z13s",
+    "z13s-base",
+    "z196",
+    "z196-base",
+    "z196.2",
+    "z196.2-base",
+    "zBC12",
+    "zBC12-base",
+    "zEC12",
+    "zEC12-base",
+    "zEC12.2",
+    "zEC12.2-base",
+    # -------------------------------------------------------------------------
+    # Base Models (Missing Required Features)
+    # Below are usable (non-deprecated) models, but as generally 'base' models
+    # lack specific cpu features required by RHEL guests (e.g., Vector Support).
+    # While they might work if features were explicitly appended (e.g., 'gen15b-base,vx=on'),
+    # current tests do not support combined model+feature configurations.
+    # -------------------------------------------------------------------------
+    "z14ZR1-base",
+    "z14.2-base",
+    "z14-base",
+    "gen15a-base",
+    "gen15b-base",
+    "gen16a-base",
+    "gen16b-base",
+    "gen17a-base",
+    "gen17b-base",
+]
 # Opteron - Windows image can't boot
 # Penryn - does not support WSL2
-EXCLUDED_CPU_MODELS = ["Opteron", "Penryn"]
+EXCLUDED_CPU_MODELS = [*EXCLUDED_CPU_MODELS_S390x, "Opteron", "Penryn"]
 # Latest windows can't boot with old cpu models
 EXCLUDED_OLD_CPU_MODELS = [*EXCLUDED_CPU_MODELS, "Westmere", "SandyBridge", "Nehalem", "IvyBridge", "Skylake"]
 

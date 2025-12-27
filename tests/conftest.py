@@ -106,6 +106,7 @@ from utilities.constants import (
     PREFERENCE_STR,
     RHEL9_STR,
     RHSM_SECRET_NAME,
+    S390X,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -2652,10 +2653,23 @@ def cluster_modern_cpu_model_scope_class(
     wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@pytest.fixture(scope="session")
+def is_s390x_cluster(nodes_cpu_architecture):
+    return nodes_cpu_architecture == S390X
+
+
 @pytest.fixture(scope="module")
-def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
+def machine_type_from_kubevirt_config(is_s390x_cluster, kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    from utilities.jira import is_jira_open
+
+    # Workaround for s390x (https://github.com/kubevirt/kubevirt/issues/14953), as machine type missing in config and
+    # hardcoded to s390_ccw_virtio in kubevirt code.
+    if is_s390x_cluster and is_jira_open("CNV-71825"):
+        mc_type = "s390-ccw-virtio"
+    else:
+        mc_type = kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
+    return mc_type
 
 
 @pytest.fixture(scope="module")
