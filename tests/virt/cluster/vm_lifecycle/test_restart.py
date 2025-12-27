@@ -1,5 +1,5 @@
 """
-Test VM restart
+VM Lifecycle Tests - Restart Operations
 """
 
 import logging
@@ -33,6 +33,23 @@ def vm_to_restart(unprivileged_client, namespace):
 
 @pytest.mark.polarion("CNV-1497")
 def test_vm_restart(vm_to_restart):
+    """
+    Test that a VM can complete a full restart cycle (restart, stop, start).
+
+    Markers:
+        - arm64
+
+    Preconditions:
+        - Running Fedora virtual machine
+
+    Steps:
+        1. Restart the VM and wait for completion
+        2. Stop the VM and wait for completion
+        3. Start the VM and wait for it to become running
+
+    Expected:
+        - VM is running and SSH accessible
+    """
     LOGGER.info("VM is running: Restarting VM")
     vm_to_restart.restart(wait=True)
     LOGGER.info("VM is running: Stopping VM")
