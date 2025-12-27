@@ -30,8 +30,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     wait_for_pods_replacement_by_type,
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
-from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
+from utilities.constants import EUS, HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
