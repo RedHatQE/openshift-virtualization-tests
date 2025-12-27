@@ -22,8 +22,6 @@ from utilities.constants import (
     CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
-    IPV4_STR,
-    IPV6_STR,
     LINUX_BRIDGE,
     MONITORING_METRICS,
     OS_FLAVOR_FEDORA,
@@ -191,10 +189,6 @@ data_import_cron_matrix = [
     {"rhel10": {"instance_type": U1_MEDIUM_STR, "preference": RHEL10_PREFERENCE}},
 ]
 
-ip_stack_version_matrix = [
-    IPV4_STR,
-    IPV6_STR,
-]
 cnv_pod_matrix = ALL_CNV_PODS
 cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
