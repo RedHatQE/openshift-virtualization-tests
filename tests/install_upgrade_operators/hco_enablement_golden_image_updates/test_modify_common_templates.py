@@ -166,6 +166,7 @@ class TestModifyCommonTemplateSpec:
     )
     def test_common_template_modify_spec(
         self,
+        admin_client,
         updated_common_template,
         updated_template_names,
         hyperconverged_status_templates_scope_function,
@@ -203,7 +204,7 @@ class TestModifyCommonTemplateSpec:
             data_import_cron_error = validate_template_change(
                 template_dict=benedict(
                     get_data_import_cron_by_name(
-                        cron_name=template_name, namespace=golden_images_namespace.name
+                        cron_name=template_name, namespace=golden_images_namespace.name, admin_client=admin_client
                     ).instance.to_dict(),
                     keypath_separator=KEY_PATH_SEPARATOR,
                 ),
@@ -251,6 +252,7 @@ class TestCommonTemplatesEnableDisable:
     )
     def test_common_template_config_disable(
         self,
+        admin_client,
         updated_common_template,
         updated_template_names,
         hyperconverged_status_templates_scope_function,
@@ -280,7 +282,9 @@ class TestCommonTemplatesEnableDisable:
                 )
 
             with pytest.raises(ResourceNotFoundError):
-                get_data_import_cron_by_name(cron_name=template_name, namespace=golden_images_namespace.name)
+                get_data_import_cron_by_name(
+                    cron_name=template_name, namespace=golden_images_namespace.name, admin_client=admin_client
+                )
         assert not errors, (
             f"Enabling/Disabling common templates via HCO failed with following reasons: {' '.join(errors)}"
         )

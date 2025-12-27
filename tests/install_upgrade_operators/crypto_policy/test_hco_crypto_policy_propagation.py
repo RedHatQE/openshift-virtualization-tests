@@ -19,11 +19,12 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture()
-def hco_crypto_policy(hco_namespace):
+def hco_crypto_policy(hco_namespace, admin_client):
     return get_resource_crypto_policy(
         resource=HyperConverged,
         name=py_config["hco_cr_name"],
         key_name=TLS_SECURITY_PROFILE,
+        admin_client=admin_client,
         namespace=hco_namespace.name,
     )
 
@@ -42,6 +43,7 @@ def updated_hco_crypto_policy(
 
 @pytest.mark.polarion("CNV-9331")
 def test_set_hco_crypto_policy(
+    admin_client,
     cnv_crypto_policy_matrix__function__,
     updated_hco_crypto_policy,
     hco_crypto_policy,
@@ -53,7 +55,8 @@ def test_set_hco_crypto_policy(
         f"Expected HCO crypto policy: '{expected_hco_crypto_policy}'\n"
     )
     assert_crypto_policy_propagated_to_components(
-        resources_dict=resources_dict,
         crypto_policy=cnv_crypto_policy_matrix__function__,
+        resources_dict=resources_dict,
         updated_resource_kind=HyperConverged.kind,
+        admin_client=admin_client,
     )

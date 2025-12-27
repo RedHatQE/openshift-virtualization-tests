@@ -50,10 +50,10 @@ def hyperconverged_resource_certconfig_change(
 def initial_certificates_dates(admin_client, hco_namespace, tmpdir, secrets_with_non_closed_bugs):
     LOGGER.info("Delete secrets so that the cert-manager will create new ones with the updated certConfig")
     for secret in SECRETS:
-        Secret(name=secret, namespace=hco_namespace.name).delete(wait=True)
+        Secret(name=secret, namespace=hco_namespace.name, client=admin_client).delete(wait=True)
 
     for secret in SECRETS:
-        Secret(name=secret, namespace=hco_namespace.name).wait(timeout=TIMEOUT_1MIN)
+        Secret(name=secret, namespace=hco_namespace.name, client=admin_client).wait(timeout=TIMEOUT_1MIN)
 
     wait_for_hco_conditions(
         admin_client=admin_client,
@@ -66,6 +66,7 @@ def initial_certificates_dates(admin_client, hco_namespace, tmpdir, secrets_with
         hco_namespace_name=hco_namespace.name,
         tmpdir=tmpdir,
         secrets_to_skip=secrets_with_non_closed_bugs,
+        admin_client=admin_client,
         seconds=TIMEOUT_11MIN,
     )
 
