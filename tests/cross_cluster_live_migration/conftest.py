@@ -18,14 +18,22 @@ from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_map import StorageMap
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 from pytest_testconfig import config as py_config
 
 from tests.cross_cluster_live_migration.utils import enable_feature_gate_and_configure_hco_live_migration_network
 from utilities.constants import (
-    DATA_SOURCE_STR,
     OS_FLAVOR_RHEL,
+    RHEL10_PREFERENCE,
+    RHEL10_STR,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
+    U1_SMALL,
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
@@ -272,9 +280,10 @@ def local_cluster_mtv_provider_for_local_cluster(admin_client, mtv_namespace):
     Get a Provider resource for the local cluster.
     "host" Provider is created by default by MTV.
     """
-    provider = Provider(client=admin_client, name="host", namespace=mtv_namespace.name, ensure_exists=True)
+    provider = Provider(client=admin_client, name="host", namespace=mtv_namespace.name)
+    provider.wait()
     provider.wait_for_condition(
-        condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_30SEC
+        condition=provider.Condition.READY, status=provider.Condition.Status.TRUE, timeout=TIMEOUT_1MIN
     )
     return provider
 
@@ -358,28 +367,63 @@ def remote_cluster_source_test_namespace(remote_admin_client, unique_suffix):
 
 
 @pytest.fixture(scope="class")
-def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_golden_images_namespace
-):
-    rhel_data_source = DataSource(
+def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden_images_namespace):
+    return DataSource(
         namespace=remote_cluster_golden_images_namespace.name,
-        name=py_config["latest_rhel_os_dict"][DATA_SOURCE_STR],
+        name=RHEL10_STR,
         client=remote_admin_client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_from_template_with_data_source(
+    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
         namespace=remote_cluster_source_test_namespace.name,
         client=remote_admin_client,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel_data_source,
+            data_source=remote_cluster_rhel10_data_source,
             storage_class=py_config["default_storage_class"],
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
         yield vm
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_with_instance_type(
+    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+):
+    with VirtualMachineForTests(
+        name="vm-with-instance-type",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=remote_admin_client),
+        vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE, client=remote_admin_client),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=remote_cluster_rhel10_data_source,
+            storage_class=py_config["default_storage_class"],
+        ),
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def vms_for_cclm(request):
+    """
+    Only fixtures from the "vms_fixtures" test param will be called
+    Only VMs that are listed in "vms_fixtures" param will be created
+    VM fixtures that are not listed in the param will not be called, and those VMs will not be created
+    """
+    vms = [request.getfixturevalue(argname=vm_fixture) for vm_fixture in request.param["vms_fixtures"]]
+    yield vms
 
 
 @pytest.fixture(scope="class")
@@ -391,7 +435,7 @@ def mtv_migration_plan(
     local_cluster_mtv_storage_map,
     local_cluster_mtv_network_map,
     namespace,
-    vm_for_cclm_from_template_with_data_source,
+    vms_for_cclm,
     unique_suffix,
 ):
     """
@@ -400,10 +444,11 @@ def mtv_migration_plan(
     """
     vms = [
         {
-            "id": vm_for_cclm_from_template_with_data_source.instance.metadata.uid,
-            "name": vm_for_cclm_from_template_with_data_source.name,
-            "namespace": vm_for_cclm_from_template_with_data_source.namespace,
+            "id": vm.instance.metadata.uid,
+            "name": vm.name,
+            "namespace": vm.namespace,
         }
+        for vm in vms_for_cclm
     ]
     with Plan(
         client=admin_client,
@@ -432,7 +477,6 @@ def mtv_migration(
     admin_client,
     mtv_namespace,
     mtv_migration_plan,
-    unique_suffix,
 ):
     """
     Create a Migration resource to execute the MTV migration plan.
@@ -440,7 +484,7 @@ def mtv_migration(
     """
     with Migration(
         client=admin_client,
-        name=f"{mtv_migration_plan.name}-{unique_suffix}",
+        name=f"migration-{mtv_migration_plan.name}",
         namespace=mtv_namespace.name,
         plan_name=mtv_migration_plan.name,
         plan_namespace=mtv_migration_plan.namespace,
