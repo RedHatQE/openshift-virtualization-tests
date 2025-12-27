@@ -101,6 +101,7 @@ def create_ns(
     For kubemacpool labeling opt-modes, provide kmp_vm_label and admin_client as admin_client
     """
     if not unprivileged_client:
+        LOGGER.info(f"Creating namespace {name} with admin client")
         with Namespace(
             client=admin_client,
             name=name,
@@ -111,6 +112,7 @@ def create_ns(
             ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield ns
     else:
+        LOGGER.info(f"Creating project {name} with unprivileged client")
         ProjectRequest(name=name, client=unprivileged_client, teardown=teardown).deploy()
         label_project(name=name, label=labels, admin_client=admin_client)
         ns = Namespace(client=unprivileged_client, name=name, ensure_exists=True)
