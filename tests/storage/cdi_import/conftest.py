@@ -12,7 +12,6 @@ from tests.storage.constants import (
     HPP_STORAGE_CLASSES,
     HTTP,
     QUAY_FEDORA_CONTAINER_IMAGE,
-    REGISTRY_STR,
 )
 from tests.storage.utils import (
     clean_up_multiprocess,
@@ -23,6 +22,7 @@ from tests.storage.utils import (
 from utilities.constants import (
     LINUX_BRIDGE,
     OS_FLAVOR_FEDORA,
+    REGISTRY_STR,
     TIMEOUT_1MIN,
     TIMEOUT_4MIN,
     Images,

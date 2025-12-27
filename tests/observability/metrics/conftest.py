@@ -4,6 +4,7 @@ import shlex
 import bitmath
 import pytest
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -40,6 +41,7 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
+    DEFAULT_FEDORA_REGISTRY_URL,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -50,6 +52,7 @@ from utilities.constants import (
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
+    REGISTRY_STR,
     SSP_OPERATOR,
     STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
@@ -85,6 +88,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
+    vm_instance_from_template,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -661,6 +665,41 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
             prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         )
     )
+
+
+@pytest.fixture()
+def fedora_rwo_dv(namespace, unprivileged_client):
+    """
+    Create a DataVolume with RWO access mode from a container registry.
+    """
+    with DataVolume(
+        client=unprivileged_client,
+        source=REGISTRY_STR,
+        name="non-evictable-vm-dv-for-test",
+        namespace=namespace.name,
+        url=DEFAULT_FEDORA_REGISTRY_URL,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        access_modes=DataVolume.AccessMode.RWO,
+        api_name="storage",
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
+@pytest.fixture()
+def non_evictable_vm_from_template(request, unprivileged_client, namespace, fedora_rwo_dv):
+    """
+    Create a VM from template using the fedora_rwo_dv DataVolume.
+    This VM will have LiveMigrate eviction strategy with RWO storage, making it non-evictable.
+    """
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        existing_data_volume=fedora_rwo_dv,
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture(scope="class")
