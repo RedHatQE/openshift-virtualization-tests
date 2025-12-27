@@ -101,19 +101,21 @@ def vms_for_upgrade(
 
 
 @pytest.fixture(scope="session")
-def vm_cluster_preference_for_upgrade():
+def vm_cluster_preference_for_upgrade(admin_client):
     with VirtualMachineClusterPreference(
         name="basic-cluster-preference-for-upgrade",
+        client=admin_client,
     ) as vm_cluster_preference:
         yield vm_cluster_preference
 
 
 @pytest.fixture(scope="session")
-def vm_cluster_instancetype_for_upgrade(cluster_common_node_cpu):
+def vm_cluster_instancetype_for_upgrade(admin_client, cluster_common_node_cpu):
     with VirtualMachineClusterInstancetype(
         name="basic-cluster-instancetype-for-upgrade",
         cpu={"guest": 1, "model": cluster_common_node_cpu},
         memory={"guest": Images.Rhel.DEFAULT_MEMORY_SIZE},
+        client=admin_client,
     ) as cluster_instance_type:
         yield cluster_instance_type
 
@@ -148,7 +150,7 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 
 @pytest.fixture()
 def unupdated_vmi_pods_names(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, migratable_vms):
-    wait_for_automatic_vm_migrations(vm_list=migratable_vms)
+    wait_for_automatic_vm_migrations(vm_list=migratable_vms, admin_client=admin_client)
 
     return validate_vms_pod_updated(
         admin_client=admin_client,

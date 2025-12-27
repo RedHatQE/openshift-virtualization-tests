@@ -37,36 +37,39 @@ def namespace_for_arq_upgrade_test(admin_client):
 
 
 @pytest.fixture(scope="session")
-def application_aware_resource_quota_upgrade(namespace_for_arq_upgrade_test):
+def application_aware_resource_quota_upgrade(admin_client, namespace_for_arq_upgrade_test):
     with ApplicationAwareResourceQuota(
         name="arq-for-upgrade-test",
         namespace=namespace_for_arq_upgrade_test.name,
         hard=UPGRADE_QUOTA_FOR_ONE_VMI,
+        client=admin_client,
     ) as arq:
         yield arq
 
 
 @pytest.fixture(scope="session")
-def vm_for_arq_upgrade_test(namespace_for_arq_upgrade_test, cpu_for_migration):
+def vm_for_arq_upgrade_test(unprivileged_client, namespace_for_arq_upgrade_test, cpu_for_migration):
     vm_name = "vm-for-arq-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_arq_upgrade_test.name,
         body=fedora_vm_body(name=vm_name),
         cpu_model=cpu_for_migration,
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="session")
-def vm_for_arq_upgrade_test_in_gated_state(namespace_for_arq_upgrade_test):
+def vm_for_arq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_arq_upgrade_test):
     vm_name = "vm-for-arq-upgrade-test-gated"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_arq_upgrade_test.name,
         body=fedora_vm_body(name=vm_name),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        client=unprivileged_client,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
         wait_for_virt_launcher_pod(vmi=vm.vmi)
@@ -85,36 +88,39 @@ def namespace_for_acrq_upgrade_test(admin_client):
 
 
 @pytest.fixture(scope="session")
-def application_aware_cluster_resource_quota_upgrade():
+def application_aware_cluster_resource_quota_upgrade(admin_client):
     with ApplicationAwareClusterResourceQuota(
         name="acrq-for-upgrade-test",
         quota={"hard": UPGRADE_QUOTA_FOR_ONE_VMI},
         selector={"labels": {"matchLabels": ACRQ_NAMESPACE_LABEL}},
+        client=admin_client,
     ) as acrq:
         yield acrq
 
 
 @pytest.fixture(scope="session")
-def vm_for_acrq_upgrade_test(namespace_for_acrq_upgrade_test, cpu_for_migration):
+def vm_for_acrq_upgrade_test(unprivileged_client, namespace_for_acrq_upgrade_test, cpu_for_migration):
     vm_name = "vm-for-acrq-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_acrq_upgrade_test.name,
         body=fedora_vm_body(name=vm_name),
         cpu_model=cpu_for_migration,
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="session")
-def vm_for_acrq_upgrade_test_in_gated_state(namespace_for_acrq_upgrade_test):
+def vm_for_acrq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_acrq_upgrade_test):
     vm_name = "vm-for-acrq-upgrade-test-gated"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_acrq_upgrade_test.name,
         body=fedora_vm_body(name=vm_name),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        client=unprivileged_client,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
         wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
