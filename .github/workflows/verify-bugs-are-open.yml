@@ -1,0 +1,139 @@
+# Generated with Claude Code assistance
+# description: Verify that Jira bugs referenced in code are still open. Runs on PRs.
+
+name: Verify Bugs Are Open
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify-bugs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and checkout PR code
+        run: |
+          echo "Fetching PR head from fork..."
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+
+          echo "Checking out PR branch..."
+          git checkout pr-branch
+
+      - name: Attempt to rebase on base branch
+        id: rebase
+        continue-on-error: true
+        run: |
+          echo "Attempting to rebase on ${{ github.event.pull_request.base.ref }}..."
+          if git rebase origin/${{ github.event.pull_request.base.ref }}; then
+            echo "rebase_success=true" >> "$GITHUB_OUTPUT"
+            echo "Successfully rebased on ${{ github.event.pull_request.base.ref }}"
+          else
+            echo "rebase_success=false" >> "$GITHUB_OUTPUT"
+            echo "Rebase failed, aborting and continuing with original PR state"
+            git rebase --abort || true
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Verify bugs are open
+        id: verify-bugs
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          # Mask the token to prevent accidental exposure
+          echo "::add-mask::$JIRA_TOKEN"
+
+          # Validate required secrets
+          if [ -z "$JIRA_TOKEN" ]; then
+            echo "ERROR: JIRA_TOKEN secret is not set"
+            echo ""
+            echo "HOW TO FIX:"
+            echo "1. Go to repository Settings > Secrets and variables > Actions"
+            echo "2. Add a secret named 'JIRA_TOKEN' with your Jira API token"
+            exit 1
+          fi
+
+          echo "Running Jira bug verification..."
+          echo "Command: uv tool run --from python-utility-scripts pyutils-jira --url https://issues.redhat.com --token *** --target-versions vfuture,4.21.0,4.21.z --resolved-statuses verified,release pending,closed --issue-pattern ([A-Z]+-[0-9]+) --version-string-not-targeted-jiras vfuture --verbose"
+
+          set -o pipefail
+          PYTHONUNBUFFERED=1 uv tool run --from python-utility-scripts pyutils-jira \
+            --url "https://issues.redhat.com" \
+            --token "$JIRA_TOKEN" \
+            --target-versions "vfuture,4.21.0,4.21.z" \
+            --resolved-statuses "verified,release pending,closed" \
+            --issue-pattern "([A-Z]+-[0-9]+)" \
+            --version-string-not-targeted-jiras "vfuture" \
+            --verbose 2>&1
+
+      - name: Add passed label
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            // Remove failed label if exists
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: 'verify-bugs-are-open:failed'
+              });
+            } catch (e) {
+              // Label doesn't exist, ignore
+            }
+            // Add passed label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['verify-bugs-are-open:passed']
+            });
+
+      - name: Add failed label
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            // Remove passed label if exists
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: 'verify-bugs-are-open:passed'
+              });
+            } catch (e) {
+              // Label doesn't exist, ignore
+            }
+            // Add failed label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['verify-bugs-are-open:failed']
+            });
