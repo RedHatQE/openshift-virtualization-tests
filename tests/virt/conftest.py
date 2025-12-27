@@ -5,10 +5,12 @@ import shlex
 import bitmath
 import pytest
 from bitmath import parse_string_unsafe
+from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
+from ocp_resources.role_binding import RoleBinding
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -29,7 +31,7 @@ from tests.virt.utils import (
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
 )
-from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, UNPRIVILEGED_USER, NamespacesNames
 from utilities.exceptions import UnsupportedGPUDeviceError
 from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
 from utilities.pytest_utils import exit_pytest_execution
@@ -406,3 +408,23 @@ def nodes_cpu_vendor(schedulable_nodes):
         return INTEL
     else:
         return None
+
+
+@pytest.fixture(scope="session")
+def kubevirt_migrate_cluster_role(admin_client):
+    return ClusterRole(name="kubevirt.io:migrate", client=admin_client, ensure_exists=True)
+
+
+@pytest.fixture()
+def unprivileged_user_migrate_rolebinding(admin_client, namespace, kubevirt_migrate_cluster_role):
+    with RoleBinding(
+        name="role-bind-kubevirt-migrate",
+        namespace=namespace.name,
+        client=admin_client,
+        subjects_kind="User",
+        subjects_name=UNPRIVILEGED_USER,
+        subjects_namespace=namespace.name,
+        role_ref_kind=kubevirt_migrate_cluster_role.kind,
+        role_ref_name=kubevirt_migrate_cluster_role.name,
+    ) as role_binding:
+        yield role_binding
