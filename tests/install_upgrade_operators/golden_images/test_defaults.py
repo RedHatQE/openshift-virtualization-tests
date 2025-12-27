@@ -1,0 +1,108 @@
+import json
+
+import pytest
+
+from tests.install_upgrade_operators.golden_images.constants import EXPECTED_DEFAULT_ARCHITECTURES
+from tests.install_upgrade_operators.golden_images.multi_arch.utils import assert_sets_equal
+from tests.install_upgrade_operators.golden_images.utils import verify_data_import_cron_template_annotation
+from utilities.constants import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
+
+pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x, pytest.mark.conformance]
+
+
+@pytest.mark.usefixtures("hyperconverged_spec_scope_session", "hyperconverged_status_scope_session")
+@pytest.mark.polarion("CNV-7504")
+def test_data_import_schedule_default_in_hco_cr(
+    data_import_schedule,
+):
+    # example (the first and second numbers are random):
+    # dataImportSchedule: 57 45/12 * * *
+    assert data_import_schedule, "No crontab value found"
+
+
+@pytest.mark.polarion("CNV-8168")
+def test_default_hco_cr_image_streams(
+    admin_client,
+    golden_images_namespace,
+    image_stream_names,
+    image_streams_from_common_templates_in_ssp_cr,
+):
+    assert_sets_equal(
+        actual=set(image_stream_names),
+        expected=set(image_streams_from_common_templates_in_ssp_cr),
+        context=f"ImageStream resources in {golden_images_namespace.name}",
+    )
+
+
+@pytest.mark.polarion("CNV-8935")
+def test_no_data_import_template_in_hco_spec(
+    hyperconverged_spec_scope_session,
+):
+    assert SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME not in json.dumps(hyperconverged_spec_scope_session), (
+        f"{SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME} found in {hyperconverged_spec_scope_session}"
+    )
+
+
+@pytest.mark.polarion("CNV-8703")
+def test_data_import_template_defaults_hco_status(
+    hyperconverged_status_scope_session,
+    hyperconverged_spec_scope_session,
+    modified_common_templates_scope_session,
+    default_custom_templates_scope_session,
+):
+    assert SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME in hyperconverged_status_scope_session, (
+        f"{SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME} not found in {hyperconverged_status_scope_session}"
+    )
+
+    assert not modified_common_templates_scope_session, (
+        f"Following common templates are marked as modified: "
+        f"{modified_common_templates_scope_session}, hco.spec: {hyperconverged_spec_scope_session}"
+    )
+    assert not default_custom_templates_scope_session, (
+        f"Following custom templates: {default_custom_templates_scope_session} are enabled by "
+        f"default on hco: {hyperconverged_spec_scope_session}"
+    )
+
+
+@pytest.mark.parametrize(
+    "node_info, workload_key",
+    [
+        pytest.param("default_hco_node_info", "workloadsArchitectures", marks=pytest.mark.polarion("CNV-12457")),
+        pytest.param("default_ssp_node_info", "workloadArchitectures", marks=pytest.mark.polarion("CNV-12462")),
+    ],
+)
+def test_default_node_info_architectures_in_cr(
+    request,
+    control_plane_node_architectures,
+    worker_nodes_architectures,
+    node_info,
+    workload_key,
+    subtests,
+):
+    node_info_data = request.getfixturevalue(node_info)
+
+    node_type_cases = [
+        ("Control plane architectures match", "controlPlaneArchitectures", control_plane_node_architectures),
+        ("Workloads architectures match", workload_key, worker_nodes_architectures),
+    ]
+
+    for msg, node_architectures_key, expected in node_type_cases:
+        with subtests.test(msg=msg, node_architectures_key=node_architectures_key, expected=expected):
+            assert_sets_equal(
+                actual=set(node_info_data[node_architectures_key]),
+                expected=expected,
+                context=f"{node_info} {node_architectures_key}",
+            )
+
+
+@pytest.mark.polarion("CNV-12463")
+def test_data_import_cron_template_defaults_architectures(hyperconverged_status_templates_scope_session, subtests):
+    for template in hyperconverged_status_templates_scope_session:
+        with subtests.test(
+            msg=f"{template['metadata']['name']} dataImportCronTemplate annotated"
+            f"with architectures: {EXPECTED_DEFAULT_ARCHITECTURES}"
+        ):
+            verify_data_import_cron_template_annotation(
+                template=template,
+                expected_architectures=EXPECTED_DEFAULT_ARCHITECTURES,
+            )

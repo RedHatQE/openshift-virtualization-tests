@@ -11,10 +11,8 @@ from tests.install_upgrade_operators.constants import (
     CUSTOM_DATASOURCE_NAME,
     KEY_PATH_SEPARATOR,
 )
-from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
-    CUSTOM_CRON_TEMPLATE,
-    get_template_dict_by_name,
-)
+from tests.install_upgrade_operators.golden_images.constants import CUSTOM_CRON_TEMPLATE
+from tests.install_upgrade_operators.golden_images.utils import get_template_dict_by_name
 from utilities.constants import (
     DATA_IMPORT_CRON_ENABLE,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
