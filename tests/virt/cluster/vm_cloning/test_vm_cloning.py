@@ -125,6 +125,7 @@ def fedora_target_vm_instance(fedora_target_vm):
     yield fedora_target_vm.instance
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_function, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
@@ -152,6 +153,7 @@ def test_clone_vm_two_pvc_disks(
     check_if_files_present_after_cloning(vm=target_vm_scope_function)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "cloning_job_scope_function",
     [
@@ -170,6 +172,7 @@ def test_clone_vm_with_instance_type_and_preference(
     check_disk_count_in_vm(vm=target_vm_scope_function)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_function, vm_with_dv_for_cloning, cloning_job_scope_function",
     [
@@ -203,6 +206,7 @@ def test_clone_windows_vm(
     assert_target_vm_has_new_pvc_disks(source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function)
 
 
+@pytest.mark.s390x
 @pytest.mark.parametrize(
     "fedora_vm_for_cloning, cloning_job_fedora_vm",
     [
@@ -227,6 +231,7 @@ def test_clone_windows_vm(
     indirect=True,
 )
 @pytest.mark.arm64
+@pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.usefixtures(
     "fedora_vm_for_cloning",
