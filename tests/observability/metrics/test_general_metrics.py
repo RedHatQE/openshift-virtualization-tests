@@ -3,13 +3,12 @@ import logging
 import pytest
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
-from pytest_testconfig import config as py_config
 
+from tests.observability.metrics.constants import KUBEVIRT_VMI_NODE_CPU_AFFINITY
 from tests.observability.metrics.utils import (
     validate_vmi_node_cpu_affinity_with_prometheus,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 KUBEVIRT_VM_TAG = f"{Resource.ApiGroup.KUBEVIRT_IO}/vm"
@@ -41,36 +40,23 @@ def fedora_vm_without_name_in_label(
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
         yield vm
 
 
 class TestVmiNodeCpuAffinityLinux:
-    @pytest.mark.parametrize(
-        "golden_image_data_volume_scope_class, vm_from_template_scope_class",
-        [
-            pytest.param(
-                {
-                    "dv_name": RHEL_LATEST_OS,
-                    "image": RHEL_LATEST["image_path"],
-                    "storage_class": py_config["default_storage_class"],
-                    "dv_size": RHEL_LATEST["dv_size"],
-                },
-                {
-                    "vm_name": "rhel-latest",
-                    "template_labels": RHEL_LATEST_LABELS,
-                    "guest_agent": False,
-                    "ssh": False,
-                },
-            ),
-        ],
-        indirect=True,
-    )
     @pytest.mark.polarion("CNV-7295")
-    def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, vm_from_template_scope_class):
-        validate_vmi_node_cpu_affinity_with_prometheus(
-            vm=vm_from_template_scope_class,
+    @pytest.mark.s390x
+    def test_kubevirt_vmi_node_cpu_affinity(
+        self,
+        prometheus,
+        vm_with_cpu_spec,
+        expected_cpu_affinity_metric_value,
+    ):
+        validate_metrics_value(
             prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_NODE_CPU_AFFINITY.format(vm_name=vm_with_cpu_spec.name),
+            expected_value=expected_cpu_affinity_metric_value,
         )
 
 

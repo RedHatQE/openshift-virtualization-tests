@@ -25,3 +25,5 @@ KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES = "kubevirt_vmi_migration_data_total_byt
 
 BINDING_NAME = "binding_name"
 BINDING_TYPE = "binding_type"
+
+KUBEVIRT_VMI_NODE_CPU_AFFINITY = "kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
