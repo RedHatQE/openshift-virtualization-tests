@@ -695,8 +695,8 @@ def non_evictable_vm_from_template(request, unprivileged_client, namespace):
         data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
     ) as vm:
         yield vm
-        
-        
+
+
 @pytest.fixture(scope="class")
 def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
     """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
