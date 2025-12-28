@@ -1,6 +1,8 @@
 import json
+import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Final
 
 import ocp_resources.network_config_openshift_io as openshift_nc
@@ -15,6 +17,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
+from libs.net.vmspec import IpNotFound
 from utilities.constants import NET_UTIL_CONTAINER_IMAGE
 from utilities.infra import get_resources_by_name_prefix
 
@@ -24,6 +27,13 @@ _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
+EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
+
+
+@dataclass
+class ExternalFrrPodInfo:
+    pod: Pod
+    ipv4: str
 
 
 @contextmanager
@@ -177,9 +187,8 @@ def deploy_external_frr_pod(
     node_name: str,
     nad_name: str,
     frr_configmap_name: str,
-    default_route: str,
     client: DynamicClient,
-) -> Generator[Pod]:
+) -> Generator[ExternalFrrPodInfo]:
     """Deploys an external FRR (Free Range Routing) pod in a specified namespace.
 
     On entering the context, this function creates a privileged pod with the FRR image,
@@ -195,17 +204,15 @@ def deploy_external_frr_pod(
         node_name (str): The name of the node where the pod will be scheduled.
         nad_name (str): The name of the NetworkAttachmentDefinition (NAD) to attach to the pod.
         frr_configmap_name (str): The name of the ConfigMap containing FRR configuration.
-        default_route (str): The default route to be used by the pod.
         client (DynamicClient): The Kubernetes dynamic client.
 
     Yields:
-        Pod: The deployed FRR pod object.
+        ExternalFrrPodInfo: The info about deployed external FRR pod, including its IPv4 address.
     """
     annotations = {
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks": json.dumps([
-            {"name": nad_name, "interface": POD_SECONDARY_IFACE_NAME, "default-route": [default_route]}
+            {"name": nad_name, "interface": POD_SECONDARY_IFACE_NAME},
         ]),
-        f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/default-network": "none",
     }
     containers = [
         {
@@ -217,6 +224,7 @@ def deploy_external_frr_pod(
         {
             "name": "iperf3",
             "image": NET_UTIL_CONTAINER_IMAGE,
+            "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
             "command": ["sleep", "infinity"],
         },
     ]
@@ -230,9 +238,24 @@ def deploy_external_frr_pod(
         containers=containers,
         volumes=volumes,
         client=client,
+        label=EXTERNAL_FRR_POD_LABEL,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
-        yield pod
+        ipv4 = _acquire_dhcp_ipv4(pod=pod, iface_name=POD_SECONDARY_IFACE_NAME)
+
+        yield ExternalFrrPodInfo(pod=pod, ipv4=ipv4)
+
+
+def _acquire_dhcp_ipv4(pod: Pod, iface_name: str) -> str:
+    pod.execute(command=shlex.split(f"dhclient {iface_name}"), container="iperf3")
+
+    iface_info = json.loads(pod.execute(command=shlex.split(f"ip -j -4 addr show {iface_name}")))
+    if iface_info and "addr_info" in iface_info[0]:
+        for addr in iface_info[0]["addr_info"]:
+            if addr["family"] == "inet":
+                return addr["local"]
+
+    raise IpNotFound(f"IP address not found for interface {iface_name}")
 
 
 def wait_for_bgp_connection_established(node_names: list) -> None:

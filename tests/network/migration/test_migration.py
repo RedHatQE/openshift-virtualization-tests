@@ -12,6 +12,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_ssh_alive,
@@ -30,7 +31,6 @@ from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
     get_valid_ip_address,
-    get_vmi_ip_v4_by_name,
     network_device,
     network_nad,
 )
@@ -114,7 +114,7 @@ def vma(
     namespace,
     unprivileged_client,
     cpu_for_migration,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
     br1test_nad,
 ):
     name = "vma"
@@ -124,8 +124,9 @@ def vma(
     }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
-        ipv6_network_data=dual_stack_network_data,
+        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
     )
+
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
@@ -145,7 +146,7 @@ def vmb(
     namespace,
     unprivileged_client,
     cpu_for_migration,
-    dual_stack_network_data,
+    ipv6_primary_interface_cloud_init_data,
     br1test_nad,
 ):
     name = "vmb"
@@ -155,7 +156,7 @@ def vmb(
     }
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
-        ipv6_network_data=dual_stack_network_data,
+        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
     )
 
     with VirtualMachineForTests(
@@ -227,7 +228,7 @@ def http_service(namespace, running_vma, running_vmb):
 
 @pytest.fixture(scope="module")
 def ping_in_background(br1test_nad, running_vma, running_vmb):
-    dst_ip = get_vmi_ip_v4_by_name(vm=running_vmb, name=br1test_nad.name)
+    dst_ip = lookup_iface_status_ip(vm=running_vmb, iface_name=br1test_nad.name, ip_family=4)
     assert_ping_successful(src_vm=running_vma, dst_ip=dst_ip)
     LOGGER.info(f"Ping {dst_ip} from {running_vma.name} to {running_vmb.name}")
     run_ssh_commands(
@@ -295,7 +296,7 @@ def migrated_vmb_and_wait_for_success(running_vmb, http_service):
 
 @pytest.fixture(scope="module")
 def vma_ip_address(br1test_nad, running_vma):
-    return get_vmi_ip_v4_by_name(vm=running_vma, name=br1test_nad.name)
+    return lookup_iface_status_ip(vm=running_vma, iface_name=br1test_nad.name, ip_family=4)
 
 
 @pytest.fixture(scope="module")
@@ -361,7 +362,7 @@ def test_ssh_vm_migration(
     ssh_in_background,
     migrated_vmb_and_wait_for_success,
 ):
-    src_ip = str(get_vmi_ip_v4_by_name(vm=running_vma, name=br1test_nad.name))
+    src_ip = str(lookup_iface_status_ip(vm=running_vma, iface_name=br1test_nad.name, ip_family=4))
     assert_ssh_alive(ssh_vm=running_vma, src_ip=src_ip)
 
 
@@ -375,7 +376,7 @@ def test_cnv_bridge_ssh_vm_migration(
     brcnv_ssh_in_background,
     brcnv_migrated_vm,
 ):
-    src_ip = str(get_vmi_ip_v4_by_name(vm=brcnv_vma_with_vlan_1, name=brcnv_ovs_nad_vlan_1.name))
+    src_ip = str(lookup_iface_status_ip(vm=brcnv_vma_with_vlan_1, iface_name=brcnv_ovs_nad_vlan_1.name, ip_family=4))
     assert_ssh_alive(ssh_vm=brcnv_vma_with_vlan_1, src_ip=src_ip)
 
 
@@ -394,27 +395,27 @@ def test_connectivity_after_migration_and_restart(
 ):
     assert_ping_successful(
         src_vm=running_vma,
-        dst_ip=get_vmi_ip_v4_by_name(vm=running_vmb, name=br1test_nad.name),
+        dst_ip=lookup_iface_status_ip(vm=running_vmb, iface_name=br1test_nad.name, ip_family=4),
     )
 
 
-@pytest.mark.polarion("CNV-2061")
 @pytest.mark.s390x
+@pytest.mark.usefixtures("http_service", "migrated_vmb_and_wait_for_success")
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param("ipv4", marks=[pytest.mark.ipv4, pytest.mark.polarion("CNV-12508")]),
+        pytest.param("ipv6", marks=[pytest.mark.ipv6, pytest.mark.polarion("CNV-12509")]),
+    ],
+)
 def test_migration_with_masquerade(
-    ip_stack_version_matrix__module__,
-    admin_client,
-    fail_if_not_ipv4_supported_cluster_from_mtx,
-    fail_if_not_ipv6_supported_cluster_from_mtx,
-    vma,
-    vmb,
     running_vma,
     running_vmb,
-    migrated_vmb_and_wait_for_success,
+    ip_family,
 ):
-    LOGGER.info(f"Testing HTTP service after migration on node {running_vmb.vmi.node.name}")
     http_port_accessible(
         vm=running_vma,
-        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_stack_version_matrix__module__),
+        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_family),
         server_port=running_vmb.custom_service.service_port,
     )
 

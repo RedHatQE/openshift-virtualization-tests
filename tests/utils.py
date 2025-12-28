@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 import shlex
@@ -29,11 +31,14 @@ from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
     RHSM_SECRET_NAME,
+    TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
+    TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
+    TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     Images,
 )
@@ -539,3 +544,66 @@ def create_cirros_vm(
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)
         yield vm
+
+
+def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
+    LOGGER.info(f"Running memory load in VM {vm.name}")
+    if "windows" in vm.name:
+        verify_wsl2_guest_running(vm=vm)
+        verify_wsl2_guest_works(vm=vm)
+        command = f"wsl nohup bash -c '{stress_command}'"
+    else:
+        command = stress_command
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(command),
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+    )
+
+
+def verify_wsl2_guest_running(vm: VirtualMachineForTests, timeout: int = TIMEOUT_3MIN) -> bool:
+    def _get_wsl2_running_status():
+        guests_status = run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("powershell.exe -command wsl -l -v"),
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+        )[0]
+        guests_status = guests_status.replace("\x00", "")
+        LOGGER.info(guests_status)
+        return re.search(r".*(Running).*\n", guests_status) is not None
+
+    sampler = TimeoutSampler(wait_timeout=timeout, sleep=TIMEOUT_5SEC, func=_get_wsl2_running_status)
+    try:
+        for sample in sampler:
+            if sample:
+                return True
+    except TimeoutExpiredError:
+        LOGGER.error("WSL2 guest is not running in the VM!")
+        raise
+    return False
+
+
+def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
+    """
+    Verifies that WSL2 is functioning on windows vm.
+    Args:
+        vm: An instance of `VirtualMachineForTests`
+    Raises:
+        TimeoutExpiredError: If WSL2 fails to return the expected output within
+            the specified timeout period.
+    """
+    test_str = "TEST"
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=run_ssh_commands,
+        host=vm.ssh_exec,
+        commands=shlex.split(f"wsl echo {test_str}"),
+    )
+    try:
+        for sample in samples:
+            if sample and test_str in sample[0]:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} failed to start WSL2")
+        raise

@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import assert_no_ping
 from utilities.infra import get_node_selector_dict
@@ -13,7 +14,6 @@ from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
     assert_ping_successful,
     cloud_init_network_data,
-    get_vmi_ip_v4_by_name,
     network_device,
     network_nad,
 )
@@ -234,7 +234,9 @@ class TestBondJumboFrame:
         ip_header = 20
         assert_ping_successful(
             src_vm=bond_bridge_attached_vma,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_bond_bridge_attached_vmb, name=br1bond_nad.name),
+            dst_ip=lookup_iface_status_ip(
+                vm=running_bond_bridge_attached_vmb, iface_name=br1bond_nad.name, ip_family=4
+            ),
             packet_size=br1bond_nad.mtu - ip_header - icmp_header,
         )
 
@@ -256,6 +258,8 @@ class TestBondJumboFrame:
         """
         assert_no_ping(
             src_vm=bond_bridge_attached_vma,
-            dst_ip=get_vmi_ip_v4_by_name(vm=running_bond_bridge_attached_vmb, name=br1bond_nad.name),
+            dst_ip=lookup_iface_status_ip(
+                vm=running_bond_bridge_attached_vmb, iface_name=br1bond_nad.name, ip_family=4
+            ),
             packet_size=br1bond_nad.mtu + 100,
         )

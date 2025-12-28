@@ -435,6 +435,7 @@ KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
 KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
 KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
+MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -461,6 +462,7 @@ NETWORKPOLICY_STR = "NetworkPolicy"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
+KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
 # All hco relate objects with kind
 ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE: PROMETHEUSRULE_STR},
@@ -500,6 +502,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {HCO_BEARER_AUTH: SECRET_STR},
     {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
     {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
+    {MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED: "MigController"},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -518,6 +521,7 @@ CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEVIRT_CONSOLE_PLUGIN,
     KUBEVIRT_MIGRATION_OPERATOR,
+    KUBEVIRT_MIGRATION_CONTROLLER,
     SSP_OPERATOR,
     VIRT_API,
     VIRT_CONTROLLER,
@@ -553,6 +557,7 @@ ALL_CNV_DEPLOYMENTS = [
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
     HPP_POOL,
     KUBEVIRT_MIGRATION_OPERATOR,
+    KUBEVIRT_MIGRATION_CONTROLLER,
 ]
 ALL_CNV_DAEMONSETS = [
     BRIDGE_MARKER,
@@ -667,6 +672,10 @@ ALL_CNV_CRDS = [
     f"volumeclonesources.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
     f"openstackvolumepopulators.forklift.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
     f"ovirtvolumepopulators.forklift.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
+    f"multinamespacevirtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
 ]
 PRODUCTION_CATALOG_SOURCE = "redhat-operators"
 TLS_OLD_POLICY = "old"
@@ -1008,3 +1017,7 @@ QUOTA_FOR_ONE_VMI = {
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
 DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
 REGISTRY_STR = "registry"
+STRESS_CPU_MEM_IO_COMMAND = (
+    "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
+    "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
+)

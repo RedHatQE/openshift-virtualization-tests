@@ -1075,7 +1075,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/70/c8/ebd2472f1627433bc
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.108"
+version = "11.0.109"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloup" },
@@ -1095,7 +1095,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/b9/7e1b10d4eaf7115396b7d43c98a35cc1025a5e29ff206853908e08a79dda/openshift_python_wrapper-11.0.108.tar.gz", hash = "sha256:eca16d63853ec69d424ea45f94750d2b3b80ed466b88136d65752e71eaabcdec", size = 7162651, upload-time = "2025-12-01T14:15:35.976Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/d7/edf1d4a78039a22b3b1799380f0ca417b0599beedf2a31bc6fbbd722b47d/openshift_python_wrapper-11.0.109.tar.gz", hash = "sha256:7a3eb146b472b3a210b28941b875e95299538936d2293fc05f77ca2cae8e5a38", size = 7503088, upload-time = "2025-12-23T10:17:32.53Z" }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -1633,6 +1633,9 @@ dependencies = [
     { name = "suds" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/88/38/0c0ccaafbb8594cf50af8d2376a5afee9e7279b7715a928558e7b52eb6f6/pylero-0.1.1.tar.gz", hash = "sha256:de0ccd37da69e50993fe403eca5d093d70c57319640d6af6403ab9a3496ae16c", size = 309121, upload-time = "2025-05-30T13:38:52.34Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/79/4a7ff895325f7226f846cf4e274be9bbeedcd2d9804027c5025e72134ff4/pylero-0.1.1-py3-none-any.whl", hash = "sha256:ada04668e36adaaed950e213699f8442466994142c127a3f07b5e4d19fc9709f", size = 101338, upload-time = "2025-12-19T15:11:28.422Z" },
+]
 
 [[package]]
 name = "pynacl"

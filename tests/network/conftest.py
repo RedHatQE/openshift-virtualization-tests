@@ -5,9 +5,9 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
-import os
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_config_openshift_io import Network
@@ -21,8 +21,6 @@ from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    IPV4_STR,
-    IPV6_STR,
     ISTIO_SYSTEM_DEFAULT_NS,
     OVS_BRIDGE,
     VIRT_HANDLER,
@@ -36,7 +34,6 @@ from utilities.infra import (
 )
 from utilities.network import (
     get_cluster_cni_type,
-    ip_version_data_from_matrix,
     network_nad,
 )
 from utilities.pytest_utils import exit_pytest_execution
@@ -73,40 +70,26 @@ def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
 
 
 @pytest.fixture()
-def fail_if_not_ipv4_supported_cluster_from_mtx(
-    request,
-    ipv4_supported_cluster,
-):
-    if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster:
-        pytest.fail(reason="IPv4 is not supported in this cluster")
-
-
-@pytest.fixture()
-def fail_if_not_ipv6_supported_cluster_from_mtx(
-    request,
-    ipv6_supported_cluster,
-):
-    if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster:
-        pytest.fail(reason="IPv6 is not supported in this cluster")
-
-
-@pytest.fixture()
 def worker_node1_pod_executor(workers_utility_pods, worker_node1):
     return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
 
 
 @pytest.fixture(scope="module")
-def dual_stack_network_data(ipv6_supported_cluster):
+def ipv6_primary_interface_cloud_init_data(
+    ipv4_supported_cluster: bool, ipv6_supported_cluster: bool
+) -> dict[str, dict] | None:
     if ipv6_supported_cluster:
         return {
             "ethernets": {
                 "eth0": {
-                    "dhcp4": True,
                     "addresses": ["fd10:0:2::2/120"],
                     "gateway6": "fd10:0:2::1",
+                    "dhcp4": ipv4_supported_cluster,
+                    "dhcp6": False,
                 },
             },
         }
+    return None
 
 
 @pytest.fixture(scope="session")
@@ -221,6 +204,11 @@ def network_operator(admin_client):
     )
 
 
+@pytest.fixture(scope="session")
+def mtv_namespace_scope_session(admin_client: DynamicClient) -> Namespace:
+    return Namespace(name="openshift-mtv", client=admin_client)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     admin_client,
@@ -235,6 +223,7 @@ def network_sanity(
     ipv6_supported_cluster,
     conformance_tests,
     nmstate_namespace,
+    mtv_namespace_scope_session,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -329,26 +318,6 @@ def network_sanity(
             else:
                 LOGGER.info(f"Validated network lane is running against an {family} supported cluster")
 
-    def _verify_bgp_env_vars():
-        """Verify if the cluster supports running BGP tests.
-
-        Requires the following environment variables to be set:
-        PRIMARY_NODE_NETWORK_VLAN_TAG: expected VLAN number on the node br-ex interface.
-        EXTERNAL_FRR_STATIC_IPV4: reserved IP in CIDR format for the external FRR pod inside
-                                  PRIMARY_NODE_NETWORK_VLAN_TAG network.
-        """
-        if any(test.get_closest_marker("bgp") and not test.get_closest_marker("xfail") for test in collected_tests):
-            LOGGER.info("Verifying if the cluster supports running BGP tests...")
-            required_env_vars = [
-                "PRIMARY_NODE_NETWORK_VLAN_TAG",
-                "EXTERNAL_FRR_STATIC_IPV4",
-            ]
-            missing_env_vars = [var for var in required_env_vars if not os.getenv(var)]
-
-            if missing_env_vars:
-                failure_msgs.append(f"BGP tests require the following environment variables: {missing_env_vars}")
-                return
-
     def _verify_nmstate_running_pods(_admin_client, namespace):
         # TODO: Only test if nmstate is required by the test(s)
         if not namespace:
@@ -364,6 +333,19 @@ def network_sanity(
         except TimeoutExpiredError:
             failure_msgs.append(f"Some pods are not running in nmstate namespace '{namespace.name}'")
 
+    def _verify_mtv_installed():
+        if any(test.get_closest_marker("mtv") for test in collected_tests):
+            LOGGER.info("Verifying if the MTV operator is installed in the cluster...")
+            if not mtv_namespace_scope_session.exists:
+                failure_msgs.append(
+                    f"MTV operator is not installed, the '{mtv_namespace_scope_session.name}' namespace does not exist"
+                )
+            else:
+                LOGGER.info(
+                    f"Validated MTV operator is installed in the cluster with "
+                    f"'{mtv_namespace_scope_session.name}' namespace"
+                )
+
     _verify_multi_nic(_request=request)
     _verify_dpdk()
     _verify_service_mesh()
@@ -371,8 +353,8 @@ def network_sanity(
     _verify_sriov()
     _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster)
     _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
-    _verify_bgp_env_vars()
     _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
+    _verify_mtv_installed()
 
     if failure_msgs:
         err_msg = "\n".join(failure_msgs)

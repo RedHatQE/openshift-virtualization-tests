@@ -817,23 +817,6 @@ def data_volume_scope_class(request, namespace, schedulable_nodes):
     )
 
 
-@pytest.fixture(scope="class")
-def golden_image_data_volume_scope_class(request, admin_client, golden_images_namespace, schedulable_nodes):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        schedulable_nodes=schedulable_nodes,
-        check_dv_exists=True,
-        admin_client=admin_client,
-    )
-
-
-@pytest.fixture(scope="class")
-def golden_image_data_source_scope_class(admin_client, golden_image_data_volume_scope_class):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_class)
-
-
 @pytest.fixture(scope="module")
 def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace, schedulable_nodes):
     yield from data_volume(
@@ -1029,13 +1012,6 @@ def sriov_nodes_states(admin_client, sriov_namespace, sriov_workers):
 def sriov_workers(schedulable_nodes):
     sriov_worker_label = "feature.node.kubernetes.io/network-sriov.capable"
     yield [node for node in schedulable_nodes if node.labels.get(sriov_worker_label) == "true"]
-
-
-@pytest.fixture(scope="session")
-def vlan_base_iface(worker_node1, nodes_available_nics):
-    # Select the last NIC from the list as a way to ensure that the selected NIC
-    # is not already used (e.g. as a bond's port).
-    return nodes_available_nics[worker_node1.name][-1]
 
 
 @pytest.fixture(scope="session")
@@ -2302,22 +2278,6 @@ def rhel_vm_with_instance_type_and_preference(
             vm_preference=vm_preference,
         ) as vm:
             yield vm
-
-
-@pytest.fixture(scope="class")
-def vm_from_template_scope_class(
-    request,
-    unprivileged_client,
-    namespace,
-    golden_image_data_source_scope_class,
-):
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_class,
-    ) as vm:
-        yield vm
 
 
 @pytest.fixture(scope="session")
