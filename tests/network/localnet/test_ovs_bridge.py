@@ -1,11 +1,10 @@
 import pytest
 
-from libs.net.traffic_generator import is_tcp_connection
+from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
 from tests.network.localnet.liblocalnet import (
     LINK_STATE_UP,
     LOCALNET_OVS_BRIDGE_INTERFACE,
-    client_server_active_connection,
 )
 from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
