@@ -20,7 +20,7 @@ You need to provide authentication credentials for the remote (target) cluster. 
 
 #### Required CLI arguments
 ```bash
-uv run pytest tests/cross_cluster_live_migration/ \
+uv run pytest tests/storage/cross_cluster_live_migration/ \
   --remote_cluster_host=https://api.remote-cluster.example.com:6443 \
   --remote_cluster_username=kubeadmin \
   --remote_cluster_password='YOUR_PASSWORD'
