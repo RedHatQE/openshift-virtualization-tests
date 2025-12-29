@@ -9,7 +9,7 @@ from ocp_resources.network_attachment_definition import NetworkAttachmentDefinit
 from utilities.constants import VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
-from utilities.virt import wait_for_virt_handler_pods_network_updated
+from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_for_virt_handler_pods_network_updated
 
 
 def enable_feature_gate_and_configure_hco_live_migration_network(
@@ -64,3 +64,34 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
         virt_handler_daemonset=virt_handler_daemonset,
         migration_network=False,
     )
+
+
+def verify_compute_live_migration_after_cclm(
+    client: DynamicClient, namespace: Namespace, vms_list: list[VirtualMachineForTests]
+) -> None:
+    """
+    Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
+
+    This function creates local VM references for each VM that was migrated from the remote cluster,
+    preserves their credentials, and attempts to perform compute live migration on each VM.
+
+    Args:
+        client: DynamicClient
+        namespace: The namespace where the VMs are located in the target cluster
+        vms_list: List of VirtualMachineForTests objects to be migrated
+
+    Raises:
+        AssertionError: If any VM migration fails, with details of all failed migrations
+    """
+    vms_failed_migration = {}
+    for vm in vms_list:
+        local_vm = VirtualMachineForTests(
+            name=vm.name, namespace=namespace.name, client=client, generate_unique_name=False
+        )
+        local_vm.username = vm.username
+        local_vm.password = vm.password
+        try:
+            migrate_vm_and_verify(vm=local_vm, check_ssh_connectivity=True)
+        except Exception as migration_exception:
+            vms_failed_migration[local_vm.name] = migration_exception
+    assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
