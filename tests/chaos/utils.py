@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from multiprocessing.context import ForkContext
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
@@ -440,3 +440,103 @@ def get_instance_type(name):
     if not instance_type.exists:
         raise ResourceNotFoundError(f"Required instance type {name} does not exist")
     return instance_type
+
+
+# def get_vm_from_restore(admin_client, namespace, vm_name_prefix, timeout=300, sleep=5):
+#     """
+#     Wait for a VM whose name starts with `vm_name_prefix` to appear in the namespace and be Running or Succeeded.
+#     Queries the cluster directly via admin_client to get the real VM CRD name (no random suffixes).
+#     """
+#
+#     vmi_resource = admin_client.resources.get(api_version="kubevirt.io/v1", kind="VirtualMachineInstance")
+#
+#     # def check_vm():
+#     #     try:
+#     #         vms = vm_resource.get(namespace=namespace).items
+#     #     except NotFoundError:
+#     #         LOGGER.debug(f"No VMs found in namespace {namespace} yet.")
+#     #         return None
+#     #
+#     #     for vm in vms:
+#     #         name = vm.metadata.name
+#     #         if name.startswith(vm_name_prefix):
+#     #             phase = vm.status.get("phase") if vm.status else None
+#     #             LOGGER.info(f"Found VM {name}, phase={phase}")
+#     #             if phase in ("Running", "Succeeded"):
+#     #                 return vm
+#     #     return None
+#
+#     def check_vm():
+#         try:
+#             vms = vm_resource.get(namespace=namespace).items
+#         except NotFoundError:
+#             LOGGER.debug(f"No VMs found in namespace {namespace} yet.")
+#             return None
+#
+#         for vm in vms:
+#             if vm.metadata.name.startswith(vm_name_prefix):
+#                 try:
+#                     vmi = vmi_resource.get(name=vm.metadata.name, namespace=namespace)
+#                     phase = vmi.status.phase
+#                     LOGGER.info(f"Found VMI {vmi.metadata.name}, phase={phase}")
+#                     if phase in ("Running", "Succeeded"):
+#                         return vm
+#                 except NotFoundError:
+#                     # VMI 还没创建
+#                     continue
+#         return None
+#
+#     for restored_vm in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=check_vm):
+#         if restored_vm:
+#             LOGGER.info(f"Found restored VM {restored_vm.metadata.name} in namespace {namespace}")
+#             return restored_vm
+#
+#     LOGGER.warning(f"Restored VM starting with {vm_name_prefix} not found in namespace {namespace} after {timeout}s")
+#     return None
+
+
+def wait_for_restored_vmi(
+    admin_client,
+    namespace,
+    vmi_name_prefix,
+    timeout=300,
+    sleep=5,
+):
+    """
+    Wait until a VirtualMachineInstance whose name starts with `vmi_name_prefix`
+    appears in the given namespace.
+    """
+
+    vmi_resource = admin_client.resources.get(
+        api_version="kubevirt.io/v1",
+        kind="VirtualMachineInstance",
+    )
+
+    def check_vmi():
+        try:
+            vmis = vmi_resource.get(namespace=namespace).items
+        except NotFoundError:
+            LOGGER.debug(f"No VMIs found in namespace {namespace} yet")
+            return None
+
+        for vmi in vmis:
+            name = vmi.metadata.name
+            if name.startswith(vmi_name_prefix):
+                phase = getattr(vmi.status, "phase", None)
+                LOGGER.info(f"Found restored VMI {name}, phase={phase}")
+                return vmi
+
+        return None
+
+    for vmi in TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=sleep,
+        func=check_vmi,
+    ):
+        if vmi:
+            LOGGER.info(f"Restored VMI {vmi.metadata.name} appeared in namespace {namespace}")
+            return vmi
+
+    raise TimeoutExpiredError(
+        f"Restored VMI starting with {vmi_name_prefix} not found in namespace {namespace} within {timeout}s"
+    )
