@@ -26,7 +26,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
-from tests.cross_cluster_live_migration.utils import enable_feature_gate_and_configure_hco_live_migration_network
+from tests.storage.cross_cluster_live_migration.utils import enable_feature_gate_and_configure_hco_live_migration_network
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
