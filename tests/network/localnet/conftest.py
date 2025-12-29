@@ -10,6 +10,7 @@ from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.conftest import client_server_active_connection
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.ip import IPV4_HEADER_SIZE, TCP_HEADER_SIZE, random_ipv4_address
@@ -23,7 +24,6 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_OVS_BRIDGE_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
-    client_server_active_connection,
     create_nncp_localnet_on_secondary_node_nic,
     create_traffic_client,
     create_traffic_server,
