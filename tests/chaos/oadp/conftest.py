@@ -10,7 +10,6 @@ from utilities.constants import (
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
     TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     Images,
 )
