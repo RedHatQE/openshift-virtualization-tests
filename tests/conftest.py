@@ -2336,6 +2336,22 @@ def rhel_vm_with_instance_type_and_preference(
             yield vm
 
 
+@pytest.fixture(scope="class")
+def vm_from_template_scope_class(
+    request,
+    unprivileged_client,
+    namespace,
+    golden_image_data_source_scope_class,
+):
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_source=golden_image_data_source_scope_class,
+    ) as vm:
+        yield vm
+
+
 @pytest.fixture(scope="session")
 def is_disconnected_cluster():
     # To enable disconnected_cluster pass --tc=disconnected_cluster:True to pytest commandline.

@@ -46,13 +46,7 @@ def fedora_vm_without_name_in_label(
 
 class TestVmiNodeCpuAffinityLinux:
     @pytest.mark.polarion("CNV-7295")
-    @pytest.mark.s390x
-    def test_kubevirt_vmi_node_cpu_affinity(
-        self,
-        prometheus,
-        vm_with_cpu_spec,
-        expected_cpu_affinity_metric_value,
-    ):
+    def test_kubevirt_vmi_node_cpu_affinity(self, prometheus, vm_with_cpu_spec, expected_cpu_affinity_metric_value):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_NODE_CPU_AFFINITY.format(vm_name=vm_with_cpu_spec.name),
