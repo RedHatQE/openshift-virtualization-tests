@@ -2,26 +2,38 @@ import datetime
 import logging
 
 import pytest
+from kubernetes.client import ApiException
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
+from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler
 
-from tests.chaos.utils import create_pod_deleting_thread, pod_deleting_process_recover
+from tests.chaos.utils import (
+    create_pod_deleting_thread,
+    pod_deleting_process_recover,
+    wait_for_oadp_phase,
+)
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
+    OADP_BACKUP_TERMINAL_STATUSES,
     TEXT_TO_TEST,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_10MIN,
     Images,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
-from utilities.oadp import VeleroBackup, create_rhel_vm
+from utilities.oadp import VeleroBackup, VeleroRestore, create_rhel_vm
 from utilities.storage import write_file
 from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
+
+POLL_INTERVAL = 5
 
 
 @pytest.fixture(scope="module")
@@ -124,28 +136,19 @@ def backup_with_pod_deletion_orchestration(
 
     thread.start()
 
-    terminal_statuses = {
-        backup.Backup.Status.COMPLETED,
-        backup.Backup.Status.FAILED,
-        backup.Backup.Status.PARTIALLYFAILED,
-        backup.Backup.Status.FAILEDVALIDATION,
-    }
-
-    final_status = None
-
     try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_10MIN,
+        final_status = wait_for_oadp_phase(
+            resource=oadp_backup_in_progress,
+            timeout=TIMEOUT_10MIN,
             sleep=5,
-            func=lambda: backup.instance.status.phase,
-        ):
-            if sample in terminal_statuses:
-                final_status = sample
-                break
+            terminal_statuses=OADP_BACKUP_TERMINAL_STATUSES,
+        )
+        LOGGER.info(f"Backup {backup.name} completed with status {final_status}")
 
         yield final_status
 
     finally:
+        LOGGER.info("Stopping pod deletion chaos thread")
         stop_event.set()
         if thread.is_alive():
             thread.join(timeout=TIMEOUT_1MIN)
@@ -157,10 +160,200 @@ def backup_with_pod_deletion_orchestration(
                 namespace=pod_deleting_thread_during_oadp_operations["namespace_name"],
                 pod_prefix=pod_deleting_thread_during_oadp_operations["pod_prefix"],
             )
-        except Exception:
+        except ResourceNotFoundError, ValueError, TypeError:
             LOGGER.error(
                 f"Recovery failed for prefix "
                 f"{pod_deleting_thread_during_oadp_operations['pod_prefix']} "
                 f"in namespace {pod_deleting_thread_during_oadp_operations['namespace_name']}"
             )
             raise
+
+
+@pytest.fixture()
+def oadp_backup_completed(admin_client, chaos_namespace, rhel_vm_with_dv_running):
+    """
+    Create a Velero backup and wait until it reaches Completed phase.
+
+    This fixture:
+    - creates backup
+    - waits for completion
+    - asserts Completed
+    - yields backup object
+    - deletes backup automatically on teardown
+    """
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_name = f"backup-{timestamp}"
+
+    with VeleroBackup(
+        name=backup_name,
+        included_namespaces=[chaos_namespace.name],
+        snapshot_move_data=True,
+        storage_location=BACKUP_STORAGE_LOCATION,
+        client=admin_client,
+        wait_complete=False,  # we wait manually
+    ) as backup:
+        backup_resource = backup.client.resources.get(
+            api_version="velero.io/v1",
+            kind="Backup",
+        )
+
+        backup_resource.patch(
+            name=backup.instance.metadata.name,
+            namespace=backup.instance.metadata.namespace,
+            body={"spec": {"defaultVolumesToFsBackup": False}},
+        )
+
+        final_phase = wait_for_oadp_phase(
+            resource=backup,
+            timeout=TIMEOUT_5MIN,
+            sleep=10,
+            terminal_statuses=OADP_BACKUP_TERMINAL_STATUSES,
+        )
+
+        assert final_phase == backup.Backup.Status.COMPLETED, f"Backup {backup.name} ended with phase {final_phase}"
+
+        yield backup
+
+
+@pytest.fixture()
+def chaos_vms_cleanup(admin_client, chaos_namespace):
+    namespace_name = chaos_namespace.name
+
+    LOGGER.info(f"Fetching all VMs in namespace {namespace_name}")
+
+    vms = VirtualMachine.get(client=admin_client, namespace=namespace_name)
+
+    found = False
+    for vm in vms:
+        if not found:
+            LOGGER.info(f"VMs found in namespace {namespace_name}")
+            found = True
+
+        LOGGER.info(f"Deleting VM {vm.name}")
+        vm.delete(wait=False)
+
+    if not found:
+        LOGGER.info(f"No VMs found in namespace {namespace_name}")
+
+    for vms_deleted in TimeoutSampler(
+        wait_timeout=TIMEOUT_3MIN,
+        sleep=POLL_INTERVAL,
+        func=lambda: not list(VirtualMachine.get(client=admin_client, namespace=namespace_name)),
+    ):
+        if vms_deleted:
+            break
+
+    LOGGER.info(f"All VMs in namespace {namespace_name} have been deleted")
+
+
+@pytest.fixture()
+def deleted_namespace(admin_client):
+    """
+    General fixture to delete any namespace by name and wait for its removal.
+    """
+
+    def _delete(namespace_name):
+        LOGGER.info(f"Deleting namespace {namespace_name} ...")
+
+        try:
+            ns = next(Namespace.get(client=admin_client, name=namespace_name), None)
+            if ns and ns.exists:
+                ns.delete()
+                LOGGER.info(f"Namespace {namespace_name} deletion triggered")
+            else:
+                LOGGER.info(f"Namespace {namespace_name} does not exist, skipping delete")
+        except ApiException as error:
+            LOGGER.error(f"Failed to delete namespace {namespace_name}", exc_info=True)
+            raise RuntimeError(f"Namespace delete failed for {namespace_name}") from error
+
+        # Wait until namespace no longer exists
+        for namespace_deleted in TimeoutSampler(
+            wait_timeout=TIMEOUT_5MIN,
+            sleep=POLL_INTERVAL,
+            func=lambda: not Namespace(name=namespace_name, client=admin_client).exists,
+        ):
+            if namespace_deleted:
+                break
+
+        LOGGER.info(f"Namespace {namespace_name} confirmed removed")
+
+    return _delete
+
+
+@pytest.fixture()
+def deleted_chaos_namespace(chaos_namespace, deleted_namespace, chaos_vms_cleanup):
+    """
+    Specialized fixture to delete the chaos namespace using the general fixture.
+    """
+    deleted_namespace(namespace_name=chaos_namespace.name)
+
+
+@pytest.fixture()
+def oadp_restore_started(admin_client, oadp_backup_completed, deleted_chaos_namespace):
+    restore_name = f"restore-{oadp_backup_completed.name}"
+
+    with VeleroRestore(
+        name=restore_name,
+        namespace=oadp_backup_completed.namespace,
+        backup_name=oadp_backup_completed.name,
+        client=admin_client,
+        wait_complete=False,
+    ) as restore:
+        yield restore
+
+
+@pytest.fixture()
+def restore_with_pod_deletion_orchestration(
+    oadp_restore_started,
+    pod_deleting_thread_during_oadp_operations,
+):
+    """
+    Orchestrate OADP restore while continuously deleting target pods.
+
+    Flow:
+    - Start pod deleting thread
+    - Wait for restore to reach terminal phase
+    - Stop chaos and recover workloads
+    - Yield final restore phase (stable state)
+    """
+
+    thread = pod_deleting_thread_during_oadp_operations["thread"]
+    namespace = pod_deleting_thread_during_oadp_operations["namespace_name"]
+    pod_prefix = pod_deleting_thread_during_oadp_operations["pod_prefix"]
+
+    # Start chaos
+    thread.start()
+
+    terminal_statuses = {
+        oadp_restore_started.Status.COMPLETED,
+        oadp_restore_started.Status.FAILED,
+        oadp_restore_started.Status.PARTIALLYFAILED,
+        oadp_restore_started.Status.FAILEDVALIDATION,
+    }
+
+    allowed_statuses = {
+        oadp_restore_started.Status.COMPLETED,
+        oadp_restore_started.Status.FAILED,
+    }
+
+    try:
+        final_status = wait_for_oadp_phase(
+            resource=oadp_restore_started,
+            terminal_statuses=terminal_statuses,
+            timeout=TIMEOUT_3MIN,
+        )
+        assert final_status in allowed_statuses, f"Restore ended in unexpected terminal phase: {final_status}"
+        yield final_status
+
+    finally:
+        pod_deleting_thread_during_oadp_operations["stop_event"].set()
+        if thread.is_alive():
+            thread.join(timeout=TIMEOUT_1MIN)
+
+        # Recovery only — thread teardown handled by pod_deleting_thread fixture
+        pod_deleting_process_recover(
+            resources=[Deployment, DaemonSet],
+            namespace=namespace,
+            pod_prefix=pod_prefix,
+        )

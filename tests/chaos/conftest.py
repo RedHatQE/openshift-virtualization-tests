@@ -196,22 +196,12 @@ def pod_deleting_process(request, admin_client):
         interval=request.param["interval"],
         max_duration=request.param["max_duration"],
     )
-    LOGGER.info("Pod deleting process for {pod_prefix} in {namespace_name} start...")
     process.start()
     yield {
         "namespace_name": namespace_name,
         "pod_prefix": pod_prefix,
     }
-
-    # Teardown: terminate the subprocess
     terminate_process(process=process)
-
-    # Ensure the subprocess has fully exited
-    process.join(timeout=10)
-    if process.is_alive():
-        LOGGER.warning(f"Pod deleting process for {pod_prefix} in {namespace_name} did not exit within 10 seconds")
-    else:
-        LOGGER.info(f"Pod deleting process for {pod_prefix} in {namespace_name} terminated successfully")
 
 
 @pytest.fixture()
