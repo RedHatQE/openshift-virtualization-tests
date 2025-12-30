@@ -39,7 +39,7 @@ def internal_fqdn(admin_client, hco_namespace):
     This fixture returns the prefix url for the cluster, which is used to identify if certain links are routed or
     served from within the cluster
     """
-    cluster_route = Route(name=HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD, namespace=hco_namespace.name)
+    cluster_route = Route(name=HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD, namespace=hco_namespace.name, client=admin_client)
     assert cluster_route.exists
     return cluster_route.instance.spec.host
 

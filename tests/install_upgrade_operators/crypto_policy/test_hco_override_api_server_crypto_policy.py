@@ -28,9 +28,10 @@ def updated_hco_tls_custom_policy(hyperconverged_resource_scope_function):
 
 
 @pytest.fixture()
-def expected_all_managed_crs_crypto_policies(resources_dict):
+def expected_all_managed_crs_crypto_policies(resources_dict, admin_client):
     return get_resources_crypto_policy_dict(
         resources_dict=resources_dict,
+        admin_client=admin_client,
     )
 
 
@@ -52,6 +53,7 @@ def updated_apiserver_with_tls_old_profile(
 @pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
+    admin_client,
     resources_dict,
     updated_hco_tls_custom_policy,
     expected_all_managed_crs_crypto_policies,
@@ -62,6 +64,7 @@ def test_hco_overriding_apiserver_crypto_policy(
         sleep=TIMEOUT_10SEC,
         func=get_resources_crypto_policy_dict,
         resources_dict=resources_dict,
+        admin_client=admin_client,
     )
     try:
         for sample in sampler:

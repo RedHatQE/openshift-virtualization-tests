@@ -57,6 +57,7 @@ def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_de
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
         deployment_name=deployment_name,
+        admin_client=admin_client,
     )
 
 
@@ -221,11 +222,13 @@ def related_object_from_hco_status(
 @pytest.fixture()
 def updated_resource(
     request,
+    admin_client,
 ):
     cr_kind = request.param.get(RESOURCE_TYPE_STR)
     cr = get_resource_by_name(
         resource_kind=cr_kind,
         name=request.param.get(RESOURCE_NAME_STR),
+        admin_client=admin_client,
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     with ResourceEditorValidateHCOReconcile(
