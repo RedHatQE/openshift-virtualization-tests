@@ -9,6 +9,7 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.resource import get_client
+from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
@@ -313,3 +314,11 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
     if not latest_z_stream:
         pytest.exit(reason="CNV version can't be determined for this run", returncode=INSTALLATION_VERSION_MISMATCH)
     return latest_z_stream
+
+
+@pytest.fixture
+def storage_class_ocs_virt(admin_client):
+    # if its not on the matrix - we dont need to test it
+    if any(StorageClassNames.CEPH_RBD_VIRTUALIZATION in sc_dict for sc_dict in py_config["storage_class_matrix"]):
+        return StorageClass(client=admin_client, name=StorageClassNames.CEPH_RBD_VIRTUALIZATION, ensure_exists=True)
+    pytest.xfail(f"Storage class {StorageClassNames.CEPH_RBD_VIRTUALIZATION} not found in the storage class matrix")
