@@ -1,6 +1,8 @@
 import logging
 
 from dictdiffer import diff
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import (
@@ -263,11 +265,13 @@ def wait_for_resource_version_update(resource, pre_update_resource_version):
         raise
 
 
-def get_resource_object(resource, resource_name, resource_namespace):
+def get_resource_object(
+    resource: type[Resource], resource_name: str, resource_namespace: str, admin_client: DynamicClient
+) -> Resource:
     if "NamespacedResource" in str(resource.__base__):
-        resource = resource(name=resource_name, namespace=resource_namespace)
+        resource = resource(name=resource_name, namespace=resource_namespace, client=admin_client)
     else:
-        resource = resource(name=resource_name)
+        resource = resource(name=resource_name, client=admin_client)
     assert resource.exists, f"Resource: {resource_name} not found."
     return resource
 
