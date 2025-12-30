@@ -65,9 +65,7 @@ def rpm_file_name(nodes_cpu_arc_s390x):
     rpm_file_names = [link.get("href") for link in soup_page.find_all("a", href=re.compile(r"\.rpm$"))]
     assert rpm_file_names, f"No RPM files found at the URL - {RPMS_REPO_URL}"
 
-    return next(
-        file_name for file_name in rpm_file_names if ("s390x" in file_name) == nodes_cpu_arc_s390x
-    )
+    return next(file_name for file_name in rpm_file_names if ("s390x" in file_name) == nodes_cpu_arc_s390x)
 
 
 @pytest.fixture()

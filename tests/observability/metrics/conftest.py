@@ -16,7 +16,6 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.conftest import nodes_cpu_arc_s390x
 from tests.observability.metrics.constants import (
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
