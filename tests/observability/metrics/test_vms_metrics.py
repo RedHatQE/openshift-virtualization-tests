@@ -373,7 +373,7 @@ class TestVmResourceLimits:
 
 class TestKubevirtVmiNonEvictable:
     @pytest.mark.parametrize(
-        "non_evictable_vm_from_template",
+        "vm_with_rwo_dv",
         [
             pytest.param(
                 {
