@@ -2,6 +2,7 @@
 
 """Unit tests for oadp module"""
 
+# flake8: noqa: E402
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -10,6 +11,7 @@ import pytest
 # Need to mock circular imports for oadp
 import utilities
 
+# mock must be before importing oadp to prevent circular import
 mock_virt = MagicMock()
 mock_infra = MagicMock()
 sys.modules["utilities.virt"] = mock_virt
@@ -18,10 +20,17 @@ utilities.virt = mock_virt
 utilities.infra = mock_infra
 
 # Import after setting up mocks to avoid circular dependency
+from utilities.constants import (
+    LS_COMMAND,
+    TIMEOUT_20SEC,
+)
 from utilities.oadp import (  # noqa: E402
     VeleroBackup,
+    VeleroRestore,
+    check_file_in_vm,
     create_rhel_vm,
     delete_velero_resource,
+    is_storage_class_support_volume_mode,
 )
 
 
@@ -589,3 +598,227 @@ class TestCreateRhelVm:
 
         # Cleanup should still be called
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+
+
+class TestVeleroRestore:
+    """Test cases for VeleroRestore class"""
+
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    def test_velero_restore_init(self, mock_restore_init, mock_unique_name):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+        mock_client = MagicMock()
+
+        restore = VeleroRestore(
+            name="test-restore",
+            namespace="test-namespace",
+            included_namespaces=["ns1"],
+            backup_name="backup-1",
+            client=mock_client,
+            teardown=True,
+            wait_complete=True,
+            timeout=600,
+        )
+
+        mock_unique_name.assert_called_once_with(name="test-restore")
+        mock_restore_init.assert_called_once_with(
+            name="test-restore-unique",
+            namespace="test-namespace",
+            included_namespaces=["ns1"],
+            backup_name="backup-1",
+            client=mock_client,
+            teardown=True,
+            yaml_file=None,
+        )
+
+        assert restore.wait_complete is True
+        assert restore.timeout == 600
+
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    @patch("utilities.oadp.Restore.__enter__")
+    def test_velero_restore_enter_with_wait_complete(self, mock_restore_enter, mock_restore_init, mock_unique_name):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+
+        restore = VeleroRestore(name="test-restore", client=MagicMock(), wait_complete=True)
+        restore.wait_for_status = MagicMock()
+        restore.Status = MagicMock()
+        restore.Status.COMPLETED = "Completed"
+
+        mock_restore_enter.return_value = restore
+
+        result = restore.__enter__()
+
+        mock_restore_enter.assert_called_once()
+        restore.wait_for_status.assert_called_once_with(status="Completed", timeout=300)
+        assert result == restore
+
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    @patch("utilities.oadp.Restore.__enter__")
+    def test_velero_restore_enter_without_wait_complete(self, mock_restore_enter, mock_restore_init, mock_unique_name):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+
+        restore = VeleroRestore(name="test-restore", client=MagicMock(), wait_complete=False)
+        restore.wait_for_status = MagicMock()
+
+        mock_restore_enter.return_value = restore
+
+        restore.__enter__()
+
+        restore.wait_for_status.assert_not_called()
+
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    @patch("utilities.oadp.Restore.__exit__")
+    @patch("utilities.oadp.delete_velero_resource")
+    def test_velero_restore_exit_with_teardown(
+        self, mock_delete_resource, mock_restore_exit, mock_restore_init, mock_unique_name
+    ):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+
+        restore = VeleroRestore(name="test-restore", client=MagicMock(), teardown=True)
+        restore.teardown = True
+        restore.client = MagicMock()
+        restore.kind = "Restore"
+        restore.name = "test-restore-unique"
+
+        restore.__exit__(None, None, None)
+
+        mock_delete_resource.assert_called_once_with(resource=restore, client=restore.client)
+        mock_restore_exit.assert_called_once_with(None, None, None)
+
+    @patch("utilities.oadp.LOGGER")
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    @patch("utilities.oadp.Restore.__exit__")
+    @patch("utilities.oadp.delete_velero_resource")
+    def test_velero_restore_exit_without_teardown(
+        self, mock_delete_resource, mock_restore_exit, mock_restore_init, mock_unique_name, mock_logger
+    ):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+
+        restore = VeleroRestore(name="test-restore", client=MagicMock(), teardown=False)
+        restore.teardown = False
+        restore.kind = "Restore"
+        restore.name = "test-restore-unique"
+
+        # Should not raise exception
+        restore.__exit__(None, None, None)
+
+        mock_logger.info.assert_called_once()
+        called_args, called_kwargs = mock_logger.info.call_args
+
+        assert called_args[0] == "Skipping Velero delete"
+
+        assert called_kwargs["extra"]["resource_kind"] == "Restore"
+        assert called_kwargs["extra"]["resource_name"].startswith("test-restore")
+        assert called_kwargs["extra"]["teardown"] is False
+
+        # Parent __exit__ should still be called
+        mock_restore_exit.assert_called_once_with(None, None, None)
+
+    @patch("utilities.oadp.unique_name")
+    @patch("utilities.oadp.Restore.__init__")
+    @patch("utilities.oadp.Restore.__exit__")
+    @patch("utilities.oadp.delete_velero_resource")
+    @patch("utilities.oadp.LOGGER")
+    def test_velero_restore_exit_delete_exception(
+        self,
+        mock_logger,
+        mock_delete_resource,
+        mock_restore_exit,
+        mock_restore_init,
+        mock_unique_name,
+    ):
+        mock_restore_init.return_value = None
+        mock_unique_name.return_value = "test-restore-unique"
+        mock_client = MagicMock()
+
+        restore = VeleroRestore(
+            name="test-restore",
+            client=mock_client,
+            teardown=True,
+        )
+
+        restore.teardown = True
+        restore.client = mock_client
+        restore.kind = "Restore"
+        restore.name = "test-restore-unique"
+
+        mock_delete_resource.side_effect = Exception("delete failed")
+
+        restore.__exit__(None, None, None)
+
+        # Ensure delete was called
+        mock_delete_resource.assert_called_once_with(resource=restore, client=mock_client)
+
+        # Ensure structured logging was called
+        mock_logger.exception.assert_called_once()
+        called_args, called_kwargs = mock_logger.exception.call_args
+
+        assert called_args[0] == "Failed to delete Velero resource"
+
+        assert called_kwargs["extra"]["resource_kind"] == "Restore"
+        assert called_kwargs["extra"]["resource_name"].startswith("test-restore")
+
+        mock_restore_exit.assert_called_once_with(None, None, None)
+
+
+class TestCheckFileInVm:
+    @patch("utilities.oadp.console.Console")
+    def test_check_file_in_vm(self, mock_console_cls):
+        mock_vm = MagicMock()
+        mock_vm.ready = True
+
+        mock_console = MagicMock()
+        mock_console_cls.return_value.__enter__.return_value = mock_console
+
+        check_file_in_vm(
+            vm=mock_vm,
+            file_name="test-file",
+            file_content="hello world",
+        )
+
+        mock_vm.start.assert_not_called()
+
+        mock_console.sendline.assert_any_call(LS_COMMAND)
+        mock_console.expect.assert_any_call("test-file", timeout=TIMEOUT_20SEC)
+        mock_console.sendline.assert_any_call("cat test-file")
+        mock_console.expect.assert_any_call("hello world", timeout=TIMEOUT_20SEC)
+
+
+class TestIsStorageClassSupportVolumeMode:
+    @patch("utilities.oadp.StorageProfile")
+    def test_volume_mode_supported(self, mock_profile):
+        admin_client = MagicMock()
+        mock_profile.return_value.claim_property_sets = [
+            MagicMock(volumeMode="Filesystem"),
+            MagicMock(volumeMode="Block"),
+        ]
+
+        assert (
+            is_storage_class_support_volume_mode(
+                admin_client=admin_client, storage_class_name="sc-name", requested_volume_mode="Block"
+            )
+            is True
+        )
+
+    @patch("utilities.oadp.StorageProfile")
+    def test_volume_mode_not_supported(self, mock_profile):
+        admin_client = MagicMock()
+        mock_profile.return_value.claim_property_sets = [
+            MagicMock(volumeMode="Filesystem"),
+        ]
+
+        assert (
+            is_storage_class_support_volume_mode(
+                admin_client=admin_client, storage_class_name="sc-name", requested_volume_mode="Block"
+            )
+            is False
+        )

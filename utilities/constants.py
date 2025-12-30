@@ -982,7 +982,7 @@ DATA_SOURCE_STR = "data_source"
 ADP_NAMESPACE = "openshift-adp"
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
-BACKUP_STORAGE_LOCATION = "dpa-1"
+BACKUP_STORAGE_LOCATION = "ts-dpa-1"
 
 # AAQ
 AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
