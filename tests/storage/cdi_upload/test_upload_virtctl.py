@@ -22,7 +22,6 @@ from utilities.storage import (
     create_dummy_first_consumer_pod,
     create_vm_from_dv,
     get_downloaded_artifact,
-    sc_is_hpp_with_immediate_volume_binding,
     sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
 )
@@ -274,7 +273,6 @@ def empty_pvc(
     namespace,
     storage_class_matrix__module__,
     storage_class_name_scope_module,
-    worker_node1,
 ):
     with PersistentVolumeClaim(
         name="empty-pvc",
@@ -283,9 +281,6 @@ def empty_pvc(
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
         size=DEFAULT_DV_SIZE,
-        hostpath_node=worker_node1.name
-        if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
-        else None,
     ) as pvc:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
             # For PVC to bind on WFFC, it must be consumed
@@ -302,7 +297,6 @@ def test_virtctl_image_upload_with_exist_pvc(
     download_image,
     namespace,
     storage_class_name_scope_module,
-    schedulable_nodes,
 ):
     """
     Check that virtctl can upload an local disk image to an existing empty PVC

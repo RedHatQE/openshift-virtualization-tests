@@ -112,14 +112,12 @@ def data_volume_multi_storage_scope_class(
     unprivileged_client,
     namespace,
     storage_class_matrix__class__,
-    schedulable_nodes,
 ):
     yield from data_volume(
-        client=unprivileged_client,
         request=request,
         namespace=namespace,
         storage_class_matrix=storage_class_matrix__class__,
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 

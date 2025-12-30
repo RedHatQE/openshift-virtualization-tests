@@ -389,9 +389,9 @@ def create_cirros_dv(
     namespace,
     name,
     storage_class,
+    client,
     access_modes=None,
     volume_mode=None,
-    client=None,
     dv_size=Images.Cirros.DEFAULT_DV_SIZE,
 ):
     with create_dv(

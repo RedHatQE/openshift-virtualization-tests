@@ -96,13 +96,12 @@ def data_volume_without_snapshot_capability_scope_function(
     request,
     namespace,
     storage_class_matrix_without_snapshot_capability_matrix__function__,
-    schedulable_nodes,
 ):
     yield from data_volume(
         request=request,
         namespace=namespace,
         storage_class_matrix=storage_class_matrix_without_snapshot_capability_matrix__function__,
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 

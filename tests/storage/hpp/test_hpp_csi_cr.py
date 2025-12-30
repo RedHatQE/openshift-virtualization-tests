@@ -146,7 +146,7 @@ def cirros_data_volume_on_hpp_basic(request, namespace):
 def vm_from_template_with_existing_dv_on_hpp_basic(
     cirros_data_volume_on_hpp_basic,
 ):
-    with create_vm_from_dv(dv=cirros_data_volume_on_hpp_basic) as vm:
+    with create_vm_from_dv(dv=cirros_data_volume_on_hpp_basic, client=cirros_data_volume_on_hpp_basic.client) as vm:
         yield vm
 
 
@@ -164,7 +164,7 @@ def cirros_data_volume_on_hpp_pvc(request, namespace):
 def vm_from_template_with_existing_dv_on_hpp_pvc(
     cirros_data_volume_on_hpp_pvc,
 ):
-    with create_vm_from_dv(dv=cirros_data_volume_on_hpp_pvc) as vm:
+    with create_vm_from_dv(dv=cirros_data_volume_on_hpp_pvc, client=cirros_data_volume_on_hpp_pvc.client) as vm:
         yield vm
 
 

@@ -128,6 +128,7 @@ def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
         size="1Gi",
         storage_class=py_config["default_storage_class"],
         consume_wffc=False,
+        client=upgrade_namespace_scope_session.client,
     ) as dv:
         yield dv
 

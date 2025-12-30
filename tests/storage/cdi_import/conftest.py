@@ -92,6 +92,7 @@ def dv_non_exist_url(namespace, storage_class_name_scope_module):
         url=NON_EXIST_URL,
         size=DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
+        client=namespace.client,
     ) as dv:
         yield dv
 
@@ -114,6 +115,7 @@ def dv_from_http_import(
         cert_configmap=request.param.get("configmap_name"),
         size=request.param.get("size", DEFAULT_DV_SIZE),
         storage_class=storage_class_name_scope_module,
+        client=namespace.client,
     ) as dv:
         dv.pvc.wait()
         yield dv
