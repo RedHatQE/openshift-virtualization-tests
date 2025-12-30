@@ -555,3 +555,16 @@ def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
         status=vm_migration_metrics_vmim_scope_class.Status.SUCCEEDED, timeout=TIMEOUT_5MIN
     )
+
+
+@pytest.fixture(scope="class")
+def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
+    """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
+    # Calculate VM CPU count
+    vm_cpu = vm_with_cpu_spec.vmi.instance.spec.domain.cpu
+    cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
+    # Get node CPU capacity
+    cpu_count_from_vm_node = int(vm_with_cpu_spec.privileged_vmi.node.instance.status.capacity.cpu)
+
+    # return multiplication for multi-CPU VMs
+    return str(cpu_count_from_vm_node * cpu_count_from_vm)
