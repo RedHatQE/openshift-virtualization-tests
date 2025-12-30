@@ -1,6 +1,6 @@
 import pytest
 
-from tests.cross_cluster_live_migration.utils import verify_compute_live_migration_after_cclm
+from tests.storage.cross_cluster_live_migration.utils import verify_compute_live_migration_after_cclm
 from utilities.constants import TIMEOUT_10MIN
 
 TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE = "CCLMvmFromTemplateWithDataSource"
