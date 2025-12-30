@@ -166,10 +166,6 @@ def test_empty_url(namespace, storage_class_name_scope_module):
             pass
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: regression, timeout failure; CNV-70094",
-    run=False,
-)
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(

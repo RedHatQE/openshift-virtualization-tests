@@ -648,6 +648,7 @@ def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
     )
 
 
+@pytest.fixture(scope="class")
 def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
     """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
     # Calculate VM CPU count
