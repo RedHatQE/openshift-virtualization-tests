@@ -57,7 +57,7 @@ def enabled_downward_metrics_hco_featuregate(hyperconverged_resource_scope_modul
 
 
 @pytest.fixture(scope="module")
-def rpm_file_name(nodes_cpu_architecture):
+def rpm_file_name(nodes_cpu_arc_s390x):
     soup_page = BeautifulSoup(
         markup=requests.get(RPMS_REPO_URL, headers=get_artifactory_header(), verify=False, timeout=TIMEOUT_30SEC).text,
         features="html.parser",
@@ -66,7 +66,7 @@ def rpm_file_name(nodes_cpu_architecture):
     assert rpm_file_names, f"No RPM files found at the URL - {RPMS_REPO_URL}"
 
     return next(
-        file_name for file_name in rpm_file_names if ("s390x" in file_name) == (nodes_cpu_architecture == "s390x")
+        file_name for file_name in rpm_file_names if ("s390x" in file_name) == nodes_cpu_arc_s390x
     )
 
 

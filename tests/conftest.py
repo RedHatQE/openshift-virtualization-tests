@@ -2787,3 +2787,8 @@ def application_aware_resource_quota(admin_client, namespace):
         hard=ARQ_QUOTA_HARD_SPEC,
     ) as arq:
         yield arq
+
+
+@pytest.fixture(scope="session")
+def nodes_cpu_arc_s390x(nodes_cpu_architecture):
+    return nodes_cpu_architecture == "s390x"

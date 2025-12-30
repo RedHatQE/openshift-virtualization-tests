@@ -16,6 +16,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.conftest import nodes_cpu_arc_s390x
 from tests.observability.metrics.constants import (
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
@@ -244,14 +245,14 @@ def windows_vm_for_test_interface_name(windows_vm_for_test):
 
 
 @pytest.fixture(scope="class")
-def vm_with_cpu_spec(namespace, unprivileged_client, nodes_cpu_architecture):
+def vm_with_cpu_spec(namespace, unprivileged_client, nodes_cpu_arc_s390x):
     name = "vm-resource-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         cpu_cores=TWO_CPU_CORES,
         cpu_sockets=TWO_CPU_SOCKETS,
-        cpu_threads=ONE_CPU_THREAD if nodes_cpu_architecture == "s390x" else TWO_CPU_THREADS,
+        cpu_threads=ONE_CPU_THREAD if nodes_cpu_arc_s390x else TWO_CPU_THREADS,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
