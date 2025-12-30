@@ -392,7 +392,7 @@ class TestKubevirtVmiNonEvictable:
     def test_kubevirt_vmi_non_evictable(
         self,
         prometheus,
-        non_evictable_vm_from_template,
+        vm_with_rwo_dv,
     ):
         validate_metrics_value(
             prometheus=prometheus,

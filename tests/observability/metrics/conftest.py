@@ -668,13 +668,7 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
 
 
 @pytest.fixture()
-def non_evictable_vm_from_template(request, unprivileged_client, namespace):
-    """
-    Create a VM from template with RWO DataVolume created via data_volume_template.
-    This VM will have LiveMigrate eviction strategy with RWO storage, making it non-evictable.
-    The DataVolume is created by the VM itself, which works correctly with WaitForFirstConsumer storage classes.
-    """
-    # Create a DataVolume template (not deployed yet - VM will create it)
+def vm_with_rwo_dv(request, unprivileged_client, namespace):
     dv = DataVolume(
         client=unprivileged_client,
         source=REGISTRY_STR,
