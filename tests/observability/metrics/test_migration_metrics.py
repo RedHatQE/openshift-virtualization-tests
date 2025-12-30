@@ -8,7 +8,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
+    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
 )
@@ -67,7 +67,7 @@ class TestKubevirtVmiMigrationMetrics:
                 marks=(pytest.mark.polarion("CNV-11600")),
             ),
             pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DISK_TRANSFER_RATE_BYTES,
+                KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
                 marks=(pytest.mark.polarion("CNV-11598")),
             ),
             pytest.param(
