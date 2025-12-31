@@ -103,6 +103,7 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
         url=f"{get_test_artifact_server_url()}{FEDORA_LATEST['image_path']}",
         storage_class=py_config["default_storage_class"],
         multus_annotation=linux_nad.name,
+        client=namespace.client,
     ) as dv:
         return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
 

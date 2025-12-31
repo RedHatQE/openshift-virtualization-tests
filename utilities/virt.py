@@ -1016,7 +1016,7 @@ class VirtualMachineForTests(VirtualMachine):
                 if sc_name:
                     return sc_name
             else:
-                return get_default_storage_class().name
+                return get_default_storage_class(client=self.client).name
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (
@@ -1317,7 +1317,9 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         # To apply this logic, self.access_modes should be available.
         if not self.sno_cluster and (not self.eviction_strategy and not (self.diskless_vm or self.non_existing_pvc)):
             if not self.access_modes:
-                self.access_modes = get_default_storage_class().storage_profile.first_claim_property_set_access_modes()
+                self.access_modes = get_default_storage_class(
+                    client=self.client
+                ).storage_profile.first_claim_property_set_access_modes()
             if DataVolume.AccessMode.RWX not in self.access_modes:
                 spec[EVICTIONSTRATEGY] = "None"
 

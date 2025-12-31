@@ -55,6 +55,7 @@ def data_volume_multi_wffc_storage_scope_module(
         request=request,
         namespace=namespace,
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
+        client=namespace.client,
     )
 
 
@@ -68,6 +69,7 @@ def data_volume_multi_wffc_storage_scope_function(
         request=request,
         namespace=namespace,
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
+        client=namespace.client,
     )
 
 
@@ -215,6 +217,7 @@ def test_wffc_import_registry_dv(
         url=f"docker://quay.io/kubevirt/{Images.Cirros.DISK_DEMO}",
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
         consume_wffc=True,
+        client=unprivileged_client,
     ) as dv:
         dv.wait_for_dv_success()
         create_vm_from_dv(client=unprivileged_client, dv=dv, vm_name=dv_name)
