@@ -732,13 +732,14 @@ class HppCsiStorageClass(StorageClass):
         HOSTPATH_CSI_PVC_TEMPLATE_OCS_FS = f"{HPP_CSI}-pvc-template-ocs-fs"
         HOSTPATH_CSI_PVC_TEMPLATE_LSO = f"{HPP_CSI}-pvc-template-lso"
 
-    def __init__(self, name, storage_pool=None, teardown=True):
+    def __init__(self, name, client, storage_pool=None, teardown=True):
         super().__init__(
             name=name,
             teardown=teardown,
             provisioner=StorageClass.Provisioner.HOSTPATH_CSI,
             reclaim_policy=StorageClass.ReclaimPolicy.DELETE,
             volume_binding_mode=StorageClass.VolumeBindingMode.WaitForFirstConsumer,
+            client=client,
         )
         self._storage_pool = storage_pool
 
@@ -819,16 +820,18 @@ def add_dv_to_vm(vm, dv_name=None, template_dv=None):
 
 def create_hpp_storage_class(
     storage_class_name,
+    admin_client,
 ):
     storage_class = HppCsiStorageClass(
         name=storage_class_name,
+        client=admin_client,
     )
     storage_class.deploy()
 
 
 class HPPWithStoragePool(HostPathProvisioner):
-    def __init__(self, name, backend_storage_class_name, volume_size, teardown=False):
-        super().__init__(name=name, teardown=teardown)
+    def __init__(self, name, backend_storage_class_name, volume_size, client, teardown=False):
+        super().__init__(name=name, teardown=teardown, client=client)
         self.backend_storage_class_name = backend_storage_class_name
         self.volume_size = volume_size
 
