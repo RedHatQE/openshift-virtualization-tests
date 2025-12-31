@@ -2725,10 +2725,10 @@ def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
 
 
 @pytest.fixture(scope="session")
-def machine_config_pools():
+def machine_config_pools(admin_client):
     return [
-        get_machine_config_pool_by_name(mcp_name="master"),
-        get_machine_config_pool_by_name(mcp_name="worker"),
+        get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client),
+        get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client),
     ]
 
 
