@@ -12,6 +12,7 @@ from timeout_sampler import TimeoutSampler
 
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     generate_data_import_cron_dict,
+    get_all_release_versions_from_docs,
 )
 from utilities.constants import TIMEOUT_2MIN
 from utilities.hco import (
@@ -125,3 +126,25 @@ def custom_data_source_scope_function(admin_client, custom_data_import_cron_scop
             f"{custom_data_import_cron_scope_function.namespace} namespace."
         )
         raise
+
+
+@pytest.fixture(scope="module")
+def latest_rhel_release_versions_dict():
+    """
+    Parse RHEL documentation pages to find the latest released versions.
+
+    Returns:
+        Dictionary mapping major versions to their latest minor versions
+        e.g., {rhel8: "8.10", rhel9: "9.7", rhel10: "10.1"}
+    """
+    latest_versions = {}
+    not_found_versions = []
+
+    for major_ver_num in [8, 9, 10]:
+        all_versions = get_all_release_versions_from_docs(major_ver_num=major_ver_num)
+        if not all_versions:
+            not_found_versions.append(major_ver_num)
+        latest_versions[major_ver_num] = max(all_versions)
+
+    assert not not_found_versions, f"Failed to find RHEL {major_ver_num} versions from documentation"
+    return {f"rhel{major}": f"{major}.{minor}" for major, minor in latest_versions.items()}
