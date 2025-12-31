@@ -20,7 +20,6 @@ class TestEUSToEUSUpgrade:
         self,
         admin_client,
         hco_namespace,
-        migratable_vms,
         eus_target_cnv_version,
         eus_cnv_upgrade_path,
         eus_paused_worker_mcp,
