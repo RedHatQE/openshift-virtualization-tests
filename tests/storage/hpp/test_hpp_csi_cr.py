@@ -112,11 +112,12 @@ def deleted_hpp_storage_classes(request, cluster_storage_classes):
 
 
 @pytest.fixture()
-def hpp_csi_storage_classes(request, cluster_storage_classes):
+def hpp_csi_storage_classes(request, admin_client, cluster_storage_classes):
     created_storage_classes_dict = {}
     for storage_class in request.param:
         sc = HppCsiStorageClass(
             name=storage_class,
+            client=admin_client,
             storage_pool=STORAGE_CLASS_TO_STORAGE_POOL_MAPPING[storage_class],
         )
         sc.deploy()
