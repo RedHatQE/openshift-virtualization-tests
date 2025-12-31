@@ -260,7 +260,7 @@ def ocp_image_url(pytestconfig):
 
 @pytest.fixture(scope="session")
 def cluster_version(admin_client):
-    cluster_version = ClusterVersion(name="version")
+    cluster_version = ClusterVersion(name="version", client=admin_client)
     if cluster_version.exists:
         return cluster_version
 
@@ -455,13 +455,13 @@ def machine_config_pools_conditions(active_machine_config_pools):
 
 
 @pytest.fixture(scope="session")
-def master_machine_config_pools():
-    return [get_machine_config_pool_by_name(mcp_name="master")]
+def master_machine_config_pools(admin_client):
+    return [get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="session")
-def worker_machine_config_pools():
-    return [get_machine_config_pool_by_name(mcp_name="worker")]
+def worker_machine_config_pools(admin_client):
+    return [get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="module")
@@ -607,7 +607,8 @@ def updated_odf_subscription_source(odf_subscription, odf_version):
 
 @pytest.fixture()
 def upgraded_odf(
+    admin_client,
     odf_version,
     updated_odf_subscription_source,
 ):
-    wait_for_odf_update(target_version=odf_version)
+    wait_for_odf_update(target_version=odf_version, admin_client=admin_client)

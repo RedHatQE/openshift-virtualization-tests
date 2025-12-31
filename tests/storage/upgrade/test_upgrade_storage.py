@@ -60,6 +60,7 @@ class TestUpgradeStorage:
     @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_restore_before_upgrade")
     def test_vm_snapshot_restore_before_upgrade(
         self,
+        admin_client,
         skip_if_no_storage_class_for_snapshot,
         cirros_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
@@ -69,6 +70,7 @@ class TestUpgradeStorage:
             namespace=snapshots_for_upgrade_a.namespace,
             vm_name=cirros_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
+            client=admin_client,
         ) as vm_restore:
             vm_restore.wait_restore_done()
             cirros_vm_for_upgrade_a.start(wait=True)
@@ -164,12 +166,15 @@ class TestUpgradeStorage:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_vm_snapshot_restore_create_after_upgrade(self, cirros_vm_for_upgrade_b, snapshots_for_upgrade_b):
+    def test_vm_snapshot_restore_create_after_upgrade(
+        self, admin_client, cirros_vm_for_upgrade_b, snapshots_for_upgrade_b
+    ):
         with VirtualMachineRestore(
             name=f"restore-snapshot-{cirros_vm_for_upgrade_b.name}",
             namespace=snapshots_for_upgrade_b.namespace,
             vm_name=cirros_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
+            client=admin_client,
         ) as vm_restore:
             vm_restore.wait_restore_done()
             cirros_vm_for_upgrade_b.start(wait=True)
