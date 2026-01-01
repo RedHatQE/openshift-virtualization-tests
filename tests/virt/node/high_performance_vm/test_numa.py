@@ -39,7 +39,7 @@ def sriov_net(admin_client, sriov_node_policy, namespace):
     with SriovNetwork(
         name="numa-sriov-test-net",
         namespace=sriov_node_policy.namespace,
-        resource_name=sriov_node_policy.resource_name,
+        resource_name=sriov_node_policy.instance.spec.resourceName,
         network_namespace=namespace.name,
         client=admin_client,
     ) as net:
