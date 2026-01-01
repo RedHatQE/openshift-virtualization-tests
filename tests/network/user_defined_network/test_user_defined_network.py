@@ -1,52 +1,18 @@
 import ipaddress
 
 import pytest
-from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import TcpServer, is_tcp_connection
 from libs.net.traffic_generator import VMTcpClient as TcpClient
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
-from libs.vm import affinity
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
-from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
-
-
-@pytest.fixture(scope="module")
-def udn_namespace(admin_client):
-    yield from create_ns(
-        admin_client=admin_client,
-        name="test-user-defined-network-ns",
-        labels={"k8s.ovn.org/primary-user-defined-network": ""},
-    )
-
-
-@pytest.fixture(scope="module")
-def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
-    with Layer2UserDefinedNetwork(
-        name="layer2-udn",
-        namespace=udn_namespace.name,
-        role="Primary",
-        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
-        ipam={"lifecycle": "Persistent"},
-        client=admin_client,
-    ) as udn:
-        udn.wait_for_condition(
-            condition="NetworkAllocationSucceeded",
-            status=udn.Condition.Status.TRUE,
-        )
-        yield udn
-
-
-@pytest.fixture(scope="class")
-def udn_affinity_label():
-    return affinity.new_label(key_prefix="udn")
 
 
 @pytest.fixture(scope="class")
@@ -55,6 +21,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         namespace_name=udn_namespace.name,
         name="vma-udn",
         client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
         template_labels=dict((udn_affinity_label,)),
     ) as vm:
         vm.start(wait=True)
@@ -68,6 +35,7 @@ def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         namespace_name=udn_namespace.name,
         name="vmb-udn",
         client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
         template_labels=dict((udn_affinity_label,)),
     ) as vm:
         vm.start(wait=True)

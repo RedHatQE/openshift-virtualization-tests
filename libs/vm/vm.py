@@ -9,13 +9,14 @@ from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
 from utilities.cpu import get_nodes_cpu_architecture
 from utilities.network import IfaceNotFound
-from utilities.virt import get_oc_image_info, vm_console_run_commands
+from utilities.virt import LOGGER, get_oc_image_info, vm_console_run_commands
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -70,6 +71,20 @@ class BaseVirtualMachine(VirtualMachine):
             condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
             status=VirtualMachineInstance.Condition.Status.TRUE,
         )
+
+    @retry(wait_timeout=405, sleep=10, exceptions_dict={})
+    def wait_for_agent_connected_with_restart(self) -> None:
+        try:
+            self.wait_for_condition(
+                timeout=90,
+                condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
+                status=VirtualMachineInstance.Condition.Status.TRUE,
+            )
+            return True
+        except TimeoutExpiredError:
+            LOGGER.warning(f"For {self.name}: Waited for guest agent connected but got timeout, restarting vm")
+            self.restart()
+            return False
 
     def set_interface_state(self, network_name: str, state: str) -> None:
         if not self._spec.template.spec.domain.devices:

@@ -4,7 +4,9 @@
 Pytest conftest file for CNV network tests
 """
 
+import contextlib
 import logging
+from typing import Generator
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -16,7 +18,12 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
+from libs.net.traffic_generator import TcpServer
+from libs.net.traffic_generator import VMTcpClient as TcpClient
+from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.constants import BRCNV
+from tests.network.localnet.liblocalnet import _IPERF_SERVER_PORT
 from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
 from utilities.constants import (
     CLUSTER,
@@ -368,3 +375,41 @@ def network_sanity(
             message="Network cluster verification failed",
             admin_client=admin_client,
         )
+
+
+@contextlib.contextmanager
+def client_server_active_connection(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    spec_logical_network: str,
+    port: int = _IPERF_SERVER_PORT,
+    maximum_segment_size: int = 0,
+) -> Generator[tuple[TcpClient, TcpServer], None, None]:
+    """Start iperf3 client-server connection with continuous TCP traffic flow.
+
+    Automatically starts an iperf3 server and client, with traffic flowing continuously
+    while inside the context. Both processes stop automatically on exit.
+
+    Args:
+        client_vm: VM running the iperf3 client (sends traffic).
+        server_vm: VM running the iperf3 server (receives traffic).
+        spec_logical_network: Network interface name on server VM for IP resolution.
+        port: TCP port for iperf3 connection.
+        maximum_segment_size: Define explicitly the TCP payload size (in bytes).
+                              Use for jumbo frame testing.
+                              Default value is 0 (do not change mss).
+
+    Yields:
+        tuple[TcpClient, TcpServer]: Client and server objects with active traffic flowing.
+
+    Note:
+        Traffic runs with infinite duration until context exits.
+    """
+    with TcpServer(vm=server_vm, port=port) as server:
+        with TcpClient(
+            vm=client_vm,
+            server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+            server_port=port,
+            maximum_segment_size=maximum_segment_size,
+        ) as client:
+            yield client, server

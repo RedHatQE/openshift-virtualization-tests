@@ -4,10 +4,10 @@ import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
+from tests.network.conftest import client_server_active_connection
 from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
-    client_server_active_connection,
 )
 from utilities.virt import migrate_vm_and_verify
 
