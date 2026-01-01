@@ -27,12 +27,6 @@ def vlan_id_3(vlan_index_number):
     return next(vlan_index_number)
 
 
-@pytest.fixture()
-def fail_if_not_ipv6_supported_cluster(ipv6_supported_cluster):
-    if not ipv6_supported_cluster:
-        pytest.fail(reason="IPv6 is not supported in this cluster")
-
-
 @pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_1_source(
     admin_client,
@@ -263,6 +257,8 @@ def nad_ovs_bridge_vlan_3(
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vma_source(
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -278,18 +274,22 @@ def vm_linux_bridge_attached_vma_source(
     ]
 
     yield from create_running_vm(
-        name=f"vma-{LINUX_BRIDGE}",
-        end_ip_octet=1,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        namespace=namespace,
+        client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
-        client=unprivileged_client,
-        namespace=namespace,
+        name=f"vma-{LINUX_BRIDGE}",
+        host_id=1,
     )
 
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vma_source(
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -305,18 +305,22 @@ def vm_ovs_bridge_attached_vma_source(
     ]
 
     yield from create_running_vm(
-        name=f"vma-{OVS_BRIDGE}",
-        end_ip_octet=1,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        namespace=namespace,
+        client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
-        client=unprivileged_client,
-        namespace=namespace,
+        name=f"vma-{OVS_BRIDGE}",
+        host_id=1,
     )
 
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vmb_destination(
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
     worker_node2,
     namespace,
     unprivileged_client,
@@ -332,18 +336,22 @@ def vm_linux_bridge_attached_vmb_destination(
     ]
 
     yield from create_running_vm(
-        name=f"vmb-{LINUX_BRIDGE}",
-        end_ip_octet=2,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        namespace=namespace,
+        client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
-        client=unprivileged_client,
-        namespace=namespace,
+        name=f"vmb-{LINUX_BRIDGE}",
+        host_id=2,
     )
 
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vmb_destination(
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
     worker_node2,
     namespace,
     unprivileged_client,
@@ -359,11 +367,13 @@ def vm_ovs_bridge_attached_vmb_destination(
     ]
 
     yield from create_running_vm(
-        name=f"vmb-{OVS_BRIDGE}",
-        end_ip_octet=2,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        namespace=namespace,
+        client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
-        client=unprivileged_client,
-        namespace=namespace,
+        name=f"vmb-{OVS_BRIDGE}",
+        host_id=2,
     )
