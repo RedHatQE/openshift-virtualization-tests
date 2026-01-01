@@ -80,6 +80,7 @@ dependencies = [
   "openshift-python-wrapper>=11.0.93",
   "marshmallow==3.26.1",
   "cachetools>=6.2.2",
+  "openshift-python-scale-utilities>=0.1.1.5",
 ]
 
 [project.optional-dependencies]

@@ -75,6 +75,9 @@ fcn_exclude_functions =
     QueueListener,
     requests,
     multiprocessing,
+    getrlimit,
+    setrlimit,
+    ceil,
 
 nit_exclude_imports =
     os_params,
