@@ -29,7 +29,6 @@ from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
-from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -94,7 +93,6 @@ from utilities.constants import (
     KMP_VM_ASSIGNMENT_LABEL,
     KUBECONFIG,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    KUBEMACPOOL_MAC_RANGE_CONFIG,
     LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     NODE_ROLE_KUBERNETES_IO,
@@ -159,7 +157,6 @@ from utilities.infra import (
 )
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
-    MacPool,
     SriovIfaceNotFound,
     cloud_init,
     create_sriov_node_policy,
@@ -1054,15 +1051,6 @@ def sriov_node_policy(
         sriov_nodes_states=sriov_nodes_states,
         sriov_resource_name="sriov_net",
         client=admin_client,
-    )
-
-
-@pytest.fixture(scope="session")
-def mac_pool(admin_client, hco_namespace):
-    return MacPool(
-        kmp_range=ConfigMap(
-            namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
-        ).instance["data"]
     )
 
 

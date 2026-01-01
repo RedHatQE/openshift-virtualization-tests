@@ -9,7 +9,9 @@ import logging
 import pytest
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.namespace import Namespace
+from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
@@ -26,6 +28,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     NamespacesNames,
 )
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
     get_deployment_by_name,
@@ -33,6 +36,7 @@ from utilities.infra import (
     wait_for_pods_running,
 )
 from utilities.network import (
+    MacPool,
     get_cluster_cni_type,
     network_nad,
 )
@@ -368,3 +372,42 @@ def network_sanity(
             message="Network cluster verification failed",
             admin_client=admin_client,
         )
+
+
+@pytest.fixture(scope="session")
+def mac_pool(kubemacpool_range_config: dict[str, str]):
+    return MacPool(kmp_range=kubemacpool_range_config)
+
+
+@pytest.fixture(scope="session")
+def kubemacpool_range_config(
+    admin_client: DynamicClient,
+    hyperconverged_resource_scope_session: HyperConverged,
+):
+    """
+    Configure a predefined MAC range for KubeMacPool via HCO CR.
+    This ensures tests have a known, predictable MAC range.
+
+    Range: 02:03:00:00:00:00 to 02:03:00:FF:FF:FF
+    This avoids collision with hardcoded test MACs like 02:01:00:00:00:00
+    """
+    kmp_range = {
+        "RANGE_START": "02:03:00:00:00:00",
+        "RANGE_END": "02:03:00:FF:FF:FF",
+    }
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_session: {
+                "spec": {
+                    "kubeMacPoolConfiguration": {
+                        "rangeStart": kmp_range["RANGE_START"],
+                        "rangeEnd": kmp_range["RANGE_END"],
+                    }
+                }
+            }
+        },
+        list_resource_reconcile=[NetworkAddonsConfig],
+        wait_for_reconcile_post_update=True,
+        admin_client=admin_client,
+    ):
+        yield kmp_range
