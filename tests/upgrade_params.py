@@ -1,7 +1,8 @@
 from pytest_testconfig import config as py_config
 
+from utilities.constants import EUS
+
 UPGRADE_PACKAGE_NAME = "tests/install_upgrade_operators/product_upgrade"
-EUS = "eus"
 
 if py_config["upgraded_product"] == EUS:
     upgrade_class = "TestEUSToEUSUpgrade"
