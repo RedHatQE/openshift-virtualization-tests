@@ -8,7 +8,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from multiprocessing.context import ForkContext
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
+from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
@@ -84,43 +85,42 @@ def create_pod_deleting_process(
         pod_deleting_process.terminate()
     """
 
-    def _choose_surviving_pods(dyn_client, pod_prefix, namespace_name, ratio):
-        initial_pods = get_pod_by_name_prefix(
+    def _delete_pods(dyn_client, pod_prefix, namespace_name, ratio):
+        pods = get_pod_by_name_prefix(
             dyn_client=dyn_client,
             pod_prefix=pod_prefix,
             namespace=namespace_name,
             get_all=True,
         )
-        number_of_deleted_pods = round(number=ratio * len(initial_pods))
-        LOGGER.info(f"Number of pods to delete: {number_of_deleted_pods} out of {len(initial_pods)}.")
-        surviving_pods = [
-            pod for pod in random.sample(population=initial_pods, k=len(initial_pods) - number_of_deleted_pods)
-        ]
-        LOGGER.info(f"Surviving pods: {[pod.name for pod in surviving_pods]}")
 
-        return surviving_pods
+        if not pods:
+            LOGGER.info("No pods found, skipping this round")
+            return
 
-    def _delete_pods(dyn_client, pod_prefix, namespace_name, surviving_pods):
-        deleted_pods = get_pod_by_name_prefix(
-            dyn_client=dyn_client,
-            pod_prefix=pod_prefix,
-            namespace=namespace_name,
-            get_all=True,
+        delete_count = max(1, round(ratio * len(pods)))
+        pods_to_delete = random.sample(
+            pods,
+            min(delete_count, len(pods)),
         )
-        for pod in deleted_pods:
-            if pod.name not in [surviving_pod.name for surviving_pod in surviving_pods]:
-                # Set the log level to ERROR to avoid cluttering the console with the logs resulting from pod deletion
-                with resource_log_level_error(resource=pod) as _pod:
-                    _pod.delete()
+
+        LOGGER.info(f"Deleting {len(pods_to_delete)} out of {len(pods)} pods: {[pod.name for pod in pods_to_delete]}")
+
+        for pod in pods_to_delete:
+            pod_name = pod.name
+            pod_uid = pod.instance.metadata.uid
+
+            LOGGER.info(f"Deleting pod {pod_name} (UID={pod_uid})")
+
+            pod.delete()
+
+            try:
+                pod.wait_deleted(timeout=30)
+                LOGGER.info(f"Pod {pod_name} deleted")
+
+            except TimeoutExpiredError:
+                LOGGER.warning(f"Pod {pod_name} was not deleted.")
 
     def _delete_pods_continuously(dyn_client, pod_prefix, namespace_name, ratio, interval, max_duration):
-        surviving_pods = _choose_surviving_pods(
-            dyn_client=dyn_client,
-            pod_prefix=pod_prefix,
-            namespace_name=namespace_name,
-            ratio=ratio,
-        )
-
         try:
             for _ in TimeoutSampler(
                 wait_timeout=max_duration,
@@ -129,7 +129,7 @@ def create_pod_deleting_process(
                 dyn_client=dyn_client,
                 pod_prefix=pod_prefix,
                 namespace_name=namespace_name,
-                surviving_pods=surviving_pods,
+                ratio=ratio,
             ):
                 pass
         except TimeoutExpiredError:
@@ -392,21 +392,42 @@ def rebooting_node(node, utility_pods):
     wait_for_node_status(node=node, status=True, wait_timeout=TIMEOUT_10MIN)
 
 
-def pod_deleting_process_recover(resource, namespace, pod_prefix):
+def pod_deleting_process_recover(resources, namespace, pod_prefix):
     """
-    This function will make sure that the pods for the affected deployment recover after the test.
+    Ensure that pods for affected resources (Deployment / DaemonSet) recover after the test.
+    'resources' can be a single resource or a list of resources.
     """
-    resource_objs = get_resources_by_name_prefix(
-        prefix=pod_prefix,
-        namespace=namespace,
-        api_resource_name=resource,
-    )
-    if not resource_objs:
-        raise ResourceNotFoundError(f"No resources found with prefix {pod_prefix} in namespace {namespace}")
+    if not isinstance(resources, (list, tuple)):
+        resources = [resources]
 
-    for resource_obj in resource_objs:
-        if resource_obj.kind == Deployment.kind:
-            resource_obj.wait_for_replicas()
+    recovered_any = False
+
+    for resource in resources:
+        resource_objs = get_resources_by_name_prefix(
+            prefix=pod_prefix,
+            namespace=namespace,
+            api_resource_name=resource,
+        )
+        if not resource_objs:
+            LOGGER.debug(f"No {resource.__name__} found with prefix {pod_prefix} in namespace {namespace}")
+            continue
+
+        for resource_obj in resource_objs:
+            recovered_any = True
+
+            if resource_obj.kind == Deployment.kind:
+                LOGGER.info(f"Waiting for Deployment {resource_obj.name} to recover replicas")
+                resource_obj.wait_for_replicas()
+
+            elif resource_obj.kind == DaemonSet.kind:
+                LOGGER.info(f"Waiting for DaemonSet {resource_obj.name} to recover")
+                resource_obj.wait_until_deployed()
+
+            else:
+                LOGGER.warning(f"Unsupported resource kind {resource_obj.kind} for recovery")
+
+    if not recovered_any:
+        raise ResourceNotFoundError(f"No resources found with prefix {pod_prefix} in namespace {namespace}")
 
     LOGGER.info("Pod recovery process completed successfully.")
 
@@ -419,3 +440,103 @@ def get_instance_type(name):
     if not instance_type.exists:
         raise ResourceNotFoundError(f"Required instance type {name} does not exist")
     return instance_type
+
+
+# def get_vm_from_restore(admin_client, namespace, vm_name_prefix, timeout=300, sleep=5):
+#     """
+#     Wait for a VM whose name starts with `vm_name_prefix` to appear in the namespace and be Running or Succeeded.
+#     Queries the cluster directly via admin_client to get the real VM CRD name (no random suffixes).
+#     """
+#
+#     vmi_resource = admin_client.resources.get(api_version="kubevirt.io/v1", kind="VirtualMachineInstance")
+#
+#     # def check_vm():
+#     #     try:
+#     #         vms = vm_resource.get(namespace=namespace).items
+#     #     except NotFoundError:
+#     #         LOGGER.debug(f"No VMs found in namespace {namespace} yet.")
+#     #         return None
+#     #
+#     #     for vm in vms:
+#     #         name = vm.metadata.name
+#     #         if name.startswith(vm_name_prefix):
+#     #             phase = vm.status.get("phase") if vm.status else None
+#     #             LOGGER.info(f"Found VM {name}, phase={phase}")
+#     #             if phase in ("Running", "Succeeded"):
+#     #                 return vm
+#     #     return None
+#
+#     def check_vm():
+#         try:
+#             vms = vm_resource.get(namespace=namespace).items
+#         except NotFoundError:
+#             LOGGER.debug(f"No VMs found in namespace {namespace} yet.")
+#             return None
+#
+#         for vm in vms:
+#             if vm.metadata.name.startswith(vm_name_prefix):
+#                 try:
+#                     vmi = vmi_resource.get(name=vm.metadata.name, namespace=namespace)
+#                     phase = vmi.status.phase
+#                     LOGGER.info(f"Found VMI {vmi.metadata.name}, phase={phase}")
+#                     if phase in ("Running", "Succeeded"):
+#                         return vm
+#                 except NotFoundError:
+#                     # VMI 还没创建
+#                     continue
+#         return None
+#
+#     for restored_vm in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=check_vm):
+#         if restored_vm:
+#             LOGGER.info(f"Found restored VM {restored_vm.metadata.name} in namespace {namespace}")
+#             return restored_vm
+#
+#     LOGGER.warning(f"Restored VM starting with {vm_name_prefix} not found in namespace {namespace} after {timeout}s")
+#     return None
+
+
+def wait_for_restored_vmi(
+    admin_client,
+    namespace,
+    vmi_name_prefix,
+    timeout=300,
+    sleep=5,
+):
+    """
+    Wait until a VirtualMachineInstance whose name starts with `vmi_name_prefix`
+    appears in the given namespace.
+    """
+
+    vmi_resource = admin_client.resources.get(
+        api_version="kubevirt.io/v1",
+        kind="VirtualMachineInstance",
+    )
+
+    def check_vmi():
+        try:
+            vmis = vmi_resource.get(namespace=namespace).items
+        except NotFoundError:
+            LOGGER.debug(f"No VMIs found in namespace {namespace} yet")
+            return None
+
+        for vmi in vmis:
+            name = vmi.metadata.name
+            if name.startswith(vmi_name_prefix):
+                phase = getattr(vmi.status, "phase", None)
+                LOGGER.info(f"Found restored VMI {name}, phase={phase}")
+                return vmi
+
+        return None
+
+    for vmi in TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=sleep,
+        func=check_vmi,
+    ):
+        if vmi:
+            LOGGER.info(f"Restored VMI {vmi.metadata.name} appeared in namespace {namespace}")
+            return vmi
+
+    raise TimeoutExpiredError(
+        f"Restored VMI starting with {vmi_name_prefix} not found in namespace {namespace} within {timeout}s"
+    )
