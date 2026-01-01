@@ -9,7 +9,6 @@ from tests.chaos.constants import STRESS_NG
 from tests.chaos.migration.utils import (
     assert_migration_result_and_cleanup,
 )
-from tests.chaos.utils import verify_vm_service_reachable
 from utilities.constants import (
     PORT_80,
     QUARANTINED,
@@ -23,11 +22,11 @@ from utilities.constants import (
     StorageClassNames,
 )
 from utilities.infra import wait_for_pods_running
-from utilities.virt import wait_for_vmi_relocation_and_running
+from utilities.virt import verify_vm_service_reachable, wait_for_vmi_relocation_and_running
 
 pytestmark = [
     pytest.mark.chaos,
-    pytest.mark.usefixtures("chaos_namespace", "cluster_monitoring_process"),
+    pytest.mark.usefixtures("multiprocessing_start_method_fork", "chaos_namespace", "cluster_monitoring_process"),
 ]
 
 
