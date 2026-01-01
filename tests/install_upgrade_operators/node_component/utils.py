@@ -356,7 +356,7 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
     def _get_pods_per_nodes(_filter_pods_by_name):
         pods_per_nodes = defaultdict(list)
         for pod in Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
         ):
             if _filter_pods_by_name and _filter_pods_by_name in pod.name:
@@ -427,7 +427,7 @@ def update_subscription_config(admin_client, hco_namespace, subscription, config
 
 def pods_with_node_selector(namespace_name: str, node_selectors: set[str], admin_client: DynamicClient) -> list[str]:
     pods_with_labels = []
-    for pod in list(Pod.get(namespace=namespace_name, dyn_client=admin_client)):
+    for pod in list(Pod.get(namespace=namespace_name, client=admin_client)):
         node_selectors_from_pod = pod.instance.spec.get("nodeSelector", [])
         LOGGER.info(f"Node selector for pod {pod.name}: {node_selectors_from_pod}")
         if node_selectors_from_pod and (set(node_selectors_from_pod.keys()).intersection(node_selectors)):

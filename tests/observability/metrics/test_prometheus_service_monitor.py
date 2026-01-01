@@ -8,7 +8,7 @@ from utilities.constants import VIRT_OPERATOR
 def kubevirt_prometheus_service_monitor_list(admin_client):
     return list(
         ServiceMonitor.get(
-            dyn_client=admin_client,
+            client=admin_client,
             label_selector=f"{ServiceMonitor.ApiGroup.APP_KUBERNETES_IO}/managed-by={VIRT_OPERATOR}",
         )
     )

@@ -36,7 +36,7 @@ BRIDGE_NAME = "br-nmstate"
 def restart_nmstate_handler(admin_client, nmstate_ds, nmstate_namespace):
     LOGGER.info("Delete NMstate PODs")
     for pod in get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=NMSTATE_HANDLER,
         namespace=nmstate_namespace.name,
         get_all=True,

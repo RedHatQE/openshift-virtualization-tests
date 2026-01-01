@@ -150,7 +150,7 @@ def kmp_manager_nodes(admin_client):
     yield [
         pod.node
         for pod in get_pod_by_name_prefix(
-            dyn_client=admin_client,
+            client=admin_client,
             pod_prefix=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
             namespace=py_config["hco_namespace"],
             get_all=True,
@@ -189,7 +189,7 @@ def pod_deleting_process(request, admin_client):
     pod_prefix = request.param["pod_prefix"]
     namespace_name = request.param["namespace_name"]
     process = create_pod_deleting_process(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=pod_prefix,
         namespace_name=namespace_name,
         ratio=request.param["ratio"],
@@ -390,7 +390,7 @@ def deleted_pod_by_name_prefix(admin_client, cnv_pod_deletion_test_matrix__class
     pod_deletion_config = cnv_pod_deletion_test_matrix__class__[pod_matrix_key]
 
     deleted_pod_by_name_prefix = create_pod_deleting_process(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=pod_deletion_config["pod_prefix"],
         namespace_name=pod_deletion_config["namespace_name"],
         ratio=pod_deletion_config["ratio"],

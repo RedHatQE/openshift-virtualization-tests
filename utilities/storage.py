@@ -246,7 +246,7 @@ def data_volume(
         consume_wffc = False
         bind_immediate = True
         try:
-            golden_image = list(DataVolume.get(dyn_client=admin_client, name=dv_name, namespace=dv_namespace))
+            golden_image = list(DataVolume.get(client=admin_client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
@@ -618,7 +618,7 @@ def wait_for_default_sc_in_cdiconfig(cdi_config, sc):
 
 def get_hyperconverged_cdi(admin_client):
     for cdi in CDI.get(
-        dyn_client=admin_client,
+        client=admin_client,
         name="cdi-kubevirt-hyperconverged",
     ):
         return cdi
@@ -701,7 +701,7 @@ def create_or_update_data_source(admin_client, dv):
     target_name = dv.name
     target_namespaces = dv.namespace
     try:
-        for data_source in DataSource.get(dyn_client=admin_client, name=target_name, namespace=target_namespaces):
+        for data_source in DataSource.get(client=admin_client, name=target_name, namespace=target_namespaces):
             LOGGER.info(f"Updating existing dataSource {data_source.name}")
             with ResourceEditor(patches={data_source: generate_data_source_dict(dv=dv)}):
                 yield data_source
@@ -762,7 +762,7 @@ def get_default_storage_class():
 
 def is_snapshot_supported_by_sc(sc_name, client):
     sc_instance = StorageClass(client=client, name=sc_name).instance
-    for vsc in VolumeSnapshotClass.get(dyn_client=client):
+    for vsc in VolumeSnapshotClass.get(client=client):
         if vsc.instance.get("driver") == sc_instance.get("provisioner"):
             return True
     return False
@@ -896,7 +896,7 @@ def wait_for_hpp_pods(client, pod_prefix):
         wait_timeout=TIMEOUT_2MIN,
         sleep=3,
         func=utilities.infra.get_pod_by_name_prefix,
-        dyn_client=client,
+        client=client,
         namespace=py_config["hco_namespace"],
         pod_prefix=f"{pod_prefix}-",
         get_all=True,

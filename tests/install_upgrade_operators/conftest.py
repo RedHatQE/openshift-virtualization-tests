@@ -46,7 +46,7 @@ def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_de
             pytest.xfail(f"{deployment_name} deployment shouldn't be present on the cluster if HPP CR is not installed")
         hpp_pool_deployments = list(
             Deployment.get(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=hco_namespace.name,
                 label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
             )
@@ -89,7 +89,7 @@ def cnv_pods_by_type(
     if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
         pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
     pod_list = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=hco_namespace.name,
         pod_prefix=pod_prefix,
         get_all=True,

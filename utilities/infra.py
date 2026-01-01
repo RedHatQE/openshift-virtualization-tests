@@ -139,10 +139,10 @@ def camelcase_to_mixedcase(camelcase_str):
     return camelcase_str[0].lower() + camelcase_str[1:]
 
 
-def get_pod_by_name_prefix(dyn_client, pod_prefix, namespace, get_all=False):
+def get_pod_by_name_prefix(client, pod_prefix, namespace, get_all=False):
     """
     Args:
-        dyn_client (DynamicClient): OCP Client to use.
+        client (DynamicClient): OCP Client to use.
         pod_prefix (str): str or regex pattern.
         namespace (str): Namespace name.
         get_all (bool): Return all pods if True else only the first one.
@@ -153,7 +153,7 @@ def get_pod_by_name_prefix(dyn_client, pod_prefix, namespace, get_all=False):
     Raises:
         ResourceNotFoundError: if no pods are found.
     """
-    pods = [pod for pod in Pod.get(dyn_client=dyn_client, namespace=namespace) if re.match(pod_prefix, pod.name)]
+    pods = [pod for pod in Pod.get(client=client, namespace=namespace) if re.match(pod_prefix, pod.name)]
     if get_all:
         return pods  # Some negative cases check if no pods exists.
     elif pods:
@@ -203,10 +203,10 @@ def get_latest_os_dict_list(os_list):
     return res
 
 
-def get_pods(dyn_client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
+def get_pods(client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
     return list(
         Pod.get(
-            dyn_client=dyn_client,
+            client=client,
             namespace=namespace.name,
             label_selector=label,
         )
@@ -278,7 +278,7 @@ def wait_for_pods_running(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_pods,
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=namespace,
         exceptions_dict={NotFoundError: []},
     )
@@ -381,7 +381,7 @@ def wait_for_consistent_resource_conditions(
         sleep=polling_interval,
         func=lambda: list(
             resource_kind.get(
-                dyn_client=dynamic_client,
+                client=dynamic_client,
                 namespace=namespace,
                 name=resource_name,
             )
@@ -527,7 +527,7 @@ def get_raw_package_manifest(admin_client, name, catalog_source):
         ResourceField or None: PackageManifest ResourceField or None if no matching resource found
     """
     for resource_field in PackageManifest.get(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=py_config["marketplace_namespace"],
         field_selector=f"metadata.name={name}",
         label_selector=f"catalog={catalog_source}",
@@ -587,13 +587,13 @@ def get_csv_by_name(csv_name, admin_client, namespace):
     raise ResourceNotFoundError(f"Csv {csv_name} not found in namespace: {namespace}")
 
 
-def get_clusterversion(dyn_client):
-    for cvo in ClusterVersion.get(dyn_client=dyn_client):
+def get_clusterversion(client):
+    for cvo in ClusterVersion.get(client=client):
         return cvo
 
 
 def get_deployments(admin_client, namespace):
-    return list(Deployment.get(dyn_client=admin_client, namespace=namespace))
+    return list(Deployment.get(client=admin_client, namespace=namespace))
 
 
 def get_related_images_name_and_version(csv):
@@ -659,7 +659,7 @@ def get_hyperconverged_resource(client, hco_ns_name):
 
 
 def get_utility_pods_from_nodes(nodes, admin_client, label_selector):
-    pods = list(Pod.get(dyn_client=admin_client, label_selector=label_selector))
+    pods = list(Pod.get(client=admin_client, label_selector=label_selector))
     nodes_without_utility_pods = [node.name for node in nodes if node.name not in [pod.node.name for pod in pods]]
     assert not nodes_without_utility_pods, (
         f"Missing pods with label {label_selector} for: {' '.join(nodes_without_utility_pods)}"
@@ -678,7 +678,7 @@ def label_nodes(nodes, labels):
 
 
 def get_daemonsets(admin_client, namespace):
-    return list(DaemonSet.get(dyn_client=admin_client, namespace=namespace))
+    return list(DaemonSet.get(client=admin_client, namespace=namespace))
 
 
 @contextmanager

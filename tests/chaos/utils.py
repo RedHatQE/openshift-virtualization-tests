@@ -52,7 +52,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_pod_deleting_process(
-    dyn_client,
+    client,
     pod_prefix,
     namespace_name,
     ratio,
@@ -64,7 +64,7 @@ def create_pod_deleting_process(
     continuously deletes pods for a certain amount of time or until the process is stopped.
 
     Args:
-        dyn_client (DynamicClient)
+        client (DynamicClient)
         pod_prefix (str): Pod name prefix used to find the pods to be deleted.
         namespace_name (str): Name of the namespace were the pods to be deleted live.
         ratio (float): Percentage of pods to be deleted (expressed as a fraction between 0 and 1).
@@ -76,7 +76,7 @@ def create_pod_deleting_process(
 
     Example:
         pod_deleting_process = create_pod_deleting_process(
-            dyn_client=admin_client, pod_prefix="apiserver",
+            client=admin_client, pod_prefix="apiserver",
             namespace_name="openshift-apiserver", ratio=0.5, interval=5, max_duration=180
         )
         pod_deleting_process.start()
@@ -84,9 +84,9 @@ def create_pod_deleting_process(
         pod_deleting_process.terminate()
     """
 
-    def _choose_surviving_pods(dyn_client, pod_prefix, namespace_name, ratio):
+    def _choose_surviving_pods(_client, pod_prefix, namespace_name, ratio):
         initial_pods = get_pod_by_name_prefix(
-            dyn_client=dyn_client,
+            client=_client,
             pod_prefix=pod_prefix,
             namespace=namespace_name,
             get_all=True,
@@ -100,9 +100,9 @@ def create_pod_deleting_process(
 
         return surviving_pods
 
-    def _delete_pods(dyn_client, pod_prefix, namespace_name, surviving_pods):
+    def _delete_pods(_client, pod_prefix, namespace_name, surviving_pods):
         deleted_pods = get_pod_by_name_prefix(
-            dyn_client=dyn_client,
+            client=_client,
             pod_prefix=pod_prefix,
             namespace=namespace_name,
             get_all=True,
@@ -113,9 +113,9 @@ def create_pod_deleting_process(
                 with resource_log_level_error(resource=pod) as _pod:
                     _pod.delete()
 
-    def _delete_pods_continuously(dyn_client, pod_prefix, namespace_name, ratio, interval, max_duration):
+    def _delete_pods_continuously(_client, pod_prefix, namespace_name, ratio, interval, max_duration):
         surviving_pods = _choose_surviving_pods(
-            dyn_client=dyn_client,
+            _client=_client,
             pod_prefix=pod_prefix,
             namespace_name=namespace_name,
             ratio=ratio,
@@ -126,7 +126,7 @@ def create_pod_deleting_process(
                 wait_timeout=max_duration,
                 sleep=interval,
                 func=_delete_pods,
-                dyn_client=dyn_client,
+                _client=client,
                 pod_prefix=pod_prefix,
                 namespace_name=namespace_name,
                 surviving_pods=surviving_pods,
@@ -139,7 +139,7 @@ def create_pod_deleting_process(
         name="pod_delete",
         target=_delete_pods_continuously,
         args=(
-            dyn_client,
+            client,
             pod_prefix,
             namespace_name,
             ratio,
@@ -206,7 +206,7 @@ def create_nginx_monitoring_process(
 def get_pods_status(admin_client, namespaces):
     pods_status = {"pod_status": {}}
     for namespace in namespaces:
-        pods = get_pods(dyn_client=admin_client, namespace=namespace)
+        pods = get_pods(client=admin_client, namespace=namespace)
         pods_status["pod_status"][namespace.name] = {}
         for pod in pods:
             # Set the log level to ERROR to avoid cluttering the console

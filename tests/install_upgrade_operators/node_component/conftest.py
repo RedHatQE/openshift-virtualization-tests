@@ -104,7 +104,7 @@ def expected_node_by_label(node_placement_labels):
 
 @pytest.fixture(scope="class")
 def np_nodes_labels_dict(admin_client):
-    return {node.name: node.instance.metadata.labels for node in Node.get(dyn_client=admin_client)}
+    return {node.name: node.instance.metadata.labels for node in Node.get(client=admin_client)}
 
 
 @pytest.fixture(scope="class")

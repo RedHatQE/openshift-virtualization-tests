@@ -113,7 +113,7 @@ INTERNAL_HTTP_TEMPLATE = {
 def hpp_resources(request, admin_client):
     rcs_object = request.param
     LOGGER.info(f"Get all resources with kind: {rcs_object.kind}")
-    resource_list = list(rcs_object.get(dyn_client=admin_client))
+    resource_list = list(rcs_object.get(client=admin_client))
     return [rcs for rcs in resource_list if rcs.name.startswith("hostpath-")]
 
 
@@ -202,7 +202,7 @@ def images_internal_http_server(internal_http_deployment, internal_http_service)
 
 @pytest.fixture()
 def upload_proxy_route(admin_client):
-    routes = Route.get(dyn_client=admin_client)
+    routes = Route.get(client=admin_client)
     upload_route = None
     for route in routes:
         if route.exposed_service == CDI_UPLOADPROXY:
@@ -339,7 +339,7 @@ def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client
     if default_sc:
         yield default_sc
     else:
-        for sc in StorageClass.get(dyn_client=admin_client, name=py_config["default_storage_class"]):
+        for sc in StorageClass.get(client=admin_client, name=py_config["default_storage_class"]):
             assert sc, f"The cluster does not include {py_config['default_storage_class']} storage class"
             with ResourceEditor(
                 patches={
@@ -358,7 +358,7 @@ def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client
 def router_cert_secret(admin_client):
     router_secret = "router-certs-default"
     for secret in Secret.get(
-        dyn_client=admin_client,
+        client=admin_client,
         name=router_secret,
         namespace="openshift-ingress",
     ):

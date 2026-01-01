@@ -79,7 +79,7 @@ class TestUpgrade:
             6.4. Wait until HCO is stable and its version is updated.
         """
         verify_upgrade_cnv(
-            dyn_client=admin_client,
+            client=admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
         )
@@ -109,7 +109,7 @@ class TestUpgrade:
         but it is not needed to disable the default sources, create a new ICSP or update the HCO CatalogSource.
         """
         verify_upgrade_cnv(
-            dyn_client=admin_client,
+            client=admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
         )

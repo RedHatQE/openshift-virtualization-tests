@@ -99,7 +99,7 @@ class TestMustGatherClusterWithVMs:
         checks,
     ):
         check_list_of_resources(
-            dyn_client=admin_client,
+            client=admin_client,
             resource_type=resource_type,
             temp_dir=collected_cluster_must_gather_with_vms,
             resource_path=resource_path,

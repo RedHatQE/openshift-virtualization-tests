@@ -52,7 +52,7 @@ def test_disk_image_not_conform_to_registy_disk(
             timeout=TIMEOUT_5MIN,
             stop_status=DataVolume.Status.SUCCEEDED,
         )
-        importer_pod = get_importer_pod(dyn_client=admin_client, namespace=dv.namespace)
+        importer_pod = get_importer_pod(client=admin_client, namespace=dv.namespace)
         wait_for_importer_container_message(
             importer_pod=importer_pod,
             msg=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND,

@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def delete_velero_resource(resource, client):
-    velero_pod = get_pod_by_name_prefix(dyn_client=client, pod_prefix="velero", namespace=ADP_NAMESPACE)
+    velero_pod = get_pod_by_name_prefix(client=client, pod_prefix="velero", namespace=ADP_NAMESPACE)
     command = ["./velero", "delete", resource.kind.lower(), resource.name, "--confirm"]
     velero_pod.execute(command=command)
 

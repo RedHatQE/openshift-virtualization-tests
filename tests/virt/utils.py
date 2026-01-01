@@ -408,7 +408,7 @@ def get_pod_memory_requests(pod_instance):
 def get_non_terminated_pods(client, node):
     return list(
         Pod.get(
-            dyn_client=client,
+            client=client,
             field_selector=f"spec.nodeName={node.name},status.phase!=Succeeded,status.phase!=Failed",
         )
     )
