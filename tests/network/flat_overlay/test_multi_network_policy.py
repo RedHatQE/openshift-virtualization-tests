@@ -5,10 +5,13 @@ from tests.network.flat_overlay.utils import get_vm_connection_reply
 from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful
 
-pytestmark = pytest.mark.usefixtures(
-    "enable_multi_network_policy_usage",
-    "flat_l2_port",
-)
+pytestmark = [
+    pytest.mark.usefixtures(
+        "enable_multi_network_policy_usage",
+        "flat_l2_port",
+    ),
+    pytest.mark.ipv4,
+]
 
 
 @pytest.mark.polarion("CNV-10644")
