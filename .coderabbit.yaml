@@ -1,0 +1,146 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI Review Configuration for openshift-virtualization-tests
+# Based on project-specific rules from CLAUDE.md
+
+language: en-US
+
+tone_instructions: "Be direct and specific. Explain WHY rules exist. Provide code examples. Distinguish critical violations from suggestions. Use severity levels: CRITICAL (blocking/security), HIGH (types/fixtures), MEDIUM (style), LOW (suggestions)."
+
+early_access: true
+enable_free_tier: true
+
+reviews:
+  # Assertive profile for strict enforcement of coding standards
+  profile: assertive
+
+  # Request changes for critical violations
+  request_changes_workflow: true
+
+  # Review display settings
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  auto_title_placeholder: "@coderabbitai"
+  review_status: true
+  commit_status: true
+  poem: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  changed_files_summary: true
+
+  # Abort review if PR is closed
+  abort_on_close: true
+
+  # Auto-review configuration
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+    base_branches:
+      - main
+      - cnv-4.20
+      - cnv-4.19
+      - cnv-4.18
+
+  # Path-specific instructions
+  path_instructions:
+    - path: "tests/**"
+      instructions: |
+        Review test code for:
+        - Fixtures should do ONE action only (single responsibility)
+        - Fixture names must be NOUNS (what they provide), not verbs
+        - Each test should verify a single aspect
+        - All tests need appropriate markers (check pytest.ini)
+        - Use @pytest.mark.usefixtures when fixture return value is not needed
+        - Use pytest-dependency only when test independence is not possible
+
+    - path: "utilities/**"
+      instructions: |
+        Review utility code for:
+        - Type hints are MANDATORY for all new public functions
+        - Google-format docstrings required for code that is not self-explanatory
+        - No defensive programming (fail-fast principle)
+        - Check for code duplication - utilities should be reusable
+        - Corresponding unit tests in utilities/unittests/ must maintain 95% coverage
+
+    - path: "utilities/unittests/**"
+      instructions: |
+        Review utility unit tests for:
+        - Test coverage of corresponding utility module functionality
+        - Test clarity and independence
+        - No mocking of the module under test (mock external dependencies only)
+        - Clear test names describing the behavior being tested
+
+    - path: "libs/**"
+      instructions: |
+        Review library code for:
+        - STRICT mypy typing enforced - all code must be fully typed
+        - No use of Any type without explicit justification
+        - Follow Google Python Style Guide
+
+    - path: "conftest.py"
+      instructions: |
+        Review conftest files for:
+        - Must contain ONLY fixtures, no utility functions
+        - No imports from other conftest.py files
+        - Fixtures should have clear names and be self-explanatory
+
+  # Enabled linting and security tools
+  tools:
+    # Python linting
+    ruff:
+      enabled: true
+    # Python type checking
+    mypy:
+      enabled: true
+    # YAML validation
+    yamllint:
+      enabled: true
+    # Shell script checking
+    shellcheck:
+      enabled: true
+    # Security scanning
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    # GitHub Actions workflow validation
+    actionlint:
+      enabled: true
+    # Dockerfile linting
+    hadolint:
+      enabled: true
+    # Markdown linting
+    markdownlint:
+      enabled: true
+    # GitHub checks integration
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+
+  # Enable code guidelines enforcement from CLAUDE.md
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - "docs/CODING_AND_STYLE_GUIDE.md"
+      - "docs/DEVELOPER_GUIDE.md"
+
+  # Enable learning from repository patterns
+  learnings:
+    scope: auto
+
+  # Enable learning from issues
+  issues:
+    scope: auto
+
+  # Enable learning from pull requests
+  pull_requests:
+    scope: auto
