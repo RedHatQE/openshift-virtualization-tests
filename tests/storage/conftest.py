@@ -21,6 +21,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -552,6 +553,12 @@ def data_volume_template_metadata(multi_storage_cirros_vm):
     return multi_storage_cirros_vm.data_volume_template["metadata"]
 
 
+def get_storage_profile_minimum_supported_pvc_size(storage_class_name, admin_client):
+    storage_profile = StorageProfile(name=storage_class_name, client=admin_client)
+    annotations = getattr(storage_profile.instance.metadata, "annotations", {}) or {}
+    return annotations.get("cdi.kubevirt.io/minimumSupportedPvcSize")
+
+
 @pytest.fixture()
 def storage_class_name_scope_function(storage_class_matrix__function__):
     return [*storage_class_matrix__function__][0]
@@ -560,6 +567,13 @@ def storage_class_name_scope_function(storage_class_matrix__function__):
 @pytest.fixture(scope="module")
 def storage_class_name_scope_module(storage_class_matrix__module__):
     return [*storage_class_matrix__module__][0]
+
+
+@pytest.fixture(scope="module")
+def storage_profile_minimum_supported_pvc_size(storage_class_name_scope_module, admin_client):
+    return get_storage_profile_minimum_supported_pvc_size(
+        storage_class_name=storage_class_name_scope_module, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="module")
