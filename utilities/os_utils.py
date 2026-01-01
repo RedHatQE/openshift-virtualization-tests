@@ -6,6 +6,8 @@ from typing import Any
 from ocp_resources.template import Template
 
 from utilities.constants import (
+    AMD_64,
+    ARM_64,
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
@@ -17,6 +19,7 @@ from utilities.constants import (
     OS_STR,
     OS_VERSION_STR,
     PREFERENCE_STR,
+    S390X,
     TEMPLATE_LABELS_STR,
     WIN_2K16,
     WIN_2K19,
@@ -25,6 +28,8 @@ from utilities.constants import (
     WIN_10,
     WIN_11,
     WORKLOAD_STR,
+    X86_64,
+    ArchImages,
     Images,
 )
 
@@ -151,13 +156,16 @@ CENTOS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
 }
 
 
-def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]) -> list[dict[str, Any]]:
+def generate_os_matrix_dict(
+    os_name: str, supported_operating_systems: list[str], arch: str | None = None
+) -> list[dict[str, Any]]:
     """
     Generate a dictionary of OS matrix for the given OS name and supported operating systems.
 
     Args:
         os_name (str): The name of the OS.
         supported_operating_systems (list[str]): A list of supported operating systems.
+        arch (optional) (str): The architecture of the OS.
 
     Returns:
         list[dict[str, Any]]: A list of dictionaries representing the OS matrix.
@@ -193,7 +201,14 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
     if not base_dict:
         raise ValueError(f"Unsupported OS: {os_name}. Supported: rhel, windows, fedora, centos")
 
-    os_base_class = getattr(Images, os_name.title(), None)
+    if arch:
+        if arch not in (AMD_64, ARM_64, S390X):
+            raise ValueError(f"{arch} architecture in not supported")
+        images_class = getattr(ArchImages, X86_64.upper() if arch == AMD_64 else arch.upper(), None)
+    else:
+        images_class = Images
+
+    os_base_class = getattr(images_class, os_name.title(), None)
     if not os_base_class:
         raise ValueError(
             f"Unsupported OS: {os_name}. "
@@ -240,6 +255,10 @@ def generate_os_matrix_dict(os_name: str, supported_operating_systems: list[str]
                 },
                 DATA_SOURCE_STR: base_version_dict.get(DATA_SOURCE_STR),
             }
+
+            if arch:
+                os_base_dict[TEMPLATE_LABELS_STR]["architecture"] = arch
+                os_base_dict[DATA_SOURCE_STR] = f"{os_base_dict[DATA_SOURCE_STR]}-{arch}"
 
             if CONTAINER_DISK_IMAGE_PATH_STR in base_version_dict:
                 os_base_dict[CONTAINER_DISK_IMAGE_PATH_STR] = base_version_dict[CONTAINER_DISK_IMAGE_PATH_STR]

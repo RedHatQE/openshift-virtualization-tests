@@ -185,6 +185,7 @@ def pytest_addoption(parser):
         "--sysprep-source-matrix",
         help="Sysprep resource types to use (ConfigMap, Secret)",
     )
+    matrix_group.addoption("--cpu-arch", help="CPU architecture to use")
 
     # OS addoption
     os_group.addoption(
@@ -738,19 +739,19 @@ def pytest_sessionstart(session):
 
         # Update OS matrix list with the latest OS if running with os_group
         if session.config.getoption("latest_rhel") and rhel_os_matrix:
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
+            py_config["rhel_os_matrix"] = py_config.get("latest_rhel_os_dict")
             py_config["instance_type_rhel_os_matrix"] = [
                 utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
             ]
 
         if session.config.getoption("latest_windows") and windows_os_matrix:
-            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
+            py_config["windows_os_matrix"] = py_config.get("latest_windows_os_dict")
 
-        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
-            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
+        if session.config.getoption("latest_centos") and (py_config.get("centos_os_matrix")):
+            py_config["centos_os_matrix"] = py_config.get("latest_centos_os_dict")
 
-        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
-            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
+        if session.config.getoption("latest_fedora") and (py_config.get("fedora_os_matrix")):
+            py_config["fedora_os_matrix"] = py_config.get("latest_fedora_os_dict")
 
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
@@ -770,6 +771,23 @@ def pytest_sessionstart(session):
     # Save the default storage_class_matrix before it is updated
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
+
+    if cpu_arch := session.config.getoption("--cpu-arch"):
+        py_config["cpu_arch"] = cpu_arch
+
+        py_config["rhel_os_matrix"] = py_config["os_matrix"][cpu_arch].get("rhel")
+        py_config["fedora_os_matrix"] = py_config["os_matrix"][cpu_arch].get("fedora")
+        py_config["centos_os_matrix"] = py_config["os_matrix"][cpu_arch].get("centos")
+        py_config["windows_os_matrix"] = py_config["os_matrix"][cpu_arch].get("windows")
+
+        py_config["latest_rhel_os_dict"] = py_config["latest_os"][cpu_arch].get("rhel")
+        py_config["latest_fedora_os_dict"] = py_config["latest_os"][cpu_arch].get("fedora")
+        py_config["latest_centos_os_dict"] = py_config["latest_os"][cpu_arch].get("centos")
+        py_config["latest_windows_os_dict"] = py_config["latest_os"][cpu_arch].get("windows")
+
+        py_config["instance_type_rhel_os_matrix"] = py_config["instance_type_matrix"][cpu_arch].get("rhel")
+        py_config["instance_type_fedora_os_matrix"] = py_config["instance_type_matrix"][cpu_arch].get("fedora")
+        py_config["instance_type_centos_os_matrix"] = py_config["instance_type_matrix"][cpu_arch].get("centos")
 
     _update_os_related_config()
 
