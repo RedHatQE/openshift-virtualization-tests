@@ -20,13 +20,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def vm(request, cluster_cpu_model_scope_function, unprivileged_client, namespace):
+def vm(request, modern_cpu_for_migration, unprivileged_client, namespace):
     name = f"vm-{request.param['vm_name']}-machine-type"
 
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        cpu_model=modern_cpu_for_migration,
         client=unprivileged_client,
         machine_type=request.param.get("machine_type"),
     ) as vm:
