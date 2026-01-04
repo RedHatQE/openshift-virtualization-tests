@@ -243,7 +243,7 @@ def data_volume(
         consume_wffc = False
         bind_immediate = True
         try:
-            golden_image = list(DataVolume.get(client=admin_client, name=dv_name, namespace=dv_namespace))
+            golden_image = list(DataVolume.get(client=client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
