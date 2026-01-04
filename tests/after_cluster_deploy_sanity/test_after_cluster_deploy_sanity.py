@@ -28,7 +28,7 @@ pytestmark = [pytest.mark.conformance]
 def wait_for_terminating_pvc(admin_client):
     def _get_terminating_pvcs():
         terminating_pvcs = []
-        for pvc in PersistentVolumeClaim.get(dyn_client=admin_client):
+        for pvc in PersistentVolumeClaim.get(client=admin_client):
             if pvc.instance.status.phase == pvc.Status.TERMINATING:
                 terminating_pvcs.append(pvc.name)
         return terminating_pvcs
@@ -105,7 +105,7 @@ def test_boot_volume_health(
 def test_pvc_health(admin_client):
     not_bound = []
     is_terminating_pvcs = False
-    for pvc in PersistentVolumeClaim.get(dyn_client=admin_client):
+    for pvc in PersistentVolumeClaim.get(client=admin_client):
         pvc_instance = pvc.instance
         pvc_status = pvc_instance.status.phase
         LOGGER.info(f"PVC {pvc.name} is in {pvc_status} state")
@@ -128,7 +128,7 @@ def test_pvc_health(admin_client):
 def test_namespace_health(admin_client):
     if errored_namespaces := [
         f"{ns.name} found in status {ns.status}"
-        for ns in Namespace.get(dyn_client=admin_client)
+        for ns in Namespace.get(client=admin_client)
         if ns.exists and ns.status != Namespace.Status.ACTIVE
     ]:
         pytest.fail(f"{errored_namespaces} found in not active state")
@@ -143,7 +143,7 @@ def test_cluster_operator_health(admin_client):
 @pytest.mark.cluster_health_check
 def test_machine_config_pool_health(admin_client):
     failed_mcps = []
-    for mcp in MachineConfigPool.get(dyn_client=admin_client):
+    for mcp in MachineConfigPool.get(client=admin_client):
         mcp_instance = mcp.instance
         ready_count = mcp_instance.status.readyMachineCount
         machine_count = mcp_instance.status.machineCount

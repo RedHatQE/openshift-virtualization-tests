@@ -83,7 +83,7 @@ def wait_for_pod_running_by_prefix(
         wait_timeout=timeout,
         sleep=TIMEOUT_5SEC,
         func=get_pod_by_name_prefix,
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=pod_prefix,
         namespace=namespace_name,
         get_all=True,

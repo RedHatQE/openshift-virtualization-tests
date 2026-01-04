@@ -346,7 +346,7 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
         ApiException,
         match=error_msg,
     ):
-        list(resource.get(dyn_client=unprivileged_client, namespace=namespace.name))
+        list(resource.get(client=unprivileged_client, namespace=namespace.name))
         return
 
 

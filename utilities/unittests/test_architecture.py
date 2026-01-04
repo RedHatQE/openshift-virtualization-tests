@@ -140,4 +140,4 @@ class TestGetClusterArchitecture:
 
             # Verify cache_admin_client was called and passed to Node.get
             mock_cache_client.assert_called_once()
-            mock_node_class.get.assert_called_once_with(dyn_client=mock_client)
+            mock_node_class.get.assert_called_once_with(client=mock_client)

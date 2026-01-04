@@ -45,17 +45,17 @@ def get_templates_resources_names_dict(templates):
     return resource_dict
 
 
-def verify_resource_not_in_ns(resource_type, namespace, dyn_client):
-    resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
+def verify_resource_not_in_ns(resource_type, namespace, client):
+    resources = resource_type.get(client=client, namespace=namespace)
     resources_names = {resource.name for resource in resources}
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
 
 
-def verify_resource_in_ns(expected_resource_names, namespace, dyn_client, resource_type, ready_condition=None):
+def verify_resource_in_ns(expected_resource_names, namespace, client, resource_type, ready_condition=None):
     """
     Verify that resources exist in expected_namespace and in ready status.
     """
-    resources = resource_type.get(dyn_client=dyn_client, namespace=namespace)
+    resources = resource_type.get(client=client, namespace=namespace)
     resources_names = {resource.name for resource in resources}
     missing_resources_names = expected_resource_names - resources_names
     assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
@@ -75,7 +75,7 @@ def wait_for_any_resource_exists_in_namespace(client, namespace, resource_types)
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_30SEC,
         func=lambda: any(
-            list(resource_type.get(dyn_client=client, namespace=namespace)) for resource_type in resource_types
+            list(resource_type.get(client=client, namespace=namespace)) for resource_type in resource_types
         ),
     ):
         if sample:
@@ -202,7 +202,7 @@ class TestDefaultCommonTemplates:
         verify_resource_in_ns(
             expected_resource_names=default_common_templates_related_resources[resource_type.kind],
             namespace=custom_golden_images_namespace.name,
-            dyn_client=admin_client,
+            client=admin_client,
             resource_type=resource_type,
             ready_condition=ready_condition,
         )
@@ -210,7 +210,7 @@ class TestDefaultCommonTemplates:
             verify_resource_not_in_ns(
                 resource_type=resource_type,
                 namespace=golden_images_namespace.name,
-                dyn_client=admin_client,
+                client=admin_client,
             )
 
     @pytest.mark.polarion("CNV-11477")

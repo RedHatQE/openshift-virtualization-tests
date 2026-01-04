@@ -266,7 +266,7 @@ def hotplugged_target_pod(namespace, unprivileged_client, hotplug_vm_for_aaq_tes
         pod_prefix=f"virt-launcher-{hotplug_vm_for_aaq_test.name}",
         namespace=namespace.name,
         get_all=True,
-        dyn_client=unprivileged_client,
+        client=unprivileged_client,
     )
     sample = []
     try:

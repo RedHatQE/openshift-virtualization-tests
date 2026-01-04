@@ -28,13 +28,13 @@ from utilities.infra import get_subscription
 LOGGER = logging.getLogger(__name__)
 
 
-def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
+def wait_for_operator_condition(client, hco_namespace, name, upgradable):
     LOGGER.info(f"Wait for the operator condition. Name:{name} Upgradable:{upgradable}")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30MIN,
         sleep=TIMEOUT_10SEC,
         func=OperatorCondition.get,
-        dyn_client=dyn_client,
+        client=client,
         namespace=hco_namespace,
         name=name,
     )
@@ -57,7 +57,7 @@ def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
 
 
 def wait_for_install_plan(
-    dyn_client: DynamicClient,
+    client: DynamicClient,
     hco_namespace: str,
     hco_target_csv_name: str,
     is_production_source: bool,
@@ -70,12 +70,12 @@ def wait_for_install_plan(
             ConflictError: [],
             ResourceNotFoundError: [],
         },  # Ignore ConflictError during install plan reconciliation
-        dyn_client=dyn_client,
+        client=client,
         hco_namespace=hco_namespace,
         hco_target_version=hco_target_csv_name,
     )
     subscription = get_subscription(
-        admin_client=dyn_client,
+        admin_client=client,
         namespace=hco_namespace,
         subscription_name=HCO_SUBSCRIPTION,
     )
@@ -130,7 +130,7 @@ def get_network_addon_config(admin_client):
     Returns:
         Generator of NetworkAddonsConfig: Generator of NetworkAddonsConfig
     """
-    for nao in NetworkAddonsConfig.get(dyn_client=admin_client, name="cluster"):
+    for nao in NetworkAddonsConfig.get(client=admin_client, name="cluster"):
         return nao
 
 

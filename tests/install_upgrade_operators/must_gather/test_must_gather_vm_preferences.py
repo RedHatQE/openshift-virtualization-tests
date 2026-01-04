@@ -36,7 +36,7 @@ class TestInstanceTypesAndPreferencesCollected:
     ):
         for resource_type in resource_types_and_pathes_dict:
             check_list_of_resources(
-                dyn_client=admin_client,
+                client=admin_client,
                 resource_type=resource_type,
                 temp_dir=gathered_instancetypes,
                 resource_path=resource_types_and_pathes_dict[resource_type],

@@ -41,7 +41,7 @@ class TestImageGathering:
     )
     def test_image_gather(self, admin_client, gathered_images, resource, resource_path):
         check_list_of_resources(
-            dyn_client=admin_client,
+            client=admin_client,
             resource_type=resource,
             temp_dir=gathered_images,
             resource_path=resource_path,

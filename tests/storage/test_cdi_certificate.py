@@ -64,7 +64,7 @@ def x509_cert_is_valid(cert, seconds):
 
 @pytest.fixture(scope="module")
 def secrets(admin_client, hco_namespace):
-    return Secret.get(dyn_client=admin_client, namespace=hco_namespace.name)
+    return Secret.get(client=admin_client, namespace=hco_namespace.name)
 
 
 @pytest.fixture()

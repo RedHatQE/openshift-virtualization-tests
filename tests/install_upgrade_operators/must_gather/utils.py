@@ -105,7 +105,7 @@ def compare_resources(resource_instance, temp_dir, resource_path, checks):
 
 
 def check_list_of_resources(
-    dyn_client,
+    client,
     resource_type,
     temp_dir,
     resource_path,
@@ -114,7 +114,7 @@ def check_list_of_resources(
     label_selector=None,
     filter_resource=None,
 ):
-    list_of_resources = resource_type.get(dyn_client=dyn_client, namespace=namespace, label_selector=label_selector)
+    list_of_resources = resource_type.get(client=client, namespace=namespace, label_selector=label_selector)
     assert list_of_resources, f"{resource_type} is empty"
     for resource_instance in list_of_resources:
         if filter_resource is None or filter_resource in resource_instance.name:
@@ -248,7 +248,7 @@ def check_logs(cnv_must_gather, running_hco_containers, namespace, label_selecto
             assert log_file in pod_log, f"Log file are different for pod/container {pod.name}/{container_name}"
 
 
-def compare_webhook_svc_contents(webhook_resources, cnv_must_gather, dyn_client, checks):
+def compare_webhook_svc_contents(webhook_resources, cnv_must_gather, client, checks):
     for webhook_resource in webhook_resources:
         if not webhook_resource.instance.webhooks:
             if webhook_resource.labels.get(PART_OF_LABEL_KEY) == HCO_PART_OF_LABEL_VALUE:
@@ -273,7 +273,7 @@ def compare_webhook_svc_contents(webhook_resources, cnv_must_gather, dyn_client,
         if webhooks_resource_instance_service:
             webhooks_svc_name = webhooks_resource_instance_service["name"]
             webhooks_svc_namespace = webhooks_resource_instance_service["namespace"]
-            svc_resources = list(Service.get(dyn_client=dyn_client, namespace=webhooks_svc_namespace))
+            svc_resources = list(Service.get(client=client, namespace=webhooks_svc_namespace))
             for svc_resource in svc_resources:
                 if webhooks_svc_name == svc_resource.name:
                     compare_resource_values(resource=svc_resource, path=service_file, checks=checks)

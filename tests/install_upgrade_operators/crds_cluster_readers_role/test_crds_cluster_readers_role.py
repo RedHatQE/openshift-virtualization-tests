@@ -45,7 +45,7 @@ def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
     """
     return [
         crd
-        for crd in CustomResourceDefinition.get(dyn_client=admin_client)
+        for crd in CustomResourceDefinition.get(client=admin_client)
         if crd.name.endswith(Resource.ApiGroup.KUBEVIRT_IO)
     ]
 

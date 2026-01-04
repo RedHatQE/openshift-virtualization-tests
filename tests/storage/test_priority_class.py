@@ -75,7 +75,7 @@ def vm_with_priority_class(
 
 @pytest.fixture()
 def importer_pod(admin_client, namespace):
-    return get_importer_pod(dyn_client=admin_client, namespace=namespace.name)
+    return get_importer_pod(client=admin_client, namespace=namespace.name)
 
 
 @pytest.mark.sno

@@ -142,7 +142,7 @@ def test_regular_user_can_list_all_pvc_in_ns(
     LOGGER.info("Make sure regular user have permissions to view PVC's in golden image NS")
     assert list(
         PersistentVolumeClaim.get(
-            dyn_client=unprivileged_client,
+            client=unprivileged_client,
             namespace=golden_images_namespace.name,
             field_selector=f"metadata.name=={golden_image_data_volume_scope_module.name}",
         )

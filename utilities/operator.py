@@ -378,7 +378,7 @@ def wait_for_catalogsource_ready(admin_client, catalog_name):
         not_running = [
             _pod.name
             for _pod in utilities.infra.get_pods(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=Namespace(name=py_config["marketplace_namespace"]),
                 label=f"olm.catalogSource={catalog_name}",
             )
@@ -582,13 +582,13 @@ def create_operator(operator_class, operator_name, admin_client, namespace_name=
     return operator
 
 
-def wait_for_package_manifest_to_exist(dyn_client, cr_name, catalog_name):
+def wait_for_package_manifest_to_exist(client, cr_name, catalog_name):
     LOGGER.info(f"Wait for package manifest creation for {cr_name} associated with catalog source: {catalog_name}")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_10MIN,
         sleep=10,
         func=utilities.infra.get_raw_package_manifest,
-        admin_client=dyn_client,
+        admin_client=client,
         name=cr_name,
         catalog_source=catalog_name,
     )
@@ -601,7 +601,7 @@ def wait_for_package_manifest_to_exist(dyn_client, cr_name, catalog_name):
         raise
 
 
-def update_image_in_catalog_source(dyn_client, image, catalog_source_name, cr_name):
+def update_image_in_catalog_source(client, image, catalog_source_name, cr_name):
     catalog = get_catalog_source(catalog_name=catalog_source_name)
     if catalog:
         LOGGER.info(f"Updating {catalog_source_name} image to {image}")
@@ -611,10 +611,10 @@ def update_image_in_catalog_source(dyn_client, image, catalog_source_name, cr_na
         create_catalog_source(
             catalog_name=catalog_source_name,
             image=image,
-            admin_client=dyn_client,
+            admin_client=client,
         )
         LOGGER.info(f"Waiting for {cr_name} packagemanifest associated with {catalog_source_name} to appear")
-        wait_for_package_manifest_to_exist(dyn_client=dyn_client, catalog_name=catalog_source_name, cr_name=cr_name)
+        wait_for_package_manifest_to_exist(client=client, catalog_name=catalog_source_name, cr_name=cr_name)
 
 
 def update_subscription_source(
@@ -644,7 +644,7 @@ def cluster_with_icsp():
 def get_cluster_operator_status_conditions(admin_client, operator_conditions=None):
     operator_conditions = operator_conditions or DEFAULT_RESOURCE_CONDITIONS
     cluster_operator_status = {}
-    for cluster_operator in list(ClusterOperator.get(dyn_client=admin_client)):
+    for cluster_operator in list(ClusterOperator.get(client=admin_client)):
         operator_name = cluster_operator.name
         cluster_operator_status[operator_name] = {}
         for condition in cluster_operator.instance.get("status", {}).get("conditions", []):

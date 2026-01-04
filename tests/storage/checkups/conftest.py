@@ -157,7 +157,7 @@ def checkup_job(
             )
         except (TimeoutExpiredError, ConditionError) as e:
             job_pods = get_pods(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=checkups_namespace,
                 label=f"job-name={job.name}",
             )

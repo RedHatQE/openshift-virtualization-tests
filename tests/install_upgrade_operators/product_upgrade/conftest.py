@@ -142,7 +142,7 @@ def updated_custom_hco_catalog_source_image(
         image_url = f"{cnv_image_url.split('iib:')[0]}iib@{image_info['digest']}"
     LOGGER.info(f"Deployment is not from production; updating HCO catalog source image to {image_url}.")
     update_image_in_catalog_source(
-        dyn_client=admin_client,
+        client=admin_client,
         image=image_url,
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=py_config["hco_cr_name"],
@@ -162,7 +162,7 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 @pytest.fixture()
 def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
     approve_cnv_upgrade_install_plan(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
@@ -201,7 +201,7 @@ def target_images_for_pods_not_managed_by_hco(related_images_from_target_csv):
 @pytest.fixture()
 def started_cnv_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=False,
@@ -226,7 +226,7 @@ def upgraded_cnv(
     )
     LOGGER.info(f"Wait for operator condition {hco_target_csv_name} to reach upgradable: True")
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=True,
@@ -234,20 +234,20 @@ def upgraded_cnv(
 
     LOGGER.info("Wait for all openshift-virtualization operator pod replacement:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=target_operator_pods_images.keys(),
         related_images=target_operator_pods_images.values(),
     )
     LOGGER.info("Wait for non-hco managed pods to be replaced:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=[POD_STR_NOT_MANAGED_BY_HCO],
         related_images=target_images_for_pods_not_managed_by_hco,
     )
     wait_for_hco_upgrade(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace,
         cnv_target_version=cnv_target_version,
     )

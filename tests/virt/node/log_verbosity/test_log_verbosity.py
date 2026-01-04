@@ -32,7 +32,7 @@ def virt_component_pods(admin_client, hco_namespace):
     for virt_component in [VIRT_HANDLER, VIRT_API, VIRT_CONTROLLER]:
         virt_pods_list.extend(
             get_pods(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=hco_namespace,
                 label=f"{Pod.ApiGroup.KUBEVIRT_IO}={virt_component}",
             )

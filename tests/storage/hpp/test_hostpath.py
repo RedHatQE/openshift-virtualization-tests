@@ -134,7 +134,7 @@ def hpp_clusterrolebinding(hpp_clusterrole_version_suffix):
 @pytest.fixture(scope="module")
 def hpp_operator_pod(admin_client, hco_namespace):
     yield get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=HOSTPATH_PROVISIONER_OPERATOR,
         namespace=hco_namespace.name,
     )
@@ -143,9 +143,7 @@ def hpp_operator_pod(admin_client, hco_namespace):
 @pytest.fixture(scope="module")
 def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
     return [
-        dp
-        for dp in Deployment.get(dyn_client=admin_client, namespace=hco_namespace.name)
-        if dp.name.startswith(HPP_POOL)
+        dp for dp in Deployment.get(client=admin_client, namespace=hco_namespace.name) if dp.name.startswith(HPP_POOL)
     ]
 
 

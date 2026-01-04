@@ -373,7 +373,7 @@ def traffic_management_service_mesh_convergence(
 @pytest.fixture(scope="class")
 def service_mesh_ingress_service_addr(admin_client, istio_system_namespace):
     for svc in Service.get(
-        dyn_client=admin_client,
+        client=admin_client,
         name=INGRESS_SERVICE,
         namespace=istio_system_namespace.metadata.name,
     ):

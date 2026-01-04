@@ -248,7 +248,7 @@ def set_permissions(
 
 
 def get_importer_pod(
-    dyn_client,
+    client,
     namespace,
 ):
     try:
@@ -256,7 +256,7 @@ def get_importer_pod(
             wait_timeout=30,
             sleep=1,
             func=get_pod_by_name_prefix,
-            dyn_client=dyn_client,
+            client=client,
             pod_prefix="importer",
             namespace=namespace,
         ):

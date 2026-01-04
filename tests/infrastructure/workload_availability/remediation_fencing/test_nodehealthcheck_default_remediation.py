@@ -43,7 +43,7 @@ def created_nodehealthcheck_snr_object(admin_client, snr_remediation_template):
 
 @pytest.fixture(scope="module")
 def snr_remediation_template(admin_client, checkup_nodehealthcheck_operator_deployment):
-    template = next(SelfNodeRemediationTemplate.get(namespace=REMEDIATION_OPERATOR_NAMESPACE, dyn_client=admin_client))
+    template = next(SelfNodeRemediationTemplate.get(namespace=REMEDIATION_OPERATOR_NAMESPACE, client=admin_client))
     return {
         "apiVersion": template.api_version,
         "name": template.name,

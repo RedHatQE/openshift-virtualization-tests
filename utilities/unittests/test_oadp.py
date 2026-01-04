@@ -42,7 +42,7 @@ class TestDeleteVeleroResource:
 
         delete_velero_resource(resource=mock_resource, client=mock_client)
 
-        mock_get_pod.assert_called_once_with(dyn_client=mock_client, pod_prefix="velero", namespace="openshift-adp")
+        mock_get_pod.assert_called_once_with(client=mock_client, pod_prefix="velero", namespace="openshift-adp")
         mock_pod.execute.assert_called_once_with(command=["./velero", "delete", "backup", "test-backup", "--confirm"])
 
     @patch("utilities.oadp.get_pod_by_name_prefix")
@@ -59,7 +59,7 @@ class TestDeleteVeleroResource:
 
         delete_velero_resource(resource=mock_resource, client=mock_client)
 
-        mock_get_pod.assert_called_once_with(dyn_client=mock_client, pod_prefix="velero", namespace="openshift-adp")
+        mock_get_pod.assert_called_once_with(client=mock_client, pod_prefix="velero", namespace="openshift-adp")
         mock_pod.execute.assert_called_once_with(command=["./velero", "delete", "restore", "test-restore", "--confirm"])
 
     @patch("utilities.oadp.get_pod_by_name_prefix")

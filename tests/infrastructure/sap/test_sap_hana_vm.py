@@ -327,7 +327,7 @@ def sriov_network_node_policy(admin_client, sriov_namespace):
     sriov_available_node_policies = [
         policy
         for policy in SriovNetworkNodePolicy.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=sriov_namespace.name,
         )
         if "sriov-network-policy" in policy.name

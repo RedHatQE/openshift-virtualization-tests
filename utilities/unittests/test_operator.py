@@ -1789,14 +1789,14 @@ class TestWaitForPackageManifestToExist:
         mock_sampler,
     ):
         """Test waiting for package manifest to exist"""
-        mock_dyn_client = MagicMock()
+        mock_client = MagicMock()
 
         mock_sampler_instance = MagicMock()
         mock_sampler_instance.__iter__ = MagicMock(return_value=iter([{"name": "test"}]))
         mock_sampler.return_value = mock_sampler_instance
 
         wait_for_package_manifest_to_exist(
-            mock_dyn_client,
+            mock_client,
             "test-cr",
             "test-catalog",
         )
@@ -1844,7 +1844,7 @@ class TestUpdateImageInCatalogSource:
         mock_wait_manifest,
     ):
         """Test updating image in existing catalog source"""
-        mock_dyn_client = MagicMock()
+        mock_client = MagicMock()
 
         mock_catalog = MagicMock()
         mock_get_catalog.return_value = mock_catalog
@@ -1853,7 +1853,7 @@ class TestUpdateImageInCatalogSource:
         mock_editor_class.return_value = mock_editor
 
         update_image_in_catalog_source(
-            mock_dyn_client,
+            mock_client,
             "registry.io/catalog:v2",
             "test-catalog",
             "test-cr",
@@ -1872,12 +1872,12 @@ class TestUpdateImageInCatalogSource:
         mock_wait_manifest,
     ):
         """Test creating new catalog source when it doesn't exist"""
-        mock_dyn_client = MagicMock()
+        mock_client = MagicMock()
 
         mock_get_catalog.return_value = None
 
         update_image_in_catalog_source(
-            mock_dyn_client,
+            mock_client,
             "registry.io/catalog:v2",
             "test-catalog",
             "test-cr",

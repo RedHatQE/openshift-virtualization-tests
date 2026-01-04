@@ -195,7 +195,7 @@ def update_vm_instancetype_name(vm, instance_type_name):
 
 
 def clean_up_migration_jobs(client, vm):
-    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=client, namespace=vm.namespace):
+    for migration_job in VirtualMachineInstanceMigration.get(client=client, namespace=vm.namespace):
         migration_job.clean_up()
 
 

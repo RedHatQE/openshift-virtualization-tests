@@ -21,7 +21,7 @@ def delete_replica_set_by_prefix(replica_set_prefix: str, namespace: str, admin_
 def get_replica_set_by_name_prefix(admin_client: DynamicClient, replica_set_prefix: str, namespace: str) -> list:
     replica_sets = [
         replica
-        for replica in ReplicaSet.get(dyn_client=admin_client, namespace=namespace)
+        for replica in ReplicaSet.get(client=admin_client, namespace=namespace)
         if replica.name.startswith(replica_set_prefix)
     ]
     assert replica_sets, f"A ReplicaSet with the {replica_set_prefix} prefix does not exist"

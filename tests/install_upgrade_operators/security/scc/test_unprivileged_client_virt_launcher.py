@@ -28,7 +28,7 @@ def developer_vm(
 def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client):
     return next(
         Pod.get(
-            dyn_client=unprivileged_client,
+            client=unprivileged_client,
             namespace=namespace.name,
             name=developer_vm.vmi.virt_launcher_pod.instance.metadata.name,
         )
