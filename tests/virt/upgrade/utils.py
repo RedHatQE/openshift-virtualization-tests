@@ -78,7 +78,7 @@ def get_workload_update_migrations_list(
 ) -> list[VirtualMachineInstanceMigration]:
     workload_migrations: dict[str, VirtualMachineInstanceMigration] = {}
     for namespace in namespaces:
-        for migration_job in list(VirtualMachineInstanceMigration.get(dyn_client=admin_client, namespace=namespace)):
+        for migration_job in list(VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace)):
             if migration_job.name.startswith("kubevirt-workload-update"):
                 job_instance = migration_job.instance
                 vmi_name = job_instance.spec.vmiName

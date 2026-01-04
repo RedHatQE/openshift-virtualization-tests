@@ -193,7 +193,7 @@ def delete_hpp_pool_pvs():
 def get_utility_pod_on_specific_node(admin_client, node):
     return [
         pod
-        for pod in Pod.get(dyn_client=admin_client, label_selector="cnv-test=utility-pods-for-hpp-test")
+        for pod in Pod.get(client=admin_client, label_selector="cnv-test=utility-pods-for-hpp-test")
         if pod.node.name == node
     ][0]
 
