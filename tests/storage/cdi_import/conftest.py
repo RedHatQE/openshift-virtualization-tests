@@ -114,6 +114,7 @@ def dv_from_http_import(
         size=request.param.get("size", DEFAULT_DV_SIZE),
         storage_class=storage_class_name_scope_module,
     ) as dv:
+        dv.pvc.wait()
         yield dv
 
 
