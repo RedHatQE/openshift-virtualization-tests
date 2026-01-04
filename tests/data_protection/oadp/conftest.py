@@ -3,7 +3,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 
 from tests.data_protection.oadp.utils import (
-    VeleroRestore,
     is_storage_class_support_volume_mode,
 )
 from utilities.constants import (
@@ -18,6 +17,7 @@ from utilities.constants import (
 from utilities.infra import create_ns
 from utilities.oadp import (
     VeleroBackup,
+    VeleroRestore,
     create_rhel_vm,
 )
 from utilities.storage import (
