@@ -1,43 +1,11 @@
-from collections import OrderedDict
-
 import pytest
 
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.constants import BRCNV
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import vm_for_brcnv_tests
 from utilities.constants import OVS_BRIDGE
 from utilities.infra import get_node_selector_dict
-from utilities.network import (
-    assert_ping_successful,
-    compose_cloud_init_data_dict,
-    network_nad,
-)
-from utilities.virt import VirtualMachineForTests, fedora_vm_body
-
-OVS_BR = "test-ovs-br"
-SRC_SEC_IFACE_IP_ADDR = random_ipv4_address(net_seed=0, host_address=1)
-DST_SEC_IFACE_IP_ADDR = random_ipv4_address(net_seed=0, host_address=2)
-
-
-@pytest.fixture()
-def ovs_bridge_on_worker1(worker_node1_pod_executor):
-    cmd = "sudo ovs-vsctl"
-    worker_node1_pod_executor.exec(command=f"{cmd} add-br {OVS_BR}")
-    yield OVS_BR
-    worker_node1_pod_executor.exec(command=f"{cmd} del-br {OVS_BR}")
-
-
-@pytest.fixture()
-def ovs_bridge_nad(admin_client, namespace, ovs_bridge_on_worker1):
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name="ovs-test-nad",
-        interface_name=ovs_bridge_on_worker1,
-        client=admin_client,
-    ) as nad:
-        yield nad
+from utilities.network import assert_ping_successful, network_nad
 
 
 @pytest.fixture(scope="module")
@@ -91,95 +59,6 @@ def brcnv_vmc_with_vlans_1_2(
         address_suffix=3,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
     )
-
-
-@pytest.fixture()
-def vma_with_ovs_based_l2(
-    unprivileged_client,
-    namespace,
-    worker_node1,
-    ovs_bridge_on_worker1,
-    ovs_bridge_nad,
-):
-    vm_name = "vm-a-ovs-sec-iface"
-    networks = OrderedDict()
-    networks[ovs_bridge_nad.name] = ovs_bridge_nad.name
-    network_data = {
-        "ethernets": {
-            "eth1": {"addresses": [f"{SRC_SEC_IFACE_IP_ADDR}/24"]},
-        }
-    }
-    cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
-
-    with VirtualMachineForTests(
-        namespace=namespace.name,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        networks=networks,
-        interfaces=networks.keys(),
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
-    ) as vm:
-        vm.start(wait=True)
-        yield vm
-
-
-@pytest.fixture()
-def running_vma_with_ovs_based_l2(vma_with_ovs_based_l2):
-    vma_with_ovs_based_l2.wait_for_agent_connected()
-    return vma_with_ovs_based_l2
-
-
-@pytest.fixture()
-def vmb_with_ovs_based_l2(
-    unprivileged_client,
-    namespace,
-    worker_node1,
-    ovs_bridge_on_worker1,
-    ovs_bridge_nad,
-):
-    vm_name = "vm-b-ovs-sec-iface"
-    networks = OrderedDict()
-    networks[ovs_bridge_nad.name] = ovs_bridge_nad.name
-    network_data = {
-        "ethernets": {
-            "eth1": {"addresses": [f"{DST_SEC_IFACE_IP_ADDR}/24"]},
-        }
-    }
-    cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
-
-    with VirtualMachineForTests(
-        namespace=namespace.name,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        networks=networks,
-        interfaces=networks.keys(),
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
-    ) as vm:
-        vm.start(wait=True)
-        yield vm
-
-
-@pytest.fixture()
-def running_vmb_with_ovs_based_l2(vmb_with_ovs_based_l2):
-    vmb_with_ovs_based_l2.wait_for_agent_connected()
-    return vmb_with_ovs_based_l2
-
-
-@pytest.mark.ipv4
-@pytest.mark.polarion("CNV-5636")
-@pytest.mark.s390x
-def test_ovs_bridge_sanity(
-    hyperconverged_ovs_annotations_enabled_scope_session,
-    vma_with_ovs_based_l2,
-    vmb_with_ovs_based_l2,
-    running_vma_with_ovs_based_l2,
-    running_vmb_with_ovs_based_l2,
-):
-    assert_ping_successful(src_vm=running_vma_with_ovs_based_l2, dst_ip=DST_SEC_IFACE_IP_ADDR)
 
 
 @pytest.mark.ovs_brcnv

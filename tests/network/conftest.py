@@ -27,7 +27,6 @@ from utilities.constants import (
     NamespacesNames,
 )
 from utilities.infra import (
-    ExecCommandOnPod,
     get_deployment_by_name,
     get_node_selector_dict,
     wait_for_pods_running,
@@ -67,11 +66,6 @@ def virt_handler_pod(admin_client):
 @pytest.fixture(scope="session")
 def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv4_supported_cluster and ipv6_supported_cluster
-
-
-@pytest.fixture()
-def worker_node1_pod_executor(workers_utility_pods, worker_node1):
-    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
 
 
 @pytest.fixture(scope="module")
