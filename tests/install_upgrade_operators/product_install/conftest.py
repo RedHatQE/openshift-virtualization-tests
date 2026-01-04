@@ -274,7 +274,7 @@ def hpp_volume_size(admin_client, cluster_backend_storage):
     hpp_volume_size = "70Gi"
     if cluster_backend_storage == LOCAL_BLOCK_HPP:
         persistent_volumes = PersistentVolume.get(
-            dyn_client=admin_client,
+            client=admin_client,
             label_selector=f"storage.openshift.com/local-volume-owner-name={cluster_backend_storage}",
         )
         for persistent_volume in persistent_volumes:

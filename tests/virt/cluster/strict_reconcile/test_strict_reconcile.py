@@ -222,7 +222,7 @@ def verify_reconciled_secret_resource(resource, resource_dict):
 def test_strict_reconcile_resources(admin_client, hco_namespace, resource_type, managed_resource_name):
     """Test that virt-operator strictly reconciles managed KubeVirt resources successfully"""
     for resource in resource_type.get(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=hco_namespace.name,
         name=managed_resource_name,
     ):

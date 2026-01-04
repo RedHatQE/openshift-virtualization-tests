@@ -123,7 +123,7 @@ def collected_vm_details_must_gather_function_scope(
 
 @pytest.fixture(scope="module")
 def custom_resource_definitions(admin_client):
-    yield list(CustomResourceDefinition.get(dyn_client=admin_client))
+    yield list(CustomResourceDefinition.get(client=admin_client))
 
 
 @pytest.fixture(scope="module")
@@ -176,7 +176,7 @@ def must_gather_bridge(admin_client, worker_node1):
 @pytest.fixture(scope="module")
 def running_hco_containers(admin_client, hco_namespace):
     pods = []
-    for pod in Pod.get(dyn_client=admin_client, namespace=hco_namespace.name):
+    for pod in Pod.get(client=admin_client, namespace=hco_namespace.name):
         for container in pod.instance["status"].get("containerStatuses", []):
             if container["ready"]:
                 pods.append((pod, container))
@@ -240,7 +240,7 @@ def must_gather_vm_scope_class(
 @pytest.fixture(scope="function")
 def resource_type(request, admin_client):
     resource_type = request.param
-    if not next(resource_type.get(dyn_client=admin_client), None):
+    if not next(resource_type.get(client=admin_client), None):
         raise MissingResourceException(resource_type.__name__)
     return resource_type
 
