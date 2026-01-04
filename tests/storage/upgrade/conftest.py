@@ -141,6 +141,7 @@ def fedora_vm_for_hotplug_upg(upgrade_namespace_scope_session, cluster_common_no
         namespace=upgrade_namespace_scope_session.name,
         body=fedora_vm_body(name=name),
         cpu_model=cluster_common_node_cpu,
+        client=upgrade_namespace_scope_session.client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -167,9 +168,9 @@ def fedora_vm_for_hotplug_upg_ssh_connectivity(fedora_vm_for_hotplug_upg):
 
 
 @pytest.fixture(scope="session")
-def skip_if_config_default_storage_class_access_mode_rwo():
+def skip_if_config_default_storage_class_access_mode_rwo(admin_client):
     storage_class = py_config["default_storage_class"]
-    access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+    access_modes = StorageProfile(name=storage_class, client=admin_client).first_claim_property_set_access_modes()
     assert access_modes, f"Could not get the access mode from the {storage_class} storage profile"
     access_mode = access_modes[0]
     LOGGER.info(f"Storage class '{storage_class}' has access mode: '{access_mode}'")

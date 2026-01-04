@@ -27,7 +27,7 @@ def virt_pods(request, admin_client, hco_namespace):
     podprefix = request.param
     pods_list = list(
         Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
             label_selector=f"kubevirt.io={podprefix}",
         )

@@ -92,7 +92,7 @@ def wait_dv_and_get_importer(dv, admin_client):
         timeout=TIMEOUT_1MIN,
         stop_status=DataVolume.Status.SUCCEEDED,
     )
-    return get_importer_pod(dyn_client=admin_client, namespace=dv.namespace)
+    return get_importer_pod(client=admin_client, namespace=dv.namespace)
 
 
 @pytest.fixture()
@@ -520,7 +520,7 @@ def test_vm_from_dv_on_different_node(
     It applies to shared storage like Ceph or NFS. It cannot be tested on local storage like HPP.
     """
     importer_pod = get_importer_pod(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=data_volume_multi_storage_scope_function.namespace,
     )
     importer_node_name = get_importer_pod_node(importer_pod=importer_pod)
