@@ -94,7 +94,7 @@ def custom_data_import_cron_scope_function(
         sleep=5,
         func=lambda: list(
             DataImportCron.get(
-                dyn_client=admin_client,
+                client=admin_client,
                 name=expected_data_import_cron_name,
                 namespace=golden_images_namespace.name,
             )
@@ -111,7 +111,7 @@ def custom_data_source_scope_function(admin_client, custom_data_import_cron_scop
     try:
         return list(
             DataSource.get(
-                dyn_client=admin_client,
+                client=admin_client,
                 name=custom_data_source_name,
                 namespace=custom_data_import_cron_scope_function.namespace,
             )
@@ -217,7 +217,7 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
     def _get_first_pvc():
         return next(
             PersistentVolumeClaim.get(
-                dyn_client=unprivileged_client,
+                client=unprivileged_client,
                 namespace=data_import_cron_namespace.name,
             ),
             None,

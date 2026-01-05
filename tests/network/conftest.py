@@ -56,7 +56,7 @@ def index_number():
 @pytest.fixture(scope="session")
 def virt_handler_pod(admin_client):
     for pod in Pod.get(
-        dyn_client=admin_client,
+        client=admin_client,
         label_selector=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
     ):
         return pod

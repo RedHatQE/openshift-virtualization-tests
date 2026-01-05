@@ -8,7 +8,6 @@ from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
-from ocp_resources.resource import get_client
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.product_install.constants import (
@@ -140,6 +139,7 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
     catalog_source = create_catalog_source(
         catalog_name=HCO_CATALOG_SOURCE,
         image=cnv_image_url,
+        admin_client=admin_client,
     )
     wait_for_catalogsource_ready(
         admin_client=admin_client,
@@ -163,17 +163,19 @@ def created_cnv_namespace(admin_client):
 
 
 @pytest.fixture(scope="module")
-def created_cnv_operator_group(created_cnv_namespace):
+def created_cnv_operator_group(admin_client, created_cnv_namespace):
     cnv_namespace_name = created_cnv_namespace.name
     return create_operator_group(
         namespace_name=cnv_namespace_name,
         operator_group_name="openshift-cnv-group",
+        admin_client=admin_client,
         target_namespaces=[cnv_namespace_name],
     )
 
 
 @pytest.fixture(scope="module")
 def installed_cnv_subscription(
+    admin_client,
     is_production_source,
     hyperconverged_catalog_source,
     created_cnv_namespace,
@@ -184,6 +186,7 @@ def installed_cnv_subscription(
         package_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
         catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name,
+        admin_client=admin_client,
         channel_name=cnv_version_to_install_info["channel"],
     )
 
@@ -230,10 +233,11 @@ def installed_openshift_virtualization(
 
 
 @pytest.fixture(scope="module")
-def created_hco_cr(created_cnv_namespace, installed_openshift_virtualization):
+def created_hco_cr(admin_client, created_cnv_namespace, installed_openshift_virtualization):
     return create_operator(
         operator_class=HyperConverged,
         operator_name=py_config["hco_cr_name"],
+        admin_client=admin_client,
         namespace_name=created_cnv_namespace.name,
     )
 
@@ -266,11 +270,11 @@ def cluster_backend_storage(admin_client):
 
 
 @pytest.fixture(scope="module")
-def hpp_volume_size(cluster_backend_storage):
+def hpp_volume_size(admin_client, cluster_backend_storage):
     hpp_volume_size = "70Gi"
     if cluster_backend_storage == LOCAL_BLOCK_HPP:
         persistent_volumes = PersistentVolume.get(
-            dyn_client=get_client(),
+            client=admin_client,
             label_selector=f"storage.openshift.com/local-volume-owner-name={cluster_backend_storage}",
         )
         for persistent_volume in persistent_volumes:
@@ -281,19 +285,22 @@ def hpp_volume_size(cluster_backend_storage):
 
 
 @pytest.fixture(scope="module")
-def installed_hpp(cluster_backend_storage, hpp_volume_size):
+def installed_hpp(admin_client, cluster_backend_storage, hpp_volume_size):
     LOGGER.info(f"Creating HPP CR using backend storage: {cluster_backend_storage} and storage size: {hpp_volume_size}")
     hpp_cr = HPPWithStoragePool(
         name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER,
         backend_storage_class_name=cluster_backend_storage,
         volume_size=hpp_volume_size,
+        client=admin_client,
     )
     hpp_cr.deploy(wait=True)
     create_hpp_storage_class(
         storage_class_name=HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC,
+        admin_client=admin_client,
     )
     create_hpp_storage_class(
         storage_class_name=HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK,
+        admin_client=admin_client,
     )
 
 
