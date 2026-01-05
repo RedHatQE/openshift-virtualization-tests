@@ -651,7 +651,21 @@ def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[s
 
 
 def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
-    vnic_info_metric_result = prometheus.query_sampler(query=metric_name)[0].get("metric")
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_30SEC,
+        func=prometheus.query,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and (result := sample.get("data", {}).get("result")):
+                vnic_info_metric_result = result[0].get("metric")
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
+        raise
     mismatch_vnic_info = {}
     for info, expected_value in vnic_info_to_compare.items():
         actual_value = vnic_info_metric_result.get(info)

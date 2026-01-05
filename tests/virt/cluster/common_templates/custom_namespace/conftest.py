@@ -46,7 +46,7 @@ def opt_in_custom_template_namespace(
     remove_templates(
         templates_list=list(
             Template.get(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=custom_vm_template_namespace.name,
                 singular_name=Template.singular_name,
             )

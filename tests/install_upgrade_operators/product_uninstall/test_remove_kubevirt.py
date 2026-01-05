@@ -78,7 +78,7 @@ def test_remove_workloads(
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_3MIN,
         sleep=5,
-        func=lambda: list(VirtualMachine.get(dyn_client=admin_client)) or kubevirt_resource.instance.uid == old_uid,
+        func=lambda: list(VirtualMachine.get(client=admin_client)) or kubevirt_resource.instance.uid == old_uid,
     ):
         if not sample:
             break

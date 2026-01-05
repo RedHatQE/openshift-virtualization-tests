@@ -421,7 +421,7 @@ def unprivileged_client(
 
 @pytest.fixture(scope="session")
 def nodes(admin_client):
-    yield list(Node.get(dyn_client=admin_client))
+    yield list(Node.get(client=admin_client))
 
 
 @pytest.fixture(scope="session")
@@ -1154,7 +1154,7 @@ def golden_images_namespace(
 ):
     for ns in Namespace.get(
         name=py_config["golden_images_namespace"],
-        dyn_client=admin_client,
+        client=admin_client,
     ):
         return ns
 
@@ -1165,7 +1165,7 @@ def golden_images_cluster_role_edit(
 ):
     for cluster_role in ClusterRole.get(
         name="os-images.kubevirt.io:edit",
-        dyn_client=admin_client,
+        client=admin_client,
     ):
         return cluster_role
 
@@ -1287,7 +1287,7 @@ def hyperconverged_ovs_annotations_fetched(hyperconverged_resource_scope_functio
 
 @pytest.fixture(scope="session")
 def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(dyn_client=admin_client))
+    nac = list(NetworkAddonsConfig.get(client=admin_client))
     assert nac, "There should be one NetworkAddonsConfig CR."
     return nac[0]
 
@@ -1329,7 +1329,7 @@ def hyperconverged_ovs_annotations_enabled_scope_session(
     wait_for_ovs_status(network_addons_config=network_addons_config_scope_session, status=False)
     wait_for_pods_deletion(
         pods=get_pods(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace,
             label="app=ovs-cni",
         )
@@ -1338,7 +1338,7 @@ def hyperconverged_ovs_annotations_enabled_scope_session(
 
 @pytest.fixture(scope="session")
 def cluster_storage_classes(admin_client):
-    return list(StorageClass.get(dyn_client=admin_client))
+    return list(StorageClass.get(client=admin_client))
 
 
 @pytest.fixture(scope="session")
@@ -1391,7 +1391,7 @@ def hpp_cr_installed(hostpath_provisioner_scope_session):
 
 @pytest.fixture(scope="module")
 def cnv_pods(admin_client, hco_namespace):
-    yield list(Pod.get(dyn_client=admin_client, namespace=hco_namespace.name))
+    yield list(Pod.get(client=admin_client, namespace=hco_namespace.name))
 
 
 @pytest.fixture(scope="session")
@@ -1540,7 +1540,7 @@ def cluster_info(
 def ocs_current_version(ocs_storage_class, admin_client):
     if ocs_storage_class:
         for csv in ClusterServiceVersion.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace="openshift-storage",
             label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
         ):
@@ -1549,7 +1549,7 @@ def ocs_current_version(ocs_storage_class, admin_client):
 
 @pytest.fixture(scope="session")
 def openshift_current_version(admin_client):
-    return get_clusterversion(dyn_client=admin_client).instance.status.history[0].version
+    return get_clusterversion(client=admin_client).instance.status.history[0].version
 
 
 @pytest.fixture(scope="session")
@@ -1567,7 +1567,7 @@ def hco_image(
         return CNV_NOT_INSTALLED
     source_name = cnv_subscription_scope_session.instance.spec.source
     for cs in CatalogSource.get(
-        dyn_client=admin_client,
+        client=admin_client,
         name=source_name,
         namespace=py_config["marketplace_namespace"],
     ):
@@ -1955,7 +1955,7 @@ def compact_cluster(nodes, workers, control_plane_nodes):
 
 @pytest.fixture()
 def virt_pods_with_running_status(admin_client, hco_namespace):
-    return get_all_virt_pods_with_running_status(dyn_client=admin_client, hco_namespace=hco_namespace)
+    return get_all_virt_pods_with_running_status(client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -2725,10 +2725,10 @@ def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
 
 
 @pytest.fixture(scope="session")
-def machine_config_pools():
+def machine_config_pools(admin_client):
     return [
-        get_machine_config_pool_by_name(mcp_name="master"),
-        get_machine_config_pool_by_name(mcp_name="worker"),
+        get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client),
+        get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client),
     ]
 
 

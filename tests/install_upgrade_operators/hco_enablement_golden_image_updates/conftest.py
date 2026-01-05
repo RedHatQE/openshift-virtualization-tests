@@ -45,7 +45,7 @@ def deleted_hco_operator_pod(admin_client, hco_namespace, hyperconverged_resourc
 def image_stream_names(admin_client, golden_images_namespace):
     return [
         image_stream.name
-        for image_stream in ImageStream.get(dyn_client=admin_client, namespace=golden_images_namespace.name)
+        for image_stream in ImageStream.get(client=admin_client, namespace=golden_images_namespace.name)
     ]
 
 
