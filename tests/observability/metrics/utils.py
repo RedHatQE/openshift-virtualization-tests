@@ -3,9 +3,8 @@ import math
 import re
 import shlex
 import time
-import urllib
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.resource import Resource
@@ -203,45 +202,6 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
 
         assert is_swap_enabled(vm=vm, swap_name=swap_name), f"Failed to enable swap memory {swap_name} on {vm.name}"
     vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
-
-
-def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
-    query = urllib.parse.quote_plus(
-        f'kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain="{vm_name}"}}'
-    )
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=2,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    sample = None
-    try:
-        for sample in samples:
-            if sample:
-                return int(sample[0]["value"][1])
-    except TimeoutExpiredError:
-        LOGGER.error(f"Failed to get data from query '{query}' in time. Current data: {sample}")
-        raise
-    return None
-
-
-def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: VirtualMachineForTests) -> None:
-    vm_cpu = vm.instance.spec.template.spec.domain.cpu
-    cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
-    LOGGER.info(f"Cpu count from vm {vm.name}: {cpu_count_from_vm}")
-    cpu_info_from_prometheus = get_vm_cpu_info_from_prometheus(prometheus=prometheus, vm_name=vm.name)
-    LOGGER.info(f"CPU information from prometheus: {cpu_info_from_prometheus}")
-    cpu_count_from_vm_node = int(vm.privileged_vmi.node.instance.status.capacity.cpu)
-    LOGGER.info(f"Cpu count from node {vm.privileged_vmi.node.name}: {cpu_count_from_vm_node}")
-
-    if cpu_count_from_vm > 1:
-        cpu_count_from_vm_node = cpu_count_from_vm_node * cpu_count_from_vm
-
-    assert cpu_count_from_vm_node == cpu_info_from_prometheus, (
-        f"Actual CPU count {cpu_count_from_vm_node} not matching with "
-        f"expected CPU count {cpu_info_from_prometheus} for VM CPU {cpu_count_from_vm}"
-    )
 
 
 def get_resource_object(
