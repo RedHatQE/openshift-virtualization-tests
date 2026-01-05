@@ -309,7 +309,8 @@ def get_hco_version(client, hco_ns_name):
         str: hyperconverged operator version
     """
     return (
-        utilities.infra.get_hyperconverged_resource(client=client, hco_ns_name=hco_ns_name)
+        utilities.infra
+        .get_hyperconverged_resource(client=client, hco_ns_name=hco_ns_name)
         .instance.status.versions[0]
         .version
     )
@@ -544,7 +545,7 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=utilities.infra.get_pod_by_name_prefix,
-        dyn_client=client,
+        client=client,
         pod_prefix="aaq-(controller|server)",
         namespace=hco_namespace.name,
         get_all=True,

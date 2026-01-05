@@ -1434,7 +1434,7 @@ def fedora_vm_body(name: str) -> dict[str, Any]:
         image=image,
         pull_secret=pull_secret,
         architecture=utilities.cpu.get_nodes_cpu_architecture(
-            nodes=list(Node.get(dyn_client=get_client())),
+            nodes=list(Node.get(client=get_client())),
         ),
     )
     image_digest = image_info["digest"]
@@ -1849,7 +1849,7 @@ def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
                 if counter >= TIMEOUT_4MIN / sleep:
                     # Get status/events for PODs in non-running or failed state
                     for pod in utilities.infra.get_pod_by_name_prefix(
-                        dyn_client=get_client(),
+                        client=get_client(),
                         pod_prefix=VIRT_LAUNCHER,
                         namespace=namespace,
                         get_all=True,
@@ -2076,7 +2076,7 @@ def wait_for_node_schedulable_status(node, status, timeout=60):
 
 def get_hyperconverged_kubevirt(admin_client, hco_namespace):
     for kv in KubeVirt.get(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=hco_namespace.name,
         name="kubevirt-kubevirt-hyperconverged",
     ):
@@ -2097,7 +2097,7 @@ def get_base_templates_list(client):
     """Return SSP base templates"""
     common_templates_list = list(
         Template.get(
-            dyn_client=client,
+            client=client,
             singular_name=Template.singular_name,
             label_selector=Template.Labels.BASE,
         )
@@ -2112,10 +2112,10 @@ def get_base_templates_list(client):
 def get_template_by_labels(admin_client, template_labels):
     template = list(
         Template.get(
-            dyn_client=admin_client,
+            client=admin_client,
             singular_name=Template.singular_name,
             namespace="openshift",
-            label_selector=",".join([f"{label}=true" for label in template_labels if OS_FLAVOR_FEDORA not in label]),
+            label_selector=",".join([label for label in template_labels if OS_FLAVOR_FEDORA not in label]),
         ),
     )
     if any(
@@ -2182,7 +2182,7 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
         func=VirtualMachineInstanceMigration.get,
         namespace=vm.namespace,
         vmi_name=vm.vmi.name,
-        dyn_client=client,
+        client=client,
     )
     try:
         for sample in sampler:
@@ -2195,7 +2195,7 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
         raise
 
 
-def check_migration_process_after_node_drain(dyn_client, vm):
+def check_migration_process_after_node_drain(client, vm):
     """
     Wait for migration process to succeed and verify that VM indeed moved to new node.
     """
@@ -2203,7 +2203,7 @@ def check_migration_process_after_node_drain(dyn_client, vm):
     source_node = vm.privileged_vmi.virt_launcher_pod.node
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
-    vmim = get_created_migration_job(vm=vm, client=dyn_client, timeout=TIMEOUT_5MIN)
+    vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
     wait_for_migration_finished(
         namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
     )
@@ -2256,11 +2256,11 @@ def wait_for_kubevirt_conditions(
     )
 
 
-def get_all_virt_pods_with_running_status(dyn_client, hco_namespace):
+def get_all_virt_pods_with_running_status(client, hco_namespace):
     virt_pods_with_status = {
         pod.name: pod.status
         for pod in Pod.get(
-            dyn_client=dyn_client,
+            client=client,
             namespace=hco_namespace.name,
         )
         if pod.name.startswith("virt")
@@ -2426,8 +2426,9 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
         for sample in TimeoutSampler(
             wait_timeout=timeout,
             sleep=TIMEOUT_5SEC,
-            func=lambda: vm.vmi.node.name != initial_node.name
-            and vm.vmi.status == VirtualMachineInstance.Status.RUNNING,
+            func=lambda: (
+                vm.vmi.node.name != initial_node.name and vm.vmi.status == VirtualMachineInstance.Status.RUNNING
+            ),
         ):
             if sample:
                 LOGGER.info(
@@ -2498,6 +2499,9 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -
         "product": smbios_vm_dict["product"] == cm_values["product"],
         "family": smbios_vm_dict["family"] == cm_values["family"],
         "version": smbios_vm_dict["version"] == cm_values["version"],
+        "sku": smbios_vm_dict["sku"] == cm_values["sku"],
+        "serial": smbios_vm_dict.get("serial"),
+        "uuid": smbios_vm_dict.get("uuid"),
     }
     LOGGER.info(f"Results: {results}")
     assert all(results.values())
@@ -2685,7 +2689,7 @@ def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
 
 def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[Pod]:
     return utilities.infra.get_pods(
-        dyn_client=client,
+        client=client,
         namespace=namespace,
         label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_HANDLER}",
     )

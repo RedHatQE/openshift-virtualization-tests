@@ -120,7 +120,7 @@ def snapshots_for_upgrade_b(
 
 
 @pytest.fixture(scope="session")
-def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
+def blank_disk_dv_with_default_sc(admin_client, upgrade_namespace_scope_session):
     with create_dv(
         source="blank",
         dv_name="blank-dv",
@@ -128,18 +128,20 @@ def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
         size="1Gi",
         storage_class=py_config["default_storage_class"],
         consume_wffc=False,
+        client=admin_client,
     ) as dv:
         yield dv
 
 
 @pytest.fixture(scope="session")
-def fedora_vm_for_hotplug_upg(upgrade_namespace_scope_session, cluster_common_node_cpu):
+def fedora_vm_for_hotplug_upg(unprivileged_client, upgrade_namespace_scope_session, cluster_common_node_cpu):
     name = "fedora-hotplug-upg"
     with VirtualMachineForTests(
         name=name,
         namespace=upgrade_namespace_scope_session.name,
         body=fedora_vm_body(name=name),
         cpu_model=cluster_common_node_cpu,
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -166,9 +168,9 @@ def fedora_vm_for_hotplug_upg_ssh_connectivity(fedora_vm_for_hotplug_upg):
 
 
 @pytest.fixture(scope="session")
-def skip_if_config_default_storage_class_access_mode_rwo():
+def skip_if_config_default_storage_class_access_mode_rwo(admin_client):
     storage_class = py_config["default_storage_class"]
-    access_modes = StorageProfile(name=storage_class).first_claim_property_set_access_modes()
+    access_modes = StorageProfile(name=storage_class, client=admin_client).first_claim_property_set_access_modes()
     assert access_modes, f"Could not get the access mode from the {storage_class} storage profile"
     access_mode = access_modes[0]
     LOGGER.info(f"Storage class '{storage_class}' has access mode: '{access_mode}'")

@@ -27,7 +27,6 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-import utilities.virt
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -37,7 +36,6 @@ from utilities.constants import (
     MTU_9000,
     OVS_BRIDGE,
     SRIOV,
-    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
@@ -267,12 +265,12 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
         if self.node_selector:
             return list(
                 Node.get(
-                    dyn_client=self.client,
+                    client=self.client,
                     name=utilities.infra.get_node_selector_name(node_selector=self.node_selector),
                 )
             )[0]
         else:
-            return list(Node.get(dyn_client=self.client))[0]
+            return list(Node.get(client=self.client))[0]
 
     def to_dict(self):
         super().to_dict()
@@ -485,50 +483,6 @@ NAD_TYPE = {
     SRIOV: SriovNetwork,
     FLAT_OVERLAY_STR: OVNOverlayNetworkAttachmentDefinition,
 }
-
-
-def get_vmi_ip_v4_by_name(vm, name):
-    vmi = vm.vmi
-
-    def _get_iface_by_name(vmi_interfaces):
-        iface = [_iface for _iface in vmi_interfaces if _iface.name == name]
-        if not iface:
-            raise IfaceNotFound(name=name)
-        return iface[0]
-
-    def _extract_interface_ips():
-        vmi_interfaces = vm.vmi.interfaces
-        iface_ips = _get_iface_by_name(vmi_interfaces=vmi_interfaces).ipAddresses
-        if iface_ips:
-            return iface_ips
-        return []
-
-    def _get_interface_ips():
-        vmi_ips = _extract_interface_ips()
-        if vmi_ips:
-            return vmi_ips
-
-        utilities.virt.wait_for_vm_interfaces(vmi=vmi)
-        return _extract_interface_ips()
-
-    sampler = TimeoutSampler(wait_timeout=TIMEOUT_2MIN, sleep=1, func=_get_interface_ips)
-    try:
-        for ip_addresses in sampler:
-            for ip_address in ip_addresses:
-                ip = ipaddress.ip_interface(address=ip_address)
-                if ip.version == 4:
-                    return ip.ip
-
-    except TimeoutExpiredError:
-        raise IpNotFound(name)
-
-
-class IpNotFound(Exception):
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return f"IP address not found for interface {self.name}"
 
 
 @contextlib.contextmanager
@@ -832,23 +786,6 @@ def get_valid_ip_address(dst_ip, family):
         return
 
 
-def ip_version_data_from_matrix(request):
-    """
-    Check if fixture ip_stack_version_matrix__<scope>__ is used in the flow, to indicate whether
-    it's a dual-stack test or not.
-
-    Args:
-        request (fixtures.SubRequest): Test's parameterized request.
-
-    Returns:
-        str: The IP family (IPv4 or IPv6) if the matrix fixture is used, else None.
-    """
-    ip_stack_matrix_fixture = [fix_name for fix_name in request.fixturenames if "ip_stack_version_matrix__" in fix_name]
-    if not ip_stack_matrix_fixture:
-        return
-    return request.getfixturevalue(ip_stack_matrix_fixture[0])
-
-
 def compose_cloud_init_data_dict(network_data=None, ipv6_network_data=None):
     init_data = {}
     interfaces_data = {"ethernets": {}}
@@ -863,7 +800,7 @@ def compose_cloud_init_data_dict(network_data=None, ipv6_network_data=None):
 
 def ovs_pods(admin_client, hco_namespace):
     pods = utilities.infra.get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=OVS_DS_NAME,
         namespace=hco_namespace,
         get_all=True,
@@ -1107,8 +1044,10 @@ def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefin
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_3MIN,
         sleep=5,
-        func=lambda: bridge_annotation in node.instance.status.capacity.keys()
-        and bridge_annotation in node.instance.status.allocatable.keys(),
+        func=lambda: (
+            bridge_annotation in node.instance.status.capacity.keys()
+            and bridge_annotation in node.instance.status.allocatable.keys()
+        ),
     )
     try:
         for sample in sampler:

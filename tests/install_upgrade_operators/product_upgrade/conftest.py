@@ -142,7 +142,7 @@ def updated_custom_hco_catalog_source_image(
         image_url = f"{cnv_image_url.split('iib:')[0]}iib@{image_info['digest']}"
     LOGGER.info(f"Deployment is not from production; updating HCO catalog source image to {image_url}.")
     update_image_in_catalog_source(
-        dyn_client=admin_client,
+        client=admin_client,
         image=image_url,
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=py_config["hco_cr_name"],
@@ -162,7 +162,7 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 @pytest.fixture()
 def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
     approve_cnv_upgrade_install_plan(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
@@ -201,7 +201,7 @@ def target_images_for_pods_not_managed_by_hco(related_images_from_target_csv):
 @pytest.fixture()
 def started_cnv_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=False,
@@ -226,7 +226,7 @@ def upgraded_cnv(
     )
     LOGGER.info(f"Wait for operator condition {hco_target_csv_name} to reach upgradable: True")
     wait_for_operator_condition(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         name=hco_target_csv_name,
         upgradable=True,
@@ -234,20 +234,20 @@ def upgraded_cnv(
 
     LOGGER.info("Wait for all openshift-virtualization operator pod replacement:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=target_operator_pods_images.keys(),
         related_images=target_operator_pods_images.values(),
     )
     LOGGER.info("Wait for non-hco managed pods to be replaced:")
     wait_for_pods_replacement_by_type(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         pod_list=[POD_STR_NOT_MANAGED_BY_HCO],
         related_images=target_images_for_pods_not_managed_by_hco,
     )
     wait_for_hco_upgrade(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace,
         cnv_target_version=cnv_target_version,
     )
@@ -260,7 +260,7 @@ def ocp_image_url(pytestconfig):
 
 @pytest.fixture(scope="session")
 def cluster_version(admin_client):
-    cluster_version = ClusterVersion(name="version")
+    cluster_version = ClusterVersion(name="version", client=admin_client)
     if cluster_version.exists:
         return cluster_version
 
@@ -319,12 +319,13 @@ def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, promethe
 
 
 @pytest.fixture(scope="session")
-def eus_cnv_upgrade_path(eus_target_cnv_version):
+def eus_cnv_upgrade_path(admin_client, eus_target_cnv_version):
     if eus_target_cnv_version is None:
         exit_pytest_execution(
             log_message="EUS upgrade can not be performed from non-eus version",
             return_code=EUS_ERROR_CODE,
             filename="eus_upgrade_failure.txt",
+            admin_client=admin_client,
         )
     # Get the shortest path to the target (EUS) version
     upgrade_path_to_target_version = get_shortest_upgrade_path(target_version=eus_target_cnv_version)
@@ -454,13 +455,13 @@ def machine_config_pools_conditions(active_machine_config_pools):
 
 
 @pytest.fixture(scope="session")
-def master_machine_config_pools():
-    return [get_machine_config_pool_by_name(mcp_name="master")]
+def master_machine_config_pools(admin_client):
+    return [get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="session")
-def worker_machine_config_pools():
-    return [get_machine_config_pool_by_name(mcp_name="worker")]
+def worker_machine_config_pools(admin_client):
+    return [get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client)]
 
 
 @pytest.fixture(scope="module")
@@ -606,7 +607,8 @@ def updated_odf_subscription_source(odf_subscription, odf_version):
 
 @pytest.fixture()
 def upgraded_odf(
+    admin_client,
     odf_version,
     updated_odf_subscription_source,
 ):
-    wait_for_odf_update(target_version=odf_version)
+    wait_for_odf_update(target_version=odf_version, admin_client=admin_client)

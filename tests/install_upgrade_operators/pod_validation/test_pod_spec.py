@@ -23,9 +23,10 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture()
 def cnv_jobs(admin_client, hco_namespace):
-    return [job.name for job in Job.get(dyn_client=admin_client, namespace=hco_namespace.name)]
+    return [job.name for job in Job.get(client=admin_client, namespace=hco_namespace.name)]
 
 
+@pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
 def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
     all_pods = ALL_CNV_PODS.copy()

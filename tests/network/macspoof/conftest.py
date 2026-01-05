@@ -8,6 +8,7 @@ from ocp_resources.resource import ResourceEditor
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
 from utilities.data_utils import name_prefix
@@ -15,7 +16,6 @@ from utilities.infra import get_node_selector_dict
 from utilities.network import (
     assert_ping_successful,
     compose_cloud_init_data_dict,
-    get_vmi_ip_v4_by_name,
     network_device,
     network_nad,
 )
@@ -171,9 +171,8 @@ def linux_bridge_attached_running_vmb(linux_bridge_attached_vmb):
 
 @pytest.fixture(scope="class")
 def vmb_ip_address(linux_bridge_device_worker_1, linux_bridge_attached_running_vmb):
-    return get_vmi_ip_v4_by_name(
-        vm=linux_bridge_attached_running_vmb,
-        name=linux_bridge_device_worker_1.bridge_name,
+    return lookup_iface_status_ip(
+        vm=linux_bridge_attached_running_vmb, iface_name=linux_bridge_device_worker_1.bridge_name, ip_family=4
     )
 
 

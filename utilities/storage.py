@@ -246,7 +246,7 @@ def data_volume(
         consume_wffc = False
         bind_immediate = True
         try:
-            golden_image = list(DataVolume.get(dyn_client=admin_client, name=dv_name, namespace=dv_namespace))
+            golden_image = list(DataVolume.get(client=admin_client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
@@ -567,7 +567,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
     source_spec_dict = source_dict["spec"]
     dv = DataVolume(
-        name=data_source.name,
+        name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
         or source_dict.get("status", {}).get("restoreSize"),
@@ -618,7 +618,7 @@ def wait_for_default_sc_in_cdiconfig(cdi_config, sc):
 
 def get_hyperconverged_cdi(admin_client):
     for cdi in CDI.get(
-        dyn_client=admin_client,
+        client=admin_client,
         name="cdi-kubevirt-hyperconverged",
     ):
         return cdi
@@ -632,6 +632,19 @@ def write_file(vm, filename, content, stop_vm=True):
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
+
+
+def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
+    """
+    Write content to a file in VM using SSH connection.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+    """
+    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
@@ -688,7 +701,7 @@ def create_or_update_data_source(admin_client, dv):
     target_name = dv.name
     target_namespaces = dv.namespace
     try:
-        for data_source in DataSource.get(dyn_client=admin_client, name=target_name, namespace=target_namespaces):
+        for data_source in DataSource.get(client=admin_client, name=target_name, namespace=target_namespaces):
             LOGGER.info(f"Updating existing dataSource {data_source.name}")
             with ResourceEditor(patches={data_source: generate_data_source_dict(dv=dv)}):
                 yield data_source
@@ -719,13 +732,14 @@ class HppCsiStorageClass(StorageClass):
         HOSTPATH_CSI_PVC_TEMPLATE_OCS_FS = f"{HPP_CSI}-pvc-template-ocs-fs"
         HOSTPATH_CSI_PVC_TEMPLATE_LSO = f"{HPP_CSI}-pvc-template-lso"
 
-    def __init__(self, name, storage_pool=None, teardown=True):
+    def __init__(self, name, client, storage_pool=None, teardown=True):
         super().__init__(
             name=name,
             teardown=teardown,
             provisioner=StorageClass.Provisioner.HOSTPATH_CSI,
             reclaim_policy=StorageClass.ReclaimPolicy.DELETE,
             volume_binding_mode=StorageClass.VolumeBindingMode.WaitForFirstConsumer,
+            client=client,
         )
         self._storage_pool = storage_pool
 
@@ -748,28 +762,10 @@ def get_default_storage_class():
 
 def is_snapshot_supported_by_sc(sc_name, client):
     sc_instance = StorageClass(client=client, name=sc_name).instance
-    for vsc in VolumeSnapshotClass.get(dyn_client=client):
+    for vsc in VolumeSnapshotClass.get(client=client):
         if vsc.instance.get("driver") == sc_instance.get("provisioner"):
             return True
     return False
-
-
-def create_cirros_dv_for_snapshot_dict(name, namespace, storage_class, artifactory_secret, artifactory_config_map):
-    dv = DataVolume(
-        api_name="storage",
-        name=f"dv-{name}",
-        namespace=namespace,
-        source="http",
-        url=utilities.artifactory.get_http_image_url(
-            image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG
-        ),
-        storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    return dv.res
 
 
 def check_disk_count_in_vm(vm):
@@ -824,16 +820,18 @@ def add_dv_to_vm(vm, dv_name=None, template_dv=None):
 
 def create_hpp_storage_class(
     storage_class_name,
+    admin_client,
 ):
     storage_class = HppCsiStorageClass(
         name=storage_class_name,
+        client=admin_client,
     )
     storage_class.deploy()
 
 
 class HPPWithStoragePool(HostPathProvisioner):
-    def __init__(self, name, backend_storage_class_name, volume_size, teardown=False):
-        super().__init__(name=name, teardown=teardown)
+    def __init__(self, name, backend_storage_class_name, volume_size, client, teardown=False):
+        super().__init__(name=name, teardown=teardown, client=client)
         self.backend_storage_class_name = backend_storage_class_name
         self.volume_size = volume_size
 
@@ -898,7 +896,7 @@ def wait_for_hpp_pods(client, pod_prefix):
         wait_timeout=TIMEOUT_2MIN,
         sleep=3,
         func=utilities.infra.get_pod_by_name_prefix,
-        dyn_client=client,
+        client=client,
         namespace=py_config["hco_namespace"],
         pod_prefix=f"{pod_prefix}-",
         get_all=True,

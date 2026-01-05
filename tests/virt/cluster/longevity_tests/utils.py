@@ -11,11 +11,12 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import verify_wsl2_guest_works
 from tests.virt.cluster.longevity_tests.constants import (
     PROC_PER_OS_DICT,
     WINDOWS_OS_PREFIX,
 )
-from tests.virt.utils import migrate_and_verify_multi_vms, verify_wsl2_guest_works
+from tests.virt.utils import migrate_and_verify_multi_vms
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,

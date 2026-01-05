@@ -14,13 +14,12 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
-from tests.storage.utils import create_windows_vm_validate_guest_agent_info
+from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
     create_dummy_first_consumer_pod,
-    create_dv,
     create_vm_from_dv,
     get_downloaded_artifact,
     sc_is_hpp_with_immediate_volume_binding,
@@ -32,10 +31,10 @@ from utilities.virt import VirtualMachineForTests, running_vm
 pytestmark = pytest.mark.post_upgrade
 
 LOGGER = logging.getLogger(__name__)
-LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
-DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
 POPULATED_STR = "populated"
 NON_CSI_POPULATED_STR = "imported/cloned/updated"
+DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
+LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
 
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
@@ -252,34 +251,22 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3725")
-def test_virtctl_image_upload_with_exist_dv(
-    unprivileged_client, download_image, namespace, storage_class_name_scope_module
-):
-    """
-    Check that virtctl is able to upload a local disk image to an existing DataVolume
-    """
-    dv_name = "cnv-3725"
-    with create_dv(
-        source="upload",
-        dv_name=dv_name,
-        namespace=namespace.name,
-        size=DEFAULT_DV_SIZE,
-        storage_class=storage_class_name_scope_module,
-    ) as dv:
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=120)
-        with virtctl_upload_dv(
-            namespace=namespace.name,
-            name=dv.name,
-            size=DEFAULT_DV_SIZE,
-            image_path=LOCAL_PATH,
-            insecure=True,
-            storage_class=storage_class_name_scope_module,
-            no_create=True,
-        ) as res:
-            check_upload_virtctl_result(result=res)
-            if not sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
-                create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
+class TestVirtctlUploadExistingDV:
+    @pytest.mark.polarion("CNV-3725")
+    def test_virtctl_image_upload_to_existing_dv_and_create_vm(self, unprivileged_client, uploaded_dv_scope_class):
+        uploaded_dv_scope_class.wait_for_dv_success()
+        with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
+            pass
+
+    @pytest.mark.polarion("CNV-4033")
+    def test_virtctl_image_upload_to_existing_dv_and_validate_populator(
+        self, uploaded_dv_scope_class, storage_class_name_scope_class, cluster_csi_drivers_names
+    ):
+        assert_use_populator(
+            pvc=uploaded_dv_scope_class.pvc,
+            storage_class=storage_class_name_scope_class,
+            cluster_csi_drivers_names=cluster_csi_drivers_names,
+        )
 
 
 @pytest.fixture()

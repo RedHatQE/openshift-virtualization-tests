@@ -6,7 +6,7 @@ import time
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from libs.net.vmspec import lookup_iface_status, wait_for_missing_iface_status
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
@@ -23,7 +23,6 @@ from utilities.infra import get_pod_by_name_prefix
 from utilities.network import (
     IfaceNotFound,
     compose_cloud_init_data_dict,
-    get_vmi_ip_v4_by_name,
     network_device,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
@@ -201,7 +200,7 @@ def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
     # Verify the IP address was set successfully.
     # The function fails on timeout if the interface or its address are not found,
     # so there's no need to check its return code.
-    hot_plugged_interface_ip = get_vmi_ip_v4_by_name(vm=vm, name=vmi_interface)
+    hot_plugged_interface_ip = lookup_iface_status_ip(vm=vm, iface_name=vmi_interface, ip_family=4)
     LOGGER.info(f"{vm.name}/{vmi_interface} set with IP address {hot_plugged_interface_ip}")
 
 
@@ -285,7 +284,7 @@ def get_kubemacpool_controller_log(
     log_start_time,
 ):
     kmp_controller_pod = get_pod_by_name_prefix(
-        dyn_client=client,
+        client=client,
         pod_prefix=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
         namespace=namespace_name,
     )

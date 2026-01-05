@@ -72,8 +72,8 @@ def pod_net_running_vmb(pod_net_vmb):
 
 
 @pytest.fixture(scope="module")
-def cloud_init_ipv6_network_data(dual_stack_network_data):
-    return compose_cloud_init_data_dict(ipv6_network_data=dual_stack_network_data)
+def cloud_init_ipv6_network_data(ipv6_primary_interface_cloud_init_data):
+    return compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
 
 
 @pytest.mark.parametrize(
