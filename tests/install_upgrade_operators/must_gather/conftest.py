@@ -123,7 +123,7 @@ def collected_vm_details_must_gather_function_scope(
 
 @pytest.fixture(scope="module")
 def custom_resource_definitions(admin_client):
-    yield list(CustomResourceDefinition.get(dyn_client=admin_client))
+    yield list(CustomResourceDefinition.get(client=admin_client))
 
 
 @pytest.fixture(scope="module")
@@ -176,7 +176,7 @@ def must_gather_bridge(admin_client, worker_node1):
 @pytest.fixture(scope="module")
 def running_hco_containers(admin_client, hco_namespace):
     pods = []
-    for pod in Pod.get(dyn_client=admin_client, namespace=hco_namespace.name):
+    for pod in Pod.get(client=admin_client, namespace=hco_namespace.name):
         for container in pod.instance["status"].get("containerStatuses", []):
             if container["ready"]:
                 pods.append((pod, container))
@@ -240,7 +240,7 @@ def must_gather_vm_scope_class(
 @pytest.fixture(scope="function")
 def resource_type(request, admin_client):
     resource_type = request.param
-    if not next(resource_type.get(dyn_client=admin_client), None):
+    if not next(resource_type.get(client=admin_client), None):
         raise MissingResourceException(resource_type.__name__)
     return resource_type
 
@@ -248,7 +248,7 @@ def resource_type(request, admin_client):
 @pytest.fixture(scope="function")
 def config_map_by_name(request, admin_client):
     cm_name, cm_namespace = request.param
-    return ConfigMap(name=cm_name, namespace=cm_namespace)
+    return ConfigMap(name=cm_name, namespace=cm_namespace, client=admin_client)
 
 
 @pytest.fixture(scope="class")
@@ -273,7 +273,8 @@ def nad_mac_address(must_gather_nad, must_gather_vm):
 def vm_interface_name(nad_mac_address, must_gather_vm):
     bridge_command = f"bridge fdb show | grep {nad_mac_address}"
     output = (
-        must_gather_vm.privileged_vmi.virt_launcher_pod.execute(
+        must_gather_vm.privileged_vmi.virt_launcher_pod
+        .execute(
             command=shlex.split(f"bash -c {shlex.quote(bridge_command)}"),
             container="compute",
         )
@@ -339,7 +340,8 @@ def extracted_data_from_must_gather_file(
 @pytest.fixture(scope="class")
 def executed_bridge_link_show_command(must_gather_vm):
     output = (
-        must_gather_vm.privileged_vmi.virt_launcher_pod.execute(
+        must_gather_vm.privileged_vmi.virt_launcher_pod
+        .execute(
             command=shlex.split(f"bash -c {shlex.quote(BRIDGE_COMMAND)}"),
             container="compute",
         )

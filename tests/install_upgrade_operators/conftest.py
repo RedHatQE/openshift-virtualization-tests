@@ -46,7 +46,7 @@ def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_de
             pytest.xfail(f"{deployment_name} deployment shouldn't be present on the cluster if HPP CR is not installed")
         hpp_pool_deployments = list(
             Deployment.get(
-                dyn_client=admin_client,
+                client=admin_client,
                 namespace=hco_namespace.name,
                 label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
             )
@@ -57,6 +57,7 @@ def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_de
     return get_deployment_by_name(
         namespace_name=hco_namespace.name,
         deployment_name=deployment_name,
+        admin_client=admin_client,
     )
 
 
@@ -88,7 +89,7 @@ def cnv_pods_by_type(
     if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
         pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
     pod_list = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=hco_namespace.name,
         pod_prefix=pod_prefix,
         get_all=True,
@@ -221,11 +222,13 @@ def related_object_from_hco_status(
 @pytest.fixture()
 def updated_resource(
     request,
+    admin_client,
 ):
     cr_kind = request.param.get(RESOURCE_TYPE_STR)
     cr = get_resource_by_name(
         resource_kind=cr_kind,
         name=request.param.get(RESOURCE_NAME_STR),
+        admin_client=admin_client,
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     with ResourceEditorValidateHCOReconcile(

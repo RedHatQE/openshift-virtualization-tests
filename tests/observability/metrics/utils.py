@@ -358,7 +358,8 @@ def compare_network_traffic_bytes_and_metrics(
     LOGGER.info("Waiting for metric kubevirt_vmi_network_traffic_bytes_total to update")
     time.sleep(TIMEOUT_15SEC)
     metric_result = (
-        prometheus.query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
+        prometheus
+        .query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
         .get("data")
         .get("result")
     )
@@ -447,9 +448,8 @@ def metric_result_output_dict_by_mountpoint(
 ) -> dict[str, str]:
     return {
         entry["metric"]["mount_point"]: entry["value"][1]
-        for entry in prometheus.query(
-            query=KUBEVIRT_VMI_FILESYSTEM_BYTES.format(capacity_or_used=capacity_or_used, vm_name=vm_name)
-        )
+        for entry in prometheus
+        .query(query=KUBEVIRT_VMI_FILESYSTEM_BYTES.format(capacity_or_used=capacity_or_used, vm_name=vm_name))
         .get("data")
         .get("result")
     }
@@ -644,7 +644,21 @@ def binding_name_and_type_from_vm_or_vmi(vm_interface: dict[str, str]) -> dict[s
 
 
 def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, str], metric_name: str) -> None:
-    vnic_info_metric_result = prometheus.query_sampler(query=metric_name)[0].get("metric")
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_30SEC,
+        func=prometheus.query,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if sample and (result := sample.get("data", {}).get("result")):
+                vnic_info_metric_result = result[0].get("metric")
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
+        raise
     mismatch_vnic_info = {}
     for info, expected_value in vnic_info_to_compare.items():
         actual_value = vnic_info_metric_result.get(info)
@@ -763,7 +777,7 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def validate_metric_value_greater_than_initial_value(
-    prometheus: Prometheus, metric_name: str, initial_value: int, timeout: int = TIMEOUT_4MIN
+    prometheus: Prometheus, metric_name: str, initial_value: float, timeout: int = TIMEOUT_4MIN
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
@@ -772,10 +786,11 @@ def validate_metric_value_greater_than_initial_value(
         prometheus=prometheus,
         metrics_name=metric_name,
     )
+    sample = None
     try:
         for sample in samples:
             if sample:
-                if int(sample) > initial_value:
+                if float(sample) > initial_value:
                     return
     except TimeoutExpiredError:
         LOGGER.error(f"{sample} should be greater than {initial_value}")

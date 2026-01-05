@@ -99,11 +99,7 @@ To run tests with an admin client only, pass `--tc=no_unprivileged_client:True` 
 ### Running tests using matrix fixtures
 
 Matrix fixtures can be added in global_config.py.
-You can run a test using a subset of a simple matrix (i.e flat list), example:
-
-```bash
---tc=ip_stack_version_matrix:ipv4
-```
+You can run a test using a subset of a simple matrix (i.e flat list).
 
 To run a test using a subset of a complex matrix (e.g list of dicts), you'll also need to add
 the following to `openshift-virtualization-tests/conftest.py`

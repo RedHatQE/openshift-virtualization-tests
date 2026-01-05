@@ -71,7 +71,7 @@ def hpp_pod_sharing_pool_path(admin_client, hco_namespace, hostpath_provisioner_
     storage_pools = hostpath_provisioner_scope_class.instance.spec.get("storagePools")
     assert storage_pools, "HPP CR exist but storagePools spec entry not found"
     pods = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=HOSTPATH_PROVISIONER_CSI,
         namespace=hco_namespace.name,
         get_all=True,

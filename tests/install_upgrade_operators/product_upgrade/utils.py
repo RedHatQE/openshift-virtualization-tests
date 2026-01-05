@@ -64,13 +64,13 @@ TIER_2_PODS_TYPE = "tier-2"
 WHITELIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
 
 
-def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images, status_dict):
+def wait_for_pod_replacement(client, hco_namespace, pod_name, related_images, status_dict):
     """
     Wait for a new pod to be created and running
 
 
     Args:
-        dyn_client (DynamicClient): OCP Client to use
+        client (DynamicClient): OCP Client to use
         hco_namespace (Namespace): HCO namespace
         pod_name (str): Pod name
         related_images (dict): "image" and "strategy" information
@@ -79,9 +79,9 @@ def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images
         TimeoutExpiredError: if a pod with the expected image is not created or if the pod is not running.
     """
 
-    def _is_expected_pod_image(_dyn_client, _pod_name, _hco_namespace, _related_images):
+    def _is_expected_pod_image(_client, _pod_name, _hco_namespace, _related_images):
         _pods = get_pod_by_name_prefix(
-            dyn_client=_dyn_client,
+            client=_client,
             pod_prefix=_pod_name,
             namespace=_hco_namespace,
             get_all=True,
@@ -98,7 +98,7 @@ def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images
         wait_timeout=TIMEOUT_30MIN,
         sleep=1,
         func=_is_expected_pod_image,
-        _dyn_client=dyn_client,
+        _client=client,
         _pod_name=pod_name,
         _hco_namespace=hco_namespace,
         _related_images=related_images,
@@ -119,7 +119,7 @@ def wait_for_pod_replacement(dyn_client, hco_namespace, pod_name, related_images
         new_pod.wait_for_status(status=status_running, timeout=TIMEOUT_30MIN)
 
 
-def wait_for_pods_replacement_by_type(dyn_client, hco_namespace, related_images, pod_list):
+def wait_for_pods_replacement_by_type(client, hco_namespace, related_images, pod_list):
     LOGGER.info("Wait for pod replacement.")
     threads = []
     status_dict = {}
@@ -129,7 +129,7 @@ def wait_for_pods_replacement_by_type(dyn_client, hco_namespace, related_images,
             name=pod_name,
             target=wait_for_pod_replacement,
             kwargs={
-                "dyn_client": dyn_client,
+                "client": client,
                 "hco_namespace": hco_namespace,
                 "pod_name": pod_name,
                 "related_images": related_images,
@@ -146,7 +146,7 @@ def wait_for_pods_replacement_by_type(dyn_client, hco_namespace, related_images,
 
 
 def wait_for_expected_pods_exist(
-    dyn_client,
+    client,
     hco_namespace,
     expected_images,
 ):
@@ -154,7 +154,7 @@ def wait_for_expected_pods_exist(
     Verifies that only pods with expected images (taken from target CSV) exist.
 
     Args:
-        dyn_client (DynamicClient): OCP Client to use
+        client (DynamicClient): OCP Client to use
         hco_namespace (Namespace): HCO namespace
         expected_images (list): of expected images
 
@@ -167,7 +167,7 @@ def wait_for_expected_pods_exist(
         wait_timeout=TIMEOUT_10MIN,
         sleep=TIMEOUT_10SEC,
         func=get_pods_with_mismatch_image,
-        dyn_client=dyn_client,
+        client=client,
         hco_namespace=hco_namespace,
         expected_images=expected_images,
     )
@@ -185,8 +185,8 @@ def wait_for_expected_pods_exist(
         raise
 
 
-def get_pods_with_mismatch_image(dyn_client, hco_namespace, expected_images):
-    cnv_pods = get_pods(dyn_client=dyn_client, namespace=hco_namespace)
+def get_pods_with_mismatch_image(client, hco_namespace, expected_images):
+    cnv_pods = get_pods(client=client, namespace=hco_namespace)
     mismatching_pods = {}
     for pod in cnv_pods:
         pod_instance = pod.instance
@@ -313,41 +313,41 @@ def format_dict_output(diff_dict):
         diff_dict.update({key: formatted_labels_dict})
 
 
-def wait_for_hco_upgrade(dyn_client: DynamicClient, hco_namespace: Namespace, cnv_target_version: str) -> None:
+def wait_for_hco_upgrade(client: DynamicClient, hco_namespace: Namespace, cnv_target_version: str) -> None:
     LOGGER.info(f"Wait for HCO version to be updated to {cnv_target_version}.")
     wait_for_hco_version(
-        client=dyn_client,
+        client=client,
         hco_ns_name=hco_namespace.name,
         cnv_version=cnv_target_version,
     )
     LOGGER.info("Wait for HCO stable conditions after upgrade")
     wait_for_hco_conditions(
-        admin_client=dyn_client,
+        admin_client=client,
         hco_namespace=hco_namespace,
         wait_timeout=TIMEOUT_20MIN,
     )
 
 
-def wait_for_post_upgrade_deployments_replicas(dyn_client, hco_namespace):
+def wait_for_post_upgrade_deployments_replicas(client, hco_namespace):
     LOGGER.info("Wait for deployments replicas.")
-    for deployment in get_deployments(admin_client=dyn_client, namespace=hco_namespace.name):
+    for deployment in get_deployments(admin_client=client, namespace=hco_namespace.name):
         deployment.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 
-def verify_upgrade_cnv(dyn_client, hco_namespace, expected_images):
-    wait_for_post_upgrade_deployments_replicas(dyn_client=dyn_client, hco_namespace=hco_namespace)
+def verify_upgrade_cnv(client, hco_namespace, expected_images):
+    wait_for_post_upgrade_deployments_replicas(client=client, hco_namespace=hco_namespace)
 
     wait_for_expected_pods_exist(
-        dyn_client=dyn_client,
+        client=client,
         hco_namespace=hco_namespace,
         expected_images=expected_images,
     )
 
 
-def approve_cnv_upgrade_install_plan(dyn_client, hco_namespace, hco_target_csv_name, is_production_source):
+def approve_cnv_upgrade_install_plan(client, hco_namespace, hco_target_csv_name, is_production_source):
     LOGGER.info("Get the upgrade install plan.")
     install_plan = wait_for_install_plan(
-        dyn_client=dyn_client,
+        client=client,
         hco_namespace=hco_namespace,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
@@ -448,7 +448,7 @@ def verify_upgrade_ocp(
     nodes,
 ):
     wait_for_cluster_version_state_and_version(
-        cluster_version=get_clusterversion(dyn_client=admin_client),
+        cluster_version=get_clusterversion(client=admin_client),
         target_ocp_version=target_ocp_version,
     )
     wait_for_mcp_update_completion(
@@ -573,9 +573,9 @@ def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]
     assert upgrade_paths, f"Couldn't find upgrade path for {target_version} version"
     upgrade_path = max(
         upgrade_paths,
-        key=lambda path: Version(version="0")
-        if "-hotfix" in path["startVersion"]
-        else Version(version=str(path["startVersion"])),
+        key=lambda path: (
+            Version(version="0") if "-hotfix" in path["startVersion"] else Version(version=str(path["startVersion"]))
+        ),
     )
     return upgrade_path
 
@@ -636,14 +636,14 @@ def perform_cnv_upgrade(
 
     LOGGER.info("Updating image in CatalogSource")
     update_image_in_catalog_source(
-        dyn_client=admin_client,
+        client=admin_client,
         image=cnv_image_url,
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=cr_name,
     )
     LOGGER.info("Approving CNV InstallPlan")
     approve_cnv_upgrade_install_plan(
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=False,
@@ -659,7 +659,7 @@ def perform_cnv_upgrade(
         stop_status="fakestatus",  # to bypass intermittent FAILED status that is not permanent.
     )
     LOGGER.info(f"Wait for HCO version to be updated to {cnv_target_version}.")
-    wait_for_hco_upgrade(dyn_client=admin_client, hco_namespace=hco_namespace, cnv_target_version=cnv_target_version)
+    wait_for_hco_upgrade(client=admin_client, hco_namespace=hco_namespace, cnv_target_version=cnv_target_version)
 
 
 def wait_for_hco_csv_creation(admin_client: DynamicClient, hco_namespace: str, hco_target_csv_name: str) -> Any:
@@ -681,10 +681,10 @@ def wait_for_hco_csv_creation(admin_client: DynamicClient, hco_namespace: str, h
         raise
 
 
-def wait_for_odf_update(target_version: str) -> None:
-    def _get_updated_odf_csv(_target_version: str) -> list[str]:
+def wait_for_odf_update(target_version: str, admin_client: DynamicClient) -> None:
+    def _get_updated_odf_csv(_target_version: str, _admin_client: DynamicClient) -> list[str]:
         csv_list = []
-        for csv in ClusterServiceVersion.get(namespace=NamespacesNames.OPENSHIFT_STORAGE):
+        for csv in ClusterServiceVersion.get(client=_admin_client, namespace=NamespacesNames.OPENSHIFT_STORAGE):
             if any(
                 csv_name in csv.name
                 for csv_name in [
@@ -706,6 +706,7 @@ def wait_for_odf_update(target_version: str) -> None:
         sleep=TIMEOUT_30SEC,
         func=_get_updated_odf_csv,
         _target_version=target_version,
+        _admin_client=admin_client,
     )
 
     for sample in upgrade_sampler:

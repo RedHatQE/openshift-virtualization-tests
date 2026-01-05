@@ -37,11 +37,12 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
-              CRITICAL: You MUST respond with a review comment on the Files Changed tab, NOT as a regular PR comment.
-              If it cannot be on the 1st line of the 1st file, add it to any other changed file.
+              CRITICAL: You MUST post an inline review comment on the first changed line of the first file.
+              The inline comment should contain the Test Execution Plan with the smoke tests recommendation.
+              Do NOT submit a formal review - just post the inline comment directly.
 
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
-              You will create a change request comment on the 1st line of the 1st file in the pr with the test execution plan.
+              You will post an inline review comment with the test execution plan on the first changed file.
               If you fail to run or post a comment, retry.
 
               **Analysis Requirements:**
@@ -75,6 +76,33 @@ jobs:
               - Use file path + test name if only specific tests are needed
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
-              - Do not add a follow-up comment in the PR, only the change request one
+
+              **CRITICAL WORKFLOW COMPLETION RULES:**
+
+              When responding to this test execution plan request, you MUST follow these rules EXACTLY:
+
+              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment containing the test execution plan on the first changed line
+              2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
+              3. **FALLBACK ONLY**: If submitting the review fails after retrying, post as a regular PR comment
+              4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
+
+              **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
+              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
+              - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
+              - ❌ Do NOT add any follow-up comments after submitting the review
+              - ❌ Do NOT reply to confirm task completion
+              - ❌ Do NOT explain what you did - just do it and stop
+
+              **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
+
+              CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
+                - Trace the actual fixture dependency chain from smoke tests to changed fixtures
+                - Verify that smoke tests actually import/use changed utilities or functions
+                - Confirm the dependency path exists; do NOT assume based on scope or semantics
+                - Be conservative: Session-scoped fixtures or infrastructure-sounding names do NOT
+                  automatically mean smoke test impact. Only flag smoke test impact when you can
+                  demonstrate a concrete dependency path.
+                WRONG: "This session-scoped storage fixture might affect smoke tests"
+                RIGHT: "Smoke test X uses fixture Y, which depends on the changed fixture Z"
 
             </details>

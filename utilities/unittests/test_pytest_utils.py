@@ -668,7 +668,8 @@ class TestGetArtifactoryServerUrl:
     @patch("utilities.pytest_utils.LOGGER")
     def test_get_artifactory_server_url_env_variable(self, mock_logger):
         """Test getting artifactory server URL from environment variable"""
-        result = get_artifactory_server_url("cluster.example.com")
+        mock_session = MagicMock()
+        result = get_artifactory_server_url("cluster.example.com", session=mock_session)
 
         assert result == "https://custom-server.com"
         mock_logger.info.assert_any_call(
@@ -680,25 +681,29 @@ class TestGetArtifactoryServerUrl:
     @patch("utilities.pytest_utils.LOGGER")
     def test_get_artifactory_server_url_matching_domain(self, mock_logger, mock_get_secret):
         """Test getting artifactory server URL with matching domain"""
-        mock_get_secret.side_effect = lambda secret_name: {
+        mock_session = MagicMock()
+        mock_session.config.getoption.return_value = False
+        mock_get_secret.side_effect = lambda secret_name, session: {
             "artifactory_servers": {
                 "example.com": "https://example-artifactory.com",
                 "test.com": "https://test-artifactory.com",
             }
         }[secret_name]
 
-        result = get_artifactory_server_url("cluster.example.com")
+        result = get_artifactory_server_url("cluster.example.com", session=mock_session)
 
         assert result == "https://example-artifactory.com"
-        mock_get_secret.assert_called_once_with(secret_name="artifactory_servers")
+        mock_get_secret.assert_called_once_with(secret_name="artifactory_servers", session=mock_session)
 
     @patch("utilities.pytest_utils.os.environ", {})
     @patch("utilities.pytest_utils.get_cnv_tests_secret_by_name")
     @patch("utilities.pytest_utils.LOGGER")
     def test_get_artifactory_server_url_default_server(self, mock_logger, mock_get_secret):
         """Test getting default artifactory server URL when no domain matches"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.return_value = False
 
-        def mock_secret_side_effect(secret_name):
+        def mock_secret_side_effect(secret_name, session):
             if secret_name == "artifactory_servers":
                 return {"other.com": "https://other-artifactory.com"}
             elif secret_name == "default_artifactory_server":
@@ -706,9 +711,69 @@ class TestGetArtifactoryServerUrl:
 
         mock_get_secret.side_effect = mock_secret_side_effect
 
-        result = get_artifactory_server_url("cluster.example.com")
+        result = get_artifactory_server_url("cluster.example.com", session=mock_session)
 
         assert result == "https://default-artifactory.com"
+        assert mock_get_secret.call_count == 2
+
+    @patch("utilities.pytest_utils.os.environ", {})
+    def test_get_artifactory_server_url_disabled_bitwarden_no_env_var(self):
+        """Test error when --disabled-bitwarden flag is set and ARTIFACTORY_SERVER env var is not set"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.return_value = True
+
+        with pytest.raises(
+            MissingEnvironmentVariableError,
+            match="Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
+        ):
+            get_artifactory_server_url("cluster.example.com", session=mock_session)
+
+        mock_session.config.getoption.assert_called_once_with("--disabled-bitwarden")
+
+    @patch("utilities.pytest_utils.os.environ", {})
+    @patch("utilities.pytest_utils.get_cnv_tests_secret_by_name")
+    def test_get_artifactory_server_url_default_server_empty_dict(self, mock_get_secret):
+        """Test error when default server returns empty dict"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.return_value = False
+
+        def mock_secret_side_effect(secret_name, session):
+            if secret_name == "artifactory_servers":
+                return {}
+            elif secret_name == "default_artifactory_server":
+                return {}
+
+        mock_get_secret.side_effect = mock_secret_side_effect
+
+        with pytest.raises(
+            MissingEnvironmentVariableError,
+            match="Could not retrieve default artifactory server from Bitwarden",
+        ):
+            get_artifactory_server_url("cluster.example.com", session=mock_session)
+
+        assert mock_get_secret.call_count == 2
+
+    @patch("utilities.pytest_utils.os.environ", {})
+    @patch("utilities.pytest_utils.get_cnv_tests_secret_by_name")
+    def test_get_artifactory_server_url_default_server_missing_server_key(self, mock_get_secret):
+        """Test error when default server is missing 'server' key"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.return_value = False
+
+        def mock_secret_side_effect(secret_name, session):
+            if secret_name == "artifactory_servers":
+                return {}
+            elif secret_name == "default_artifactory_server":
+                return {"wrong_key": "value"}
+
+        mock_get_secret.side_effect = mock_secret_side_effect
+
+        with pytest.raises(
+            MissingEnvironmentVariableError,
+            match="Could not retrieve default artifactory server from Bitwarden",
+        ):
+            get_artifactory_server_url("cluster.example.com", session=mock_session)
+
         assert mock_get_secret.call_count == 2
 
 

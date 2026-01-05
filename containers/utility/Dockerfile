@@ -11,6 +11,7 @@ RUN set -eux; \
     yum -y update && \
     yum install -y \
         NetworkManager \
+        dhcp-client \
         iperf3 \
         iproute \
         nftables \

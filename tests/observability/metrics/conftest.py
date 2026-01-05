@@ -8,11 +8,16 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
+from packaging.version import Version
+from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
@@ -35,7 +40,7 @@ from tests.observability.metrics.utils import (
     vnic_info_from_vm_or_vmi,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms
+from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
@@ -49,6 +54,7 @@ from utilities.constants import (
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
     SSP_OPERATOR,
+    STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -57,12 +63,14 @@ from utilities.constants import (
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
+    U1_MEDIUM_STR,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
+    get_linux_guest_agent_version,
     get_node_selector_dict,
     get_pod_by_name_prefix,
     unique_name,
@@ -95,6 +103,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
+MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
 
 
 @pytest.fixture(scope="module")
@@ -150,7 +159,7 @@ def virt_pod_names_by_label(request, admin_client, hco_namespace):
     return [
         pod.name
         for pod in Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
             label_selector=request.param,
         )
@@ -287,7 +296,7 @@ def vm_virt_controller_ip_address(admin_client, hco_namespace, kubevirt_vmi_stat
     virt_controller_pod_name = kubevirt_vmi_status_addresses_ip_labels_values.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
     virt_controller_pod_ip = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=virt_controller_pod_name,
         namespace=hco_namespace.name,
     ).ip
@@ -379,12 +388,12 @@ def template_validator_finalizer(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def deleted_ssp_operator_pod(admin_client, hco_namespace):
     get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=SSP_OPERATOR,
         namespace=hco_namespace.name,
     ).delete(wait=True)
     yield
-    verify_ssp_pod_is_running(dyn_client=admin_client, hco_namespace=hco_namespace)
+    verify_ssp_pod_is_running(client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")
@@ -590,6 +599,65 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture(scope="class")
+def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="fedora-vm-test-with-stress-ng",
+        namespace=namespace.name,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(
+                name=OS_FLAVOR_FEDORA,
+                namespace=golden_images_namespace.name,
+            ),
+            storage_class=py_config["default_storage_class"],
+        ),
+    ) as vm:
+        running_vm(vm=vm)
+        LOGGER.info(f"Installing stress-ng on VM: {vm.name}")
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("sudo dnf install stress-ng -y"),
+        )
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def qemu_guest_agent_version_validated(fedora_vm_with_stress_ng):
+    LOGGER.info(f"Checking qemu-guest-agent package on VM: {fedora_vm_with_stress_ng.name}")
+    guest_agent_version_str = get_linux_guest_agent_version(ssh_exec=fedora_vm_with_stress_ng.ssh_exec)
+    LOGGER.info(f"qemu-guest-agent version: {guest_agent_version_str}")
+    guest_agent_version = Version(version=guest_agent_version_str)
+    assert guest_agent_version >= Version(version=MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS), (
+        f"qemu-guest-agent version {guest_agent_version} is less than required "
+        f"{MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS}"
+    )
+
+
+@pytest.fixture(scope="class")
+def initial_guest_load_metrics_values(prometheus, fedora_vm_with_stress_ng):
+    """Capture initial values for all guest load metrics before stressing the VM."""
+
+    return {
+        metric: get_metrics_value(
+            prometheus=prometheus,
+            metrics_name=f"{metric}{{name='{fedora_vm_with_stress_ng.name}'}}",
+        )
+        for metric in GUEST_LOAD_TIME_PERIODS
+    }
+
+
+@pytest.fixture(scope="class")
+def stressed_vm_cpu_fedora(fedora_vm_with_stress_ng):
+    LOGGER.info(f"Starting CPU stress test on VM: {fedora_vm_with_stress_ng.name}")
+    start_stress_on_vm(
+        vm=fedora_vm_with_stress_ng,
+        stress_command=STRESS_CPU_MEM_IO_COMMAND.format(workers="2", memory="50%", timeout="30m"),
+    )
+
+
+@pytest.fixture(scope="class")
 def vm_created_pod_total_initial_metric_value(prometheus, namespace):
     return int(
         get_metrics_value(
@@ -608,3 +676,14 @@ def initial_vmi_deletion_metrics_values(prometheus):
             KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
         ]
     }
+
+def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
+    """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
+    # Calculate VM CPU count
+    vm_cpu = vm_with_cpu_spec.vmi.instance.spec.domain.cpu
+    cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
+    # Get node CPU capacity
+    cpu_count_from_vm_node = int(vm_with_cpu_spec.privileged_vmi.node.instance.status.capacity.cpu)
+
+    # return multiplication for multi-CPU VMs
+    return str(cpu_count_from_vm_node * cpu_count_from_vm)

@@ -61,12 +61,13 @@ def resources_dict(hco_namespace):
 
 
 @pytest.fixture()
-def resource_crypto_policy_settings(request):
+def resource_crypto_policy_settings(request, admin_client):
     yield get_resource_crypto_policy(
         resource=request.param.get(RESOURCE_TYPE_STR),
         name=request.param.get(RESOURCE_NAME_STR),
-        namespace=request.param.get(RESOURCE_NAMESPACE_STR),
         key_name=request.param.get(KEY_NAME_STR),
+        admin_client=admin_client,
+        namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
 
 
@@ -97,7 +98,7 @@ def updated_api_server_crypto_policy(
 
 
 @pytest.fixture(scope="session")
-def services_to_check_connectivity(hco_namespace):
+def services_to_check_connectivity(hco_namespace, admin_client):
     services_list = []
     missing_services = []
     services_name_list = [
@@ -110,7 +111,7 @@ def services_to_check_connectivity(hco_namespace):
         "hostpath-provisioner-operator-service",
     ]
     for service_name in services_name_list:
-        service = Service(name=service_name, namespace=hco_namespace.name)
+        service = Service(name=service_name, namespace=hco_namespace.name, client=admin_client)
         services_list.append(service) if service.exists else missing_services.append(service_name)
 
     if missing_services:

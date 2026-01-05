@@ -55,7 +55,7 @@ def disabled_olm_operator(olm_namespace):
 @pytest.fixture(scope="class")
 def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
     virt_pods_with_running_status = get_all_virt_pods_with_running_status(
-        dyn_client=admin_client, hco_namespace=hco_namespace
+        client=admin_client, hco_namespace=hco_namespace
     )
     virt_pods_count_before_disabling_virt_operator = len(virt_pods_with_running_status.keys())
     with scale_deployment_replicas(
@@ -69,7 +69,7 @@ def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_all_virt_pods_with_running_status,
-        dyn_client=admin_client,
+        client=admin_client,
         hco_namespace=hco_namespace,
     )
     sample = None
@@ -93,8 +93,10 @@ def csv_scope_class(admin_client, hco_namespace, installing_cnv):
 
 
 @pytest.fixture(scope="module")
-def virt_operator_deployment(hco_namespace):
-    return get_deployment_by_name(deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name)
+def virt_operator_deployment(admin_client, hco_namespace):
+    return get_deployment_by_name(
+        deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="module")

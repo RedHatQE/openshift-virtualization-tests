@@ -87,7 +87,7 @@ def verify_cdi_app_label(cdi_resources, cnv_version):
 def cdi_resources_scope_module(request, admin_client):
     rcs_object = request.param
     LOGGER.info(f"Get all resources with kind: {rcs_object.kind}")
-    resource_list = list(rcs_object.get(dyn_client=admin_client))
+    resource_list = list(rcs_object.get(client=admin_client))
     return [rcs for rcs in resource_list if rcs.name.startswith("cdi-")]
 
 

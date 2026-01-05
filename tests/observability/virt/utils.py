@@ -11,30 +11,33 @@ from utilities.infra import get_deployment_by_name
 LOGGER = logging.getLogger(__name__)
 
 
-def delete_replica_set_by_prefix(replica_set_prefix: str, namespace: str, dyn_client: DynamicClient) -> None:
+def delete_replica_set_by_prefix(replica_set_prefix: str, namespace: str, admin_client: DynamicClient) -> None:
     for replica_set in get_replica_set_by_name_prefix(
-        dyn_client=dyn_client, replica_set_prefix=replica_set_prefix, namespace=namespace
+        admin_client=admin_client, replica_set_prefix=replica_set_prefix, namespace=namespace
     ):
         replica_set.delete(wait=True)
 
 
-def get_replica_set_by_name_prefix(dyn_client: DynamicClient, replica_set_prefix: str, namespace: str) -> list:
+def get_replica_set_by_name_prefix(admin_client: DynamicClient, replica_set_prefix: str, namespace: str) -> list:
     replica_sets = [
         replica
-        for replica in ReplicaSet.get(dyn_client=dyn_client, namespace=namespace)
+        for replica in ReplicaSet.get(client=admin_client, namespace=namespace)
         if replica.name.startswith(replica_set_prefix)
     ]
     assert replica_sets, f"A ReplicaSet with the {replica_set_prefix} prefix does not exist"
     return replica_sets
 
 
-def wait_hco_csv_updated_virt_operator_httpget(namespace: str, updated_hco_field: str) -> None:
+def wait_hco_csv_updated_virt_operator_httpget(
+    namespace: str, updated_hco_field: str, admin_client: DynamicClient
+) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
         func=get_deployment_by_name,
         namespace_name=namespace,
         deployment_name=VIRT_OPERATOR,
+        admin_client=admin_client,
     )
     httpget_path = None
     try:
