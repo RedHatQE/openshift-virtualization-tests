@@ -330,11 +330,11 @@ def is_hpp_cr_legacy(hostpath_provisioner):
     return not hostpath_provisioner.instance.spec.storagePools
 
 
-def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, client):
+def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, admin_client):
     daemonset = DaemonSet(
         name=f"{HostPathProvisioner.Name.HOSTPATH_PROVISIONER}{hpp_cr_suffix}",
         namespace=hco_namespace.name,
-        client=client,
+        client=admin_client,
     )
     assert daemonset.exists, "hpp_daemonset does not exist"
     return daemonset

@@ -415,12 +415,16 @@ def hpp_cr_suffix_scope_session(is_hpp_cr_legacy_scope_session):
 
 @pytest.fixture(scope="session")
 def hpp_daemonset_scope_session(hco_namespace, hpp_cr_suffix_scope_session, admin_client):
-    yield get_hpp_daemonset(hco_namespace=hco_namespace, hpp_cr_suffix=hpp_cr_suffix_scope_session, client=admin_client)
+    yield get_hpp_daemonset(
+        hco_namespace=hco_namespace, hpp_cr_suffix=hpp_cr_suffix_scope_session, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="module")
 def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module, admin_client):
-    yield get_hpp_daemonset(hco_namespace=hco_namespace, hpp_cr_suffix=hpp_cr_suffix_scope_module, client=admin_client)
+    yield get_hpp_daemonset(
+        hco_namespace=hco_namespace, hpp_cr_suffix=hpp_cr_suffix_scope_module, admin_client=admin_client
+    )
 
 
 @pytest.fixture()
