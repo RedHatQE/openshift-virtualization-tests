@@ -677,6 +677,7 @@ def initial_vmi_deletion_metrics_values(prometheus):
         ]
     }
 
+
 def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
     """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
     # Calculate VM CPU count
