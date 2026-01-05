@@ -160,7 +160,7 @@ def virt_pod_names_by_label(request, admin_client, hco_namespace):
     return [
         pod.name
         for pod in Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
             label_selector=request.param,
         )
@@ -297,7 +297,7 @@ def vm_virt_controller_ip_address(admin_client, hco_namespace, kubevirt_vmi_stat
     virt_controller_pod_name = kubevirt_vmi_status_addresses_ip_labels_values.get("pod")
     assert virt_controller_pod_name, "virt-controller not found"
     virt_controller_pod_ip = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=virt_controller_pod_name,
         namespace=hco_namespace.name,
     ).ip
@@ -389,12 +389,12 @@ def template_validator_finalizer(admin_client, hco_namespace):
 @pytest.fixture(scope="class")
 def deleted_ssp_operator_pod(admin_client, hco_namespace):
     get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=SSP_OPERATOR,
         namespace=hco_namespace.name,
     ).delete(wait=True)
     yield
-    verify_ssp_pod_is_running(dyn_client=admin_client, hco_namespace=hco_namespace)
+    verify_ssp_pod_is_running(client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="class")

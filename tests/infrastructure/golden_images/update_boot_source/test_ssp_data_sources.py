@@ -223,7 +223,7 @@ def update_data_source(data_source):
 
 @pytest.fixture()
 def golden_images_data_sources_scope_function(admin_client, golden_images_namespace):
-    return list(DataSource.get(dyn_client=admin_client, namespace=golden_images_namespace.name))
+    return list(DataSource.get(client=admin_client, namespace=golden_images_namespace.name))
 
 
 @pytest.fixture()

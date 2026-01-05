@@ -265,12 +265,12 @@ class OvsBridgeNodeNetworkConfigurationPolicy(BridgeNodeNetworkConfigurationPoli
         if self.node_selector:
             return list(
                 Node.get(
-                    dyn_client=self.client,
+                    client=self.client,
                     name=utilities.infra.get_node_selector_name(node_selector=self.node_selector),
                 )
             )[0]
         else:
-            return list(Node.get(dyn_client=self.client))[0]
+            return list(Node.get(client=self.client))[0]
 
     def to_dict(self):
         super().to_dict()
@@ -800,7 +800,7 @@ def compose_cloud_init_data_dict(network_data=None, ipv6_network_data=None):
 
 def ovs_pods(admin_client, hco_namespace):
     pods = utilities.infra.get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=OVS_DS_NAME,
         namespace=hco_namespace,
         get_all=True,

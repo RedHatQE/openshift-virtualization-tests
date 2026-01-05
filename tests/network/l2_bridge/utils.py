@@ -284,7 +284,7 @@ def get_kubemacpool_controller_log(
     log_start_time,
 ):
     kmp_controller_pod = get_pod_by_name_prefix(
-        dyn_client=client,
+        client=client,
         pod_prefix=KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
         namespace=namespace_name,
     )

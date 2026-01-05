@@ -22,7 +22,7 @@ def pods_list_with_given_prefix(request, admin_client, hco_namespace):
     namespace_name = hco_namespace.name
     pods_prefix_name = request.param["pods_prefix_name"]
     pods_list_by_prefix = get_pod_by_name_prefix(
-        dyn_client=admin_client,
+        client=admin_client,
         pod_prefix=pods_prefix_name,
         namespace=namespace_name,
         get_all=True,
@@ -65,7 +65,7 @@ def test_priority_class_value(pods_list_with_given_prefix):
 def virt_template_validator_pods(admin_client, hco_namespace):
     return list(
         Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
             label_selector="kubevirt.io=virt-template-validator",
         )

@@ -21,7 +21,7 @@ def test_cr_deletion(admin_client, hco_namespace, cdi):
     # Get CDI pods
     cdi_pods = list(
         Pod.get(
-            dyn_client=admin_client,
+            client=admin_client,
             namespace=hco_namespace.name,
             label_selector="cdi.kubevirt.io",
         )
