@@ -170,7 +170,7 @@ def test_verify_pod_cdi_label(cdi_resources_scope_module):
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3475")
 @pytest.mark.s390x
-def test_importer_pod_cdi_label(namespace, https_server_certificate):
+def test_importer_pod_cdi_label(namespace, admin_client, https_server_certificate):
     # verify "cdi.kubevirt.io" label is included in importer pod
     with import_image_to_dv(
         dv_name="cnv-3475",
@@ -182,13 +182,14 @@ def test_importer_pod_cdi_label(namespace, https_server_certificate):
         wait_for_cdi_worker_pod(
             pod_name="importer",
             storage_ns_name=namespace.name,
+            admin_client=admin_client,
         )
 
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3474")
 @pytest.mark.s390x
-def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_name_scope_module):
+def test_uploader_pod_cdi_label(unprivileged_client, admin_client, namespace, storage_class_name_scope_module):
     """
     Verify "cdi.kubevirt.io" label is included in uploader pod
     """
@@ -201,6 +202,7 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
         wait_for_cdi_worker_pod(
             pod_name=CDI_UPLOAD,
             storage_ns_name=namespace.name,
+            admin_client=admin_client,
         )
 
 
@@ -222,6 +224,7 @@ def test_uploader_pod_cdi_label(unprivileged_client, namespace, storage_class_na
 @pytest.mark.s390x
 def test_cloner_pods_cdi_label(
     unprivileged_client,
+    admin_client,
     namespace,
     data_volume_without_snapshot_capability_scope_function,
 ):
@@ -238,10 +241,12 @@ def test_cloner_pods_cdi_label(
         wait_for_cdi_worker_pod(
             pod_name=CDI_UPLOAD_TMP_PVC if cdv.pvc.use_populator else f"{CDI_UPLOAD}-dv-target",
             storage_ns_name=cdv.namespace,
+            admin_client=admin_client,
         )
         wait_for_cdi_worker_pod(
             pod_name=f"-{SOURCE_POD}",
             storage_ns_name=cdv.namespace,
+            admin_client=admin_client,
         )
 
 

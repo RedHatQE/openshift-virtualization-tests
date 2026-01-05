@@ -859,9 +859,9 @@ class HPPWithStoragePool(HostPathProvisioner):
         })
 
 
-def wait_for_hpp_pool_pods_to_be_running(client, schedulable_nodes):
+def wait_for_hpp_pool_pods_to_be_running(admin_client, schedulable_nodes):
     LOGGER.info(f"Wait for {HPP_POOL} pods to be Running")
-    for hpp_pool_pods in wait_for_hpp_pods(client=client, pod_prefix=HPP_POOL):
+    for hpp_pool_pods in wait_for_hpp_pods(client=admin_client, pod_prefix=HPP_POOL):
         if len(hpp_pool_pods) == len(schedulable_nodes):
             for pod in hpp_pool_pods:
                 pod.wait_for_status(status=pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
@@ -898,12 +898,12 @@ def wait_for_hpp_pods(client, pod_prefix):
 
 
 def verify_hpp_pool_health(admin_client, schedulable_nodes, hco_namespace):
-    wait_for_hpp_pool_pods_to_be_running(client=admin_client, schedulable_nodes=schedulable_nodes)
+    wait_for_hpp_pool_pods_to_be_running(admin_client=admin_client, schedulable_nodes=schedulable_nodes)
     # Check there are as many 'hpp-pool-' PVCs as schedulable_nodes, and they are Bound
     verify_hpp_pool_pvcs_are_bound(schedulable_nodes=schedulable_nodes, hco_namespace=hco_namespace)
 
 
-def wait_for_cdi_worker_pod(pod_name, storage_ns_name):
+def wait_for_cdi_worker_pod(pod_name, storage_ns_name, admin_client):
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_30SEC,
@@ -912,6 +912,7 @@ def wait_for_cdi_worker_pod(pod_name, storage_ns_name):
                 Pod.get(
                     namespace=storage_ns_name,
                     label_selector=CDI_LABEL,
+                    client=admin_client,
                 )
             ),
         ):

@@ -44,18 +44,18 @@ def deteled_hostpath_provisioner_cr(admin_client, hco_namespace, schedulable_nod
         verify_hpp_cr_deleted_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            admin_client=admin_client,
             is_hpp_cr_with_pvc_template=is_cr_with_pvc_template,
         )
         yield
         # Recreate HPP CR after the test if it was deleted
-        recreated_hpp_cr = HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
+        recreated_hpp_cr = HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER, client=admin_client)
         recreated_hpp_cr.yaml_file = yaml_object
         recreated_hpp_cr.deploy()
         verify_hpp_cr_installed_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            admin_client=admin_client,
             hpp_custom_resource=recreated_hpp_cr,
         )
     else:
@@ -77,12 +77,12 @@ def hpp_csi_custom_resource(
     assert os.path.exists(file_path)
 
     is_cr_with_pvc_template = False
-    with HostPathProvisioner(yaml_file=file_path) as hpp_csi_cr:
+    with HostPathProvisioner(yaml_file=file_path, client=admin_client) as hpp_csi_cr:
         is_cr_with_pvc_template = is_hpp_cr_with_pvc_template(hpp_custom_resource=hpp_csi_cr)
         verify_hpp_cr_installed_successfully(
             hco_namespace=hco_namespace,
             schedulable_nodes=schedulable_nodes,
-            client=admin_client,
+            admin_client=admin_client,
             hpp_custom_resource=hpp_csi_cr,
         )
         yield hpp_csi_cr
@@ -90,16 +90,16 @@ def hpp_csi_custom_resource(
     verify_hpp_cr_deleted_successfully(
         hco_namespace=hco_namespace,
         schedulable_nodes=schedulable_nodes,
-        client=admin_client,
+        admin_client=admin_client,
         is_hpp_cr_with_pvc_template=is_cr_with_pvc_template,
     )
 
 
 @pytest.fixture(scope="module")
-def deleted_hpp_storage_classes(request, cluster_storage_classes):
+def deleted_hpp_storage_classes(request, admin_client, cluster_storage_classes):
     deleted_storage_classes_list = []
     for storage_class in request.param:
-        storage_class_object = StorageClass(name=storage_class)
+        storage_class_object = StorageClass(name=storage_class, client=admin_client)
         if storage_class_object.exists:
             yaml_object = io.StringIO(yaml.dump(storage_class_object.instance.to_dict()))
             storage_class_object.clean_up()
