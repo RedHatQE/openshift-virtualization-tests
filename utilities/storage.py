@@ -170,7 +170,7 @@ def create_dv(
         api_name=api_name,
         source_ref=source_ref,
     ) as dv:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
             create_dummy_first_consumer_pod(dv=dv)
         yield dv
     utilities.artifactory.cleanup_artifactory_secret_and_config_map(
@@ -273,7 +273,7 @@ def data_volume(
                 if (
                     not consume_wffc
                     and storage_class
-                    and sc_volume_binding_mode_is_wffc(sc=storage_class)
+                    and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client)
                     and not bind_immediate
                 ):
                     # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
@@ -324,8 +324,11 @@ def get_storage_class_dict_from_matrix(storage_class: str) -> dict:
     return matching_storage_classes[0]
 
 
-def sc_volume_binding_mode_is_wffc(sc: str) -> bool:
-    return get_storage_class_dict_from_matrix(storage_class=sc)[sc]["wffc"] is True
+def sc_volume_binding_mode_is_wffc(sc: str, client: DynamicClient) -> bool:
+    return (
+        StorageClass(name=sc, client=client).instance["volumeBindingMode"]
+        == StorageClass.VolumeBindingMode.WaitForFirstConsumer
+    )
 
 
 @contextmanager

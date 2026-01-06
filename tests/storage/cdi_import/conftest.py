@@ -167,7 +167,7 @@ def vm_list_created_by_multiprocess(
     vms_list = []
     processes = {}
     for dv in dv_list_created_by_multiprocess:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
             dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
         else:
             dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)

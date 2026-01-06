@@ -132,7 +132,7 @@ def test_delete_pvc_after_successful_import(
     pvc.delete()
     wait_for_pvc_recreate(pvc=pvc, pvc_original_timestamp=pvc_original_timestamp)
     storage_class = data_volume_multi_storage_scope_function.storage_class
-    if sc_volume_binding_mode_is_wffc(sc=storage_class):
+    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=data_volume_multi_storage_scope_function.client):
         create_dummy_first_consumer_pod(pvc=pvc)
     data_volume_multi_storage_scope_function.wait_for_dv_success()
 
