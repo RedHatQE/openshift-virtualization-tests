@@ -661,3 +661,12 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
             f"Default storage class '{storage_class}' doesn't support RWX mode "
             f"(required: RWX, found: {found_mode or 'none'})"
         )
+
+def get_resource_by_name(resource_kind, name, namespace=None):
+    kwargs = {"name": name}
+    if namespace:
+        kwargs["namespace"] = namespace
+    resource = resource_kind(**kwargs)
+    if resource.exists:
+        return resource
+    raise ResourceNotFoundError(f"{resource_kind} {name} not found.")

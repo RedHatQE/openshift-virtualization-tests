@@ -2746,3 +2746,8 @@ def hugepages_gib_values(workers):
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]
+
+
+@pytest.fixture(scope="class")
+def mig_gpu_nodes(nodes):
+    return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")

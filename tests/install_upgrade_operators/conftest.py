@@ -18,7 +18,6 @@ from tests.install_upgrade_operators.constants import (
 )
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
-    get_resource_by_name,
     get_resource_from_module_name,
 )
 from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
@@ -35,7 +34,7 @@ from utilities.operator import (
 )
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
-
+from tests.utils import get_resource_by_name
 LOGGER = logging.getLogger(__name__)
 
 

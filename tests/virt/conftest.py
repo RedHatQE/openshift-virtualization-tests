@@ -1,6 +1,7 @@
 import collections
 import logging
 import shlex
+import time
 
 import bitmath
 import pytest
@@ -123,7 +124,8 @@ def virt_special_infra_sanity(
         if any(item.get_closest_marker("high_resource_vm") for item in request.session.items):
             _verify_not_psi_cluster()
             _verify_hw_virtualization(
-                _schedulable_nodes=schedulable_nodes, _nodes_cpu_virt_extension=nodes_cpu_virt_extension
+                _schedulable_nodes=schedulable_nodes,
+                _nodes_cpu_virt_extension=nodes_cpu_virt_extension,
             )
         if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
             try:
@@ -131,7 +133,10 @@ def virt_special_infra_sanity(
             except ResourceValueError as error:
                 failed_verifications_list.append(str(error))
         if any(item.get_closest_marker("gpu") for item in request.session.items):
-            _verify_gpu(_gpu_nodes=gpu_nodes, _nodes_with_supported_gpus=nodes_with_supported_gpus)
+            _verify_gpu(
+                _gpu_nodes=gpu_nodes,
+                _nodes_with_supported_gpus=nodes_with_supported_gpus,
+            )
             _verfify_no_dpdk()
         if any(item.get_closest_marker("sriov") for item in request.session.items):
             _verify_sriov(_sriov_workers=sriov_workers)
@@ -175,6 +180,15 @@ def nodes_with_supported_gpus(gpu_nodes, workers_utility_pods):
     return gpu_nodes_copy
 
 
+@pytest.fixture(scope="class")
+def nodes_with_supported_mig_gpus(mig_gpu_nodes, workers_utility_pods):
+    gpu_nodes_copy = mig_gpu_nodes.copy()
+    for node in mig_gpu_nodes:
+        if "A2" in get_nodes_gpu_info(util_pods=workers_utility_pods, node=node):
+            gpu_nodes_copy.remove(node)
+    return gpu_nodes_copy
+
+
 @pytest.fixture(scope="session")
 def nodes_cpu_virt_extension(nodes_cpu_vendor):
     if nodes_cpu_vendor == INTEL:
@@ -211,22 +225,87 @@ def supported_gpu_device(workers_utility_pods, nodes_with_supported_gpus):
     raise UnsupportedGPUDeviceError("GPU device ID not in current GPU_CARDS_MAP!")
 
 
+@pytest.fixture(scope="class")
+def supported_mig_gpu_device(workers_utility_pods, nodes_with_supported_mig_gpus):
+    gpu_info = get_nodes_gpu_info(util_pods=workers_utility_pods, node=nodes_with_supported_mig_gpus[0])
+    for gpu_id in GPU_CARDS_MAP:
+        if gpu_id in gpu_info:
+            return GPU_CARDS_MAP[gpu_id]
+
+    raise UnsupportedGPUDeviceError("GPU device ID not in current GPU_CARDS_MAP!")
+
+
 @pytest.fixture(scope="session")
 def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource_scope_session, supported_gpu_device):
     yield from patch_hco_cr_with_mdev_permitted_hostdevices(
-        hyperconverged_resource=hyperconverged_resource_scope_session, supported_gpu_device=supported_gpu_device
+        hyperconverged_resource=hyperconverged_resource_scope_session,
+        supported_gpu_device=supported_gpu_device,
     )
 
 
 @pytest.fixture(scope="session")
 def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
-    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/gpu.workload.config": "vm-vgpu"})
+    yield from label_nodes(
+        nodes=nodes_with_supported_gpus,
+        labels={"nvidia.com/gpu.workload.config": "vm-vgpu"},
+    )
 
 
 @pytest.fixture(scope="session")
 def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
     wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
     yield gpu_nodes_labeled_with_vm_vgpu
+
+
+@pytest.fixture(scope="class")
+def mig_gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_mig_gpus):
+    labeling_node = label_nodes(
+        nodes=nodes_with_supported_mig_gpus,
+        labels={"nvidia.com/gpu.workload.config": "vm-vgpu"},
+    )
+    labeled_node = next(labeling_node)
+    time.sleep(TIMEOUT_1MIN)
+    yield labeled_node
+
+
+@pytest.fixture(scope="class")
+def mig_vgpu_ready_nodes(admin_client, mig_gpu_nodes_labeled_with_vm_vgpu):
+    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+    yield mig_gpu_nodes_labeled_with_vm_vgpu
+
+
+@pytest.fixture(scope="class")
+def non_existent_mdev_bus_mig_nodes(workers_utility_pods, mig_vgpu_ready_nodes):
+    """
+    Check if the mdev_bus needed for vGPU is available.
+
+    On the Worker Node on which GPU Device exists, check if the
+    mdev_bus needed for vGPU is available.
+    If it's not available, this means the nvidia-vgpu-manager-daemonset
+    Pod might not be in running state in the nvidia-gpu-operator namespace.
+    """
+    desired_bus = "mdev_bus"
+    non_existent_mdev_bus_nodes = []
+    for node in mig_vgpu_ready_nodes:
+        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_1MIN,
+                sleep=TIMEOUT_5SEC,
+                func=pod_exec.exec,
+                command=f"ls /sys/class | grep {desired_bus} || true",
+            ):
+                if sample:
+                    return
+        except TimeoutExpiredError:
+            non_existent_mdev_bus_nodes.append(node.name)
+    if non_existent_mdev_bus_nodes:
+        pytest.fail(
+            reason=(
+                f"On these nodes: {non_existent_mdev_bus_nodes} {desired_bus} is not available."
+                "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
+            )
+        )
 
 
 @pytest.fixture(scope="session")
@@ -315,7 +394,9 @@ def node_with_least_available_memory(available_memory_per_node):
 @pytest.fixture(scope="module")
 def golden_image_data_source_for_test_scope_module(request, admin_client, golden_images_namespace):
     yield from get_or_create_golden_image_data_source(
-        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+        admin_client=admin_client,
+        golden_images_namespace=golden_images_namespace,
+        os_dict=request.param["os_dict"],
     )
 
 
@@ -330,7 +411,9 @@ def golden_image_data_volume_template_for_test_scope_module(request, golden_imag
 @pytest.fixture(scope="class")
 def golden_image_data_source_for_test_scope_class(request, admin_client, golden_images_namespace):
     yield from get_or_create_golden_image_data_source(
-        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+        admin_client=admin_client,
+        golden_images_namespace=golden_images_namespace,
+        os_dict=request.param["os_dict"],
     )
 
 
@@ -345,7 +428,9 @@ def golden_image_data_volume_template_for_test_scope_class(request, golden_image
 @pytest.fixture()
 def golden_image_data_source_for_test_scope_function(request, admin_client, golden_images_namespace):
     yield from get_or_create_golden_image_data_source(
-        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
+        admin_client=admin_client,
+        golden_images_namespace=golden_images_namespace,
+        os_dict=request.param["os_dict"],
     )
 
 
