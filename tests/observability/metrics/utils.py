@@ -734,11 +734,13 @@ def create_windows11_wsl2_vm(
         vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
-        running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
-        yield vm
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
+        try:
+            running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
+            yield vm
+        finally:
+            cleanup_artifactory_secret_and_config_map(
+                artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+            )
 
 
 def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
