@@ -27,7 +27,6 @@ from utilities.constants import (
     NamespacesNames,
 )
 from utilities.infra import (
-    ExecCommandOnPod,
     get_deployment_by_name,
     get_node_selector_dict,
     wait_for_pods_running,
@@ -67,11 +66,6 @@ def virt_handler_pod(admin_client):
 @pytest.fixture(scope="session")
 def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
     return ipv4_supported_cluster and ipv6_supported_cluster
-
-
-@pytest.fixture()
-def worker_node1_pod_executor(workers_utility_pods, worker_node1):
-    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
 
 
 @pytest.fixture(scope="module")
@@ -225,6 +219,8 @@ def network_sanity(
     conformance_tests,
     nmstate_namespace,
     mtv_namespace_scope_session,
+    sriov_namespace,
+    sriov_node_policy,
 ):
     """
     Ensures the test cluster meets network requirements before executing tests.
@@ -296,20 +292,25 @@ def network_sanity(
     def _verify_sriov():
         if any(test.get_closest_marker("sriov") for test in collected_tests):
             LOGGER.info("Verifying if the cluster supports running SRIOV tests...")
-            if not Namespace(name=py_config["sriov_namespace"], client=admin_client).exists:
+            if not sriov_namespace.exists:
                 failure_msgs.append(
-                    f"SRIOV operator is not installed, the '{py_config['sriov_namespace']}' namespace does not exist"
+                    f"SRIOV operator is not installed, the '{sriov_namespace.name}' namespace does not exist"
                 )
+                return
             if len(sriov_workers) < 2:
                 failure_msgs.append(
                     "SRIOV tests require at least 2 SRIOV-capable worker nodes, but fewer were detected"
                 )
-            else:
-                LOGGER.info(
-                    "Validated SRIOV operator is running against a valid cluster with "
-                    f"'{py_config['sriov_namespace']}' namespace and "
-                    f"has {len(sriov_workers)} SRIOV-capable worker nodes"
-                )
+                return
+            if not sriov_node_policy:
+                failure_msgs.append(f"No SR-IOV network node policy found in namespace {sriov_namespace.name}")
+                return
+            LOGGER.info(
+                "Validated SRIOV operator is running against a valid cluster with "
+                f"'{sriov_namespace.name}' namespace, "
+                f"has {len(sriov_workers)} SRIOV-capable worker nodes "
+                f"and '{sriov_node_policy.name}' {sriov_node_policy.kind}"
+            )
 
     def _verify_ip_family(family, is_supported_in_cluster):
         if any(test.get_closest_marker(family) for test in collected_tests):
