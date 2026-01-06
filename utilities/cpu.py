@@ -139,8 +139,15 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
         ValueError: If nodes have mixed CPU architectures.
     """
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
+    config_cpu_arch: str | None = py_config.get("cpu_arch")
 
-    if len(nodes_cpu_arch) > 1 and not py_config.get("cpu_arch"):
+    if config_cpu_arch:
+        if config_cpu_arch not in nodes_cpu_arch:
+            raise ValueError(
+                f"CPU architecture {config_cpu_arch} passed via `--cpu-arch` is not supported in the cluster!"
+            )
+        return config_cpu_arch
+
+    if len(nodes_cpu_arch) > 1:
         raise ValueError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
-
     return next(iter(nodes_cpu_arch))
