@@ -607,3 +607,12 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
+
+def get_resource_by_name(resource_kind, name, namespace=None):
+    kwargs = {"name": name}
+    if namespace:
+        kwargs["namespace"] = namespace
+    resource = resource_kind(**kwargs)
+    if resource.exists:
+        return resource
+    raise ResourceNotFoundError(f"{resource_kind} {name} not found.")

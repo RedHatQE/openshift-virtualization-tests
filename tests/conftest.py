@@ -2739,3 +2739,8 @@ def application_aware_resource_quota(admin_client, namespace):
 @pytest.fixture(scope="session")
 def is_s390x_cluster(nodes_cpu_architecture):
     return nodes_cpu_architecture == S390X
+
+
+@pytest.fixture(scope="class")
+def mig_gpu_nodes(nodes):
+    return get_nodes_with_label(nodes=nodes, label="nvidia.com/gpu.present")
