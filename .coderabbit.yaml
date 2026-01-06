@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI Review Configuration for openshift-virtualization-tests
+# Based on project-specific rules from CLAUDE.md
+
+language: en-US
+
+tone_instructions: "Be direct and specific. Explain WHY rules exist. Provide code examples. Distinguish critical violations from suggestions. Use severity levels: CRITICAL (blocking/security), HIGH (types/fixtures), MEDIUM (style), LOW (suggestions)."
+
+early_access: true
+enable_free_tier: true
+
+reviews:
+  # Assertive profile for strict enforcement of coding standards
+  profile: assertive
+
+  # Request changes for critical violations
+  request_changes_workflow: true
+
+  # Review display settings
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  auto_title_placeholder: "@coderabbitai"
+  review_status: true
+  commit_status: true
+  poem: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  changed_files_summary: true
+
+  # Targeted pre-merge checks - only run on changed files
+  path_filters:
+    - "!**/*.md"  # Skip markdown-only changes for full review
+
+  # Abort review if PR is closed
+  abort_on_close: true
+
+  # Auto-review configuration
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+    base_branches:
+      - main
+      - cnv-4.20
+      - cnv-4.19
+      - cnv-4.18
+
+  # Enabled linting and security tools
+  tools:
+    # Python linting
+    ruff:
+      enabled: true
+    # Additional Python linting (stricter checks)
+    pylint:
+      enabled: true
+    # Note: mypy is not a supported CodeRabbit tool - type checking is enforced via pre-commit and tox
+    # YAML validation
+    yamllint:
+      enabled: true
+    # Shell script checking
+    shellcheck:
+      enabled: true
+    # Security scanning
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    # GitHub Actions workflow validation
+    actionlint:
+      enabled: true
+    # Dockerfile linting
+    hadolint:
+      enabled: true
+    # Markdown linting
+    markdownlint:
+      enabled: true
+    # GitHub checks integration
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+
+  # Enable code guidelines enforcement from CLAUDE.md and docs
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+
+  # Enable learning from repository patterns
+  learnings:
+    scope: auto
+
+  # Enable learning from issues
+  issues:
+    scope: auto
+
+  # Enable learning from pull requests
+  pull_requests:
+    scope: auto
