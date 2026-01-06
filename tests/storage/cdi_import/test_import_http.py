@@ -428,6 +428,10 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
                 )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: fix test to create resources sequentially; tracked in CNV-75838",
+    run=False,
+)
 @pytest.mark.sno
 @pytest.mark.parametrize(
     "number_of_processes",
