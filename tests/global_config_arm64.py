@@ -33,7 +33,6 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": False,
-            "default": True,
         }
     },
     {
@@ -43,6 +42,7 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": True,
+            "default": True,
         }
     },
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
