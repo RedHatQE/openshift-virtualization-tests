@@ -7,7 +7,7 @@ from pytest_testconfig import config as py_config
 from tests.os_params import RHEL_LATEST
 from tests.storage.utils import get_importer_pod
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import Images
+from utilities.constants import QUARANTINED, Images
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
@@ -116,6 +116,13 @@ def test_dv_template_has_the_same_priority_as_vm_when_not_specified(
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: Test fails during setup with network timeout "
+        "when fetching image info from registry. Tracked in CNV-75757"
+    ),
+    run=False,
 )
 @pytest.mark.s390x
 def test_dv_template_has_the_different_priority_as_vm_when_specify(
