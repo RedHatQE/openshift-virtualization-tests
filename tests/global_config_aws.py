@@ -12,6 +12,16 @@ Images.Windows.DEFAULT_DV_SIZE = "75Gi"
 
 storage_class_matrix = [
     {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+            "default": True,
+        }
+    },
+    {
         StorageClassNames.PORTWORX_CSI_DB_SHARED: {
             "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
@@ -27,7 +37,6 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": False,
-            "default": True,
         }
     },
     {
@@ -41,8 +50,8 @@ storage_class_matrix = [
     },
 ]
 
-storage_class_a = StorageClassNames.IO2_CSI
-storage_class_b = StorageClassNames.IO2_CSI
+storage_class_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 
 for _dir in dir():
     if not config:  # noqa: F821
