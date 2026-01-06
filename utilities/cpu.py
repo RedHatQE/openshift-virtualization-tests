@@ -141,6 +141,6 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
 
     if len(nodes_cpu_arch) > 1 and not py_config.get("cpu_arch"):
-        raise ValueError("cpu-arch param should be set for multi-arch clusters!")
+        raise ValueError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
 
     return next(iter(nodes_cpu_arch))
