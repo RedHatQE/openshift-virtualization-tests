@@ -2,7 +2,6 @@ import logging
 import shlex
 from collections import OrderedDict
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.service import Service
@@ -323,11 +322,3 @@ def basic_expose_command(
         f"expose {resource} {resource_name} --port={port} --target-port="
         f"{target_port} --type={service_type} --name={svc_name} --protocol={protocol}"
     )
-
-
-def get_service(name, namespace, client):
-    service = Service(name=name, namespace=namespace, client=client)
-    if service.exists:
-        return service
-
-    raise ResourceNotFoundError(f"Service {name}.")
