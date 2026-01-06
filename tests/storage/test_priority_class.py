@@ -65,8 +65,8 @@ def vm_with_priority_class(
             "spec": dv_dict["spec"],
         },
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
-        priority_class_name=vm_priority_class.name,
         body=fedora_vm_body(name=vm_name),
+        priority_class_name=vm_priority_class.name,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         client=unprivileged_client,
     ) as vm:
@@ -121,4 +121,5 @@ def test_dv_template_has_the_same_priority_as_vm_when_not_specified(
 def test_dv_template_has_the_different_priority_as_vm_when_specify(
     priority_class, vm_with_priority_class, importer_pod
 ):
+
     assert importer_pod.instance.spec.priority != priority_class["vm_priority_class"].value
