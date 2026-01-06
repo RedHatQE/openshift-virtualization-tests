@@ -47,11 +47,11 @@ from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
-from ocp_resources.sriov_network_node_state import SriovNetworkNodeState
+from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -161,9 +161,7 @@ from utilities.infra import (
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
-    SriovIfaceNotFound,
     cloud_init,
-    create_sriov_node_policy,
     enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
@@ -999,16 +997,7 @@ def worker_node3(schedulable_nodes):
 
 @pytest.fixture(scope="session")
 def sriov_namespace(admin_client):
-    return Namespace(name=py_config["sriov_namespace"], client=admin_client)
-
-
-@pytest.fixture(scope="session")
-def sriov_nodes_states(admin_client, sriov_namespace, sriov_workers):
-    sriov_nns_list = [
-        SriovNetworkNodeState(client=admin_client, namespace=sriov_namespace.name, name=worker.name)
-        for worker in sriov_workers
-    ]
-    return sriov_nns_list
+    return Namespace(name="openshift-sriov-network-operator", client=admin_client)
 
 
 @pytest.fixture(scope="session")
@@ -1018,43 +1007,16 @@ def sriov_workers(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def sriov_ifaces(sriov_nodes_states, workers_utility_pods):
-    node = sriov_nodes_states[0]
-    state_up = Resource.Interface.State.UP
-    ifaces_list = [
-        iface
-        for iface in node.instance.status.interfaces
-        if (
-            iface.totalvfs
-            and ExecCommandOnPod(utility_pods=workers_utility_pods, node=node).interface_status(interface=iface.name)
-            == state_up
-        )
-    ]
-
-    if not ifaces_list:
-        raise SriovIfaceNotFound(
-            f"no sriov interface with '{state_up}' status was found, "
-            f"please make sure at least one sriov interface is {state_up}"
-        )
-
-    return ifaces_list
-
-
-@pytest.fixture(scope="session")
 def sriov_node_policy(
     admin_client,
-    sriov_unused_ifaces,
-    sriov_nodes_states,
-    workers_utility_pods,
     sriov_namespace,
 ):
-    yield from create_sriov_node_policy(
-        nncp_name="test-sriov-policy",
-        namespace=sriov_namespace.name,
-        sriov_iface=sriov_unused_ifaces[0],
-        sriov_nodes_states=sriov_nodes_states,
-        sriov_resource_name="sriov_net",
-        client=admin_client,
+    return next(
+        SriovNetworkNodePolicy.get(
+            client=admin_client,
+            namespace=sriov_namespace.name,
+        ),
+        None,
     )
 
 
@@ -2555,17 +2517,6 @@ def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migra
 @pytest.fixture(scope="class")
 def ssp_resource_scope_class(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def sriov_unused_ifaces(sriov_ifaces):
-    """
-    This fixture returns SRIOV interfaces which are not used. If an interface has
-    some VFs in use but still have available VFs, it will be seen as used and will
-    not be included in the returned list.
-    """
-    available_ifaces_list = [interface for interface in sriov_ifaces if not interface.numVfs]
-    return available_ifaces_list
 
 
 @pytest.fixture(scope="session")
