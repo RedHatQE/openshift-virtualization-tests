@@ -403,6 +403,7 @@ def virtctl_upload_dv(
     name,
     image_path,
     size,
+    client,
     pvc=False,
     storage_class=None,
     volume_mode=None,
@@ -448,7 +449,7 @@ def virtctl_upload_dv(
         command.append(f"--volume-mode={volume_mode.lower()}")
     if no_create:
         command.append("--no-create")
-    if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc and not no_create:
+    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc and not no_create:
         command.append("--force-bind")
 
     yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)

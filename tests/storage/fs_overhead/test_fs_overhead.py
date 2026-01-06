@@ -74,6 +74,7 @@ def uploaded_cirros_dv(
 ):
     dv_name = "uploaded-dv"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=Images.Cirros.DEFAULT_DV_SIZE,

@@ -59,6 +59,7 @@ def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2192"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -87,6 +88,7 @@ def test_successful_virtctl_upload_no_route(
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2191"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size="1Gi",
@@ -114,6 +116,7 @@ def test_image_upload_with_overridden_url(
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -139,6 +142,7 @@ def test_virtctl_image_upload_with_ca(
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_path)
     pvc_name = "cnv-3031"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -164,6 +168,7 @@ def test_virtctl_image_upload_dv(
     """
     dv_name = f"cnv-3724-{storage_class_name_immediate_binding_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
@@ -205,6 +210,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
     """
     dv_name = data_volume_multi_storage_scope_function.name
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
@@ -236,6 +242,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
     """
     pvc_name = "cnv-3728"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
@@ -303,6 +310,7 @@ def test_virtctl_image_upload_with_exist_pvc(
     Check that virtctl can upload an local disk image to an existing empty PVC
     """
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=empty_pvc.name,
         size=DEFAULT_DV_SIZE,
@@ -338,6 +346,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     """
     pvc_name = f"cnv-3729-{storage_class_name_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -347,6 +356,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     ) as res:
         check_upload_virtctl_result(result=res)
         with virtctl_upload_dv(
+            client=namespace.client,
             namespace=namespace.name,
             name=pvc_name,
             size=DEFAULT_DV_SIZE,
@@ -382,6 +392,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     - PVC with the same name already exists.
     """
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=empty_pvc.name,
         size=DEFAULT_DV_SIZE,
@@ -455,6 +466,7 @@ def test_print_response_body_on_error_upload_virtctl(
     """
     dv_name = f"cnv-4512-{storage_class_name_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size="3G",

@@ -220,6 +220,7 @@ def uploaded_rhel_dv(
 ):
     dv_name = "uploaded-dv"
     with virtctl_upload_dv(
+        client=namespace_for_backup2.client,
         namespace=namespace_for_backup2.name,
         name=dv_name,
         size=Images.Rhel.DEFAULT_DV_SIZE,

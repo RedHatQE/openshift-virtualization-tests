@@ -114,6 +114,7 @@ def uploaded_dv_via_virtctl_wffc(
     storage_class_matrix_wffc_matrix__module__,
 ):
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=WFFC_DV_NAME,
         size=Images.Cirros.DEFAULT_DV_SIZE,
@@ -186,6 +187,7 @@ class TestWFFCUploadVirtctl:
         storage_class_matrix_wffc_matrix__module__,
     ):
         with virtctl_upload_dv(
+            client=vm_from_uploaded_dv.client,
             namespace=vm_from_uploaded_dv.namespace,
             name=WFFC_DV_NAME,
             size=Images.Cirros.DEFAULT_DV_SIZE,
