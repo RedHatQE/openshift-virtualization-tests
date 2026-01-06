@@ -95,7 +95,7 @@ def sriov_network(admin_client, sriov_node_policy, namespace, sriov_namespace):
         client=admin_client,
         nad_type=SRIOV,
         nad_name="sriov-test-network",
-        sriov_resource_name=sriov_node_policy.instance.spec.resourceName,
+        sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
     ) as sriov_network:
@@ -110,7 +110,7 @@ def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespa
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-test-network-vlan",
-        sriov_resource_name=sriov_node_policy.instance.spec.resourceName,
+        sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
         vlan=next(vlan_index_number),

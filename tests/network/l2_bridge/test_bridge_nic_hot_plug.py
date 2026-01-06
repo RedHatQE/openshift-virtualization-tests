@@ -431,7 +431,7 @@ def sriov_network_for_hot_plug(admin_client, sriov_node_policy, namespace, sriov
     with network_nad(
         nad_type=SRIOV,
         nad_name="sriov-hot-plug-test-network",
-        sriov_resource_name=sriov_node_policy.instance.spec.resourceName,
+        sriov_resource_name=sriov_node_policy.resource_name,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
         client=admin_client,

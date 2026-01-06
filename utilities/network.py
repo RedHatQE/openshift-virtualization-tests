@@ -33,6 +33,7 @@ from utilities.constants import (
     IPV4_STR,
     IPV6_STR,
     LINUX_BRIDGE,
+    MTU_9000,
     OVS_BRIDGE,
     SRIOV,
     TIMEOUT_3MIN,
@@ -992,6 +993,50 @@ def is_destination_pingable_from_vm(
 
 def get_cluster_cni_type(admin_client):
     return Network(client=admin_client, name="cluster").instance.status.networkType
+
+
+def wait_for_ready_sriov_nodes(snns):
+    for status in (INPROGRESS, SriovNetworkNodePolicy.Status.SUCCEEDED):
+        for sriov_node_network_state in snns:
+            LOGGER.info(f"Checking state: {sriov_node_network_state.name}")
+            try:
+                sriov_node_network_state.wait_for_status_sync(wanted_status=status)
+            except TimeoutExpiredError:
+                if (
+                    status == INPROGRESS
+                    and sriov_node_network_state.instance.status.syncStatus == SriovNetworkNodePolicy.Status.SUCCEEDED
+                ):
+                    continue
+                else:
+                    LOGGER.error(
+                        f"Current status: {sriov_node_network_state.instance.status.syncStatus} expected: {status}"
+                    )
+                    raise
+
+
+def create_sriov_node_policy(
+    nncp_name,
+    namespace,
+    sriov_iface,
+    sriov_nodes_states,
+    sriov_resource_name,
+    client,
+    mtu=MTU_9000,
+):
+    with network_device(
+        interface_type=SRIOV,
+        nncp_name=nncp_name,
+        namespace=namespace,
+        sriov_iface=sriov_iface,
+        sriov_resource_name=sriov_resource_name,
+        # sriov operator doesnt pass the mtu to the VFs when using vfio-pci device driver (the one we are using)
+        # so the mtu parameter only affects the PF. we need to change the mtu manually on the VM.
+        mtu=mtu,
+        client=client,
+    ) as policy:
+        wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
+        yield policy
+    wait_for_ready_sriov_nodes(snns=sriov_nodes_states)
 
 
 def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefinition, node: Node) -> None:
