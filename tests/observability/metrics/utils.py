@@ -328,38 +328,26 @@ def validate_metric_value_within_range(
 
 def network_packets_received(
     vm: VirtualMachineForTests, interface_name: str, windows_wsl: bool = False
-) -> dict[str, str]:
+) -> dict[str, str] | None:
     ip_link_show_content = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split(f"{'wsl' if windows_wsl else ''} ip -s link show")
     )[0]
-    LOGGER.info(f"Looking for interface: '{interface_name}'")
-    LOGGER.info(f"ip link show output:\n{ip_link_show_content}")
 
     pattern = re.compile(
         rf".*?{re.escape(interface_name)}:.*?"  # Match the line with the interface name
-        r"RX:.*?\n\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+\d+\s+\d+.*?"  # Capture RX stats (bytes, packets, errors, dropped)
-        r"TX:.*?\n\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)",  # Capture TX stats (bytes, packets, errors, dropped)
+        r"RX:.*?\n\s+(?P<rx_bytes>\d+)\s+(?P<rx_packets>\d+)\s+(?P<rx_errs>\d+)\s+(?P<rx_drop>\d+)\s+\d+\s+\d+.*?"
+        r"TX:.*?\n\s+(?P<tx_bytes>\d+)\s+(?P<tx_packets>\d+)\s+(?P<tx_errs>\d+)\s+(?P<tx_drop>\d+)",
         re.DOTALL | re.IGNORECASE,
     )
     match = pattern.search(string=ip_link_show_content)
 
     if match:
-        rx_bytes, rx_packets, rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop = match.groups()
-        result = {
-            "rx_bytes": rx_bytes,
-            "rx_packets": rx_packets,
-            "rx_errs": rx_errs,
-            "rx_drop": rx_drop,
-            "tx_bytes": tx_bytes,
-            "tx_packets": tx_packets,
-            "tx_errs": tx_errs,
-            "tx_drop": tx_drop,
-        }
+        result = match.groupdict()
         LOGGER.info(f"Successfully parsed network stats: {result}")
         return result
     else:
         LOGGER.warning(f"No match found for interface '{interface_name}' in ip link show output")
-        return {}
+        return None
 
 
 def compare_network_traffic_bytes_and_metrics(
@@ -786,7 +774,10 @@ def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
 
 
 def validate_metric_value_greater_than_initial_value(
-    prometheus: Prometheus, metric_name: str, initial_value: float, timeout: int = TIMEOUT_4MIN, equals: bool = False
+    prometheus: Prometheus,
+    metric_name: str,
+    initial_value: float,
+    timeout: int = TIMEOUT_4MIN,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=timeout,
