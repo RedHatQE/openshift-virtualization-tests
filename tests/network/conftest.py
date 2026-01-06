@@ -16,24 +16,20 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
-from tests.network.constants import BRCNV
-from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
+from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     ISTIO_SYSTEM_DEFAULT_NS,
-    OVS_BRIDGE,
     VIRT_HANDLER,
     NamespacesNames,
 )
 from utilities.infra import (
     get_deployment_by_name,
-    get_node_selector_dict,
     wait_for_pods_running,
 )
 from utilities.network import (
     get_cluster_cni_type,
-    network_nad,
 )
 from utilities.pytest_utils import exit_pytest_execution
 
@@ -118,42 +114,6 @@ def vlans_list():
 @pytest.fixture(scope="module")
 def vlan_index_number(vlans_list):
     return get_vlan_index_number(vlans_list=vlans_list)
-
-
-@pytest.fixture(scope="module")
-def brcnv_ovs_nad_vlan_1(
-    admin_client,
-    hyperconverged_ovs_annotations_enabled_scope_session,
-    namespace,
-    vlan_index_number,
-):
-    vlan_tag = next(vlan_index_number)
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"{BRCNV}-{vlan_tag}",
-        interface_name=BRCNV,
-        vlan=vlan_tag,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="module")
-def brcnv_vma_with_vlan_1(
-    unprivileged_client,
-    namespace,
-    worker_node1,
-    brcnv_ovs_nad_vlan_1,
-):
-    yield from vm_for_brcnv_tests(
-        vm_name="vma",
-        namespace=namespace,
-        unprivileged_client=unprivileged_client,
-        nads=[brcnv_ovs_nad_vlan_1],
-        address_suffix=1,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-    )
 
 
 @pytest.fixture(scope="session")
