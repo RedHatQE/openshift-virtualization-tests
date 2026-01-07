@@ -18,6 +18,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
@@ -208,6 +209,10 @@ def second_object_cleanup(
     resource_class(namespace=namespace.name, name=second_object_name).clean_up()
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Volume snapshot fails to become ready during test setup. Tracked in CNV-75955",
+    run=False,
+)
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-7602")
 @pytest.mark.s390x
