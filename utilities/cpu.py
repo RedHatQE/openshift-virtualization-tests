@@ -12,6 +12,7 @@ from utilities.constants import (
     EXCLUDED_OLD_CPU_MODELS,
     KUBERNETES_ARCH_LABEL,
 )
+from utilities.exceptions import UnsupportedCPUArchitectureError
 
 LOGGER = logging.getLogger(__name__)
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
@@ -136,18 +137,18 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
         CPU architecture string (e.g., "amd64", "arm64", "s390x").
 
     Raises:
-        ValueError: If nodes have mixed CPU architectures.
+        UnsupportedCPUArchitectureError: If nodes have mixed CPU architectures.
     """
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
-    config_cpu_arch: str | None = py_config.get("cpu_arch")
+    config_arch: str | None = py_config.get("arch")
 
-    if config_cpu_arch:
-        if config_cpu_arch not in nodes_cpu_arch:
-            raise ValueError(
-                f"CPU architecture {config_cpu_arch} passed via `--cpu-arch` is not supported in the cluster!"
+    if config_arch:
+        if config_arch not in nodes_cpu_arch:
+            raise UnsupportedCPUArchitectureError(
+                f"CPU architecture {config_arch} passed via `--cpu-arch` is not supported in the cluster!"
             )
-        return config_cpu_arch
+        return config_arch
 
     if len(nodes_cpu_arch) > 1:
-        raise ValueError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
+        raise UnsupportedCPUArchitectureError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
     return next(iter(nodes_cpu_arch))

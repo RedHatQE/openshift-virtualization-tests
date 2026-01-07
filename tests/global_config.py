@@ -1,5 +1,6 @@
 from typing import Any
 
+import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine import VirtualMachine
@@ -46,6 +47,7 @@ from utilities.storage import HppCsiStorageClass
 
 arch = get_cluster_architecture()
 global config
+global_config = pytest_testconfig.load_python(py_file=f"tests/global_config_{arch}.py", encoding="utf-8")
 
 
 def _get_default_storage_class(sc_list):

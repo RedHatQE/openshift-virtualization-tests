@@ -7,7 +7,6 @@ from ocp_resources.template import Template
 
 from utilities.constants import (
     AMD_64,
-    ARM_64,
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
@@ -19,7 +18,6 @@ from utilities.constants import (
     OS_STR,
     OS_VERSION_STR,
     PREFERENCE_STR,
-    S390X,
     TEMPLATE_LABELS_STR,
     WIN_2K16,
     WIN_2K19,
@@ -201,12 +199,7 @@ def generate_os_matrix_dict(
     if not base_dict:
         raise ValueError(f"Unsupported OS: {os_name}. Supported: rhel, windows, fedora, centos")
 
-    if arch:
-        if arch not in (AMD_64, ARM_64, S390X):
-            raise ValueError(f"{arch} architecture in not supported")
-        images_class = getattr(ArchImages, X86_64.upper() if arch == AMD_64 else arch.upper(), None)
-    else:
-        images_class = Images
+    images_class = getattr(ArchImages, X86_64.upper() if arch == AMD_64 else arch.upper(), None) if arch else Images
 
     os_base_class = getattr(images_class, os_name.title(), None)
     if not os_base_class:
