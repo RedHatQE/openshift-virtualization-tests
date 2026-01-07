@@ -125,5 +125,8 @@ docs/source/rst
 # IntelliJ project folder
 .idea/
 
+# Claude Code assistant
+.claude/
+
 # For local run (debug).
 ocp_resources
