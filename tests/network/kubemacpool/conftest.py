@@ -1,15 +1,32 @@
+from typing import Generator
+
 import pytest
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.resource import ResourceEditor
 
-from utilities.constants import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.spec import Interface, Multus, Network
+from libs.vm.vm import BaseVirtualMachine
+from utilities.constants import (
+    KMP_VM_ASSIGNMENT_LABEL,
+    LINUX_BRIDGE,
+)
 from utilities.data_utils import name_prefix
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns, get_node_selector_dict
-from utilities.network import network_device, network_nad
+from utilities.network import (
+    MacPool,
+    network_device,
+    network_nad,
+)
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
+from ..libs.mac import random_mac_range
 from . import utils as kmp_utils
+from .utils import wait_for_created_vm
 
 
 @pytest.fixture(scope="module")
@@ -356,3 +373,76 @@ def cnao_down(admin_client, cnao_deployment):
         yield
 
     cnao_deployment.wait_for_replicas()
+
+
+@pytest.fixture()
+def custom_range_vm(
+    namespace: Namespace,
+    unprivileged_client: DynamicClient,
+) -> Generator[BaseVirtualMachine, None, None]:
+    secondary_iface_name = "custom-range-hco"
+
+    spec = base_vmspec()
+    spec.template.spec.networks = [
+        Network(name="default", pod={}),
+        Network(name=secondary_iface_name, multus=Multus(networkName=secondary_iface_name)),
+    ]
+
+    spec.template.spec.domain.devices.interfaces = [  # type: ignore
+        Interface(name="default", masquerade={}),
+        Interface(name=secondary_iface_name, bridge={}),
+    ]
+
+    vm = fedora_vm(
+        namespace=namespace.name,
+        name="vm-custom-range-kmp",
+        client=unprivileged_client,
+        spec=spec,
+    )
+    with vm:
+        wait_for_created_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def kubemacpool_random_range_config_hco(
+    admin_client: DynamicClient,
+    hyperconverged_resource_scope_function: HyperConverged,
+) -> Generator[None]:
+    rand_range_start, rand_range_end = random_mac_range(range_seed=0)
+    kmp_range = {
+        "RANGE_START": rand_range_start,
+        "RANGE_END": rand_range_end,
+    }
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_function: {
+                "spec": {
+                    "kubeMacPoolConfiguration": {
+                        "rangeStart": kmp_range["RANGE_START"],
+                        "rangeEnd": kmp_range["RANGE_END"],
+                    }
+                }
+            }
+        },
+        list_resource_reconcile=[NetworkAddonsConfig],
+        wait_for_reconcile_post_update=True,
+        admin_client=admin_client,
+    ):
+        yield
+
+
+@pytest.fixture()
+def custom_range_hco_mac_pool(
+    admin_client: DynamicClient,
+    hco_namespace: Namespace,
+    hyperconverged_resource_scope_function: HyperConverged,
+    kubemacpool_random_range_config_hco,
+) -> MacPool:
+
+    kmp_range_from_hco = {
+        "RANGE_START": hyperconverged_resource_scope_function.instance.spec.kubeMacPoolConfiguration.rangeStart,
+        "RANGE_END": hyperconverged_resource_scope_function.instance.spec.kubeMacPoolConfiguration.rangeEnd,
+    }
+
+    return MacPool(kmp_range=kmp_range_from_hco)

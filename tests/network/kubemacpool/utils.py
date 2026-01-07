@@ -2,6 +2,9 @@ import logging
 from collections import namedtuple
 from ipaddress import ip_interface
 
+from timeout_sampler import TimeoutExpiredError, retry
+
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.ip import random_ipv4_address
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
@@ -149,3 +152,24 @@ def assert_macs_preseved(vm):
 
 def assert_manual_mac_configured(vm, iface_config):
     assert iface_config.mac_address == get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=iface_config.name)
+
+
+def wait_for_created_vm(vm: BaseVirtualMachine) -> None:
+    try:
+        _wait_for_vm_interfaces(vm=vm)
+    except TimeoutExpiredError:
+        raise AttributeError(f"VM {vm.name} doesn't have MAC addresses on interfaces")
+
+
+@retry(wait_timeout=30, sleep=5, exceptions_dict={})
+def _wait_for_vm_interfaces(vm: BaseVirtualMachine) -> bool:
+    interfaces = vm.get_interfaces()
+    if not interfaces:
+        return False
+
+    for iface in interfaces:
+        if not hasattr(iface, "macAddress") or not iface.macAddress:
+            return False
+
+    LOGGER.info(f"All interfaces on VM {vm.name} are up with MAC addresses: {interfaces}")
+    return True
