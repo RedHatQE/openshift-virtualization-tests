@@ -141,21 +141,18 @@ def vm_with_node_selector_for_upgrade(vm_with_node_selector_namespace, unprivile
 
 @pytest.fixture(scope="session")
 def outdated_vmis_count(admin_client):
-    """
-    Get the count of VMIs that have the kubevirt.io/outdatedLauncherImage label
-    """
-    vmis_with_outdated_label = list(
-        VirtualMachineInstance.get(
-            dyn_client=admin_client,
-            label_selector="kubevirt.io/outdatedLauncherImage",
+    vmis_with_outdated_label = len(
+        list(
+            VirtualMachineInstance.get(
+                client=admin_client,
+                label_selector="kubevirt.io/outdatedLauncherImage",
+            )
         )
     )
-    return len(vmis_with_outdated_label)
+    assert vmis_with_outdated_label > 0, "There is no outdated vms"
+    return vmis_with_outdated_label
 
 
 @pytest.fixture(scope="session")
 def kubevirt_resource_outdated_vmi_workloads_count(kubevirt_resource_scope_session):
-    """
-    Get the count of outdated VMI workloads from KubeVirt resource status
-    """
     return kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads

@@ -7,6 +7,7 @@ from utilities.constants import DEPENDENCY_SCOPE_SESSION
 
 
 @pytest.mark.cnv_upgrade
+@pytest.mark.eus_upgrade
 class TestUpgradeObservability:
     TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE = (
         "test_metric_kubevirt_vmi_number_of_outdated_before_upgrade"
