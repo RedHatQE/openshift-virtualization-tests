@@ -18,7 +18,6 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": False,
-            "default": True,
         }
     },
     {
@@ -46,12 +45,13 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": True,
+            "default": True,
         }
     },
 ]
 
-storage_class_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
-storage_class_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_a = StorageClassNames.IO2_CSI
+storage_class_b = StorageClassNames.IO2_CSI
 
 for _dir in dir():
     if not config:  # noqa: F821
