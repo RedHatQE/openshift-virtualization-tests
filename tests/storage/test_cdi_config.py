@@ -291,7 +291,7 @@ def test_cdiconfig_changing_storage_class_default(
                     dv_name="import-cdiconfig-scratch-space-not-default",
                     namespace=configmap.namespace,
                     url=url,
-                    storage_class=StorageClassNames.CEPH_RBD,
+                    storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
                     cert_configmap=configmap.name,
                 ) as dv:
                     dv.wait_for_dv_success()

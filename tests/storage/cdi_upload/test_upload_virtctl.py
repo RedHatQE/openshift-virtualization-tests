@@ -22,7 +22,6 @@ from utilities.storage import (
     create_dummy_first_consumer_pod,
     create_vm_from_dv,
     get_downloaded_artifact,
-    sc_is_hpp_with_immediate_volume_binding,
     sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
 )
@@ -60,6 +59,7 @@ def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2192"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -88,6 +88,7 @@ def test_successful_virtctl_upload_no_route(
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2191"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size="1Gi",
@@ -115,6 +116,7 @@ def test_image_upload_with_overridden_url(
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -140,6 +142,7 @@ def test_virtctl_image_upload_with_ca(
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_path)
     pvc_name = "cnv-3031"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -165,6 +168,7 @@ def test_virtctl_image_upload_dv(
     """
     dv_name = f"cnv-3724-{storage_class_name_immediate_binding_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
@@ -206,6 +210,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
     """
     dv_name = data_volume_multi_storage_scope_function.name
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=DEFAULT_DV_SIZE,
@@ -237,6 +242,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
     """
     pvc_name = "cnv-3728"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         pvc=True,
         name=pvc_name,
@@ -274,7 +280,6 @@ def empty_pvc(
     namespace,
     storage_class_matrix__module__,
     storage_class_name_scope_module,
-    worker_node1,
 ):
     with PersistentVolumeClaim(
         name="empty-pvc",
@@ -283,11 +288,9 @@ def empty_pvc(
         volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
         accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
         size=DEFAULT_DV_SIZE,
-        hostpath_node=worker_node1.name
-        if sc_is_hpp_with_immediate_volume_binding(sc=storage_class_name_scope_module)
-        else None,
+        client=namespace.client,
     ) as pvc:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
             # For PVC to bind on WFFC, it must be consumed
             # (this was previously solved by hard coding hostpath_node at all times)
             create_dummy_first_consumer_pod(pvc=pvc)
@@ -302,12 +305,12 @@ def test_virtctl_image_upload_with_exist_pvc(
     download_image,
     namespace,
     storage_class_name_scope_module,
-    schedulable_nodes,
 ):
     """
     Check that virtctl can upload an local disk image to an existing empty PVC
     """
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=empty_pvc.name,
         size=DEFAULT_DV_SIZE,
@@ -318,13 +321,14 @@ def test_virtctl_image_upload_with_exist_pvc(
         no_create=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        if not sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
+        if not sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
             with VirtualMachineForTests(
                 name="cnv-3727-vm",
                 namespace=empty_pvc.namespace,
                 os_flavor=Images.Cirros.OS_FLAVOR,
                 memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
                 pvc=empty_pvc,
+                client=namespace.client,
             ) as vm:
                 running_vm(vm=vm, wait_for_interfaces=False)
 
@@ -342,6 +346,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     """
     pvc_name = f"cnv-3729-{storage_class_name_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=pvc_name,
         size=DEFAULT_DV_SIZE,
@@ -351,6 +356,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     ) as res:
         check_upload_virtctl_result(result=res)
         with virtctl_upload_dv(
+            client=namespace.client,
             namespace=namespace.name,
             name=pvc_name,
             size=DEFAULT_DV_SIZE,
@@ -386,6 +392,7 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     - PVC with the same name already exists.
     """
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=empty_pvc.name,
         size=DEFAULT_DV_SIZE,
@@ -459,6 +466,7 @@ def test_print_response_body_on_error_upload_virtctl(
     """
     dv_name = f"cnv-4512-{storage_class_name_scope_module}"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size="3G",

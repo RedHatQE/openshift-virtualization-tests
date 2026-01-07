@@ -186,7 +186,6 @@ from utilities.storage import (
     get_storage_class_with_specified_volume_mode,
     is_snapshot_supported_by_sc,
     remove_default_storage_classes,
-    sc_is_hpp_with_immediate_volume_binding,
     update_default_sc,
     verify_boot_sources_reimported,
 )
@@ -745,13 +744,12 @@ def data_volume_multi_storage_scope_function(
     request,
     namespace,
     storage_class_matrix__function__,
-    schedulable_nodes,
 ):
     yield from data_volume(
         request=request,
         namespace=namespace,
         storage_class_matrix=storage_class_matrix__function__,
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 
@@ -760,13 +758,12 @@ def data_volume_multi_storage_scope_module(
     request,
     namespace,
     storage_class_matrix__module__,
-    schedulable_nodes,
 ):
     yield from data_volume(
         request=request,
         namespace=namespace,
         storage_class_matrix=storage_class_matrix__module__,
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 
@@ -776,15 +773,13 @@ def golden_image_data_volume_multi_storage_scope_function(
     request,
     golden_images_namespace,
     storage_class_matrix__function__,
-    schedulable_nodes,
 ):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
         storage_class_matrix=storage_class_matrix__function__,
-        schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        client=admin_client,
     )
 
 
@@ -799,47 +794,44 @@ def golden_image_data_source_multi_storage_scope_function(
 
 
 @pytest.fixture()
-def data_volume_scope_function(request, namespace, schedulable_nodes):
+def data_volume_scope_function(request, namespace):
     yield from data_volume(
         request=request,
         namespace=namespace,
         storage_class=request.param["storage_class"],
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 
 @pytest.fixture(scope="class")
-def data_volume_scope_class(request, namespace, schedulable_nodes):
+def data_volume_scope_class(request, namespace):
     yield from data_volume(
         request=request,
         namespace=namespace,
         storage_class=request.param["storage_class"],
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 
 @pytest.fixture(scope="module")
-def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace, schedulable_nodes):
+def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
         storage_class=request.param["storage_class"],
-        schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        client=admin_client,
     )
 
 
 @pytest.fixture()
-def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace, schedulable_nodes):
+def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace):
     yield from data_volume(
         request=request,
         namespace=golden_images_namespace,
         storage_class=request.param["storage_class"],
-        storage_class_matrix=request.param.get("storage_class_matrix"),
-        schedulable_nodes=schedulable_nodes,
         check_dv_exists=True,
-        admin_client=admin_client,
+        client=admin_client,
     )
 
 
@@ -1176,7 +1168,7 @@ def default_sc(admin_client):
     Get default Storage Class defined
     """
     try:
-        yield get_default_storage_class()
+        yield get_default_storage_class(client=admin_client)
     except ValueError:
         yield
 
@@ -2484,7 +2476,6 @@ def dvs_for_upgrade(
             url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
             bind_immediate_annotation=True,
-            hostpath_node=(worker_node1.name if sc_is_hpp_with_immediate_volume_binding(sc=storage_class) else None),
             api_name="storage",
         )
         dv.create()
