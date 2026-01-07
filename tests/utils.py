@@ -521,7 +521,7 @@ def create_cirros_vm(
         source="http",
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        size="4Gi",
         api_name="storage",
         volume_mode=volume_mode,
         secret=artifactory_secret,
