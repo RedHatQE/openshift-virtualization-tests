@@ -1010,13 +1010,15 @@ def sriov_node_policy(
     admin_client,
     sriov_namespace,
 ):
-    return next(
-        SriovNetworkNodePolicy.get(
-            client=admin_client,
-            namespace=sriov_namespace.name,
-        ),
-        None,
-    )
+    if sriov_namespace.exists:
+        return next(
+            SriovNetworkNodePolicy.get(
+                client=admin_client,
+                namespace=sriov_namespace.name,
+            ),
+            None,
+        )
+    return None
 
 
 @pytest.fixture(scope="session")
