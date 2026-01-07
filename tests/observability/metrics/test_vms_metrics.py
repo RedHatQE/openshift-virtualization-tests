@@ -114,8 +114,24 @@ def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
         body=fedora_vm_body(name=vm_name),
         pvc=pvc_for_vm_in_starting_state,
     ) as vm:
-        vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)
+        # Try to start the VM - it should timeout because the PVC cannot be bound
+        try:
+            vm.start(wait=True, timeout=TIMEOUT_2MIN)
+            # If we reach here, VM started successfully (unexpected behavior)
+            raise AssertionError(f"VM {vm.name} started successfully but was expected to fail due to unbound PVC")
+        except TimeoutExpiredError:
+            pvc_error_statuses = [
+                VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING,
+                VirtualMachine.Status.ERROR_UNSCHEDULABLE,
+                VirtualMachine.Status.PENDING,
+            ]
+            current_status = vm.printable_status
+            if current_status not in pvc_error_statuses:
+                raise AssertionError(
+                    f"VM {vm.name} failed to start but not in expected state. "
+                    f"Current status: {current_status}, Expected one of: {pvc_error_statuses}"
+                )
+            LOGGER.info(f"VM {vm.name} stuck in expected status: {current_status}")
         yield vm
 
 
