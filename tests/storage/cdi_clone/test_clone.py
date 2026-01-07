@@ -79,7 +79,6 @@ def create_vm_from_clone_dv_template(
 )
 @pytest.mark.s390x
 def test_successful_clone_of_large_image(
-    admin_client,
     namespace,
     data_volume_multi_storage_scope_function,
 ):
@@ -90,6 +89,7 @@ def test_successful_clone_of_large_image(
         size=data_volume_multi_storage_scope_function.size,
         source_pvc=data_volume_multi_storage_scope_function.name,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
+        client=namespace.client,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
 

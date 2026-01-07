@@ -5,6 +5,7 @@ Utilities for Hostpath Provisioner CSI Custom Resource permutations tests
 import logging
 from contextlib import contextmanager
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -115,6 +116,7 @@ def cirros_dv_on_hpp(dv_name, storage_class, namespace):
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=storage_class,
+        client=namespace.client,
     ) as dv:
         yield dv
 
@@ -139,24 +141,25 @@ def wait_for_desired_hpp_pods_running(hpp_daemonset, number_of_pods):
             break
 
 
-def wait_for_hpp_csi_pods_to_be_running(hco_namespace, schedulable_nodes):
+def wait_for_hpp_csi_pods_to_be_running(hco_namespace, schedulable_nodes, admin_client):
     hpp_csi_daemonset = DaemonSet(
         name=HOSTPATH_PROVISIONER_CSI,
         namespace=hco_namespace.name,
+        client=admin_client,
     )
     wait_for_desired_hpp_pods_running(hpp_daemonset=hpp_csi_daemonset, number_of_pods=len(schedulable_nodes))
 
 
-def wait_for_hpp_csi_pods_to_be_deleted(client, pod_prefix):
+def wait_for_hpp_csi_pods_to_be_deleted(admin_client, pod_prefix):
     LOGGER.info(f"Wait for all {pod_prefix} pods to be deleted")
-    for hpp_pods in wait_for_hpp_pods(client=client, pod_prefix=pod_prefix):
+    for hpp_pods in wait_for_hpp_pods(client=admin_client, pod_prefix=pod_prefix):
         if not hpp_pods:
             break
 
 
-def wait_for_hpp_operator_running(client):
+def wait_for_hpp_operator_running(admin_client):
     LOGGER.info(f"Wait for {HOSTPATH_PROVISIONER_OPERATOR} pod to be Running")
-    for hpp_operator_pod in wait_for_hpp_pods(client=client, pod_prefix=HOSTPATH_PROVISIONER_OPERATOR):
+    for hpp_operator_pod in wait_for_hpp_pods(client=admin_client, pod_prefix=HOSTPATH_PROVISIONER_OPERATOR):
         if hpp_operator_pod:
             hpp_operator_pod[0].wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_1MIN)
             break
@@ -173,9 +176,9 @@ def delete_hpp_pool_pvcs(hco_namespace):
     [pvc.wait_deleted() for pvc in pvcs]
 
 
-def delete_hpp_pool_pvs():
+def delete_hpp_pool_pvs(admin_client: DynamicClient):
     LOGGER.info(f"Delete {HPP_POOL} PVs")
-    for pv in PersistentVolume.get():
+    for pv in PersistentVolume.get(client=admin_client):
         pv_instance = pv.exists
         if pv_instance:
             pv_claim_ref_name = pv_instance.get("spec", {}).get("claimRef", {}).get("name")
@@ -236,21 +239,25 @@ def is_hpp_cr_with_pvc_template(hpp_custom_resource):
     return any([template.get("pvcTemplate") for template in hpp_custom_resource.instance.spec.storagePools])
 
 
-def verify_hpp_cr_installed_successfully(hco_namespace, schedulable_nodes, client, hpp_custom_resource):
-    wait_for_hpp_csi_pods_to_be_running(hco_namespace=hco_namespace, schedulable_nodes=schedulable_nodes)
+def verify_hpp_cr_installed_successfully(hco_namespace, schedulable_nodes, admin_client, hpp_custom_resource):
+    wait_for_hpp_csi_pods_to_be_running(
+        hco_namespace=hco_namespace, schedulable_nodes=schedulable_nodes, admin_client=admin_client
+    )
     if is_hpp_cr_with_pvc_template(hpp_custom_resource=hpp_custom_resource):
         verify_hpp_pool_health(
-            admin_client=client,
+            admin_client=admin_client,
             schedulable_nodes=schedulable_nodes,
             hco_namespace=hco_namespace,
         )
 
 
-def verify_hpp_cr_deleted_successfully(hco_namespace, schedulable_nodes, client, is_hpp_cr_with_pvc_template=False):
-    wait_for_hpp_csi_pods_to_be_deleted(client=client, pod_prefix=HOSTPATH_PROVISIONER_CSI)
+def verify_hpp_cr_deleted_successfully(
+    hco_namespace, schedulable_nodes, admin_client, is_hpp_cr_with_pvc_template=False
+):
+    wait_for_hpp_csi_pods_to_be_deleted(admin_client=admin_client, pod_prefix=HOSTPATH_PROVISIONER_CSI)
     if is_hpp_cr_with_pvc_template:
-        wait_for_hpp_csi_pods_to_be_deleted(client=client, pod_prefix=HPP_POOL)
-        wait_for_hpp_operator_running(client=client)
+        wait_for_hpp_csi_pods_to_be_deleted(admin_client=admin_client, pod_prefix=HPP_POOL)
+        wait_for_hpp_operator_running(admin_client=admin_client)
         # Check PVCs are still there and Bound
         verify_hpp_pool_pvcs_are_bound(
             schedulable_nodes=schedulable_nodes,
@@ -259,7 +266,7 @@ def verify_hpp_cr_deleted_successfully(hco_namespace, schedulable_nodes, client,
         # Delete PVCs to cleanup the cluster
         delete_hpp_pool_pvcs(hco_namespace=hco_namespace)
         # Delete the Released PVs to cleanup the cluster
-        delete_hpp_pool_pvs()
+        delete_hpp_pool_pvs(admin_client=admin_client)
 
 
 def check_disk_count_in_vm_and_image_location(vm, dv, hpp_csi_storage_class, admin_client):

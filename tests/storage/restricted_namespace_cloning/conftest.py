@@ -42,14 +42,15 @@ def destination_namespace(admin_client):
 
 
 @pytest.fixture(scope="module")
-def restricted_namespace_service_account(destination_namespace):
-    with ServiceAccount(name="vm-service-account", namespace=destination_namespace.name) as sa:
+def restricted_namespace_service_account(destination_namespace, admin_client):
+    with ServiceAccount(name="vm-service-account", namespace=destination_namespace.name, client=admin_client) as sa:
         yield sa
 
 
 @pytest.fixture(scope="module")
-def cluster_role_for_creating_pods():
+def cluster_role_for_creating_pods(admin_client):
     with create_cluster_role(
+        client=admin_client,
         name="pod-creator",
         api_groups=[""],
         verbs=CREATE,
@@ -76,8 +77,9 @@ def data_volume_clone_settings(destination_namespace, data_volume_multi_storage_
 
 
 @pytest.fixture()
-def restricted_role_binding_for_vms_in_destination_namespace(destination_namespace):
+def restricted_role_binding_for_vms_in_destination_namespace(destination_namespace, admin_client):
     with create_role_binding(
+        client=admin_client,
         name="allow-unprivileged-client-to-run-vms-on-dst-ns",
         namespace=destination_namespace.name,
         subjects_kind="User",
@@ -90,8 +92,11 @@ def restricted_role_binding_for_vms_in_destination_namespace(destination_namespa
 
 
 @pytest.fixture()
-def perm_src_service_account(request, namespace, destination_namespace, restricted_namespace_service_account):
+def perm_src_service_account(
+    request, namespace, destination_namespace, restricted_namespace_service_account, admin_client
+):
     with set_permissions(
+        client=admin_client,
         role_name="datavolume-cluster-role-src",
         role_api_groups=[DataVolume.api_group],
         verbs=request.param[VERBS_SRC_SA],
@@ -106,8 +111,11 @@ def perm_src_service_account(request, namespace, destination_namespace, restrict
 
 
 @pytest.fixture()
-def perm_destination_service_account(request, destination_namespace, restricted_namespace_service_account):
+def perm_destination_service_account(
+    request, destination_namespace, restricted_namespace_service_account, admin_client
+):
     with set_permissions(
+        client=admin_client,
         role_name="datavolume-cluster-role-dst",
         role_api_groups=[DataVolume.api_group],
         verbs=request.param[VERBS_DST_SA],
@@ -128,8 +136,9 @@ def fail_when_no_unprivileged_client_available(unprivileged_client):
 
 
 @pytest.fixture()
-def permissions_datavolume_source(request, namespace):
+def permissions_datavolume_source(request, namespace, admin_client):
     with set_permissions(
+        client=admin_client,
         role_name="datavolume-cluster-role-source",
         role_api_groups=[DataVolume.api_group],
         verbs=request.param[VERBS_SRC],
@@ -143,8 +152,9 @@ def permissions_datavolume_source(request, namespace):
 
 
 @pytest.fixture()
-def permissions_datavolume_destination(request, destination_namespace):
+def permissions_datavolume_destination(request, destination_namespace, admin_client):
     with set_permissions(
+        client=admin_client,
         role_name="datavolume-cluster-role-destination",
         role_api_groups=[DataVolume.api_group],
         verbs=request.param[VERBS_DST],
@@ -158,8 +168,9 @@ def permissions_datavolume_destination(request, destination_namespace):
 
 
 @pytest.fixture()
-def permissions_pvc_source(namespace):
+def permissions_pvc_source(namespace, admin_client):
     with set_permissions(
+        client=admin_client,
         role_name="pvc-cluster-role-source",
         role_api_groups=[PersistentVolumeClaim.api_group],
         verbs=LIST_GET,
@@ -173,8 +184,9 @@ def permissions_pvc_source(namespace):
 
 
 @pytest.fixture()
-def permissions_pvc_destination(destination_namespace):
+def permissions_pvc_destination(destination_namespace, admin_client):
     with set_permissions(
+        client=admin_client,
         role_name="pvc-cluster-role-destination",
         role_api_groups=[PersistentVolumeClaim.api_group],
         verbs=LIST_GET,
@@ -193,8 +205,10 @@ def permission_src_service_account_for_creating_pods(
     destination_namespace,
     restricted_namespace_service_account,
     cluster_role_for_creating_pods,
+    admin_client,
 ):
     with create_role_binding(
+        client=admin_client,
         name="service-account-can-create-pods-on-src",
         namespace=namespace.name,
         subjects_kind=restricted_namespace_service_account.kind,
@@ -208,9 +222,10 @@ def permission_src_service_account_for_creating_pods(
 
 @pytest.fixture()
 def permission_destination_service_account_for_creating_pods(
-    destination_namespace, restricted_namespace_service_account, cluster_role_for_creating_pods
+    destination_namespace, restricted_namespace_service_account, cluster_role_for_creating_pods, admin_client
 ):
     with create_role_binding(
+        client=admin_client,
         name="service-account-can-create-pods-on-destination",
         namespace=destination_namespace.name,
         subjects_kind=restricted_namespace_service_account.kind,

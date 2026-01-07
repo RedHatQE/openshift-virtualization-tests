@@ -49,6 +49,7 @@ def uploaded_dv_with_immediate_binding(
     local_path = f"{tmpdir}/{image_file}"
     get_downloaded_artifact(remote_name=request.param.get("remote_name"), local_name=local_path)
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=request.param.get("dv_size"),
@@ -81,6 +82,7 @@ def uploaded_dv_scope_class(unprivileged_client, namespace, storage_class_name_s
     ) as dv:
         dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_2MIN)
         with virtctl_upload_dv(
+            client=namespace.client,
             namespace=namespace.name,
             name=dv.name,
             size=DEFAULT_DV_SIZE,

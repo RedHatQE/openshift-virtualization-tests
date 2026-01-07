@@ -120,7 +120,7 @@ def snapshots_for_upgrade_b(
 
 
 @pytest.fixture(scope="session")
-def blank_disk_dv_with_default_sc(admin_client, upgrade_namespace_scope_session):
+def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
     with create_dv(
         source="blank",
         dv_name="blank-dv",
@@ -128,20 +128,20 @@ def blank_disk_dv_with_default_sc(admin_client, upgrade_namespace_scope_session)
         size="1Gi",
         storage_class=py_config["default_storage_class"],
         consume_wffc=False,
-        client=admin_client,
+        client=upgrade_namespace_scope_session.client,
     ) as dv:
         yield dv
 
 
 @pytest.fixture(scope="session")
-def fedora_vm_for_hotplug_upg(unprivileged_client, upgrade_namespace_scope_session, cluster_common_node_cpu):
+def fedora_vm_for_hotplug_upg(upgrade_namespace_scope_session, cluster_common_node_cpu):
     name = "fedora-hotplug-upg"
     with VirtualMachineForTests(
         name=name,
         namespace=upgrade_namespace_scope_session.name,
         body=fedora_vm_body(name=name),
         cpu_model=cluster_common_node_cpu,
-        client=unprivileged_client,
+        client=upgrade_namespace_scope_session.client,
     ) as vm:
         running_vm(vm=vm)
         yield vm

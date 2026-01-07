@@ -92,6 +92,7 @@ def dv_non_exist_url(namespace, storage_class_name_scope_module):
         url=NON_EXIST_URL,
         size=DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
+        client=namespace.client,
     ) as dv:
         yield dv
 
@@ -114,6 +115,7 @@ def dv_from_http_import(
         cert_configmap=request.param.get("configmap_name"),
         size=request.param.get("size", DEFAULT_DV_SIZE),
         storage_class=storage_class_name_scope_module,
+        client=namespace.client,
     ) as dv:
         dv.pvc.wait()
         yield dv
@@ -165,7 +167,7 @@ def vm_list_created_by_multiprocess(
     vms_list = []
     processes = {}
     for dv in dv_list_created_by_multiprocess:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module):
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
             dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
         else:
             dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)

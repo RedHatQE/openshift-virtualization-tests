@@ -103,6 +103,7 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
         url=f"{get_test_artifact_server_url()}{FEDORA_LATEST['image_path']}",
         storage_class=py_config["default_storage_class"],
         multus_annotation=linux_nad.name,
+        client=namespace.client,
     ) as dv:
         return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
 
@@ -131,7 +132,7 @@ def test_delete_pvc_after_successful_import(
     pvc.delete()
     wait_for_pvc_recreate(pvc=pvc, pvc_original_timestamp=pvc_original_timestamp)
     storage_class = data_volume_multi_storage_scope_function.storage_class
-    if sc_volume_binding_mode_is_wffc(sc=storage_class):
+    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=data_volume_multi_storage_scope_function.client):
         create_dummy_first_consumer_pod(pvc=pvc)
     data_volume_multi_storage_scope_function.wait_for_dv_success()
 

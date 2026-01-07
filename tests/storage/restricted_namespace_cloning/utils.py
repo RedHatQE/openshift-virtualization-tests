@@ -23,7 +23,7 @@ def verify_snapshot_used_namespace_transfer(cdv: DataVolume, unprivileged_client
     # Namespace transfer is not possible with WFFC
     if is_snapshot_supported_by_sc(
         sc_name=storage_class, client=unprivileged_client
-    ) and not sc_volume_binding_mode_is_wffc(sc=storage_class):
+    ) and not sc_volume_binding_mode_is_wffc(sc=storage_class, client=unprivileged_client):
         assert_pvc_snapshot_clone_annotation(pvc=cdv.pvc, storage_class=storage_class)
 
 
