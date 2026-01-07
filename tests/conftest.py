@@ -2599,6 +2599,11 @@ def cluster_modern_cpu_model_scope_class(
     wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@pytest.fixture(scope="session")
+def is_s390x_cluster(nodes_cpu_architecture):
+    return nodes_cpu_architecture == S390X
+
+
 @pytest.fixture(scope="module")
 def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
