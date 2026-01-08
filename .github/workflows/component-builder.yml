@@ -51,12 +51,12 @@ jobs:
         run: |
           mkdir -p artifacts
           podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
-          echo "Saved image to artifacts/fedora-image.tar"
+          podman save -o artifacts/fedora-image-${{ env.CPU_ARCH }}.tar "${remote_repository}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image-${{ env.CPU_ARCH }}.tar"
       - name: Upload container image artifact
         uses: actions/upload-artifact@v6
         with:
-          name: fedora-container-image
-          path: artifacts/fedora-image.tar
+          name: fedora-container-image-${{ env.CPU_ARCH }}
+          path: artifacts/fedora-image-${{ env.CPU_ARCH }}.tar
           retention-days: 5
           compression-level: 0
