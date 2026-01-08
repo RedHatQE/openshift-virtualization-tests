@@ -11,6 +11,7 @@ pytestmark = [
     pytest.mark.gpfs,
     pytest.mark.usefixtures(
         "skip_if_no_storage_class_for_snapshot",
+        "multiprocessing_start_method_fork",
         "chaos_namespace",
         "cluster_monitoring_process",
     ),

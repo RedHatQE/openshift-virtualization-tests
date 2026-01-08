@@ -406,3 +406,14 @@ def deleted_pod_by_name_prefix(admin_client, cnv_pod_deletion_test_matrix__class
         namespace=pod_deletion_config["namespace_name"],
         pod_prefix=pod_deletion_config["pod_prefix"],
     )
+
+
+@pytest.fixture(scope="module")
+def multiprocessing_start_method_fork():
+    # Use fork context to avoid pickling issues with nested functions
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Process
+    # https://github.com/python/cpython/issues/132898
+    original_start_method = multiprocessing.get_start_method()
+    multiprocessing.set_start_method("fork", force=True)
+    yield
+    multiprocessing.set_start_method(original_start_method, force=True)

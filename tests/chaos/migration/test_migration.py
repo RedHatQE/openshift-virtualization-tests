@@ -27,7 +27,7 @@ from utilities.virt import wait_for_vmi_relocation_and_running
 
 pytestmark = [
     pytest.mark.chaos,
-    pytest.mark.usefixtures("chaos_namespace", "cluster_monitoring_process"),
+    pytest.mark.usefixtures("multiprocessing_start_method_fork", "chaos_namespace", "cluster_monitoring_process"),
 ]
 
 
