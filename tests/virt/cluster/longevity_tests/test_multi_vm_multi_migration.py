@@ -27,8 +27,9 @@ pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
     ],
     indirect=True,
 )
-def test_migration_storm_linux_vms(linux_vms_with_pids):
+def test_migration_storm_linux_vms(admin_client, linux_vms_with_pids):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["linux_iterations"]),
         vms_with_pids=linux_vms_with_pids,
         os_type=LINUX_OS_PREFIX,
@@ -46,8 +47,9 @@ def test_migration_storm_linux_vms(linux_vms_with_pids):
     ],
     indirect=True,
 )
-def test_migration_storm_windows_vms(windows_vms_with_pids):
+def test_migration_storm_windows_vms(admin_client, windows_vms_with_pids):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["windows_iterations"]),
         vms_with_pids=windows_vms_with_pids,
         os_type=WINDOWS_OS_PREFIX,
@@ -65,8 +67,9 @@ def test_migration_storm_windows_vms(windows_vms_with_pids):
     ],
     indirect=True,
 )
-def test_migration_storm_wsl2_vms(wsl2_vms_with_pids):
+def test_migration_storm_wsl2_vms(admin_client, wsl2_vms_with_pids):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["windows_iterations"]),
         vms_with_pids=wsl2_vms_with_pids,
         os_type=WINDOWS_OS_PREFIX,
