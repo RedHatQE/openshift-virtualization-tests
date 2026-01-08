@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from kubernetes.client.rest import ApiException
 
@@ -7,6 +9,7 @@ from utilities.virt import VirtualMachineForTests
 from . import utils as kmp_utils
 
 pytestmark = [pytest.mark.ipv4]
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.s390x
@@ -134,3 +137,18 @@ def test_kmp_down(unprivileged_client, namespace, kmp_down):
     with pytest.raises(ApiException):
         with VirtualMachineForTests(name="kmp-down-vm", namespace=namespace.name, client=unprivileged_client):
             return
+
+
+class TestKmpCustomRange:
+    @pytest.mark.polarion("CNV-12568")
+    @pytest.mark.usefixtures("kubemacpool_random_range_config_hco")
+    def test_kmp_random_custom_range_hco(
+        self,
+        subtests,
+        custom_range_hco_mac_pool,
+        custom_range_vm,
+    ):
+        for iface in custom_range_vm.get_interfaces():
+            with subtests.test(name=iface.name):
+                LOGGER.info(f"Testing interface {iface.name} with MAC {iface.macAddress}")
+                assert custom_range_hco_mac_pool.mac_is_within_range(iface.macAddress)
