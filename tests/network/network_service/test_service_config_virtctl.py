@@ -24,26 +24,34 @@ class TestServiceConfigurationViaVirtctl:
                 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK,
                 marks=(pytest.mark.polarion("CNV-6481")),
             ),
-            pytest.param(
-                SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
-                SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
-                SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
-                marks=(pytest.mark.polarion("CNV-6482")),
-            ),
         ],
         indirect=["virtctl_expose_service", "expected_num_families_in_service"],
     )
     @pytest.mark.single_nic
-    def test_virtctl_expose_services(
+    def test_virtctl_expose_single_stack_services(
         self,
         expected_num_families_in_service,
-        running_vm_for_exposure,
         virtctl_expose_service,
-        dual_stack_cluster,
         ip_family_policy,
     ):
         assert_svc_ip_params(
             svc=virtctl_expose_service,
             expected_num_families_in_service=expected_num_families_in_service,
             expected_ip_family_policy=ip_family_policy,
+        )
+
+    @pytest.mark.parametrize("virtctl_expose_service", [SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK], indirect=True)
+    @pytest.mark.polarion("CNV-6482")
+    @pytest.mark.ipv4
+    @pytest.mark.ipv6
+    @pytest.mark.single_nic
+    @pytest.mark.s390x
+    def test_virtctl_expose_service_require_dual_stack(
+        self,
+        virtctl_expose_service,
+    ):
+        assert_svc_ip_params(
+            svc=virtctl_expose_service,
+            expected_num_families_in_service=2,
+            expected_ip_family_policy=SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
         )
