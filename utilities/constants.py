@@ -410,6 +410,7 @@ KUBEVIRT_HYPERCONVERGED_OPERATOR_METRICS = "kubevirt-hyperconverged-operator-met
 KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
 KUBEVIRT_KUBEVIRT_HYPERCONVERGED = "kubevirt-kubevirt-hyperconverged"
 CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
+MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
 CLUSTER = "cluster"
 VIRTCTL_CLIDOWNLOADS_KUBEVIRT_HYPERCONVERGED = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 KUBEVIRT_CONSOLE_PLUGIN_SERVICE = "kubevirt-console-plugin-service"
