@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import io
 import ipaddress
 import json
@@ -12,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional
 
 import bitmath
 import jinja2
@@ -61,11 +62,13 @@ from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
+    MIGRATION_POLICY_VM_LABEL,
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     OS_PROC_NAME,
+    PORT_80,
     ROOTDISK,
     SSH_PORT_22,
     TCP_TIMEOUT_30SEC,
@@ -1534,13 +1537,13 @@ class ServiceForVirtualMachineForTests(Service):
 
 
 def wait_for_ssh_connectivity(
-    vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
+    vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN, sleep: int = TIMEOUT_5SEC
 ) -> None:
     LOGGER.info(f"Wait for {vm.name} SSH connectivity.")
 
     for sample in TimeoutSampler(
         wait_timeout=timeout,
-        sleep=5,
+        sleep=sleep,
         func=vm.ssh_exec.run_command,
         command=["exit"],
         tcp_timeout=tcp_timeout,
@@ -2763,3 +2766,54 @@ def wait_for_virt_handler_pods_network_updated(
         )
         raise
     return False
+
+
+def create_vm_with_nginx_service(
+    name: str,
+    namespace: Namespace,
+    client: DynamicClient,
+    utility_pods: list[Pod],
+    node: Node,
+    node_selector_label: dict | None = None,
+) -> Generator[VirtualMachine]:
+    with VirtualMachineForTests(
+        namespace=namespace.name,
+        name=name,
+        body=fedora_vm_body(name=name),
+        client=client,
+        node_selector_labels=node_selector_label,
+        additional_labels=MIGRATION_POLICY_VM_LABEL,
+    ) as vm:
+        running_vm(vm=vm, check_ssh_connectivity=False)
+        vm.custom_service_enable(service_name=name, port=PORT_80, service_type=Service.Type.CLUSTER_IP)
+        verify_vm_service_reachable(
+            utility_pods=utility_pods,
+            node=node,
+            url=f"{vm.custom_service.instance.spec.clusterIPs[0]}:{PORT_80}",
+        )
+        LOGGER.info(f"VMI Host Node:{vm.vmi.node.name}")
+        yield vm
+
+
+def verify_vm_service_reachable(utility_pods: list[Pod], node: Node, url: str) -> None:
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=is_http_ok,
+            utility_pods=utility_pods,
+            node=node,
+            url=url,
+        ):
+            if sample:
+                break
+    except TimeoutExpiredError:
+        LOGGER.error(f"Service at {url} is not reachable")
+        raise
+
+
+def is_http_ok(utility_pods: list[Pod], node: Node, url: str) -> bool:
+    http_result = utilities.infra.ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
+        command=f"curl -s --connect-timeout {TIMEOUT_10SEC} -w '%{{http_code}}' {url}  -o /dev/null"
+    )
+    return int(http_result) == http.HTTPStatus.OK
