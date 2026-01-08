@@ -54,6 +54,9 @@ from utilities.operator import (  # noqa: E402
     wait_for_package_manifest_to_exist,
 )
 
+TIMEOUT_75MIN = 4500
+TIMEOUT_5SEC = 5
+
 # ============================================================================
 # SIMPLE FUNCTIONS (8 tests)
 # ============================================================================
@@ -1077,7 +1080,44 @@ class TestWaitForMcpUpdateEnd:
 
         wait_for_mcp_update_end([mock_mcp])
 
-        mock_wait_updated.assert_called_once_with(machine_config_pools_list=[mock_mcp])
+        mock_wait_updated.assert_called_once_with(
+            machine_config_pools_list=[mock_mcp],
+            timeout=TIMEOUT_75MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+        mock_wait_ready.assert_called_once_with(machine_config_pools_list=[mock_mcp])
+
+    @patch("utilities.operator.wait_for_mcp_ready_machine_count")
+    @patch("utilities.operator.wait_for_mcp_updated_condition_true")
+    def test_wait_for_update_end_custom_args(self, mock_wait_updated, mock_wait_ready):
+        """Test waiting for MCP update to end with custom timeout and sleep"""
+        mock_mcp = MagicMock()
+        custom_timeout = 100
+        custom_sleep = 1
+
+        wait_for_mcp_update_end([mock_mcp], timeout=custom_timeout, sleep=custom_sleep)
+
+        mock_wait_updated.assert_called_once_with(
+            machine_config_pools_list=[mock_mcp],
+            timeout=custom_timeout,
+            sleep=custom_sleep,
+        )
+        mock_wait_ready.assert_called_once_with(machine_config_pools_list=[mock_mcp])
+
+    @patch("utilities.operator.wait_for_mcp_ready_machine_count")
+    @patch("utilities.operator.wait_for_mcp_updated_condition_true")
+    def test_wait_for_update_end_partial_args(self, mock_wait_updated, mock_wait_ready):
+        """Test waiting for MCP update to end with only custom timeout"""
+        mock_mcp = MagicMock()
+        custom_timeout = 500
+
+        wait_for_mcp_update_end([mock_mcp], timeout=custom_timeout)
+
+        mock_wait_updated.assert_called_once_with(
+            machine_config_pools_list=[mock_mcp],
+            timeout=custom_timeout,
+            sleep=TIMEOUT_5SEC,
+        )
         mock_wait_ready.assert_called_once_with(machine_config_pools_list=[mock_mcp])
 
 

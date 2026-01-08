@@ -288,6 +288,11 @@ def pytest_addoption(parser):
         help="Path to scale test params file, default is tests/scale/scale_params.yaml",
         default="tests/scale/scale_params.yaml",
     )
+    scale_group.addoption(
+        "--scale",
+        help="Enable scale tests",
+        action="store_true",
+    )
 
     # Session group
     session_group.addoption(
@@ -505,6 +510,7 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
         or config.getoption("--install")
         or config.getoption("--upgrade")
         or config.getoption("--upgrade_custom")
+        or config.getoption("--scale")
     ):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
         config.hook.pytest_deselected(items=discard_tests)
@@ -515,6 +521,14 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
 def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     if config.getoption("-m") and "sno" not in config.getoption("-m"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items
+
+
+def filter_scale_only_tests(items: list[Item], config: Config) -> list[Item]:
+    if not config.getoption("--scale"):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="scale")
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
     return items
@@ -595,6 +609,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = filter_scale_only_tests(items=items, config=config)
 
 
 def pytest_report_teststatus(report, config):
