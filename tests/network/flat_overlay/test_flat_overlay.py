@@ -23,10 +23,10 @@ class TestFlatOverlayConnectivity:
     @pytest.mark.polarion("CNV-10158")
     # Not marked as `conformance`; requires NMState
     @pytest.mark.dependency(name="test_flat_overlay_basic_ping")
-    def test_flat_overlay_basic_ping(self, flat_overlay_vma_vmb_nad, vma_flat_overlay, vmb_flat_overlay):
+    def test_flat_overlay_basic_ping(self, vma_flat_overlay, vmb_flat_overlay_ip_address):
         assert_ping_successful(
             src_vm=vma_flat_overlay,
-            dst_ip=lookup_iface_status_ip(vm=vmb_flat_overlay, iface_name=flat_overlay_vma_vmb_nad.name, ip_family=4),
+            dst_ip=vmb_flat_overlay_ip_address,
         )
 
     @pytest.mark.polarion("CNV-10159")
@@ -70,9 +70,8 @@ class TestFlatOverlayConnectivity:
         vme_flat_overlay,
     ):
         assert flat_overlay_vma_vmb_nad.name == flat_overlay_vme_nad.name, (
-            f"NAD names are not identical:\n first NAD's "
-            f"name: {flat_overlay_vma_vmb_nad.name}, second NAD's name: "
-            f"{flat_overlay_vme_nad.name}"
+            f"NAD names are not identical:\n first NAD's name: {flat_overlay_vma_vmb_nad.name}, "
+            f"second NAD's name: {flat_overlay_vme_nad.name}"
         )
         assert_ping_successful(
             src_vm=vma_flat_overlay,
