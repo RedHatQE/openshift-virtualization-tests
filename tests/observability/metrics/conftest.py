@@ -255,7 +255,6 @@ def vm_with_cpu_spec(namespace, unprivileged_client, is_s390x_cluster):
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
-        running_vm(vm=vm)
         yield vm
 
 
