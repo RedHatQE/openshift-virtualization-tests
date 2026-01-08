@@ -1,0 +1,69 @@
+# Generated with Claude Code assistance
+# description: Verify that Jira bugs referenced in code are still open. Runs on PRs.
+
+name: Verify Bugs Are Open
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify-bugs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and checkout PR code
+        run: |
+          echo "Fetching PR head from fork..."
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+
+          echo "Checking out PR branch..."
+          git checkout pr-branch
+
+      - name: Merge base branch into PR
+        id: merge
+        continue-on-error: true
+        run: |
+          echo "Merging ${{ github.event.pull_request.base.ref }} into PR branch..."
+          if git merge --no-ff --no-edit origin/${{ github.event.pull_request.base.ref }}; then
+            echo "merge_success=true" >> "$GITHUB_OUTPUT"
+            echo "Successfully merged ${{ github.event.pull_request.base.ref }} into PR"
+          else
+            echo "merge_success=false" >> "$GITHUB_OUTPUT"
+            echo "Merge failed, aborting and continuing with original PR state"
+            git merge --abort || true
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Verify bugs are open
+        id: verify-bugs
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          # Mask secret to prevent accidental exposure in logs
+          echo "::add-mask::$JIRA_TOKEN"
+
+          echo "Running Jira bug verification via tox"
+          tox -e verify-bugs-are-open-gh
