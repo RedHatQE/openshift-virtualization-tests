@@ -8,4 +8,3 @@ EXPECTED_CNAO_COMP_NAMES = [
     "ovs-cni",
 ]
 HTTPBIN_IMAGE = "quay.io/openshifttest/httpbin:1.2.2"
-BRCNV = "brcnv"
