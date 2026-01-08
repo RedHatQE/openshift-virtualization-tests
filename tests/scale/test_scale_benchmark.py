@@ -448,6 +448,7 @@ class TestScale:
     @pytest.mark.polarion("CNV-8993")
     def test_mass_vm_live_migration(
         self,
+        admin_client,
         skip_if_not_run_live_migration,
         scale_vms,
         vm_migration_info,
@@ -455,6 +456,7 @@ class TestScale:
         for batch in scale_vms:
             for vm in batch:
                 wait_for_migration_finished(
+                    client=admin_client,
                     namespace=vm.namespace,
                     migration=vm_migration_info[vm.name][MIGRATION_INSTANCE_STR],
                 )

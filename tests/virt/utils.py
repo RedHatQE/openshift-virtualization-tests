@@ -127,7 +127,7 @@ def verify_stress_ng_pid_not_changed(vm, initial_pid, windows=False):
     )
 
 
-def migrate_and_verify_multi_vms(vm_list):
+def migrate_and_verify_multi_vms(client, vm_list):
     vms_dict = {}
     failed_migrations_list = []
 
@@ -139,7 +139,7 @@ def migrate_and_verify_multi_vms(vm_list):
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
+        wait_for_migration_finished(client=client, namespace=vm.namespace, migration=migration)
         migration.clean_up()
 
     for vm in vm_list:

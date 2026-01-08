@@ -166,7 +166,9 @@ def drain_uncordon_node(
 def all_existing_migrations_completed(admin_client, namespace):
     # Descheduler may trigger multiple migrations, need to wait when all succeeded
     for migration in VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace):
-        wait_for_migration_finished(namespace=namespace.name, migration=migration, timeout=TIMEOUT_5MIN)
+        wait_for_migration_finished(
+            client=admin_client, namespace=namespace.name, migration=migration, timeout=TIMEOUT_5MIN
+        )
 
 
 @pytest.fixture(scope="class")
