@@ -6,7 +6,6 @@ import random
 import time
 from contextlib import contextmanager
 from datetime import datetime
-from multiprocessing.context import ForkContext
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
@@ -44,9 +43,6 @@ from utilities.infra import (
     wait_for_node_status,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
-
-# Use fork context to avoid pickling issues with nested functions
-_FORK_CONTEXT: ForkContext = multiprocessing.get_context("fork")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -135,7 +131,7 @@ def create_pod_deleting_process(
         except TimeoutExpiredError:
             LOGGER.info("Pod deleting process finished.")
 
-    return _FORK_CONTEXT.Process(
+    return multiprocessing.Process(
         name="pod_delete",
         target=_delete_pods_continuously,
         args=(
@@ -189,7 +185,7 @@ def create_nginx_monitoring_process(
             time.sleep(_sampling_interval)
         LOGGER.info("HTTP querying finished successfully.")
 
-    return _FORK_CONTEXT.Process(
+    return multiprocessing.Process(
         name="nginx_monitoring",
         target=_monitor_nginx_server,
         args=(
@@ -320,7 +316,7 @@ def create_cluster_monitoring_process(
             )
             time.sleep(interval)
 
-    return _FORK_CONTEXT.Process(
+    return multiprocessing.Process(
         name="cluster_monitoring",
         target=_monitor_cluster,
     )
