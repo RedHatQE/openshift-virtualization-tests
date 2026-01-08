@@ -608,6 +608,7 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
 
+
 def get_resource_by_name(resource_kind, name, namespace=None):
     kwargs = {"name": name}
     if namespace:
