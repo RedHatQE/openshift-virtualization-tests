@@ -93,8 +93,11 @@ utilities-test = [
   "pytest-watch>=4.2.0",
 ]
 
+[project.scripts]
+quarantine-dashboard = "scripts.quarantine_stats.generate_dashboard:main"
+
 [tool.hatch.build.targets.wheel]
-packages = ["*"]
+packages = ["libs", "scripts", "tests", "utilities"]
 
 [dependency-groups]
 dev = [
