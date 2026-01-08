@@ -4,15 +4,12 @@ import shlex
 
 import bitmath
 import pytest
-from bitmath import parse_string_unsafe
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
-from ocp_resources.storage_profile import StorageProfile
-from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
     NVIDIA_VGPU_MANAGER_DS,
@@ -30,7 +27,7 @@ from tests.virt.utils import (
     update_hco_memory_overcommit,
 )
 from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
-from utilities.exceptions import UnsupportedGPUDeviceError
+from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
 from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
@@ -51,6 +48,7 @@ def virt_special_infra_sanity(
     nodes_cpu_virt_extension,
     workers_utility_pods,
     allocatable_memory_per_node_scope_session,
+    hugepages_gib_values,
 ):
     """Performs verification that cluster has all required capabilities based on collected tests."""
 
@@ -58,11 +56,6 @@ def virt_special_infra_sanity(
         LOGGER.info("Verifying tests run on BM cluster")
         if Infrastructure(name="cluster").instance.status.platform == "OpenStack":
             failed_verifications_list.append("Cluster should be BM and not PSI")
-
-    def _verify_cpumanager_workers(_schedulable_nodes):
-        LOGGER.info("Verifing cluster nodes have CPU Manager labels")
-        if not any([node.labels.cpumanager == "true" for node in _schedulable_nodes]):
-            failed_verifications_list.append("Cluster does't have CPU Manager")
 
     def _verify_gpu(_gpu_nodes, _nodes_with_supported_gpus):
         LOGGER.info("Verifing cluster nodes have enough supported GPU cards")
@@ -99,21 +92,6 @@ def virt_special_infra_sanity(
                 "Hardware virtualization related tests are supported only on cluster with INTEL/AMD based CPUs"
             )
 
-    def _verify_hugepages_1gi(_workers):
-        LOGGER.info("Verifing cluster has 1Gi hugepages enabled")
-        if not any([
-            parse_string_unsafe(worker.instance.status.allocatable["hugepages-1Gi"]) >= parse_string_unsafe("1Gi")
-            for worker in _workers
-        ]):
-            failed_verifications_list.append("Cluster does not have hugepages-1Gi")
-
-    def _verify_rwx_default_storage():
-        storage_class = py_config["default_storage_class"]
-        LOGGER.info(f"Verifing default storage class {storage_class} supports RWX mode")
-        access_modes = StorageProfile(client=admin_client, name=storage_class).first_claim_property_set_access_modes()
-        if not access_modes or access_modes[0] != DataVolume.AccessMode.RWX:
-            failed_verifications_list.append(f"Default storage class {storage_class} doesn't support RWX mode")
-
     def _verify_descheduler_operator_installed():
         descheduler_deployment = Deployment(
             name="descheduler-operator",
@@ -148,16 +126,25 @@ def virt_special_infra_sanity(
                 _schedulable_nodes=schedulable_nodes, _nodes_cpu_virt_extension=nodes_cpu_virt_extension
             )
         if any(item.get_closest_marker("cpu_manager") for item in request.session.items):
-            _verify_cpumanager_workers(_schedulable_nodes=schedulable_nodes)
+            try:
+                verify_cpumanager_workers(schedulable_nodes=schedulable_nodes)
+            except ResourceValueError as error:
+                failed_verifications_list.append(str(error))
         if any(item.get_closest_marker("gpu") for item in request.session.items):
             _verify_gpu(_gpu_nodes=gpu_nodes, _nodes_with_supported_gpus=nodes_with_supported_gpus)
             _verfify_no_dpdk()
         if any(item.get_closest_marker("sriov") for item in request.session.items):
             _verify_sriov(_sriov_workers=sriov_workers)
         if any(item.get_closest_marker("hugepages") for item in request.session.items):
-            _verify_hugepages_1gi(_workers=workers)
+            try:
+                verify_hugepages_1gi(hugepages_gib_values=hugepages_gib_values)
+            except ResourceValueError as error:
+                failed_verifications_list.append(str(error))
         if any(item.get_closest_marker("rwx_default_storage") for item in request.session.items):
-            _verify_rwx_default_storage()
+            try:
+                verify_rwx_default_storage(client=admin_client)
+            except ResourceValueError as error:
+                failed_verifications_list.append(str(error))
         if any(item.get_closest_marker("descheduler") for item in request.session.items):
             _verify_descheduler_operator_installed()
             _verify_psi_kernel_argument(_workers_utility_pods=workers_utility_pods)

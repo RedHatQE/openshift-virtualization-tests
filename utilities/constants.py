@@ -1019,3 +1019,6 @@ STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
     "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
 )
+
+# High performance & Numa related constants
+NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"
