@@ -1086,12 +1086,13 @@ class VirtualMachineForTests(VirtualMachine):
     def wait_for_specific_status(self, status, timeout=TIMEOUT_3MIN, sleep=TIMEOUT_5SEC):
         LOGGER.info(f"Wait for {self.kind} {self.name} status to be {status}")
         samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: self.printable_status)
+        sample = None
         try:
             for sample in samples:
                 if sample == status:
                     return
         except TimeoutExpiredError:
-            LOGGER.error(f"Status of {self.kind} {self.name} is {status}")
+            LOGGER.error(f"Status of {self.kind} {self.name} is {sample}")
             raise
 
     @property
