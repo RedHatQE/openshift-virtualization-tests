@@ -3,10 +3,12 @@ from copy import deepcopy
 import pytest
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
-from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
+from tests.install_upgrade_operators.golden_images.constants import (
     COMMON_TEMPLATE,
     CUSTOM_CRON_TEMPLATE,
     CUSTOM_TEMPLATE,
+)
+from tests.install_upgrade_operators.golden_images.utils import (
     get_template_dict_by_name,
     get_templates_by_type_from_hco_status,
 )
