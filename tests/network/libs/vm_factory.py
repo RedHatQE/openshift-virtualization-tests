@@ -12,11 +12,12 @@ def udn_vm(
     namespace_name: str,
     name: str,
     client: DynamicClient,
+    binding: str,
     template_labels: dict | None = None,
     anti_affinity_namespaces: list[str] | None = None,
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
-    iface, network = udn_primary_network(name="udn-primary")
+    iface, network = udn_primary_network(name="udn-primary", binding=binding)
     spec.template.spec.domain.devices.interfaces = [iface]  # type: ignore
     spec.template.spec.networks = [network]
     if template_labels:
