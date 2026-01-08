@@ -14,7 +14,6 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_IMPORT_CRON_NAME,
     CUSTOM_DATA_SOURCE_NAME,
     DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE,
-    DEFAULT_FEDORA_REGISTRY_URL,
     PVC_NOT_FOUND_ERROR,
 )
 from tests.utils import get_parameters_from_template
@@ -24,7 +23,7 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import DATA_SOURCE_NAME, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
+from utilities.constants import DATA_SOURCE_NAME, DEFAULT_FEDORA_REGISTRY_URL, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
 from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value
 
