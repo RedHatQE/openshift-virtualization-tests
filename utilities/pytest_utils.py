@@ -20,6 +20,7 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
+    MULTIARCH,
     POD_SECURITY_NAMESPACE_LABELS,
     SANITY_TESTS_FAILURE,
     TIMEOUT_2MIN,
@@ -30,7 +31,12 @@ from utilities.data_collector import (
     get_data_collector_base_directory,
     write_to_file,
 )
-from utilities.exceptions import MissingEnvironmentVariableError
+from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
+from utilities.infra import generate_latest_os_dict
+from utilities.os_utils import (
+    generate_linux_instance_type_os_matrix,
+    generate_os_matrix_dict,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -332,3 +338,50 @@ def exit_pytest_execution(
     if junitxml_property:
         junitxml_property(name="exit_code", value=return_code)
     pytest.exit(reason=log_message, returncode=return_code)
+
+
+def update_os_related_config(cpu_arch: str) -> None:
+    if py_config["arch"] == MULTIARCH and not cpu_arch:
+        raise UnsupportedCPUArchitectureError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
+    if py_config["arch"] != MULTIARCH and cpu_arch:
+        raise UnsupportedCPUArchitectureError("`--cpu-arch` cmdline arg must not be provided for single-arch clusters!")
+
+    if py_config["arch"] == MULTIARCH:
+        py_config["arch"] = cpu_arch
+        os_dict = py_config["os_matrix"][cpu_arch]
+    else:
+        os_dict = py_config
+
+    if rhel_os_list := os_dict.get("rhel_os_list"):
+        py_config["rhel_os_matrix"] = generate_os_matrix_dict(
+            os_name="rhel", supported_operating_systems=rhel_os_list, arch=cpu_arch
+        )
+        py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_list=py_config["rhel_os_matrix"])
+    if fedora_os_list := os_dict.get("fedora_os_list"):
+        py_config["fedora_os_matrix"] = generate_os_matrix_dict(
+            os_name="fedora", supported_operating_systems=fedora_os_list, arch=cpu_arch
+        )
+        py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
+    if centos_os_list := os_dict.get("centos_os_list"):
+        py_config["centos_os_matrix"] = generate_os_matrix_dict(
+            os_name="centos", supported_operating_systems=centos_os_list, arch=cpu_arch
+        )
+        py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_list=py_config["centos_os_matrix"])
+    if windows_os_list := os_dict.get("windows_os_list"):
+        py_config["windows_os_matrix"] = generate_os_matrix_dict(
+            os_name="windows", supported_operating_systems=windows_os_list, arch=cpu_arch
+        )
+        py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_list=py_config["windows_os_matrix"])
+
+    if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
+        py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
+        )
+    if instance_type_fedora_os_list := os_dict.get("instance_type_fedora_os_list"):
+        py_config["instance_type_fedora_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="fedora", preferences=instance_type_fedora_os_list, arch_suffix=cpu_arch
+        )
+    if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
+        py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch
+        )

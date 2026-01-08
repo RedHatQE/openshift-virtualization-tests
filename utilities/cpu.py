@@ -4,6 +4,7 @@ from typing import Set
 
 from ocp_resources.node import Node
 from ocp_resources.resource import Resource
+from pytest_testconfig import config as py_config
 
 from utilities.constants import (
     CPU_MODEL_LABEL_PREFIX,
@@ -11,6 +12,7 @@ from utilities.constants import (
     EXCLUDED_OLD_CPU_MODELS,
     KUBERNETES_ARCH_LABEL,
 )
+from utilities.exceptions import UnsupportedCPUArchitectureError
 
 LOGGER = logging.getLogger(__name__)
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
@@ -132,11 +134,21 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
         nodes: List of Node objects to extract architecture information from.
 
     Returns:
-        CPU architecture string (e.g., "x86_64", "arm64", "s390x").
+        CPU architecture string (e.g., "amd64", "arm64", "s390x").
 
     Raises:
-        AssertionError: If nodes have mixed CPU architectures.
+        UnsupportedCPUArchitectureError: If nodes have mixed CPU architectures.
     """
     nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
-    assert len(nodes_cpu_arch) == 1, "Mixed CPU architectures in the cluster is not supported"
+    config_arch: str | None = py_config.get("arch")
+
+    if config_arch:
+        if config_arch not in nodes_cpu_arch:
+            raise UnsupportedCPUArchitectureError(
+                f"CPU architecture {config_arch} passed via `--cpu-arch` is not supported in the cluster!"
+            )
+        return config_arch
+
+    if len(nodes_cpu_arch) > 1:
+        raise UnsupportedCPUArchitectureError("`--cpu-arch` cmdline arg must be provided for multi-arch clusters!")
     return next(iter(nodes_cpu_arch))

@@ -43,6 +43,7 @@ AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
+MULTIARCH = "multiarch"
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
@@ -205,7 +206,10 @@ class ArchImages:
 
 
 # Choose the Image class according to the architecture. Default: x86_64
-Images = getattr(ArchImages, get_cluster_architecture().upper())
+if (cluster_arch := get_cluster_architecture()) == MULTIARCH:
+    Images = getattr(ArchImages, X86_64.upper())
+else:
+    Images = getattr(ArchImages, cluster_arch.upper())
 
 
 # Virtctl constants

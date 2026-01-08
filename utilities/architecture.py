@@ -1,10 +1,13 @@
 import os
+from functools import cache
 
 from ocp_resources.node import Node
 
 from utilities.cluster import cache_admin_client
+from utilities.exceptions import UnsupportedCPUArchitectureError
 
 
+@cache
 def get_cluster_architecture() -> str:
     """
     Returns cluster architecture.
@@ -17,7 +20,7 @@ def get_cluster_architecture() -> str:
     Raises:
         ValueError: if architecture is not supported.
     """
-    from utilities.constants import AMD_64, ARM_64, KUBERNETES_ARCH_LABEL, S390X, X86_64
+    from utilities.constants import AMD_64, ARM_64, KUBERNETES_ARCH_LABEL, MULTIARCH, S390X, X86_64
 
     # Needed for CI
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH")
@@ -27,11 +30,11 @@ def get_cluster_architecture() -> str:
         # cache_admin_client is used here as this function is used to get the architecture when initialing pytest config
         nodes: list[Node] = list(Node.get(client=cache_admin_client()))
         nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
-        arch = next(iter(nodes_cpu_arch))
+        arch = MULTIARCH if len(nodes_cpu_arch) > 1 else next(iter(nodes_cpu_arch))
 
     arch = X86_64 if arch == AMD_64 else arch
 
-    if arch not in (X86_64, ARM_64, S390X):
-        raise ValueError(f"{arch} architecture in not supported")
+    if arch not in (X86_64, ARM_64, S390X, MULTIARCH):
+        raise UnsupportedCPUArchitectureError(f"CPU architecture {arch} is not supported")
 
     return arch
