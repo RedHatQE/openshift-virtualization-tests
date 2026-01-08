@@ -761,9 +761,11 @@ def get_and_extract_file_from_cluster(urls, system_os, dest_dir, machine_type=No
     raise UrlNotFoundError(f"Url not found for system_os={system_os}")
 
 
-def download_file_from_cluster(get_console_spec_links_name, dest_dir):
+def download_file_from_cluster(
+    get_console_spec_links_name: str, dest_dir: os.PathLike[str], admin_client: DynamicClient
+) -> str:
     console_cli_links = get_console_spec_links(
-        admin_client=get_client(),
+        admin_client=admin_client,
         name=get_console_spec_links_name,
     )
     download_urls = get_all_console_links(console_cli_downloads_spec_links=console_cli_links)
