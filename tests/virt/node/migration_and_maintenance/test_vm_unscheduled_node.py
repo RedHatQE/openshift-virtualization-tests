@@ -13,7 +13,6 @@ from utilities.virt import (
 @pytest.fixture()
 def unscheduled_node_vm(
     request,
-    cluster_cpu_model_scope_function,
     worker_node1,
     unprivileged_client,
     namespace,

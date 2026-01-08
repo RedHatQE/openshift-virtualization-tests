@@ -33,6 +33,7 @@ def matrix_centos_os_vm_from_template(
     namespace,
     centos_os_matrix__class__,
     matrix_centos_os_golden_image_data_source,
+    cpu_for_migration,
 ):
     return matrix_os_vm_from_template(
         unprivileged_client=unprivileged_client,
@@ -42,6 +43,7 @@ def matrix_centos_os_vm_from_template(
         data_volume_template=get_data_volume_template_dict_with_default_storage_class(
             data_source=matrix_centos_os_golden_image_data_source
         ),
+        cpu_model=cpu_for_migration,
     )
 
 
@@ -60,6 +62,7 @@ def matrix_fedora_os_vm_from_template(
     namespace,
     fedora_os_matrix__class__,
     matrix_fedora_os_golden_image_data_source,
+    cpu_for_migration,
 ):
     return matrix_os_vm_from_template(
         request=request,
@@ -70,6 +73,7 @@ def matrix_fedora_os_vm_from_template(
         data_volume_template=get_data_volume_template_dict_with_default_storage_class(
             data_source=matrix_fedora_os_golden_image_data_source
         ),
+        cpu_model=cpu_for_migration,
     )
 
 
@@ -87,6 +91,7 @@ def matrix_rhel_os_vm_from_template(
     namespace,
     rhel_os_matrix__class__,
     matrix_rhel_os_golden_image_data_source,
+    cpu_for_migration,
 ):
     return matrix_os_vm_from_template(
         unprivileged_client=unprivileged_client,
@@ -96,6 +101,7 @@ def matrix_rhel_os_vm_from_template(
         data_volume_template=get_data_volume_template_dict_with_default_storage_class(
             data_source=matrix_rhel_os_golden_image_data_source
         ),
+        cpu_model=cpu_for_migration,
     )
 
 
@@ -113,6 +119,7 @@ def matrix_windows_os_vm_from_template(
     namespace,
     windows_os_matrix__class__,
     matrix_windows_os_golden_image_data_source,
+    modern_cpu_for_migration,
 ):
     return matrix_os_vm_from_template(
         unprivileged_client=unprivileged_client,
@@ -122,6 +129,7 @@ def matrix_windows_os_vm_from_template(
         data_volume_template=get_data_volume_template_dict_with_default_storage_class(
             data_source=matrix_windows_os_golden_image_data_source
         ),
+        cpu_model=modern_cpu_for_migration,
     )
 
 

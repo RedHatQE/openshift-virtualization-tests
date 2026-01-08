@@ -75,7 +75,7 @@ def hco_csv_win_virtio_image(csv_scope_session):
 
 @pytest.fixture(scope="class")
 def vm_with_guest_tools(
-    cluster_modern_cpu_model_scope_class,
+    modern_cpu_for_migration,
     namespace,
     unprivileged_client,
     golden_image_data_volume_template_for_test_scope_class,
@@ -93,6 +93,7 @@ def vm_with_guest_tools(
         os_flavor=OS_FLAVOR_WINDOWS,
         disk_type=None,
         virtio_image=virtio_win_image,
+        cpu_model=modern_cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
         yield vm
