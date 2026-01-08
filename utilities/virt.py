@@ -1096,7 +1096,7 @@ class VirtualMachineForTests(VirtualMachine):
 
     @property
     def privileged_vmi(self):
-        return VirtualMachineInstance(client=get_client(), name=self.name, namespace=self.namespace)
+        return VirtualMachineInstance(client=self.client, name=self.name, namespace=self.namespace)
 
     def wait_for_agent_connected(self, timeout: int = TIMEOUT_5MIN):
         self.vmi.wait_for_condition(
@@ -1370,7 +1370,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         if self.template_params:
             template_kwargs.update(self.template_params)
 
-        resources_list = template_object.process(client=get_client(), **template_kwargs)
+        resources_list = template_object.process(client=self.client, **template_kwargs)
         for resource in resources_list:
             if resource["kind"] == VirtualMachine.kind and resource["metadata"]["name"] == self.name:
                 return resource
@@ -1508,7 +1508,7 @@ class ServiceForVirtualMachineForTests(Service):
             return self.instance.spec.clusterIP
 
         vm_node = Node(
-            client=get_client(),
+            client=self.client,
             name=self.vmi.instance.status.nodeName,
         )
         if self.service_type == Service.Type.NODE_PORT:
