@@ -14,6 +14,10 @@ exclude =
     .cache/*
     utilities/unittests/*
 
+per-file-ignores =
+    # AST NodeVisitor methods must follow Python's naming convention (visit_NodeType)
+    scripts/tests_analyzer/pytest_marker_analyzer.py: N802
+
 fcn_exclude_functions =
     re,
     group,
@@ -75,6 +79,13 @@ fcn_exclude_functions =
     QueueListener,
     requests,
     multiprocessing,
+    Path,
+    ast,
+    get_logger,
+    ThreadPoolExecutor,
+    as_completed,
+    mkdtemp,
+    tempfile,
 
 nit_exclude_imports =
     os_params,

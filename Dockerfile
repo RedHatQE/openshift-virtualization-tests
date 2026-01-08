@@ -63,4 +63,9 @@ RUN uv sync --locked \
   && rm -rf ${TEST_DIR}/artifacts \
   && find ${TEST_DIR}/ -type d -name "__pycache__" -print0 | xargs -0 rm -rfv
 
+# Make tests_analyzer scripts executable and add symlinks to PATH
+RUN find ${TEST_DIR}/scripts/tests_analyzer/ \( -name "*.py" -o -name "*.sh" \) -exec chmod +x {} \; && \
+    ln -s ${TEST_DIR}/scripts/tests_analyzer/pytest_marker_analyzer.py /usr/local/bin/pytest-marker-analyzer && \
+    ln -s ${TEST_DIR}/scripts/tests_analyzer/compare_coderabbit_decisions.py /usr/local/bin/compare-coderabbit-decisions
+
 CMD ["uv", "run", "pytest", "--tc=server_url:${HTTP_IMAGE_SERVER}", "--collect-only"]
