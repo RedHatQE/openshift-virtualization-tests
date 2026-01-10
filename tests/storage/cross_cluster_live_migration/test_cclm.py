@@ -1,6 +1,9 @@
 import pytest
 
-from tests.storage.cross_cluster_live_migration.utils import verify_compute_live_migration_after_cclm
+from tests.storage.cross_cluster_live_migration.utils import (
+    verify_compute_live_migration_after_cclm,
+    verify_vms_boot_time_after_migration,
+)
 from utilities.constants import TIMEOUT_10MIN
 
 TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE = "CCLMvmFromTemplateWithDataSource"
@@ -34,12 +37,19 @@ class TestCCLMvmFromTemplateWithDataSource:
     def test_migrate_vm_from_remote_to_local_cluster(
         self,
         mtv_migration,
+        vms_for_cclm,
+        vms_boot_time_before_cclm,
+        admin_client,
+        namespace,
     ):
         mtv_migration.wait_for_condition(
             condition=mtv_migration.Condition.Type.SUCCEEDED,
             status=mtv_migration.Condition.Status.TRUE,
             timeout=TIMEOUT_10MIN,
             stop_condition=mtv_migration.Status.FAILED,
+        )
+        verify_vms_boot_time_after_migration(
+            client=admin_client, namespace=namespace, vms_list=vms_for_cclm, initial_boot_time=vms_boot_time_before_cclm
         )
 
     @pytest.mark.dependency(
