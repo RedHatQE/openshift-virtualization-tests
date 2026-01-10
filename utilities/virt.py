@@ -1551,8 +1551,16 @@ def wait_for_ssh_connectivity(
             return
 
 
-def wait_for_console(vm):
-    with Console(vm=vm, timeout=TIMEOUT_25MIN):
+def wait_for_console(vm, kubeconfig=None):
+    """
+    Wait for VM console to be accessible.
+
+    Args:
+        vm: VirtualMachine instance
+        kubeconfig: Optional path to kubeconfig file for remote cluster access
+    """
+    # Pass the kubeconfig to Console for remote cluster support
+    with Console(vm=vm, timeout=TIMEOUT_25MIN, kubeconfig=kubeconfig):
         LOGGER.info(f"Successfully connected to {vm.name} console")
 
 

@@ -1,9 +1,12 @@
 import logging
+import os
 import re
+import tempfile
 from copy import deepcopy
 
 import pytest
 import requests
+
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
@@ -27,6 +30,7 @@ from pytest_testconfig import config as py_config
 
 from tests.storage.cross_cluster_live_migration.utils import (
     enable_feature_gate_and_configure_hco_live_migration_network,
+    get_vm_boot_time_via_console,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
@@ -38,7 +42,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
-from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.storage import data_volume_template_with_source_ref_dict, write_file
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -98,6 +102,56 @@ def remote_cluster_auth_token(remote_admin_client):
     if token_match := re.match(r"Bearer (.*)", remote_admin_client.configuration.api_key.get("authorization", "")):
         return token_match.group(1)
     raise NotFoundError("Unable to extract authentication token from remote admin client")
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_kubeconfig(remote_admin_client, remote_cluster_auth_token):
+    """
+    Generate a kubeconfig file from the remote admin client credentials.
+    Returns the path to the generated kubeconfig file.
+    """
+    # Extract cluster information from the client
+    cluster_host = remote_admin_client.configuration.host
+    cluster_name = "remote-cluster"
+    user_name = "remote-admin"
+    context_name = "remote-context"
+
+    # Create kubeconfig structure
+    kubeconfig_dict = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [
+            {
+                "name": cluster_name,
+                "cluster": {
+                    "server": cluster_host,
+                    "insecure-skip-tls-verify": True,  # Since we're using verify_ssl=False
+                },
+            }
+        ],
+        "users": [{"name": user_name, "user": {"token": remote_cluster_auth_token}}],
+        "contexts": [{"name": context_name, "context": {"cluster": cluster_name, "user": user_name}}],
+        "current-context": context_name,
+    }
+
+    # Create temporary file for kubeconfig
+    temp_dir = tempfile.mkdtemp(suffix="-remote-kubeconfig")
+    kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
+
+    with open(kubeconfig_path, "w") as f:
+        yaml.safe_dump(kubeconfig_dict, f)
+
+    LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
+
+    yield kubeconfig_path
+
+    # Cleanup
+    try:
+        os.remove(kubeconfig_path)
+        os.rmdir(temp_dir)
+        LOGGER.info(f"Cleaned up remote cluster kubeconfig at: {kubeconfig_path}")
+    except Exception as e:
+        LOGGER.warning(f"Failed to cleanup remote cluster kubeconfig: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -374,7 +428,10 @@ def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_kubeconfig,
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
@@ -388,7 +445,19 @@ def vm_for_cclm_from_template_with_data_source(
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        write_file(
+            vm=vm,
+            filename="test-file",
+            content="test-content",
+            stop_vm=False,
+            kubeconfig=remote_cluster_kubeconfig,
+        )
         yield vm
+
+
+@pytest.fixture(scope="class")
+def vms_boot_time_before_cclm(vms_for_cclm, remote_cluster_kubeconfig):
+    yield {vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in vms_for_cclm}
 
 
 @pytest.fixture(scope="class")
