@@ -58,7 +58,7 @@ CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
 
 class ArchImages:
-    class X86_64:  # noqa: N801
+    class AMD64:  # noqa: N801
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
         Cirros = Cirros(
@@ -205,9 +205,9 @@ class ArchImages:
         Windows = Windows()
 
 
-# Choose the Image class according to the architecture. Default: x86_64
+# Choose the Image class according to the architecture. Default: amd64
 if (cluster_arch := get_cluster_architecture()) == MULTIARCH:
-    Images = getattr(ArchImages, X86_64.upper())
+    Images = getattr(ArchImages, AMD_64.upper())
 else:
     Images = getattr(ArchImages, cluster_arch.upper())
 

@@ -356,26 +356,29 @@ def update_os_related_config(cpu_arch: str) -> None:
         py_config["rhel_os_matrix"] = generate_os_matrix_dict(
             os_name="rhel", supported_operating_systems=rhel_os_list, arch=cpu_arch
         )
-        py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_list=py_config["rhel_os_matrix"])
+        py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
     if fedora_os_list := os_dict.get("fedora_os_list"):
         py_config["fedora_os_matrix"] = generate_os_matrix_dict(
             os_name="fedora", supported_operating_systems=fedora_os_list, arch=cpu_arch
         )
-        py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_list=py_config["fedora_os_matrix"])
+        py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_matrix=py_config["fedora_os_matrix"])
     if centos_os_list := os_dict.get("centos_os_list"):
         py_config["centos_os_matrix"] = generate_os_matrix_dict(
             os_name="centos", supported_operating_systems=centos_os_list, arch=cpu_arch
         )
-        py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_list=py_config["centos_os_matrix"])
+        py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_matrix=py_config["centos_os_matrix"])
     if windows_os_list := os_dict.get("windows_os_list"):
         py_config["windows_os_matrix"] = generate_os_matrix_dict(
             os_name="windows", supported_operating_systems=windows_os_list, arch=cpu_arch
         )
-        py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_list=py_config["windows_os_matrix"])
+        py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
+        )
+        py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
+            os_matrix=py_config["instance_type_rhel_os_matrix"]
         )
     if instance_type_fedora_os_list := os_dict.get("instance_type_fedora_os_list"):
         py_config["instance_type_fedora_os_matrix"] = generate_linux_instance_type_os_matrix(

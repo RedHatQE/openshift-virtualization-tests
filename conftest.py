@@ -26,7 +26,6 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.cluster
-import utilities.infra
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
@@ -36,7 +35,6 @@ from utilities.constants import (
     S390X,
     SETUP_ERROR,
     TIMEOUT_5MIN,
-    X86_64,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -591,8 +589,8 @@ def pytest_collection_modifyitems(session, config, items):
 
         mark_tests_by_team(item=item)
 
-        # All tests are verified on X86_64 platforms, adding `x86_64` to all tests
-        item.add_marker(marker=X86_64)
+        # All tests are verified on x86_64 platforms, adding `amd64` to all tests
+        item.add_marker(marker=AMD_64)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep
@@ -752,19 +750,26 @@ def pytest_sessionstart(session):
 
         # Update OS matrix list with the latest OS if running with os_group
         if session.config.getoption("latest_rhel") and rhel_os_matrix:
-            py_config["rhel_os_matrix"] = py_config.get("latest_rhel_os_dict")
+            latest_rhel_os_dict = py_config.get("latest_rhel_os_dict", {})
+            py_config["rhel_os_matrix"] = [
+                {f"rhel.{latest_rhel_os_dict.get('os_version', 'latest')}": latest_rhel_os_dict}
+            ]
+            latest_instance_type_rhel_os_dict = py_config.get("latest_instance_type_rhel_os_dict", {})
             py_config["instance_type_rhel_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
+                {latest_instance_type_rhel_os_dict.get("preference", "rhel.latest"): latest_instance_type_rhel_os_dict}
             ]
 
         if session.config.getoption("latest_windows") and windows_os_matrix:
-            py_config["windows_os_matrix"] = py_config.get("latest_windows_os_dict")
+            latest_windows_os_dict = py_config.get("latest_windows_os_dict", {})
+            py_config["windows_os_matrix"] = [{"windows.latest": latest_windows_os_dict}]
 
         if session.config.getoption("latest_centos") and (py_config.get("centos_os_matrix")):
-            py_config["centos_os_matrix"] = py_config.get("latest_centos_os_dict")
+            latest_centos_os_dict = py_config.get("latest_centos_os_dict", {})
+            py_config["centos_os_matrix"] = [{"centos.latest": latest_centos_os_dict}]
 
         if session.config.getoption("latest_fedora") and (py_config.get("fedora_os_matrix")):
-            py_config["fedora_os_matrix"] = py_config.get("latest_fedora_os_dict")
+            latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
+            py_config["fedora_os_matrix"] = [{"fedora.latest": latest_fedora_os_dict}]
 
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
