@@ -12,7 +12,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_30SEC
+from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_artifactory_header, get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
@@ -56,7 +56,7 @@ def enabled_downward_metrics_hco_featuregate(hyperconverged_resource_scope_modul
 
 
 @pytest.fixture(scope="module")
-def rpm_file_name(nodes_cpu_architecture):
+def rpm_file_name(is_s390x_cluster):
     soup_page = BeautifulSoup(
         markup=requests.get(RPMS_REPO_URL, headers=get_artifactory_header(), verify=False, timeout=TIMEOUT_30SEC).text,
         features="html.parser",
@@ -64,9 +64,7 @@ def rpm_file_name(nodes_cpu_architecture):
     rpm_file_names = [link.get("href") for link in soup_page.find_all("a", href=re.compile(r"\.rpm$"))]
     assert rpm_file_names, f"No RPM files found at the URL - {RPMS_REPO_URL}"
 
-    return next(
-        file_name for file_name in rpm_file_names if ("s390x" in file_name) == (nodes_cpu_architecture == "s390x")
-    )
+    return next(file_name for file_name in rpm_file_names if (S390X in file_name) == is_s390x_cluster)
 
 
 @pytest.fixture()
