@@ -136,7 +136,7 @@ def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
 
 
 @pytest.fixture(scope="class")
-def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
+def vm_metric_1(namespace, unprivileged_client):
     vm_name = "vm-metrics-1"
     with VirtualMachineForTests(
         name=vm_name,
@@ -144,7 +144,6 @@ def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
         body=fedora_vm_body(name=vm_name),
         client=unprivileged_client,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
-        cpu_model=cluster_common_node_cpu,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
         yield vm
