@@ -14,7 +14,7 @@ from tests.storage.online_resize.utils import (
     expand_pvc,
     wait_for_resize,
 )
-from utilities.constants import OS_FLAVOR_RHEL, Images
+from utilities.constants import OS_FLAVOR_RHEL, Images, StorageClassNames
 from utilities.storage import create_dv, is_snapshot_supported_by_sc
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -29,6 +29,13 @@ def xfail_if_storage_for_online_resize_does_not_support_snapshots(
         client=admin_client,
     ):
         pytest.xfail(f"Storage class for online resize '{sc_name}' doesn't support snapshots")
+
+
+@pytest.fixture(scope="module")
+def xfail_if_gcp_storage_class(storage_class_matrix_online_resize_matrix__module__):
+    sc_name = next(iter(storage_class_matrix_online_resize_matrix__module__))
+    if sc_name == StorageClassNames.GCP:
+        pytest.xfail("Online resize is not supported for GCP storage class for RWX Datavolume")
 
 
 @pytest.fixture()

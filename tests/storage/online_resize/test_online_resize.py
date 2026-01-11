@@ -24,6 +24,8 @@ from utilities.virt import migrate_vm_and_verify, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.usefixtures("xfail_if_gcp_storage_class")
+
 
 @pytest.mark.gating
 @pytest.mark.conformance
