@@ -668,7 +668,7 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
 
 @pytest.fixture(scope="class")
 def initial_vmi_deletion_metrics_values(prometheus):
-    yield {
+    return {
         metric: int(get_metrics_value(prometheus=prometheus, metrics_name=metric))
         for metric in [
             KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
