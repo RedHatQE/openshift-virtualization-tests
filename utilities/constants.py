@@ -1015,8 +1015,13 @@ QUOTA_FOR_ONE_VMI = {
 }
 
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
+DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
+REGISTRY_STR = "registry"
 STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
     "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
 )
 REGISTRY_STR = "registry"
+
+# High performance & Numa related constants
+NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"

@@ -4,6 +4,7 @@ import shlex
 import bitmath
 import pytest
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -42,6 +43,7 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
+    DEFAULT_FEDORA_REGISTRY_URL,
     IPV4_STR,
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
@@ -51,7 +53,9 @@ from utilities.constants import (
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
+    ONE_CPU_THREAD,
     OS_FLAVOR_FEDORA,
+    REGISTRY_STR,
     SSP_OPERATOR,
     STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
@@ -87,6 +91,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
+    vm_instance_from_template,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -258,14 +263,14 @@ def network_packet_received_linux_vm(vm_for_test, linux_vm_for_test_interface_na
 
 
 @pytest.fixture(scope="class")
-def vm_with_cpu_spec(namespace, unprivileged_client):
+def vm_with_cpu_spec(namespace, unprivileged_client, is_s390x_cluster):
     name = "vm-resource-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         cpu_cores=TWO_CPU_CORES,
         cpu_sockets=TWO_CPU_SOCKETS,
-        cpu_threads=TWO_CPU_THREADS,
+        cpu_threads=ONE_CPU_THREAD if is_s390x_cluster else TWO_CPU_THREADS,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
     ) as vm:
@@ -676,6 +681,30 @@ def vm_created_pod_total_initial_metric_value(prometheus, namespace):
             prometheus=prometheus, metrics_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=namespace.name)
         )
     )
+
+
+@pytest.fixture()
+def vm_with_rwo_dv(request, unprivileged_client, namespace):
+    dv = DataVolume(
+        client=unprivileged_client,
+        source=REGISTRY_STR,
+        name="non-evictable-vm-dv-for-test",
+        namespace=namespace.name,
+        url=DEFAULT_FEDORA_REGISTRY_URL,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        access_modes=DataVolume.AccessMode.RWO,
+        api_name="storage",
+    )
+    dv.to_dict()
+    dv_res = dv.res
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture(scope="class")

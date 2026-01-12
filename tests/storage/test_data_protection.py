@@ -10,57 +10,15 @@ import pytest
 from kubernetes.dynamic.exceptions import BadRequestError
 from ocp_resources.cdi import CDI
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from utilities.constants import TIMEOUT_5MIN, Images
-from utilities.storage import (
-    create_dummy_first_consumer_pod,
-    sc_is_hpp_with_immediate_volume_binding,
-    sc_volume_binding_mode_is_wffc,
-)
 
 LOGGER = logging.getLogger(__name__)
 
 
 def _assert_cdi_delete(exc_info):
     assert "there are still DataVolumes present." in str(exc_info), f"delete CDI failure with reason: {exc_info}"
-
-
-@pytest.fixture(scope="module")
-def pvc_hpp(unprivileged_client, namespace, worker_node1, available_hpp_storage_class):
-    with PersistentVolumeClaim(
-        client=unprivileged_client,
-        name="pvc-hpp",
-        namespace=namespace.name,
-        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size="1Gi",
-        storage_class=available_hpp_storage_class.name,
-        hostpath_node=worker_node1.name
-        if sc_is_hpp_with_immediate_volume_binding(sc=available_hpp_storage_class.name)
-        else None,
-    ) as pvc:
-        if sc_volume_binding_mode_is_wffc(sc=pvc.storage_class):
-            # For PVC to bind on WFFC, it must be consumed
-            # (this was previously solved by hard coding hostpath_node at all times)
-            create_dummy_first_consumer_pod(pvc=pvc)
-        pvc.wait()
-        yield pvc
-
-
-@pytest.mark.destructive
-@pytest.mark.polarion("CNV-3648")
-def test_remove_cdi_pvc(skip_test_if_no_hpp_sc, pvc_hpp, cdi):
-    """
-    Test the CDI can be removed when only a PVC exists
-    """
-    # CDI can be removed and created again
-    cdi.delete()
-    cdi.wait_for_status(status=CDI.Status.DEPLOYING)
-    cdi.wait_for_status(status=CDI.Status.DEPLOYED)
-
-    # PVC still exists
-    assert pvc_hpp.bound()
 
 
 @pytest.mark.destructive

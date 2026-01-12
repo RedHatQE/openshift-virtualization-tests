@@ -3,6 +3,7 @@ import math
 import os
 import shlex
 from contextlib import contextmanager
+from typing import Any, Dict, Generator
 
 import cachetools.func
 import kubernetes
@@ -14,6 +15,7 @@ from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
+from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import NamespacedResource, ResourceEditor
@@ -23,6 +25,7 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
 from pyhelper_utils.shell import run_ssh_commands
+from pytest import FixtureRequest
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
@@ -108,16 +111,16 @@ def create_dv(
     dv_name,
     namespace,
     storage_class,
+    client,
     volume_mode=None,
     url=None,
     source="http",
-    content_type=DataVolume.ContentType.KUBEVIRT,
+    content_type=None,
     size="5Gi",
     secret=None,
     cert_configmap=None,
     hostpath_node=None,
     access_modes=None,
-    client=None,
     source_pvc=None,
     source_namespace=None,
     multus_annotation=None,
@@ -167,7 +170,7 @@ def create_dv(
         api_name=api_name,
         source_ref=source_ref,
     ) as dv:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
             create_dummy_first_consumer_pod(dv=dv)
         yield dv
     utilities.artifactory.cleanup_artifactory_secret_and_config_map(
@@ -176,41 +179,38 @@ def create_dv(
 
 
 def data_volume(
-    namespace,
-    storage_class_matrix=None,
-    storage_class=None,
-    schedulable_nodes=None,
-    request=None,
-    os_matrix=None,
-    check_dv_exists=False,
-    admin_client=None,
-    bind_immediate=None,
-    client=None,
-):
+    namespace: Namespace,
+    client: DynamicClient,
+    storage_class_matrix: Dict[str, Dict[str, Any]] | None = None,
+    storage_class: str | None = None,
+    request: FixtureRequest | None = None,
+    os_matrix: Dict[str, Dict[str, Any]] | None = None,
+    check_dv_exists: bool = False,
+    bind_immediate: bool | None = None,
+) -> Generator[DataVolume, None, None]:
     """
     DV creation using create_dv.
 
     Args:
-        namespace (:obj: `Namespace`): namespace resource
-        storage_class_matrix (dict): Contains current storage_class_matrix attributes
-        storage_class (str): Storage class name
-        schedulable_nodes (list): List of schedulable nodes objects
+        namespace: The Namespace object where the DataVolume will be created.
+        client: DynamicClient for API operations.
+        storage_class_matrix (dict): Optional dictionary containing storage class configuration.
+        storage_class (str): Name of the storage class to use.
+        request: Optional pytest request fixture containing parametrized test data in request.param.
         os_matrix (dict): Contains current os_matrix attributes
         check_dv_exists (bool): Skip DV creation if DV exists. Used for golden images. IF the DV exists in golden images
-        namespace, it can be used for cloning.
-        bind_immediate (bool): if True, cdi.kubevirt.io/storage.bind.immediate.requested annotation
+            namespace, it can be used for cloning.
+        bind_immediate (bool): If True, adds the cdi.kubevirt.io/storage.bind.immediate.requested annotation
 
     Yields:
-        obj `DataVolume`: DV resource
-
+        DataVolume: The created or existing DataVolume resource.
     """
-    if not storage_class_matrix:
-        storage_class_matrix = get_storage_class_dict_from_matrix(storage_class=storage_class)
-
-    storage_class = [*storage_class_matrix][0]
-    # Save with a different name to avoid confusing.
-
     params_dict = request.param if request else {}
+
+    if storage_class_matrix:
+        storage_class = [*storage_class_matrix][0]
+    else:
+        storage_class = storage_class or params_dict.get("storage_class")
 
     # Set DV attributes
     # DV name is the only mandatory value
@@ -218,10 +218,7 @@ def data_volume(
     # rhel_os_matrix or windows_os_matrix (passed as os_matrix)
     source = params_dict.get("source", "http")
     consume_wffc = params_dict.get("consume_wffc", True)
-
-    # DV namespace may not be in the same namespace as the originating test
-    # If a namespace is passes in request.param, use it instead of the test's namespace
-    dv_namespace = params_dict.get("dv_namespace", namespace.name)
+    dv_namespace = namespace.name
 
     if os_matrix:
         os_matrix_key = [*os_matrix][0]
@@ -230,7 +227,7 @@ def data_volume(
         dv_size = os_matrix[os_matrix_key].get("dv_size")
     else:
         image = params_dict.get("image", "")
-        dv_name = params_dict.get("dv_name").replace(".", "-").lower()
+        dv_name = (params_dict.get("dv_name") or "").replace(".", "-").lower()
         dv_size = params_dict.get("dv_size")
 
     # Don't need URL for DVs that are not http
@@ -246,7 +243,7 @@ def data_volume(
         consume_wffc = False
         bind_immediate = True
         try:
-            golden_image = list(DataVolume.get(client=admin_client, name=dv_name, namespace=dv_namespace))
+            golden_image = list(DataVolume.get(client=client, name=dv_name, namespace=dv_namespace))
             yield golden_image[0]
         except NotFoundError:
             LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
@@ -256,10 +253,9 @@ def data_volume(
         "namespace": dv_namespace,
         "source": source,
         "size": dv_size,
-        "storage_class": params_dict.get("storage_class", storage_class),
+        "storage_class": storage_class,
         "access_modes": params_dict.get("access_modes"),
         "volume_mode": params_dict.get("volume_mode"),
-        "content_type": DataVolume.ContentType.KUBEVIRT,
         "consume_wffc": consume_wffc,
         "bind_immediate": bind_immediate,
         "preallocation": params_dict.get("preallocation", None),
@@ -274,13 +270,18 @@ def data_volume(
             if source == "upload":
                 dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
             else:
-                if not consume_wffc and sc_volume_binding_mode_is_wffc(sc=storage_class) and not bind_immediate:
+                if (
+                    not consume_wffc
+                    and storage_class
+                    and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client)
+                    and not bind_immediate
+                ):
                     # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
                     # and bind_immediate is False (i.e bind_immediate annotation will be added, import will not wait
                     # first consumer)
                     # We will hand out a DV that has nothing on it, just waiting to be further consumed by kubevirt
                     # It will be in a status 'PendingPopulation' (for csi storage)
-                    dv.wait_for_status(status="PendingPopulation", timeout=TIMEOUT_10SEC)
+                    dv.wait_for_status(status=dv.Status.PENDING_POPULATION, timeout=TIMEOUT_10SEC)
                 else:
                     dv.wait_for_dv_success(timeout=TIMEOUT_60MIN if OS_FLAVOR_WINDOWS in image else TIMEOUT_30MIN)
         yield dv
@@ -315,7 +316,7 @@ def get_downloaded_artifact(remote_name, local_name):
         raise
 
 
-def get_storage_class_dict_from_matrix(storage_class):
+def get_storage_class_dict_from_matrix(storage_class: str) -> dict:
     storages = py_config["system_storage_class_matrix"]
     matching_storage_classes = [sc for sc in storages if [*sc][0] == storage_class]
     if not matching_storage_classes:
@@ -323,15 +324,11 @@ def get_storage_class_dict_from_matrix(storage_class):
     return matching_storage_classes[0]
 
 
-def sc_is_hpp_with_immediate_volume_binding(sc):
+def sc_volume_binding_mode_is_wffc(sc: str, client: DynamicClient) -> bool:
     return (
-        sc == "hostpath-provisioner"
-        and StorageClass(name=sc).instance["volumeBindingMode"] == StorageClass.VolumeBindingMode.Immediate
+        StorageClass(name=sc, client=client).instance["volumeBindingMode"]
+        == StorageClass.VolumeBindingMode.WaitForFirstConsumer
     )
-
-
-def sc_volume_binding_mode_is_wffc(sc):
-    return StorageClass(name=sc).instance["volumeBindingMode"] == StorageClass.VolumeBindingMode.WaitForFirstConsumer
 
 
 @contextmanager
@@ -406,6 +403,7 @@ def virtctl_upload_dv(
     name,
     image_path,
     size,
+    client,
     pvc=False,
     storage_class=None,
     volume_mode=None,
@@ -451,7 +449,7 @@ def virtctl_upload_dv(
         command.append(f"--volume-mode={volume_mode.lower()}")
     if no_create:
         command.append("--no-create")
-    if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc and not no_create:
+    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc and not no_create:
         command.append("--force-bind")
 
     yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
@@ -751,8 +749,8 @@ class HppCsiStorageClass(StorageClass):
             })
 
 
-def get_default_storage_class():
-    storage_classes = list(StorageClass.get())
+def get_default_storage_class(client: DynamicClient) -> StorageClass:
+    storage_classes = list(StorageClass.get(client=client))
     for annotation in [StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS, StorageClass.Annotations.IS_DEFAULT_CLASS]:
         for sc in storage_classes:
             if sc.instance.metadata.get("annotations", {}).get(annotation) == "true":
@@ -865,9 +863,9 @@ class HPPWithStoragePool(HostPathProvisioner):
         })
 
 
-def wait_for_hpp_pool_pods_to_be_running(client, schedulable_nodes):
+def wait_for_hpp_pool_pods_to_be_running(admin_client, schedulable_nodes):
     LOGGER.info(f"Wait for {HPP_POOL} pods to be Running")
-    for hpp_pool_pods in wait_for_hpp_pods(client=client, pod_prefix=HPP_POOL):
+    for hpp_pool_pods in wait_for_hpp_pods(client=admin_client, pod_prefix=HPP_POOL):
         if len(hpp_pool_pods) == len(schedulable_nodes):
             for pod in hpp_pool_pods:
                 pod.wait_for_status(status=pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
@@ -904,12 +902,12 @@ def wait_for_hpp_pods(client, pod_prefix):
 
 
 def verify_hpp_pool_health(admin_client, schedulable_nodes, hco_namespace):
-    wait_for_hpp_pool_pods_to_be_running(client=admin_client, schedulable_nodes=schedulable_nodes)
+    wait_for_hpp_pool_pods_to_be_running(admin_client=admin_client, schedulable_nodes=schedulable_nodes)
     # Check there are as many 'hpp-pool-' PVCs as schedulable_nodes, and they are Bound
     verify_hpp_pool_pvcs_are_bound(schedulable_nodes=schedulable_nodes, hco_namespace=hco_namespace)
 
 
-def wait_for_cdi_worker_pod(pod_name, storage_ns_name):
+def wait_for_cdi_worker_pod(pod_name, storage_ns_name, admin_client):
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_30SEC,
@@ -918,6 +916,7 @@ def wait_for_cdi_worker_pod(pod_name, storage_ns_name):
                 Pod.get(
                     namespace=storage_ns_name,
                     label_selector=CDI_LABEL,
+                    client=admin_client,
                 )
             ),
         ):
@@ -943,6 +942,7 @@ def get_storage_class_with_specified_volume_mode(volume_mode, sc_names):
 @contextmanager
 def create_vm_from_dv(
     dv,
+    client: DynamicClient,
     vm_name="cirros-vm",
     image=None,
     start=True,
@@ -952,7 +952,6 @@ def create_vm_from_dv(
     memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
     wait_for_cloud_init=False,
     wait_for_interfaces=False,
-    client=None,
 ):
     with virt_util.VirtualMachineForTests(
         name=vm_name,

@@ -14,7 +14,7 @@ from ocp_resources.node import Node
 from libs.net import netattachdef as libnad
 from libs.net.traffic_generator import PodTcpClient as TcpClient
 from libs.net.traffic_generator import TcpServer
-from libs.net.udn import create_udn_namespace
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -210,6 +210,7 @@ def vm_cudn(
         namespace_name=namespace_cudn.name,
         name="vm-cudn-bgp",
         client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
         template_labels=EXTERNAL_FRR_POD_LABEL,
         anti_affinity_namespaces=[frr_external_pod.pod.namespace],
     ) as vm:
