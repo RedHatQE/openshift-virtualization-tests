@@ -662,6 +662,7 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
             f"(required: RWX, found: {found_mode or 'none'})"
         )
 
+
 def get_resource_by_name(resource_kind, name, namespace=None):
     kwargs = {"name": name}
     if namespace:
