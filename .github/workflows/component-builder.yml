@@ -60,3 +60,55 @@ jobs:
           path: artifacts/fedora-image-${{ env.CPU_ARCH }}.tar
           retention-days: 5
           compression-level: 0
+  guest-fedora-s390x:
+    runs-on: ubuntu-latest
+    env:
+      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2
+      FEDORA_VERSION: 41
+      CPU_ARCH: s390x
+      FULL_EMULATION: "true"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies for VM build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-system-s390x \
+            libvirt-daemon-system \
+            virtinst cloud-image-utils \
+            libguestfs-tools
+      - name: Tweak hosted runner to enable 'virt-sysprep'
+        # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
+        run: sudo chmod 0644 /boot/vmlinuz*
+      - name: Fetch base Fedora image
+        working-directory: ./containers/fedora
+        run: wget -q "https://download.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/${{ env.FEDORA_IMAGE }}"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.22"
+      - name: Create VM
+        working-directory: ./containers/fedora
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          NO_SECRETS: "true"
+        run: ./build.sh
+      - name: Save container image as tarball
+        env:
+          local_repository: "localhost/fedora"
+          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+        run: |
+          mkdir -p artifacts
+          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
+          podman save -o artifacts/fedora-image-${{ env.CPU_ARCH }}.tar "${remote_repository}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image-${{ env.CPU_ARCH }}.tar"
+      - name: Upload container image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-container-image-${{ env.CPU_ARCH }}
+          path: artifacts/fedora-image-${{ env.CPU_ARCH }}.tar
+          retention-days: 5
+          compression-level: 0
