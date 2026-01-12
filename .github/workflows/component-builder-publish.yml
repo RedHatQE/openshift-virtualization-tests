@@ -10,12 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  guest-fedora-amd64:
+  guest-fedora:
     runs-on: ubuntu-latest
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
       FEDORA_VERSION: 41
-      CPU_ARCH: amd64
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -35,6 +33,8 @@ jobs:
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
         run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        env:
+          FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -45,11 +45,14 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
           ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
+          FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
+          CPU_ARCH: amd64
         run: ./build.sh
       - name: Logging to quay.io
         run: podman login -u ${{ secrets.QUAY_USER }} -p ${{ secrets.QUAY_TOKEN }} quay.io
       - name: Tag & Push image to staging
         env:
+          CPU_ARCH: amd64
           local_repository: "localhost/fedora"
           remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
           arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
