@@ -1,9 +1,12 @@
 import logging
 
 import pytest
+from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
+from ocp_resources.resource import Resource
 
+from tests.storage.utils import create_role_binding
 from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_RHEL, Images
 from utilities.infra import create_ns
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
@@ -56,6 +59,7 @@ def data_import_cron_with_pvc_source(
     dv_source_for_data_import_cron,
     imported_data_source,
     storage_class_name_scope_module,
+    cdi_cloner_rbac,
 ):
     with DataImportCron(
         name="datasource-with-pvc-source",
@@ -86,3 +90,40 @@ def data_import_cron_with_pvc_source(
 @pytest.fixture(scope="class")
 def imported_data_source(data_import_cron_pvc_target_namespace):
     yield DataSource(namespace=data_import_cron_pvc_target_namespace.name, name="target-data-source")
+
+
+@pytest.fixture(scope="class")
+def cdi_cloner_rbac(dv_source_for_data_import_cron, data_import_cron_pvc_target_namespace, admin_client):
+    """
+    Creates a ClusterRole for DataVolume cloning and a RoleBinding in the source
+        namespace to allow the target namespace's ServiceAccount to clone DataVolumes.
+    Args:
+        dv_source_for_data_import_cron: DataVolume fixture that provides the source
+            namespace.
+        data_import_cron_pvc_target_namespace: Namespace fixture representing the
+            target namespace.
+        admin_client: Admin client used to create and manage cluster-scoped RBAC
+            resources.
+    """
+
+    with ClusterRole(
+        name="datavolume-cloner",
+        client=admin_client,
+        rules=[
+            {
+                "apiGroups": [Resource.ApiGroup.CDI_KUBEVIRT_IO],
+                "resources": ["datavolumes", "datavolumes/source"],
+                "verbs": ["*"],
+            }
+        ],
+    ) as cluster_role:
+        with create_role_binding(
+            name=f"allow-clone-to-{data_import_cron_pvc_target_namespace.name}",
+            namespace=dv_source_for_data_import_cron.namespace,
+            subjects_kind="ServiceAccount",
+            subjects_name="default",
+            subjects_namespace=data_import_cron_pvc_target_namespace.name,
+            role_ref_kind=cluster_role.kind,
+            role_ref_name=cluster_role.name,
+        ):
+            yield
