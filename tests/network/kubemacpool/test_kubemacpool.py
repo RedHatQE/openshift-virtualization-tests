@@ -1,10 +1,9 @@
 import pytest
 from kubernetes.client.rest import ApiException
 
+from tests.network.kubemacpool import utils as kmp_utils
 from utilities.network import assert_ping_successful, get_vmi_mac_address_by_iface_name
 from utilities.virt import VirtualMachineForTests
-
-from . import utils as kmp_utils
 
 pytestmark = [pytest.mark.ipv4]
 
