@@ -126,6 +126,7 @@ def cdi_cloner_rbac(dv_source_for_data_import_cron, data_import_cron_pvc_target_
         ],
     ) as cluster_role:
         with create_role_binding(
+            client=admin_client,
             name=f"allow-clone-to-{data_import_cron_pvc_target_namespace.name}",
             namespace=dv_source_for_data_import_cron.namespace,
             subjects_kind="ServiceAccount",
