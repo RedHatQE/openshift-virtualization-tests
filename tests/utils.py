@@ -558,7 +558,8 @@ def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
         verify_wsl2_guest_works(vm=vm)
         command = f"wsl nohup bash -c '{stress_command}'"
     else:
-        command = stress_command
+        command = f"sudo dnf install stress-ng -y; {stress_command}"
+
     run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(command),
