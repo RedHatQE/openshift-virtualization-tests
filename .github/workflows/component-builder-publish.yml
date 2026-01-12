@@ -24,17 +24,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             qemu-system-x86 \
+            qemu-system-s390x \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
             libguestfs-tools
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
-      - name: Fetch base Fedora image
+      - name: Fetch base Fedora amd64 image
         working-directory: ./containers/fedora
         run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
         env:
           FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
+      - name: Fetch base Fedora s390x image
+        working-directory: ./containers/fedora
+        run: wget -q "https://download.fedoraproject.org/pub/fedora-secondary/releases/41/Cloud/s390x/images/${{ env.FEDORA_IMAGE }}"
+        env:
+          FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -48,17 +54,28 @@ jobs:
           FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
           CPU_ARCH: amd64
         run: ./build.sh
+      - name: Create s390x VM
+        working-directory: ./containers/fedora
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
+          ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
+          FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2
+          CPU_ARCH: s390x
+        run: ./build.sh
       - name: Logging to quay.io
         run: podman login -u ${{ secrets.QUAY_USER }} -p ${{ secrets.QUAY_TOKEN }} quay.io
       - name: Tag & Push image to staging
         env:
-          CPU_ARCH: amd64
           local_repository: "localhost/fedora"
           remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
-          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+          arch_tag_amd64: "${{ env.FEDORA_VERSION }}-amd64"
+          arch_tag_s390x: "${{ env.FEDORA_VERSION }}-s390x"
           remote_tag: "${{ env.FEDORA_VERSION }}-dev"
         run: |
-          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman push "${remote_repository}":"${arch_tag}"
-          podman manifest create --log-level=debug "${remote_repository}":"${remote_tag}" "${remote_repository}":"${arch_tag}"
+          podman tag "${local_repository}":"${arch_tag_amd64}" "${remote_repository}":"${arch_tag_amd64}"
+          podman tag "${local_repository}":"${arch_tag_s390x}" "${remote_repository}":"${arch_tag_s390x}"
+          podman push "${remote_repository}":"${arch_tag_amd64}"
+          podman push "${remote_repository}":"${arch_tag_s390x}"
+          podman manifest create --log-level=debug "${remote_repository}":"${remote_tag}" "${remote_repository}":"${arch_tag_amd64}" "${remote_repository}":"${arch_tag_s390x}"
           podman manifest push "${remote_repository}":"${remote_tag}" --all --format=v2s2
