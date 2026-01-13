@@ -6,7 +6,7 @@ from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
 
 
-@pytest.fixture()
+@pytest.fixture
 def vm_with_cephfs_storage(
     request,
     unprivileged_client,
@@ -40,7 +40,7 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_function,vm_with_cephfs_storage",
+    ("golden_image_data_source_for_test_scope_function", "vm_with_cephfs_storage"),
     [
         pytest.param(
             {"os_dict": FEDORA_LATEST},
@@ -50,5 +50,6 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
     ],
     indirect=True,
 )
-def test_vm_with_odf_cephfs_storage_class_migrates(xfail_if_no_odf_cephfs_sc, vm_with_cephfs_storage):
+@pytest.mark.usefixtures("xfail_if_no_odf_cephfs_sc")
+def test_vm_with_odf_cephfs_storage_class_migrates(vm_with_cephfs_storage):
     migrate_vm_and_verify(vm=vm_with_cephfs_storage)
