@@ -32,7 +32,6 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"
 
 
-@pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 class TestCommonTemplatesWindows:
     @pytest.mark.sno
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")

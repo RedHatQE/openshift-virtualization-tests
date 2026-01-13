@@ -39,7 +39,6 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesRhel"
 
 
-@pytest.mark.usefixtures("cluster_cpu_model_scope_class")
 class TestCommonTemplatesRhel:
     @pytest.mark.arm64
     @pytest.mark.sno
