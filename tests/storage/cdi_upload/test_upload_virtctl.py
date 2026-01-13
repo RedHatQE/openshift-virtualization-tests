@@ -14,6 +14,7 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
+from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
 from utilities.storage import (
@@ -281,13 +282,18 @@ def empty_pvc(
     storage_class_matrix__module__,
     storage_class_name_scope_module,
 ):
+    storage_profile_minimum_supported_pvc_size = get_storage_profile_minimum_supported_pvc_size(
+        storage_class_name=storage_class_name_scope_module,
+        client=namespace.client,
+    )
+    sc_config = storage_class_matrix__module__[storage_class_name_scope_module]
     with PersistentVolumeClaim(
         name="empty-pvc",
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
-        volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
-        accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size=DEFAULT_DV_SIZE,
+        volume_mode=sc_config["volume_mode"],
+        accessmodes=sc_config["access_mode"],
+        size=storage_profile_minimum_supported_pvc_size or DEFAULT_DV_SIZE,
         client=namespace.client,
     ) as pvc:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
