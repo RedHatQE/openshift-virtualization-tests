@@ -35,13 +35,14 @@ RHEL_8_10_TEMPLATE_LABELS = {
 
 
 @pytest.fixture(scope="class")
-def vm_for_machine_type_test(request, cluster_cpu_model_scope_class, unprivileged_client, namespace):
+def vm_for_machine_type_test(request, cpu_for_migration, unprivileged_client, namespace):
     name = f"vm-{request.param['vm_name']}-machine-type"
 
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
+        cpu_model=cpu_for_migration,
         client=unprivileged_client,
         machine_type=request.param.get("machine_type"),
     ) as vm:

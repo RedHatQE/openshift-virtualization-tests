@@ -72,7 +72,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client
@@ -203,7 +203,6 @@ from utilities.virt import (
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_kv_stabilize,
     wait_for_windows_vm,
 )
 
@@ -2526,74 +2525,6 @@ def is_aws_cluster(admin_client):
 def skip_on_aws_cluster(is_aws_cluster):
     if is_aws_cluster:
         pytest.skip("This test is skipped on an AWS cluster")
-
-
-@pytest.fixture()
-def cluster_cpu_model_scope_function(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_function,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_function,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="module")
-def cluster_cpu_model_scope_module(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_module,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_module,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="class")
-def cluster_cpu_model_scope_class(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_class,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_class,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="class")
-def cluster_modern_cpu_model_scope_class(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_class,
-    cluster_common_modern_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_class,
-        cpu_model=cluster_common_modern_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")
