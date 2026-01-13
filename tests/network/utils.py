@@ -1,7 +1,6 @@
 import logging
 import shlex
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.service import Service
@@ -12,7 +11,6 @@ from libs.net.vmspec import lookup_iface_status_ip
 from utilities.constants import (
     IPV4_STR,
     OS_FLAVOR_FEDORA,
-    SSH_PORT_22,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_10SEC,
@@ -272,26 +270,3 @@ def get_destination_ip_address(destination_vm):
     assert dst_ip, f"Cannot get valid IP address from {destination_vm.name}."
 
     return dst_ip
-
-
-def basic_expose_command(
-    resource_name,
-    svc_name,
-    resource="vm",
-    port="27017",
-    target_port=SSH_PORT_22,
-    service_type="NodePort",
-    protocol="TCP",
-):
-    return (
-        f"expose {resource} {resource_name} --port={port} --target-port="
-        f"{target_port} --type={service_type} --name={svc_name} --protocol={protocol}"
-    )
-
-
-def get_service(name, namespace, client):
-    service = Service(name=name, namespace=namespace, client=client)
-    if service.exists:
-        return service
-
-    raise ResourceNotFoundError(f"Service {name}.")
