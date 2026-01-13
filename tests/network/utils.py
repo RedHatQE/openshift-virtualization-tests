@@ -1,6 +1,5 @@
 import logging
 import shlex
-from collections import OrderedDict
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.deployment import Deployment
@@ -9,8 +8,6 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import BRCNV
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     IPV4_STR,
     OS_FLAVOR_FEDORA,
@@ -20,12 +17,11 @@ from utilities.constants import (
     TIMEOUT_10SEC,
 )
 from utilities.network import (
-    compose_cloud_init_data_dict,
     get_ip_from_vm_or_virt_handler_pod,
     get_vmi_ip_v4_by_name,
     ping,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 SERVICE_MESH_INJECT_ANNOTATION = "sidecar.istio.io/inject"
@@ -259,38 +255,6 @@ def assert_nncp_successfully_configured(nncp):
     except TimeoutExpiredError:
         LOGGER.error(f"{nncp.name} is not {successfully_configured}, but rather {nncp.status}.")
         raise
-
-
-def vm_for_brcnv_tests(
-    vm_name,
-    namespace,
-    unprivileged_client,
-    nads,
-    address_suffix,
-    node_selector=None,
-):
-    vm_name = f"{BRCNV}-{vm_name}"
-    networks = OrderedDict()
-    network_data = {"ethernets": {}}
-    for idx, nad in enumerate(nads, start=1):
-        networks[nad.name] = nad.name
-        network_data["ethernets"][f"eth{idx}"] = {
-            "addresses": [f"{random_ipv4_address(net_seed=idx, host_address=address_suffix)}/24"]
-        }
-    cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
-
-    with VirtualMachineForTests(
-        namespace=namespace.name,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        networks=networks,
-        interfaces=networks.keys(),
-        node_selector=node_selector,
-        cloud_init_data=cloud_init_data,
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
 
 
 def get_vlan_index_number(vlans_list):

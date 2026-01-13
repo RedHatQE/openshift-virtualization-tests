@@ -16,29 +16,24 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
-from tests.network.constants import BRCNV
-from tests.network.utils import get_vlan_index_number, vm_for_brcnv_tests
+from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     IPV4_STR,
     IPV6_STR,
     ISTIO_SYSTEM_DEFAULT_NS,
-    OVS_BRIDGE,
     VIRT_HANDLER,
     NamespacesNames,
 )
 from utilities.infra import (
-    ExecCommandOnPod,
     exit_pytest_execution,
     get_deployment_by_name,
-    get_node_selector_dict,
     wait_for_pods_running,
 )
 from utilities.network import (
     get_cluster_cni_type,
     ip_version_data_from_matrix,
-    network_nad,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -90,11 +85,6 @@ def fail_if_not_ipv6_supported_cluster_from_mtx(
         pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
-@pytest.fixture()
-def worker_node1_pod_executor(workers_utility_pods, worker_node1):
-    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
-
-
 @pytest.fixture(scope="module")
 def dual_stack_network_data(ipv6_supported_cluster):
     if ipv6_supported_cluster:
@@ -141,40 +131,6 @@ def vlans_list():
 @pytest.fixture(scope="module")
 def vlan_index_number(vlans_list):
     return get_vlan_index_number(vlans_list=vlans_list)
-
-
-@pytest.fixture(scope="module")
-def brcnv_ovs_nad_vlan_1(
-    hyperconverged_ovs_annotations_enabled_scope_session,
-    namespace,
-    vlan_index_number,
-):
-    vlan_tag = next(vlan_index_number)
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"{BRCNV}-{vlan_tag}",
-        interface_name=BRCNV,
-        vlan=vlan_tag,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="module")
-def brcnv_vma_with_vlan_1(
-    unprivileged_client,
-    namespace,
-    worker_node1,
-    brcnv_ovs_nad_vlan_1,
-):
-    yield from vm_for_brcnv_tests(
-        vm_name="vma",
-        namespace=namespace,
-        unprivileged_client=unprivileged_client,
-        nads=[brcnv_ovs_nad_vlan_1],
-        address_suffix=1,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-    )
 
 
 @pytest.fixture(scope="session")

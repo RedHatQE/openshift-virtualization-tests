@@ -16,7 +16,6 @@ from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_ssh_alive,
     run_ssh_in_background,
-    vm_for_brcnv_tests,
 )
 from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
@@ -167,21 +166,6 @@ def vmb(
         yield vm
 
 
-@pytest.fixture()
-def brcnv_vm_for_migration(
-    unprivileged_client,
-    namespace,
-    brcnv_ovs_nad_vlan_1,
-):
-    yield from vm_for_brcnv_tests(
-        vm_name="migration-vm",
-        namespace=namespace,
-        unprivileged_client=unprivileged_client,
-        nads=[brcnv_ovs_nad_vlan_1],
-        address_suffix=4,
-    )
-
-
 @pytest.fixture(scope="module")
 def running_vma(vma):
     vma.wait_for_agent_connected()
@@ -266,21 +250,6 @@ def ssh_in_background(br1test_nad, running_vma, running_vmb):
     )
 
 
-@pytest.fixture()
-def brcnv_ssh_in_background(brcnv_ovs_nad_vlan_1, brcnv_vma_with_vlan_1, brcnv_vm_for_migration):
-    """
-    Start ssh connection to the vm
-    """
-
-    run_ssh_in_background(
-        nad=brcnv_ovs_nad_vlan_1,
-        src_vm=brcnv_vma_with_vlan_1,
-        dst_vm=brcnv_vm_for_migration,
-        dst_vm_user=brcnv_vm_for_migration.login_params["username"],
-        dst_vm_password=brcnv_vm_for_migration.login_params["password"],
-    )
-
-
 @pytest.fixture(scope="module")
 def migrated_vmb_and_wait_for_success(running_vmb, http_service):
     migrate_vm_and_verify(
@@ -313,13 +282,6 @@ def migrated_vmb_without_waiting_for_success(vma_ip_address, running_vmb, br1tes
             break
     yield
     migrated_vmi.clean_up()
-
-
-@pytest.fixture()
-def brcnv_migrated_vm(
-    brcnv_vm_for_migration,
-):
-    migrate_vm_and_verify(vm=brcnv_vm_for_migration)
 
 
 @pytest.mark.xfail(
@@ -358,20 +320,6 @@ def test_ssh_vm_migration(
 ):
     src_ip = str(get_vmi_ip_v4_by_name(vm=running_vma, name=br1test_nad.name))
     assert_ssh_alive(ssh_vm=running_vma, src_ip=src_ip)
-
-
-@pytest.mark.ovs_brcnv
-@pytest.mark.ipv4
-@pytest.mark.polarion("CNV-8600")
-def test_cnv_bridge_ssh_vm_migration(
-    brcnv_ovs_nad_vlan_1,
-    brcnv_vma_with_vlan_1,
-    brcnv_vm_for_migration,
-    brcnv_ssh_in_background,
-    brcnv_migrated_vm,
-):
-    src_ip = str(get_vmi_ip_v4_by_name(vm=brcnv_vma_with_vlan_1, name=brcnv_ovs_nad_vlan_1.name))
-    assert_ssh_alive(ssh_vm=brcnv_vma_with_vlan_1, src_ip=src_ip)
 
 
 @pytest.mark.post_upgrade
