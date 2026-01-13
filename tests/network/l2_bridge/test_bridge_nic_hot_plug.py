@@ -46,7 +46,7 @@ def running_vm_for_nic_hot_plug(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def bridge_interface_for_hot_plug(admin_client, hosts_common_available_ports):
+def bridge_interface_for_hot_plug(nmstate_dependent_placeholder, admin_client, hosts_common_available_ports):
     yield from create_bridge_interface_for_hot_plug(
         bridge_name=f"{HOT_PLUG_STR}-br",
         bridge_port=hosts_common_available_ports[-1],
