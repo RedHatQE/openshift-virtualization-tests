@@ -404,7 +404,9 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, admin_client, unprivileged_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(
+    namespace, admin_client, is_jira_bug_73864_open, unprivileged_client, golden_images_namespace
+):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="disk-allocation-size-vm",
@@ -413,7 +415,7 @@ def vm_for_vm_disk_allocation_size_test(namespace, admin_client, unprivileged_cl
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client,
+                client=admin_client if is_jira_bug_73864_open else unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -602,8 +604,15 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     return formatted_hard_limit, formatted_used_value
 
 
+@pytest.fixture(scope="session")
+def is_jira_bug_73864_open():
+    return is_jira_open(jira_id="CNV-73864")
+
+
 @pytest.fixture(scope="class")
-def fedora_vm_with_stress_ng(namespace, admin_client, unprivileged_client, golden_images_namespace):
+def fedora_vm_with_stress_ng(
+    namespace, admin_client, is_jira_bug_73864_open, unprivileged_client, golden_images_namespace
+):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
@@ -614,7 +623,7 @@ def fedora_vm_with_stress_ng(namespace, admin_client, unprivileged_client, golde
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client,
+                client=admin_client if is_jira_bug_73864_open else unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),
