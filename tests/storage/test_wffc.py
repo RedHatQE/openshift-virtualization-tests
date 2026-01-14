@@ -14,6 +14,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from tests.storage.constants import CIRROS_QCOW2_IMG
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret, get_test_artifact_server_url
 from utilities.constants import (
+    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_10SEC,
@@ -180,6 +181,10 @@ class TestWFFCUploadVirtctl:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-7413")
     @pytest.mark.s390x
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: pvc pending to be bound Tracked in CNV-76519",
+        run=False,
+    )
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
         downloaded_cirros_image_full_path,
