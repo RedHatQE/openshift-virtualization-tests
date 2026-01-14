@@ -3,15 +3,17 @@ import shlex
 
 import bitmath
 import pytest
+from contextlib import contextmanager
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import ResourceEditor, Resource
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
+from ocp_resources.kubevirt import KubeVirt
 from packaging.version import Version
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
@@ -66,9 +68,10 @@ from utilities.constants import (
     TWO_CPU_THREADS,
     U1_MEDIUM_STR,
     VIRT_TEMPLATE_VALIDATOR,
-    Images,
+    Images, DEFAULT_HCO_CONDITIONS,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
+from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco, update_hco_annotations, \
+    wait_for_hco_conditions
 from utilities.infra import (
     create_ns,
     get_linux_guest_agent_version,
@@ -703,3 +706,29 @@ def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
+
+
+@pytest.fixture
+def emulation_config_value(hyperconverged_resource_scope_class):
+    hco_spec = hyperconverged_resource_scope_class.instance.to_dict()["spec"]
+    developer_config = hco_spec.get("configuration", {}).get("developerConfiguration", {})
+    return developer_config.get("useEmulation", False)
+
+
+@contextmanager
+def toggle_emulation_in_hco(admin_client, hco_namespace, hyperconverged_resource, enable_emulation):
+    with update_hco_annotations(
+            resource=hyperconverged_resource,
+            path="developerConfiguration/useEmulation",
+            value=enable_emulation,
+            component="kubevirt",
+    ):
+        wait_for_hco_conditions(
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            expected_conditions={
+                **DEFAULT_HCO_CONDITIONS,
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
+            },
+        )
+        yield
