@@ -107,6 +107,7 @@ def create_vm_with_secondary_interface_on_setup(
         yield vm
 
 
+@contextlib.contextmanager
 def hot_plug_interface(
     vm,
     hot_plugged_interface_name,
@@ -122,14 +123,14 @@ def hot_plug_interface(
         "name": hot_plugged_interface_name,
     })
 
-    update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
-
-    return lookup_iface_status(
-        vm=vm,
-        iface_name=hot_plugged_interface_name,
-        predicate=lambda interface: "guest-agent" in interface["infoSource"],
-        timeout=TIMEOUT_2MIN,
-    )
+    with update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks):
+        iface_status = lookup_iface_status(
+            vm=vm,
+            iface_name=hot_plugged_interface_name,
+            predicate=lambda interface: "guest-agent" in interface["infoSource"],
+            timeout=TIMEOUT_2MIN,
+        )
+        yield iface_status
 
 
 def hot_unplug_interface(vm, hot_plugged_interface_name):
@@ -137,11 +138,11 @@ def hot_unplug_interface(vm, hot_plugged_interface_name):
     unplugged_interface = next(interface for interface in interfaces if interface["name"] == hot_plugged_interface_name)
     unplugged_interface.update(dict(state="absent"))
 
-    update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces)
+    with update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces):
+        wait_for_missing_iface_status(vm=vm, iface_name=hot_plugged_interface_name)
 
-    wait_for_missing_iface_status(vm=vm, iface_name=hot_plugged_interface_name)
 
-
+@contextlib.contextmanager
 def update_hot_plug_config_in_vm(vm, interfaces, networks=None):
     spec_dict = {
         "domain": {
@@ -154,7 +155,7 @@ def update_hot_plug_config_in_vm(vm, interfaces, networks=None):
     if networks:
         spec_dict.update({"networks": networks})
 
-    ResourceEditor(
+    with ResourceEditor(
         patches={
             vm: {
                 "spec": {
@@ -164,7 +165,8 @@ def update_hot_plug_config_in_vm(vm, interfaces, networks=None):
                 }
             }
         }
-    ).update()
+    ):
+        yield
 
 
 def create_bridge_interface_for_hot_plug(
@@ -204,6 +206,7 @@ def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
     LOGGER.info(f"{vm.name}/{vmi_interface} set with IP address {hot_plugged_interface_ip}")
 
 
+@contextlib.contextmanager
 def hot_plug_interface_and_set_address(
     vm,
     hot_plugged_interface_name,
@@ -211,20 +214,18 @@ def hot_plug_interface_and_set_address(
     ipv4_address,
     sriov=False,
 ):
-    iface = hot_plug_interface(
+    with hot_plug_interface(
         vm=vm,
         hot_plugged_interface_name=hot_plugged_interface_name,
         net_attach_def_name=net_attach_def_name,
         sriov=sriov,
-    )
-
-    set_secondary_static_ip_address(
-        vm=vm,
-        ipv4_address=ipv4_address,
-        vmi_interface=iface.name,
-    )
-
-    return iface
+    ) as iface:
+        set_secondary_static_ip_address(
+            vm=vm,
+            ipv4_address=ipv4_address,
+            vmi_interface=iface.name,
+        )
+        yield iface
 
 
 def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):
@@ -319,11 +320,11 @@ def create_vm_with_hot_plugged_sriov_interface(
         vm_name=vm_name,
         client=client,
     ) as vm:
-        hot_plug_interface_and_set_address(
+        with hot_plug_interface_and_set_address(
             vm=vm,
             hot_plugged_interface_name=sriov_network_for_hot_plug.name,
             net_attach_def_name=f"{namespace_name}/{sriov_network_for_hot_plug.name}",
             ipv4_address=ipv4_address,
             sriov=True,
-        )
-        yield vm
+        ):
+            yield vm

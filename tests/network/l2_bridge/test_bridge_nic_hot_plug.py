@@ -1,3 +1,4 @@
+import contextlib
 import time
 
 import pytest
@@ -75,26 +76,29 @@ def hot_plugged_interface(
     running_vm_for_nic_hot_plug,
     network_attachment_definition_for_hot_plug,
 ):
-    return hot_plug_interface(
+    with hot_plug_interface(
         vm=running_vm_for_nic_hot_plug,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
-    )
+    ) as iface:
+        yield iface
 
 
 @pytest.fixture()
 def multiple_hot_plugged_interfaces(running_vm_for_nic_hot_plug, network_attachment_definition_for_hot_plug):
     hot_plugged_interfaces = []
     # Perform extra 3 hot-plug actions (which are added to a previous hot-plug)
-    for index in range(3):
-        iface = hot_plug_interface(
-            vm=running_vm_for_nic_hot_plug,
-            hot_plugged_interface_name=f"{HOT_PLUG_STR}-{index}",
-            net_attach_def_name=network_attachment_definition_for_hot_plug.name,
-        )
-        hot_plugged_interfaces.append(iface)
+    with contextlib.ExitStack() as stack:
+        for index in range(3):
+            iface_context = hot_plug_interface(
+                vm=running_vm_for_nic_hot_plug,
+                hot_plugged_interface_name=f"{HOT_PLUG_STR}-{index}",
+                net_attach_def_name=network_attachment_definition_for_hot_plug.name,
+            )
+            iface = stack.enter_context(cm=iface_context)
+            hot_plugged_interfaces.append(iface)
 
-    return hot_plugged_interfaces
+        yield hot_plugged_interfaces
 
 
 @pytest.fixture(scope="module")
@@ -145,11 +149,12 @@ def hot_plugged_interface_on_vm_created_with_secondary_interface(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     network_attachment_definition_for_hot_plug,
 ):
-    return hot_plug_interface(
+    with hot_plug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-additional-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
-    )
+    ) as iface:
+        yield iface
 
 
 @pytest.fixture()
@@ -218,12 +223,13 @@ def hot_plugged_jumbo_interface_with_address(
     network_attachment_definition_for_jumbo_hot_plug,
     index_number,
 ):
-    return hot_plug_interface_and_set_address(
+    with hot_plug_interface_and_set_address(
         vm=running_vm_for_jumbo_nic_hot_plug,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-jumbo-iface",
         net_attach_def_name=network_attachment_definition_for_jumbo_hot_plug.name,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-    )
+    ) as iface:
+        yield iface
 
 
 @pytest.fixture()
@@ -232,14 +238,13 @@ def hot_plugged_jumbo_interface_in_utility_vm(
     network_attachment_definition_for_jumbo_hot_plug,
     index_number,
 ):
-    iface = hot_plug_interface_and_set_address(
+    with hot_plug_interface_and_set_address(
         vm=running_utility_vm_for_connectivity_check,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-jumbo-utility-iface",
         net_attach_def_name=network_attachment_definition_for_jumbo_hot_plug.name,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-    )
-
-    yield iface
+    ) as iface:
+        yield iface
 
     hot_unplug_interface(
         vm=running_utility_vm_for_connectivity_check,
@@ -252,11 +257,12 @@ def hot_plugged_interface_from_flat_overlay_network(
     running_vm_for_nic_hot_plug,
     flat_overlay_network_attachment_definition_for_hot_plug,
 ):
-    return hot_plug_interface(
+    with hot_plug_interface(
         vm=running_vm_for_nic_hot_plug,
         hot_plugged_interface_name=f"flat-{HOT_PLUG_STR}-iface",
         net_attach_def_name=flat_overlay_network_attachment_definition_for_hot_plug.name,
-    )
+    ) as iface:
+        yield iface
 
 
 @pytest.fixture()
@@ -290,11 +296,12 @@ def hot_plugged_interface_for_kmp_removal(
     vm_for_hot_plug_and_kmp,
     network_attachment_definition_for_hot_plug,
 ):
-    return hot_plug_interface(
+    with hot_plug_interface(
         vm=vm_for_hot_plug_and_kmp,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-and-kmp-iface",
         net_attach_def_name=network_attachment_definition_for_hot_plug.name,
-    )
+    ) as iface:
+        yield iface
 
 
 @pytest.fixture()
