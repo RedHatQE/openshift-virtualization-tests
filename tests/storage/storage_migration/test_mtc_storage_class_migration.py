@@ -56,6 +56,10 @@ class TestStorageClassMigrationAtoB:
         ],
         indirect=True,
     )
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: MigMigration resource reports Failed for VMs with RWO storage; MIG-1770",
+        run=False,
+    )
     def test_vm_storage_class_migration_a_to_b_running_vms(
         self,
         source_storage_class,
