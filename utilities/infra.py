@@ -828,7 +828,10 @@ def get_openshift_pull_secret(client: DynamicClient = None) -> Secret:
     return secret
 
 
+@cache
 def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
+    # TODO: refactor this code; only needed by `utilities.virt.get_oc_image_info`
+    #  Should be called by `utilities.virt.get_oc_image_info` and not require the user to pass it
     pull_secret = get_openshift_pull_secret(client=client)
     pull_secret_path = tempfile.mkdtemp(suffix="-cnv-tests-pull-secret")
     json_file = os.path.join(pull_secret_path, "pull-secrets.json")
