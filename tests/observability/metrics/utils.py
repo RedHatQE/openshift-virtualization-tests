@@ -37,6 +37,7 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     CAPACITY,
+    DEFAULT_HCO_CONDITIONS,
     KUBEVIRT_VIRT_OPERATOR_UP,
     NODE_STR,
     OS_FLAVOR_WINDOWS,
@@ -52,6 +53,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     Images,
 )
+from utilities.hco import update_hco_annotations, wait_for_hco_conditions
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -847,3 +849,22 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
+
+
+@contextmanager
+def toggle_emulation_in_hco(admin_client, hco_namespace, hyperconverged_resource, enable_emulation):
+    with update_hco_annotations(
+        resource=hyperconverged_resource,
+        path="developerConfiguration/useEmulation",
+        value=enable_emulation,
+        component="kubevirt",
+    ):
+        wait_for_hco_conditions(
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            expected_conditions={
+                **DEFAULT_HCO_CONDITIONS,
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
+            },
+        )
+        yield

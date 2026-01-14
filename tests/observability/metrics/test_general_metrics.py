@@ -4,11 +4,9 @@ import pytest
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
 
-from tests.observability.metrics.conftest import toggle_emulation_in_hco
 from tests.observability.metrics.constants import KUBEVIRT_VMI_NODE_CPU_AFFINITY
-from tests.observability.metrics.utils import validate_vmi_node_cpu_affinity_with_prometheus
+from tests.observability.metrics.utils import toggle_emulation_in_hco, validate_vmi_node_cpu_affinity_with_prometheus
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 KUBEVIRT_VM_TAG = f"{Resource.ApiGroup.KUBEVIRT_IO}/vm"
@@ -103,12 +101,12 @@ class TestVirtHCOSingleStackIpv6:
 class TestConfigurationEmulationEnabled:
     @pytest.mark.polarion("CNV-99999")
     def test_kubevirt_configuration_emulation_enabled(
-            self,
-            admin_client,
-            hco_namespace,
-            prometheus,
-            hyperconverged_resource_scope_class,
-            emulation_config_value,
+        self,
+        admin_client,
+        hco_namespace,
+        prometheus,
+        hyperconverged_resource_scope_class,
+        emulation_config_value,
     ):
         new_emulation_value = not emulation_config_value
         with toggle_emulation_in_hco(
