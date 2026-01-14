@@ -13,7 +13,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from packaging.version import Version
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -617,11 +616,6 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
         ),
     ) as vm:
         running_vm(vm=vm)
-        LOGGER.info(f"Installing stress-ng on VM: {vm.name}")
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split("sudo dnf install stress-ng -y"),
-        )
         yield vm
 
 
