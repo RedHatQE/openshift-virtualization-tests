@@ -558,7 +558,7 @@ def initial_metric_value(request, prometheus):
 
 
 @pytest.fixture(scope="class")
-def deleted_vmi(running_metric_vm, initial_vmi_deletion_metrics_values):
+def deleted_vmi(running_metric_vm):
     running_metric_vm.delete(wait=True)
 
 
