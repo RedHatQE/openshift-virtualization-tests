@@ -175,16 +175,16 @@ def test_cnv_resources_installed_namespace_scoped(
 @pytest.mark.polarion("CNV-12453")
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
-def test_ocs_virt_default_storage_class(admin_client, golden_images_namespace, storage_class_ocs_virt):
+def test_default_storage_class_set(admin_client, golden_images_namespace, default_storage_class):
     if (
-        storage_class_ocs_virt.instance.metadata.get("annotations", {}).get(
+        default_storage_class.instance.metadata.get("annotations", {}).get(
             StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
         )
         != "true"
     ):
-        # set the OCS Virt storage class as default for the smoke tests afterwards
+        # set the default storage class as default for the smoke tests afterwards
         for storage_class in StorageClass.get(client=admin_client):
-            is_default = True if storage_class.name == storage_class_ocs_virt.name else False
+            is_default = True if storage_class.name == default_storage_class.name else False
             persist_storage_class_default(default=is_default, storage_class=storage_class)
     assert verify_boot_sources_reimported(
         admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
