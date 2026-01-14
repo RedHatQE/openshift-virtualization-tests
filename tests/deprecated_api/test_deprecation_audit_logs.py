@@ -4,6 +4,7 @@ from collections import defaultdict
 import pytest
 from packaging.version import Version
 
+from utilities.constants import QUARANTINED
 from utilities.infra import get_node_audit_log_line_dict
 
 LOGGER = logging.getLogger(__name__)
@@ -108,6 +109,10 @@ def deprecated_apis_calls(audit_logs):
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-6679")
 @pytest.mark.order("last")
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Timeout after 180s retrieving logs Tracked CNV-76514",
+    run=False,
+)
 def test_deprecated_apis_in_audit_logs(deprecated_apis_calls):
     LOGGER.info(f"Test deprecated API calls, max version for deprecation check: {DEPRECATED_API_MAX_VERSION}")
     if deprecated_apis_calls:
