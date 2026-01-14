@@ -710,6 +710,7 @@ def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
 
 @pytest.fixture
 def emulation_config_value(hyperconverged_resource_scope_class):
+    # gets HCO CR's spec.configuration.developerConfiguration.useEmulation value, default false
     hco_spec = hyperconverged_resource_scope_class.instance.to_dict()["spec"]
     developer_config = hco_spec.get("configuration", {}).get("developerConfiguration", {})
     return developer_config.get("useEmulation", False)

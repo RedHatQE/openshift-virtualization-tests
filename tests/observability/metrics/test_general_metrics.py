@@ -98,8 +98,9 @@ class TestVirtHCOSingleStackIpv6:
         )
 
 
+@pytest.mark.tier2
 class TestConfigurationEmulationEnabled:
-    @pytest.mark.polarion("CNV-99999")
+    @pytest.mark.polarion("CNV-12588")
     def test_kubevirt_configuration_emulation_enabled(
         self,
         admin_client,

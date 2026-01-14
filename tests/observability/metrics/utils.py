@@ -853,6 +853,18 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
 
 @contextmanager
 def toggle_emulation_in_hco(admin_client, hco_namespace, hyperconverged_resource, enable_emulation):
+    """
+    Toggle useEmulation in HCO developerConfiguration and wait for reconciliation.
+
+    Args:
+        admin_client: Kubernetes client with admin privileges.
+        hco_namespace: Namespace containing the HyperConverged resource.
+        hyperconverged_resource: HyperConverged resource to patch.
+        enable_emulation: Boolean value to set for useEmulation.
+
+    Yields:
+        None: Yields after HCO conditions are met, restores original state on exit.
+    """
     with update_hco_annotations(
         resource=hyperconverged_resource,
         path="developerConfiguration/useEmulation",
