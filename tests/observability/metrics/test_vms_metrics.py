@@ -31,6 +31,7 @@ from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
     MIGRATION_POLICY_VM_LABEL,
+    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
@@ -184,6 +185,11 @@ class TestVMStatusLastTransitionMetrics:
 
     @pytest.mark.polarion("CNV-9751")
     @pytest.mark.s390x
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Storage Classes act differently when "
+        f"attaching broken pvc and stuck in other state than expected; tracked in CNV-76518 ",
+        run=False,
+    )
     def test_vm_starting_status_metrics(self, prometheus, vm_in_starting_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
