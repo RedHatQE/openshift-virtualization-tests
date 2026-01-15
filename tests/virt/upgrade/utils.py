@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 
@@ -26,9 +25,6 @@ from utilities.constants import (
     VIRT_LAUNCHER,
 )
 from utilities.exceptions import ResourceMissingFieldError
-from utilities.infra import (
-    get_pod_disruption_budget,
-)
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     wait_for_ssh_connectivity,
@@ -83,30 +79,6 @@ def get_src_pvc_default_name(template):
         return param_value_list[0]
 
     raise ResourceMissingFieldError(f"Template {template.name} does not have a parameter {DATA_SOURCE_NAME}")
-
-
-def get_all_migratable_vms(admin_client, namespaces):
-    # Check pod disruption budget associated with given namespaces. Collect associated vm names. These vms are
-    # the only migratable ones
-    pod_disruption_budget_list = [
-        pod_disruption_budget
-        for ns in namespaces
-        for pod_disruption_budget in get_pod_disruption_budget(admin_client=admin_client, namespace_name=ns.name)
-    ]
-    pod_disruption_budget_info = {
-        pod_disruption_budget.name: pod_disruption_budget.instance.metadata.ownerReferences[0]["name"]
-        for pod_disruption_budget in pod_disruption_budget_list
-    }
-    LOGGER.info(f"PodDisruptionBudgets: {pod_disruption_budget_info}")
-
-    return [
-        VirtualMachine(
-            client=admin_client,
-            namespace=pod_disruption_budget.namespace,
-            name=pod_disruption_budget.instance.metadata.ownerReferences[0]["name"],
-        )
-        for pod_disruption_budget in pod_disruption_budget_list
-    ]
 
 
 def get_workload_update_migrations_list(namespaces):
@@ -197,40 +169,9 @@ def verify_run_strategy_vmi_status(run_strategy_vmi_list):
     return run_strategy_vmi_list
 
 
-def vm_is_migrateable(vm):
-    vm_spec = vm.instance.spec
-    vm_access_modes = (
-        vm.get_storage_configuration()
-        if (vm_spec.get("instancetype") or vm_spec.get("preference"))
-        else vm.access_modes
-    )
-    if DataVolume.AccessMode.RWO in vm_access_modes:
-        LOGGER.info(f"Cannot migrate a VM {vm.name} with RWO PVC.")
-        return False
-    return True
-
-
 def get_vm_boot_time(vm):
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
-
-
-def verify_linux_boot_time(vm_list, initial_boot_time):
-    rebooted_vms = {}
-    for vm in vm_list:
-        if vm_is_migrateable(vm=vm):
-            current_boot_time = get_vm_boot_time(vm=vm)
-            if initial_boot_time[vm.name] != current_boot_time:
-                rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
-    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
-
-
-def verify_windows_boot_time(windows_vm, initial_boot_time):
-    if vm_is_migrateable(vm=windows_vm):
-        current_boot_time = get_vm_boot_time(vm=windows_vm)
-        assert initial_boot_time == current_boot_time, (
-            f"Boot time for Windows VM changed:\n initial: {initial_boot_time}\n current: {current_boot_time}"
-        )
 
 
 @contextmanager

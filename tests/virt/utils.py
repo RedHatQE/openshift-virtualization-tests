@@ -507,3 +507,20 @@ def get_allocatable_memory_per_node(schedulable_nodes):
         nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
         LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
     return nodes_memory
+
+
+def get_boot_time_for_multiple_vms(vm_list):
+    from tests.virt.upgrade.utils import get_vm_boot_time
+
+    return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
+
+
+def verify_guest_boot_time(vm_list, initial_boot_time):
+    from tests.virt.upgrade.utils import get_vm_boot_time
+
+    rebooted_vms = {}
+    for vm in vm_list:
+        current_boot_time = get_vm_boot_time(vm=vm)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
