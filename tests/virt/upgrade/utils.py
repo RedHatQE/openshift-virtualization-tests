@@ -24,7 +24,6 @@ from utilities.infra import (
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
-    get_vm_boot_time,
     wait_for_ssh_connectivity,
 )
 
@@ -167,13 +166,6 @@ def verify_run_strategy_vmi_status(run_strategy_vmi_list):
     if vmi_failed:
         pytest.fail(f"VMI in wrong state:\n {vmi_failed}")
     return run_strategy_vmi_list
-
-
-def verify_windows_boot_time(windows_vm, initial_boot_time):
-    current_boot_time = get_vm_boot_time(vm=windows_vm)
-    assert initial_boot_time == current_boot_time, (
-        f"Boot time for Windows VM changed:\n initial: {initial_boot_time}\n current: {current_boot_time}"
-    )
 
 
 @contextmanager
