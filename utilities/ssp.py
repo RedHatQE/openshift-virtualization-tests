@@ -305,8 +305,11 @@ def verify_ssp_pod_is_running(
             raise
 
 
-def cluster_instance_type_for_hot_plug(guest_sockets: int, cpu_model: str | None) -> VirtualMachineClusterInstancetype:
+def cluster_instance_type_for_hot_plug(
+    client: DynamicClient, guest_sockets: int, cpu_model: str | None
+) -> VirtualMachineClusterInstancetype:
     return VirtualMachineClusterInstancetype(
+        client=client,
         name=f"hot-plug-{guest_sockets}-cpu-instance-type",
         memory={"guest": FOUR_GI_MEMORY},
         cpu={
