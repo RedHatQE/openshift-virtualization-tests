@@ -46,7 +46,7 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
-def test_schedule_vm_on_cordoned_node(worker_node1, unscheduled_node_vm):
+def test_schedule_vm_on_cordoned_node(admin_client, worker_node1, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
     1. Cordon the target node specified in the VM's nodeAffinity (worker_node1).
     2. Wait until the node status becomes 'Ready,SchedulingDisabled'.
@@ -57,7 +57,7 @@ def test_schedule_vm_on_cordoned_node(worker_node1, unscheduled_node_vm):
     7. Verify that the VMI is running on the expected node (worker_node1).
     """
 
-    with node_mgmt_console(node=worker_node1, node_mgmt="cordon"):
+    with node_mgmt_console(admin_client=admin_client, node=worker_node1, node_mgmt="cordon"):
         wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
