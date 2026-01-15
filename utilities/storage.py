@@ -637,7 +637,7 @@ def wait_for_ssh_session_run_ssh_command(
     vm: virt_util.VirtualMachineForTests,
     command: str,
     tcp_timeout: float | None = TCP_TIMEOUT_60SEC,
-) -> str:
+) -> list:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
@@ -659,7 +659,7 @@ def wait_for_ssh_session_run_ssh_command(
                 exp,
             ]
         )
-    return ""
+    return []
 
 
 def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
