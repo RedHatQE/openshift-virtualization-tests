@@ -16,7 +16,7 @@ from pytest_testconfig import config as py_config
 
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
+from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -132,6 +132,10 @@ def test_image_upload_with_overridden_url(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3031")
 @pytest.mark.s390x
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
+    run=False,
+)
 def test_virtctl_image_upload_with_ca(
     unprivileged_client,
     enabled_ca,
@@ -462,7 +466,7 @@ def test_successful_vm_from_uploaded_dv_windows(
     indirect=True,
 )
 @pytest.mark.s390x
-@pytest.mark.jira("CNV-74020", run=False)
+@pytest.mark.jira("CNV-76657", run=False)
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):

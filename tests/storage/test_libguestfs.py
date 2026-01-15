@@ -6,7 +6,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
 from tests.storage.utils import create_cirros_dv
-from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import QUARANTINED, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
 
 pytestmark = pytest.mark.post_upgrade
@@ -67,7 +67,6 @@ def client_for_test(request, admin_client, unprivileged_client):
         )
 
 
-@pytest.mark.jira("CNV-62312", run=False)
 @pytest.mark.parametrize(
     (
         "client_for_test",
@@ -86,6 +85,10 @@ def client_for_test(request, admin_client, unprivileged_client):
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Timeout exceeded. Tracked in CNV-62312",
+    run=False,
 )
 @pytest.mark.s390x
 def test_virtctl_libguestfs_with_specific_user(
