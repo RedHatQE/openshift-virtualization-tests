@@ -24,6 +24,7 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
+from paramiko.ssh_exception import SSHException
 from pyhelper_utils.shell import run_ssh_commands
 from pytest import FixtureRequest
 from pytest_testconfig import config as py_config
@@ -40,6 +41,7 @@ from utilities.constants import (
     HPP_POOL,
     OS_FLAVOR_WINDOWS,
     POD_CONTAINER_SPEC,
+    TCP_TIMEOUT_60SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
@@ -55,7 +57,7 @@ from utilities.constants import (
     TIMEOUT_60MIN,
     Images,
 )
-from utilities.exceptions import UrlNotFoundError
+from utilities.exceptions import SSHCommandTimeoutError, UrlNotFoundError, raise_multiple_exceptions
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -631,6 +633,35 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
+def wait_for_ssh_session_run_ssh_command(
+    vm: virt_util.VirtualMachineForTests,
+    command: str,
+    tcp_timeout: float | None = TCP_TIMEOUT_60SEC,
+) -> str:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=run_ssh_commands,
+        exceptions_dict={SSHException: []},
+        host=vm.ssh_exec,
+        commands=shlex.split(command),
+        tcp_timeout=tcp_timeout,
+    )
+    try:
+        for sample in samples:
+            if sample:
+                LOGGER.info(f"SSH command executed successfully: {sample}")
+                return sample
+    except TimeoutExpiredError as exp:
+        raise_multiple_exceptions(
+            exceptions=[
+                SSHCommandTimeoutError(f"Failed to execute '{command}' via ssh on VM {vm.name}"),
+                exp,
+            ]
+        )
+    return ""
+
+
 def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection.
@@ -640,8 +671,26 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         filename: Path to the file to write in the VM
         content: Content to write to the file
     """
-    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+    cmd = f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync"
+    wait_for_ssh_session_run_ssh_command(vm=vm, command=cmd)
+
+
+def run_command_on_vm_and_check_output(
+    vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
+) -> None:
+    """Run command on VM via SSH and verify expected result is in output.
+
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+
+    Raises:
+        AssertionError: If expected result is not in output.
+    """
+    cmd_output = wait_for_ssh_session_run_ssh_command(vm=vm, command=f"bash -c {shlex.quote(command)}")[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):

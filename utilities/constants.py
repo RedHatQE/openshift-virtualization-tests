@@ -267,7 +267,7 @@ TIMEOUT_180MIN = 180 * 60
 TIMEOUT_12HRS = 12 * 60 * 60
 
 TCP_TIMEOUT_30SEC = 30.0
-
+TCP_TIMEOUT_60SEC = 60.0
 
 # OpenShift Virtualization components constants
 VIRT_OPERATOR = "virt-operator"
