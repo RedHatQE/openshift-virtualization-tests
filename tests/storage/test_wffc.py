@@ -13,7 +13,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from tests.storage.constants import CIRROS_QCOW2_IMG
-from tests.storage.utils import create_vm_from_dv, upload_image_to_dv, upload_token_request
+from tests.storage.utils import upload_image_to_dv, upload_token_request
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
@@ -32,6 +32,7 @@ from utilities.storage import (
     check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dv,
+    create_vm_from_dv,
     data_volume,
     get_downloaded_artifact,
     get_test_artifact_server_url,

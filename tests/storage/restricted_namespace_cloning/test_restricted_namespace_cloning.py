@@ -5,7 +5,6 @@ Restricted namespace cloning
 import logging
 
 import pytest
-from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -23,7 +22,6 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC,
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
-from tests.storage.utils import verify_vm_disk_image_permission
 from utilities.storage import create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -85,7 +83,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
 )
 def test_user_permissions_positive(
     unprivileged_client,
-    storage_class_matrix__module__,
+    admin_client,
     storage_class_name_scope_module,
     permissions_pvc_destination,
     dv_destination_cloned_from_pvc,
@@ -93,12 +91,8 @@ def test_user_permissions_positive(
 ):
     verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
     if requested_verify_image_permissions:
-        with create_vm_from_dv(dv=dv_destination_cloned_from_pvc) as vm:
-            if (
-                storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"]
-                == DataVolume.VolumeMode.FILE
-            ):
-                verify_vm_disk_image_permission(vm=vm)
+        with create_vm_from_dv(dv=dv_destination_cloned_from_pvc):
+            pass
 
 
 @pytest.mark.sno

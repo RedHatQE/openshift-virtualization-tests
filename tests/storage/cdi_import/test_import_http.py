@@ -22,7 +22,6 @@ from tests.storage.constants import (
 from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
-    create_vm_from_dv,
     get_file_url,
     get_importer_pod,
     wait_for_importer_container_message,
@@ -44,6 +43,7 @@ from utilities.storage import (
     ErrorMsg,
     create_dummy_first_consumer_pod,
     create_dv,
+    create_vm_from_dv,
     get_test_artifact_server_url,
     sc_volume_binding_mode_is_wffc,
 )

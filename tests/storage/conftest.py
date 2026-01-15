@@ -583,3 +583,8 @@ def rhel10_data_source_scope_session(golden_images_namespace):
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture(scope="class")
+def storage_class_name_scope_class(storage_class_matrix__class__):
+    return [*storage_class_matrix__class__][0]
