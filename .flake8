@@ -82,6 +82,7 @@ fcn_exclude_functions =
     as_completed,
     mkdtemp,
     tempfile,
+    setdefaulttimeout,
 
 nit_exclude_imports =
     os_params,

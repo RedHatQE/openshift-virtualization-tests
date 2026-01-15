@@ -1,11 +1,13 @@
 import logging
+import socket
 from contextlib import contextmanager
 
 import deepdiff
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
-from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.node import Node
+from ocp_resources.resource import Resource
 from packaging.version import Version
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -27,11 +29,13 @@ from tests.install_upgrade_operators.utils import (
 from utilities.constants import (
     CLUSTER,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TLS_SECURITY_PROFILE,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
+from utilities.virt import wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
 
@@ -257,13 +261,23 @@ def update_apiserver_crypto_policy(
     apiserver,
     tls_spec,
 ):
-    with ResourceEditor(
-        patches={apiserver: {"spec": {TLS_SECURITY_PROFILE: tls_spec}}},
-    ):
-        yield
-    wait_for_cluster_operator_stabilize(admin_client=admin_client)
-    wait_for_hco_conditions(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        list_dependent_crs_to_check=MANAGED_CRS_LIST,
-    )
+    old_timeout = socket.getdefaulttimeout()
+
+    try:
+        socket.setdefaulttimeout(30)
+        with ResourceEditorValidateHCOReconcile(
+            patches={apiserver: {"spec": {TLS_SECURITY_PROFILE: tls_spec}}},
+            admin_client=admin_client,
+            hco_namespace=hco_namespace.name,
+            wait_for_reconcile_post_update=True,
+            list_resource_reconcile=MANAGED_CRS_LIST,
+        ):
+            yield
+
+        wait_for_cluster_operator_stabilize(admin_client=admin_client)
+        nodes = list(Node.get(client=admin_client))
+        for node in nodes:
+            # After APIServer rollout with crypto policy changes, nodes may take longer to become schedulable
+            wait_for_node_schedulable_status(node=node, status=True, timeout=TIMEOUT_5MIN)
+    finally:
+        socket.setdefaulttimeout(old_timeout)
