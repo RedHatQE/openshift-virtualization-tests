@@ -9,7 +9,7 @@ from tests.virt.node.descheduler.utils import (
     assert_vms_distribution_after_failover,
     verify_at_least_one_vm_migrated,
 )
-from tests.virt.utils import verify_linux_boot_time
+from tests.virt.utils import verify_guest_boot_time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class TestDeschedulerEvictsVMAfterDrainUncordon:
         deployed_vms_for_descheduler_test,
         vms_boot_time_before_node_drain,
     ):
-        verify_linux_boot_time(
+        verify_guest_boot_time(
             vm_list=deployed_vms_for_descheduler_test,
             initial_boot_time=vms_boot_time_before_node_drain,
         )
@@ -124,7 +124,7 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         deployed_vms_for_utilization_imbalance,
         vms_boot_time_before_utilization_imbalance,
     ):
-        verify_linux_boot_time(
+        verify_guest_boot_time(
             vm_list=deployed_vms_for_utilization_imbalance,
             initial_boot_time=vms_boot_time_before_utilization_imbalance,
         )
