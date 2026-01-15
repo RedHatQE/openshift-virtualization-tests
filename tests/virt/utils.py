@@ -46,6 +46,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
+    get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
     pause_optional_migrate_unpause_and_check_connectivity,
@@ -493,3 +494,16 @@ def get_allocatable_memory_per_node(schedulable_nodes):
         nodes_memory[node] = bitmath.parse_string_unsafe(s=memory).to_KiB()
         LOGGER.info(f"Node {node.name} has {nodes_memory[node].to_GiB()} of allocatable memory")
     return nodes_memory
+
+
+def get_boot_time_for_multiple_vms(vm_list):
+    return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
+
+
+def verify_guest_boot_time(vm_list, initial_boot_time):
+    rebooted_vms = {}
+    for vm in vm_list:
+        current_boot_time = get_vm_boot_time(vm=vm)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+    assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
