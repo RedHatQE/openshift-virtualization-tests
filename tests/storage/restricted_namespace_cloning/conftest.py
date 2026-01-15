@@ -130,8 +130,8 @@ def perm_destination_service_account(
 
 
 @pytest.fixture(scope="module")
-def fail_when_no_unprivileged_client_available(unprivileged_client):
-    if not unprivileged_client:
+def fail_when_no_unprivileged_client_available(unprivileged_client, admin_client):
+    if unprivileged_client is admin_client:
         pytest.fail("No unprivileged_client available, failing the test")
 
 

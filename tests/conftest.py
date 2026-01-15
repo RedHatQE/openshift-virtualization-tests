@@ -392,7 +392,8 @@ def unprivileged_client(
     Provides none privilege API client
     """
     if skip_unprivileged_client:
-        yield
+        LOGGER.info("no_unprivileged_client was set, using admin_client")
+        yield admin_client
 
     else:
         current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
