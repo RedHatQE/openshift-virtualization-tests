@@ -20,6 +20,7 @@ from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
     CDI_SECRETS,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
@@ -305,6 +306,10 @@ def downloaded_cirros_image(tmpdir):
 
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-5708")
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
+    run=False,
+)
 def test_cert_exposure_rotation(
     enabled_ca,
     updated_certconfig_in_hco_cr,
