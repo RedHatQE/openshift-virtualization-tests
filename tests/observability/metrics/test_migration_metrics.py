@@ -82,7 +82,7 @@ class TestKubevirtVmiMigrationMetrics:
             ),
         ],
     )
-    @pytest.mark.jira("CNV-71828", run=False)
+    @pytest.mark.jira("CNV-76682", run=False)
     @pytest.mark.s390x
     def test_kubevirt_vmi_migration_metrics(
         self,

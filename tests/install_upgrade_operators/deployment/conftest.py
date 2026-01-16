@@ -25,6 +25,6 @@ def cnv_deployments_excluding_hpp_pool(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def xfail_if_jira_75721_open_and_migration_controller_deployment(jira_75721_open, cnv_deployment_by_name):
-    if cnv_deployment_by_name.name == KUBEVIRT_MIGRATION_CONTROLLER and jira_75721_open:
-        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} deployment is not running due to CNV-75721 bug")
+def xfail_if_jira_76659_open_and_migration_controller_deployment(jira_76659_open, cnv_deployment_by_name):
+    if cnv_deployment_by_name.name == KUBEVIRT_MIGRATION_CONTROLLER and jira_76659_open:
+        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} deployment is not running due to CNV-76659 bug")

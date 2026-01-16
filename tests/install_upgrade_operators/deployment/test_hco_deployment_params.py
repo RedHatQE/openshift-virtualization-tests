@@ -69,7 +69,7 @@ def test_request_param(deployment_by_name, cpu_min_value):
 @pytest.mark.polarion("CNV-7675")
 def test_cnv_deployment_priority_class_name(
     cnv_deployment_by_name,
-    xfail_if_jira_75721_open_and_migration_controller_deployment,
+    xfail_if_jira_76659_open_and_migration_controller_deployment,
 ):
     if cnv_deployment_by_name.name.startswith(HPP_POOL):
         pytest.xfail("HPP pool deployment doesn't have priority class name")
