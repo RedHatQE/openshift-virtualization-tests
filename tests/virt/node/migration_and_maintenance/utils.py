@@ -2,6 +2,7 @@ import json
 import logging
 import re
 from contextlib import contextmanager
+from threading import Thread
 
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
@@ -85,10 +86,16 @@ def assert_vm_migrated_through_dedicated_network_with_tcpdump(utility_pods, node
 @contextmanager
 def run_tcpdump_on_source_node(utility_pods, node, iface_name):
     pod_exec = ExecCommandOnPod(utility_pods=utility_pods, node=node)
-    pod_exec.exec(
-        command=f"tcpdump -i {iface_name} net {WHEREABOUTS_NETWORK} -nnn > {TCPDUMP_LOG_FILE} 2> /dev/null &",
-        chroot_host=False,
+    tcpdump_thread = Thread(
+        target=pod_exec.exec,
+        kwargs={
+            "command": (f"tcpdump -i {iface_name} net {WHEREABOUTS_NETWORK} -nnn > {TCPDUMP_LOG_FILE} 2> /dev/null"),
+            "chroot_host": False,
+            "ignore_rc": True,
+        },
+        daemon=True,
     )
+    tcpdump_thread.start()
 
     yield
 
