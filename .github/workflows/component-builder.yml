@@ -36,7 +36,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "0.9.24"
+          version: "0.9.26"
       - name: Create VM
         working-directory: ./containers/fedora
         env:
