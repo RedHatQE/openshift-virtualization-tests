@@ -13,13 +13,13 @@ pytestmark = [
     pytest.mark.usefixtures(
         "enable_multi_network_policy_usage",
     ),
+    pytest.mark.ipv4,
 ]
 
 
 @pytest.mark.s390x
 class TestFlatOverlayConnectivity:
     @pytest.mark.gating
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-10158")
     # Not marked as `conformance`; requires NMState
     @pytest.mark.dependency(name="test_flat_overlay_basic_ping")
@@ -92,6 +92,7 @@ class TestFlatOverlayConnectivity:
         )
 
 
+@pytest.mark.jumbo_frame
 class TestFlatOverlayJumboConnectivity:
     @pytest.mark.polarion("CNV-10162")
     @pytest.mark.s390x
