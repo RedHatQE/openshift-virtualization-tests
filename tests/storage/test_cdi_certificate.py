@@ -20,6 +20,7 @@ from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
     CDI_SECRETS,
+    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
@@ -190,6 +191,7 @@ def test_upload_after_certs_renewal(
     """
     dv_name = "cnv-3667"
     with virtctl_upload_dv(
+        client=unprivileged_client,
         namespace=namespace.name,
         name=dv_name,
         size=Images.Cirros.DEFAULT_DV_SIZE,
@@ -255,6 +257,7 @@ def test_upload_after_validate_aggregated_api_cert(
     """
     dv_name = "cnv-3977"
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=dv_name,
         size=Images.Cirros.DEFAULT_DV_SIZE,
@@ -303,6 +306,10 @@ def downloaded_cirros_image(tmpdir):
 
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-5708")
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
+    run=False,
+)
 def test_cert_exposure_rotation(
     enabled_ca,
     updated_certconfig_in_hco_cr,
@@ -310,6 +317,7 @@ def test_cert_exposure_rotation(
     downloaded_cirros_image,
 ):
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name="cnv-5708",
         size=Images.Cirros.DEFAULT_DV_SIZE,

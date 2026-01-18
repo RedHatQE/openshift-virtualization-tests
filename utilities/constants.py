@@ -463,6 +463,7 @@ AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
 KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
+KUBEVIRT_OPERATOR = "kubevirt-operator"
 # All hco relate objects with kind
 ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE: PROMETHEUSRULE_STR},
@@ -574,7 +575,7 @@ CNV_OPERATORS = [
     HOSTPATH_PROVISIONER_OPERATOR,
     HYPERCONVERGED_CLUSTER_OPERATOR,
     KUBEVIRT_MIGRATION_OPERATOR,
-    "kubevirt-operator",
+    KUBEVIRT_OPERATOR,
     SSP_OPERATOR,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
 ]
@@ -1015,7 +1016,12 @@ QUOTA_FOR_ONE_VMI = {
 }
 
 ARQ_QUOTA_HARD_SPEC = {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
+DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
+REGISTRY_STR = "registry"
 STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
     "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
 )
+
+# High performance & Numa related constants
+NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"

@@ -10,6 +10,7 @@ import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import cache
 from json import JSONDecodeError
 from subprocess import run
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -1016,7 +1017,7 @@ class VirtualMachineForTests(VirtualMachine):
                 if sc_name:
                     return sc_name
             else:
-                return get_default_storage_class().name
+                return get_default_storage_class(client=self.client).name
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (
@@ -1318,7 +1319,9 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         # To apply this logic, self.access_modes should be available.
         if not self.sno_cluster and (not self.eviction_strategy and not (self.diskless_vm or self.non_existing_pvc)):
             if not self.access_modes:
-                self.access_modes = get_default_storage_class().storage_profile.first_claim_property_set_access_modes()
+                self.access_modes = get_default_storage_class(
+                    client=self.client
+                ).storage_profile.first_claim_property_set_access_modes()
             if DataVolume.AccessMode.RWX not in self.access_modes:
                 spec[EVICTIONSTRATEGY] = "None"
 
@@ -2277,11 +2280,18 @@ def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@cache
 def get_oc_image_info(  # type: ignore[return]
     image: str, pull_secret: str | None = None, architecture: str = LINUX_AMD_64
 ) -> dict[str, Any]:
-    def _get_image_json(cmd: str) -> dict[str, Any]:
-        return json.loads(run_command(command=shlex.split(cmd), check=False)[1])
+
+    def _get_image_json(cmd: str) -> dict[str, Any] | None:
+        _, out, err = run_command(command=shlex.split(cmd), check=False)
+        if err:
+            LOGGER.error("Failed to get image info from quay", extra={"image": image, "error": err})
+            return None
+
+        return json.loads(out)
 
     base_command = f"oc image -o json info {image} --filter-by-os {architecture}"
     if pull_secret:
@@ -2297,6 +2307,7 @@ def get_oc_image_info(  # type: ignore[return]
         ):
             if sample:
                 return sample
+
     except TimeoutExpiredError:
         LOGGER.error(f"Failed to parse {base_command}")
         raise

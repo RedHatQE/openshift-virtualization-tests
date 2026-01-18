@@ -1,15 +1,18 @@
+import contextlib
 import logging
 from abc import ABC, abstractmethod
-from typing import Final
+from typing import Final, Generator
 
 from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import retry
 
+from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
 from libs.vm.vm import BaseVirtualMachine
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 _IPERF_BIN: Final[str] = "iperf3"
+IPERF_SERVER_PORT: Final[int] = 5201
 
 
 LOGGER = logging.getLogger(__name__)
@@ -186,3 +189,41 @@ class PodTcpClient(BaseTcpClient):
 
 def is_tcp_connection(server: TcpServer, client: BaseTcpClient) -> bool:
     return server.is_running() and client.is_running()
+
+
+@contextlib.contextmanager
+def client_server_active_connection(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    spec_logical_network: str,
+    port: int = IPERF_SERVER_PORT,
+    maximum_segment_size: int = 0,
+) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
+    """Start iperf3 client-server connection with continuous TCP traffic flow.
+
+    Automatically starts an iperf3 server and client, with traffic flowing continuously
+    while inside the context. Both processes stop automatically on exit.
+
+    Args:
+        client_vm: VM running the iperf3 client (sends traffic).
+        server_vm: VM running the iperf3 server (receives traffic).
+        spec_logical_network: Network interface name on server VM for IP resolution.
+        port: TCP port for iperf3 connection.
+        maximum_segment_size: Define explicitly the TCP payload size (in bytes).
+                              Use for jumbo frame testing.
+                              Default value is 0 (do not change mss).
+
+    Yields:
+        tuple[VMTcpClient, TcpServer]: Client and server objects with active traffic flowing.
+
+    Note:
+        Traffic runs with infinite duration until context exits.
+    """
+    with TcpServer(vm=server_vm, port=port) as server:
+        with VMTcpClient(
+            vm=client_vm,
+            server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+            server_port=port,
+            maximum_segment_size=maximum_segment_size,
+        ) as client:
+            yield client, server

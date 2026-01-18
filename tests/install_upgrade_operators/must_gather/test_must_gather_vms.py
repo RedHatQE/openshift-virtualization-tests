@@ -48,7 +48,7 @@ def kubevirt_architecture_configuration_scope_session(
 
     # TODO: This block for s390x to be removed once we move to kubevirt version 1.7 as this is
     # fixed in https://github.com/kubevirt/kubevirt/issues/14953
-    if nodes_cpu_architecture == S390X and is_jira_open(jira_id="CNV-71825"):
+    if nodes_cpu_architecture == S390X and is_jira_open(jira_id="CNV-76681"):
         kubevirt_architecture_config["ovmfPath"] = ""
         kubevirt_architecture_config["machineType"] = "s390-ccw-virtio"
         kubevirt_architecture_config["emulatedMachines"] = "s390-ccw-virtio*"
