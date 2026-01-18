@@ -30,9 +30,9 @@ strict_concatenate = true
 
 
 [project]
-name = "openshift-virtualization-tests-4.21"
+name = "openshift-virtualization-tests-4.22"
 requires-python = ">=3.14"
-version = "4.21"
+version = "4.22"
 description = "Tests for Openshift Virtualization"
 authors = [{ "name" = "openshift-virtualization-tests" }]
 dependencies = [
