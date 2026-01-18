@@ -3,11 +3,12 @@ from datetime import datetime, timezone
 
 import bitmath
 import pytest
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
+from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
@@ -30,13 +31,12 @@ from utilities.constants import (
     CAPACITY,
     LIVE_MIGRATE,
     MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
     USED,
 )
-from utilities.infra import get_node_selector_dict
+from utilities.infra import NON_EXIST_URL, get_node_selector_dict
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -92,45 +92,28 @@ def vm_in_error_state(namespace):
 
 
 @pytest.fixture()
-def pvc_for_vm_in_starting_state(unprivileged_client, namespace):
-    with PersistentVolumeClaim(
-        name="vm-in-starting-state-pvc",
-        namespace=namespace.name,
-        accessmodes=PersistentVolumeClaim.AccessMode.RWX,
-        size="1Gi",
-        pvlabel="non-existent-pv",
-        client=unprivileged_client,
-    ) as pvc:
-        yield pvc
-
-
-@pytest.fixture()
-def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
+def vm_in_starting_state(namespace, unprivileged_client):
     vm_name = "vm-in-starting-state"
+    dv = DataVolume(
+        name=f"{vm_name}-dv",
+        namespace=namespace.name,
+        source="http",
+        url=NON_EXIST_URL,
+        size="1Gi",
+        storage_class=py_config["default_storage_class"],
+        api_name="storage",
+    )
+    dv.to_dict()
+    dv_template = dv.res
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
-        pvc=pvc_for_vm_in_starting_state,
+        data_volume_template=dv_template,
+        client=unprivileged_client,
     ) as vm:
-        # Try to start the VM - it should timeout because the PVC cannot be bound
-        try:
-            vm.start(wait=True, timeout=TIMEOUT_2MIN)
-            # If we reach here, VM started successfully (unexpected behavior)
-            raise AssertionError(f"VM {vm.name} started successfully but was expected to fail due to unbound PVC")
-        except TimeoutExpiredError:
-            pvc_error_statuses = [
-                VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING,
-                VirtualMachine.Status.ERROR_UNSCHEDULABLE,
-                VirtualMachine.Status.PENDING,
-            ]
-            current_status = vm.printable_status
-            if current_status not in pvc_error_statuses:
-                raise AssertionError(
-                    f"VM {vm.name} failed to start but not in expected state. "
-                    f"Current status: {current_status}, Expected one of: {pvc_error_statuses}"
-                )
-            LOGGER.info(f"VM {vm.name} stuck in expected status: {current_status}")
+        vm.start()
+        vm.wait_for_specific_status(status=VirtualMachine.Status.DATAVOLUME_ERROR, timeout=TIMEOUT_3MIN)
         yield vm
 
 
@@ -201,11 +184,6 @@ class TestVMStatusLastTransitionMetrics:
 
     @pytest.mark.polarion("CNV-9751")
     @pytest.mark.s390x
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Storage Classes act differently when "
-        f"attaching broken pvc and stuck in other state than expected; tracked in CNV-76518 ",
-        run=False,
-    )
     def test_vm_starting_status_metrics(self, prometheus, vm_in_starting_state):
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
