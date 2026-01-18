@@ -13,7 +13,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from packaging.version import Version
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -405,7 +404,7 @@ def initiate_metric_value(request, prometheus):
 
 @pytest.fixture()
 def vm_for_vm_disk_allocation_size_test(
-    namespace, admin_client, is_jira_bug_73864_open, unprivileged_client, golden_images_namespace
+    namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace
 ):
     with VirtualMachineForTests(
         client=unprivileged_client,
@@ -415,7 +414,7 @@ def vm_for_vm_disk_allocation_size_test(
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=admin_client if is_jira_bug_73864_open else unprivileged_client,
+                client=client_based_on_bug_73864,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -469,14 +468,14 @@ def windows_vm_for_test(namespace, unprivileged_client):
 
 @pytest.fixture(scope="session")
 def memory_metric_has_bug():
-    return is_jira_open(jira_id="CNV-71827")
+    return is_jira_open(jira_id="CNV-76656")
 
 
 @pytest.fixture()
 def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
     if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metric_has_bug:
         pytest.xfail(
-            f"Bug (CNV-71827), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
+            f"Bug (CNV-76656), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
             "any value for windows vm"
         )
 
@@ -605,14 +604,12 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
 
 
 @pytest.fixture(scope="session")
-def is_jira_bug_73864_open():
-    return is_jira_open(jira_id="CNV-73864")
+def client_based_on_bug_73864(admin_client, unprivileged_client):
+    return admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_with_stress_ng(
-    namespace, admin_client, is_jira_bug_73864_open, unprivileged_client, golden_images_namespace
-):
+def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
@@ -623,17 +620,12 @@ def fedora_vm_with_stress_ng(
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=admin_client if is_jira_bug_73864_open else unprivileged_client,
+                client=client_based_on_bug_73864,
             ),
             storage_class=py_config["default_storage_class"],
         ),
     ) as vm:
         running_vm(vm=vm)
-        LOGGER.info(f"Installing stress-ng on VM: {vm.name}")
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split("sudo dnf install stress-ng -y"),
-        )
         yield vm
 
 

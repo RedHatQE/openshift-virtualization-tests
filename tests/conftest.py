@@ -54,7 +54,6 @@ from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -1759,21 +1758,6 @@ def upgrade_namespace_scope_session(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="session")
-def migratable_vms(admin_client, upgrade_namespace_scope_session, kmp_enabled_namespace):
-    migratable_vms = []
-    for ns in [kmp_enabled_namespace, upgrade_namespace_scope_session]:
-        for vm in VirtualMachine.get(client=admin_client, namespace=ns.name):
-            if vm.ready and any(
-                condition.type == "LiveMigratable" and condition.status == "True"
-                for condition in vm.vmi.instance.status.conditions
-            ):
-                migratable_vms.append(vm)
-
-    LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
-    return migratable_vms
-
-
-@pytest.fixture(scope="session")
 def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
@@ -1922,23 +1906,27 @@ def os_path_environment():
 
 
 @pytest.fixture(scope="session")
-def virtctl_binary(installing_cnv, os_path_environment, bin_directory):
+def virtctl_binary(installing_cnv, bin_directory, admin_client):
     if installing_cnv:
         return
     installed_virtctl = os.environ.get("CNV_TESTS_VIRTCTL_BIN")
     if installed_virtctl:
         LOGGER.warning(f"Using previously installed: {installed_virtctl}")
         return
-    return download_file_from_cluster(get_console_spec_links_name=VIRTCTL_CLI_DOWNLOADS, dest_dir=bin_directory)
+    return download_file_from_cluster(
+        get_console_spec_links_name=VIRTCTL_CLI_DOWNLOADS, dest_dir=bin_directory, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="session")
-def oc_binary(os_path_environment, bin_directory):
+def oc_binary(bin_directory, admin_client):
     installed_oc = os.environ.get("CNV_TESTS_OC_BIN")
     if installed_oc:
         LOGGER.warning(f"Using previously installed: {installed_oc}")
         return
-    return download_file_from_cluster(get_console_spec_links_name="oc-cli-downloads", dest_dir=bin_directory)
+    return download_file_from_cluster(
+        get_console_spec_links_name="oc-cli-downloads", dest_dir=bin_directory, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="session")
