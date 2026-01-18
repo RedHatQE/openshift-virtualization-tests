@@ -2277,7 +2277,6 @@ def wait_for_kv_stabilize(admin_client, hco_namespace):
 def get_oc_image_info(  # type: ignore[return]
     image: str, pull_secret: str | None = None, architecture: str = LINUX_AMD_64
 ) -> dict[str, Any]:
-
     def _get_image_json(cmd: str) -> dict[str, Any] | None:
         _, out, err = run_command(command=shlex.split(cmd), check=False)
         if err:
