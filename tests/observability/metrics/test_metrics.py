@@ -12,6 +12,7 @@ from tests.observability.metrics.utils import (
     compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
 )
+from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -131,9 +132,10 @@ def test_metrics(prometheus, single_metric_vm, query):
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
-    query_result = prometheus.query(query=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS)["data"]["result"]
-    assert str(query_result[0]["value"][1]) == "1", (
-        f"Metrics query: {KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS},  result: {query_result}"
+    validate_metrics_value(
+        prometheus=prometheus,
+        metric_name=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
+        expected_value="1",
     )
 
 
