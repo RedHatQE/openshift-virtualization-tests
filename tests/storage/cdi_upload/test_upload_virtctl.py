@@ -492,7 +492,7 @@ def test_disk_image_after_upload_virtctl(
     indirect=True,
 )
 @pytest.mark.s390x
-@pytest.mark.jira("CNV-74020", run=False)
+@pytest.mark.jira("CNV-73405", run=False)
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):
