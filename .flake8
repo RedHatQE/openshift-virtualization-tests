@@ -77,6 +77,11 @@ fcn_exclude_functions =
     QueueListener,
     requests,
     multiprocessing,
+    ast,
+    ThreadPoolExecutor,
+    as_completed,
+    mkdtemp,
+    tempfile,
 
 nit_exclude_imports =
     os_params,
