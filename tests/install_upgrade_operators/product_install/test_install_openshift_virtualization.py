@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from ocp_resources.storage_class import StorageClass
 
 from tests.install_upgrade_operators.product_install.constants import (
     CLUSTER_RESOURCE_ALLOWLIST,
@@ -26,6 +27,7 @@ from utilities.monitoring import (
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
 )
+from utilities.storage import persist_storage_class_default, verify_boot_sources_reimported
 
 CNV_INSTALLATION_TEST = "test_cnv_installation"
 CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
@@ -168,6 +170,25 @@ def test_cnv_resources_installed_namespace_scoped(
     if mismatch_namespaced:
         LOGGER.error(f"Mismatched namespaced resources: {mismatch_namespaced}")
         raise ResourceMismatch(f"Unexpected namespaced resources found post cnv installation: {mismatch_namespaced}")
+
+
+@pytest.mark.polarion("CNV-12453")
+@pytest.mark.order(after=CNV_INSTALLATION_TEST)
+@pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
+def test_default_storage_class_set(admin_client, golden_images_namespace, default_storage_class):
+    if (
+        default_storage_class.instance.metadata.get("annotations", {}).get(
+            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
+        )
+        != "true"
+    ):
+        # et the default storage class as default for the smoke tests afterwards
+        for storage_class in StorageClass.get(client=admin_client):
+            is_default = True if storage_class.name == default_storage_class.name else False
+            persist_storage_class_default(default=is_default, storage_class=storage_class)
+    assert verify_boot_sources_reimported(
+        admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
+    ), "Failed to re-import boot sources"
 
 
 @pytest.mark.polarion("CNV-10528")

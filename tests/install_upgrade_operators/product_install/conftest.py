@@ -8,7 +8,9 @@ from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
+from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
+from timeout_sampler import TimeoutSampler
 
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
@@ -26,6 +28,7 @@ from utilities.constants import (
     PENDING_STR,
     PRODUCTION_CATALOG_SOURCE,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     StorageClassNames,
 )
@@ -320,3 +323,23 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
     if not latest_z_stream:
         pytest.exit(reason="CNV version can't be determined for this run", returncode=INSTALLATION_VERSION_MISMATCH)
     return latest_z_stream
+
+
+@pytest.fixture
+def default_storage_class(admin_client):
+    # if its not on the matrix - we dont need to test it.
+    default_storage_class_name = py_config["default_storage_class"]
+    if not any(default_storage_class_name in sc_dict for sc_dict in py_config["storage_class_matrix"]):
+        pytest.xfail(f"Storage class {default_storage_class_name} not found in the storage class matrix")
+
+    LOGGER.info(f"Waiting for storage class {default_storage_class_name} to be created")
+    default_storage_class = StorageClass(client=admin_client, name=default_storage_class_name)
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: default_storage_class.exists,
+    ):
+        if sample:
+            break
+
+    return default_storage_class
