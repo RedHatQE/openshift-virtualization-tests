@@ -27,7 +27,11 @@ from utilities.monitoring import (
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
 )
-from utilities.storage import persist_storage_class_default, verify_boot_sources_reimported
+from utilities.storage import (
+    is_storage_class_with_default_annotation,
+    persist_storage_class_default,
+    verify_boot_sources_reimported,
+)
 
 CNV_INSTALLATION_TEST = "test_cnv_installation"
 CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
@@ -176,16 +180,12 @@ def test_cnv_resources_installed_namespace_scoped(
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
 def test_default_storage_class_set(admin_client, golden_images_namespace, default_storage_class):
-    if (
-        default_storage_class.instance.metadata.get("annotations", {}).get(
-            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
-        )
-        != "true"
-    ):
-        # et the default storage class as default for the smoke tests afterwards
-        for storage_class in StorageClass.get(client=admin_client):
-            is_default = True if storage_class.name == default_storage_class.name else False
-            persist_storage_class_default(default=is_default, storage_class=storage_class)
+    if not is_storage_class_with_default_annotation(storage_class=default_storage_class):
+        # set the default for the smoke tests execution, and unset if there are other default storage classes
+        persist_storage_class_default(default=True, storage_class=default_storage_class)
+        for sc in StorageClass.get(client=admin_client):
+            if sc.name != default_storage_class.name and is_storage_class_with_default_annotation(storage_class=sc):
+                persist_storage_class_default(default=False, storage_class=sc)
     assert verify_boot_sources_reimported(
         admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
     ), "Failed to re-import boot sources"
