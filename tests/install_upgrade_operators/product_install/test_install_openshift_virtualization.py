@@ -88,6 +88,7 @@ def test_cnv_installation_alert_cleanup(prometheus):
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=HCO_NOT_INSTALLED_ALERT)
 
 
+# TODO: check if this test is still required
 @pytest.mark.polarion("CNV-10076")
 @pytest.mark.order(after=CNV_ALERT_CLEANUP_TEST)
 @pytest.mark.dependency(
@@ -126,6 +127,7 @@ def test_cnv_resources_installed_cluster_scoped(
         raise ResourceMismatch(f"Unexpected cluster resources found post cnv installation: {mismatch_cluster_scoped}")
 
 
+# TODO: check if this test is still required
 @pytest.mark.order(after=CNV_ALERT_CLEANUP_TEST)
 @pytest.mark.dependency(
     depends=[CNV_INSTALLATION_TEST],
@@ -178,6 +180,7 @@ def test_cnv_resources_installed_namespace_scoped(
 
 @pytest.mark.polarion("CNV-12453")
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
+# Dependency: CNV must be installed before storage class configuration can be verified
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
 def test_default_storage_class_set(admin_client, golden_images_namespace, default_storage_class):
     if not is_storage_class_with_default_annotation(storage_class=default_storage_class):

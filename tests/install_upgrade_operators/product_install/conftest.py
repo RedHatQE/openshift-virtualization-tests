@@ -325,7 +325,7 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
     return latest_z_stream
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_storage_class(admin_client):
     # if its not on the matrix - we dont need to test it.
     default_storage_class_name = py_config["default_storage_class"]

@@ -101,6 +101,14 @@ CLUSTER_RESOURCE_ALLOWLIST = {
 }
 NAMESPACED_IGNORE_KINDS = ["Event", "Template"]
 NAMESPACED_RESOURCE_ALLOWLIST = {
+    "openshift-kube-apiserver": {
+        "Pod": ["installer-", "revision-pruner-"],
+        "PodMetrics": ["installer-", "revision-pruner-"],
+    },
+    "openshift-monitoring": {
+        "Pod": ["metrics-server", "prometheus-k8s", "alertmanager-main"],
+        "PodMetrics": ["metrics-server", "prometheus-k8s", "alertmanager-main"],
+    },
     "kube-system": {
         "RoleBinding": [
             "hostpath-provisioner-operator-service-auth-reader",
