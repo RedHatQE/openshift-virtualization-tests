@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.storage_class import StorageClass
 
 from tests.install_upgrade_operators.product_install.constants import (
     CLUSTER_RESOURCE_ALLOWLIST,
@@ -28,8 +27,6 @@ from utilities.monitoring import (
     wait_for_gauge_metrics_value,
 )
 from utilities.storage import (
-    is_storage_class_with_default_annotation,
-    persist_storage_class_default,
     verify_boot_sources_reimported,
 )
 
@@ -182,13 +179,8 @@ def test_cnv_resources_installed_namespace_scoped(
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
 # Dependency: CNV must be installed before storage class configuration can be verified
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
-def test_default_storage_class_set(admin_client, golden_images_namespace, default_storage_class):
-    if not is_storage_class_with_default_annotation(storage_class=default_storage_class):
-        # set the default for the smoke tests execution, and unset if there are other default storage classes
-        persist_storage_class_default(default=True, storage_class=default_storage_class)
-        for sc in StorageClass.get(client=admin_client):
-            if sc.name != default_storage_class.name and is_storage_class_with_default_annotation(storage_class=sc):
-                persist_storage_class_default(default=False, storage_class=sc)
+@pytest.mark.usefixtures("updated_default_storage_class_from_config")
+def test_default_storage_class_set(admin_client, golden_images_namespace):
     assert verify_boot_sources_reimported(
         admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
     ), "Failed to re-import boot sources"

@@ -755,15 +755,6 @@ def get_default_storage_class(client: DynamicClient) -> StorageClass:
     raise ValueError("No default storage class defined")
 
 
-def is_storage_class_with_default_annotation(storage_class: StorageClass) -> bool:
-    """Check if storage class is marked as default or virt-default."""
-    sc_annotations = storage_class.instance.metadata.get("annotations", {})
-    return (
-        sc_annotations.get(StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS) == "true"
-        or sc_annotations.get(StorageClass.Annotations.IS_DEFAULT_CLASS) == "true"
-    )
-
-
 def is_snapshot_supported_by_sc(sc_name, client):
     sc_instance = StorageClass(client=client, name=sc_name).instance
     for vsc in VolumeSnapshotClass.get(client=client):
@@ -1092,7 +1083,11 @@ def verify_boot_sources_reimported(
 def remove_default_storage_classes(cluster_storage_classes):
     sc_resources = []
     for sc in cluster_storage_classes:
-        if is_storage_class_with_default_annotation(storage_class=sc):
+        sc_annotations = sc.instance.metadata.get("annotations", {})
+        if (
+            sc_annotations.get(StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS) == "true"
+            or sc_annotations.get(StorageClass.Annotations.IS_DEFAULT_CLASS) == "true"
+        ):
             sc_resources.append(
                 ResourceEditor(
                     patches={

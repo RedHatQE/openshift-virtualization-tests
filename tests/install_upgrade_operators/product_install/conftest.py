@@ -60,6 +60,8 @@ from utilities.storage import (
     HppCsiStorageClass,
     HPPWithStoragePool,
     create_hpp_storage_class,
+    get_default_storage_class,
+    persist_storage_class_default,
 )
 
 INSTALLATION_VERSION_MISMATCH = "98"
@@ -326,12 +328,13 @@ def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_i
 
 
 @pytest.fixture()
-def default_storage_class(admin_client):
+def default_storage_class_from_config(admin_client):
     # if its not on the matrix - we dont need to test it.
     default_storage_class_name = py_config["default_storage_class"]
     if not any(default_storage_class_name in sc_dict for sc_dict in py_config["storage_class_matrix"]):
         pytest.xfail(f"Storage class {default_storage_class_name} not found in the storage class matrix")
-
+    # Some storageclasses are created asynchronously, for example ocs-virt,
+    # so we need to wait for them to be created
     LOGGER.info(f"Waiting for storage class {default_storage_class_name} to be created")
     default_storage_class = StorageClass(client=admin_client, name=default_storage_class_name)
     for sample in TimeoutSampler(
@@ -343,3 +346,16 @@ def default_storage_class(admin_client):
             break
 
     return default_storage_class
+
+
+@pytest.fixture()
+def updated_default_storage_class_from_config(admin_client, default_storage_class_from_config):
+    # Swaps the current default StorageClass with the one defined in our config.
+    try:
+        current_default_sc = get_default_storage_class(client=admin_client)
+        if current_default_sc.name == default_storage_class_from_config.name:
+            return
+        persist_storage_class_default(default=False, storage_class=current_default_sc)
+    except ValueError:
+        LOGGER.info("No default storage class exists, setting the config one as default")
+    persist_storage_class_default(default=True, storage_class=default_storage_class_from_config)
