@@ -361,10 +361,15 @@ def pipelinerun_for_disk_uploader(
     vm_for_disk_uploader,
     request,
 ):
+    volumes = vm_for_disk_uploader.instance.spec.template.spec.volumes
+    dv_volume = next((dv for dv in volumes if "dataVolume" in dict(dv)), None)
+    if not dv_volume:
+        raise ValueError(f"No dataVolume found in VM {vm_for_disk_uploader.name} volumes")
+    dv_name = dv_volume.dataVolume.name
     pipeline_run_params = {
         EXPORT_SOURCE_KIND: request.param,
-        EXPORT_SOURCE_NAME: (vm_for_disk_uploader.name if request.param == "vm" else OS_FLAVOR_FEDORA),
-        VOLUME_NAME: OS_FLAVOR_FEDORA,
+        EXPORT_SOURCE_NAME: (vm_for_disk_uploader.name if request.param == "vm" else dv_name),
+        VOLUME_NAME: dv_name,
         IMAGE_DESTINATION: "quay.io/openshift-cnv/tekton-tasks",
         SECRET_NAME: quay_disk_uploader_secret.name,
     }
