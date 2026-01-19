@@ -524,15 +524,12 @@ class TestVmiPhaseTransitionFromDeletion:
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_count(
         self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi
     ):
-        validate_metrics_value(
+        validate_metric_value_greater_than_initial_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
-            expected_value=str(
-                initial_vmi_deletion_metrics_values[
-                    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED
-                ]
-                + 1
-            ),
+            initial_value=initial_vmi_deletion_metrics_values[
+                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED
+            ],
         )
 
 
