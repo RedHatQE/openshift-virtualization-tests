@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.jira("CNV-63031", run=False)
 @pytest.mark.polarion("CNV-7603")
 def test_same_random_minute_after_delete_hco_pod(
     admin_client,
