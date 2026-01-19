@@ -15,10 +15,13 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
@@ -29,7 +32,7 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     DISK_SERIAL,
-    HCO_DEFAULT_CPU_MODEL_KEY,
+    NODE_HUGE_PAGES_1GI_KEY,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -42,6 +45,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
@@ -54,7 +58,6 @@ from utilities.virt import (
     running_vm,
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
-    wait_for_updated_kv_value,
 )
 
 NUM_TEST_VMS = 3
@@ -72,6 +75,7 @@ def create_vms(
     client=None,
     ssh=True,
     node_selector_labels=None,
+    cpu_model=None,
 ):
     """
     Create n number of fedora vms.
@@ -83,6 +87,7 @@ def create_vms(
         node_selector_labels (str): Labels for node selector.
         client (DynamicClient): DynamicClient object
         ssh (bool): enable SSH on the VM
+        cpu_model (str): CPU model to be used for the VMs
 
     Returns:
         list: List of VirtualMachineForTests
@@ -99,6 +104,7 @@ def create_vms(
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             ssh=ssh,
             client=client,
+            cpu_model=cpu_model,
         ) as vm:
             vms_list.append(vm)
     return vms_list
@@ -247,23 +253,6 @@ def assert_restart_required_condition(vm, expected_message):
     except TimeoutExpiredError:
         LOGGER.error("No RestartRequired condition found on VM!")
         raise
-
-
-@contextmanager
-def update_cluster_cpu_model(admin_client, hco_namespace, hco_resource, cpu_model):
-    with ResourceEditorValidateHCOReconcile(
-        patches={hco_resource: {"spec": {HCO_DEFAULT_CPU_MODEL_KEY: cpu_model}}},
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        wait_for_updated_kv_value(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
-            path=["cpuModel"],
-            value=cpu_model,
-            timeout=30,
-        )
-        yield
 
 
 def get_vm_cpu_list(vm):
@@ -553,7 +542,8 @@ def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
         verify_wsl2_guest_works(vm=vm)
         command = f"wsl nohup bash -c '{stress_command}'"
     else:
-        command = stress_command
+        command = f"sudo dnf install stress-ng -y; {stress_command}"
+
     run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(command),
@@ -607,3 +597,52 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
+
+
+def verify_cpumanager_workers(schedulable_nodes: list[Node]) -> None:
+    """Verify cluster nodes have CPU Manager labels
+
+    Args:
+        schedulable_nodes (list[Node]): List of schedulable node objects.
+
+    Raises:
+        ResourceValueError: If no node has CPU Manager enabled.
+    """
+    LOGGER.info("Verifying cluster nodes have CPU Manager labels")
+    if not any(node.labels.cpumanager == "true" for node in schedulable_nodes):
+        raise ResourceValueError("Cluster does not have CPU Manager enabled on any node")
+
+
+def verify_hugepages_1gi(hugepages_gib_values: list[float | int]) -> None:
+    """Verify that cluster nodes have 1Gi hugepages enabled.
+
+    Args:
+        hugepages_gib_values (list[float | int]): List of hugepage sizes (in GiB) from worker nodes.
+
+    Raises:
+        ResourceValueError: If 1Gi hugepages are not configured or are insufficient.
+    """
+    LOGGER.info("Verifying cluster has 1Gi hugepages enabled")
+    if not hugepages_gib_values or max(hugepages_gib_values) < 1:
+        raise ResourceValueError(f"Cluster does not have sufficient {NODE_HUGE_PAGES_1GI_KEY}")
+
+
+def verify_rwx_default_storage(client: DynamicClient) -> None:
+    """Verify default storage class supports RWX mode.
+
+    Args:
+        client (DynamicClient): Kubernetes dynamic client used to query cluster resources.
+
+    Raises:
+       ResourceValueError: access mode is not RWX
+    """
+    storage_class = py_config["default_storage_class"]
+    LOGGER.info(f"Verifying default storage class {storage_class} supports RWX mode")
+
+    access_modes = StorageProfile(client=client, name=storage_class).first_claim_property_set_access_modes()
+    found_mode = access_modes[0] if access_modes else None
+    if found_mode != DataVolume.AccessMode.RWX:
+        raise ResourceValueError(
+            f"Default storage class '{storage_class}' doesn't support RWX mode "
+            f"(required: RWX, found: {found_mode or 'none'})"
+        )

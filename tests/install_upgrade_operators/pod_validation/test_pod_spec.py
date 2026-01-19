@@ -14,6 +14,7 @@ from utilities.constants import (
     ALL_CNV_PODS,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
+    KUBEVIRT_MIGRATION_CONTROLLER,
 )
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -24,6 +25,12 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def cnv_jobs(admin_client, hco_namespace):
     return [job.name for job in Job.get(client=admin_client, namespace=hco_namespace.name)]
+
+
+@pytest.fixture()
+def xfail_if_jira_76659_open_and_migration_controller_pod(jira_76659_open, cnv_pods_by_type):
+    if any(pod.name.startswith(KUBEVIRT_MIGRATION_CONTROLLER) for pod in cnv_pods_by_type) and jira_76659_open:
+        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-76659 bug")
 
 
 @pytest.mark.skip_must_gather_collection
@@ -41,7 +48,7 @@ def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
 
 
 @pytest.mark.polarion("CNV-7262")
-def test_pods_priority_class_value(cnv_pods_by_type):
+def test_pods_priority_class_value(cnv_pods_by_type, xfail_if_jira_76659_open_and_migration_controller_pod):
     if any(pod.name.startswith((HPP_POOL, HOSTPATH_PROVISIONER_CSI)) for pod in cnv_pods_by_type):
         pytest.xfail("HPP pods don't have priority class name")
     validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type)

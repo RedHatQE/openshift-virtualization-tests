@@ -8,7 +8,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import PVC, TIMEOUT_20MIN
+from utilities.constants import PVC, QUARANTINED, TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv
 from utilities.virt import wait_for_ssh_connectivity
 
@@ -116,6 +116,13 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: Template label selector fails with BadRequestError "
+        "during VM creation from template. Tracked in CNV-75736"
+    ),
+    run=False,
 )
 @pytest.mark.s390x
 def test_regular_user_can_create_vm_from_cloned_dv(

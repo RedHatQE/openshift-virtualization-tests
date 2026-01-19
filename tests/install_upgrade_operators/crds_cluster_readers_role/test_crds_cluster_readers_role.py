@@ -51,17 +51,17 @@ def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
 
 
 @pytest.fixture(scope="module")
-def jira_75591_open():
-    return is_jira_open(jira_id="CNV-75591")
+def jira_76680_open():
+    return is_jira_open(jira_id="CNV-76680")
 
 
 @pytest.mark.polarion("CNV-8263")
-def test_crds_cluster_readers_role(admin_client, jira_75591_open):
+def test_crds_cluster_readers_role(admin_client, jira_76680_open):
     cluster_readers = "system:cluster-readers"
     unreadable_crds = []
     for crd in get_cnv_crds(admin_client=admin_client):
-        if crd.name in UNREADABLE_MIG_CRDS and jira_75591_open:
-            LOGGER.warning(f"Skipping {crd.name} because it is unreadable due to CNV-75591 bug")
+        if crd.name in UNREADABLE_MIG_CRDS and jira_76680_open:
+            LOGGER.warning(f"Skipping {crd.name} because it is unreadable due to CNV-76680 bug")
             continue
         can_read = check_output(shlex.split(f"oc adm policy who-can get {crd.name}"))
         if cluster_readers not in str(can_read):

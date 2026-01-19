@@ -77,7 +77,7 @@ def validate_os_info_virtctl_vs_linux_os(vm):
         virtctl_info = get_virtctl_os_info(vm=vm)
 
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
-    if is_jira_67104_bug_open():
+    if is_jira_76697_bug_open():
         virtctl_info.pop("load", None)
 
     for os_param_name, os_param_value in virtctl_info.items():
@@ -518,6 +518,7 @@ def matrix_os_vm_from_template(
     namespace: Namespace,
     data_source_object: DataSource,
     os_matrix: dict[str, dict],
+    cpu_model: str | None = None,
     request: Optional[FixtureRequest] = None,
     data_volume_template: Optional[dict[str, dict]] = None,
 ) -> VirtualMachineForTestsFromTemplate:
@@ -532,9 +533,10 @@ def matrix_os_vm_from_template(
         labels=Template.generate_template_labels(**os_matrix[os_matrix_key]["template_labels"]),
         data_volume_template=data_volume_template,
         vm_dict=param_dict.get("vm_dict"),
+        cpu_model=cpu_model,
     )
 
 
 @cache
-def is_jira_67104_bug_open():
-    return is_jira_open(jira_id="CNV-67104")
+def is_jira_76697_bug_open():
+    return is_jira_open(jira_id="CNV-76697")

@@ -10,12 +10,13 @@ default_run_strategy = VirtualMachine.RunStrategy.MANUAL
 
 
 @contextmanager
-def container_disk_vm(namespace, unprivileged_client, data_volume_template=None):
+def container_disk_vm(namespace, unprivileged_client, cpu_model=None, data_volume_template=None):
     """lifecycle_vm is used to call this fixture and data_volume_vm; data_source is not needed in this use cases"""
     name = "fedora-vm-lifecycle"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        cpu_model=cpu_model,
         client=unprivileged_client,
         body=fedora_vm_body(name=name),
         run_strategy=default_run_strategy,
@@ -24,10 +25,11 @@ def container_disk_vm(namespace, unprivileged_client, data_volume_template=None)
 
 
 @contextmanager
-def data_volume_vm(unprivileged_client, namespace, data_volume_template):
+def data_volume_vm(unprivileged_client, namespace, data_volume_template, cpu_model=None):
     with VirtualMachineForTests(
         name="rhel-vm-lifecycle",
         namespace=namespace.name,
+        cpu_model=cpu_model,
         client=unprivileged_client,
         memory_requests=Images.Rhel.DEFAULT_MEMORY_SIZE,
         run_strategy=default_run_strategy,
@@ -38,7 +40,7 @@ def data_volume_vm(unprivileged_client, namespace, data_volume_template):
 
 @pytest.fixture(scope="class")
 def lifecycle_vm(
-    cluster_cpu_model_scope_module,
+    cpu_for_migration,
     unprivileged_client,
     namespace,
     vm_volumes_matrix__class__,
@@ -53,5 +55,6 @@ def lifecycle_vm(
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_module,
+        cpu_model=cpu_for_migration,
     ) as vm:
         yield vm

@@ -20,7 +20,7 @@ from tests.network.l2_bridge.utils import (
     wait_for_interface_hot_plug_completion,
 )
 from tests.network.libs.ip import random_ipv4_address
-from utilities.constants import FLAT_OVERLAY_STR, SRIOV
+from utilities.constants import FLAT_OVERLAY_STR, QUARANTINED, SRIOV
 from utilities.network import (
     IfaceNotFound,
     assert_ping_successful,
@@ -459,6 +459,10 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     @pytest.mark.dependency(
         name="test_multiple_interfaces_hot_plugged",
         depends=["test_vmi_spec_updated_with_hot_plugged_interface"],
+    )
+    @pytest.mark.xfail(
+        reason=(f"{QUARANTINED}: Failing due to hot plugging too many interfaces to the VM. Tracked in CNV-76670"),
+        run=False,
     )
     def test_multiple_interfaces_hot_plugged(
         self,

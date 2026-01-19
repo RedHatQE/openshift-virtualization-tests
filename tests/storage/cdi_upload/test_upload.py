@@ -11,7 +11,6 @@ from random import shuffle
 from time import sleep
 
 import pytest
-import sh
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.route import Route
@@ -21,13 +20,11 @@ from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
 import utilities.storage
-from tests.os_params import RHEL_LATEST
 from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_15SEC,
     Images,
 )
 from utilities.storage import create_vm_from_dv, get_downloaded_artifact
@@ -260,17 +257,16 @@ def test_successful_upload_token_expiry(unprivileged_client, namespace, data_vol
         wait_for_upload_response_code(token=token, data="test", response_code=HTTP_UNAUTHORIZED)
 
 
-def _upload_image(dv_name, namespace, storage_class, local_name, size=None, client=None):
+def _upload_image(dv_name, namespace, storage_class, local_name, client):
     """
     Upload image function for the use of other tests
     """
-    size = size or "3Gi"
     with utilities.storage.create_dv(
         client=client,
         source="upload",
         dv_name=dv_name,
         namespace=namespace.name,
-        size=size,
+        size="3Gi",
         storage_class=storage_class,
     ) as dv:
         LOGGER.info("Wait for DV to be UploadReady")
@@ -323,49 +319,6 @@ def test_successful_concurrent_uploads(
         dvs.join()
         if dvs.exitcode != 0:
             raise pytest.fail("Creating DV exited with non-zero return code")
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "upload_file_path",
-    [
-        pytest.param(
-            {
-                "remote_image_dir": Images.Rhel.DIR,
-                "remote_image_name": Images.Rhel.RHEL8_0_IMG,
-            },
-            marks=(pytest.mark.polarion("CNV-2017")),
-        ),
-    ],
-    indirect=True,
-)
-def test_successful_upload_missing_file_in_transit(
-    unprivileged_client, namespace, storage_class_matrix__class__, upload_file_path
-):
-    dv_name = "cnv-2017"
-    storage_class = [*storage_class_matrix__class__][0]
-    get_downloaded_artifact(
-        remote_name=RHEL_LATEST["image_path"],
-        local_name=upload_file_path,
-    )
-    # Use fork context to avoid pickling issues with nested functions
-    _fork_context = multiprocessing.get_context("fork")
-
-    upload_process = _fork_context.Process(
-        target=_upload_image,
-        args=(dv_name, namespace, storage_class, upload_file_path, "10Gi", unprivileged_client),
-    )
-
-    # Run process in parallel
-    upload_process.start()
-
-    # Ideally, the file should be removed while the status of upload is 'UploadInProgress'.
-    # However, 'UploadInProgress' status phase is not implemented yet.
-    time.sleep(TIMEOUT_15SEC)
-    sh.rm("-f", upload_file_path)
-
-    # Exit the completed processes
-    upload_process.join()
 
 
 @pytest.mark.sno

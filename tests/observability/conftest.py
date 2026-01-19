@@ -3,7 +3,6 @@ import logging
 import pytest
 from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.utils import validate_initial_virt_operator_replicas_reverted
@@ -14,12 +13,10 @@ from utilities.constants import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
 from utilities.infra import (
-    create_ns,
     get_deployment_by_name,
-    get_node_selector_dict,
     scale_deployment_replicas,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, get_all_virt_pods_with_running_status, running_vm
+from utilities.virt import get_all_virt_pods_with_running_status
 
 LOGGER = logging.getLogger(__name__)
 ANNOTATIONS_FOR_VIRT_OPERATOR_ENDPOINT = {
@@ -118,41 +115,3 @@ def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_re
     validate_initial_virt_operator_replicas_reverted(
         prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
     )
-
-
-@pytest.fixture(scope="session")
-def vm_with_node_selector_namespace(admin_client, unprivileged_client):
-    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="test-outdated-vm-ns")
-
-
-@pytest.fixture(scope="session")
-def vm_with_node_selector_for_upgrade(vm_with_node_selector_namespace, unprivileged_client, worker_node1):
-    name = "vm-with-node-selector"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=vm_with_node_selector_namespace.name,
-        body=fedora_vm_body(name=name),
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="session")
-def outdated_vmis_count(admin_client):
-    vmis_with_outdated_label = len(
-        list(
-            VirtualMachineInstance.get(
-                client=admin_client,
-                label_selector="kubevirt.io/outdatedLauncherImage",
-            )
-        )
-    )
-    assert vmis_with_outdated_label > 0, "There is no outdated vms"
-    return vmis_with_outdated_label
-
-
-@pytest.fixture(scope="session")
-def kubevirt_resource_outdated_vmi_workloads_count(kubevirt_resource_scope_session):
-    return kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads

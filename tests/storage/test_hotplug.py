@@ -112,14 +112,12 @@ def data_volume_multi_storage_scope_class(
     unprivileged_client,
     namespace,
     storage_class_matrix__class__,
-    schedulable_nodes,
 ):
     yield from data_volume(
-        client=unprivileged_client,
         request=request,
         namespace=namespace,
         storage_class_matrix=storage_class_matrix__class__,
-        schedulable_nodes=schedulable_nodes,
+        client=namespace.client,
     )
 
 
@@ -150,7 +148,7 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
     memory_requests = None
     cpu_requests = None
 
-    if is_jira_open(jira_id="CNV-71599"):
+    if is_jira_open(jira_id="CNV-76658"):
         memory_requests = f"{float(Images.Fedora.DEFAULT_MEMORY_SIZE[:-2]) * 2}Gi"
         cpu_requests = 1
 

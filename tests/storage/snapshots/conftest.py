@@ -26,11 +26,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def permissions_for_dv(namespace):
+def permissions_for_dv(namespace, admin_client):
     """
     Sets DV permissions for an unprivileged client
     """
     with set_permissions(
+        client=admin_client,
         role_name="datavolume-cluster-role",
         role_api_groups=[DataVolume.api_group],
         verbs=["*"],

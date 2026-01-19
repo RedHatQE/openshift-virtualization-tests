@@ -14,6 +14,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from tests.storage.constants import CIRROS_QCOW2_IMG
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret, get_test_artifact_server_url
 from utilities.constants import (
+    QUARANTINED,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_10SEC,
@@ -55,6 +56,7 @@ def data_volume_multi_wffc_storage_scope_module(
         request=request,
         namespace=namespace,
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
+        client=namespace.client,
     )
 
 
@@ -68,6 +70,7 @@ def data_volume_multi_wffc_storage_scope_function(
         request=request,
         namespace=namespace,
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
+        client=namespace.client,
     )
 
 
@@ -112,6 +115,7 @@ def uploaded_dv_via_virtctl_wffc(
     storage_class_matrix_wffc_matrix__module__,
 ):
     with virtctl_upload_dv(
+        client=namespace.client,
         namespace=namespace.name,
         name=WFFC_DV_NAME,
         size=Images.Cirros.DEFAULT_DV_SIZE,
@@ -177,6 +181,10 @@ class TestWFFCUploadVirtctl:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-7413")
     @pytest.mark.s390x
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: pvc pending to be bound Tracked in CNV-76519",
+        run=False,
+    )
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
         downloaded_cirros_image_full_path,
@@ -184,6 +192,7 @@ class TestWFFCUploadVirtctl:
         storage_class_matrix_wffc_matrix__module__,
     ):
         with virtctl_upload_dv(
+            client=vm_from_uploaded_dv.client,
             namespace=vm_from_uploaded_dv.namespace,
             name=WFFC_DV_NAME,
             size=Images.Cirros.DEFAULT_DV_SIZE,
@@ -215,6 +224,7 @@ def test_wffc_import_registry_dv(
         url=f"docker://quay.io/kubevirt/{Images.Cirros.DISK_DEMO}",
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
         consume_wffc=True,
+        client=unprivileged_client,
     ) as dv:
         dv.wait_for_dv_success()
         create_vm_from_dv(client=unprivileged_client, dv=dv, vm_name=dv_name)

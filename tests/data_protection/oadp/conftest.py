@@ -43,6 +43,7 @@ def imported_dv_in_progress_second_namespace(
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=storage_class_for_snapshot,
+        client=namespace_for_backup2.client,
     ) as dv:
         yield dv
 
@@ -59,8 +60,9 @@ def namespace_for_backup(admin_client):
 
 
 @pytest.fixture()
-def velero_backup_single_namespace(request, imported_dv_in_progress_second_namespace):
+def velero_backup_single_namespace(request, admin_client, imported_dv_in_progress_second_namespace):
     with VeleroBackup(
+        client=admin_client,
         included_namespaces=[
             imported_dv_in_progress_second_namespace.namespace,
         ],
@@ -76,8 +78,9 @@ def namespace_for_backup2(admin_client):
 
 
 @pytest.fixture()
-def velero_backup_multiple_namespaces(imported_dv_second_namespace, rhel_vm_with_data_volume_template):
+def velero_backup_multiple_namespaces(admin_client, imported_dv_second_namespace, rhel_vm_with_data_volume_template):
     with VeleroBackup(
+        client=admin_client,
         included_namespaces=[
             imported_dv_second_namespace.namespace,
             rhel_vm_with_data_volume_template.namespace,
@@ -88,11 +91,12 @@ def velero_backup_multiple_namespaces(imported_dv_second_namespace, rhel_vm_with
 
 
 @pytest.fixture()
-def velero_restore_multiple_namespaces(velero_backup_multiple_namespaces):
+def velero_restore_multiple_namespaces(admin_client, velero_backup_multiple_namespaces):
     # Delete NS in order to restore it
     for ns in velero_backup_multiple_namespaces.included_namespaces:
         Namespace(name=ns).delete(wait=True)
     with VeleroRestore(
+        client=admin_client,
         included_namespaces=velero_backup_multiple_namespaces.included_namespaces,
         name="restore-multiple-ns",
         backup_name=velero_backup_multiple_namespaces.name,
@@ -135,8 +139,9 @@ def rhel_vm_with_data_volume_template(
 
 
 @pytest.fixture()
-def velero_backup_first_namespace_using_datamover(namespace_for_backup):
+def velero_backup_first_namespace_using_datamover(admin_client, namespace_for_backup):
     with VeleroBackup(
+        client=admin_client,
         included_namespaces=[
             namespace_for_backup.name,
         ],
@@ -149,11 +154,13 @@ def velero_backup_first_namespace_using_datamover(namespace_for_backup):
 
 @pytest.fixture()
 def velero_restore_first_namespace_with_datamover(
+    admin_client,
     velero_backup_first_namespace_using_datamover,
 ):
     # Delete NS in order to restore it
     Namespace(name=velero_backup_first_namespace_using_datamover.included_namespaces[0]).delete(wait=True)
     with VeleroRestore(
+        client=admin_client,
         included_namespaces=velero_backup_first_namespace_using_datamover.included_namespaces,
         name="datamover-restore-ns",
         backup_name=velero_backup_first_namespace_using_datamover.name,
@@ -170,6 +177,7 @@ def rhel_vm_from_existing_dv(imported_dv_second_namespace):
         start=True,
         os_flavor=OS_FLAVOR_RHEL,
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        client=imported_dv_second_namespace.client,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=True)
         write_file(
@@ -203,6 +211,7 @@ def cloned_rhel_dv(imported_dv_second_namespace):
         size=imported_dv_second_namespace.size,
         source_pvc=imported_dv_second_namespace.name,
         storage_class=imported_dv_second_namespace.storage_class,
+        client=imported_dv_second_namespace.client,
     ) as cdv:
         cdv.wait_for_dv_success()
         yield cdv
@@ -217,6 +226,7 @@ def uploaded_rhel_dv(
 ):
     dv_name = "uploaded-dv"
     with virtctl_upload_dv(
+        client=namespace_for_backup2.client,
         namespace=namespace_for_backup2.name,
         name=dv_name,
         size=Images.Rhel.DEFAULT_DV_SIZE,
@@ -229,8 +239,9 @@ def uploaded_rhel_dv(
 
 
 @pytest.fixture()
-def velero_backup_second_namespace_using_datamover(namespace_for_backup2):
+def velero_backup_second_namespace_using_datamover(admin_client, namespace_for_backup2):
     with VeleroBackup(
+        client=admin_client,
         included_namespaces=[
             namespace_for_backup2.name,
         ],
@@ -243,11 +254,13 @@ def velero_backup_second_namespace_using_datamover(namespace_for_backup2):
 
 @pytest.fixture()
 def velero_restore_second_namespace_with_datamover(
+    admin_client,
     velero_backup_second_namespace_using_datamover,
 ):
     # Delete NS in order to restore it
     Namespace(name=velero_backup_second_namespace_using_datamover.included_namespaces[0]).delete(wait=True)
     with VeleroRestore(
+        client=admin_client,
         included_namespaces=velero_backup_second_namespace_using_datamover.included_namespaces,
         name="datamover-restore-ns2",
         backup_name=velero_backup_second_namespace_using_datamover.name,

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from typing import Generator
 
 import requests
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
@@ -170,12 +171,13 @@ def get_file_url_https_server(images_https_server, file_name):
 
 @contextmanager
 def create_cluster_role(
-    name: str, api_groups: list[str], verbs: list[str], permissions_to_resources: list[str]
+    client: DynamicClient, name: str, api_groups: list[str], verbs: list[str], permissions_to_resources: list[str]
 ) -> Generator:
     """
     Create cluster role
     """
     with ClusterRole(
+        client=client,
         name=name,
         rules=[
             {
@@ -190,6 +192,7 @@ def create_cluster_role(
 
 @contextmanager
 def create_role_binding(
+    client: DynamicClient,
     name: str,
     namespace: str,
     subjects_kind: str,
@@ -203,6 +206,7 @@ def create_role_binding(
     Create role binding
     """
     with RoleBinding(
+        client=client,
         name=name,
         namespace=namespace,
         subjects_kind=subjects_kind,
@@ -217,6 +221,7 @@ def create_role_binding(
 
 @contextmanager
 def set_permissions(
+    client: DynamicClient,
     role_name: str,
     role_api_groups: list[str],
     verbs: list[str],
@@ -229,12 +234,14 @@ def set_permissions(
     subjects_namespace: str | None = None,
 ) -> Generator:
     with create_cluster_role(
+        client=client,
         name=role_name,
         api_groups=role_api_groups,
         permissions_to_resources=permissions_to_resources,
         verbs=verbs,
     ) as cluster_role:
         with create_role_binding(
+            client=client,
             name=binding_name,
             namespace=namespace,
             subjects_kind=subjects_kind,
@@ -323,10 +330,11 @@ def is_hpp_cr_legacy(hostpath_provisioner):
     return not hostpath_provisioner.instance.spec.storagePools
 
 
-def get_hpp_daemonset(hco_namespace, hpp_cr_suffix):
+def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, admin_client):
     daemonset = DaemonSet(
         name=f"{HostPathProvisioner.Name.HOSTPATH_PROVISIONER}{hpp_cr_suffix}",
         namespace=hco_namespace.name,
+        client=admin_client,
     )
     assert daemonset.exists, "hpp_daemonset does not exist"
     return daemonset
@@ -389,9 +397,9 @@ def create_cirros_dv(
     namespace,
     name,
     storage_class,
+    client,
     access_modes=None,
     volume_mode=None,
-    client=None,
     dv_size=Images.Cirros.DEFAULT_DV_SIZE,
 ):
     with create_dv(

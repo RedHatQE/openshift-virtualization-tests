@@ -30,9 +30,9 @@ strict_concatenate = true
 
 
 [project]
-name = "openshift-virtualization-tests-4.21"
+name = "openshift-virtualization-tests-4.22"
 requires-python = ">=3.14"
-version = "4.21"
+version = "4.22"
 description = "Tests for Openshift Virtualization"
 authors = [{ "name" = "openshift-virtualization-tests" }]
 dependencies = [
@@ -93,8 +93,13 @@ utilities-test = [
   "pytest-watch>=4.2.0",
 ]
 
+[project.scripts]
+quarantine-dashboard = "scripts.quarantine_stats.generate_dashboard:main"
+pytest-marker-analyzer = "scripts.tests_analyzer.pytest_marker_analyzer:main"
+compare-coderabbit-decisions = "scripts.tests_analyzer.compare_coderabbit_decisions:main"
+
 [tool.hatch.build.targets.wheel]
-packages = ["*"]
+packages = ["libs", "scripts", "tests", "utilities"]
 
 [dependency-groups]
 dev = [
