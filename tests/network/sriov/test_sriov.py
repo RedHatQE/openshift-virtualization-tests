@@ -7,7 +7,7 @@ import logging
 import pytest
 
 from tests.network.utils import assert_no_ping
-from utilities.constants import MTU_9000
+from utilities.constants import MTU_9000, QUARANTINED
 from utilities.network import assert_ping_successful, get_vmi_ip_v4_by_name
 from utilities.virt import migrate_vm_and_verify
 
@@ -48,6 +48,10 @@ class TestPingConnectivity:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-3958")
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: fails in CI due to issue in specific cluster; tracked in CNV-75730",
+        run=False,
+    )
     def test_sriov_basic_connectivity_vlan(
         self,
         sriov_network_vlan,
@@ -61,6 +65,10 @@ class TestPingConnectivity:
 
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-4713")
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: fails in CI due to issue in specific cluster; tracked in CNV-75730",
+        run=False,
+    )
     def test_sriov_no_connectivity_no_vlan_to_vlan(
         self,
         sriov_network_vlan,
