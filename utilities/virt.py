@@ -9,6 +9,7 @@ import re
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import cache
 from json import JSONDecodeError
 from subprocess import run
 from typing import Any
@@ -2214,28 +2215,37 @@ def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
-def get_oc_image_info(
+@cache
+def get_oc_image_info(  # type: ignore[return]
     image: str, pull_secret: str | None = None, architecture: str = LINUX_AMD_64
-) -> dict[str, Any] | Any:
+) -> dict[str, Any]:
+
+    def _get_image_json(cmd: str) -> dict[str, Any] | None:
+        _, out, err = run_command(command=shlex.split(cmd), check=False)
+        if err:
+            LOGGER.error("Failed to get image info from quay", extra={"image": image, "error": err})
+            return None
+
+        return json.loads(out)
+
     base_command = f"oc image -o json info {image} --filter-by-os {architecture}"
     if pull_secret:
         base_command = f"{base_command} --registry-config={pull_secret}"
-    sample = None
+
     try:
         for sample in TimeoutSampler(
-            wait_timeout=10,
-            sleep=1,
+            wait_timeout=TIMEOUT_10SEC,
+            sleep=TIMEOUT_1SEC,
             exceptions_dict={JSONDecodeError: [], TypeError: []},
-            func=run_command,
-            command=shlex.split(base_command),
-            check=False,
+            func=_get_image_json,
+            cmd=base_command,
         ):
-            command_out = sample[1]
-            return json.loads(command_out)
+            if sample:
+                return sample
+
     except TimeoutExpiredError:
-        LOGGER.error(f"Failed to parse {base_command} output: {sample}")
+        LOGGER.error(f"Failed to parse {base_command}")
         raise
-    return None
 
 
 def taint_node_no_schedule(node):
