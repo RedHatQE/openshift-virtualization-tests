@@ -54,7 +54,6 @@ from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -72,7 +71,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from tests.utils import download_and_extract_tar, update_cluster_cpu_model
+from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client
@@ -194,7 +193,6 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    get_all_virt_pods_with_running_status,
     get_base_templates_list,
     get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
@@ -203,7 +201,6 @@ from utilities.virt import (
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_kv_stabilize,
     wait_for_windows_vm,
 )
 
@@ -1760,21 +1757,6 @@ def upgrade_namespace_scope_session(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="session")
-def migratable_vms(admin_client, upgrade_namespace_scope_session, kmp_enabled_namespace):
-    migratable_vms = []
-    for ns in [kmp_enabled_namespace, upgrade_namespace_scope_session]:
-        for vm in VirtualMachine.get(client=admin_client, namespace=ns.name):
-            if vm.ready and any(
-                condition.type == "LiveMigratable" and condition.status == "True"
-                for condition in vm.vmi.instance.status.conditions
-            ):
-                migratable_vms.append(vm)
-
-    LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
-    return migratable_vms
-
-
-@pytest.fixture(scope="session")
 def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
@@ -1907,11 +1889,6 @@ def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
 
 
-@pytest.fixture()
-def virt_pods_with_running_status(admin_client, hco_namespace):
-    return get_all_virt_pods_with_running_status(client=admin_client, hco_namespace=hco_namespace)
-
-
 @pytest.fixture(scope="session")
 def bin_directory(tmpdir_factory):
     return tmpdir_factory.mktemp("bin")
@@ -1923,23 +1900,27 @@ def os_path_environment():
 
 
 @pytest.fixture(scope="session")
-def virtctl_binary(installing_cnv, os_path_environment, bin_directory):
+def virtctl_binary(installing_cnv, bin_directory, admin_client):
     if installing_cnv:
         return
     installed_virtctl = os.environ.get("CNV_TESTS_VIRTCTL_BIN")
     if installed_virtctl:
         LOGGER.warning(f"Using previously installed: {installed_virtctl}")
         return
-    return download_file_from_cluster(get_console_spec_links_name=VIRTCTL_CLI_DOWNLOADS, dest_dir=bin_directory)
+    return download_file_from_cluster(
+        get_console_spec_links_name=VIRTCTL_CLI_DOWNLOADS, dest_dir=bin_directory, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="session")
-def oc_binary(os_path_environment, bin_directory):
+def oc_binary(bin_directory, admin_client):
     installed_oc = os.environ.get("CNV_TESTS_OC_BIN")
     if installed_oc:
         LOGGER.warning(f"Using previously installed: {installed_oc}")
         return
-    return download_file_from_cluster(get_console_spec_links_name="oc-cli-downloads", dest_dir=bin_directory)
+    return download_file_from_cluster(
+        get_console_spec_links_name="oc-cli-downloads", dest_dir=bin_directory, admin_client=admin_client
+    )
 
 
 @pytest.fixture(scope="session")
@@ -2526,74 +2507,6 @@ def is_aws_cluster(admin_client):
 def skip_on_aws_cluster(is_aws_cluster):
     if is_aws_cluster:
         pytest.skip("This test is skipped on an AWS cluster")
-
-
-@pytest.fixture()
-def cluster_cpu_model_scope_function(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_function,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_function,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="module")
-def cluster_cpu_model_scope_module(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_module,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_module,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="class")
-def cluster_cpu_model_scope_class(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_class,
-    cluster_common_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_class,
-        cpu_model=cluster_common_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="class")
-def cluster_modern_cpu_model_scope_class(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_class,
-    cluster_common_modern_node_cpu,
-):
-    with update_cluster_cpu_model(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_resource=hyperconverged_resource_scope_class,
-        cpu_model=cluster_common_modern_node_cpu,
-    ):
-        yield
-    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="module")

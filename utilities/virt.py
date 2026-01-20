@@ -10,6 +10,7 @@ import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import cache
 from json import JSONDecodeError
 from subprocess import run
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -1015,8 +1016,9 @@ class VirtualMachineForTests(VirtualMachine):
                 sc_name = self.vm_preference.instance.spec.get("volumes", {}).get("preferredStorageClassName")
                 if sc_name:
                     return sc_name
-            else:
-                return get_default_storage_class(client=self.client).name
+            default_sc = get_default_storage_class(client=self.client).name
+            LOGGER.info(f"Using default storage class: {default_sc} for access mode field")
+            return default_sc
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (
@@ -2258,31 +2260,23 @@ def wait_for_kubevirt_conditions(
     )
 
 
-def get_all_virt_pods_with_running_status(client, hco_namespace):
-    virt_pods_with_status = {
-        pod.name: pod.status
-        for pod in Pod.get(
-            client=client,
-            namespace=hco_namespace.name,
-        )
-        if pod.name.startswith("virt")
-    }
-    assert all(pod_status == Pod.Status.RUNNING for pod_status in virt_pods_with_status.values()), (
-        f"All virt pods were expected to be in running state.Here are all virt pods:{virt_pods_with_status}"
-    )
-    return virt_pods_with_status
-
-
 def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_kubevirt_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@cache
 def get_oc_image_info(  # type: ignore[return]
     image: str, pull_secret: str | None = None, architecture: str = LINUX_AMD_64
 ) -> dict[str, Any]:
-    def _get_image_json(cmd: str) -> dict[str, Any]:
-        return json.loads(run_command(command=shlex.split(cmd), check=False)[1])
+
+    def _get_image_json(cmd: str) -> dict[str, Any] | None:
+        _, out, err = run_command(command=shlex.split(cmd), check=False)
+        if err:
+            LOGGER.error("Failed to get image info from quay", extra={"image": image, "error": err})
+            return None
+
+        return json.loads(out)
 
     base_command = f"oc image -o json info {image} --filter-by-os {architecture}"
     if pull_secret:
@@ -2298,6 +2292,7 @@ def get_oc_image_info(  # type: ignore[return]
         ):
             if sample:
                 return sample
+
     except TimeoutExpiredError:
         LOGGER.error(f"Failed to parse {base_command}")
         raise

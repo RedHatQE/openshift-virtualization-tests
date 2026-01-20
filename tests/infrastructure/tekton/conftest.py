@@ -234,8 +234,10 @@ def resource_editor_efi_pipelines(
 
 
 @pytest.fixture(scope="module")
-def custom_pipeline_namespace(admin_client):
-    yield from create_ns(name="test-custom-pipeline-ns", admin_client=admin_client)
+def custom_pipeline_namespace(unprivileged_client, admin_client):
+    yield from create_ns(
+        name="test-custom-pipeline-ns", admin_client=admin_client, unprivileged_client=unprivileged_client
+    )
 
 
 @pytest.fixture(scope="module")
@@ -327,15 +329,13 @@ def quay_disk_uploader_secret(admin_client, custom_pipeline_namespace):
 
 
 @pytest.fixture(scope="module")
-def vm_for_disk_uploader(unprivileged_client, custom_pipeline_namespace, golden_images_namespace):
+def vm_for_disk_uploader(admin_client, custom_pipeline_namespace, golden_images_namespace):
     with VirtualMachineForTests(
         name="fedora-vm-diskuploader",
         namespace=custom_pipeline_namespace.name,
-        client=unprivileged_client,
+        client=admin_client,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=DataSource(
-                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
-            ),
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=admin_client),
             storage_class=py_config["default_storage_class"],
         ),
         vm_instance_type_infer=True,
@@ -368,10 +368,15 @@ def pipelinerun_for_disk_uploader(
     vm_for_disk_uploader,
     request,
 ):
+    volumes = vm_for_disk_uploader.instance.spec.template.spec.volumes
+    dv_volume = next((dv for dv in volumes if "dataVolume" in dict(dv)), None)
+    if not dv_volume:
+        raise ValueError(f"No dataVolume found in VM {vm_for_disk_uploader.name} volumes")
+    dv_name = dv_volume.dataVolume.name
     pipeline_run_params = {
         EXPORT_SOURCE_KIND: request.param,
-        EXPORT_SOURCE_NAME: (vm_for_disk_uploader.name if request.param == "vm" else OS_FLAVOR_FEDORA),
-        VOLUME_NAME: OS_FLAVOR_FEDORA,
+        EXPORT_SOURCE_NAME: (vm_for_disk_uploader.name if request.param == "vm" else dv_name),
+        VOLUME_NAME: dv_name,
         IMAGE_DESTINATION: "quay.io/openshift-cnv/tekton-tasks",
         SECRET_NAME: quay_disk_uploader_secret.name,
     }

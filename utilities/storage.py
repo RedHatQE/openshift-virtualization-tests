@@ -98,7 +98,6 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         name=f"first-consumer-{pvc.name}",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
-        client=pvc.client,
     ) as pod:
         LOGGER.info(
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "

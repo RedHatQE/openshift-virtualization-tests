@@ -18,7 +18,6 @@ from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
     BINDING_NAME,
     BINDING_TYPE,
@@ -27,7 +26,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -36,7 +34,6 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     CAPACITY,
-    KUBEVIRT_VIRT_OPERATOR_UP,
     NODE_STR,
     OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
@@ -329,7 +326,7 @@ def validate_metric_value_within_range(
 
 def network_packets_received(
     vm: VirtualMachineForTests, interface_name: str, windows_wsl: bool = False
-) -> dict[str, str] | None:
+) -> dict[str, str]:
     ip_link_show_content = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split(f"{'wsl' if windows_wsl else ''} ip -s link show")
     )[0]
@@ -346,9 +343,7 @@ def network_packets_received(
         result = match.groupdict()
         LOGGER.info(f"Successfully parsed network stats: {result}")
         return result
-    else:
-        LOGGER.warning(f"No match found for interface '{interface_name}' in ip link show output")
-        return None
+    raise ValueError(f"No match found for interface '{interface_name}' in ip link show output")
 
 
 def compare_network_traffic_bytes_and_metrics(
@@ -500,17 +495,6 @@ def compare_kubevirt_vmi_info_metric_with_vm_info(
             f"The following values has a mismatch between metric and vm values: {values_mismatch}\n"
         )
         raise
-
-
-def validate_initial_virt_operator_replicas_reverted(
-    prometheus: Prometheus, initial_virt_operator_replicas: str
-) -> None:
-    for metric in [KUBEVIRT_VIRT_OPERATOR_READY, KUBEVIRT_VIRT_OPERATOR_UP]:
-        validate_metrics_value(
-            prometheus=prometheus,
-            expected_value=initial_virt_operator_replicas,
-            metric_name=metric,
-        )
 
 
 def timestamp_to_seconds(timestamp: str) -> int:

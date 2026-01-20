@@ -14,8 +14,9 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
+from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, TIMEOUT_1MIN, Images
+from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -131,6 +132,10 @@ def test_image_upload_with_overridden_url(
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-3031")
 @pytest.mark.s390x
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
+    run=False,
+)
 def test_virtctl_image_upload_with_ca(
     unprivileged_client,
     enabled_ca,
@@ -281,13 +286,18 @@ def empty_pvc(
     storage_class_matrix__module__,
     storage_class_name_scope_module,
 ):
+    storage_profile_minimum_supported_pvc_size = get_storage_profile_minimum_supported_pvc_size(
+        storage_class_name=storage_class_name_scope_module,
+        client=namespace.client,
+    )
+    sc_config = storage_class_matrix__module__[storage_class_name_scope_module]
     with PersistentVolumeClaim(
         name="empty-pvc",
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
-        volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
-        accessmodes=storage_class_matrix__module__[storage_class_name_scope_module]["access_mode"],
-        size=DEFAULT_DV_SIZE,
+        volume_mode=sc_config["volume_mode"],
+        accessmodes=sc_config["access_mode"],
+        size=storage_profile_minimum_supported_pvc_size or DEFAULT_DV_SIZE,
         client=namespace.client,
     ) as pvc:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
@@ -456,7 +466,7 @@ def test_successful_vm_from_uploaded_dv_windows(
     indirect=True,
 )
 @pytest.mark.s390x
-@pytest.mark.jira("CNV-74020", run=False)
+@pytest.mark.jira("CNV-76657", run=False)
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):

@@ -761,9 +761,11 @@ def get_and_extract_file_from_cluster(urls, system_os, dest_dir, machine_type=No
     raise UrlNotFoundError(f"Url not found for system_os={system_os}")
 
 
-def download_file_from_cluster(get_console_spec_links_name, dest_dir):
+def download_file_from_cluster(
+    get_console_spec_links_name: str, dest_dir: os.PathLike[str], admin_client: DynamicClient
+) -> str:
     console_cli_links = get_console_spec_links(
-        admin_client=get_client(),
+        admin_client=admin_client,
         name=get_console_spec_links_name,
     )
     download_urls = get_all_console_links(console_cli_downloads_spec_links=console_cli_links)
@@ -828,7 +830,10 @@ def get_openshift_pull_secret(client: DynamicClient = None) -> Secret:
     return secret
 
 
+@cache
 def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
+    # TODO: refactor this code; only needed by `utilities.virt.get_oc_image_info`
+    #  Should be called by `utilities.virt.get_oc_image_info` and not require the user to pass it
     pull_secret = get_openshift_pull_secret(client=client)
     pull_secret_path = tempfile.mkdtemp(suffix="-cnv-tests-pull-secret")
     json_file = os.path.join(pull_secret_path, "pull-secrets.json")

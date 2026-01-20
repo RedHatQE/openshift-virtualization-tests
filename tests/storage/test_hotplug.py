@@ -148,7 +148,7 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
     memory_requests = None
     cpu_requests = None
 
-    if is_jira_open(jira_id="CNV-71599"):
+    if is_jira_open(jira_id="CNV-76658"):
         memory_requests = f"{float(Images.Fedora.DEFAULT_MEMORY_SIZE[:-2]) * 2}Gi"
         cpu_requests = 1
 

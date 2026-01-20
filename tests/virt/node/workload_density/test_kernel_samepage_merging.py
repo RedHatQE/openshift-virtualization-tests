@@ -144,12 +144,13 @@ def ksm_deactivated_on_node(worker_node1, workers_utility_pods):
 
 
 @pytest.fixture(scope="class")
-def vms_for_ksm_test(namespace):
+def vms_for_ksm_test(namespace, cpu_for_migration):
     # We need several VMs for sharing memory
     vms_list = create_vms(
         name_prefix="ksm-test-vm",
         namespace_name=namespace.name,
         node_selector_labels=KERNEL_SAMEPAGE_MERGING_TEST_LABEL,
+        cpu_model=cpu_for_migration,
     )
     for vm in vms_list:
         running_vm(vm=vm)
@@ -170,7 +171,6 @@ def pages_to_scan_initial_value(worker_node1, workers_utility_pods):
 @pytest.mark.usefixtures(
     "ksm_enabled_in_hco",
     "ksm_label_added_to_worker1",
-    "cluster_cpu_model_scope_class",
     "vms_for_ksm_test",
     "ksm_override_annotation_added_to_worker1",
 )
