@@ -66,10 +66,12 @@ class TestUpgradeStorage:
     def test_vm_snapshot_restore_before_upgrade(
         self,
         skip_if_no_storage_class_for_snapshot,
+        admin_client,
         rhel_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
     ):
         with VirtualMachineRestore(
+            client=admin_client,
             name=f"restore-snapshot-{rhel_vm_for_upgrade_a.name}",
             namespace=snapshots_for_upgrade_a.namespace,
             vm_name=rhel_vm_for_upgrade_a.name,
@@ -188,8 +190,11 @@ class TestUpgradeStorage:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_vm_snapshot_restore_create_after_upgrade(self, rhel_vm_for_upgrade_b, snapshots_for_upgrade_b):
+    def test_vm_snapshot_restore_create_after_upgrade(
+        self, admin_client, rhel_vm_for_upgrade_b, snapshots_for_upgrade_b
+    ):
         with VirtualMachineRestore(
+            client=admin_client,
             name=f"restore-snapshot-{rhel_vm_for_upgrade_b.name}",
             namespace=snapshots_for_upgrade_b.namespace,
             vm_name=rhel_vm_for_upgrade_b.name,
