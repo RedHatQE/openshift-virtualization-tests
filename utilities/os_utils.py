@@ -41,12 +41,6 @@ def get_windows_container_disk_path(os_value: str) -> str:
 RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
     WORKLOAD_STR: Template.Workload.SERVER,
     FLAVOR_STR: Template.Flavor.TINY,
-    "rhel-7-9": {
-        IMAGE_NAME_STR: "RHEL7_9_IMG",
-        OS_VERSION_STR: "7.9",
-        OS_STR: "rhel7.9",
-        DATA_SOURCE_STR: "rhel7",
-    },
     "rhel-8-10": {
         IMAGE_NAME_STR: "RHEL8_10_IMG",
         OS_VERSION_STR: "8.10",

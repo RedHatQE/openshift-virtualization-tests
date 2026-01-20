@@ -75,7 +75,6 @@ class ArchImages:
         )
 
         Rhel = Rhel(
-            RHEL7_9_IMG="rhel-79.qcow2",
             RHEL8_0_IMG="rhel-8.qcow2",
             RHEL8_9_IMG="rhel-89.qcow2",
             RHEL8_10_IMG="rhel-810.qcow2",

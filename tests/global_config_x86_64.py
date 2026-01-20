@@ -19,7 +19,6 @@ global config
 rhel_os_matrix = generate_os_matrix_dict(
     os_name="rhel",
     supported_operating_systems=[
-        "rhel-7-9",
         "rhel-8-10",
         "rhel-9-6",
     ],
