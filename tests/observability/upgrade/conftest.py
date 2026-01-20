@@ -29,7 +29,7 @@ def outdated_vmis_count(admin_client):
             )
         )
     )
-    assert vmis_with_outdated_label > 0, "There is no outdated vms"
+    assert vmis_with_outdated_label > 0, "There are no outdated vms"
     return vmis_with_outdated_label
 
 

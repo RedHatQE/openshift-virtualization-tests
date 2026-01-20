@@ -1016,8 +1016,9 @@ class VirtualMachineForTests(VirtualMachine):
                 sc_name = self.vm_preference.instance.spec.get("volumes", {}).get("preferredStorageClassName")
                 if sc_name:
                     return sc_name
-            else:
-                return get_default_storage_class(client=self.client).name
+            default_sc = get_default_storage_class(client=self.client).name
+            LOGGER.info(f"Using default storage class: {default_sc} for access mode field")
+            return default_sc
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (
@@ -2257,21 +2258,6 @@ def wait_for_kubevirt_conditions(
         polling_interval=sleep,
         consecutive_checks_count=consecutive_checks_count,
     )
-
-
-def get_all_virt_pods_with_running_status(client, hco_namespace):
-    virt_pods_with_status = {
-        pod.name: pod.status
-        for pod in Pod.get(
-            client=client,
-            namespace=hco_namespace.name,
-        )
-        if pod.name.startswith("virt")
-    }
-    assert all(pod_status == Pod.Status.RUNNING for pod_status in virt_pods_with_status.values()), (
-        f"All virt pods were expected to be in running state.Here are all virt pods:{virt_pods_with_status}"
-    )
-    return virt_pods_with_status
 
 
 def wait_for_kv_stabilize(admin_client, hco_namespace):
