@@ -968,3 +968,5 @@ STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
     "--verify -t {timeout} -v --hdd 1 --io 1 --vm-keep &> /dev/null &"
 )
+DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
+REGISTRY_STR = "registry"
