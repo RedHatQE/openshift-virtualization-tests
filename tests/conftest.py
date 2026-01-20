@@ -452,7 +452,7 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
     if installing_cnv:
         yield
     else:
-        name = "cnv-tests-utilities"
+        name = NamespacesNames.CNV_TESTS_UTILITIES
         if Namespace(client=admin_client, name=name).exists:
             exit_pytest_execution(
                 log_message=f"{name} namespace already exists."

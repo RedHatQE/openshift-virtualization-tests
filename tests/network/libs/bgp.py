@@ -18,14 +18,13 @@ from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
 from libs.net.vmspec import IpNotFound
-from utilities.constants import NET_UTIL_CONTAINER_IMAGE
+from utilities.constants import NET_UTIL_CONTAINER_IMAGE, NamespacesNames
 from utilities.infra import get_resources_by_name_prefix
 
 _CLUSTER_FRR_ASN: Final[int] = 64512
 _EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
-_FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
 
@@ -68,12 +67,12 @@ def enable_route_advertisements_in_cluster(
     }
 
     with ResourceEditor(patches=patch):
-        deployment = Deployment(name=_FRR_DEPLOYMENT_NAME, namespace=_FRR_NS_NAME, client=client)
+        deployment = Deployment(name=_FRR_DEPLOYMENT_NAME, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, client=client)
         deployment.wait_for_replicas()
 
         yield
 
-    Namespace(name=_FRR_NS_NAME, client=client).clean_up()
+    Namespace(name=NamespacesNames.OPENSHIFT_FRR_K8S, client=client).clean_up()
 
 
 def create_cudn_route_advertisements(name: str, match_labels: dict, client: DynamicClient) -> RouteAdvertisements:
@@ -134,7 +133,7 @@ def create_frr_configuration(
         ]
     }
 
-    return FRRConfiguration(name=name, namespace=_FRR_NS_NAME, bgp=bgp_config, client=client)
+    return FRRConfiguration(name=name, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, bgp=bgp_config, client=client)
 
 
 def generate_frr_conf(
@@ -278,9 +277,11 @@ def wait_for_bgp_connection_established(node_names: list) -> None:
 )
 def _get_bgp_session_state(node_name: str) -> BGPSessionState:
     bgp_session_state = get_resources_by_name_prefix(
-        prefix=node_name, namespace=_FRR_NS_NAME, api_resource_name=BGPSessionState
+        prefix=node_name, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, api_resource_name=BGPSessionState
     )  # type: ignore[no-untyped-call]
     if bgp_session_state:
         return bgp_session_state[0]
 
-    raise ResourceNotFoundError(f"BGPSessionState for node '{node_name}' not found in namespace '{_FRR_NS_NAME}'")
+    raise ResourceNotFoundError(
+        f"BGPSessionState for node '{node_name}' not found in namespace '{NamespacesNames.OPENSHIFT_FRR_K8S}'"
+    )
