@@ -9,6 +9,9 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.ipv4,
+]
 
 MAC_ADDRESS = "macAddress"
 
