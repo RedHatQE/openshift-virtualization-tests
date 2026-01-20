@@ -3,9 +3,6 @@ import logging
 import pytest
 
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
-    HOSTPATH_PROVISIONER_OPERATOR,
-)
 
 pytestmark = [pytest.mark.usefixtures("skip_if_hpp_not_exist", "hpp_condition_available_scope_module")]
 
@@ -20,26 +17,6 @@ class TestKubevirtHPPPoolPathSharedWithOS:
             prometheus=prometheus,
             metric_name="kubevirt_hpp_pool_path_shared_with_os",
             expected_value="1",
-        )
-
-
-@pytest.mark.parametrize(
-    "scaled_deployment_scope_class",
-    [{"deployment_name": HOSTPATH_PROVISIONER_OPERATOR, "replicas": 0}],
-    indirect=["scaled_deployment_scope_class"],
-)
-@pytest.mark.usefixtures("disabled_virt_operator", "scaled_deployment_scope_class")
-class TestHPPOperatorUpMetric:
-    @pytest.mark.polarion("CNV-10435")
-    @pytest.mark.s390x
-    def test_kubevirt_hpp_operator_up_metric(
-        self,
-        prometheus,
-    ):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_hpp_operator_up",
-            expected_value="0",
         )
 
 

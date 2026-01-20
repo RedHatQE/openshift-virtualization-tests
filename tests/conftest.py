@@ -193,7 +193,6 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    get_all_virt_pods_with_running_status,
     get_base_templates_list,
     get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
@@ -1888,11 +1887,6 @@ def golden_images_data_import_crons_scope_class(admin_client, golden_images_name
 @pytest.fixture(scope="session")
 def compact_cluster(nodes, workers, control_plane_nodes):
     return len(nodes) == len(workers) == len(control_plane_nodes) == 3
-
-
-@pytest.fixture()
-def virt_pods_with_running_status(admin_client, hco_namespace):
-    return get_all_virt_pods_with_running_status(client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
