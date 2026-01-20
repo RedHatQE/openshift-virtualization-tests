@@ -30,7 +30,6 @@ class Alpine:
 
 @dataclass
 class Rhel:
-    RHEL7_9_IMG: str | None = None
     RHEL8_0_IMG: str | None = None
     RHEL8_9_IMG: str | None = None
     RHEL8_10_IMG: str | None = None

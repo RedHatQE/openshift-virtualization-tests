@@ -43,14 +43,14 @@ class TestGenerateOsMatrixDict:
         """Test RHEL OS matrix generation with multiple versions"""
         mock_images.Rhel = mock_os_images["rhel"]
 
-        result = generate_os_matrix_dict("rhel", ["rhel-7-9", "rhel-8-10", "rhel-9-6"])
+        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-8-10", "rhel-9-6"])
 
-        assert len(result) == 3
+        assert len(result) == 2
 
-        # Check RHEL 7.9
-        rhel_79 = next(item for item in result if "rhel-7-9" in item)["rhel-7-9"]
-        assert rhel_79["os_version"] == "7.9"
-        assert rhel_79["image_name"] == "rhel-7.9.qcow2"
+        # Check RHEL 8.10
+        rhel_810 = next(item for item in result if "rhel-8-10" in item)["rhel-8-10"]
+        assert rhel_810["os_version"] == "8.10"
+        assert rhel_810["image_name"] == "rhel-8.10.qcow2"
 
         # Check RHEL 9.6 (latest)
         rhel_96 = next(item for item in result if "rhel-9-6" in item)["rhel-9-6"]
@@ -282,13 +282,12 @@ class TestOsMappingsConstants:
         """Test RHEL OS mapping has correct structure"""
         assert "workload" in RHEL_OS_MAPPING
         assert "flavor" in RHEL_OS_MAPPING
-        assert "rhel-7-9" in RHEL_OS_MAPPING
         assert "rhel-8-10" in RHEL_OS_MAPPING
         assert "rhel-9-5" in RHEL_OS_MAPPING
         assert "rhel-9-6" in RHEL_OS_MAPPING
 
         # Check required keys in version entries
-        for version_key in ["rhel-7-9", "rhel-8-10", "rhel-9-5", "rhel-9-6"]:
+        for version_key in ["rhel-8-10", "rhel-9-5", "rhel-9-6"]:
             version_data = RHEL_OS_MAPPING[version_key]
             assert "image_name" in version_data
             assert "os_version" in version_data
