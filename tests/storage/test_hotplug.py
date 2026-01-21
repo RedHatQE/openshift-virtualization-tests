@@ -295,9 +295,7 @@ class TestHotPlugWindows:
             command=shlex.split("wmic diskdrive get SerialNumber"),
             vm=vm_instance_from_template_multi_storage_scope_class,
         )
-        assert_hotplugvolume_nonexist(
-            vm=vm_instance_from_template_multi_storage_scope_class
-        )
+        assert_hotplugvolume_nonexist(vm=vm_instance_from_template_multi_storage_scope_class)
 
     @pytest.mark.polarion("CNV-11391")
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
