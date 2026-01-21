@@ -84,13 +84,15 @@ def validate_cnv_pods_resource_request(cnv_pods, resource):
 
 
 def assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type):
-    cnv_pods_env_with_upstream_image_reference = {}
-    for pod in cnv_pods_by_type:
-        cnv_pods_env_with_upstream_image_reference[pod.name] = {}
-        for container in pod.instance.spec.containers:
-            pod_env_image_mismatch = get_resource_container_env_image_mismatch(container=container)
-            if pod_env_image_mismatch:
-                cnv_pods_env_with_upstream_image_reference[pod.name][container["name"]] = pod_env_image_mismatch
+    cnv_pods_env_with_upstream_image_reference = {
+        pod.name: {
+            container["name"]: get_resource_container_env_image_mismatch(container=container)
+            for container in pod.instance.spec.containers
+            if get_resource_container_env_image_mismatch(container=container)
+        }
+        for pod in cnv_pods_by_type
+    }
+
     validate_image_values(pod_image_dict=cnv_pods_env_with_upstream_image_reference)
 
 
