@@ -157,7 +157,6 @@ def mock_os_images():
     mock_rhel_class = MagicMock()
     mock_rhel_class.LATEST_RELEASE_STR = "rhel-9.6.qcow2"
     mock_rhel_class.DEFAULT_DV_SIZE = "20Gi"
-    mock_rhel_class.RHEL7_9_IMG = "rhel-7.9.qcow2"
     mock_rhel_class.RHEL8_10_IMG = "rhel-8.10.qcow2"
     mock_rhel_class.RHEL9_5_IMG = "rhel-9.5.qcow2"
     mock_rhel_class.RHEL9_6_IMG = "rhel-9.6.qcow2"

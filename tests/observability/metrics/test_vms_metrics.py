@@ -113,7 +113,6 @@ def vm_in_starting_state(namespace, unprivileged_client):
         client=unprivileged_client,
     ) as vm:
         vm.start()
-        vm.wait_for_specific_status(status=VirtualMachine.Status.DATAVOLUME_ERROR, timeout=TIMEOUT_3MIN)
         yield vm
 
 
