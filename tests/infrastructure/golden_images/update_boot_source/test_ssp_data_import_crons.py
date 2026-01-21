@@ -14,11 +14,11 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_IMPORT_CRON_NAME,
     CUSTOM_DATA_SOURCE_NAME,
-    DEFAULT_FEDORA_REGISTRY_URL,
 )
 from tests.infrastructure.golden_images.update_boot_source.utils import get_image_version
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
+    DEFAULT_FEDORA_REGISTRY_URL,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,

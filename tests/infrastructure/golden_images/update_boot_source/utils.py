@@ -6,10 +6,7 @@ from bs4 import BeautifulSoup
 from ocp_resources.template import Template
 from packaging.version import Version
 
-from tests.infrastructure.golden_images.constants import (
-    DEFAULT_FEDORA_REGISTRY_URL,
-)
-from utilities.constants import TIMEOUT_30SEC, WILDCARD_CRON_EXPRESSION
+from utilities.constants import DEFAULT_FEDORA_REGISTRY_URL, TIMEOUT_30SEC, WILDCARD_CRON_EXPRESSION
 from utilities.infra import generate_openshift_pull_secret_file
 from utilities.virt import get_oc_image_info
 
