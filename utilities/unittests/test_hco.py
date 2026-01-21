@@ -1104,5 +1104,38 @@ class TestEnabledAaqInHco:
         mock_sampler.return_value = mock_sampler_instance
 
         with pytest.raises(TimeoutExpiredError):
-            with enabled_aaq_in_hco(mock_client, mock_namespace, mock_hco):
+            with enabled_aaq_in_hco(
+                client=mock_client,
+                hco_namespace=mock_namespace,
+                hyperconverged_resource=mock_hco,
+            ):
                 pass
+
+    @patch("utilities.hco.LOGGER")
+    @patch("utilities.hco.TimeoutSampler")
+    @patch("utilities.hco.utilities.infra.get_pod_by_name_prefix")
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_enable_aaq_handles_resource_not_found(self, mock_editor_class, mock_get_pod, mock_sampler, mock_logger):
+        mock_client = MagicMock()
+        mock_namespace = MagicMock()
+        mock_namespace.name = "openshift-cnv"
+        mock_hco = MagicMock()
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        # Force the try-block to raise the exception Codecov says is uncovered
+        mock_sampler_instance = MagicMock()
+        mock_sampler_instance.__iter__ = MagicMock(side_effect=ResourceNotFoundError("not found"))
+        mock_sampler.return_value = mock_sampler_instance
+
+        with enabled_aaq_in_hco(
+            client=mock_client,
+            hco_namespace=mock_namespace,
+            hyperconverged_resource=mock_hco,
+        ):
+            pass
+
+        mock_logger.info.assert_called_with("AAQ system PODs removed.")
