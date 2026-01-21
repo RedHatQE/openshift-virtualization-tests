@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3
+  python: python3.14
 
 repos:
   - repo: https://github.com/PyCQA/autoflake
@@ -44,6 +44,7 @@ repos:
     rev: "7.3.0"
     hooks:
       - id: flake8
+        language_version: python3.14
         args: [--config=.flake8]
         additional_dependencies:
           [
