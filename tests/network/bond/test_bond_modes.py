@@ -196,7 +196,9 @@ def vm_with_fail_over_mac_bond(
 
 
 @pytest.fixture()
-def bond_resource(nmstate_dependent_placeholder, admin_client, index_number, hosts_common_available_ports, worker_node1):
+def bond_resource(
+    nmstate_dependent_placeholder, admin_client, index_number, hosts_common_available_ports, worker_node1
+):
     bond_idx = next(index_number)
     with BondNodeNetworkConfigurationPolicy(
         client=admin_client,
