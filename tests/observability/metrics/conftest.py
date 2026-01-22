@@ -403,14 +403,18 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
+def vm_for_vm_disk_allocation_size_test(
+    namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace
+):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="disk-allocation-size-vm",
         namespace=namespace.name,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
-                name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, client=unprivileged_client
+                name=OS_FLAVOR_FEDORA,
+                namespace=golden_images_namespace.name,
+                client=client_based_on_bug_73864,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -599,8 +603,13 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     return formatted_hard_limit, formatted_used_value
 
 
+@pytest.fixture(scope="session")
+def client_based_on_bug_73864(admin_client, unprivileged_client):
+    return admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client
+
+
 @pytest.fixture(scope="class")
-def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
+def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
@@ -611,6 +620,7 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
+                client=client_based_on_bug_73864,
             ),
             storage_class=py_config["default_storage_class"],
         ),
