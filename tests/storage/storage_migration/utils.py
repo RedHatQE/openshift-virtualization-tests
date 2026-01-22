@@ -1,8 +1,10 @@
 import shlex
 
 import pytest
+from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pyhelper_utils.shell import run_ssh_commands
+from timeout_sampler import TimeoutSampler
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
@@ -11,7 +13,7 @@ from tests.storage.storage_migration.constants import (
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
 from utilities import console
-from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
+from utilities.constants import LS_COMMAND, TIMEOUT_10MIN, TIMEOUT_10SEC, TIMEOUT_20SEC
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 
 
@@ -105,3 +107,59 @@ def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with
     cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
     out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
     assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
+
+
+def wait_for_storage_migration_completed(
+    mig_migration: MultiNamespaceVirtualMachineStorageMigration, timeout: int = TIMEOUT_10MIN
+):
+    """Wait for all namespaces in the migration to have phase == Completed."""
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_10SEC,
+        func=lambda: mig_migration.instance.status,
+    )
+    for sample in samples:
+        if sample and sample.namespaces:
+            all_completed = all(ns.get("phase") == mig_migration.Status.COMPLETED for ns in sample.namespaces)
+            if all_completed:
+                break
+
+
+def build_namespaces_spec_for_storage_migration(
+    vms: list[VirtualMachineForTests], target_storage_class: str
+) -> list[dict]:
+    """
+    Build namespaces spec for MultiNamespaceVirtualMachineStorageMigrationPlan:
+    [
+        {"name": "namespace1", "virtualMachines": [vm1, vm2, ...]},
+        {"name": "namespace2", "virtualMachines": [vm3, ...]},
+    ]
+
+    Args:
+        vms: List of VMs to include in the migration plan.
+        target_storage_class: Target storage class for the migration.
+
+    Returns:
+        List of namespace specs with VMs and their target migration PVCs.
+    """
+    namespaces_dict: dict[str, list] = {}
+    for vm in vms:
+        # Get volume names from VM spec
+        target_migration_pvcs = []
+        for volume in vm.instance.spec.template.spec.volumes:
+            if "dataVolume" in volume.keys():
+                target_migration_pvcs.append({
+                    "volumeName": volume.name,
+                    "destinationPVC": {
+                        "volumeMode": "Auto",
+                        "accessModes": ["Auto"],
+                        "storageClassName": target_storage_class,
+                    },
+                })
+        # Group VMs by namespace
+        namespaces_dict.setdefault(vm.namespace, []).append({
+            "name": vm.name,
+            "targetMigrationPVCs": target_migration_pvcs,
+        })
+
+    return [{"name": ns_name, "virtualMachines": vms} for ns_name, vms in namespaces_dict.items()]
