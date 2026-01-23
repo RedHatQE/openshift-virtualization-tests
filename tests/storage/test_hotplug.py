@@ -16,7 +16,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 from utilities.storage import (
     assert_disk_serial,
-    assert_hotplugvolume_nonexist_optional_restart,
+    assert_hotplugvolume_nonexist,
     create_dv,
     data_volume,
     virtctl_volume,
@@ -204,7 +204,7 @@ class TestHotPlugWithPersist:
         hotplug_volume_scope_class,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
-        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class, restart=True)
+        assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_scope_class)
 
     @pytest.mark.polarion("CNV-11390")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
@@ -241,7 +241,7 @@ class TestHotPlugWithSerialPersist:
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
-        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class, restart=True)
+        assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_scope_class)
 
     @pytest.mark.polarion("CNV-6425b")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
@@ -295,10 +295,7 @@ class TestHotPlugWindows:
             command=shlex.split("wmic diskdrive get SerialNumber"),
             vm=vm_instance_from_template_multi_storage_scope_class,
         )
-        assert_hotplugvolume_nonexist_optional_restart(
-            vm=vm_instance_from_template_multi_storage_scope_class,
-            restart=True,
-        )
+        assert_hotplugvolume_nonexist(vm=vm_instance_from_template_multi_storage_scope_class)
 
     @pytest.mark.polarion("CNV-11391")
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
