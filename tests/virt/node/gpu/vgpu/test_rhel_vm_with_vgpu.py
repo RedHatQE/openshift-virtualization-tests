@@ -195,7 +195,7 @@ class TestVGPURHELGPUSSpec:
 )
 class TestNodeMDEVTypeVGPURHELGPUSSpec:
     """
-    Test vGPU with RHEL VM using GPUS Spec.
+    Test vGPU with RHEL VM using GPUS Spec and node-specific vGPU configuration via GPU operator.
     """
 
     @pytest.mark.polarion("CNV-8744")
@@ -204,13 +204,12 @@ class TestNodeMDEVTypeVGPURHELGPUSSpec:
     ):
         """
         Test Permitted HostDevice is visible and count updated under Capacity/Allocatable
-        section for both nodes.
+        section for both nodes, configured via GPU operator's node-specific vGPU config.
 
-        Automatic Configuration of node specific mediated devices using nodeMediatedDeviceTypes
-        Here we are using 'nodeMediatedDeviceTypes' in HCO CR, hence different nodes would
-        have different mdevtype configured.
-        Without the use of 'nodeMediatedDeviceTypes' in HCO CR, all the nodes, would have
-        the same mdevtype configured for all the nodes.
+        Node-specific mediated device configuration is done using nvidia.com/vgpu.config labels.
+        node[0] uses the default vGPU config (e.g. A2-2Q) and node[1] is explicitly
+        labeled with a different vGPU config (e.g. A2-4Q) by the test setup.
+        The GPU operator then configures the mediated devices accordingly.
         """
         vgpu_device_name = supported_gpu_device[VGPU_DEVICE_NAME_STR]
         vgpu_grid_name = supported_gpu_device[VGPU_GRID_NAME_STR]
