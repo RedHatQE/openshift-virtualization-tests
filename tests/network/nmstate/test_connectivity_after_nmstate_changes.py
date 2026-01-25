@@ -46,26 +46,26 @@ def restart_nmstate_handler(admin_client, nmstate_ds, nmstate_namespace):
 
 
 @pytest.fixture(scope="class")
-def nmstate_linux_bridge_device_worker_1(admin_client, nodes_available_nics, worker_node1):
+def nmstate_linux_bridge_device_worker_1(admin_client, hosts_common_available_ports, worker_node1):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"restart-nmstate-{name_prefix(worker_node1.name)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[nodes_available_nics[worker_node1.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
         client=admin_client,
     ) as br_dev:
         yield br_dev
 
 
 @pytest.fixture(scope="class")
-def nmstate_linux_bridge_device_worker_2(admin_client, nodes_available_nics, worker_node2):
+def nmstate_linux_bridge_device_worker_2(admin_client, hosts_common_available_ports, worker_node2):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"restart-nmstate-{name_prefix(worker_node2.name)}",
         interface_name=BRIDGE_NAME,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[nodes_available_nics[worker_node2.name][-1]],
+        ports=[hosts_common_available_ports[-1]],
         client=admin_client,
     ) as br_dev:
         yield br_dev
@@ -230,7 +230,7 @@ def nncp_ready(nmstate_linux_bridge_device_worker_1, nmstate_linux_bridge_device
 
 @pytest.fixture()
 def modified_nncp(
-    nodes_available_nics,
+    hosts_common_available_ports,
     worker_node1,
     worker_node2,
     nmstate_linux_bridge_device_worker_1,
@@ -239,9 +239,9 @@ def modified_nncp(
     nncps = [nmstate_linux_bridge_device_worker_1, nmstate_linux_bridge_device_worker_2]
     for nncp, worker_node in zip(nncps, [worker_node1, worker_node2]):
         interfaces = nncp.desired_state["interfaces"]
-        interfaces[0]["bridge"]["port"][0]["name"] = nodes_available_nics[worker_node.name][
+        interfaces[0]["bridge"]["port"][0]["name"] = hosts_common_available_ports[
             -2
-        ]  # NNCP was created with nodes_available_nics[-1]
+        ]  # NNCP was created with hosts_common_available_ports[-1]
         ResourceEditor(
             patches={
                 nncp: {

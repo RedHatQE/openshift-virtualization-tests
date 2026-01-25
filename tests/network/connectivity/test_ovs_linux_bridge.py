@@ -4,8 +4,8 @@ VM to VM connectivity via secondary (bridged) interfaces.
 
 import pytest
 
-from libs.net.vmspec import lookup_iface_status_ip
-from tests.network.connectivity.utils import get_masquerade_vm_ip, is_masquerade
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
+from tests.network.connectivity.utils import filter_link_local_addresses
 from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful
 
@@ -13,62 +13,23 @@ from utilities.network import assert_ping_successful
 class TestConnectivityLinuxBridge:
     @pytest.mark.gating
     @pytest.mark.post_upgrade
-    @pytest.mark.parametrize(
-        "use_default_bridge",
-        [
-            pytest.param(
-                True,
-                marks=pytest.mark.polarion("CNV-11156"),
-                id="POD_network",
-            ),
-            pytest.param(
-                False,
-                marks=pytest.mark.polarion("CNV-11122"),
-                id="L2_bridge_network",
-            ),
-        ],
-    )
-    @pytest.mark.ipv4
-    @pytest.mark.s390x
-    def test_ipv4_linux_bridge(
+    @pytest.mark.polarion("CNV-11122")
+    def test_linux_bridge(
         self,
-        use_default_bridge,
+        subtests,
         nad_linux_bridge,
         vm_linux_bridge_attached_vma_source,
         vm_linux_bridge_attached_vmb_destination,
     ):
-        bridge = "default" if use_default_bridge else nad_linux_bridge.name
-        assert_ping_successful(
-            src_vm=vm_linux_bridge_attached_vma_source,
-            dst_ip=get_masquerade_vm_ip(
-                vm=vm_linux_bridge_attached_vmb_destination,
-                ipv6_testing=False,
-            )
-            if is_masquerade(vm=vm_linux_bridge_attached_vmb_destination, bridge=bridge)
-            else lookup_iface_status_ip(vm=vm_linux_bridge_attached_vmb_destination, iface_name=bridge, ip_family=4),
-        )
-
-    @pytest.mark.gating
-    @pytest.mark.post_upgrade
-    @pytest.mark.polarion("CNV-11125")
-    @pytest.mark.ipv6
-    def test_ipv6_linux_bridge(
-        self,
-        fail_if_not_ipv6_supported_cluster,
-        nad_linux_bridge,
-        vm_linux_bridge_attached_vma_source,
-        vm_linux_bridge_attached_vmb_destination,
-    ):
-        bridge = "default"
-        assert_ping_successful(
-            src_vm=vm_linux_bridge_attached_vma_source,
-            dst_ip=get_masquerade_vm_ip(
-                vm=vm_linux_bridge_attached_vmb_destination,
-                ipv6_testing=True,
-            )
-            if is_masquerade(vm=vm_linux_bridge_attached_vmb_destination, bridge=bridge)
-            else lookup_iface_status_ip(vm=vm_linux_bridge_attached_vmb_destination, iface_name=bridge, ip_family=6),
-        )
+        """Verify the Linux bridge interface connectivity while the pod network connectivity is preserved"""
+        for iface_name in ["default", nad_linux_bridge.name]:
+            iface = lookup_iface_status(vm=vm_linux_bridge_attached_vmb_destination, iface_name=iface_name)
+            for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
+                with subtests.test(msg=f"Testing interface {iface.name} with IPv{ip.version}", ip=str(ip)):
+                    assert_ping_successful(
+                        src_vm=vm_linux_bridge_attached_vma_source,
+                        dst_ip=ip,
+                    )
 
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-11123")
@@ -111,62 +72,24 @@ class TestConnectivityLinuxBridge:
 @pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
 class TestConnectivityOVSBridge:
     @pytest.mark.post_upgrade
-    @pytest.mark.parametrize(
-        "use_default_bridge",
-        [
-            pytest.param(
-                True,
-                marks=pytest.mark.polarion("CNV-11157"),
-                id="POD_network",
-            ),
-            pytest.param(
-                False,
-                marks=pytest.mark.polarion("CNV-11126"),
-                id="L2_bridge_network",
-            ),
-        ],
-    )
-    @pytest.mark.ipv4
-    @pytest.mark.s390x
-    def test_ipv4_ovs_bridge(
-        self,
-        use_default_bridge,
-        nad_ovs_bridge,
-        vm_ovs_bridge_attached_vma_source,
-        vm_ovs_bridge_attached_vmb_destination,
-    ):
-        bridge = "default" if use_default_bridge else nad_ovs_bridge.name
-        assert_ping_successful(
-            src_vm=vm_ovs_bridge_attached_vma_source,
-            dst_ip=get_masquerade_vm_ip(
-                vm=vm_ovs_bridge_attached_vmb_destination,
-                ipv6_testing=False,
-            )
-            if is_masquerade(vm=vm_ovs_bridge_attached_vmb_destination, bridge=bridge)
-            else lookup_iface_status_ip(vm=vm_ovs_bridge_attached_vmb_destination, iface_name=bridge, ip_family=4),
-        )
-
     @pytest.mark.gating
-    @pytest.mark.post_upgrade
-    @pytest.mark.polarion("CNV-11128")
-    @pytest.mark.ipv6
-    def test_ipv6_ovs_bridge(
+    @pytest.mark.polarion("CNV-12556")
+    def test_ovs_bridge(
         self,
-        fail_if_not_ipv6_supported_cluster,
+        subtests,
         nad_ovs_bridge,
         vm_ovs_bridge_attached_vma_source,
         vm_ovs_bridge_attached_vmb_destination,
     ):
-        bridge = "default"
-        assert_ping_successful(
-            src_vm=vm_ovs_bridge_attached_vma_source,
-            dst_ip=get_masquerade_vm_ip(
-                vm=vm_ovs_bridge_attached_vmb_destination,
-                ipv6_testing=True,
-            )
-            if is_masquerade(vm=vm_ovs_bridge_attached_vmb_destination, bridge=bridge)
-            else lookup_iface_status_ip(vm=vm_ovs_bridge_attached_vmb_destination, iface_name=bridge, ip_family=6),
-        )
+        """Verify the OVS bridge interface connectivity while the pod network connectivity is preserved"""
+        for iface_name in ["default", nad_ovs_bridge.name]:
+            iface = lookup_iface_status(vm=vm_ovs_bridge_attached_vmb_destination, iface_name=iface_name)
+            for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
+                with subtests.test(msg=f"Testing interface {iface.name} with IPv{ip.version}", ip=str(ip)):
+                    assert_ping_successful(
+                        src_vm=vm_ovs_bridge_attached_vma_source,
+                        dst_ip=ip,
+                    )
 
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-11129")

@@ -22,12 +22,17 @@ pytestmark = [
     pytest.mark.skip_must_gather_collection,
 ]
 
-UNREADABLE_MIG_CRDS = [
-    f"multinamespacevirtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-    f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-    f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-    f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-]
+UNREADABLE_CRDS_BY_JIRA = {
+    "CNV-76680": [
+        f"multinamespacevirtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+        f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+        f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+        f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    ],
+    "CNV-76369": [
+        f"virtualmachinebackuptrackers.backup.{Resource.ApiGroup.KUBEVIRT_IO}",
+    ],
+}
 
 
 @retry(
@@ -50,18 +55,32 @@ def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
     ]
 
 
-@pytest.fixture(scope="module")
-def jira_76680_open():
-    return is_jira_open(jira_id="CNV-76680")
+@pytest.fixture()
+def crds_with_open_jira():
+    """
+    Map CRD names to open Jira IDs.
+
+    Returns:
+        dict[str, str]: Mapping of CRD name to open Jira ID.
+    """
+    return {
+        crd_name: jira_id
+        for jira_id, crd_list in UNREADABLE_CRDS_BY_JIRA.items()
+        if is_jira_open(jira_id=jira_id)
+        for crd_name in crd_list
+    }
 
 
 @pytest.mark.polarion("CNV-8263")
-def test_crds_cluster_readers_role(admin_client, jira_76680_open):
+def test_crds_cluster_readers_role(admin_client, crds_with_open_jira):
     cluster_readers = "system:cluster-readers"
     unreadable_crds = []
     for crd in get_cnv_crds(admin_client=admin_client):
-        if crd.name in UNREADABLE_MIG_CRDS and jira_76680_open:
-            LOGGER.warning(f"Skipping {crd.name} because it is unreadable due to CNV-76680 bug")
+        if crd.name in crds_with_open_jira:
+            LOGGER.warning(
+                f"Skipping {crd.name} because it is unreadable due to a product bug.",
+                extra={"crd_name": crd.name, "jira_id": crds_with_open_jira[crd.name]},
+            )
             continue
         can_read = check_output(shlex.split(f"oc adm policy who-can get {crd.name}"))
         if cluster_readers not in str(can_read):

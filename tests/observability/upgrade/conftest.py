@@ -1,6 +1,8 @@
 import pytest
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
+from utilities.constants import ES_NONE
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -14,6 +16,8 @@ def vm_with_node_selector_for_upgrade(namespace_for_outdated_vm_upgrade, unprivi
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
         client=unprivileged_client,
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm)
         yield vm

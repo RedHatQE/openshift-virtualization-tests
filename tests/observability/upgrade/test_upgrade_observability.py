@@ -58,10 +58,11 @@ class TestUpgradeObservability:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(
-        self, prometheus, kubevirt_resource_outdated_vmi_workloads_count
+        self, prometheus, kubevirt_resource_outdated_vmi_workloads_count, vm_with_node_selector_for_upgrade
     ):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_NUMBER_OF_OUTDATED,
-            expected_value=str(kubevirt_resource_outdated_vmi_workloads_count),
+            metric_name=f"{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}"
+            f"{{namespace='{vm_with_node_selector_for_upgrade.namespace}'}}",
+            expected_value="1",
         )
