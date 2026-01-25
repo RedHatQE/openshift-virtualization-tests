@@ -1,11 +1,9 @@
 import pytest
 
-from tests.network.network_policy.libnetpolicy import ApplyNetworkPolicy
-from utilities.constants import PORT_80
+from tests.network.network_policy.libnetpolicy import TEST_PORTS, ApplyNetworkPolicy
 from utilities.infra import create_ns, get_node_selector_dict
-from utilities.virt import VirtualMachineForTests, fedora_vm_body
-
-PORT_81 = 81
+from utilities.network import compose_cloud_init_data_dict
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data
 
 
 @pytest.fixture(scope="module")
@@ -37,58 +35,61 @@ def allow_all_http_ports(unprivileged_client, namespace_1):
     with ApplyNetworkPolicy(
         name="allow-all-http-ports",
         namespace=namespace_1.name,
-        ports=[PORT_80, PORT_81],
+        ports=TEST_PORTS,
         client=unprivileged_client,
     ) as np:
         yield np
 
 
 @pytest.fixture()
-def allow_http80_port(unprivileged_client, namespace_1):
+def allow_single_http_port(unprivileged_client, namespace_1):
     with ApplyNetworkPolicy(
-        name="allow-http80-port",
+        name="allow-single-http-port",
         namespace=namespace_1.name,
-        ports=[PORT_80],
+        ports=[TEST_PORTS[0]],
         client=unprivileged_client,
     ) as np:
         yield np
 
 
 @pytest.fixture(scope="module")
-def network_policy_vma(unprivileged_client, worker_node1, namespace_1):
-    name = "vma"
+def network_policy_vma(
+    unprivileged_client,
+    worker_node1,
+    namespace_1,
+    ipv6_primary_interface_cloud_init_data,
+):
+    name = "vma-network-policy"
+    http_server_commands = [f"python3 -m http.server {port} --bind :: &" for port in TEST_PORTS]
+
+    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
+    cloud_init_data.update(prepare_cloud_init_user_data(section="runcmd", data=http_server_commands))
+
     with VirtualMachineForTests(
         namespace=namespace_1.name,
         name=name,
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
+        cloud_init_data=cloud_init_data,
     ) as vm:
         vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
 
 
 @pytest.fixture(scope="module")
-def network_policy_vmb(unprivileged_client, worker_node1, namespace_2):
-    name = "vmb"
+def network_policy_vmb(unprivileged_client, worker_node1, namespace_2, ipv6_primary_interface_cloud_init_data):
+    name = "vmb-network-policy"
+    cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
     with VirtualMachineForTests(
         namespace=namespace_2.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
         body=fedora_vm_body(name=name),
+        cloud_init_data=cloud_init_data,
     ) as vm:
         vm.start(wait=True)
+        vm.wait_for_agent_connected()
         yield vm
-
-
-@pytest.fixture(scope="module")
-def running_network_policy_vma(network_policy_vma):
-    network_policy_vma.wait_for_agent_connected()
-    return network_policy_vma
-
-
-@pytest.fixture(scope="module")
-def running_network_policy_vmb(network_policy_vmb):
-    network_policy_vmb.wait_for_agent_connected()
-    return network_policy_vmb
