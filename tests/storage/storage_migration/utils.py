@@ -4,7 +4,7 @@ import pytest
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
@@ -14,6 +14,7 @@ from tests.storage.storage_migration.constants import (
 )
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_10MIN, TIMEOUT_10SEC, TIMEOUT_20SEC
+from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 
 
@@ -111,18 +112,26 @@ def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with
 
 def wait_for_storage_migration_completed(
     mig_migration: MultiNamespaceVirtualMachineStorageMigration, timeout: int = TIMEOUT_10MIN
-):
+) -> None:
     """Wait for all namespaces in the migration to have phase == Completed."""
+    last_sample = None
     samples = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_10SEC,
         func=lambda: mig_migration.instance.status,
     )
-    for sample in samples:
-        if sample and sample.namespaces:
-            all_completed = all(ns.get("phase") == mig_migration.Status.COMPLETED for ns in sample.namespaces)
-            if all_completed:
-                break
+    try:
+        for sample in samples:
+            last_sample = sample
+            if sample and sample.namespaces:
+                all_completed = all(ns.get("phase") == mig_migration.Status.COMPLETED for ns in sample.namespaces)
+                if all_completed:
+                    return
+    except TimeoutExpiredError:
+        raise StorageMigrationError(
+            f"Timeout waiting for storage migration '{mig_migration.name}' to complete. "
+            f"Last status sample: {last_sample}"
+        )
 
 
 def build_namespaces_spec_for_storage_migration(
