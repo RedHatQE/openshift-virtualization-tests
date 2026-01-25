@@ -107,6 +107,7 @@ def pytest_addoption(parser):
     leftovers_collector = parser.getgroup(name="LeftoversCollector")
     scale_group = parser.getgroup(name="Scale")
     session_group = parser.getgroup(name="Session")
+    ci_group = parser.getgroup(name="CI")
     csv_group = parser.getgroup(name="CSV")
     csv_group.addoption("--update-csv", action="store_true")
     # Upgrade addoption
@@ -295,6 +296,11 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Skip verification that cluster has all required capabilities for virt special_infra marked tests",
+    )
+    ci_group.addoption(
+        "--disabled-bitwarden",
+        action="store_true",
+        help="Disable Bitwarden access for tests that don't require secrets",
     )
 
 
@@ -747,12 +753,13 @@ def pytest_sessionstart(session):
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
-                cluster_host_url=get_client().configuration.host
+                cluster_host_url=get_client().configuration.host,
+                session=session,
             )
             py_config["servers"] = {
                 name: _server.format(server=py_config["server_url"]) for name, _server in py_config["servers"].items()
             }
-            py_config["os_login_param"] = get_cnv_tests_secret_by_name(secret_name="os_login")
+            py_config["os_login_param"] = get_cnv_tests_secret_by_name(secret_name="os_login", session=session)
 
     # must be at the end to make sure we create it only after all pytest_sessionstart checks pass.
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
