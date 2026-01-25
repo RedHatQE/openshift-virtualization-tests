@@ -56,6 +56,7 @@ def hotplug_vm_snapshot(hotplugged_vm):
             {"os_dict": RHEL_LATEST},
             {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-cpu-hotplug-vm"},
             id="RHEL-VM",
+            marks=pytest.mark.s390x,
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
