@@ -21,7 +21,7 @@ def check_vm_dumpxml(vm, cores=None, sockets=None, threads=None):
 
 
 @pytest.fixture()
-def vm_with_cpu_support(request, namespace, unprivileged_client):
+def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_client):
     """
     VM with CPU support (cores,sockets,threads)
     """
@@ -31,7 +31,7 @@ def vm_with_cpu_support(request, namespace, unprivileged_client):
         namespace=namespace.name,
         cpu_cores=request.param["cores"],
         cpu_sockets=request.param["sockets"],
-        cpu_threads=request.param["threads"],
+        cpu_threads=1 if is_s390x_cluster else request.param["threads"],
         cpu_max_sockets=request.param["sockets"] or 1,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
@@ -66,6 +66,7 @@ def vm_with_cpu_support(request, namespace, unprivileged_client):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_vm_with_cpu_support(vm_with_cpu_support):
     """
     Test VM with cpu support
@@ -97,6 +98,7 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
 
 @pytest.mark.gating
 @pytest.mark.conformance
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-1485")
 def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
     """
@@ -108,6 +110,7 @@ def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
 
 
 @pytest.mark.gating
+@pytest.mark.s390x
 @pytest.mark.polarion("CNV-2818")
 def test_vm_with_cpu_limitation(namespace, unprivileged_client):
     """
@@ -130,6 +133,7 @@ def test_vm_with_cpu_limitation(namespace, unprivileged_client):
 
 
 @pytest.mark.polarion("CNV-2819")
+@pytest.mark.s390x
 def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
     """
     Test VM with cpu limitation

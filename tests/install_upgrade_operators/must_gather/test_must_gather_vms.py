@@ -31,8 +31,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     validate_no_empty_files_collected_must_gather_vm,
 )
 from tests.os_params import FEDORA_LATEST
-from utilities.constants import ARM_64, COUNT_FIVE, S390X
-from utilities.jira import is_jira_open
+from utilities.constants import ARM_64, COUNT_FIVE
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -44,24 +43,15 @@ def kubevirt_architecture_configuration_scope_session(
     kubevirt_resource_scope_session,
     nodes_cpu_architecture,
 ):
-    kubevirt_architecture_config = {}
+    kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
+        "architectureConfiguration"
+    ][nodes_cpu_architecture]
 
-    # TODO: This block for s390x to be removed once we move to kubevirt version 1.7 as this is
-    # fixed in https://github.com/kubevirt/kubevirt/issues/14953
-    if nodes_cpu_architecture == S390X and is_jira_open(jira_id="CNV-76681"):
-        kubevirt_architecture_config["ovmfPath"] = ""
-        kubevirt_architecture_config["machineType"] = "s390-ccw-virtio"
-        kubevirt_architecture_config["emulatedMachines"] = "s390-ccw-virtio*"
-    else:
-        kubevirt_architecture_config = kubevirt_resource_scope_session.instance.to_dict()["spec"]["configuration"][
-            "architectureConfiguration"
-        ][nodes_cpu_architecture]
-
-        # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
-        # '/usr/share/AAVMF' but the files in this location are symlinked to
-        # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
-        if nodes_cpu_architecture == ARM_64:
-            kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
+    # Default value of kubevirt.spec.configuration.architectureConfiguration.arm64.ovmfPath is
+    # '/usr/share/AAVMF' but the files in this location are symlinked to
+    # '/usr/share/edk2/aarch64'. VM domain capabilities refer to symlinked file.
+    if nodes_cpu_architecture == ARM_64:
+        kubevirt_architecture_config["ovmfPath"] = "/usr/share/edk2/aarch64"
     return kubevirt_architecture_config
 
 

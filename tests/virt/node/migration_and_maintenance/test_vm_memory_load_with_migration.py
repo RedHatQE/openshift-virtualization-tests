@@ -59,6 +59,7 @@ class TestMigrationVMWithMemoryLoad:
         ],
         indirect=True,
     )
+    @pytest.mark.s390x
     def test_fedora_vm_migrate_with_memory_load(
         self,
         vm_with_memory_load,
