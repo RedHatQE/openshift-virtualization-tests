@@ -127,11 +127,11 @@ def wait_for_storage_migration_completed(
                 all_completed = all(ns.get("phase") == mig_migration.Status.COMPLETED for ns in sample.namespaces)
                 if all_completed:
                     return
-    except TimeoutExpiredError:
+    except TimeoutExpiredError as err:
         raise StorageMigrationError(
             f"Timeout waiting for storage migration '{mig_migration.name}' to complete. "
             f"Last status sample: {last_sample}"
-        )
+        ) from err
 
 
 def build_namespaces_spec_for_storage_migration(
