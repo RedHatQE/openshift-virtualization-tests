@@ -118,7 +118,6 @@ class TestRHELTabletDevice:
         migrate_vm_and_verify(vm=tablet_device_vm, check_ssh_connectivity=True)
 
 
-@pytest.mark.s390x
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
     [pytest.param({"os_dict": FEDORA_LATEST})],
