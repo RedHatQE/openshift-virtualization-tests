@@ -45,6 +45,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
@@ -224,11 +225,39 @@ def get_os_memory_value(vm):
         return f"{round(float(meminfo))}Gi"
 
 
-def assert_guest_os_cpu_count(vm, spec_cpu_amount):
-    guest_os_cpu_amount = get_os_cpu_count(vm=vm)
-    assert guest_os_cpu_amount == spec_cpu_amount, (
-        f"Wrong amount of CPUs! Guest: {guest_os_cpu_amount}; VMI: {spec_cpu_amount}"
+def _collect_cpu_diagnostic_info(vm):
+    """Collect CPU diagnostic information when CPU count mismatch occurs."""
+    base_dir = get_data_collector_dir()
+    LOGGER.info(f"Collecting CPU diagnostic information for VM {vm.name}")
+
+    if "windows" in vm.name:
+        cmd = shlex.split('powershell.exe -command "Get-WinEvent -LogName System -MaxEvents 100 | Format-List"')
+    else:
+        cmd = shlex.split("dmesg")
+
+    output = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0]
+    write_to_file(base_directory=base_dir, file_name=f"{vm.name}_cpu_diagnostic.txt", content=output)
+
+
+def wait_for_guest_os_cpu_count(vm, spec_cpu_amount):
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_os_cpu_count,
+        vm=vm,
     )
+    sample = None
+    try:
+        for sample in sampler:
+            if sample == spec_cpu_amount:
+                LOGGER.info(f"Guest OS CPU count matches VMI spec: {spec_cpu_amount}")
+                return
+    except TimeoutExpiredError:
+        _collect_cpu_diagnostic_info(vm=vm)
+        LOGGER.error(
+            f"Timed out waiting for guest OS CPU count to match VMI spec. Guest: {sample}; VMI: {spec_cpu_amount}"
+        )
+        raise
 
 
 def assert_guest_os_memory_amount(vm, spec_memory_amount):
