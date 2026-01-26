@@ -361,9 +361,6 @@ KUBECONFIG = "KUBECONFIG"
 # commands
 LS_COMMAND = "ls -1 | sort | tr '\n' ' '"
 
-# hotplug
-HOTPLUG_DISK_SERIAL = "1234567890"
-
 ONE_CPU_CORE = 1
 ONE_CPU_THREAD = 1
 TWO_CPU_CORES = 2
@@ -584,6 +581,11 @@ NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"
 CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
 TSC_FREQUENCY = "tsc-frequency"
+
+# hotplug
+HOTPLUG_DISK_SERIAL = "1234567890" 
+HOTPLUG_DISK_VIRTIO_BUS = VIRTIO
+HOTPLUG_DISK_SCSI_BUS = "scsi"
 
 # Container constants
 CNV_TESTS_CONTAINER = "CNV_TESTS_CONTAINER"
