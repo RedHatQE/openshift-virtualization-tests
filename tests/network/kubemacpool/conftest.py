@@ -18,6 +18,7 @@ def kubemacpool_bridge_device_name(index_number):
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     worker_node1,
     kubemacpool_bridge_device_name,
@@ -36,6 +37,7 @@ def kubemacpool_bridge_device_worker_1(
 
 @pytest.fixture(scope="module")
 def kubemacpool_bridge_device_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     worker_node2,
     kubemacpool_bridge_device_name,

@@ -39,6 +39,7 @@ def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace
 
 @pytest.fixture(scope="class")
 def ovs_linux_bond1_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     index_number,
     worker_node1,
@@ -60,6 +61,7 @@ def ovs_linux_bond1_worker_1(
 
 @pytest.fixture(scope="class")
 def ovs_linux_bond1_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     index_number,
     worker_node2,
@@ -84,6 +86,7 @@ def ovs_linux_bond1_worker_2(
 
 @pytest.fixture(scope="class")
 def ovs_linux_bridge_on_bond_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__class__,
     worker_node1,
@@ -106,6 +109,7 @@ def ovs_linux_bridge_on_bond_worker_1(
 
 @pytest.fixture(scope="class")
 def ovs_linux_bridge_on_bond_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__class__,
     worker_node2,

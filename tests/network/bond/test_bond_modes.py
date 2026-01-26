@@ -63,6 +63,7 @@ def create_vm(namespace, nad, node_selector, unprivileged_client):
 
 @pytest.fixture()
 def matrix_bond_modes_bond(
+    nmstate_dependent_placeholder,
     admin_client,
     index_number,
     link_aggregation_mode_no_connectivity_matrix__function__,
@@ -98,6 +99,7 @@ def bond_modes_nad(admin_client, bridge_device_matrix__function__, namespace, ma
 
 @pytest.fixture()
 def matrix_bond_modes_bridge(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__function__,
     worker_node1,
@@ -137,6 +139,7 @@ def bond_modes_vm(
 
 @pytest.fixture()
 def bridge_on_bond_fail_over_mac(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__function__,
     worker_node1,
@@ -158,7 +161,9 @@ def bridge_on_bond_fail_over_mac(
 
 
 @pytest.fixture()
-def active_backup_bond_with_fail_over_mac(admin_client, index_number, worker_node1, hosts_common_available_ports):
+def active_backup_bond_with_fail_over_mac(
+    nmstate_dependent_placeholder, admin_client, index_number, worker_node1, hosts_common_available_ports
+):
     bond_index = next(index_number)
     with BondNodeNetworkConfigurationPolicy(
         client=admin_client,
@@ -191,7 +196,9 @@ def vm_with_fail_over_mac_bond(
 
 
 @pytest.fixture()
-def bond_resource(admin_client, index_number, hosts_common_available_ports, worker_node1):
+def bond_resource(
+    nmstate_dependent_placeholder, admin_client, index_number, hosts_common_available_ports, worker_node1
+):
     bond_idx = next(index_number)
     with BondNodeNetworkConfigurationPolicy(
         client=admin_client,

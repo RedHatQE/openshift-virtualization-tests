@@ -35,6 +35,7 @@ pytestmark = [
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bond1_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
     index_number,
@@ -57,6 +58,7 @@ def jumbo_frame_bond1_worker_1(
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bond1_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
     index_number,
@@ -79,6 +81,7 @@ def jumbo_frame_bond1_worker_2(
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_on_bond_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,
@@ -101,6 +104,7 @@ def jumbo_frame_bridge_on_bond_worker_1(
 
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_on_bond_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
     bridge_device_matrix__class__,

@@ -63,6 +63,7 @@ def http_port_accessible(vm, server_ip, server_port):
 
 @pytest.fixture(scope="module")
 def bridge_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     worker_node1,
     hosts_common_available_ports,
@@ -80,6 +81,7 @@ def bridge_worker_1(
 
 @pytest.fixture(scope="module")
 def bridge_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     worker_node2,
     hosts_common_available_ports,

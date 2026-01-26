@@ -53,6 +53,7 @@ def l2_bridge_device_name(index_number):
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_1(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__class__,
     hosts_common_available_ports,
@@ -72,6 +73,7 @@ def l2_bridge_device_worker_1(
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_2(
+    nmstate_dependent_placeholder,
     admin_client,
     bridge_device_matrix__class__,
     hosts_common_available_ports,
