@@ -1,5 +1,9 @@
 import pytest
 
+pytestmark = [
+    pytest.mark.ipv4,
+]
+
 
 @pytest.mark.polarion("CNV-12568")
 def test_kmp_random_custom_range_hco(

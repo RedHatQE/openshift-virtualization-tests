@@ -343,7 +343,7 @@ def network_packets_received(
         result = match.groupdict()
         LOGGER.info(f"Successfully parsed network stats: {result}")
         return result
-    raise ValueError(f"No match found for interface '{interface_name}' in ip link show output")
+    raise ValueError(f"No match found for interface '{interface_name}' in ip link show output : {ip_link_show_content}")
 
 
 def compare_network_traffic_bytes_and_metrics(
@@ -832,7 +832,3 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
-
-
-def get_pod_interface_name_from_vm(vm: VirtualMachineForTests) -> str:
-    return vm.vmi.interfaces[0].podInterfaceName

@@ -54,28 +54,10 @@ def vm_os_version(vm):
     run_ssh_commands(host=vm.ssh_exec, commands=command)
 
 
-def restart_qemu_guest_agent_service(vm):
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo systemctl restart qemu-guest-agent"))
-
-
 # Guest agent data comparison functions.
 def validate_os_info_virtctl_vs_linux_os(vm):
     data_mismatch = []
-    virtctl_info = None
-    if "rhel-7" in vm.name:
-        # Needed for rhel-7 because guest agent is restarted before check
-        # and virtctl needs to re-sync the data
-        try:
-            for sampler in TimeoutSampler(
-                wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_15SEC, func=get_virtctl_os_info, vm=vm
-            ):
-                if virtctl_info := sampler:
-                    break
-        except TimeoutExpiredError:
-            raise ValueError("Virtctl OS info not updated after service restart!")
-    else:
-        virtctl_info = get_virtctl_os_info(vm=vm)
-
+    virtctl_info = get_virtctl_os_info(vm=vm)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
     if is_jira_76697_bug_open():
         virtctl_info.pop("load", None)

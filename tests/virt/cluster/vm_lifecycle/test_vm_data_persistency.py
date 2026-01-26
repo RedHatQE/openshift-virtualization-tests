@@ -192,6 +192,7 @@ def verify_changes(vm, os):
     indirect=True,
 )
 class TestRestartPersistenceLinux:
+    @pytest.mark.s390x
     @pytest.mark.parametrize(
         "changed_os_preferences, restarted_persistence_vm",
         [

@@ -14,11 +14,14 @@ from ocp_resources.secret import Secret
 from ocp_resources.storage_map import StorageMap
 from pytest_testconfig import config as py_config
 
-from libs.net.udn import create_udn_namespace
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
-from tests.network.provider_migration.libprovider import SourceHypervisorProvider
+from tests.network.libs.vm_factory import udn_vm
+from tests.network.provider_migration.libprovider import SourceHypervisorProvider, extract_vm_primary_network_data
 from utilities.bitwarden import get_cnv_tests_secret_by_name
+from utilities.constants import OS_FLAVOR_FEDORA
 
 CUDN_LABEL: Final[dict] = {"cudn": "mtv"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.100.0/24"
@@ -60,15 +63,17 @@ def cudn_layer2_for_mtv_import(
 
 
 @pytest.fixture(scope="module")
-def source_vm_powered_on(source_hypervisor_data: dict) -> Generator[None]:
+def source_vm_network_data(source_hypervisor_data: dict) -> Generator[tuple[str, str]]:
     with SourceHypervisorProvider(
         host=source_hypervisor_data["host"],
         username=source_hypervisor_data["user"],
         password=source_hypervisor_data["password"],
     ) as sp:
-        sp.power_on_vm(vm_name=source_hypervisor_data["vm_name"])
-        yield
-        sp.power_off_vm(vm_name=source_hypervisor_data["vm_name"])
+        try:
+            vm = sp.power_on_vm(vm_name=source_hypervisor_data["vm_name"])
+            yield extract_vm_primary_network_data(vm=vm)
+        finally:
+            sp.power_off_vm(vm_name=source_hypervisor_data["vm_name"])
 
 
 @pytest.fixture(scope="module")
@@ -219,7 +224,7 @@ def mtv_migration_plan_to_cudn_ns(
     mtv_storage_map: StorageMap,
     mtv_network_map: NetworkMap,
     forklift_controller_udn_static_ip_patched: None,
-    source_vm_powered_on: None,
+    source_vm_network_data: tuple,
 ) -> Generator[Plan]:
     with Plan(
         client=admin_client,
@@ -239,19 +244,57 @@ def mtv_migration_plan_to_cudn_ns(
         target_power_state="on",
         preserve_static_ips=True,
     ) as plan:
-        plan.wait_for_condition(
-            condition=plan.Condition.READY, status=plan.Condition.Status.TRUE, timeout=MTV_RESOURCE_TIMEOUT_SEC
-        )
+        plan.wait_for_condition(condition=plan.Condition.READY, status=plan.Condition.Status.TRUE, timeout=60)
         yield plan
 
 
 @pytest.fixture(scope="module")
-def mtv_migration_to_cudn_ns(admin_client: DynamicClient, mtv_migration_plan_to_cudn_ns: Plan) -> Generator[Migration]:
+def mtv_migration_to_cudn_ns(admin_client: DynamicClient, mtv_migration_plan_to_cudn_ns: Plan) -> Generator[None]:
     with Migration(
         client=admin_client,
         name=mtv_migration_plan_to_cudn_ns.name,
         namespace=mtv_migration_plan_to_cudn_ns.namespace,
         plan_name=mtv_migration_plan_to_cudn_ns.name,
         plan_namespace=mtv_migration_plan_to_cudn_ns.namespace,
-    ) as migration:
-        yield migration
+    ):
+        mtv_migration_plan_to_cudn_ns.wait_for_condition(
+            condition=mtv_migration_plan_to_cudn_ns.Condition.Type.SUCCEEDED,
+            status=mtv_migration_plan_to_cudn_ns.Condition.Status.TRUE,
+            timeout=1000,
+            sleep_time=10,
+        )
+        yield
+
+
+@pytest.fixture(scope="module")
+def imported_cudn_vm(
+    admin_client: DynamicClient, cudn_namespace: Namespace, source_hypervisor_data: dict, mtv_migration_to_cudn_ns: None
+) -> Generator[BaseVirtualMachine]:
+    vm = BaseVirtualMachine.from_existing(
+        name=source_hypervisor_data["vm_name"],
+        namespace=cudn_namespace.name,
+        client=admin_client,
+        os_distribution=OS_FLAVOR_FEDORA,
+    )
+    try:
+        vm.wait_for_agent_connected()
+        yield vm
+    finally:
+        vm.clean_up()
+
+
+@pytest.fixture(scope="module")
+def local_cudn_vm(
+    admin_client: DynamicClient,
+    cudn_namespace: Namespace,
+    cudn_layer2_for_mtv_import: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=cudn_namespace.name,
+        name="vm-local-cudn",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+    ) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm

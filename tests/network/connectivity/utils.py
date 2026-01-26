@@ -1,22 +1,17 @@
+import ipaddress
 from collections import OrderedDict
 
-from tests.network.libs.ip import random_ipv4_address
-from utilities.constants import IPV6_STR
-from utilities.network import (
-    compose_cloud_init_data_dict,
-    get_ip_from_vm_or_virt_handler_pod,
-)
+from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 def create_running_vm(
     name,
-    end_ip_octet,
     node_selector,
     network_names,
-    ipv6_primary_interface_cloud_init_data,
     client,
     namespace,
+    cloud_init_data,
 ):
     networks = OrderedDict()
 
@@ -30,15 +25,7 @@ def create_running_vm(
         networks=networks,
         interfaces=networks.keys(),
         node_selector=node_selector,
-        cloud_init_data=compose_cloud_init_data_dict(
-            network_data={
-                "ethernets": {
-                    f"eth{i + 1}": {"addresses": [f"{random_ipv4_address(net_seed=i, host_address=end_ip_octet)}/24"]}
-                    for i in range(0, 3)
-                }
-            },
-            ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        ),
+        cloud_init_data=cloud_init_data,
         client=client,
     ) as vm:
         vm.start(wait=True)
@@ -46,19 +33,24 @@ def create_running_vm(
         yield vm
 
 
-def is_masquerade(vm, bridge):
-    return (
-        True
-        if [
-            interface
-            for interface in vm.vmi.instance.spec.domain.devices.interfaces
-            if interface["name"] == bridge and "masquerade" in interface.keys()
-        ]
-        else False
-    )
+def secondary_interfaces_cloud_init_data(
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+    host_id: int,
+) -> dict[str, dict[str, dict[str, list[str]]]]:
+    ethernets = {}
+    for i in range(3):
+        interface_name = f"eth{i + 1}"
+        addresses = []
+        if ipv4_supported_cluster:
+            addresses.append(f"{random_ipv4_address(net_seed=i, host_address=host_id)}/24")
+        if ipv6_supported_cluster:
+            addresses.append(f"{random_ipv6_address(net_seed=i, host_address=host_id)}/64")
+
+        ethernets[interface_name] = {"addresses": addresses}
+
+    return {"ethernets": ethernets}
 
 
-def get_masquerade_vm_ip(vm, ipv6_testing):
-    if ipv6_testing:
-        return get_ip_from_vm_or_virt_handler_pod(family=IPV6_STR, vm=vm)
-    return vm.vmi.virt_launcher_pod.instance.status.podIP
+def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]

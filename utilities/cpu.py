@@ -122,7 +122,9 @@ def get_common_cpu_from_nodes(cluster_cpus: Set[str]) -> str | None:
     Returns:
         A single CPU model string from the set if available, None if the set is empty.
     """
-    return next(iter(cluster_cpus)) if cluster_cpus else None
+    common_cpu_model = next(iter(cluster_cpus)) if cluster_cpus else None
+    LOGGER.info(f"Common CPU used is {common_cpu_model}")
+    return common_cpu_model
 
 
 def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
