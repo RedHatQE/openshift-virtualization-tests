@@ -482,17 +482,17 @@ class TestVmiPhaseTransitionFromDeletion:
         self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi, subtests
     ):
         metrics_to_check = [
-            ("sum", KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED),
-            ("bucket", SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED),
-            ("count", KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED),
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
         ]
 
-        for metric_type, metric_name in metrics_to_check:
-            with subtests.test(msg=metric_type):
+        for metric in metrics_to_check:
+            with subtests.test(msg=metric):
                 validate_metric_value_greater_than_initial_value(
                     prometheus=prometheus,
-                    metric_name=metric_name,
-                    initial_value=initial_vmi_deletion_metrics_values[metric_name],
+                    metric_name=metric,
+                    initial_value=initial_vmi_deletion_metrics_values[metric],
                 )
 
     @pytest.mark.parametrize(
