@@ -39,7 +39,9 @@ PRIMARY_INTERFACE_NAME = "eth0"
 
 
 @pytest.fixture(scope="module")
-def nncp_localnet(admin_client: DynamicClient) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+def nncp_localnet(
+    nmstate_dependent_placeholder: None, admin_client: DynamicClient
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     desired_state = libnncp.DesiredState(
         ovn=libnncp.OVN([
             libnncp.BridgeMappings(
@@ -359,6 +361,7 @@ def migrated_localnet_vm(
 
 @pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic(
+    nmstate_dependent_placeholder: None,
     admin_client: DynamicClient,
     hosts_common_available_ports: list[str],
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
@@ -371,6 +374,7 @@ def nncp_localnet_on_secondary_node_nic(
 
 @pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic_with_jumbo_frame(
+    nmstate_dependent_placeholder: None,
     admin_client: DynamicClient,
     hosts_common_available_ports: list[str],
     cluster_hardware_mtu: int,

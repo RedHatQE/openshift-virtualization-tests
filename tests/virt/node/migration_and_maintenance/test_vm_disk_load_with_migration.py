@@ -20,7 +20,10 @@ def vm_with_fio(
     unprivileged_client,
     namespace,
     golden_image_data_volume_template_for_test_scope_class,
+    is_s390x_cluster,
 ):
+    if is_s390x_cluster:
+        request.param["cpu_threads"] = 1
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
@@ -87,6 +90,7 @@ def get_disk_usage(ssh_exec):
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 @pytest.mark.rwx_default_storage
 def test_fedora_vm_load_migration(vm_with_fio, running_fio_in_vm):
     LOGGER.info("Test migrate VM with disk load")

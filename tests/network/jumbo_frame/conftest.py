@@ -122,7 +122,7 @@ def secondary_linux_bridge_nad(admin_client, namespace, linux_bridge_interface):
 
 
 @pytest.fixture(scope="module")
-def linux_bridge_interface(admin_client, hosts_common_available_ports):
+def linux_bridge_interface(nmstate_dependent_placeholder, admin_client, hosts_common_available_ports):
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name="sec-br",

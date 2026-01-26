@@ -83,10 +83,13 @@ The "no defensive programming" rule has these five exceptions:
 ### Logging Guidelines
 
 - **INFO level REQUIRED for** - test phase transitions, resource creation/deletion, configuration changes, API responses, intermediate state
+- **WARNING level REQUIRED for** - skipped operations due to known issues, unusual configurations that may cause problems, missing optional configuration, deprecation notices
 - **ERROR level REQUIRED for** - exceptions with full context: what failed, expected vs actual values, resource state
 - **NEVER use DEBUG level** - if a log is needed, use INFO.
 - **NEVER log** - secrets, tokens, passwords, or PII
-- **Log format REQUIRED** - structured key-value pairs for searchability: `LOGGER.info("VM created", extra={"name": vm_name, "namespace": ns})`
+- **Log format REQUIRED** - Use f-string formatting:
+  - `LOGGER.info(f"VM {vm} created in {ns} namespace")`
+  - `LOGGER.warning(f"CRD {crd.name} is unreadable due to {jira_id} bug")`
 
 ### Code Patterns (Not Enforced by Linters)
 

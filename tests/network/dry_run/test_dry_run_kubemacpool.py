@@ -35,7 +35,7 @@ def create_dry_run_vm(name, namespace, networks, unprivileged_client, macs=None)
 
 
 @pytest.fixture()
-def bridge_on_all_nodes(admin_client):
+def bridge_on_all_nodes(nmstate_dependent_placeholder, admin_client):
     bridge_name = "br-dry-run-test"
     with network_device(
         interface_type=LINUX_BRIDGE,
