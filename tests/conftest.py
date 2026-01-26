@@ -1077,13 +1077,6 @@ def sriov_workers(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def vlan_base_iface(worker_node1, nodes_available_nics):
-    # Select the last NIC from the list as a way to ensure that the selected NIC
-    # is not already used (e.g. as a bond's port).
-    return nodes_available_nics[worker_node1.name][-1]
-
-
-@pytest.fixture(scope="session")
 def sriov_ifaces(sriov_nodes_states, workers_utility_pods):
     node = sriov_nodes_states[0]
     state_up = Resource.Interface.State.UP

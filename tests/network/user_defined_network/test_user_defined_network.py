@@ -4,7 +4,8 @@ import pytest
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
-from libs.net.traffic_generator import Client, Server, is_tcp_connection
+from libs.net.traffic_generator import TcpServer, is_tcp_connection
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
 from tests.network.libs.ip import random_ipv4_address
@@ -75,14 +76,14 @@ def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 
 @pytest.fixture(scope="class")
 def server(vmb_udn):
-    with Server(vm=vmb_udn, port=SERVER_PORT) as server:
+    with TcpServer(vm=vmb_udn, port=SERVER_PORT) as server:
         assert server.is_running()
         yield server
 
 
 @pytest.fixture(scope="class")
 def client(vma_udn, vmb_udn):
-    with Client(
+    with TcpClient(
         vm=vma_udn,
         server_ip=lookup_iface_status(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name)[IP_ADDRESS],
         server_port=SERVER_PORT,

@@ -110,6 +110,7 @@ class PodAffinityTerm:
     labelSelector: LabelSelector  # noqa: N815
     topologyKey: str  # noqa: N815
     namespaceSelector: dict[str, Any] | None = None  # noqa: N815
+    namespaces: list[str] | None = None
 
 
 @dataclass
