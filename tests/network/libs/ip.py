@@ -1,3 +1,4 @@
+import ipaddress
 import random
 from functools import cache
 from typing import Final
@@ -76,3 +77,19 @@ def _random_hextets(count: int) -> list[int]:
         list[int]: A list of unique random integers representing hextet values.
     """
     return random.sample(range(1, 0xFFFE), count)
+
+
+def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """
+    Filter out link-local IP addresses from a list of IP address strings.
+
+    Link-local addresses (169.254.0.0/16 for IPv4, fe80::/10 for IPv6) are
+    automatically assigned and typically not used for inter-VM communication.
+
+    Args:
+        ip_addresses: List of IP address strings to filter.
+
+    Returns:
+        List of IP address objects with link-local addresses removed.
+    """
+    return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]
