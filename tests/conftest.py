@@ -1978,6 +1978,7 @@ def autouse_fixtures(
     cluster_sanity_scope_session,
     cluster_sanity_scope_module,
     generated_ssh_key_for_vm_access,
+    session_start_time,
 ):
     """call all autouse fixtures"""
 
@@ -2067,7 +2068,7 @@ def audit_logs(session_start_time):
             except ValueError as err:
                 LOGGER.warning(f"Invalid timestamp in log {log}: {err}")
         else:
-            LOGGER.debug(f"Skipping non-audit file: {log}")
+            LOGGER.info(f"Skipping non-audit file: {log}")
 
     # Filter rotated logs to keep only relevant ones
     filtered_nodes_logs = {}
