@@ -29,6 +29,7 @@ def vlan_id_3(vlan_index_number):
 
 @pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_1_source(
+    nmstate_dependent_placeholder,
     admin_client,
     hosts_common_available_ports,
     worker_node1,
@@ -47,6 +48,7 @@ def nncp_linux_bridge_device_worker_1_source(
 
 @pytest.fixture(scope="class")
 def nncp_ovs_bridge_device_worker_1_source(
+    nmstate_dependent_placeholder,
     admin_client,
     hosts_common_available_ports,
     worker_node1,
@@ -65,6 +67,7 @@ def nncp_ovs_bridge_device_worker_1_source(
 
 @pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_2_destination(
+    nmstate_dependent_placeholder,
     admin_client,
     hosts_common_available_ports,
     worker_node2,
@@ -83,6 +86,7 @@ def nncp_linux_bridge_device_worker_2_destination(
 
 @pytest.fixture(scope="class")
 def nncp_ovs_bridge_device_worker_2_destination(
+    nmstate_dependent_placeholder,
     admin_client,
     hosts_common_available_ports,
     worker_node2,

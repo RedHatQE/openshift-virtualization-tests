@@ -71,6 +71,7 @@ def running_nmstate_vmb(nmstate_vmb):
 
 @pytest.fixture(scope="module")
 def bridge_on_management_ifaces_node1(
+    nmstate_dependent_placeholder,
     admin_client,
     worker_nodes_management_iface_stats,
     worker_node1,
@@ -99,6 +100,7 @@ def bridge_on_management_ifaces_node1(
 
 @pytest.fixture(scope="module")
 def bridge_on_management_ifaces_node2(
+    nmstate_dependent_placeholder,
     admin_client,
     workers_utility_pods,
     worker_nodes_management_iface_stats,
