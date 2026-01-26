@@ -11,10 +11,11 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import HOTPLUG_DISK_SERIAL, Images
+from utilities.constants import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 from utilities.storage import (
+    assert_disk_bus,
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
     create_dv,
@@ -186,34 +187,38 @@ def blank_disk_dv_multi_storage_scope_class(
 @pytest.mark.parametrize(
     "hotplug_volume_scope_class",
     [
-        pytest.param({"persist": True}),
+        pytest.param({"persist": True, "bus": HOTPLUG_DISK_VIRTIO_BUS}, id="virtio-bus"),
     ],
     indirect=True,
 )
 @pytest.mark.conformance
 @pytest.mark.gating
+@pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6014")
-    @pytest.mark.dependency(name="test_hotplug_volume_with_persist")
+    @pytest.mark.dependency(name="test_hotplug_volume_with_bus_and_persist")
     @pytest.mark.s390x
-    def test_hotplug_volume_with_persist(
+    def test_hotplug_volume_with_bus_and_persist(
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_scope_class)
+        assert_disk_bus(
+            vm=fedora_vm_for_hotplug_scope_class,
+            volume=blank_disk_dv_multi_storage_scope_class,
+            expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
+        )
 
     @pytest.mark.polarion("CNV-11390")
-    @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
+    @pytest.mark.dependency(depends=["test_hotplug_volume_with_bus_and_persist"])
     @pytest.mark.s390x
-    def test_hotplug_volume_with_persist_migrate(
+    def test_hotplug_volume_with_bus_and_persist_migrate(
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
@@ -228,6 +233,7 @@ class TestHotPlugWithPersist:
 )
 @pytest.mark.conformance
 @pytest.mark.gating
+@pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithSerialPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6425")
@@ -237,7 +243,6 @@ class TestHotPlugWithSerialPersist:
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
@@ -250,7 +255,6 @@ class TestHotPlugWithSerialPersist:
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
@@ -278,6 +282,7 @@ class TestHotPlugWithSerialPersist:
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("hotplug_volume_windows_scope_class")
 @pytest.mark.tier3
 class TestHotPlugWindows:
     @pytest.mark.polarion("CNV-6525")
@@ -288,7 +293,6 @@ class TestHotPlugWindows:
         data_volume_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
         started_windows_vm_scope_class,
-        hotplug_volume_windows_scope_class,
     ):
         wait_for_vm_volume_ready(vm=vm_instance_from_template_multi_storage_scope_class)
         assert_disk_serial(
@@ -306,7 +310,6 @@ class TestHotPlugWindows:
         data_volume_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
         started_windows_vm_scope_class,
-        hotplug_volume_windows_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
