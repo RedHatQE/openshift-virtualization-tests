@@ -4,6 +4,8 @@ from ocp_resources.node import Node
 
 from utilities.cluster import cache_admin_client
 
+# comment to trigger workflow
+
 
 def get_cluster_architecture() -> str:
     """

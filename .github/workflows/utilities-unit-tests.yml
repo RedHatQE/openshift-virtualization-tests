@@ -38,7 +38,17 @@ jobs:
         run: uv tool install tox --with tox-uv
 
       - name: Run tests
-        run: tox -e utilities-unittests
+        id: run_tests
+        continue-on-error: false
+        run: tox -e utilities-unittests --quiet
+
+      - name: Test Summary
+        if: failure()
+        run: |
+          echo "## ❌ Test Failures Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Check the test output above for detailed failure information." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tip:** Use \`--tb=short\` traceback format for concise error messages." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage to Codecov
         if: success()
