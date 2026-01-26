@@ -10,6 +10,7 @@ import os
 import ssl
 
 import pytest
+import shortuuid
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.config_map import ConfigMap
@@ -580,3 +581,8 @@ def rhel10_data_source_scope_module(golden_images_namespace):
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture(scope="class")
+def unique_suffix():
+    return shortuuid.ShortUUID().random(length=4).lower()

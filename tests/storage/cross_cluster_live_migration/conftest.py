@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import pytest
 import requests
-import shortuuid
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
@@ -353,11 +352,6 @@ def local_cluster_mtv_network_map(
 @pytest.fixture(scope="session")
 def remote_cluster_golden_images_namespace(remote_admin_client):
     return Namespace(name=py_config["golden_images_namespace"], client=remote_admin_client, ensure_exists=True)
-
-
-@pytest.fixture(scope="class")
-def unique_suffix():
-    return shortuuid.ShortUUID().random(length=4).lower()
 
 
 @pytest.fixture(scope="class")

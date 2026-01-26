@@ -56,10 +56,6 @@ class TestStorageClassMigrationAtoB:
         ],
         indirect=True,
     )
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: MigMigration resource reports Failed for VMs with RWO storage; MIG-1770",
-        run=False,
-    )
     def test_vm_storage_class_migration_a_to_b_running_vms(
         self,
         source_storage_class,
@@ -123,6 +119,14 @@ class TestStorageClassMigrationAtoB:
 )
 class TestStorageClassMigrationBtoA:
     @pytest.mark.polarion("CNV-11501")
+    @pytest.mark.xfail(
+        reason=(
+            f"{QUARANTINED}: "
+            "Migration fails for Stopped VMs; CNV-75975; "
+            "Migration OCS -> HPP fails for VMs with cloned DataSource; CNV-77731"
+        ),
+        run=False,
+    )
     def test_vm_storage_class_migration_b_to_a_with_running_and_stopped_vms(
         self,
         source_storage_class,
@@ -171,10 +175,6 @@ class TestStorageClassMigrationWithVolumeHotplug:
             )
         ],
         indirect=True,
-    )
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: MigMigration resource reports Failed for VMs with RWO storage; MIG-1770",
-        run=False,
     )
     def test_vm_storage_class_migration_with_hotplugged_volume(
         self,
@@ -243,10 +243,6 @@ class TestStorageClassMigrationWithVolumeHotplug:
 class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm")
     @pytest.mark.polarion("CNV-11499")
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: MigMigration resource reports Failed for VMs with RWO storage; MIG-1770",
-        run=False,
-    )
     def test_vm_storage_class_migration_windows_vm_with_vtpm(
         self,
         source_storage_class,
