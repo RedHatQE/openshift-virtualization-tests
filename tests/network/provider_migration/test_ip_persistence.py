@@ -3,7 +3,7 @@ from typing import Final
 import pytest
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
-from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, lookup_primary_network
 from utilities.constants import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
 
@@ -19,7 +19,12 @@ def test_mac_and_ip_preserved_after_vm_import(source_vm_network_data, imported_c
     target_vm_iface = lookup_iface_status(
         vm=imported_cudn_vm, iface_name=lookup_primary_network(vm=imported_cudn_vm).name
     )
-    target_vm_mac, target_vm_ip = target_vm_iface.get("mac", None), target_vm_iface.get(IP_ADDRESS, None)
+    target_vm_mac = target_vm_iface.get("mac", None)
+    target_vm_ip = str(
+        lookup_iface_status_ip(
+            vm=imported_cudn_vm, iface_name=lookup_primary_network(vm=imported_cudn_vm).name, ip_family=4
+        )
+    )
 
     with subtests.test("MAC preserved"):
         assert source_vm_mac == target_vm_mac, (
