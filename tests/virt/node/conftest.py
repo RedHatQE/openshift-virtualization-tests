@@ -12,13 +12,13 @@ from tests.utils import (
 )
 from tests.virt.utils import append_feature_gate_to_hco
 from utilities.constants import (
+    AMD_64,
     EIGHT_CPU_SOCKETS,
     FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
     ONE_CPU_CORE,
     ONE_CPU_THREAD,
     TEN_GI_MEMORY,
-    X86_64,
 )
 from utilities.jira import is_jira_open
 from utilities.virt import (
@@ -64,7 +64,7 @@ def vmx_disabled_flag(nodes_cpu_architecture):
                 }
             ]
         }
-        if nodes_cpu_architecture == X86_64 and is_jira_open("CNV-62851")
+        if nodes_cpu_architecture == AMD_64 and is_jira_open("CNV-62851")
         else None
     )
 
