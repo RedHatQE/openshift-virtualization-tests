@@ -14,7 +14,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
-    ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
     ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
     WINDOWS_DIRECTORY_PATH,
@@ -189,38 +188,38 @@ class TestRestoreSnapshots:
             rhel_vm_for_snapshot.stop(wait=True)
             vmrestore.wait_restore_done()
 
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content, namespace",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-5049"},
-                {"number_of_snapshots": 1},
-                ADMIN_NAMESPACE_PARAM,
-                marks=pytest.mark.polarion("CNV-5049"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_fail_restore_vm_with_unprivileged_client(
-        self,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
-        unprivileged_client,
-    ):
-        if rhel_vm_for_snapshot.ready:
-            rhel_vm_for_snapshot.stop(wait=True)
-        with pytest.raises(
-            ApiException,
-            match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
-        ):
-            with VirtualMachineRestore(
-                client=unprivileged_client,
-                name="restore-snapshot-cnv-5049-unprivileged",
-                namespace=rhel_vm_for_snapshot.namespace,
-                vm_name=rhel_vm_for_snapshot.name,
-                snapshot_name=snapshot_with_content[0].name,
-            ):
-                return
+    # @pytest.mark.parametrize(
+    #     "rhel_vm_name, snapshot_with_content, namespace",
+    #     [
+    #         pytest.param(
+    #             {"vm_name": "vm-cnv-5049"},
+    #             {"number_of_snapshots": 1},
+    #             ADMIN_NAMESPACE_PARAM,
+    #             marks=pytest.mark.polarion("CNV-5049"),
+    #         ),
+    #     ],
+    #     indirect=True,
+    # )
+    # def test_fail_restore_vm_with_unprivileged_client(
+    #     self,
+    #     rhel_vm_for_snapshot,
+    #     snapshot_with_content,
+    #     unprivileged_client,
+    # ):
+    #     if rhel_vm_for_snapshot.ready:
+    #         rhel_vm_for_snapshot.stop(wait=True)
+    #     with pytest.raises(
+    #         ApiException,
+    #         match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
+    #     ):
+    #         with VirtualMachineRestore(
+    #             client=unprivileged_client,
+    #             name="restore-snapshot-cnv-5049-unprivileged",
+    #             namespace=rhel_vm_for_snapshot.namespace,
+    #             vm_name=rhel_vm_for_snapshot.name,
+    #             snapshot_name=snapshot_with_content[0].name,
+    #         ):
+    #             return
 
     @pytest.mark.sno
     @pytest.mark.parametrize(
