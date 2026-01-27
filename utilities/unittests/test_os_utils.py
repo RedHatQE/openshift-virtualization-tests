@@ -63,7 +63,7 @@ class TestGenerateOsMatrixDict:
         """Test Windows OS matrix generation with UEFI support"""
         mock_images.Windows = mock_os_images["windows"]
 
-        result = generate_os_matrix_dict("windows", ["win-10", "win-2016"])
+        result = generate_os_matrix_dict("windows", ["win-10", "win-2019"])
 
         assert len(result) == 2
 
@@ -75,10 +75,10 @@ class TestGenerateOsMatrixDict:
         assert win10["template_labels"]["workload"] == "desktop"
         assert win10["template_labels"]["flavor"] == "medium"
 
-        # Check Windows 2016 (UEFI + server workload)
-        win2016 = next(item for item in result if "win-2016" in item)["win-2016"]
-        assert win2016["image_path"] == "cnv-tests/windows-uefi-images/win2k16.qcow2"
-        assert win2016["template_labels"]["workload"] == "server"
+        # Check Windows 2019 (UEFI + server workload)
+        win2019 = next(item for item in result if "win-2019" in item)["win-2019"]
+        assert win2019["image_path"] == "cnv-tests/windows-uefi-images/win2k19.qcow2"
+        assert win2019["template_labels"]["workload"] == "server"
 
     @patch("utilities.os_utils.Images")
     def test_generate_windows_os_matrix_without_uefi(self, mock_images, mock_os_images):
@@ -300,7 +300,7 @@ class TestOsMappingsConstants:
 
         # Check for UEFI flag where expected
         assert WINDOWS_OS_MAPPING["win-10"]["uefi"] is True
-        assert WINDOWS_OS_MAPPING["win-2016"]["uefi"] is True
+        assert WINDOWS_OS_MAPPING["win-2019"]["uefi"] is True
         assert "uefi" not in WINDOWS_OS_MAPPING["win-2022"]
 
     def test_fedora_os_mapping_structure(self):
