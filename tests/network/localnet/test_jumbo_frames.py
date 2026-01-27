@@ -9,6 +9,7 @@ from utilities.virt import vm_console_run_commands
 pytestmark = [
     pytest.mark.special_infra,
     pytest.mark.jumbo_frame,
+    pytest.mark.ipv4,
 ]
 
 

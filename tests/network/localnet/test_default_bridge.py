@@ -1,9 +1,9 @@
-from ipaddress import ip_address, ip_interface
+from ipaddress import ip_interface
 
 import pytest
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
-from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
+from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
@@ -55,8 +55,8 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
     correctly reports the IP address for that interface.
     """
     vm, _ = localnet_running_vms
-    interface_status = lookup_iface_status(vm=vm, iface_name=LOCALNET_BR_EX_INTERFACE_NO_VLAN)
-    assert ip_address(interface_status[IP_ADDRESS]) == ip_interface(vm_localnet_1_secondary_ip).ip, (
+    vm_ip = lookup_iface_status_ip(vm=vm, iface_name=LOCALNET_BR_EX_INTERFACE_NO_VLAN, ip_family=4)
+    assert vm_ip == ip_interface(vm_localnet_1_secondary_ip).ip, (
         f"IP address mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
-        f"interface status: {interface_status}"
+        f"expected {ip_interface(vm_localnet_1_secondary_ip).ip}, got {vm_ip}"
     )
