@@ -240,6 +240,15 @@ def _collect_cpu_diagnostic_info(vm):
 
 
 def wait_for_guest_os_cpu_count(vm, spec_cpu_amount):
+    """Wait for the guest OS CPU count to match the VMI spec.
+
+    Args:
+        vm (VirtualMachineForTests): Target VM.
+        spec_cpu_amount (int): Expected CPU socket count from VMI spec.
+
+    Raises:
+        TimeoutExpiredError: If the guest OS CPU count does not match within the timeout.
+    """
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
