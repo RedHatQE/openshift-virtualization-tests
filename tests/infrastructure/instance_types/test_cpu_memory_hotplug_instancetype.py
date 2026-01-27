@@ -80,25 +80,25 @@ def hotplug_preference(admin_client):
 
 
 @pytest.fixture(scope="class")
-def four_sockets_instance_type(modern_cpu_for_migration):
+def four_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=FOUR_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=FOUR_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 
 
 @pytest.fixture(scope="class")
-def six_sockets_instance_type(modern_cpu_for_migration):
+def six_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=SIX_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=SIX_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 
 
 @pytest.fixture(scope="class")
-def ten_sockets_instance_type(modern_cpu_for_migration):
+def ten_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=TEN_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=TEN_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 

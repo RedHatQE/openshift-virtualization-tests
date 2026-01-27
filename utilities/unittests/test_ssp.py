@@ -547,8 +547,9 @@ class TestClusterInstanceTypeForHotPlug:
         """Test successful creation of cluster instance type for hot plug"""
         mock_instance_type = MagicMock()
         mock_instance_type_class.return_value = mock_instance_type
+        mock_client = MagicMock()
 
-        result = cluster_instance_type_for_hot_plug(guest_sockets=2, cpu_model="host-model")
+        result = cluster_instance_type_for_hot_plug(client=mock_client, guest_sockets=2, cpu_model="host-model")
 
         assert result == mock_instance_type
         mock_instance_type_class.assert_called_once()
@@ -558,8 +559,9 @@ class TestClusterInstanceTypeForHotPlug:
         """Test cluster instance type creation with None CPU model"""
         mock_instance_type = MagicMock()
         mock_instance_type_class.return_value = mock_instance_type
+        mock_client = MagicMock()
 
-        result = cluster_instance_type_for_hot_plug(guest_sockets=4, cpu_model=None)
+        result = cluster_instance_type_for_hot_plug(client=mock_client, guest_sockets=4, cpu_model=None)
 
         assert result == mock_instance_type
         mock_instance_type_class.assert_called_once()
