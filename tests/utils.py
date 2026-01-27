@@ -33,6 +33,7 @@ from utilities.artifactory import (
 from utilities.constants import (
     DISK_SERIAL,
     NODE_HUGE_PAGES_1GI_KEY,
+    OS_FLAVOR_WINDOWS,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -230,10 +231,10 @@ def _collect_cpu_diagnostic_info(vm):
     base_dir = get_data_collector_dir()
     LOGGER.info(f"Collecting CPU diagnostic information for VM {vm.name}")
 
-    if "windows" in vm.name:
-        cmd = shlex.split('powershell.exe -command "Get-WinEvent -LogName System -MaxEvents 100 | Format-List"')
+    if vm.os_flavor == OS_FLAVOR_WINDOWS:
+        cmd = shlex.split('powershell.exe -command "Get-WinEvent -LogName System -MaxEvents 30 | Format-List"')
     else:
-        cmd = shlex.split("dmesg")
+        cmd = shlex.split("bash -c 'dmesg | tail -n 30'")
 
     output = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0]
     write_to_file(base_directory=base_dir, file_name=f"{vm.name}_cpu_diagnostic.txt", content=output)
