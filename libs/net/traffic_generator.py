@@ -7,7 +7,7 @@ from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import retry
 
-from libs.net.vmspec import IP_ADDRESS, lookup_iface_status
+from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
@@ -198,6 +198,7 @@ def client_server_active_connection(
     spec_logical_network: str,
     port: int = IPERF_SERVER_PORT,
     maximum_segment_size: int = 0,
+    ip_family: int = 4,
 ) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
     """Start iperf3 client-server connection with continuous TCP traffic flow.
 
@@ -212,6 +213,7 @@ def client_server_active_connection(
         maximum_segment_size: Define explicitly the TCP payload size (in bytes).
                               Use for jumbo frame testing.
                               Default value is 0 (do not change mss).
+        ip_family: IP version to use (4 for IPv4, 6 for IPv6). Default is 4.
 
     Yields:
         tuple[VMTcpClient, TcpServer]: Client and server objects with active traffic flowing.
@@ -222,7 +224,7 @@ def client_server_active_connection(
     with TcpServer(vm=server_vm, port=port) as server:
         with VMTcpClient(
             vm=client_vm,
-            server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+            server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family)),
             server_port=port,
             maximum_segment_size=maximum_segment_size,
         ) as client:
