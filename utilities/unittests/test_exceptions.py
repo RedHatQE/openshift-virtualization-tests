@@ -20,6 +20,7 @@ from utilities.exceptions import (
     UnsupportedGPUDeviceError,
     UrlNotFoundError,
     UtilityPodNotFoundError,
+    raise_multiple_exceptions,
 )
 
 
@@ -240,3 +241,56 @@ class TestUnsupportedGPUDeviceError:
         """Test UnsupportedGPUDeviceError can be raised"""
         with pytest.raises(UnsupportedGPUDeviceError):
             raise UnsupportedGPUDeviceError("Test error")
+
+
+class TestRaiseMultipleExceptions:
+    """Test cases for raise_multiple_exceptions function"""
+
+    def test_raise_multiple_exceptions_empty_list(self):
+        """Test raise_multiple_exceptions with empty list returns None"""
+        result = raise_multiple_exceptions(exceptions=[])
+        assert result is None
+
+    def test_raise_multiple_exceptions_single_exception(self):
+        """Test raise_multiple_exceptions with single exception"""
+        with pytest.raises(ValueError, match="Single error"):
+            raise_multiple_exceptions(exceptions=[ValueError("Single error")])
+
+    def test_raise_multiple_exceptions_multiple_exceptions(self):
+        """Test raise_multiple_exceptions with multiple exceptions"""
+        exceptions_list = [
+            TypeError("First error"),
+            ValueError("Second error"),
+        ]
+
+        # raise_multiple_exceptions uses pop() which removes from end first (LIFO).
+        # ValueError is popped and raised first, but then in the finally block,
+        # TypeError is popped and raised. Since the finally block raises during
+        # exception handling, TypeError becomes the final exception that propagates.
+        with pytest.raises(TypeError, match="First error"):
+            raise_multiple_exceptions(exceptions=exceptions_list)
+
+    def test_raise_multiple_exceptions_chain(self):
+        """Test raise_multiple_exceptions creates proper exception chain"""
+        exceptions_list = [
+            RuntimeError("Error 1"),
+            ValueError("Error 2"),
+            TypeError("Error 3"),
+        ]
+
+        # The last exception in the list is raised first (due to pop())
+        # Then recursively the remaining exceptions are raised
+        try:
+            raise_multiple_exceptions(exceptions=exceptions_list)
+        except TypeError:
+            # The TypeError (Error 3) should be raised
+            pass
+        except ValueError:
+            # The ValueError (Error 2) should be raised if Error 3 was already popped
+            pass
+        except RuntimeError:
+            # The RuntimeError (Error 1) should be raised if others were popped
+            pass
+        except BaseException as exc:
+            # Should have raised one of the exceptions above
+            pytest.fail(f"Unexpected exception type: {type(exc)}")

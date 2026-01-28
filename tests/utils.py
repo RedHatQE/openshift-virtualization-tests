@@ -20,7 +20,6 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
@@ -52,6 +51,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -212,17 +212,17 @@ def get_os_cpu_count(vm):
         cmd = shlex.split("echo %NUMBER_OF_PROCESSORS%")
     else:
         cmd = shlex.split("nproc")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip())
+    return int(run_ssh_commands(vm=vm, commands=cmd)[0].strip())
 
 
 def get_os_memory_value(vm):
     if "windows" in vm.name:
         cmd = shlex.split("wmic ComputerSystem get TotalPhysicalMemory")
-        wmic_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[1]
+        wmic_total_mem = run_ssh_commands(vm=vm, commands=cmd)[0].strip().split()[1]
         return f"{round(float(bitmath.Bit(int(wmic_total_mem)).to_Gib()))}Gi"
     else:
         cmd = shlex.split("awk \"'{print$2/1024/1024;exit}'\" /proc/meminfo")
-        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip()
+        meminfo = run_ssh_commands(vm=vm, commands=cmd)[0].strip()
         return f"{round(float(meminfo))}Gi"
 
 
@@ -386,7 +386,7 @@ def validate_dedicated_emulatorthread(vm):
         re.match(
             r"(\d+)",
             run_ssh_commands(
-                host=vm.ssh_exec,
+                vm=vm,
                 commands=["nproc"],
             )[0],
         ).group(1)
@@ -515,7 +515,7 @@ def register_vm_to_rhsm(vm):
     LOGGER.info("Register the VM with RedHat Subscription Manager")
 
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(
             "sudo subscription-manager register "
             "--serverurl=subscription.rhsm.stage.redhat.com:443/subscription "
@@ -584,18 +584,18 @@ def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
         command = f"sudo dnf install stress-ng -y; {stress_command}"
 
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(command),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
 
 
 def verify_wsl2_guest_running(vm: VirtualMachineForTests, timeout: int = TIMEOUT_3MIN) -> bool:
     def _get_wsl2_running_status():
         guests_status = run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split("powershell.exe -command wsl -l -v"),
-            tcp_timeout=TCP_TIMEOUT_30SEC,
+            timeout=TCP_TIMEOUT_30SEC,
         )[0]
         guests_status = guests_status.replace("\x00", "")
         LOGGER.info(guests_status)
@@ -626,7 +626,7 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_15SEC,
         func=run_ssh_commands,
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"wsl echo {test_str}"),
     )
     try:

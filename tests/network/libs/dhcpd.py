@@ -2,12 +2,12 @@ import shlex
 import uuid
 from typing import Final
 
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import TIMEOUT_5SEC, TIMEOUT_30SEC
 from utilities.network import LOGGER
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests
 
 DHCP_IP_SUBNET: Final[str] = random_ipv4_address(net_seed=3, host_address=0).rpartition(".")[0]
@@ -47,8 +47,8 @@ def verify_dhcpd_activated(vm: VirtualMachineForTests) -> bool:
         wait_timeout=TIMEOUT_30SEC,
         sleep=TIMEOUT_5SEC,
         func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"sudo systemctl is-{active} {dhcpd}")],
+        vm=vm,
+        commands=shlex.split(f"sudo systemctl is-{active} {dhcpd}"),
     )
     try:
         for sample in sampler:

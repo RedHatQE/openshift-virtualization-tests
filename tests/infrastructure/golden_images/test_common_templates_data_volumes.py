@@ -5,6 +5,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
 from utilities.constants import OS_FLAVOR_FEDORA, U1_SMALL, Images
+from utilities.ssh import is_connective
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -97,7 +98,7 @@ def test_vm_from_golden_image_cluster_default_storage_class(
     golden_image_data_volume_multi_storage_scope_function,
     vm_from_golden_image_multi_storage,
 ):
-    vm_from_golden_image_multi_storage.ssh_exec.executor().is_connective()
+    assert is_connective(vm=vm_from_golden_image_multi_storage)
 
 
 @pytest.mark.parametrize(
@@ -120,7 +121,7 @@ def test_vm_from_golden_image_cluster_default_storage_class(
     indirect=True,
 )
 def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_existing_dv):
-    vm_from_template_with_existing_dv.ssh_exec.executor().is_connective()
+    assert is_connective(vm=vm_from_template_with_existing_dv)
 
 
 @pytest.mark.polarion("CNV-5529")

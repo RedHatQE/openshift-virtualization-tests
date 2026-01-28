@@ -6,6 +6,7 @@ import pytest
 from timeout_sampler import TimeoutExpiredError
 
 from utilities.constants import TIMEOUT_1MIN
+from utilities.ssh import is_connective
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
@@ -69,7 +70,7 @@ def test_vm_with_cpu_flag_positive_case(cpu_flag_vm_positive, cluster_common_nod
     """
     Test VM with cpu flag, test CPU model and SSH connectivity
     """
-    cpu_flag_vm_positive.ssh_exec.executor().is_connective()
+    assert is_connective(vm=cpu_flag_vm_positive)
     assert (
         cpu_flag_vm_positive.instance["spec"]["template"]["spec"]["domain"]["cpu"]["model"] == cluster_common_node_cpu
     )

@@ -24,7 +24,6 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
-from pyhelper_utils.shell import run_ssh_commands
 from pytest import FixtureRequest
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -56,6 +55,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.exceptions import UrlNotFoundError
+from utilities.ssh import run_ssh_commands
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -641,7 +641,7 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         content: Content to write to the file
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+    run_ssh_commands(vm=vm, commands=cmd)
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
@@ -651,7 +651,7 @@ def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
-    assert HOTPLUG_DISK_SERIAL in run_ssh_commands(host=vm.ssh_exec, commands=command)[0], (
+    assert HOTPLUG_DISK_SERIAL in run_ssh_commands(vm=vm, commands=command)[0], (
         f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
     )
 
@@ -766,8 +766,8 @@ def is_snapshot_supported_by_sc(sc_name, client):
 def check_disk_count_in_vm(vm):
     LOGGER.info("Check disk count.")
     out = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
+        vm=vm,
+        commands=shlex.split("lsblk | grep disk | grep -v SWAP| wc -l"),
     )[0].strip()
     assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
         "Failed to verify actual disk count against VMI"

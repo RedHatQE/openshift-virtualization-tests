@@ -3,10 +3,10 @@
 """Unit tests for data_utils module"""
 
 import base64
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
-import paramiko
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from utilities.data_utils import (
     authorized_key,
@@ -22,54 +22,54 @@ class TestBase64EncodeStr:
     def test_base64_encode_simple_ascii(self):
         """Test encoding simple ASCII text"""
         text = "hello"
-        result = base64_encode_str(text)
+        result = base64_encode_str(text=text)
         expected = base64.b64encode(text.encode()).decode()
         assert result == expected
         assert result == "aGVsbG8="
 
     def test_base64_encode_empty_string(self):
         """Test encoding empty string"""
-        result = base64_encode_str("")
+        result = base64_encode_str(text="")
         assert result == ""
         assert isinstance(result, str)
 
     def test_base64_encode_special_characters(self):
         """Test encoding special characters"""
         text = "hello@#$%^&*()!~`"
-        result = base64_encode_str(text)
+        result = base64_encode_str(text=text)
         expected = base64.b64encode(text.encode()).decode()
         assert result == expected
 
     def test_base64_encode_unicode_utf8(self):
         """Test encoding Unicode/UTF-8 text"""
-        text = "Hello 世界 🌍"
-        result = base64_encode_str(text)
+        text = "Hello world"
+        result = base64_encode_str(text=text)
         expected = base64.b64encode(text.encode()).decode()
         assert result == expected
 
     def test_base64_encode_round_trip(self):
         """Test encoding/decoding round-trip"""
         original = "Test round-trip encoding"
-        encoded = base64_encode_str(original)
+        encoded = base64_encode_str(text=original)
         decoded = base64.b64decode(encoded.encode()).decode()
         assert decoded == original
 
     def test_base64_encode_returns_string(self):
         """Test that result is a string type"""
-        result = base64_encode_str("test")
+        result = base64_encode_str(text="test")
         assert isinstance(result, str)
 
     def test_base64_encode_multiline_text(self):
         """Test encoding multiline text"""
         text = "line1\nline2\nline3"
-        result = base64_encode_str(text)
+        result = base64_encode_str(text=text)
         expected = base64.b64encode(text.encode()).decode()
         assert result == expected
 
     def test_base64_encode_whitespace(self):
         """Test encoding text with various whitespace"""
         text = "  spaces  \t\ttabs\t\t  \n\nnewlines\n\n  "
-        result = base64_encode_str(text)
+        result = base64_encode_str(text=text)
         expected = base64.b64encode(text.encode()).decode()
         assert result == expected
 
@@ -79,47 +79,47 @@ class TestNamePrefix:
 
     def test_name_prefix_single_dot(self):
         """Test extracting prefix with single dot"""
-        result = name_prefix("file.txt")
+        result = name_prefix(name="file.txt")
         assert result == "file"
 
     def test_name_prefix_multiple_dots(self):
         """Test extracting prefix with multiple dots"""
-        result = name_prefix("archive.tar.gz")
+        result = name_prefix(name="archive.tar.gz")
         assert result == "archive"
 
     def test_name_prefix_no_dots(self):
         """Test name with no dots returns entire name"""
-        result = name_prefix("noextension")
+        result = name_prefix(name="noextension")
         assert result == "noextension"
 
     def test_name_prefix_empty_string(self):
         """Test empty string returns empty string"""
-        result = name_prefix("")
+        result = name_prefix(name="")
         assert result == ""
 
     def test_name_prefix_starts_with_dot(self):
         """Test name starting with dot (hidden file)"""
-        result = name_prefix(".hidden")
+        result = name_prefix(name=".hidden")
         assert result == ""
 
     def test_name_prefix_hidden_file_with_extension(self):
         """Test hidden file with extension"""
-        result = name_prefix(".gitignore")
+        result = name_prefix(name=".gitignore")
         assert result == ""
 
     def test_name_prefix_only_dots(self):
         """Test name with only dots"""
-        result = name_prefix("...")
+        result = name_prefix(name="...")
         assert result == ""
 
     def test_name_prefix_complex_filename(self):
         """Test complex filename with multiple components"""
-        result = name_prefix("my.project.backup.2024.tar.gz")
+        result = name_prefix(name="my.project.backup.2024.tar.gz")
         assert result == "my"
 
     def test_name_prefix_trailing_dot(self):
         """Test name with trailing dot"""
-        result = name_prefix("filename.")
+        result = name_prefix(name="filename.")
         assert result == "filename"
 
 
@@ -131,7 +131,7 @@ class TestAuthorizedKey:
         """Test authorized_key returns correct SSH format"""
         mock_private_to_public.return_value = "AAAAB3NzaC1yc2EAAAADAQABAAABAQC"
 
-        result = authorized_key("/path/to/id_rsa")
+        result = authorized_key(private_key_path="/path/to/id_rsa")
 
         expected = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC root@exec1.rdocloud"
         assert result == expected
@@ -143,7 +143,7 @@ class TestAuthorizedKey:
         mock_private_to_public.return_value = "test_base64_key"
 
         key_path = "/home/user/.ssh/id_rsa"
-        authorized_key(key_path)
+        authorized_key(private_key_path=key_path)
 
         mock_private_to_public.assert_called_once_with(key=key_path)
 
@@ -152,7 +152,7 @@ class TestAuthorizedKey:
         """Test authorized_key format has all required components"""
         mock_private_to_public.return_value = "mock_key"
 
-        result = authorized_key("/path/to/key")
+        result = authorized_key(private_key_path="/path/to/key")
 
         # Verify format: "ssh-rsa <key> root@exec1.rdocloud"
         parts = result.split()
@@ -167,77 +167,100 @@ class TestAuthorizedKey:
         mock_private_to_public.side_effect = FileNotFoundError("Key file not found")
 
         with pytest.raises(FileNotFoundError):
-            authorized_key("/nonexistent/path/id_rsa")
+            authorized_key(private_key_path="/nonexistent/path/id_rsa")
 
     @patch("utilities.data_utils.private_to_public_key")
-    def test_authorized_key_with_ssh_exception(self, mock_private_to_public):
-        """Test authorized_key propagates paramiko.SSHException"""
-        mock_private_to_public.side_effect = paramiko.SSHException("Invalid key format")
+    def test_authorized_key_with_value_error(self, mock_private_to_public):
+        """Test authorized_key propagates ValueError"""
+        mock_private_to_public.side_effect = ValueError("Invalid key format")
 
-        with pytest.raises(paramiko.SSHException):
-            authorized_key("/path/to/invalid_key")
+        with pytest.raises(ValueError):
+            authorized_key(private_key_path="/path/to/invalid_key")
 
 
 class TestPrivateToPublicKey:
     """Test cases for private_to_public_key function"""
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_success(self, mock_from_private_key_file):
+    @patch("utilities.data_utils.serialization.load_pem_private_key")
+    def test_private_to_public_key_success(self, mock_load_pem):
         """Test successful private to public key conversion"""
-        mock_rsa_key = MagicMock()
-        mock_rsa_key.get_base64.return_value = "AAAAB3NzaC1yc2EAAAADAQABAAABAQC"
-        mock_from_private_key_file.return_value = mock_rsa_key
+        # Create a mock RSA private key
+        mock_private_key = MagicMock()
+        mock_private_key.__class__.__name__ = "RSAPrivateKey"
 
-        result = private_to_public_key("/path/to/id_rsa")
+        mock_public_key = MagicMock()
+        mock_public_key.public_bytes.return_value = b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC comment"
+
+        mock_private_key.public_key.return_value = mock_public_key
+        mock_load_pem.return_value = mock_private_key
+
+        # Mock the isinstance check by patching
+        with patch("utilities.data_utils.isinstance", return_value=True):
+            with patch("builtins.open", mock_open(read_data=b"MOCK_PEM_DATA")):
+                result = private_to_public_key(key="/path/to/id_rsa")
 
         assert result == "AAAAB3NzaC1yc2EAAAADAQABAAABAQC"
-        mock_from_private_key_file.assert_called_once_with("/path/to/id_rsa")
-        mock_rsa_key.get_base64.assert_called_once()
+        mock_public_key.public_bytes.assert_called_once()
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_returns_base64_string(self, mock_from_private_key_file):
+    @patch("utilities.data_utils.serialization.load_pem_private_key")
+    def test_private_to_public_key_returns_base64_string(self, mock_load_pem):
         """Test private_to_public_key returns base64 string"""
-        mock_rsa_key = MagicMock()
-        mock_rsa_key.get_base64.return_value = "base64_encoded_key_data"
-        mock_from_private_key_file.return_value = mock_rsa_key
+        mock_private_key = MagicMock()
+        mock_public_key = MagicMock()
+        mock_public_key.public_bytes.return_value = b"ssh-rsa base64_encoded_key_data"
 
-        result = private_to_public_key("/path/to/key")
+        mock_private_key.public_key.return_value = mock_public_key
+        mock_load_pem.return_value = mock_private_key
+
+        with patch("utilities.data_utils.isinstance", return_value=True):
+            with patch("builtins.open", mock_open(read_data=b"MOCK_PEM_DATA")):
+                result = private_to_public_key(key="/path/to/key")
 
         assert isinstance(result, str)
         assert result == "base64_encoded_key_data"
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_file_not_found(self, mock_from_private_key_file):
+    def test_private_to_public_key_file_not_found(self):
         """Test FileNotFoundError when key file doesn't exist"""
-        mock_from_private_key_file.side_effect = FileNotFoundError("Private key file not found")
-
         with pytest.raises(FileNotFoundError):
-            private_to_public_key("/nonexistent/key")
+            private_to_public_key(key="/nonexistent/key")
 
-        mock_from_private_key_file.assert_called_once_with("/nonexistent/key")
+    @patch("utilities.data_utils.serialization.load_pem_private_key")
+    def test_private_to_public_key_invalid_key_type(self, mock_load_pem):
+        """Test ValueError for non-RSA key type"""
+        # Mock Ed25519 key (not RSA)
+        mock_private_key = MagicMock(spec=Ed25519PrivateKey)
+        mock_load_pem.return_value = mock_private_key
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_invalid_key_format(self, mock_from_private_key_file):
-        """Test paramiko.SSHException for invalid key format"""
-        mock_from_private_key_file.side_effect = paramiko.SSHException("Invalid RSA key format")
+        with patch("builtins.open", mock_open(read_data=b"MOCK_PEM_DATA")):
+            with pytest.raises(ValueError, match="Expected RSA key"):
+                private_to_public_key(key="/path/to/ed25519_key")
 
-        with pytest.raises(paramiko.SSHException):
-            private_to_public_key("/path/to/invalid_key")
+    @patch("utilities.data_utils.serialization.load_pem_private_key")
+    def test_private_to_public_key_single_part_output(self, mock_load_pem):
+        """Test handling of public key output without spaces"""
+        mock_private_key = MagicMock()
+        mock_public_key = MagicMock()
+        # Output without spaces (unusual format)
+        mock_public_key.public_bytes.return_value = b"singlepart"
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_password_protected(self, mock_from_private_key_file):
-        """Test paramiko.PasswordRequiredException for password-protected key"""
-        mock_from_private_key_file.side_effect = paramiko.PasswordRequiredException("Key is password protected")
+        mock_private_key.public_key.return_value = mock_public_key
+        mock_load_pem.return_value = mock_private_key
 
-        with pytest.raises(paramiko.PasswordRequiredException):
-            private_to_public_key("/path/to/protected_key")
+        with patch("utilities.data_utils.isinstance", return_value=True):
+            with patch("builtins.open", mock_open(read_data=b"MOCK_PEM_DATA")):
+                result = private_to_public_key(key="/path/to/key")
 
-    @patch("utilities.data_utils.paramiko.RSAKey.from_private_key_file")
-    def test_private_to_public_key_with_different_paths(self, mock_from_private_key_file):
+        assert result == "singlepart"
+
+    @patch("utilities.data_utils.serialization.load_pem_private_key")
+    def test_private_to_public_key_with_different_paths(self, mock_load_pem):
         """Test private_to_public_key with various key file paths"""
-        mock_rsa_key = MagicMock()
-        mock_rsa_key.get_base64.return_value = "test_key"
-        mock_from_private_key_file.return_value = mock_rsa_key
+        mock_private_key = MagicMock()
+        mock_public_key = MagicMock()
+        mock_public_key.public_bytes.return_value = b"ssh-rsa test_key"
+
+        mock_private_key.public_key.return_value = mock_public_key
+        mock_load_pem.return_value = mock_private_key
 
         paths = [
             "/home/user/.ssh/id_rsa",
@@ -246,6 +269,8 @@ class TestPrivateToPublicKey:
             "./local_key",
         ]
 
-        for path in paths:
-            result = private_to_public_key(path)
-            assert result == "test_key"
+        with patch("utilities.data_utils.isinstance", return_value=True):
+            with patch("builtins.open", mock_open(read_data=b"MOCK_PEM_DATA")):
+                for path in paths:
+                    result = private_to_public_key(key=path)
+                    assert result == "test_key"

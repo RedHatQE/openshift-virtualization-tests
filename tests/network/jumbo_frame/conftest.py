@@ -1,7 +1,6 @@
 import shlex
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.jumbo_frame.utils import (
@@ -11,6 +10,7 @@ from tests.network.jumbo_frame.utils import (
 from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.infra import get_node_selector_dict
 from utilities.network import network_device, network_nad
+from utilities.ssh import run_ssh_commands
 
 
 @pytest.fixture(scope="class")
@@ -147,6 +147,6 @@ def ping_over_secondary(
     )
 
     run_ssh_commands(
-        host=running_vme_jumbo_primary_interface_and_secondary_interface.ssh_exec,
-        commands=[shlex.split(f"ping {dst_ip}  >& /dev/null &")],
+        vm=running_vme_jumbo_primary_interface_and_secondary_interface,
+        commands=shlex.split(f"ping {dst_ip}  >& /dev/null &"),
     )

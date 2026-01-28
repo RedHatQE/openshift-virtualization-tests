@@ -10,10 +10,10 @@ from contextlib import contextmanager
 
 import bitmath
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import TIMEOUT_4MIN
+from utilities.ssh import run_ssh_commands
 from utilities.storage import create_dv
 from utilities.virt import running_vm
 
@@ -59,11 +59,11 @@ def cksum_file(vm, filename, create=False):
     if create:
         LOGGER.info("Creating file with random data")
         run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split(f"dd if=/dev/urandom of={filename} count=100 && sync"),
         )
 
-    out = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(f"sha256sum {filename}"))[0]
+    out = run_ssh_commands(vm=vm, commands=shlex.split(f"sha256sum {filename}"))[0]
     sha256sum = out.split()[0]
     LOGGER.info(f"File sha256sum is {sha256sum}")
     return sha256sum
@@ -104,7 +104,7 @@ def expand_pvc(dv, size_change):
 
 def get_resize_count(vm):
     commands = shlex.split("sudo dmesg | grep -c 'new size' || true")
-    result = run_ssh_commands(host=vm.ssh_exec, commands=commands)[0]
+    result = run_ssh_commands(vm=vm, commands=commands)[0]
 
     return int(result)
 
@@ -136,7 +136,7 @@ def wait_for_resize(vm, count=1):
             if current_resize_count in (desired_count, desired_count + 1):
                 break
     except TimeoutExpiredError:
-        dmesg = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("dmesg"))[0]
+        dmesg = run_ssh_commands(vm=vm, commands=shlex.split("dmesg"))[0]
         LOGGER.error(f"Failed to reach resize count {desired_count}.\ndmesg:\n{dmesg}")
         raise
 

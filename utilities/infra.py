@@ -15,7 +15,10 @@ import zipfile
 from contextlib import contextmanager
 from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from utilities.ssh import SSHClient
 
 import netaddr
 import requests
@@ -1170,12 +1173,12 @@ def delete_resources_from_namespace_by_type(resources_types, namespace, wait=Fal
             resource.delete(wait=wait)
 
 
-def get_linux_guest_agent_version(ssh_exec):
+def get_linux_guest_agent_version(ssh_exec: "SSHClient") -> str:
     ssh_exec.sudo = True
-    return guest_agent_version_parser(version_string=ssh_exec.package_manager.info("qemu-guest-agent"))
+    return guest_agent_version_parser(version_string=ssh_exec.package_manager.info(package="qemu-guest-agent"))
 
 
-def get_linux_os_info(ssh_exec):
+def get_linux_os_info(ssh_exec: "SSHClient") -> dict[str, Any]:
     # Use guest agent version without the build number
     ga_ver = get_linux_guest_agent_version(ssh_exec=ssh_exec).split("-")[0]
     hostname = ssh_exec.network.hostname

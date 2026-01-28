@@ -3,13 +3,13 @@ import shlex
 
 import pytest
 from ocp_resources.template import Template
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_11, WINDOWS_2022
 from tests.utils import update_hco_with_persistent_storage_config
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN
+from utilities.ssh import run_ssh_commands
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_windows_os_dict,
@@ -26,7 +26,7 @@ TESTS_CLASS_NAME = "TestBitLockerVTPM"
 
 def verify_tpm_in_os(vm):
     vtpm_enabled = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(
             r"wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get IsEnabled_InitialValue",
             posix=False,
@@ -41,7 +41,7 @@ def enable_bitlocker(vm):
             wait_timeout=TIMEOUT_40MIN,
             sleep=TIMEOUT_2MIN,
             func=run_ssh_commands,
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split("manage-bde -status c:"),
         )
 
@@ -58,13 +58,13 @@ def enable_bitlocker(vm):
 
     if "win-2022" in vm.name:
         run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split('powershell -c "install-windowsfeature bitlocker"'),
         )
         restart_vm_wait_for_running_vm(vm=vm)
 
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split('powershell -c "initialize-tpm"'))
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("manage-bde -on c: -s"))
+    run_ssh_commands(vm=vm, commands=shlex.split('powershell -c "initialize-tpm"'))
+    run_ssh_commands(vm=vm, commands=shlex.split("manage-bde -on c: -s"))
     _wait_encryption_finish(vm=vm)
 
 

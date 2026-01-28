@@ -6,7 +6,6 @@ import logging
 
 import pytest
 from ocp_resources.service import Service
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_OS
@@ -14,6 +13,7 @@ from utilities.constants import (
     OS_FLAVOR_WINDOWS,
     TIMEOUT_5MIN,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, vm_instance_from_template, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -79,11 +79,12 @@ def configure_rdp_on_server_windows_vm(vm: VirtualMachineForTests) -> None:
         # Restart Remote Desktop service to apply changes
         "Restart-Service TermService -Force",
     ]
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[["powershell", "-Command", cmd] for cmd in enable_rdp_cmds],
-        tcp_timeout=TCP_TIMEOUT_SEC,
-    )
+    for cmd in enable_rdp_cmds:
+        run_ssh_commands(
+            vm=vm,
+            commands=["powershell", "-Command", cmd],
+            timeout=TCP_TIMEOUT_SEC,
+        )
 
 
 @pytest.mark.parametrize(

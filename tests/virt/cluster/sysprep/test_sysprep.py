@@ -10,12 +10,12 @@ from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import WINDOWS_2019
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, TIMEOUT_5MIN
+from utilities.ssh import run_ssh_commands
 from utilities.ssp import get_windows_timezone
 from utilities.storage import get_downloaded_artifact
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
@@ -37,14 +37,12 @@ def __get_sysprep_missing_autounattend_condition(vm):
 def verify_changes_from_autounattend(vm, timezone, hostname):
     # timezone
     LOGGER.info(f"Verifying timezone change from answer file in vm {vm.name}")
-    actual_timezone = get_windows_timezone(ssh_exec=vm.ssh_exec, get_standard_name=True).split(":")[1].strip()
+    actual_timezone = get_windows_timezone(vm=vm, get_standard_name=True).split(":")[1].strip()
     assert actual_timezone == timezone, f"Incorrect timezone, expected {timezone}, found {actual_timezone}"
 
     # hostname
     LOGGER.info(f"Verifying hostname change from answer file in vm {vm.name}")
-    actual_hostname = run_ssh_commands(host=vm.ssh_exec, commands=["hostname"], tcp_timeout=TCP_TIMEOUT_30SEC)[
-        0
-    ].strip()
+    actual_hostname = run_ssh_commands(vm=vm, commands=["hostname"], timeout=TCP_TIMEOUT_30SEC)[0].strip()
     assert actual_hostname == hostname, f"Incorrect hostname, expected {hostname}, found {actual_hostname}"
 
 
@@ -150,12 +148,12 @@ def sealed_vm(sysprep_vm):
 
     LOGGER.info(f"Sealing VM {sysprep_vm.name}")
     run_ssh_commands(
-        host=sysprep_vm.ssh_exec,
+        vm=sysprep_vm,
         commands=shlex.split(
             "%WINDIR%\\system32\\sysprep\\sysprep.exe /generalize /quit /oobe /mode:vm",
             posix=False,
         ),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
 
 

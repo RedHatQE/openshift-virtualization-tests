@@ -2,8 +2,8 @@ import logging
 import shlex
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.ssh import run_ssh_commands
 from utilities.virt import wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 def get_vm_boot_count(vm):
     reboot_count = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[shlex.split("journalctl --list-boots | wc -l")],
     )[0].strip()
 

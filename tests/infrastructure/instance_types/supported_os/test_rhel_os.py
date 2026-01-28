@@ -11,6 +11,7 @@ from tests.infrastructure.instance_types.utils import (
     assert_secure_boot_mokutil_status,
 )
 from utilities.constants import PREFERENCE_STR, U1_MEDIUM_STR
+from utilities.ssh import is_connective
 from utilities.virt import (
     assert_linux_efi,
     assert_vm_xml_efi,
@@ -62,9 +63,7 @@ class TestVMCreationAndValidation:
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11829")
     def test_expose_ssh(self, golden_image_rhel_vm_with_instance_type):
-        assert golden_image_rhel_vm_with_instance_type.ssh_exec.executor().is_connective(tcp_timeout=120), (
-            "Failed to login via SSH"
-        )
+        assert is_connective(vm=golden_image_rhel_vm_with_instance_type, timeout=120), "Failed to login via SSH"
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11713")

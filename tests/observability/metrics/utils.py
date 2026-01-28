@@ -16,7 +16,6 @@ from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_utilities.monitoring import Prometheus
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
@@ -50,6 +49,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.monitoring import get_metrics_value
+from utilities.ssh import run_command, run_ssh_commands
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dic
 
 
 def is_swap_enabled(vm: VirtualMachineForTests, swap_name: str = r"\/dev\/zram0") -> bool:
-    out = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("swapon --raw"))
+    out = run_ssh_commands(vm=vm, commands=shlex.split("swapon --raw"))
     LOGGER.info(f"Swap: {out}")
     if not out:
         return False
@@ -215,10 +215,10 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
             f"mkswap /{swap_name}",
             f"swapon /{swap_name}",
         ]:
-            vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split(command))
+            run_command(vm=vm, command=f"sudo {command}", check=True)
 
         assert is_swap_enabled(vm=vm, swap_name=swap_name), f"Failed to enable swap memory {swap_name} on {vm.name}"
-    vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
+    run_command(vm=vm, command="sudo sysctl vm.swappiness=100", check=True)
 
 
 def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
@@ -324,7 +324,7 @@ def validate_metric_value_within_range(
 
 
 def network_packets_received(vm: VirtualMachineForTests, interface_name: str) -> dict[str, str]:
-    ip_link_show_content = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ip -s link show"))[0]
+    ip_link_show_content = run_ssh_commands(vm=vm, commands=shlex.split("ip -s link show"))[0]
     pattern = re.compile(
         rf".*?{re.escape(interface_name)}:.*?"  # Match the line with the interface name
         r"(?:RX:\s+bytes\s+packets\s+errors\s+dropped\s+.*?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)).*?"  # Capture RX stats
@@ -731,13 +731,12 @@ def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
 def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     vm: VirtualMachineForTests, windows: bool = False
 ) -> dict[str, str]:
-    guest_os_kernel_release = run_ssh_commands(
-        host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
-    )[0].strip()
+    guest_os_kernel_release = run_ssh_commands(vm=vm, commands=shlex.split("ver" if windows else "uname -r"))[0].strip()
     if windows:
-        guest_os_kernel_release = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
-        assert guest_os_kernel_release, "OS kernel release version not found."
-        guest_os_kernel_release = guest_os_kernel_release.group(2)
+        kernel_release_match = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
+        if kernel_release_match is None:
+            raise ValueError(f"OS kernel release version not found in: {guest_os_kernel_release}")
+        guest_os_kernel_release = kernel_release_match.group(2)
     return {
         "guest_os_kernel_release": guest_os_kernel_release,
         "namespace": vm.namespace,

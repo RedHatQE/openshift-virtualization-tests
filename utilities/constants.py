@@ -50,6 +50,7 @@ OS_FLAVOR_ALPINE = "alpine"
 OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
+FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS, OS_FLAVOR_ALPINE)
 
 FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"

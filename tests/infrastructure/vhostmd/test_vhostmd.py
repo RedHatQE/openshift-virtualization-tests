@@ -8,7 +8,6 @@ import xmltodict
 from bs4 import BeautifulSoup
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import Resource
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
@@ -16,6 +15,7 @@ from utilities.artifactory import get_artifactory_header
 from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_node_selector_dict, get_node_selector_name
+from utilities.ssh import run_ssh_commands
 from utilities.virt import (
     running_vm,
     vm_instance_from_template,
@@ -35,13 +35,14 @@ RPMS_REPO_URL = f"{py_config['servers']['https_server']}cnv-tests/rpms/"
 def download_and_install_vm_dump_metrics(vm, rpm_file_name):
     LOGGER.info(f"Download and install vm-dump-metrics tool to VM: {vm.name}")
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[
-            shlex.split(
+            *shlex.split(
                 f"curl {RPMS_REPO_URL + rpm_file_name} -k -O "
                 f"-H 'Authorization: {get_artifactory_header()['Authorization']}' "
             ),
-            shlex.split(f"sudo yum install -y ./{rpm_file_name}"),
+            "&&",
+            *shlex.split(f"sudo yum install -y ./{rpm_file_name}"),
         ],
     )
 
@@ -120,7 +121,7 @@ def running_vhostmd_vm2(vhostmd_vm2, rpm_file_name):
 
 def run_vm_dump_metrics(vm):
     return run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=["sudo", "vm-dump-metrics"],
     )[0]
 

@@ -5,7 +5,6 @@ import shlex
 import string
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import (
     RHEL_LATEST,
@@ -21,6 +20,7 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_30MIN,
 )
+from utilities.ssh import is_connective, run_ssh_commands
 from utilities.ssp import get_windows_timezone
 from utilities.virt import (
     guest_reboot,
@@ -96,16 +96,12 @@ def restarted_persistence_vm(request, persistence_vm):
     )
 
 
-def get_linux_timezone(ssh_exec):
-    return run_ssh_commands(host=ssh_exec, commands=shlex.split("timedatectl show | grep -i timezone"))[0]
+def get_linux_timezone(vm):
+    return run_ssh_commands(vm=vm, commands=shlex.split("timedatectl show | grep -i timezone"))[0]
 
 
 def get_timezone(vm, os):
-    tz = (
-        get_linux_timezone(ssh_exec=vm.ssh_exec)
-        if os == RHEL
-        else get_windows_timezone(ssh_exec=vm.ssh_exec, get_standard_name=True)
-    )
+    tz = get_linux_timezone(vm=vm) if os == RHEL else get_windows_timezone(vm=vm, get_standard_name=True)
 
     # Outputs are different for RHEL/Windows, need to split differently
     # RHEL: 'Timezone=America/New_York\n'
@@ -169,7 +165,7 @@ def set_passwd(vm, os, passwd):
     vm.password = passwd
 
     LOGGER.info("Verifying password change")
-    vm.ssh_exec.executor().is_connective()
+    is_connective(vm=vm)
 
 
 def verify_changes(vm, os):

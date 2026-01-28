@@ -6,6 +6,7 @@ import logging
 
 import pytest
 
+from utilities.ssh import is_connective
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -42,4 +43,4 @@ def test_vm_restart(vm_to_restart):
     vm_to_restart.start(wait=True)
     vm_to_restart.vmi.wait_until_running()
     wait_for_vm_interfaces(vmi=vm_to_restart.vmi)
-    vm_to_restart.ssh_exec.executor().is_connective()
+    assert is_connective(vm=vm_to_restart)

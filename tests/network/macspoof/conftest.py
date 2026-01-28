@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 import pytest
 from ocp_resources.resource import ResourceEditor
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
@@ -19,6 +18,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 ETH1_INTERFACE_NAME = "eth1"
@@ -41,15 +41,15 @@ def _networks_data(nad, ip):
 
 def get_vm_bridge_network_mac(vm):
     return run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"cat /sys/class/net/{ETH1_INTERFACE_NAME}/address")],
+        vm=vm,
+        commands=shlex.split(f"cat /sys/class/net/{ETH1_INTERFACE_NAME}/address"),
     )[0].strip()
 
 
 def set_vm_interface_network_mac(vm, mac):
     run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"sudo ip link set dev {ETH1_INTERFACE_NAME} address {mac}")],
+        vm=vm,
+        commands=shlex.split(f"sudo ip link set dev {ETH1_INTERFACE_NAME} address {mac}"),
     )
     LOGGER.info(f"wait for {vm.name} {ETH1_INTERFACE_NAME}  mac to be {mac}")
     for sample in TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=1, func=get_vm_bridge_network_mac, vm=vm):

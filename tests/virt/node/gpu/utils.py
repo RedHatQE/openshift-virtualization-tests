@@ -1,7 +1,5 @@
 import shlex
 
-from pyhelper_utils.shell import run_ssh_commands
-
 from tests.virt.node.gpu.constants import VGPU_DEVICE_NAME_STR
 from tests.virt.utils import fetch_gpu_device_name_from_vm_instance, verify_gpu_device_exists_in_vm
 from utilities.constants import (
@@ -10,6 +8,7 @@ from utilities.constants import (
     NamespacesNames,
 )
 from utilities.infra import get_daemonsets
+from utilities.ssh import run_ssh_commands
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 
@@ -41,14 +40,14 @@ def install_nvidia_drivers_on_windows_vm(vm, supported_gpu_device):
     vgpu_device_name = supported_gpu_device[VGPU_DEVICE_NAME_STR]
     gpu_mode = "vgpu" if fetch_gpu_device_name_from_vm_instance(vm) == vgpu_device_name else "gpu"
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[
             shlex.split(
                 f"C:\\NVIDIA\\{gpu_mode}\\International\\setup.exe -s & exit /b 0",
                 posix=False,
             )
         ],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
     # Wait for Running VM, as only vGPU VM Reboots after installing NVIDIA GRID Drivers.
     if fetch_gpu_device_name_from_vm_instance(vm=vm) == vgpu_device_name:

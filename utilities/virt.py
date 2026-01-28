@@ -40,10 +40,8 @@ from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
 from ocp_utilities.exceptions import CommandExecFailed
-from paramiko import ProxyCommandFailure
-from pyhelper_utils.shell import run_command, run_ssh_commands
+from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
-from rrmngmnt import Host, ssh, user
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.cpu
@@ -59,17 +57,14 @@ from utilities.constants import (
     DEFAULT_KUBEVIRT_CONDITIONS,
     DV_DISK,
     EVICTIONSTRATEGY,
+    FLAVORS_EXCLUDED_FROM_CLOUD_INIT,
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
-    OS_FLAVOR_ALPINE,
-    OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     OS_PROC_NAME,
     ROOTDISK,
-    SSH_PORT_22,
-    TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
@@ -86,11 +81,18 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     VIRT_HANDLER,
     VIRT_LAUNCHER,
-    VIRTCTL,
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import wait_for_hco_conditions
+from utilities.ssh import (
+    SSHClient,
+    SSHCommandError,
+    run_ssh_commands,
+)
+from utilities.ssh import (
+    wait_for_ssh_connectivity as ssh_wait_for_connectivity,
+)
 from utilities.storage import get_default_storage_class
 
 if TYPE_CHECKING:
@@ -102,7 +104,6 @@ LOGGER = logging.getLogger(__name__)
 K8S_TAINT = "node.kubernetes.io/unschedulable"
 NO_SCHEDULE = "NoSchedule"
 CIRROS_IMAGE = "kubevirt/cirros-container-disk-demo:latest"
-FLAVORS_EXCLUDED_FROM_CLOUD_INIT = (OS_FLAVOR_WINDOWS, OS_FLAVOR_CIRROS, OS_FLAVOR_ALPINE)
 VM_ERROR_STATUSES = [
     VirtualMachine.Status.CRASH_LOOPBACK_OFF,
     VirtualMachine.Status.ERROR_UNSCHEDULABLE,
@@ -1031,10 +1032,6 @@ class VirtualMachineForTests(VirtualMachine):
         )
 
     @property
-    def virtctl_port_forward_cmd(self):
-        return f"{VIRTCTL} port-forward --stdio=true vm/{self.name}/{self.namespace} {SSH_PORT_22}"
-
-    @property
     def login_params(self):
         os_login_param = py_config.get("os_login_param", {}).get(self.os_flavor, {})
         if not os_login_param:
@@ -1066,24 +1063,20 @@ class VirtualMachineForTests(VirtualMachine):
                     self.password = secrets.token_urlsafe(nbytes=12)
 
     @property
-    def ssh_exec(self):
-        # In order to use this property VM should be created with ssh=True
-        self.username = self.username or self.login_params["username"]
-        self.password = self.password or self.login_params["password"]
+    def ssh_exec(self) -> SSHClient:
+        """Get SSH client for executing commands on the VM.
 
-        LOGGER.info(f"SSH command: ssh -o 'ProxyCommand={self.virtctl_port_forward_cmd}' {self.username}@{self.name}")
-        host = Host(hostname=self.name)
-        # For SSH using a key, the public key needs to reside on the server.
-        # As the tests use a given set of credentials, this cannot be done in Windows/Cirros.
-        if any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
-            host_user = user.User(name=self.username, password=self.password)
-        else:
-            host_user = user.UserWithPKey(name=self.username, private_key=os.environ[CNV_VM_SSH_KEY_PATH])
-        host.executor_user = host_user
-        host.executor_factory = ssh.RemoteExecutorFactory(
-            sock=self.virtctl_port_forward_cmd,
+        Returns:
+            SSHClient instance that provides rrmngmnt Host-like interface.
+        """
+        # Ensure credentials are set
+        self.username = self.username or self.login_params.get("username", "")
+        self.password = self.password or self.login_params.get("password", "")
+
+        LOGGER.info(
+            "Creating SSH client", extra={"vm": self.name, "namespace": self.namespace, "username": self.username}
         )
-        return host
+        return SSHClient(vm=self)
 
     def wait_for_specific_status(self, status, timeout=TIMEOUT_3MIN, sleep=TIMEOUT_5SEC):
         LOGGER.info(f"Wait for {self.kind} {self.name} status to be {status}")
@@ -1538,17 +1531,14 @@ class ServiceForVirtualMachineForTests(Service):
 def wait_for_ssh_connectivity(
     vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
 ) -> None:
-    LOGGER.info(f"Wait for {vm.name} SSH connectivity.")
+    """Wait for SSH connectivity to the VM.
 
-    for sample in TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=5,
-        func=vm.ssh_exec.run_command,
-        command=["exit"],
-        tcp_timeout=tcp_timeout,
-    ):
-        if sample:
-            return
+    Args:
+        vm: VirtualMachineForTests instance.
+        timeout: Maximum time to wait for SSH connectivity.
+        tcp_timeout: Individual connection timeout (unused, kept for API compatibility).
+    """
+    ssh_wait_for_connectivity(vm=vm, timeout=timeout)
 
 
 def wait_for_console(vm):
@@ -2328,7 +2318,7 @@ def start_and_fetch_processid_on_linux_vm(vm, process_name, args="", use_nohup=F
     utilities.virt.wait_for_ssh_connectivity(vm=vm)
     nohup_cmd = "nohup" if use_nohup else ""
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"killall -9 {process_name}; {nohup_cmd} {process_name} {args} </dev/null &>/dev/null &"),
     )
     return fetch_pid_from_linux_vm(vm=vm, process_name=process_name)
@@ -2336,7 +2326,7 @@ def start_and_fetch_processid_on_linux_vm(vm, process_name, args="", use_nohup=F
 
 def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"pgrep {process_name} -x || true"),
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
@@ -2346,20 +2336,18 @@ def fetch_pid_from_linux_vm(vm, process_name):
 def start_and_fetch_processid_on_windows_vm(vm, process_name):
     wait_for_ssh_connectivity(vm=vm)
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(
             f"powershell Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList {process_name}"
         ),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
     )
     return fetch_pid_from_windows_vm(vm=vm, process_name=process_name)
 
 
 def fetch_pid_from_windows_vm(vm, process_name):
     cmd_res = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"powershell -Command (Get-Process -Name {process_name.removesuffix('.exe')}).Id"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0].strip()
     assert cmd_res, f"Process '{process_name}' not in output: {cmd_res}"
     return int(cmd_res)
@@ -2367,7 +2355,7 @@ def fetch_pid_from_windows_vm(vm, process_name):
 
 def kill_processes_by_name_linux(vm, process_name, check_rc=True):
     cmd = shlex.split(f"pkill {process_name}")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd, check_rc=check_rc)
+    run_ssh_commands(vm=vm, commands=cmd, check=check_rc)
 
 
 class VirtualMachineForCloning(VirtualMachineForTests):
@@ -2438,7 +2426,7 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
         raise
 
 
-def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
+def check_qemu_guest_agent_installed(ssh_exec: SSHClient) -> bool:
     ssh_exec.sudo = True
     return ssh_exec.package_manager.exist(package="qemu-guest-agent")
 
@@ -2459,7 +2447,7 @@ def assert_linux_efi(vm: VirtualMachineForTests) -> None:
     """
     Verify guest OS is using EFI.
     """
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
+    run_ssh_commands(vm=vm, commands=shlex.split("ls -ld /sys/firmware/efi"))
 
 
 def pause_unpause_vm_and_check_connectivity(vm: VirtualMachineForTests) -> None:
@@ -2605,7 +2593,7 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
         if "windows" in vm.name  # type: ignore[operator]
         else "who -b"
     )
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+    return run_ssh_commands(vm=vm, commands=shlex.split(boot_command))[0]
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
@@ -2658,12 +2646,11 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
 def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
     try:
         return run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split(command),
             timeout=5,
-            tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
-    except ProxyCommandFailure:
+    except SSHCommandError:
         # On RHEL on successful reboot command execution ssh gets stuck
         if "reboot" not in command:
             raise

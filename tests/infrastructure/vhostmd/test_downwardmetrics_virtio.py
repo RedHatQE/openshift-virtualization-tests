@@ -17,10 +17,10 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
-from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.constants import OS_FLAVOR_RHEL
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def parsed_metrics_command_data(vm):
     virtio_file = "/dev/virtio-ports/org.github.vhostmd.1"
     return parse_metrics_collected(
         metrics_collected=run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=shlex.split(
                 f"sudo sh -c 'printf \"GET /metrics/XML\\n\\n\" > {virtio_file}' "
                 f"&& sudo awk '/<\\/metrics>/{{print; exit}} 1' {virtio_file}"

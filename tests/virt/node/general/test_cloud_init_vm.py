@@ -5,6 +5,7 @@ Test VM with cloudInit disk.
 import pytest
 
 from utilities.constants import CLOUD_INIT_NO_CLOUD
+from utilities.ssh import is_connective
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
@@ -26,4 +27,4 @@ def vm_with_cloud_init_type(namespace):
 
 @pytest.mark.polarion("CNV-3804")
 def test_cloud_init_types(vm_with_cloud_init_type):
-    vm_with_cloud_init_type.ssh_exec.executor().is_connective()
+    assert is_connective(vm=vm_with_cloud_init_type)

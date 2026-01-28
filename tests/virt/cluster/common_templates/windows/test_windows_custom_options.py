@@ -6,7 +6,6 @@ from ocp_resources.template import Template
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 
 from tests.os_params import (
@@ -15,6 +14,7 @@ from tests.os_params import (
 )
 from utilities.constants import LINUX_BRIDGE, TCP_TIMEOUT_30SEC, TIMEOUT_12MIN, VIRTIO, Images
 from utilities.network import network_device, network_nad
+from utilities.ssh import run_ssh_commands
 from utilities.storage import get_storage_class_dict_from_matrix
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
@@ -94,7 +94,7 @@ def assert_firmware_uuid_in_domxml(vm, uuid):
 
 def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive_letter):
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[
             shlex.split(cmd)
             for cmd in [
@@ -105,8 +105,7 @@ def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive
                 f'powershell -command "format-volume -driveletter {drive_letter} -filesystem NTFS"',
             ]
         ],
-        get_pty=True,
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
 
 

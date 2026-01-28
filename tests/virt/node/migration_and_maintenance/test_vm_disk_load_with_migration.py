@@ -3,11 +3,11 @@ import re
 import shlex
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from utilities.constants import TIMEOUT_1MIN
+from utilities.ssh import run_ssh_commands
 from utilities.virt import migrate_vm_and_verify, running_vm, vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def vm_with_fio(
 @pytest.fixture()
 def running_fio_in_vm(vm_with_fio):
     LOGGER.info("Installing fio and iotop tools")
-    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=shlex.split("sudo dnf install -y iotop fio"))
+    run_ssh_commands(vm=vm_with_fio, commands=shlex.split("sudo dnf install -y iotop fio"))
 
     # Random write/read -  create a 1G file, and perform 4KB reads and writes using a 75%/25%
     LOGGER.info("Running fio in VM")
@@ -47,11 +47,11 @@ def running_fio_in_vm(vm_with_fio):
         "--gtod_reduce=1 --name=test --filename=/home/fedora/random_read_write.fio --bs=4k --iodepth=64 "
         "--size=1G --readwrite=randrw --rwmixread=75 --numjobs=8 >& /dev/null &"
     )
-    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=fio_cmd)
-    get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)
+    run_ssh_commands(vm=vm_with_fio, commands=fio_cmd)
+    get_disk_usage(vm=vm_with_fio)
 
 
-def get_disk_usage(ssh_exec):
+def get_disk_usage(vm):
     # After migration, the SSH connection may not be accessible for a brief moment ("No route to host")
     # Sometimes fio will stop the writes/read for a brief second and then continue, need to retry to make sure that the
     # IO continues
@@ -61,7 +61,7 @@ def get_disk_usage(ssh_exec):
             wait_timeout=TIMEOUT_1MIN,
             sleep=5,
             func=run_ssh_commands,
-            host=ssh_exec,
+            vm=vm,
             commands=shlex.split("sudo iotop -b -n 2 -o | grep -E \\'Actual|Current\\' | tail -n 1 "),
         ):
             if sample:
@@ -95,4 +95,4 @@ def get_disk_usage(ssh_exec):
 def test_fedora_vm_load_migration(vm_with_fio, running_fio_in_vm):
     LOGGER.info("Test migrate VM with disk load")
     migrate_vm_and_verify(vm=vm_with_fio, check_ssh_connectivity=True)
-    get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)
+    get_disk_usage(vm=vm_with_fio)

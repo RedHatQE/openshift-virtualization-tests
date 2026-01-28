@@ -5,8 +5,8 @@ Test VM with RNG
 import shlex
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
@@ -36,7 +36,7 @@ def test_vm_with_rng(rng_vm):
         for device in ["random", "hwrng"]
     ] + [rng_current_cmd]
     rng_output = run_ssh_commands(
-        host=rng_vm.ssh_exec,
+        vm=rng_vm,
         commands=rng_commnds,
     )
     assert set(rng_output[:2]) == {"1\n"}, f"Expected:1, actual: {rng_output[:2]}"

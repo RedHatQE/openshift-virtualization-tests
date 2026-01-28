@@ -9,10 +9,10 @@ from kubernetes.client import ApiException
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_export import VirtualMachineExport
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
 from utilities.infra import run_virtctl_command
+from utilities.ssh import run_ssh_commands
 from utilities.virt import running_vm
 
 VIRTUALMACHINEEXPORTS = "virtualmachineexports"
@@ -63,7 +63,7 @@ def test_vmexport_snapshot_manifests(
 ):
     running_vm(vm=vm_from_vmexport)
 
-    result = run_ssh_commands(host=vm_from_vmexport.ssh_exec, commands=shlex.split(f"cat {VM_EXPORT_TEST_FILE_NAME}"))
+    result = run_ssh_commands(vm=vm_from_vmexport, commands=shlex.split(f"cat {VM_EXPORT_TEST_FILE_NAME}"))
     file_content = result[0].strip()
 
     assert file_content == VM_EXPORT_TEST_FILE_CONTENT

@@ -9,7 +9,6 @@ import shlex
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.template import Template
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.network.libs.ip import random_ipv4_address
@@ -27,6 +26,7 @@ from utilities.network import (
     network_nad,
     sriov_network_dict,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.ssp import create_custom_template_from_url
 from utilities.virt import (
     VirtualMachineForTests,
@@ -206,16 +206,16 @@ def restarted_sriov_vm4(request, sriov_vm4):
 def get_vm_sriov_network_mtu(vm):
     return int(
         run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=[shlex.split(f"cat /sys/class/net/{VM_SRIOV_IFACE_NAME}/mtu")],
+            vm=vm,
+            commands=shlex.split(f"cat /sys/class/net/{VM_SRIOV_IFACE_NAME}/mtu"),
         )[0]
     )
 
 
 def set_vm_sriov_network_mtu(vm, mtu):
     run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"sudo ip link set {VM_SRIOV_IFACE_NAME} mtu {mtu}")],
+        vm=vm,
+        commands=shlex.split(f"sudo ip link set {VM_SRIOV_IFACE_NAME} mtu {mtu}"),
     )
     LOGGER.info(f"wait for {vm.name} {VM_SRIOV_IFACE_NAME} mtu to be {mtu}")
     for sample in TimeoutSampler(wait_timeout=30, sleep=1, func=get_vm_sriov_network_mtu, vm=vm):
@@ -301,7 +301,7 @@ def vm_dpdk_pci_slot(sriov_dpdk_vm1):
         wait_timeout=TIMEOUT_10MIN,
         sleep=TIMEOUT_20SEC,
         func=run_ssh_commands,
-        host=sriov_dpdk_vm1.ssh_exec,
+        vm=sriov_dpdk_vm1,
         commands=shlex.split("dpdk-devbind.py --status"),
     ):
         dpdk_result = re.search(
@@ -317,7 +317,7 @@ def vm_dpdk_pci_slot(sriov_dpdk_vm1):
 def vm_dpdk_numa_cpu(sriov_dpdk_vm1):
     # Get the CPU list to send to testpmd.
     lscpu_output = run_ssh_commands(
-        host=sriov_dpdk_vm1.ssh_exec,
+        vm=sriov_dpdk_vm1,
         commands=["lscpu"],
     )[0]
 
@@ -329,10 +329,10 @@ def testpmd_output(vm_dpdk_pci_slot, vm_dpdk_numa_cpu, sriov_dpdk_vm1):
     # testpmd starts tracing traffic and waits for <Enter> to exit and output the statistics.
     # A timeout is provided to have enough runtime for traffic to be collected before sending <Enter>
     test_output = run_ssh_commands(
-        host=sriov_dpdk_vm1.ssh_exec,
-        commands=[
-            shlex.split(f"(sleep 30; echo -ne '\n') | sudo dpdk-testpmd  -l {vm_dpdk_numa_cpu} -w {vm_dpdk_pci_slot}")
-        ],
+        vm=sriov_dpdk_vm1,
+        commands=shlex.split(
+            f"(sleep 30; echo -ne '\n') | sudo dpdk-testpmd  -l {vm_dpdk_numa_cpu} -w {vm_dpdk_pci_slot}"
+        ),
     )[0]
 
     return re.search(r".*?[RX|TX]-total: (\d+).*?", test_output, re.DOTALL).group(1)

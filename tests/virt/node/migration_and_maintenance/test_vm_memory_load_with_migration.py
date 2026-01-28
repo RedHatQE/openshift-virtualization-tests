@@ -29,7 +29,7 @@ def cpu_mem_io_stress_started(vm_with_memory_load):
 @pytest.fixture()
 def stress_pid_before_migration(vm_with_memory_load, cpu_mem_io_stress_started):
     stress_pid = get_stress_ng_pid(
-        ssh_exec=vm_with_memory_load.ssh_exec,
+        vm=vm_with_memory_load,
         windows="windows" in vm_with_memory_load.name,
     )
     assert stress_pid, "Can't get stress-ng pid before migration"

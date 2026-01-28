@@ -9,7 +9,6 @@ import shlex
 
 import pytest
 from ocp_resources.service import Service
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
@@ -33,6 +32,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -53,8 +53,8 @@ def http_port_accessible(vm, server_ip, server_port):
         wait_timeout=TIMEOUT_2MIN,
         sleep=5,
         func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"curl --head {server_ip}:{server_port}")],
+        vm=vm,
+        commands=shlex.split(f"curl --head {server_ip}:{server_port}"),
     )
     for sample in sampler:
         if sample:
@@ -218,8 +218,8 @@ def ping_in_background(br1test_nad, running_vma, running_vmb):
     assert_ping_successful(src_vm=running_vma, dst_ip=dst_ip)
     LOGGER.info(f"Ping {dst_ip} from {running_vma.name} to {running_vmb.name}")
     run_ssh_commands(
-        host=running_vma.ssh_exec,
-        commands=[shlex.split(f"sudo ping -i 0.1 {dst_ip} >& {PING_LOG} &")],
+        vm=running_vma,
+        commands=shlex.split(f"sudo ping -i 0.1 {dst_ip} >& {PING_LOG} &"),
     )
 
 
@@ -229,14 +229,15 @@ class HighPacketLossError(Exception):
 
 
 def assert_low_packet_loss(vm):
-    output = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[
-            shlex.split("sudo kill -SIGINT `pgrep ping`"),
-            shlex.split(f"cat {PING_LOG}"),
-        ],
+    run_ssh_commands(
+        vm=vm,
+        commands=shlex.split("sudo kill -SIGINT `pgrep ping`"),
     )
-    packet_loss = re.findall(r"\d+.\d+% packet loss", output[1])
+    output = run_ssh_commands(
+        vm=vm,
+        commands=shlex.split(f"cat {PING_LOG}"),
+    )
+    packet_loss = re.findall(r"\d+.\d+% packet loss", output[0])
     assert packet_loss
     float_packet_loss = float(re.findall(r"\d+.\d+", packet_loss[0])[0])
     if float_packet_loss > 2:

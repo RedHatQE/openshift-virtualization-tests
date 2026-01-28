@@ -3,10 +3,10 @@ import shlex
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS
 from utilities.constants import TIMEOUT_10MIN
+from utilities.ssh import run_ssh_commands
 from utilities.virt import running_vm
 
 
@@ -61,7 +61,7 @@ def run_command_on_vm_and_check_output(vm, command, expected_result):
         AssertionError: If expected result is not in output.
     """
     cmd_output = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"bash -c {shlex.quote(command)}"),
     )[0].strip()
     expected_result = expected_result.strip()

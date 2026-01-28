@@ -398,10 +398,10 @@ class TestGetWindowsTimezone:
     @patch("utilities.ssp.run_ssh_commands")
     def test_get_windows_timezone_success(self, mock_run_ssh):
         """Test successful extraction of Windows timezone"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
         mock_run_ssh.return_value = ["UTC"]
 
-        result = get_windows_timezone(mock_ssh_exec)
+        result = get_windows_timezone(vm=mock_vm)
 
         assert result == "UTC"
         mock_run_ssh.assert_called_once()
@@ -409,10 +409,10 @@ class TestGetWindowsTimezone:
     @patch("utilities.ssp.run_ssh_commands")
     def test_get_windows_timezone_with_standard_name(self, mock_run_ssh):
         """Test timezone extraction with standard name only"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
         mock_run_ssh.return_value = ["StandardName: UTC"]
 
-        result = get_windows_timezone(mock_ssh_exec, get_standard_name=True)
+        result = get_windows_timezone(vm=mock_vm, get_standard_name=True)
 
         assert result == "StandardName: UTC"
         mock_run_ssh.assert_called_once()
@@ -424,10 +424,10 @@ class TestGetGaVersion:
     @patch("utilities.ssp.run_ssh_commands")
     def test_get_ga_version_success(self, mock_run_ssh):
         """Test successful extraction of GA version"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
         mock_run_ssh.return_value = ["7.4.0  "]  # With trailing space to test strip()
 
-        result = get_ga_version(mock_ssh_exec)
+        result = get_ga_version(vm=mock_vm)
 
         assert result == "7.4.0"
         mock_run_ssh.assert_called_once()
@@ -439,11 +439,11 @@ class TestGetCimInstanceJson:
     @patch("utilities.ssp.run_ssh_commands")
     def test_get_cim_instance_json_success(self, mock_run_ssh):
         """Test successful extraction of CIM instance JSON"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
         test_json = '{"CSName": "test-host", "BuildNumber": "19042"}'
         mock_run_ssh.return_value = [test_json]
 
-        result = get_cim_instance_json(mock_ssh_exec)
+        result = get_cim_instance_json(vm=mock_vm)
 
         expected = {"CSName": "test-host", "BuildNumber": "19042"}
         assert result == expected
@@ -456,10 +456,10 @@ class TestGetRegProductName:
     @patch("utilities.ssp.run_ssh_commands")
     def test_get_reg_product_name_success(self, mock_run_ssh):
         """Test successful extraction of registry product name"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
         mock_run_ssh.return_value = ["REG_SZ    Microsoft Windows Server 2019\r\n"]
 
-        result = get_reg_product_name(mock_ssh_exec)
+        result = get_reg_product_name(vm=mock_vm)
 
         assert result == "REG_SZ    Microsoft Windows Server 2019\r\n"
         mock_run_ssh.assert_called_once()
@@ -475,7 +475,7 @@ class TestGetWindowsOsInfo:
     @patch("utilities.ssp.guest_agent_version_parser")
     def test_get_windows_os_info_success(self, mock_parser, mock_cim, mock_ga, mock_reg, mock_tz):
         """Test successful extraction of Windows OS info"""
-        mock_ssh_exec = MagicMock()
+        mock_vm = MagicMock()
 
         mock_cim.return_value = {
             "CSName": "test-host",
@@ -489,7 +489,7 @@ class TestGetWindowsOsInfo:
         mock_reg.return_value = "REG_SZ    Windows Server 2019 Standard\r\n"
         mock_tz.return_value = "UTC"
 
-        result = get_windows_os_info(mock_ssh_exec)
+        result = get_windows_os_info(vm=mock_vm)
 
         expected = {
             "guestAgentVersion": "7.4.0",

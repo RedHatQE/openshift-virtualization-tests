@@ -2,7 +2,6 @@ import shlex
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST
@@ -16,6 +15,7 @@ from tests.virt.cluster.vm_cloning.utils import (
     check_if_files_present_after_cloning,
 )
 from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
+from utilities.ssh import run_ssh_commands
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
@@ -100,7 +100,7 @@ def cloning_job_fedora_vm(request, unprivileged_client, namespace):
 @pytest.fixture()
 def files_created_on_pvc_disks(vm_with_dv_for_cloning):
     run_ssh_commands(
-        host=vm_with_dv_for_cloning.ssh_exec,
+        vm=vm_with_dv_for_cloning,
         commands=[
             # create file on root disk
             shlex.split(f"echo 'TEST' > {ROOT_DISK_TEST_FILE_STR}"),

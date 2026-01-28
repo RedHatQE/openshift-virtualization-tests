@@ -4,7 +4,6 @@ import shlex
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.service import Service
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
@@ -19,6 +18,7 @@ from utilities.network import (
     get_ip_from_vm_or_virt_handler_pod,
     ping,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 LOGGER = logging.getLogger(__name__)
@@ -207,7 +207,7 @@ def assert_ssh_alive(ssh_vm, src_ip):
         wait_timeout=30,
         sleep=1,
         func=run_ssh_commands,
-        host=ssh_vm.ssh_exec,
+        vm=ssh_vm,
         commands=[shlex.split(f"sudo ss -o state established '( sport = 22 ) and dst = {src_ip}' --no-header")],
     )
     try:
@@ -228,7 +228,7 @@ def run_ssh_in_background(nad, src_vm, dst_vm, dst_vm_user, dst_vm_password):
     src_ip = str(lookup_iface_status_ip(vm=src_vm, iface_name=nad.name, ip_family=4))
     LOGGER.info(f"Start ssh connection to {dst_vm.name} from {src_vm.name}")
     run_ssh_commands(
-        host=src_vm.ssh_exec,
+        vm=src_vm,
         commands=[
             shlex.split(
                 f"sshpass -p {dst_vm_password} ssh -o 'StrictHostKeyChecking no' "

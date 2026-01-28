@@ -14,6 +14,7 @@ from tests.os_params import (
     WINDOWS_2019_TEMPLATE_LABELS,
 )
 from utilities.constants import TIMEOUT_2MIN, VIRTIO
+from utilities.ssh import is_connective
 from utilities.virt import restart_vm_wait_for_running_vm, vm_instance_from_template
 
 RHEL_TESTS_CLASS_NAME = "TestLatestRHEL"
@@ -104,7 +105,7 @@ class TestLatestRHEL:
         self,
         network_interface_multiqueue_vm,
     ):
-        network_interface_multiqueue_vm.ssh_exec.executor().is_connective(tcp_timeout=TIMEOUT_2MIN)
+        assert is_connective(vm=network_interface_multiqueue_vm, timeout=TIMEOUT_2MIN)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8892")
@@ -160,7 +161,7 @@ class TestLatestWindows:
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::windows_default_cpu_values")
     @pytest.mark.polarion("CNV-8897")
     def test_default_cpu_values(self, network_interface_multiqueue_vm):
-        network_interface_multiqueue_vm.ssh_exec.executor().is_connective(tcp_timeout=TIMEOUT_2MIN)
+        assert is_connective(vm=network_interface_multiqueue_vm, timeout=TIMEOUT_2MIN)
 
     @pytest.mark.dependency(depends=[f"{WINDOWS_TESTS_CLASS_NAME}::windows_default_cpu_values"])
     @pytest.mark.polarion("CNV-8898")

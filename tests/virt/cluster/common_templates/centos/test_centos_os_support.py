@@ -16,6 +16,7 @@ from tests.virt.cluster.common_templates.utils import (
 from utilities import console
 from utilities.constants import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
+from utilities.ssh import is_connective
 from utilities.virt import (
     check_vm_xml_smbios,
     migrate_vm_and_verify,
@@ -76,9 +77,7 @@ class TestCommonTemplatesCentos:
     def test_expose_ssh(self, matrix_centos_os_vm_from_template):
         """CNV common templates access VM via SSH"""
 
-        assert matrix_centos_os_vm_from_template.ssh_exec.executor().is_connective(  # noqa: E501
-            tcp_timeout=120
-        ), "Failed to login via SSH"
+        assert is_connective(vm=matrix_centos_os_vm_from_template, timeout=120), "Failed to login via SSH"
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]

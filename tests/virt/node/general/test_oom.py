@@ -9,13 +9,13 @@ from threading import Event, Thread
 
 import pytest
 from ocp_resources.virtual_machine import VirtualMachine
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
 from tests.utils import start_stress_on_vm
 from tests.virt.constants import WINDOWS_10_WSL
 from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
+from utilities.ssh import run_ssh_commands
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.tier3
@@ -64,12 +64,12 @@ def start_file_transfer(vm):
 
     def _transfer_loop(stop_event):
         while not stop_event.is_set():
-            vm.ssh_exec.fs.transfer(path_src=file_name, target_host=vm.ssh_exec, path_dst="new_file")
+            vm.ssh_exec.fs.transfer(path_src=file_name, target_host=vm.ssh_exec.fs, path_dst="new_file")
 
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split(f"{'wsl' if 'windows' in vm.name else ''} dd if=/dev/zero of={file_name} bs=100M count=1"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
 
     stop_event = Event()

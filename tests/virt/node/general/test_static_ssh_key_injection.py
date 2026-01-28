@@ -11,6 +11,7 @@ from ocp_resources.secret import Secret
 from tests.os_params import RHEL_LATEST
 from utilities.constants import CLOUD_INIT_NO_CLOUD, CNV_VM_SSH_KEY_PATH, OS_FLAVOR_RHEL
 from utilities.data_utils import authorized_key, base64_encode_str
+from utilities.ssh import is_connective
 from utilities.virt import VirtualMachineForTests, running_vm
 
 NAME = "static-access-creds-injection"
@@ -73,4 +74,4 @@ class TestVMWithStaticKeyInjection:
                 ssh_secret: {"data": {"id_rsa.pub": base64_encode_str(text="ssh-rsa junk-pub-key root@exec1.rdocloud")}}
             }
         ):
-            vm_with_ssh_secret.ssh_exec.executor().is_connective()
+            assert is_connective(vm=vm_with_ssh_secret)

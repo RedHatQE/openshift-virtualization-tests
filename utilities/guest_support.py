@@ -2,10 +2,10 @@ import json
 import shlex
 from typing import TYPE_CHECKING
 
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import HYPERV_FEATURES_LABELS_DOM_XML, TCP_TIMEOUT_30SEC, TIMEOUT_15SEC, TIMEOUT_90SEC
+from utilities.ssh import run_ssh_commands
 
 if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
@@ -22,9 +22,9 @@ def assert_windows_efi(vm: "VirtualMachineForTests") -> None:
         AssertionError: If EFI boot path is not found in the bcdedit output.
     """
     out = run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=shlex.split("bcdedit | findstr EFI"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )[0]
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
 
@@ -122,9 +122,9 @@ def check_windows_vm_hvinfo(vm: "VirtualMachineForTests") -> None:
         wait_timeout=TIMEOUT_90SEC,
         sleep=TIMEOUT_15SEC,
         func=run_ssh_commands,
-        host=vm.ssh_exec,
+        vm=vm,
         commands=["C:\\\\hvinfo\\\\hvinfo.exe"],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )
     for sample in sampler:
         output = sample[0]

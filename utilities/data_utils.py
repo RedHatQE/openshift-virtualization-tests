@@ -1,6 +1,7 @@
 import base64
 
-import paramiko
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
 
 def base64_encode_str(text: str) -> str:
@@ -66,4 +67,24 @@ def private_to_public_key(key: str) -> str:
     Returns:
         Base64-encoded public key string.
     """
-    return paramiko.RSAKey.from_private_key_file(key).get_base64()
+    with open(key, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(
+            data=key_file.read(),
+            password=None,
+        )
+
+    if not isinstance(private_key, RSAPrivateKey):
+        raise ValueError(f"Expected RSA key, got {type(private_key).__name__}")
+
+    public_key = private_key.public_key()
+    public_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.OpenSSH,
+        format=serialization.PublicFormat.OpenSSH,
+    )
+
+    # public_bytes is in format: "ssh-rsa AAAA... comment"
+    # We need just the base64 part (second field)
+    parts = public_bytes.decode().split()
+    if len(parts) >= 2:
+        return parts[1]
+    return public_bytes.decode()

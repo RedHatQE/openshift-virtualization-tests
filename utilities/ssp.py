@@ -5,6 +5,7 @@ import re
 import shlex
 import urllib.request
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
@@ -13,9 +14,13 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+from utilities.ssh import run_ssh_commands
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 import utilities.infra
 import utilities.storage
@@ -169,72 +174,136 @@ def guest_agent_version_parser(version_string):
     return re.search(r"[0-9]+\.[0-9]+\.[0-9]+(?:[.|-][0-9]+)?", version_string).group(0)
 
 
-def get_windows_timezone(ssh_exec, get_standard_name=False):
-    """
+def get_windows_timezone(vm: "VirtualMachineForTests", get_standard_name: bool = False) -> str:
+    """Get Windows timezone from VM.
+
     Args:
-        ssh_exec: vm SSH executor
-        get_standard_name (bool, default False): If True, get only Windows StandardName
+        vm: VirtualMachine instance with SSH connectivity.
+        get_standard_name: If True, get only Windows StandardName.
+
+    Returns:
+        Windows timezone string.
     """
     standard_name_cmd = '| findstr "StandardName"' if get_standard_name else ""
     timezone_cmd = shlex.split(f'powershell -command "Get-TimeZone {standard_name_cmd}"')
-    return run_ssh_commands(host=ssh_exec, commands=[timezone_cmd], tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+    return run_ssh_commands(vm=vm, commands=timezone_cmd, timeout=TCP_TIMEOUT_30SEC)[0]
 
 
-def get_ga_version(ssh_exec):
+def get_ga_version(vm: "VirtualMachineForTests") -> str:
+    """Get QEMU guest agent version from Windows VM.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity.
+
+    Returns:
+        Guest agent version string.
+    """
     return run_ssh_commands(
-        host=ssh_exec,
+        vm=vm,
         commands=[
             "powershell",
             "-Command",
             "(Get-Item",
             "'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion",
         ],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )[0].strip()
 
 
-def get_cim_instance_json(ssh_exec):
+def get_cim_instance_json(vm: "VirtualMachineForTests") -> dict:
+    """Get CIM instance information from Windows VM as JSON.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity.
+
+    Returns:
+        Dictionary containing Win32_OperatingSystem CIM instance data.
+    """
     return json.loads(
         run_ssh_commands(
-            host=ssh_exec,
+            vm=vm,
             commands=shlex.split('powershell -c "Get-CimInstance -Class Win32_OperatingSystem | ConvertTo-Json"'),
         )[0]
     )
 
 
-def get_reg_product_name(ssh_exec):
+def get_reg_product_name(vm: "VirtualMachineForTests") -> str:
+    """Get Windows product name from registry.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity.
+
+    Returns:
+        Registry product name string.
+    """
     return run_ssh_commands(
-        host=ssh_exec,
+        vm=vm,
         commands=shlex.split(
             'REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /v "ProductName"'
         ),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )[0]
 
 
-def get_windows_os_info(ssh_exec):
-    cim_instance_json = get_cim_instance_json(ssh_exec=ssh_exec)
+def get_windows_os_info(vm: "VirtualMachineForTests") -> dict:
+    """Get comprehensive Windows OS information from VM.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity.
+
+    Returns:
+        Dictionary containing guest agent version, hostname, OS details, and timezone.
+    """
+    cim_instance_json = get_cim_instance_json(vm=vm)
+    caption = cim_instance_json["Caption"]
+    version_str = cim_instance_json["Version"]
+    reg_product_name = get_reg_product_name(vm=vm)
+
+    version_match = re.search(r"(.+\d+)", caption)
+    if version_match is None:
+        raise ValueError(f"Failed to extract version from Caption: {caption}")
+
+    pretty_name_match = re.search(r"REG_SZ\s+(.+)\r\n", reg_product_name)
+    if pretty_name_match is None:
+        raise ValueError(f"Failed to extract pretty name from registry: {reg_product_name}")
+
+    version_id_match = re.search(r"\D+(\d+)", caption)
+    if version_id_match is None:
+        raise ValueError(f"Failed to extract version ID from Caption: {caption}")
+
+    kernel_version_match = re.search(r"(\d+\.\d+)\.", version_str)
+    if kernel_version_match is None:
+        raise ValueError(f"Failed to extract kernel version from Version: {version_str}")
+
     return {
-        "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(ssh_exec=ssh_exec)),
+        "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(vm=vm)),
         "hostname": cim_instance_json["CSName"],
         "os": {
             "name": "Microsoft Windows",
             "kernelRelease": cim_instance_json["BuildNumber"],
-            "version": re.search(r"(.+\d+)", cim_instance_json["Caption"]).group(1),
-            "prettyName": re.search(r"REG_SZ\s+(.+)\r\n", get_reg_product_name(ssh_exec=ssh_exec)).group(1),
-            "versionId": re.search(r"\D+(\d+)", cim_instance_json["Caption"]).group(1),
-            "kernelVersion": re.search(r"(\d+\.\d+)\.", cim_instance_json["Version"]).group(1),
+            "version": version_match.group(1),
+            "prettyName": pretty_name_match.group(1),
+            "versionId": version_id_match.group(1),
+            "kernelVersion": kernel_version_match.group(1),
             "machine": "x86_64" if "64" in cim_instance_json["OSArchitecture"] else "x86",
             "id": "mswindows",
         },
-        "timezone": get_windows_timezone(ssh_exec=ssh_exec),
+        "timezone": get_windows_timezone(vm=vm),
     }
 
 
-def validate_os_info_vmi_vs_windows_os(vm):
+def validate_os_info_vmi_vs_windows_os(vm: "VirtualMachineForTests") -> None:
+    """Validate OS information from VMI matches Windows guest OS.
+
+    Args:
+        vm: VirtualMachine instance with SSH connectivity.
+
+    Raises:
+        AssertionError: If VMI has no guest agent data or if OS data mismatches.
+    """
     vmi_info = utilities.virt.get_guest_os_info(vmi=vm.vmi)
     assert vmi_info, "VMI doesn't have guest agent data"
-    windows_info = get_windows_os_info(ssh_exec=vm.ssh_exec)["os"]
+    windows_info = get_windows_os_info(vm=vm)["os"]
 
     data_mismatch = []
     for os_param_name, os_param_value in vmi_info.items():

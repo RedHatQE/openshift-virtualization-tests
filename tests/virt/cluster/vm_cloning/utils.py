@@ -2,7 +2,6 @@ import logging
 import shlex
 
 from ocp_resources.virtual_machine_clone import VirtualMachineClone
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import retry
 
 from tests.virt.cluster.vm_cloning.constants import (
@@ -11,6 +10,7 @@ from tests.virt.cluster.vm_cloning.constants import (
     SECOND_DISK_TEST_FILE_STR,
 )
 from utilities.constants import TIMEOUT_1SEC, TIMEOUT_10SEC
+from utilities.ssh import run_ssh_commands
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class VirtualMachineCloneConditionRunningError(Exception):
 def check_if_files_present_after_cloning(vm):
     LOGGER.info("Check if files present on the disks after cloning")
     run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[
             # check file on a root
             shlex.split(f"cat {ROOT_DISK_TEST_FILE_STR}"),

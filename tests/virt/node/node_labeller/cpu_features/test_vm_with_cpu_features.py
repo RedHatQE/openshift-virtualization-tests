@@ -6,6 +6,7 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from utilities.constants import AMD
+from utilities.ssh import is_connective
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.usefixtures("fail_if_amd_cpu_nodes")]
@@ -47,7 +48,7 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
     """
     Test VM with cpu flag, test the VM started and is accessible via SSH
     """
-    cpu_features_vm_positive.ssh_exec.executor().is_connective()
+    assert is_connective(vm=cpu_features_vm_positive)
     assert (
         cpu_features_vm_positive.cpu_flags["features"][0]["name"]
         == (cpu_features_vm_positive.instance["spec"]["template"]["spec"]["domain"]["cpu"]["features"][0]["name"])

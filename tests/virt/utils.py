@@ -12,7 +12,6 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -42,6 +41,7 @@ from utilities.hco import (
     update_hco_annotations,
     wait_for_hco_conditions,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.storage import (
     create_dv,
     create_or_update_data_source,
@@ -105,21 +105,21 @@ def running_sleep_in_linux(vm):
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
 
 
-def get_stress_ng_pid(ssh_exec, windows=False):
+def get_stress_ng_pid(vm, windows=False):
     stress = "stress-ng"
     LOGGER.info(f"Get pid of {stress}")
     command_prefix = "wsl" if windows else ""
 
     return run_ssh_commands(
-        host=ssh_exec,
+        vm=vm,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )[0].split("\n")[0]
 
 
 def verify_stress_ng_pid_not_changed(vm, initial_pid, windows=False):
     current_stress_ng_pid = get_stress_ng_pid(
-        ssh_exec=vm.ssh_exec,
+        vm=vm,
         windows=windows,
     )
     assert initial_pid == current_stress_ng_pid, (
@@ -214,7 +214,7 @@ def flatten_dict(dictionary, parent_key=""):
 
 def kill_processes_by_name_windows(vm, process_name):
     cmd = shlex.split(f"taskkill /F /IM {process_name}")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
+    run_ssh_commands(vm=vm, commands=cmd, timeout=TCP_TIMEOUT_30SEC)
 
 
 def validate_pause_unpause_windows_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
@@ -294,7 +294,7 @@ def fetch_gpu_device_name_from_vm_instance(vm):
 def get_num_gpu_devices_in_rhel_vm(vm):
     return int(
         run_ssh_commands(
-            host=vm.ssh_exec,
+            vm=vm,
             commands=[
                 "bash",
                 "-c",
@@ -306,9 +306,9 @@ def get_num_gpu_devices_in_rhel_vm(vm):
 
 def get_gpu_device_name_from_windows_vm(vm):
     return run_ssh_commands(
-        host=vm.ssh_exec,
+        vm=vm,
         commands=[shlex.split("wmic path win32_VideoController get name")],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        timeout=TCP_TIMEOUT_30SEC,
     )[0]
 
 

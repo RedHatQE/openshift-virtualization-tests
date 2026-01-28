@@ -4,7 +4,6 @@ import shlex
 from ipaddress import ip_interface
 
 import pytest
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.network.libs.dhcpd import (
     DHCP_IP_RANGE_END,
@@ -25,6 +24,7 @@ from utilities.network import (
     network_device,
     network_nad,
 )
+from utilities.ssh import run_ssh_commands
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -392,14 +392,15 @@ def eth3_nmcli_connection_uuid(l2_bridge_running_vm_b):
 @pytest.fixture(scope="class")
 def configured_l2_bridge_vm_a(l2_bridge_running_vm_a):
     run_ssh_commands(
-        host=l2_bridge_running_vm_a.ssh_exec,
-        commands=[
-            shlex.split(
-                "sudo bash -c "
-                + shlex.quote(f"cat > /etc/sysconfig/dhcpd <<'EOF'\nDHCPDARGS=\"{DHCP_INTERFACE_NAME}\"\nEOF")
-            ),
-            shlex.split(DHCP_SERVICE_RESTART),
-        ],
+        vm=l2_bridge_running_vm_a,
+        commands=shlex.split(
+            "sudo bash -c "
+            + shlex.quote(f"cat > /etc/sysconfig/dhcpd <<'EOF'\nDHCPDARGS=\"{DHCP_INTERFACE_NAME}\"\nEOF")
+        ),
+    )
+    run_ssh_commands(
+        vm=l2_bridge_running_vm_a,
+        commands=shlex.split(DHCP_SERVICE_RESTART),
     )
     verify_dhcpd_activated(vm=l2_bridge_running_vm_a)
     return l2_bridge_running_vm_a
@@ -412,11 +413,20 @@ def started_vmb_dhcp_client(l2_bridge_running_vm_b, eth3_nmcli_connection_uuid):
 
     # Start dhcp client with unique client identifier
     run_ssh_commands(
-        host=l2_bridge_running_vm_b.ssh_exec,
-        commands=[
-            shlex.split(f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.method auto"),
-            shlex.split(f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.dhcp-client-id '{UNIQUE_CLIENT_ID}'"),
-            shlex.split(f"{nmcli_cmd} up '{eth3_nmcli_connection_uuid}'"),
-            shlex.split("sudo systemctl restart qemu-guest-agent.service"),
-        ],
+        vm=l2_bridge_running_vm_b,
+        commands=shlex.split(f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.method auto"),
+    )
+    run_ssh_commands(
+        vm=l2_bridge_running_vm_b,
+        commands=shlex.split(
+            f"{nmcli_cmd} modify '{eth3_nmcli_connection_uuid}' ipv4.dhcp-client-id '{UNIQUE_CLIENT_ID}'"
+        ),
+    )
+    run_ssh_commands(
+        vm=l2_bridge_running_vm_b,
+        commands=shlex.split(f"{nmcli_cmd} up '{eth3_nmcli_connection_uuid}'"),
+    )
+    run_ssh_commands(
+        vm=l2_bridge_running_vm_b,
+        commands=shlex.split("sudo systemctl restart qemu-guest-agent.service"),
     )

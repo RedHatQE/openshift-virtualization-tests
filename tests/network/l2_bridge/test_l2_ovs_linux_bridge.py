@@ -3,13 +3,13 @@ import shlex
 
 import pytest
 from netaddr import IPNetwork
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
 from utilities.constants import TIMEOUT_2MIN
 from utilities.network import assert_ping_successful, ping
+from utilities.ssh import run_ssh_commands
 
 LOGGER = logging.getLogger(__name__)
 CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type and linux bridge
@@ -107,8 +107,8 @@ class TestL2LinuxBridge:
             vm=l2_bridge_running_vm_b, iface_name=custom_eth_type_llpd_nad.name, ip_family=4
         )
         out = run_ssh_commands(
-            host=configured_l2_bridge_vm_a.ssh_exec,
-            commands=[shlex.split(f"nping -e eth2 --ether-type {CUSTOM_ETH_PROTOCOL} {dst_ip} -c {num_of_packets} &")],
+            vm=configured_l2_bridge_vm_a,
+            commands=shlex.split(f"nping -e eth2 --ether-type {CUSTOM_ETH_PROTOCOL} {dst_ip} -c {num_of_packets} &"),
         )[0]
         assert f"Successful connections: {num_of_packets}" in out
 
