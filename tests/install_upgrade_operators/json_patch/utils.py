@@ -65,6 +65,8 @@ def filter_metric_by_component(metrics, metric_name, component_name):
     for metric in metrics:
         if metric["metric"]["annotation_name"] == annotation_name and metric["metric"]["__name__"] == metric_name:
             return int(metric["value"][1])
+    LOGGER.warning(f"Metric {metric_name} with annotation {annotation_name} not found in metrics {metrics}")
+    return 0
 
 
 def wait_for_metrics_value_update(prometheus, component_name, query_string, previous_value):
