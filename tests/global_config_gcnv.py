@@ -10,8 +10,8 @@ global_config = load_python(py_file="tests/global_config.py", encoding="utf-8")
 
 storage_class_matrix = [
     {
-        StorageClassNames.GCP: {
-            "volume_mode": DataVolume.VolumeMode.BLOCK,
+        StorageClassNames.GCNV: {
+            "volume_mode": DataVolume.VolumeMode.FILE,
             "access_mode": DataVolume.AccessMode.RWX,
             "snapshot": True,
             "online_resize": True,
@@ -21,8 +21,8 @@ storage_class_matrix = [
     }
 ]
 
-storage_class_a = StorageClassNames.GCP
-storage_class_b = StorageClassNames.GCP
+storage_class_a = StorageClassNames.GCNV
+storage_class_b = StorageClassNames.GCNV
 
 config: dict[str, Any] = globals().get("config") or {}
 
