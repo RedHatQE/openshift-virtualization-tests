@@ -11,7 +11,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
+from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, Metadata, SpecDisk, VMSpec, Volume
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
 from utilities.cpu import get_nodes_cpu_architecture
@@ -85,6 +85,19 @@ class BaseVirtualMachine(VirtualMachine):
         devices = asdict(obj=self._spec.template.spec.domain.devices, dict_factory=self._filter_out_none_values)
         patches = {
             self: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": devices["interfaces"]}}}}}}
+        }
+        ResourceEditor(patches=patches).update()
+
+    def update_template_annotations(self, template_annotations: dict[str, str]) -> None:
+        if self._spec.template.metadata is None:
+            self._spec.template.metadata = Metadata()
+        if self._spec.template.metadata.annotations is None:
+            self._spec.template.metadata.annotations = {}
+
+        self._spec.template.metadata.annotations.update(template_annotations)
+
+        patches = {
+            self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
 
