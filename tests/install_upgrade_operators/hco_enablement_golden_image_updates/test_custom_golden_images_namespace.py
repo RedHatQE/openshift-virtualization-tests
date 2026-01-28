@@ -121,6 +121,7 @@ def default_common_templates_related_resources(default_common_template_hco_statu
 
 @pytest.fixture(scope="class")
 def updated_common_template_custom_ns(
+    unprivileged_client,
     golden_images_namespace,
     hyperconverged_resource_scope_class,
     custom_golden_images_namespace,
@@ -135,7 +136,9 @@ def updated_common_template_custom_ns(
         wait_for_reconcile_post_update=True,
     ):
         yield
-    for data_source in get_data_sources_managed_by_data_import_cron(namespace=golden_images_namespace.name):
+    for data_source in get_data_sources_managed_by_data_import_cron(
+        client=unprivileged_client, namespace=golden_images_namespace.name
+    ):
         data_source.wait_for_condition(
             condition=DataSource.Condition.READY,
             status=DataSource.Condition.Status.TRUE,
