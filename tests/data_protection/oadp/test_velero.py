@@ -121,7 +121,6 @@ def test_restore_uploaded_dv(
     wait_for_restored_dv(dv=uploaded_rhel_dv)
 
 
-@pytest.mark.s390x
 @pytest.mark.parametrize(
     "windows_vm_with_data_volume_template",
     [
