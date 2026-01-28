@@ -1,6 +1,9 @@
+import shlex
+
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
@@ -12,6 +15,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import create_ns
+from tests.data_protection.oadp.utils import create_windows_vm
 from utilities.oadp import (
     VeleroBackup,
     VeleroRestore,
@@ -263,6 +267,60 @@ def velero_restore_second_namespace_with_datamover(
         included_namespaces=velero_backup_second_namespace_using_datamover.included_namespaces,
         name="datamover-restore-ns2",
         backup_name=velero_backup_second_namespace_using_datamover.name,
+        timeout=TIMEOUT_15MIN,
+    ) as restore:
+        yield restore
+
+
+@pytest.fixture()
+def windows_vm_with_data_volume_template(
+    request,
+    admin_client,
+    namespace_for_backup,
+    snapshot_storage_class_name_scope_module,
+):
+    with create_windows_vm(
+        storage_class=snapshot_storage_class_name_scope_module,
+        namespace=namespace_for_backup.name,
+        dv_name=request.param.get("dv_name"),
+        vm_name=request.param.get("vm_name"),
+        wait_running=True,
+        windows_image=request.param.get("windows_image"),
+        client=admin_client,
+    ) as vm:
+        cmd = shlex.split(
+            f'powershell -command "\\"{TEXT_TO_TEST}\\" | Out-File -FilePath {FILE_NAME_FOR_BACKUP}"'
+        )
+        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+        yield vm
+
+
+@pytest.fixture()
+def velero_backup_windows_vm_using_datamover(admin_client, namespace_for_backup, windows_vm_with_data_volume_template):
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[
+            namespace_for_backup.name,
+        ],
+        name="datamover-backup-windows-vm",
+        snapshot_move_data=True,
+        storage_location=BACKUP_STORAGE_LOCATION,
+    ) as backup:
+        yield backup
+
+
+@pytest.fixture()
+def velero_restore_windows_vm_with_datamover(
+    admin_client,
+    velero_backup_windows_vm_using_datamover,
+):
+    # Delete NS in order to restore it
+    Namespace(name=velero_backup_windows_vm_using_datamover.included_namespaces[0]).delete(wait=True)
+    with VeleroRestore(
+        client=admin_client,
+        included_namespaces=velero_backup_windows_vm_using_datamover.included_namespaces,
+        name="datamover-restore-windows-vm",
+        backup_name=velero_backup_windows_vm_using_datamover.name,
         timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore

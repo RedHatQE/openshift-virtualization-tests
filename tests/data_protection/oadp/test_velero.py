@@ -119,3 +119,25 @@ def test_restore_uploaded_dv(
     velero_restore_second_namespace_with_datamover,
 ):
     wait_for_restored_dv(dv=uploaded_rhel_dv)
+
+
+@pytest.mark.s390x
+@pytest.mark.parametrize(
+    "windows_vm_with_data_volume_template",
+    [
+        pytest.param(
+            {
+                "dv_name": "windows-dv",
+                "vm_name": "windows-vm",
+                "windows_image": Images.Windows.WIN2k19_IMG,
+            },
+            marks=pytest.mark.polarion("CNV-8696"),
+        ),
+    ],
+    indirect=True,
+)
+def test_restore_windows_vm(
+    windows_vm_with_data_volume_template,
+    velero_restore_windows_vm_with_datamover,
+):
+    check_file_in_vm(vm=windows_vm_with_data_volume_template)
