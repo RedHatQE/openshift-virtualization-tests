@@ -392,7 +392,8 @@ def unprivileged_client(
     Provides none privilege API client
     """
     if skip_unprivileged_client:
-        yield
+        LOGGER.info("no_unprivileged_client was set, using admin_client")
+        yield admin_client
 
     else:
         current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
@@ -578,6 +579,7 @@ def node_physical_nics(workers_utility_pods):
 
 @pytest.fixture(scope="session")
 def nodes_active_nics(
+    nmstate_dependent_placeholder,
     admin_client,
     workers,
     workers_utility_pods,
@@ -1150,8 +1152,16 @@ def hosts_common_available_ports(nodes_available_nics):
 
     will return ['ens3', 'ens6']
     """
-    nics_list = list(set.intersection(*[set(_list) for _list in nodes_available_nics.values()]))
-    nics_list.sort()
+    nic_sets = [set(lst) for lst in nodes_available_nics.values()]
+    if not nic_sets:
+        LOGGER.warning("No available NICs found on any worker node.")
+        return []
+
+    nics_list = sorted(set.intersection(*nic_sets))
+    if not nics_list:
+        LOGGER.warning("No common NICs found across all nodes.")
+        return []
+
     LOGGER.info(f"Hosts common available NICs: {nics_list}")
     return nics_list
 
@@ -2595,6 +2605,18 @@ def nmstate_namespace(admin_client):
     except ResourceNotFoundError:
         LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
         return None
+
+
+@pytest.fixture(scope="session")
+def nmstate_dependent_placeholder():
+    """
+    Placeholder fixture that serves as a dependency marker for fixtures that interact
+    with NMState Custom Resources (NNCP, NNCE, NNS).
+
+    This fixture is used by pytest_collection_modifyitems to automatically detect
+    and mark tests that depend on NMState functionality.
+    """
+    return
 
 
 @pytest.fixture()

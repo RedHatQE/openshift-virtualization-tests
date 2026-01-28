@@ -6,11 +6,11 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
 from tests.utils import (
-    assert_guest_os_cpu_count,
     assert_restart_required_condition,
     clean_up_migration_jobs,
     hotplug_instance_type_vm_and_verify,
     update_vm_instancetype_name,
+    wait_for_guest_os_cpu_count,
 )
 from utilities.constants import (
     FOUR_CPU_SOCKETS,
@@ -80,25 +80,25 @@ def hotplug_preference(admin_client):
 
 
 @pytest.fixture(scope="class")
-def four_sockets_instance_type(modern_cpu_for_migration):
+def four_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=FOUR_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=FOUR_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 
 
 @pytest.fixture(scope="class")
-def six_sockets_instance_type(modern_cpu_for_migration):
+def six_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=SIX_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=SIX_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 
 
 @pytest.fixture(scope="class")
-def ten_sockets_instance_type(modern_cpu_for_migration):
+def ten_sockets_instance_type(admin_client, modern_cpu_for_migration):
     with cluster_instance_type_for_hot_plug(
-        guest_sockets=TEN_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
+        client=admin_client, guest_sockets=TEN_CPU_SOCKETS, cpu_model=modern_cpu_for_migration
     ) as instance_type:
         yield instance_type
 
@@ -128,7 +128,7 @@ class TestCPUHotPlugInstanceType:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type")
     @pytest.mark.polarion("CNV-11401")
     def test_hotplug_cpu_instance_type(self, instance_type_hotplug_vm, hotplugged_six_sockets_instance_type):
-        assert_guest_os_cpu_count(vm=instance_type_hotplug_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
+        wait_for_guest_os_cpu_count(vm=instance_type_hotplug_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
     @pytest.mark.polarion("CNV-11402")

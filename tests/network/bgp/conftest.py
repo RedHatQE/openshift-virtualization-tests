@@ -47,7 +47,9 @@ LOCALNET_NETWORK_NAME: Final[str] = "localnet-network-bgp"
 
 @pytest.fixture(scope="module")
 def nncp_localnet_node1(
-    admin_client: DynamicClient, worker_node1: Node
+    nmstate_dependent_placeholder,
+    admin_client: DynamicClient,
+    worker_node1: Node,
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     desired_state = libnncp.DesiredState(
         ovn=libnncp.OVN([

@@ -28,7 +28,6 @@ windows_os_matrix = generate_os_matrix_dict(
     os_name="windows",
     supported_operating_systems=[
         "win-10",
-        "win-2016",
         "win-2019",
         "win-11",
         "win-2022",

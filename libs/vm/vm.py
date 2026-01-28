@@ -4,6 +4,7 @@ import uuid
 from dataclasses import asdict
 from typing import Any
 
+from dacite import from_dict
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
@@ -86,6 +87,46 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"spec": {"domain": {"devices": {"interfaces": devices["interfaces"]}}}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    @classmethod
+    def from_existing(
+        cls,
+        name: str,
+        namespace: str,
+        client: DynamicClient,
+        os_distribution: str,
+    ) -> BaseVirtualMachine:
+        """Construct an instance that represents an already existing BaseVirtualMachine in the cluster.
+
+        The regular constructor of this class does not support instantiating an object purely
+        from an existing resource returned by the API server. This classmethod is an alternative
+        constructor used when the VM already exists, it bypasses normal object creation,
+        explicitly loads the existing VirtualMachine from the cluster, and then initializes
+        the instance so that it can be managed using the same interface as newly created VMs.
+
+        Args:
+            name: Name of the existing VM.
+            namespace: Namespace in which the VM exists.
+            client: OpenShift/Kubernetes dynamic client.
+            os_distribution: OS distribution metadata associated with the VM.
+
+        Returns:
+            BaseVirtualMachine instance bound to an existing cluster resource.
+        """
+        obj = cls.__new__(cls)  # noqa: FCN001
+
+        VirtualMachine.__init__(  # noqa: FCN001
+            obj,
+            namespace=namespace,
+            name=name,
+            client=client,
+            ensure_exists=True,
+        )
+
+        obj._os_distribution = os_distribution
+        obj._spec = from_dict(data_class=VMSpec, data=obj.instance.to_dict()["spec"])
+
+        return obj
 
 
 def container_image(base_image: str) -> str:

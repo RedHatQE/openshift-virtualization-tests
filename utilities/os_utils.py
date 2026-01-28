@@ -18,7 +18,6 @@ from utilities.constants import (
     OS_VERSION_STR,
     PREFERENCE_STR,
     TEMPLATE_LABELS_STR,
-    WIN_2K16,
     WIN_2K19,
     WIN_2K22,
     WIN_2K25,
@@ -73,14 +72,6 @@ WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
         "uefi": True,
         DATA_SOURCE_STR: WIN_10,
         CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_10),
-    },
-    "win-2016": {
-        IMAGE_NAME_STR: "WIN2k16_IMG",
-        OS_VERSION_STR: "2016",
-        OS_STR: WIN_2K16,
-        "uefi": True,
-        DATA_SOURCE_STR: WIN_2K16,
-        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_2K16),
     },
     "win-2019": {
         IMAGE_NAME_STR: "WIN2k19_IMG",
