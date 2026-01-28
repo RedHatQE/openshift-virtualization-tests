@@ -88,11 +88,15 @@ def nad_localnet(
 
 @pytest.fixture(scope="module")
 def frr_configmap(
-    workers: list[Node], cnv_tests_utilities_namespace: Namespace, admin_client: DynamicClient
+    workers: list[Node],
+    cnv_tests_utilities_namespace: Namespace,
+    admin_client: DynamicClient,
+    nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[ConfigMap]:
+    node_name_with_nncp = nncp_localnet_node1.node_selector["kubernetes.io/hostname"]
     frr_conf = generate_frr_conf(
         external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
-        nodes_ipv4_list=[worker.internal_ip for worker in workers],
+        nodes_ipv4_list=[worker.internal_ip for worker in workers if worker.name != node_name_with_nncp],
     )
 
     with ConfigMap(
@@ -197,7 +201,7 @@ def bgp_setup_ready(
     frr_configuration_created: None,
     workers: list[Node],
 ) -> None:
-    node_names = [worker.name for worker in workers]
+    node_names = [worker.name for worker in workers if worker.name != frr_external_pod.pod.instance.spec.nodeName]
     wait_for_bgp_connection_established(node_names=node_names)
 
 

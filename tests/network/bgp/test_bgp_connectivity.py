@@ -1,17 +1,12 @@
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [
     pytest.mark.bgp,
     pytest.mark.ipv4,
     pytest.mark.usefixtures("bgp_setup_ready"),
-    pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Unstable connectivity failure CNV-76552",
-        run=False,
-    ),
 ]
 
 
