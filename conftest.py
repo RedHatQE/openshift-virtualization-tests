@@ -93,7 +93,7 @@ TEAM_MARKERS = {
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
-    "network": [NamespacesNames.OPENSHIFT_NMSTATE],
+    "network": [],
     "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [
@@ -884,7 +884,8 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
                 namespaces_to_collect.extend([NamespacesNames.OPENSHIFT_FRR_K8S, NamespacesNames.CNV_TESTS_UTILITIES])
             if "mtv" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_MTV)
-
+            if "nmstate" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.OPENSHIFT_NMSTATE)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
