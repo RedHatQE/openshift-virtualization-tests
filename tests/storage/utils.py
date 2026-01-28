@@ -143,7 +143,10 @@ def upload_image(token, data, asynchronous=False, client=None):
     try:
         with open(data, "rb") as fd:
             fd_data = fd.read()
-    except OSError | IOError:
+    except OSError as error:
+        LOGGER.error(
+            f"Failed to read upload image (type={type(data).__name__}); treating input as raw data. error={error}"
+        )
         fd_data = data
 
     return requests.post(url=uploadproxy_url, data=fd_data, headers=headers, verify=False).status_code
