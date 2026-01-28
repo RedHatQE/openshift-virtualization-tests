@@ -159,7 +159,7 @@ def get_image_version(image: str) -> str | None:
     try:
         version = Version(version=full_version)
         return f"{version.major}.{version.minor}"
-    except ValueError | AttributeError | TypeError:  # type: ignore[misc]
+    except ValueError, AttributeError, TypeError:
         LOGGER.warning(f"No RHEL version was found from: {image}")
         return None
 
