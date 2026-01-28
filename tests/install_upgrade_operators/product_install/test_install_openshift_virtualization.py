@@ -26,6 +26,9 @@ from utilities.monitoring import (
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
 )
+from utilities.storage import (
+    verify_boot_sources_reimported,
+)
 
 CNV_INSTALLATION_TEST = "test_cnv_installation"
 CNV_ALERT_CLEANUP_TEST = "test_cnv_installation_alert_cleanup"
@@ -168,6 +171,17 @@ def test_cnv_resources_installed_namespace_scoped(
     if mismatch_namespaced:
         LOGGER.error(f"Mismatched namespaced resources: {mismatch_namespaced}")
         raise ResourceMismatch(f"Unexpected namespaced resources found post cnv installation: {mismatch_namespaced}")
+
+
+@pytest.mark.polarion("CNV-12453")
+@pytest.mark.order(after=CNV_INSTALLATION_TEST)
+# Dependency: CNV must be installed before storage class configuration can be verified
+@pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
+@pytest.mark.usefixtures("updated_default_storage_class_from_config")
+def test_default_storage_class_set(admin_client, golden_images_namespace):
+    assert verify_boot_sources_reimported(
+        admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
+    ), "Failed to re-import boot sources"
 
 
 @pytest.mark.polarion("CNV-10528")
