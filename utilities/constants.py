@@ -808,3 +808,5 @@ HPP_CAPABILITIES = {
     "online_resize": False,
     "wffc": True,
 }
+REGISTRY_STR = "registry"
+DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"

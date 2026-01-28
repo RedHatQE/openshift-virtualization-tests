@@ -12,7 +12,6 @@ HPP_STORAGE_CLASSES = [
     HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK,
 ]
 
-REGISTRY_STR = "registry"
 INTERNAL_HTTP_CONFIGMAP_NAME = "internal-https-configmap"
 HTTPS_CONFIG_MAP_NAME = "https-cert"
 HTTP = "http"
