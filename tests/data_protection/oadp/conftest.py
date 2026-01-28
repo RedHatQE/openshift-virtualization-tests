@@ -7,6 +7,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.data_protection.oadp.utils import (
     VeleroRestore,
+    create_windows_vm,
     is_storage_class_support_volume_mode,
 )
 from utilities.constants import (
@@ -19,7 +20,6 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import create_ns
-from tests.data_protection.oadp.utils import create_windows_vm
 from utilities.oadp import (
     VeleroBackup,
     create_rhel_vm,
@@ -289,9 +289,7 @@ def windows_vm_with_data_volume_template(
         windows_image=request.param.get("windows_image"),
         client=admin_client,
     ) as vm:
-        cmd = shlex.split(
-            f'powershell -command "\\"{TEXT_TO_TEST}\\" | Out-File -FilePath {FILE_NAME_FOR_BACKUP}"'
-        )
+        cmd = shlex.split(f'powershell -command "\\"{TEXT_TO_TEST}\\" | Out-File -FilePath {FILE_NAME_FOR_BACKUP}"')
         run_ssh_commands(host=vm.ssh_exec, commands=cmd)
         yield vm
 
