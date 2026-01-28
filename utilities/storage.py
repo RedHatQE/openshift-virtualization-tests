@@ -1041,9 +1041,10 @@ def wait_for_succeeded_dv(namespace, dv_name):
         raise
 
 
-def get_data_sources_managed_by_data_import_cron(namespace):
+def get_data_sources_managed_by_data_import_cron(client: DynamicClient, namespace: str) -> list[DataSource]:
     return list(
         DataSource.get(
+            client=client,
             namespace=namespace,
             label_selector=RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL,
         )
@@ -1057,7 +1058,7 @@ def verify_boot_sources_reimported(
     Verify that the boot sources are re-imported while changing a storage class.
     """
     try:
-        for data_source in get_data_sources_managed_by_data_import_cron(namespace=namespace):
+        for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")
             utilities.infra.wait_for_consistent_resource_conditions(
                 dynamic_client=admin_client,
