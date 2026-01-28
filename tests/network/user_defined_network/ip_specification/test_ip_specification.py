@@ -8,16 +8,20 @@ https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
 """
 
 import ipaddress
+from typing import Final
 
 import pytest
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.libs import cloudinit
 from tests.network.user_defined_network.ip_specification.libipspec import (
     ip_address_annotation,
     read_guest_interface_ipv4,
 )
+
+FIRST_GUEST_IFACE_NAME: Final[str] = "eth0"
 
 
 @pytest.mark.ipv4
@@ -67,12 +71,23 @@ class TestVMWithExplicitIPAddressSpecification:
         vm_under_test.update_template_annotations(
             template_annotations=ip_address_annotation(ip_address=ip_to_request, network_name=vm_logical_net_name)
         )
+
+        netdata = cloudinit.NetworkData(
+            ethernets={
+                FIRST_GUEST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=[str(ip_to_request)],
+                    gateway4=str(next(ipaddress.ip_network(address=ip_to_request, strict=False).hosts())),
+                )
+            }
+        )
+        vm_under_test.add_cloud_init(netdata=netdata)
+
         vm_under_test.start()
         vm_under_test.wait_for_agent_connected()
         assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
 
         assert assigned_ip == ip_to_request.ip
-        assert read_guest_interface_ipv4(vm_under_test, interface_name="eth0") == ip_to_request
+        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
 
         with client_server_active_connection(
             client_vm=vm_for_connectivity_ref,
