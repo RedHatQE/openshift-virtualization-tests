@@ -1050,7 +1050,9 @@ def get_data_sources_managed_by_data_import_cron(namespace):
     )
 
 
-def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) -> bool:
+def verify_boot_sources_reimported(
+    admin_client: DynamicClient, namespace: str, consecutive_checks_count: int = 6
+) -> bool:
     """
     Verify that the boot sources are re-imported while changing a storage class.
     """
@@ -1063,7 +1065,7 @@ def verify_boot_sources_reimported(admin_client: DynamicClient, namespace: str) 
                 resource_kind=DataSource,
                 namespace=namespace,
                 total_timeout=TIMEOUT_10MIN,
-                consecutive_checks_count=6,
+                consecutive_checks_count=consecutive_checks_count,
                 resource_name=data_source.name,
             )
         return True
@@ -1129,3 +1131,29 @@ def validate_file_exists_in_url(url):
         raise UrlNotFoundError(url_request=response)
 
     return True
+
+
+def persist_storage_class_default(default: bool, storage_class: StorageClass) -> None:
+    """
+    Update the default storage class to be persistent.
+
+    Args:
+        default (bool): Whether the storage class should be the default storage class.
+        storage_class (StorageClass): The storage class to update.
+    """
+    is_default = str(default).lower()
+    editor = ResourceEditor(
+        patches={
+            storage_class: {
+                "metadata": {
+                    "annotations": {
+                        StorageClass.Annotations.IS_DEFAULT_CLASS: is_default,
+                        StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: is_default,
+                    },
+                    "name": storage_class.name,
+                },
+            }
+        }
+    )
+    # Apply the changes to be persistent without backup for restoration
+    editor.update(backup_resources=False)
