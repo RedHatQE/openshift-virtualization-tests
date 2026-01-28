@@ -11,8 +11,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.net.vmspec import add_volume_disk
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, Metadata, SpecDisk, VMSpec, Volume
+from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Devices, Disk, Metadata, SpecDisk, VMISpec, VMSpec, Volume
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
@@ -189,3 +188,12 @@ def cloudinitdisk_storage(data: CloudInitNoCloud) -> tuple[SpecDisk, Volume]:
     return SpecDisk(name=CLOUD_INIT_DISK_NAME, disk=Disk(bus="virtio")), Volume(
         name=CLOUD_INIT_DISK_NAME, cloudInitNoCloud=data
     )
+
+
+def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpec:
+    vmi_spec.volumes = vmi_spec.volumes or []
+    vmi_spec.volumes.append(volume)
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
+    vmi_spec.domain.devices.disks.append(disk)
+    return vmi_spec

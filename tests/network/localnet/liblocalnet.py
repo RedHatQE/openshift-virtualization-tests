@@ -8,11 +8,11 @@ from kubernetes.dynamic import DynamicClient
 
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer
 from libs.net.traffic_generator import VMTcpClient as TcpClient
-from libs.net.vmspec import add_volume_disk, lookup_iface_status_ip
+from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
-from libs.vm.vm import BaseVirtualMachine, cloudinitdisk_storage
+from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
