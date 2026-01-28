@@ -7,11 +7,22 @@ STP Reference:
 https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/ip-request.md
 """
 
-__test__ = False
+import ipaddress
 
 import pytest
 
+from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
+from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
+from libs.vm.vm import BaseVirtualMachine
+from tests.network.user_defined_network.ip_specification.libipspec import (
+    ip_address_annotation,
+    read_guest_interface_ipv4,
+)
 
+
+@pytest.mark.ipv4
+@pytest.mark.single_nic
+@pytest.mark.incremental
 class TestVMWithExplicitIPAddressSpecification:
     """
     Tests for VM with an IP address explicitly defined for the primary UDN.
@@ -29,7 +40,12 @@ class TestVMWithExplicitIPAddressSpecification:
     """
 
     @pytest.mark.polarion("CNV-13120")
-    def test_vm_is_started_with_successful_connectivity(self):
+    def test_vm_is_started_with_successful_connectivity(
+        self,
+        vm_under_test: BaseVirtualMachine,
+        vm_for_connectivity_ref: BaseVirtualMachine,
+        ip_to_request: ipaddress.IPv4Interface | ipaddress.IPv6Interface,
+    ) -> None:
         """
         Test that a VM with an explicit IP address specified is started successfully and is reachable.
 
@@ -47,9 +63,26 @@ class TestVMWithExplicitIPAddressSpecification:
             - IP address reported by VMI status and guest OS is the same as the one specified.
             - Verify that the VM is reachable from the ref VM.
         """
+        vm_logical_net_name = lookup_primary_network(vm=vm_under_test).name
+        vm_under_test.update_template_annotations(
+            template_annotations=ip_address_annotation(ip_address=ip_to_request, network_name=vm_logical_net_name)
+        )
+        vm_under_test.start()
+        vm_under_test.wait_for_agent_connected()
+        assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
+
+        assert assigned_ip == ip_to_request.ip
+        assert read_guest_interface_ipv4(vm_under_test, interface_name="eth0") == ip_to_request
+
+        with client_server_active_connection(
+            client_vm=vm_for_connectivity_ref,
+            server_vm=vm_under_test,
+            spec_logical_network=vm_logical_net_name,
+        ) as (client, server):
+            assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-12582")
-    def test_successful_external_connectivity(self):
+    def test_successful_external_connectivity(self) -> None:
         """
         Test that a VM with an explicit IP address specified is reaching an external IP address.
 
@@ -64,8 +97,10 @@ class TestVMWithExplicitIPAddressSpecification:
             - Verify that the ping command succeeds with 0% packet loss.
         """
 
+    test_successful_external_connectivity.__test__ = False
+
     @pytest.mark.polarion("CNV-12586")
-    def test_seamless_in_cluster_connectivity_is_preserved_over_live_migration(self):
+    def test_seamless_in_cluster_connectivity_is_preserved_over_live_migration(self) -> None:
         """
         Test that a VM with an explicit IP address specified can preserve connectivity during live migration.
 
@@ -82,8 +117,10 @@ class TestVMWithExplicitIPAddressSpecification:
             - The initial TCP connection is preserved (no disconnection).
         """
 
+    test_seamless_in_cluster_connectivity_is_preserved_over_live_migration.__test__ = False
+
     @pytest.mark.polarion("CNV-12585")
-    def test_ip_address_is_preserved_over_power_lifecycle(self):
+    def test_ip_address_is_preserved_over_power_lifecycle(self) -> None:
         """
         Test that a VM with an explicit IP address specified can preserve its IP address over a power lifecycle
         (VM is stopped and started again).
@@ -99,3 +136,5 @@ class TestVMWithExplicitIPAddressSpecification:
         Expected:
             - IP address reported by VMI status and guest OS is the same as the one specified.
         """
+
+    test_ip_address_is_preserved_over_power_lifecycle.__test__ = False
