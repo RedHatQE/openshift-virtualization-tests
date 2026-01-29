@@ -11,7 +11,8 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
+from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Devices, Disk, Metadata, SpecDisk, VMISpec, VMSpec, Volume
+from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
 from utilities.cpu import get_nodes_cpu_architecture
@@ -88,6 +89,45 @@ class BaseVirtualMachine(VirtualMachine):
         }
         ResourceEditor(patches=patches).update()
 
+    def update_template_annotations(self, template_annotations: dict[str, str]) -> None:
+        if self._spec.template.metadata is None:
+            self._spec.template.metadata = Metadata()
+        if self._spec.template.metadata.annotations is None:
+            self._spec.template.metadata.annotations = {}
+
+        self._spec.template.metadata.annotations.update(template_annotations)
+
+        patches = {
+            self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
+        }
+        ResourceEditor(patches=patches).update()
+
+    def add_cloud_init(self, netdata: cloudinit.NetworkData) -> None:
+        # Prevents cloud-init from overriding the default OS user credentials
+        userdata = cloudinit.UserData(users=[])
+        disk, volume = cloudinitdisk_storage(
+            data=CloudInitNoCloud(
+                networkData=cloudinit.asyaml(no_cloud=netdata),
+                userData=cloudinit.format_cloud_config(userdata=userdata),
+            )
+        )
+        self._spec.template.spec = add_volume_disk(vmi_spec=self._spec.template.spec, volume=volume, disk=disk)
+
+        spec = asdict(obj=self._spec.template.spec, dict_factory=self._filter_out_none_values)
+        patches = {
+            self: {
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "volumes": spec["volumes"],
+                            "domain": {"devices": {"disks": spec["domain"]["devices"]["disks"]}},
+                        }
+                    }
+                }
+            }
+        }
+        ResourceEditor(patches=patches).update()
+
     @classmethod
     def from_existing(
         cls,
@@ -148,3 +188,12 @@ def cloudinitdisk_storage(data: CloudInitNoCloud) -> tuple[SpecDisk, Volume]:
     return SpecDisk(name=CLOUD_INIT_DISK_NAME, disk=Disk(bus="virtio")), Volume(
         name=CLOUD_INIT_DISK_NAME, cloudInitNoCloud=data
     )
+
+
+def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpec:
+    vmi_spec.volumes = vmi_spec.volumes or []
+    vmi_spec.volumes.append(volume)
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
+    vmi_spec.domain.devices.disks.append(disk)
+    return vmi_spec
