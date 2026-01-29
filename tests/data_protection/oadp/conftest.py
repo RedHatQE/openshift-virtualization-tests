@@ -2,10 +2,6 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 
-from tests.data_protection.oadp.utils import (
-    VeleroRestore,
-    is_storage_class_support_volume_mode,
-)
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
@@ -18,7 +14,9 @@ from utilities.constants import (
 from utilities.infra import create_ns
 from utilities.oadp import (
     VeleroBackup,
+    VeleroRestore,
     create_rhel_vm,
+    is_storage_class_support_volume_mode,
 )
 from utilities.storage import (
     check_upload_virtctl_result,
@@ -113,6 +111,7 @@ def rhel_vm_with_data_volume_template(
 ):
     volume_mode = request.param.get("volume_mode")
     if not is_storage_class_support_volume_mode(
+        admin_client=admin_client,
         storage_class_name=snapshot_storage_class_name_scope_module,
         requested_volume_mode=volume_mode,
     ):
