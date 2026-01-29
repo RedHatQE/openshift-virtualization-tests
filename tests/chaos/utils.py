@@ -107,7 +107,6 @@ def create_pod_deleting_process(
             except TimeoutExpiredError:
                 LOGGER.warning(f"Pod {pod_name} was not deleted.")
 
-
     def _delete_pods_continuously(dyn_client, pod_prefix, namespace_name, ratio, interval, max_duration):
         try:
             for _ in TimeoutSampler(
