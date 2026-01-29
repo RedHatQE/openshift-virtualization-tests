@@ -88,7 +88,6 @@ class ArchImages:
             WIN10_IMG="win_10_uefi.qcow2",
             WIN10_WSL2_IMG="win_10_wsl2_uefi.qcow2",
             WIN10_ISO_IMG="Win10_22H2_English_x64.iso",
-            WIN2k16_IMG="win_2k16_uefi.qcow2",
             WIN2k19_IMG="win_2k19_uefi.qcow2",
             WIN2k25_IMG="win_2k25_uefi.qcow2",
             WIN2k19_HA_IMG="win_2019_virtio.qcow2",
@@ -924,7 +923,6 @@ WIN_10 = "win10"
 WIN_11 = "win11"
 WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
-WIN_2K16 = "win2k16"
 WIN_2K19 = "win2k19"
 
 HYPERV_FEATURES_LABELS_DOM_XML = [

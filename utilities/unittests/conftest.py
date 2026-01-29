@@ -168,7 +168,6 @@ def mock_os_images():
     mock_windows_class.DEFAULT_DV_SIZE = "60Gi"
     mock_windows_class.WIN10_IMG = "win10.qcow2"
     mock_windows_class.WIN11_IMG = "win11.qcow2"
-    mock_windows_class.WIN2k16_IMG = "win2k16.qcow2"
     mock_windows_class.WIN2k19_IMG = "win2k19.qcow2"
     mock_windows_class.WIN2022_IMG = "win2022.qcow2"
     mock_windows_class.WIN2k25_IMG = "win2k25.qcow2"

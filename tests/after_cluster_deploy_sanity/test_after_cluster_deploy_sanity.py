@@ -54,8 +54,10 @@ def hco_managed_data_import_crons(hyperconverged_resource_scope_session):
 
 
 @pytest.fixture(scope="session")
-def data_import_cron_managed_datasources(golden_images_namespace):
-    return get_data_sources_managed_by_data_import_cron(namespace=golden_images_namespace.name)
+def data_import_cron_managed_datasources(unprivileged_client, golden_images_namespace):
+    return get_data_sources_managed_by_data_import_cron(
+        client=unprivileged_client, namespace=golden_images_namespace.name
+    )
 
 
 @pytest.mark.cluster_health_check

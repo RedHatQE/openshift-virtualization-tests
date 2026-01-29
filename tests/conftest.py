@@ -392,7 +392,8 @@ def unprivileged_client(
     Provides none privilege API client
     """
     if skip_unprivileged_client:
-        yield
+        LOGGER.info("no_unprivileged_client was set, using admin_client")
+        yield admin_client
 
     else:
         current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
@@ -578,6 +579,7 @@ def node_physical_nics(workers_utility_pods):
 
 @pytest.fixture(scope="session")
 def nodes_active_nics(
+    nmstate_dependent_placeholder,
     admin_client,
     workers,
     workers_utility_pods,
@@ -2603,6 +2605,18 @@ def nmstate_namespace(admin_client):
     except ResourceNotFoundError:
         LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
         return None
+
+
+@pytest.fixture(scope="session")
+def nmstate_dependent_placeholder():
+    """
+    Placeholder fixture that serves as a dependency marker for fixtures that interact
+    with NMState Custom Resources (NNCP, NNCE, NNS).
+
+    This fixture is used by pytest_collection_modifyitems to automatically detect
+    and mark tests that depend on NMState functionality.
+    """
+    return
 
 
 @pytest.fixture()
