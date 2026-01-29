@@ -4,8 +4,9 @@ import logging
 
 import pytest
 
+from tests.network.nmstate.libnmstate import NMSTATE_HANDLER
 from tests.network.utils import wait_for_address_on_iface
-from utilities.constants import LINUX_BRIDGE, NMSTATE_HANDLER
+from utilities.constants import LINUX_BRIDGE
 from utilities.data_utils import name_prefix
 from utilities.infra import get_daemonset_by_name, get_node_pod, get_node_selector_dict
 from utilities.network import network_device
