@@ -30,7 +30,7 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     Images,
 )
-from utilities.storage import check_disk_count_in_vm, get_downloaded_artifact
+from utilities.storage import check_disk_count_in_vm, create_vm_from_dv, get_downloaded_artifact
 
 LOGGER = logging.getLogger(__name__)
 HTTP_UNAUTHORIZED = 401
@@ -177,7 +177,7 @@ def test_successful_upload_with_supported_formats(
     ) as dv:
         storage_utils.upload_token_request(storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name)
         dv.wait_for_dv_success()
-        with storage_utils.create_vm_from_dv(dv=dv) as vm_dv:
+        with create_vm_from_dv(dv=dv) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
 

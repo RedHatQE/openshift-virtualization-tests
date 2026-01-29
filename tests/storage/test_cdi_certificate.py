@@ -18,7 +18,6 @@ from ocp_resources.secret import Secret
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
-import tests.storage.utils as storage_utils
 from utilities.constants import (
     CDI_SECRETS,
     TIMEOUT_1MIN,
@@ -32,6 +31,7 @@ from utilities.storage import (
     check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dv,
+    create_vm_from_dv,
     get_downloaded_artifact,
     virtctl_upload_dv,
 )
@@ -202,7 +202,7 @@ def test_upload_after_certs_renewal(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
+        with create_vm_from_dv(dv=dv, start=True) as vm:
             check_disk_count_in_vm(vm=vm)
 
 
@@ -239,7 +239,7 @@ def test_import_clone_after_certs_renewal(
         storage_class=data_volume_multi_storage_scope_module.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=TIMEOUT_3MIN)
-        with storage_utils.create_vm_from_dv(dv=cdv, start=True) as vm:
+        with create_vm_from_dv(dv=cdv, start=True) as vm:
             check_disk_count_in_vm(vm=vm)
 
 
@@ -266,7 +266,7 @@ def test_upload_after_validate_aggregated_api_cert(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        with storage_utils.create_vm_from_dv(dv=dv, start=True) as vm:
+        with create_vm_from_dv(dv=dv, start=True) as vm:
             check_disk_count_in_vm(vm=vm)
 
 
