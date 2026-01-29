@@ -21,6 +21,12 @@ class PodSecurityViolationError(Exception):
 
 @pytest.fixture()
 def pod_security_violations_apis_calls(audit_logs, hco_namespace):
+    """
+    Collect pod security violations from audit logs since test session started.
+
+    Only reads audit log files relevant to the current test session
+    to avoid processing large historical log files.
+    """
     failed_api_calls = defaultdict(list)
     for node, logs in audit_logs.items():
         for audit_log_entry_dict in get_node_audit_log_line_dict(
@@ -43,7 +49,10 @@ def pod_security_violations_apis_calls(audit_logs, hco_namespace):
                 and f"/apis/apps/v1/namespaces/{HCO_NAMESPACE}/daemonsets" in audit_log_entry_dict["requestURI"]
                 and audit_log_entry_dict["verb"] in ["create", "update"]
                 and f'to ServiceAccount "{CLUSTER_NETWORK_ADDONS_OPERATOR}/{HCO_NAMESPACE}' in pod_security_reason
-                and ('container "cni-plugins"' or f'container "{BRIDGE_MARKER}"' in pod_audit_violations)
+                and (
+                    'container "cni-plugins"' in pod_audit_violations
+                    or f'container "{BRIDGE_MARKER}"' in pod_audit_violations
+                )
             ):
                 continue
 
@@ -56,7 +65,7 @@ def pod_security_violations_apis_calls(audit_logs, hco_namespace):
     return failed_api_calls
 
 
-@pytest.mark.tier3
+@pytest.mark.tier2
 @pytest.mark.polarion("CNV-9115")
 def test_cnv_pod_security_violation_audit_logs(pod_security_violations_apis_calls):
     LOGGER.info("Test pod security violations API calls:")
