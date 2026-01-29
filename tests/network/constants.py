@@ -8,3 +8,7 @@ EXPECTED_CNAO_COMP_NAMES = [
     "ovs-cni",
 ]
 HTTPBIN_IMAGE = "quay.io/openshifttest/httpbin:1.2.2"
+ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
+MTU_9000 = 9000
+NMSTATE_HANDLER = "nmstate-handler"
+KMP_DISABLED_LABEL = "ignore"

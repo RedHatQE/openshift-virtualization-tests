@@ -12,10 +12,10 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from tests.network.constants import MTU_9000
 from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import (
     CNV_SUPPLEMENTAL_TEMPLATES_URL,
-    MTU_9000,
     NODE_HUGE_PAGES_1GI_KEY,
     SRIOV,
     TIMEOUT_10MIN,
