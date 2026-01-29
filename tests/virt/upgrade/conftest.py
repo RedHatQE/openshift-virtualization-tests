@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
@@ -25,6 +26,7 @@ from utilities.constants import (
     TIMEOUT_40MIN,
     Images,
 )
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
 from utilities.storage import (
     create_dv,
@@ -343,3 +345,19 @@ def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_fo
     ) as vm:
         running_vm(vm=vm)
         yield vm
+
+
+@pytest.fixture(scope="session")
+def parallel_live_migrations_increased(hyperconverged_resource_scope_session):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_session: {
+                "spec": {
+                    "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                }
+            }
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
