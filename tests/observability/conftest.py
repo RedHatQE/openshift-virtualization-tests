@@ -4,7 +4,6 @@ import pytest
 from ocp_resources.ssp import SSP
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.metrics.utils import validate_initial_virt_operator_replicas_reverted
 from tests.observability.utils import (
     get_olm_namespace,
 )
@@ -13,8 +12,8 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     VIRT_OPERATOR,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile, get_installed_hco_csv
-from utilities.infra import get_deployment_by_name, scale_deployment_replicas
+from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.infra import scale_deployment_replicas
 from utilities.virt import get_all_virt_pods_with_running_status
 
 LOGGER = logging.getLogger(__name__)
@@ -86,29 +85,3 @@ def disabled_virt_operator(admin_client, hco_namespace, disabled_olm_operator):
             f"Here are available virt pods: {sample}"
         )
         raise
-
-
-@pytest.fixture(scope="class")
-def csv_scope_class(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="module")
-def virt_operator_deployment(hco_namespace):
-    return get_deployment_by_name(deployment_name=VIRT_OPERATOR, namespace_name=hco_namespace.name)
-
-
-@pytest.fixture(scope="module")
-def initial_virt_operator_replicas(prometheus, virt_operator_deployment, hco_namespace):
-    virt_operator_deployment.wait_for_replicas()
-    virt_operator_deployment_initial_replicas = virt_operator_deployment.instance.status.replicas
-    assert virt_operator_deployment_initial_replicas, f"Not replicas found for {VIRT_OPERATOR}"
-    return str(virt_operator_deployment_initial_replicas)
-
-
-@pytest.fixture(scope="class")
-def initial_virt_operator_replicas_reverted(prometheus, initial_virt_operator_replicas):
-    validate_initial_virt_operator_replicas_reverted(
-        prometheus=prometheus, initial_virt_operator_replicas=initial_virt_operator_replicas
-    )

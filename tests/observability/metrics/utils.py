@@ -13,17 +13,14 @@ from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.observability.constants import KUBEVIRT_VIRT_OPERATOR_READY
 from tests.observability.metrics.constants import (
     GO_VERSION_STR,
     KUBE_VERSION_STR,
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
-    KUBEVIRT_VIRT_OPERATOR_UP,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
@@ -401,17 +398,6 @@ def compare_kubevirt_vmi_info_metric_with_vm_info(
             f"The following values has a mismatch between metric and vm values: {values_mismatch}\n"
         )
         raise
-
-
-def validate_initial_virt_operator_replicas_reverted(
-    prometheus: Prometheus, initial_virt_operator_replicas: str
-) -> None:
-    for metric in [KUBEVIRT_VIRT_OPERATOR_READY, KUBEVIRT_VIRT_OPERATOR_UP]:
-        validate_metrics_value(
-            prometheus=prometheus,
-            expected_value=initial_virt_operator_replicas,
-            metric_name=metric,
-        )
 
 
 def timestamp_to_seconds(timestamp: str) -> int:
