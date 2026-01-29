@@ -105,8 +105,7 @@ def test_node_drain_using_console_fedora(
     admin_client,
     vm_container_disk_fedora,
 ):
-    privileged_virt_launcher_pod = vm_container_disk_fedora.privileged_vmi.virt_launcher_pod
-    drain_using_console(client=admin_client, source_node=privileged_virt_launcher_pod.node, vm=vm_container_disk_fedora)
+    drain_using_console(client=admin_client, source_node=vm_container_disk_fedora.vmi.node, vm=vm_container_disk_fedora)
 
 
 @pytest.mark.parametrize(
@@ -127,7 +126,7 @@ class TestNodeMaintenanceRHEL:
     @pytest.mark.polarion("CNV-2292")
     def test_node_drain_using_console_rhel(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
         vm = vm_for_test_from_template_scope_class
-        drain_using_console(client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+        drain_using_console(client=admin_client, source_node=vm.vmi.node, vm=vm)
 
     @pytest.mark.polarion("CNV-4995")
     def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
@@ -147,9 +146,9 @@ class TestNodeMaintenanceRHEL:
         4. Make sure the VMI is migrated to the other node.
         """
         vm = vm_for_test_from_template_scope_class
-        cordon_nodes = node_filter(pod=vm.privileged_vmi.virt_launcher_pod, schedulable_nodes=schedulable_nodes)
+        cordon_nodes = node_filter(pod=vm.vmi.virt_launcher_pod, schedulable_nodes=schedulable_nodes)
         with node_mgmt_console(node=cordon_nodes[0], node_mgmt="cordon"):
-            drain_using_console(client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+            drain_using_console(client=admin_client, source_node=vm.vmi.node, vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -171,12 +170,12 @@ class TestNodeCordonAndDrain:
     @pytest.mark.polarion("CNV-2048")
     def test_node_drain_template_windows(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
         vm = vm_for_test_from_template_scope_class
-        drain_using_console_windows(client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+        drain_using_console_windows(client=admin_client, source_node=vm.vmi.node, vm=vm)
 
     @pytest.mark.polarion("CNV-4906")
     def test_node_cordon_template_windows(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
         vm = vm_for_test_from_template_scope_class
-        with node_mgmt_console(node=vm.privileged_vmi.virt_launcher_pod.node, node_mgmt="cordon"):
+        with node_mgmt_console(node=vm.vmi.node, node_mgmt="cordon"):
             with pytest.raises(TimeoutExpiredError):
                 migration_job_sampler(client=admin_client, namespace=vm.namespace)
                 pytest.fail("Cordon of a Node should not trigger VMI migration.")
