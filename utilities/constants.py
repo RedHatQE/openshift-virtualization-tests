@@ -212,7 +212,6 @@ VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
-MTU_9000 = 9000
 IPV4_STR = "ipv4"
 IPV6_STR = "ipv6"
 CLUSTER_NETWORK_ADDONS_OPERATOR = "cluster-network-addons-operator"
@@ -225,8 +224,6 @@ KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
 KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
 KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
 KUBEMACPOOL_MAC_RANGE_CONFIG = "kubemacpool-mac-range-config"
-NMSTATE_HANDLER = "nmstate-handler"
-ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
 SSH_PORT_22 = 22
 PORT_80 = 80
 ACTIVE_BACKUP = "active-backup"
@@ -342,7 +339,6 @@ CLOUD_INIT_NO_CLOUD = "cloudInitNoCloud"
 # Kubemacpool constants
 KMP_VM_ASSIGNMENT_LABEL = "mutatevirtualmachines.kubemacpool.io"
 KMP_ENABLED_LABEL = "allocate"
-KMP_DISABLED_LABEL = "ignore"
 
 # SSH constants
 CNV_VM_SSH_KEY_PATH = "CNV-SSH-KEY-PATH"
