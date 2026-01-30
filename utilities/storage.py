@@ -671,14 +671,16 @@ def assert_disk_bus(vm: virt_util.VirtualMachineForTests, volume: DataVolume, ex
         AssertionError: If disk is not found or bus type does not match.
     """
     disk = next(
-        (disk_entry for disk_entry in vm.vmi.instance.spec.domain.devices.disks if disk_entry.get("name") == volume.name),
-        None
+        (
+            disk_entry
+            for disk_entry in vm.vmi.instance.spec.domain.devices.disks
+            if disk_entry.get("name") == volume.name
+        ),
+        None,
     )
     assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
     actual_bus = disk.get("disk", {}).get("bus")
-    assert actual_bus == expected_bus, (
-        f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
-    )
+    assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
 
 
 def assert_hotplugvolume_nonexist(vm):
