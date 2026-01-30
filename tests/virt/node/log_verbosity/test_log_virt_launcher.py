@@ -1,3 +1,7 @@
+"""
+Tests for virt-launcher pod log verbosity and migration progress keys.
+"""
+
 import logging
 
 import pytest
@@ -18,6 +22,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def find_missing_progress_keys_in_pod_log(pod):
+    """
+    Return a list of migration progress keys missing from the pod's log.
+    """
     pod_log = pod.log(container="compute")
     missing_keys = list(
         filter(
@@ -46,6 +53,10 @@ def find_missing_progress_keys_in_pod_log(pod):
 
 
 def wait_for_all_progress_keys_in_pod_log(pod):
+    """
+    Wait until all migration progress keys are present in the pod's log.
+    Raises TimeoutExpiredError if not all keys are found within the timeout.
+    """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
@@ -68,6 +79,9 @@ def vm_for_migration_progress_test(
     unprivileged_client,
     cpu_for_migration,
 ):
+    """
+    Fixture to create and start a VM for migration progress tests.
+    """
     name = "vm-for-migration-progress-test"
     with VirtualMachineForTests(
         name=name,
@@ -83,11 +97,17 @@ def vm_for_migration_progress_test(
 
 @pytest.fixture()
 def source_pod_log_verbosity_test(vm_for_migration_progress_test):
+    """
+    Fixture to get the virt-launcher pod for the test VM.
+    """
     return vm_for_migration_progress_test.vmi.virt_launcher_pod
 
 
 @pytest.fixture()
 def migrated_vm_with_policy(migration_policy_with_bandwidth, vm_for_migration_progress_test):
+    """
+    Fixture to migrate the test VM with a migration policy.
+    """
     migrate_vm_and_verify(vm=vm_for_migration_progress_test, wait_for_migration_success=False)
 
 
@@ -105,6 +125,9 @@ class TestProgressOfMigrationInVirtLauncher:
         updated_log_verbosity_config,
         vm_for_migration_progress_test,
     ):
+        """
+        Test that virt-launcher pod log contains the correct verbosity level.
+        """
         assert f"verbosity to {VIRT_LOG_VERBOSITY_LEVEL_6}" in vm_for_migration_progress_test.vmi.virt_launcher_pod.log(
             container="compute"
         ), f"Not found correct log verbosity level: {VIRT_LOG_VERBOSITY_LEVEL_6} in logs"
@@ -118,4 +141,7 @@ class TestProgressOfMigrationInVirtLauncher:
         source_pod_log_verbosity_test,
         migrated_vm_with_policy,
     ):
+        """
+        Test that all migration progress keys appear in virt-launcher pod log after migration.
+        """
         wait_for_all_progress_keys_in_pod_log(pod=source_pod_log_verbosity_test)
