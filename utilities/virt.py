@@ -2204,7 +2204,7 @@ def check_migration_process_after_node_drain(client, vm):
     Wait for migration process to succeed and verify that VM indeed moved to new node.
     """
     vmi_old_uid = vm.vmi.instance.metadata.uid
-    source_node = vm.privileged_vmi.virt_launcher_pod.node
+    source_node = vm.vmi.virt_launcher_pod.node
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
@@ -2212,7 +2212,7 @@ def check_migration_process_after_node_drain(client, vm):
         namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
     )
 
-    target_pod = vm.privileged_vmi.virt_launcher_pod
+    target_pod = vm.vmi.virt_launcher_pod
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
     target_node = target_pod.node
     LOGGER.info(f"The VMI is currently running on {target_node.name}")
