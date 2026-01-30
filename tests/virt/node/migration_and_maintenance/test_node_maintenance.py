@@ -1,5 +1,7 @@
 """
 Draining node by Node Maintenance Operator
+
+STP Reference: https://docs.openshift.com/container-platform/latest/nodes/nodes/nodes-nodes-working.html
 """
 
 import logging
@@ -105,6 +107,24 @@ def test_node_drain_using_console_fedora(
     admin_client,
     vm_container_disk_fedora,
 ):
+    """
+    Test that Fedora container disk VM migrates successfully during node drain.
+
+    Markers:
+        - post_upgrade
+        - rwx_default_storage
+
+    Preconditions:
+        - Running Fedora container disk VM
+        - RWX storage available
+
+    Steps:
+        1. Start a process on VM
+        2. Drain the node hosting the VM
+
+    Expected:
+        - VM migrates successfully, process continues running
+    """
     privileged_virt_launcher_pod = vm_container_disk_fedora.privileged_vmi.virt_launcher_pod
     drain_using_console(client=admin_client, source_node=privileged_virt_launcher_pod.node, vm=vm_container_disk_fedora)
 
@@ -124,8 +144,36 @@ def test_node_drain_using_console_fedora(
 )
 @pytest.mark.ibm_bare_metal
 class TestNodeMaintenanceRHEL:
+    """
+    Tests for node maintenance operations with RHEL VM.
+
+    Markers:
+        - ibm_bare_metal
+        - post_upgrade
+        - rwx_default_storage
+
+    Parametrize:
+        - os_image: [RHEL_LATEST]
+
+    Preconditions:
+        - Running RHEL VM from template
+    """
+
     @pytest.mark.polarion("CNV-2292")
     def test_node_drain_using_console_rhel(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
+        """
+        Test that RHEL VM migrates successfully during node drain.
+
+        Preconditions:
+            - No existing migration job in namespace
+
+        Steps:
+            1. Start a process on VM
+            2. Drain the node hosting the VM
+
+        Expected:
+            - VM migrates successfully
+        """
         vm = vm_for_test_from_template_scope_class
         drain_using_console(client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
 
@@ -133,18 +181,18 @@ class TestNodeMaintenanceRHEL:
     def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
         self, no_migration_job, vm_for_test_from_template_scope_class, schedulable_nodes, admin_client
     ):
-        """Test VMI migration, when multiple nodes are unschedulable.
+        """
+        Test that VM migrates when multiple nodes are unschedulable.
 
-        In our BM or PSI setups, we mostly use only 3 worker nodes,
-        the OCS pods would need at-least 2 nodes up and running, to
-        avoid violation of the ceph pod's disruption budget.
-        Hence we simulating this case here, with Cordon 1 node and
-        Drain 1 node, instead of Draining 2 Worker nodes.
+        Preconditions:
+            - No existing migration job in namespace
 
-        1. Start a VMI
-        2. Cordon a Node, other than the current running VMI Node.
-        3. Drain the Node, on which the VMI is present.
-        4. Make sure the VMI is migrated to the other node.
+        Steps:
+            1. Cordon one node
+            2. Drain the node hosting VM
+
+        Expected:
+            - VM migrates to remaining available node
         """
         vm = vm_for_test_from_template_scope_class
         cordon_nodes = node_filter(pod=vm.privileged_vmi.virt_launcher_pod, schedulable_nodes=schedulable_nodes)
@@ -168,13 +216,56 @@ class TestNodeMaintenanceRHEL:
 )
 @pytest.mark.ibm_bare_metal
 class TestNodeCordonAndDrain:
+    """
+    Tests for node cordon and drain operations with Windows VM.
+
+    Markers:
+        - ibm_bare_metal
+        - special_infra
+        - high_resource_vm
+        - post_upgrade
+        - rwx_default_storage
+
+    Parametrize:
+        - os_image: [WINDOWS_LATEST]
+
+    Preconditions:
+        - Running Windows VM from template
+    """
+
     @pytest.mark.polarion("CNV-2048")
     def test_node_drain_template_windows(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
+        """
+        Test that Windows VM migrates during node drain with process preservation.
+
+        Preconditions:
+            - No existing migration job in namespace
+
+        Steps:
+            1. Start process on Windows VM
+            2. Drain node
+
+        Expected:
+            - Process ID after migration equals process ID before migration
+        """
         vm = vm_for_test_from_template_scope_class
         drain_using_console_windows(client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
 
     @pytest.mark.polarion("CNV-4906")
     def test_node_cordon_template_windows(self, no_migration_job, vm_for_test_from_template_scope_class, admin_client):
+        """
+        [NEGATIVE] Test that cordoning a node does NOT trigger VM migration.
+
+        Preconditions:
+            - No existing migration job in namespace
+
+        Steps:
+            1. Cordon the node hosting VM
+            2. Wait for migration job
+
+        Expected:
+            - No migration job is created
+        """
         vm = vm_for_test_from_template_scope_class
         with node_mgmt_console(node=vm.privileged_vmi.virt_launcher_pod.node, node_mgmt="cordon"):
             with pytest.raises(TimeoutExpiredError):

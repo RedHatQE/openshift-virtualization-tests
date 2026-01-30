@@ -1,5 +1,12 @@
-# Run strategies logic can be found under
-# https://kubevirt.io/user-guide/#/creation/run-strategies?id=run-strategies
+"""
+VM Run Strategy Tests
+
+Run strategies logic can be found under
+https://kubevirt.io/user-guide/#/creation/run-strategies?id=run-strategies
+
+STP Reference:
+# TOOD: add link
+"""
 
 import logging
 import re
@@ -204,6 +211,23 @@ def shutdown_vm_guest_os(vm):
 @pytest.mark.s390x
 @pytest.mark.gating
 class TestRunStrategyBaseActions:
+    """
+    Tests for VM run strategy basic lifecycle actions.
+
+    Markers:
+        - arm64
+        - s390x
+        - gating
+        - post_upgrade
+
+    Parametrize:
+        - vm_action: [start, restart, stop]
+
+    Preconditions:
+        - Running RHEL VM
+        - VM configured with run strategy
+    """
+
     @pytest.mark.parametrize(
         "vm_action",
         [
@@ -218,6 +242,18 @@ class TestRunStrategyBaseActions:
         matrix_updated_vm_run_strategy,
         vm_action,
     ):
+        """
+        Test that VM action behaves correctly according to run strategy policy.
+
+        Parametrize:
+            - vm_action: [start, restart, stop]
+
+        Steps:
+            1. Perform the VM action (start/restart/stop)
+
+        Expected:
+            - VM status and run strategy match expected policy
+        """
         LOGGER.info(f"Verify VM with run strategy {matrix_updated_vm_run_strategy} and VM action {vm_action}")
         verify_vm_action(
             vm=lifecycle_vm,
@@ -232,6 +268,16 @@ class TestRunStrategyBaseActions:
     indirect=True,
 )
 class TestRunStrategyAdvancedActions:
+    """
+    Tests for advanced VM run strategy behaviors.
+
+    Markers:
+        - post_upgrade
+
+    Preconditions:
+        - Running RHEL VM
+    """
+
     @pytest.mark.polarion("CNV-5054")
     def test_run_strategy_shutdown(
         self,
@@ -240,6 +286,18 @@ class TestRunStrategyAdvancedActions:
         matrix_updated_vm_run_strategy,
         start_vm_if_not_running,
     ):
+        """
+        Test that guest OS shutdown behaves correctly per run strategy.
+
+        Preconditions:
+            - VM is running with specific run strategy
+
+        Steps:
+            1. Shutdown VM from guest OS
+
+        Expected:
+            - VMI and virt-launcher pod reach expected status per run strategy
+        """
         vmi = lifecycle_vm.vmi
         launcher_pod = vmi.virt_launcher_pod
         run_strategy = matrix_updated_vm_run_strategy
@@ -278,6 +336,22 @@ class TestRunStrategyAdvancedActions:
     def test_run_strategy_pause_unpause_vmi(
         self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running
     ):
+        """
+        Test that VMI can be paused and unpaused.
+
+        Parametrize:
+            - run_strategy: [Manual, Always]
+
+        Preconditions:
+            - VM is running with run strategy
+
+        Steps:
+            1. Pause VMI
+            2. Unpause VMI
+
+        Expected:
+            - VM is Running after unpause
+        """
         LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {request_updated_vm_run_strategy}")
         pause_unpause_vmi_and_verify_status(vm=lifecycle_vm)
 
@@ -299,4 +373,23 @@ class TestRunStrategyAdvancedActions:
     )
     @pytest.mark.rwx_default_storage
     def test_run_strategy_migrate_vm(self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running):
+        """
+        Test that VM can be migrated.
+
+        Markers:
+            - rwx_default_storage
+
+        Parametrize:
+            - run_strategy: [Manual, Always]
+
+        Preconditions:
+            - VM is running with run strategy
+            - RWX storage available
+
+        Steps:
+            1. Migrate VM
+
+        Expected:
+            - VM is Running and run strategy unchanged
+        """
         migrate_validate_run_strategy_vm(vm=lifecycle_vm, run_strategy=request_updated_vm_run_strategy)
