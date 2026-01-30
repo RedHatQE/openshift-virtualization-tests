@@ -1,9 +1,8 @@
 import logging
 from collections import defaultdict
 
-from kubernetes.client.rest import ApiException
 from kubernetes.dynamic import DynamicClient
-from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -367,11 +366,8 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
                 # to filter out terminating pods, see: https://github.com/kubernetes/kubectl/issues/450
                 if pod.instance.metadata.get("deletionTimestamp") is None:
                     pods_per_nodes[pod.node.name].append(pod)
-            except ApiException as ex:
-                if ex.reason == ResourceNotFoundError:
-                    LOGGER.debug(
-                        f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}"
-                    )
+            except NotFoundError:
+                LOGGER.warning(f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}")
         return pods_per_nodes
 
     pod_names_per_nodes = {}
