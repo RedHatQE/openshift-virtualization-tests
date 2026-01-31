@@ -23,12 +23,6 @@ pytestmark = [
 ]
 
 UNREADABLE_CRDS_BY_JIRA = {
-    "CNV-76680": [
-        f"multinamespacevirtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-        f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-        f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-        f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-    ],
     "CNV-76369": [
         f"virtualmachinebackuptrackers.backup.{Resource.ApiGroup.KUBEVIRT_IO}",
     ],
