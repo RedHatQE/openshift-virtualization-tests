@@ -134,11 +134,13 @@ class TestNegativeVmWithInstanceTypeAndPref:
 class TestVmWithInstanceTypeAndPref:
     @pytest.mark.dependency(name="start_vm_with_instance_type_and_preference")
     @pytest.mark.polarion("CNV-9087")
+    @pytest.mark.s390x
     def test_start_vm_with_instance_type_and_preference(self, rhel_vm_with_instance_type_and_preference):
         running_vm(vm=rhel_vm_with_instance_type_and_preference)
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
     @pytest.mark.polarion("CNV-9545")
+    @pytest.mark.s390x
     def test_instance_pref_controller_revision(
         self,
         rhel_vm_with_instance_type_and_preference,
@@ -153,6 +155,7 @@ class TestVmWithInstanceTypeAndPref:
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
     @pytest.mark.polarion("CNV-9821")
+    @pytest.mark.s390x
     def test_validate_clock_values(self, rhel_vm_with_instance_type_and_preference):
         clock_dict = rhel_vm_with_instance_type_and_preference.vmi.instance.to_dict()["spec"]["domain"]["clock"]
         vmi_clock_values = [

@@ -13,6 +13,7 @@ from utilities.virt import VirtualMachineForTests, running_vm
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-10358")
+@pytest.mark.s390x
 def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 

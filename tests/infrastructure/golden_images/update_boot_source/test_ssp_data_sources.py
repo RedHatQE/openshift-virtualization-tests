@@ -462,6 +462,7 @@ def test_opt_out_data_source_reconciles_after_update(
 
 
 @pytest.mark.polarion("CNV-8100")
+@pytest.mark.s390x
 def test_opt_out_data_source_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,

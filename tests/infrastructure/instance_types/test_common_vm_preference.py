@@ -78,6 +78,7 @@ def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_clus
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-10798")
+@pytest.mark.s390x
 def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_preferences)
 
@@ -127,6 +128,7 @@ class TestCommonVmPreference:
 
 @pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-11289")
+@pytest.mark.s390x
 def test_common_preference_owner(base_vm_cluster_preferences):
     failed_preferences = []
     for vm_cluster_preference in base_vm_cluster_preferences:
