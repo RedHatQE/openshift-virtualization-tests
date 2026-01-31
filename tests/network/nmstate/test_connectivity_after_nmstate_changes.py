@@ -6,6 +6,7 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
+from tests.network.constants import NMSTATE_HANDLER
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import (
     assert_nncp_successfully_configured,
@@ -14,7 +15,6 @@ from tests.network.utils import (
 )
 from utilities.constants import (
     LINUX_BRIDGE,
-    NMSTATE_HANDLER,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
 )

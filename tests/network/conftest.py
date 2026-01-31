@@ -16,11 +16,11 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
+from tests.network.constants import ISTIO_SYSTEM_DEFAULT_NS
 from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    ISTIO_SYSTEM_DEFAULT_NS,
     VIRT_HANDLER,
     NamespacesNames,
 )
