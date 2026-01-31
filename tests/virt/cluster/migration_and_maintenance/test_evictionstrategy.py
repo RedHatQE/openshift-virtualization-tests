@@ -42,9 +42,9 @@ def assert_vm_restarts_after_node_drain(source_node, vmi, vmi_old_uid):
 
 
 @pytest.fixture()
-def drained_node(vm_for_test_from_template_scope_class):
+def drained_node(admin_client, vm_for_test_from_template_scope_class):
     source_node = vm_for_test_from_template_scope_class.privileged_vmi.node
-    with node_mgmt_console(node=source_node, node_mgmt="drain"):
+    with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
         yield source_node
 
 
@@ -125,9 +125,7 @@ class TestEvictionStrategy:
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
         self, unprivileged_client, vm_for_test_from_template_scope_class, drained_node
     ):
-        check_migration_process_after_node_drain(
-            dyn_client=unprivileged_client, vm=vm_for_test_from_template_scope_class
-        )
+        check_migration_process_after_node_drain(client=unprivileged_client, vm=vm_for_test_from_template_scope_class)
 
     @pytest.mark.polarion("CNV-10088")
     def test_hco_evictionstrategy_none_vm_no_evictionstrategy(
@@ -169,6 +167,4 @@ class TestEvictionStrategy:
         added_vm_evictionstrategy,
         drained_node,
     ):
-        check_migration_process_after_node_drain(
-            dyn_client=unprivileged_client, vm=vm_for_test_from_template_scope_class
-        )
+        check_migration_process_after_node_drain(client=unprivileged_client, vm=vm_for_test_from_template_scope_class)
