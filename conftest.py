@@ -524,6 +524,29 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     return items
 
 
+def mark_nmstate_dependent_tests(items: list[Item]) -> list[Item]:
+    """
+    Dynamically mark tests that depend on NMState with the 'nmstate' marker.
+
+    Tests are identified by checking if they depend (directly or indirectly) on the
+    nmstate_dependent_placeholder fixture. This placeholder is used as a dependency tracker
+    by all fixtures that interact with NMState Custom Resources (NNCP, NNCE, NNS) either
+    for viewing or for changing the network configuration.
+    This allows filtering tests using pytest markers (e.g., -m nmstate or -m "not nmstate").
+
+    Args:
+        items: List of collected test items.
+
+    Returns:
+        List of collected test items.
+    """
+    for item in items:
+        if "nmstate_dependent_placeholder" in getattr(item, "fixturenames", []):
+            item.add_marker(marker=pytest.mark.nmstate)
+
+    return items
+
+
 def remove_tests_from_list(items: list[Item], filter_str: str) -> tuple[list[Item], list[Item]]:
     discard_tests: list[Item] = []
     items_to_return: list[Item] = []
@@ -561,6 +584,7 @@ def pytest_collection_modifyitems(session, config, items):
     3. Adds the tier2 marker for tests without an exclusion marker.
     4. Marks tests by team.
     5. Filters upgrade tests based on the --upgrade option.
+    6. Dynamically mark NMState-dependent tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -599,6 +623,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = mark_nmstate_dependent_tests(items=items)
 
 
 def pytest_report_teststatus(report, config):
