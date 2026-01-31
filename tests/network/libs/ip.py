@@ -8,7 +8,8 @@ _IPV4_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "172.16"
 _IPV6_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "fd00:1234:5678"
 TCP_HEADER_SIZE: Final[int] = 20
 IPV4_HEADER_SIZE: Final[int] = 20
-ICMPV4_HEADER_SIZE: Final[int] = 8
+IPV6_HEADER_SIZE: Final[int] = 40
+ICMP_HEADER_SIZE: Final[int] = 8
 
 
 def random_ipv4_address(net_seed: int, host_address: int) -> str:
