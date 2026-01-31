@@ -147,12 +147,13 @@ def node_to_drain(
 
 @pytest.fixture()
 def drain_uncordon_node(
+    admin_client,
     deployed_vms_for_descheduler_test,
     vms_orig_nodes_before_node_drain,
     node_to_drain,
 ):
     """Return when node is schedulable again after uncordon"""
-    with node_mgmt_console(node=node_to_drain, node_mgmt="drain"):
+    with node_mgmt_console(admin_client=admin_client, node=node_to_drain, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=node_to_drain, status=False)
         for vm in deployed_vms_for_descheduler_test:
             if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:

@@ -4,7 +4,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
 from utilities.constants import TIMEOUT_20SEC
-from utilities.infra import get_node_selector_dict, get_node_selector_name
+from utilities.infra import get_node_selector_dict
 from utilities.virt import (
     node_mgmt_console,
     vm_instance_from_template,
@@ -53,7 +53,7 @@ def unscheduled_node_vm(
     indirect=True,
 )
 @pytest.mark.polarion("CNV-4157")
-def test_schedule_vm_on_cordoned_node(nodes, data_volume_scope_function, unscheduled_node_vm):
+def test_schedule_vm_on_cordoned_node(admin_client, worker_node1, unscheduled_node_vm):
     """Test VM scheduling on a node under maintenance.
     1. Cordon the Node
     2. Once node status is 'Ready,SchedulingDisabled', start a VM (on the
@@ -64,15 +64,12 @@ def test_schedule_vm_on_cordoned_node(nodes, data_volume_scope_function, unsched
     6. Wait for VMI status to be 'Running'
     7. Verify VMI is running on the selected node
     """
-    vm_node = [
-        node for node in nodes if node.name == get_node_selector_name(node_selector=unscheduled_node_vm.node_selector)
-    ][0]
-    with node_mgmt_console(node=vm_node, node_mgmt="cordon"):
-        wait_for_node_schedulable_status(node=vm_node, status=False)
+    with node_mgmt_console(admin_client=admin_client, node=worker_node1, node_mgmt="cordon"):
+        wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
         unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.SCHEDULING, timeout=TIMEOUT_20SEC)
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
     vmi_node_name = unscheduled_node_vm.privileged_vmi.virt_launcher_pod.node.name
-    assert vmi_node_name == vm_node.name, (
+    assert vmi_node_name == worker_node1.name, (
         f"VMI is running on {vmi_node_name} and not on the selected node {unscheduled_node_vm.node_selector}"
     )

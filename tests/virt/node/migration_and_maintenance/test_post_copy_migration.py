@@ -4,6 +4,7 @@ import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from pytest_testconfig import config as py_config
 
+from tests.utils import clean_up_migration_jobs
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
 from utilities.constants import (
@@ -69,8 +70,9 @@ def migrated_hotplugged_vm(hotplugged_vm):
 
 @pytest.fixture()
 def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
-    with node_mgmt_console(node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
-        check_migration_process_after_node_drain(dyn_client=admin_client, vm=hotplugged_vm)
+    with node_mgmt_console(admin_client=admin_client, node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
+        check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 
 @pytest.mark.parametrize(

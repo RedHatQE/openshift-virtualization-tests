@@ -83,7 +83,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
-from utilities.hco import wait_for_hco_conditions
+from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.storage import get_default_storage_class
 
 if TYPE_CHECKING:
@@ -1982,7 +1982,8 @@ def vm_instance_from_template(
 
 
 @contextmanager
-def node_mgmt_console(node, node_mgmt):
+def node_mgmt_console(admin_client, node, node_mgmt):
+    hco_namespace = get_hco_namespace(admin_client=admin_client)
     try:
         LOGGER.info(f"{node_mgmt.capitalize()} the node {node.name}")
         extra_opts = "--delete-emptydir-data --ignore-daemonsets=true --force" if node_mgmt == "drain" else ""
@@ -1992,9 +1993,15 @@ def node_mgmt_console(node, node_mgmt):
         )
         yield
     finally:
+        if node_mgmt == "drain":
+            LOGGER.info("Terminate drain process")
+            run(
+                shlex.split('pkill -f "oc adm drain"'),
+            )
         LOGGER.info(f"Uncordon node {node.name}")
         run(f"oc adm uncordon {node.name}", shell=True)
         wait_for_node_schedulable_status(node=node, status=True)
+        wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @contextmanager
@@ -2193,7 +2200,7 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
         raise
 
 
-def check_migration_process_after_node_drain(dyn_client, vm):
+def check_migration_process_after_node_drain(client, vm):
     """
     Wait for migration process to succeed and verify that VM indeed moved to new node.
     """
@@ -2201,7 +2208,7 @@ def check_migration_process_after_node_drain(dyn_client, vm):
     source_node = vm.privileged_vmi.virt_launcher_pod.node
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
-    vmim = get_created_migration_job(vm=vm, client=dyn_client, timeout=TIMEOUT_5MIN)
+    vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
     wait_for_migration_finished(vm=vm, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
 
     target_pod = vm.privileged_vmi.virt_launcher_pod
