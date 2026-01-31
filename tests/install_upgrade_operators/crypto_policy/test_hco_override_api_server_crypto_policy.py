@@ -15,7 +15,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
-pytestmark = pytest.mark.tier3
+pytestmark = pytest.mark.tier2
 
 
 @pytest.fixture()
