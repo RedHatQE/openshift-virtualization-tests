@@ -93,7 +93,7 @@ TEAM_MARKERS = {
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
-    "network": [NamespacesNames.OPENSHIFT_NMSTATE],
+    "network": [],
     "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [
@@ -872,12 +872,14 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     else:
         component = components[0]
         namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component].copy()
+        all_markers = get_all_node_markers(node=node)
         if component == "virt":
-            all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
             if "descheduler" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
+        elif component == "network" and "nmstate" in all_markers:
+            namespaces_to_collect.append(NamespacesNames.OPENSHIFT_NMSTATE)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
