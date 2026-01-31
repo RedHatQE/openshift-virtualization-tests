@@ -14,8 +14,10 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
 )
 from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
@@ -471,24 +473,23 @@ class TestVmVnicInfo:
 
 
 class TestVmiPhaseTransitionFromDeletion:
-    @pytest.mark.parametrize(
-        "initial_metric_value",
-        [
-            pytest.param(
-                KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-                marks=pytest.mark.polarion("CNV-12067"),
-            )
-        ],
-        indirect=True,
-    )
-    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_linux(
-        self, prometheus, initial_metric_value, running_metric_vm, deleted_vmi
+    @pytest.mark.polarion("CNV-12990")
+    def test_kubevirt_vmi_phase_transition_from_deletion_seconds_linux(
+        self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi, subtests
     ):
-        validate_metric_value_greater_than_initial_value(
-            prometheus=prometheus,
-            metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-            initial_value=initial_metric_value,
-        )
+        metrics_to_check = [
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
+        ]
+
+        for metric in metrics_to_check:
+            with subtests.test(msg=metric):
+                validate_metric_value_greater_than_initial_value(
+                    prometheus=prometheus,
+                    metric_name=metric,
+                    initial_value=initial_vmi_deletion_metrics_values[metric],
+                )
 
     @pytest.mark.parametrize(
         "initial_metric_value",
