@@ -14,8 +14,11 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
-from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
-from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
+from tests.storage.utils import (
+    assert_use_populator,
+    create_windows_vm_validate_guest_agent_info,
+    get_storage_profile_minimum_supported_pvc_size,
+)
 from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
 from utilities.storage import (
     ErrorMsg,

@@ -4,6 +4,7 @@ import shlex
 from contextlib import contextmanager
 from typing import Generator
 
+import bitmath
 import requests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cdi import CDI
@@ -405,11 +406,17 @@ def create_cirros_dv(
     volume_mode=None,
     dv_size=Images.Cirros.DEFAULT_DV_SIZE,
 ):
+    min_size = get_storage_profile_minimum_supported_pvc_size(storage_class_name=storage_class, client=client)
+    size = (
+        min_size
+        if min_size and bitmath.parse_string_unsafe(s=min_size) >= bitmath.parse_string_unsafe(s=dv_size)
+        else dv_size
+    )
     with create_dv(
         dv_name=f"dv-{name}",
         namespace=namespace,
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=dv_size,
+        size=size,
         storage_class=storage_class,
         access_modes=access_modes,
         volume_mode=volume_mode,
@@ -507,3 +514,23 @@ def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path:
         windows_vm=windows_vm,
         directory_path=directory_path,
     )
+
+
+def get_storage_profile_minimum_supported_pvc_size(storage_class_name: str, client: DynamicClient) -> str | None:
+    """
+    Get the minimum supported PVC size from the storage profile annotations.
+
+    Args:
+        storage_class_name: Name of the storage class to get the minimum PVC size for
+        client: DynamicClient for API operations
+
+    Returns:
+        The minimum supported PVC size string (e.g., "1Gi") from the storage profile annotation
+        'cdi.kubevirt.io/minimumSupportedPvcSize', or None if not set
+    """
+    storage_profile = StorageProfile(name=storage_class_name, client=client, ensure_exists=True)
+    min_pvc_size = storage_profile.instance.metadata.get("annotations", {}).get(
+        f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/minimumSupportedPvcSize"
+    )
+    LOGGER.info(f"Minimum supported PVC size from the StorageProfile: {min_pvc_size}")
+    return min_pvc_size
