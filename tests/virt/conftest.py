@@ -9,7 +9,12 @@ from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
+from tests.utils import (
+    verify_cpumanager_workers,
+    verify_hugepages_1gi,
+    verify_rwx_default_storage,
+    wait_for_pod_running_by_prefix,
+)
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
     NVIDIA_VGPU_MANAGER_DS,
@@ -224,8 +229,14 @@ def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
 
 
 @pytest.fixture(scope="session")
-def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
+def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu, nodes_with_supported_gpus):
     wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+    wait_for_pod_running_by_prefix(
+        admin_client=admin_client,
+        namespace_name=NamespacesNames.NVIDIA_GPU_OPERATOR,
+        pod_prefix="nvidia-vgpu-device-manager",
+        expected_number_of_pods=len(nodes_with_supported_gpus),
+    )
     yield gpu_nodes_labeled_with_vm_vgpu
 
 
