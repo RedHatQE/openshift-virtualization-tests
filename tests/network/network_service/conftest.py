@@ -4,7 +4,6 @@ import pytest
 from ocp_resources.service import Service
 
 from tests.network.network_service.libservice import (
-    SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
     SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
     basic_expose_command,
 )
@@ -60,26 +59,22 @@ def virtctl_expose_service(
     request,
     unprivileged_client,
     running_vm_for_exposure,
-    dual_stack_cluster,
 ):
     ip_family_policy = request.param
-    if ip_family_policy == SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK and not dual_stack_cluster:
-        pytest.skip(
-            f"{SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK} service cannot be created in a non-dual-stack cluster."
-        )
-
-    svc_name = f"ssh-{ip_family_policy.lower()}-svc"
-    expose_command = basic_expose_command(resource_name=running_vm_for_exposure.name, svc_name=svc_name)
+    service_name = f"ssh-{ip_family_policy.lower()}-svc"
+    expose_command = basic_expose_command(resource_name=running_vm_for_exposure.name, svc_name=service_name)
     expose_command += f" --ip-family-policy={ip_family_policy}"
+
     run_virtctl_command(command=shlex.split(expose_command), namespace=running_vm_for_exposure.namespace, check=True)
 
-    svc = Service(
-        name=svc_name,
+    service = Service(
+        name=service_name,
         namespace=running_vm_for_exposure.namespace,
         client=unprivileged_client,
-        ensure_exists=True,
     )
-    yield svc
+    service.wait(timeout=10)
+    yield service
+    service.clean_up()
 
 
 @pytest.fixture()
