@@ -42,13 +42,13 @@ def decorate_log(msg):
     return f"{msg_decor}{msg}{msg_decor}"
 
 
-def run_migration_loop(iterations, vms_with_pids, os_type, wsl2_guest=False):
+def run_migration_loop(client, iterations, vms_with_pids, os_type, wsl2_guest=False):
     for iteration in range(iterations):
         LOGGER.info(decorate_log(f"Iteration {iteration + 1}"))
 
         LOGGER.info(decorate_log("VM Migration"))
         vm_list = [vms_with_pids[vm_name]["vm"] for vm_name in vms_with_pids]
-        migrate_and_verify_multi_vms(vm_list=vm_list)
+        migrate_and_verify_multi_vms(client, vm_list=vm_list)
 
         LOGGER.info(decorate_log("PID check"))
         verify_pid_after_migrate_multi_vms(vms_with_pids=vms_with_pids, os_type=os_type)
