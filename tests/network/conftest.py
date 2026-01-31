@@ -161,7 +161,7 @@ def network_operator(admin_client):
 
 @pytest.fixture(scope="session")
 def mtv_namespace_scope_session(admin_client: DynamicClient) -> Namespace:
-    return Namespace(name="openshift-mtv", client=admin_client)
+    return Namespace(name=NamespacesNames.OPENSHIFT_MTV, client=admin_client)
 
 
 @pytest.fixture(scope="session", autouse=True)

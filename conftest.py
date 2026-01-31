@@ -872,12 +872,19 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     else:
         component = components[0]
         namespaces_to_collect: list[str] = NAMESPACE_COLLECTION[component].copy()
+        all_markers = get_all_node_markers(node=node)
         if component == "virt":
-            all_markers = get_all_node_markers(node=node)
             if "gpu" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.NVIDIA_GPU_OPERATOR)
             if "descheduler" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR)
+
+        if component == "network":
+            if "bgp" in all_markers:
+                namespaces_to_collect.extend([NamespacesNames.OPENSHIFT_FRR_K8S, NamespacesNames.CNV_TESTS_UTILITIES])
+            if "mtv" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.OPENSHIFT_MTV)
+
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
