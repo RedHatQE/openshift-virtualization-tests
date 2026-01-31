@@ -252,7 +252,7 @@ class TestDedicatedLiveMigrationNetwork:
         # TCPDUMP check not used due to possibility that utility-pod
         # might be killed before vm migration
         assert_node_drain_and_vm_migration(
-            dyn_client=admin_client,
+            admin_client=admin_client,
             vm=restarted_migration_vm_1,
             virt_handler_pods=virt_handler_pods_with_migration_network,
         )

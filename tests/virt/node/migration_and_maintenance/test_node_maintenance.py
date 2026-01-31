@@ -3,7 +3,6 @@ Draining node by Node Maintenance Operator
 """
 
 import logging
-import random
 
 import pytest
 from ocp_resources.virtual_machine_instance_migration import (
@@ -37,20 +36,20 @@ pytestmark = pytest.mark.post_upgrade
 LOGGER = logging.getLogger(__name__)
 
 
-def drain_using_console(dyn_client, source_node, vm):
+def drain_using_console(admin_client, source_node, vm):
     with running_sleep_in_linux(vm=vm):
-        with node_mgmt_console(node=source_node, node_mgmt="drain"):
-            check_migration_process_after_node_drain(dyn_client=dyn_client, vm=vm)
+        with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
+            check_migration_process_after_node_drain(client=admin_client, vm=vm)
 
 
-def drain_using_console_windows(dyn_client, source_node, vm):
+def drain_using_console_windows(admin_client, source_node, vm):
     process_name = OS_PROC_NAME["windows"]
     pre_migrate_processid = start_and_fetch_processid_on_windows_vm(
         vm=vm,
         process_name=process_name,
     )
-    with node_mgmt_console(node=source_node, node_mgmt="drain"):
-        check_migration_process_after_node_drain(dyn_client=dyn_client, vm=vm)
+    with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
+        check_migration_process_after_node_drain(client=admin_client, vm=vm)
         post_migrate_processid = fetch_pid_from_windows_vm(vm=vm, process_name=process_name)
         assert post_migrate_processid == pre_migrate_processid, (
             f"Post migrate processid is: {post_migrate_processid}. Pre migrate processid is: {pre_migrate_processid}"
@@ -70,42 +69,43 @@ def node_filter(pod, schedulable_nodes):
 
 @pytest.fixture()
 def vm_container_disk_fedora(
-    cluster_cpu_model_scope_module,
-    namespace,
     unprivileged_client,
+    cpu_for_migration,
+    namespace,
 ):
-    name = f"vm-nodemaintenance-{random.randrange(99999)}"
+    name = "vm-nodemaintenance"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
+        cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
-def get_migration_job(dyn_client, namespace):
-    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=dyn_client, namespace=namespace):
+def get_migration_job(client, namespace):
+    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=client, namespace=namespace):
         return migration_job
 
 
 @pytest.fixture()
 def no_migration_job(admin_client, golden_image_vm_instance_from_template_multi_storage_scope_class):
     migration_job = get_migration_job(
-        dyn_client=admin_client,
+        client=admin_client,
         namespace=golden_image_vm_instance_from_template_multi_storage_scope_class.namespace,
     )
     if migration_job:
         migration_job.delete(wait=True)
 
 
-def migration_job_sampler(dyn_client, namespace):
+def migration_job_sampler(client, namespace):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30SEC,
         sleep=2,
         func=get_migration_job,
-        dyn_client=dyn_client,
+        client=client,
         namespace=namespace,
     )
     for sample in samples:
@@ -120,7 +120,7 @@ def test_node_drain_using_console_fedora(
 ):
     privileged_virt_launcher_pod = vm_container_disk_fedora.privileged_vmi.virt_launcher_pod
     drain_using_console(
-        dyn_client=admin_client, source_node=privileged_virt_launcher_pod.node, vm=vm_container_disk_fedora
+        admin_client=admin_client, source_node=privileged_virt_launcher_pod.node, vm=vm_container_disk_fedora
     )
 
 
@@ -149,21 +149,20 @@ def test_node_drain_using_console_fedora(
     "golden_image_data_volume_multi_storage_scope_class",
 )
 @pytest.mark.ibm_bare_metal
+@pytest.mark.usefixtures("no_migration_job")
 class TestNodeMaintenanceRHEL:
     @pytest.mark.polarion("CNV-2292")
     def test_node_drain_using_console_rhel(
         self,
-        no_migration_job,
         golden_image_vm_instance_from_template_multi_storage_scope_class,
         admin_client,
     ):
         vm = golden_image_vm_instance_from_template_multi_storage_scope_class
-        drain_using_console(dyn_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+        drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
 
     @pytest.mark.polarion("CNV-4995")
     def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
         self,
-        no_migration_job,
         golden_image_vm_instance_from_template_multi_storage_scope_class,
         schedulable_nodes,
         admin_client,
@@ -186,8 +185,8 @@ class TestNodeMaintenanceRHEL:
             pod=vm.privileged_vmi.virt_launcher_pod,
             schedulable_nodes=schedulable_nodes,
         )
-        with node_mgmt_console(node=cordon_nodes[0], node_mgmt="cordon"):
-            drain_using_console(dyn_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+        with node_mgmt_console(admin_client=admin_client, node=cordon_nodes[0], node_mgmt="cordon"):
+            drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -216,31 +215,34 @@ class TestNodeMaintenanceRHEL:
     "golden_image_data_volume_multi_storage_scope_class",
 )
 @pytest.mark.ibm_bare_metal
+@pytest.mark.usefixtures("no_migration_job")
 class TestNodeCordonAndDrain:
     @pytest.mark.polarion("CNV-2048")
     def test_node_drain_template_windows(
         self,
-        no_migration_job,
         golden_image_vm_instance_from_template_multi_storage_scope_class,
         admin_client,
     ):
         vm = golden_image_vm_instance_from_template_multi_storage_scope_class
         drain_using_console_windows(
-            dyn_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm
+            admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm
         )
 
     @pytest.mark.polarion("CNV-4906")
     def test_node_cordon_template_windows(
         self,
-        no_migration_job,
         golden_image_vm_instance_from_template_multi_storage_scope_class,
         admin_client,
     ):
         vm = golden_image_vm_instance_from_template_multi_storage_scope_class
-        with node_mgmt_console(node=vm.privileged_vmi.virt_launcher_pod.node, node_mgmt="cordon"):
+        with node_mgmt_console(
+            admin_client=admin_client,
+            node=vm.privileged_vmi.virt_launcher_pod.node,
+            node_mgmt="cordon",
+        ):
             with pytest.raises(TimeoutExpiredError):
                 migration_job_sampler(
-                    dyn_client=admin_client,
+                    client=admin_client,
                     namespace=vm.namespace,
                 )
                 pytest.fail("Cordon of a Node should not trigger VMI migration.")
