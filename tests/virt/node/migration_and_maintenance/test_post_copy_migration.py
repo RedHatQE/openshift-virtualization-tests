@@ -75,7 +75,7 @@ def migrated_hotplugged_vm(hotplugged_vm):
 
 @pytest.fixture()
 def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
-    with node_mgmt_console(node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
+    with node_mgmt_console(admin_client=admin_client, node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
         check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm)
     clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 

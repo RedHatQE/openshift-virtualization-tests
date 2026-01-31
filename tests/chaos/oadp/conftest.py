@@ -74,8 +74,8 @@ def rebooted_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress, wo
 
 
 @pytest.fixture()
-def drain_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress):
+def drain_vm_source_node(admin_client, rhel_vm_with_dv_running, oadp_backup_in_progress):
     vm_node = rhel_vm_with_dv_running.vmi.node
-    with node_mgmt_console(node=vm_node, node_mgmt="drain"):
+    with node_mgmt_console(admin_client=admin_client, node=vm_node, node_mgmt="drain"):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
