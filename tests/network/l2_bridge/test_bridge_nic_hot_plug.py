@@ -4,7 +4,7 @@ import pytest
 
 from libs.net import netattachdef
 from libs.net.vmspec import lookup_iface_status_ip
-from tests.network.l2_bridge.utils import (
+from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
     create_vm_for_hot_plug,
