@@ -480,20 +480,6 @@ def windows_vm_for_test(namespace, unprivileged_client):
         yield vm
 
 
-@pytest.fixture(scope="session")
-def memory_metric_has_bug():
-    return is_jira_open(jira_id="CNV-76656")
-
-
-@pytest.fixture()
-def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
-    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metric_has_bug:
-        pytest.xfail(
-            f"Bug (CNV-76656), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
-            "any value for windows vm"
-        )
-
-
 @pytest.fixture()
 def initial_migration_metrics_values(prometheus):
     yield {
