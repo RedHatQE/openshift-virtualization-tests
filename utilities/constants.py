@@ -737,6 +737,9 @@ class NamespacesNames:
     WASP = "wasp"
     OPENSHIFT_KUBE_DESCHEDULER_OPERATOR = "openshift-kube-descheduler-operator"
     OPENSHIFT_NMSTATE = "openshift-nmstate"
+    OPENSHIFT_FRR_K8S = "openshift-frr-k8s"
+    OPENSHIFT_MTV = "openshift-mtv"
+    CNV_TESTS_UTILITIES = "cnv-tests-utilities"
 
 
 # CNV supplemental-templates
