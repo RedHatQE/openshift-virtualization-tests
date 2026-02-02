@@ -9,7 +9,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
 
-from tests.os_params import WINDOWS_10
+from tests.os_params import WINDOWS_11
 from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_3MIN, VIRTIO_WIN
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
@@ -87,7 +87,7 @@ def vm_with_guest_tools(
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.10"),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         termination_grace_period=TIMEOUT_3MIN,
         os_flavor=OS_FLAVOR_WINDOWS,
@@ -115,7 +115,7 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
 
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
-    [pytest.param({"os_dict": WINDOWS_10})],
+    [pytest.param({"os_dict": WINDOWS_11})],
     indirect=True,
 )
 class TestWindowsGuestTools:

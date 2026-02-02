@@ -11,7 +11,7 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.os_params import WINDOWS_10, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.os_params import WINDOWS_11, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
 from utilities.constants import TCP_TIMEOUT_30SEC, VIRTIO
 
@@ -123,7 +123,7 @@ class TestWindowsTabletDevice:
             pytest.param(
                 {
                     "vm_name": "windows-desktop-default-tablet-device",
-                    "template_labels": WINDOWS_10.get("template_labels"),
+                    "template_labels": WINDOWS_11.get("template_labels"),
                 },
                 marks=pytest.mark.polarion("CNV-4150"),
             ),
