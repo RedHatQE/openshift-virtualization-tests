@@ -4,7 +4,15 @@ import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 
-from tests.network.constants import EXPECTED_CNAO_COMP_NAMES
+from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR
+
+EXPECTED_CNAO_COMP_NAMES = [
+    "multus",
+    CLUSTER_NETWORK_ADDONS_OPERATOR,
+    "kubemacpool",
+    "bridge",
+    "ovs-cni",
+]
 
 pytestmark = pytest.mark.sno
 
