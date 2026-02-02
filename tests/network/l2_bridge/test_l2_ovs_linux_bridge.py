@@ -1,4 +1,3 @@
-import logging
 import shlex
 
 import pytest
@@ -7,53 +6,27 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
+from tests.network.l2_bridge.libl2bridge import wait_for_no_packet_loss_after_connection
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
 from utilities.constants import TIMEOUT_2MIN
-from utilities.network import assert_ping_successful, ping
+from utilities.network import assert_ping_successful
 
-LOGGER = logging.getLogger(__name__)
-CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type and linux bridge
+pytestmark = [pytest.mark.ipv4, pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")]
 
-pytestmark = pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
-
-
-def wait_for_no_packet_loss_after_connection(src_vm, dst_ip, interface=None):
-    sleep_count_value = 10
-
-    def _get_ping_state():
-        return (
-            ping(
-                src_vm=src_vm,
-                dst_ip=dst_ip,
-                count=sleep_count_value,
-                interface=interface,
-            )
-            == 0
-        )
-
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=sleep_count_value,
-            func=_get_ping_state,
-        ):
-            if sample:
-                return
-    except TimeoutError:
-        LOGGER.error(f"Ping from {src_vm.name} to {dst_ip} failed.")
-        raise
+CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type
 
 
 @pytest.mark.s390x
-class TestL2LinuxBridge:
+class TestL2Bridge:
     """
-    Test L2 connectivity via linux bridge CNI plugin.
+    Test L2 connectivity via Linux or OVS bridge CNI plugin.
+    Each bridge is configured by fixtures with matrix.
     The main goal is to make sure that different kinds of L2 traffic can pass
-    transparently via Linux Bridge.
+    transparently via Linux/OVS Bridge.
     """
 
     @pytest.mark.polarion("CNV-2285")
-    def test_connectivity_l2_bridge(
+    def test_mpls_connectivity_l2_bridge(
         self,
         configured_l2_bridge_vm_a,
         l2_bridge_running_vm_a,
@@ -74,10 +47,9 @@ class TestL2LinuxBridge:
         l2_bridge_running_vm_b,
         configured_l2_bridge_vm_a,
         started_vmb_dhcp_client,
-        request,
     ):
         """
-        Test broadcast traffic via L2 linux bridge. VM_A has dhcp server installed. VM_B dhcp client.
+        Test broadcast traffic via L2 bridge. VM_A has dhcp server installed. VM_B dhcp client.
         """
         current_ip = TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -91,7 +63,6 @@ class TestL2LinuxBridge:
             if str(address) in IPNetwork(f"{DHCP_IP_RANGE_START}/24"):
                 return True
 
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-2284")
     def test_custom_eth_type(
         self,
@@ -119,6 +90,6 @@ class TestL2LinuxBridge:
         l2_bridge_running_vm_b,
     ):
         """
-        Test multicast traffic(ICMP) via linux bridge
+        Test multicast traffic(ICMP) via L2 bridge
         """
         assert_ping_successful(src_vm=l2_bridge_running_vm_b, dst_ip="224.0.0.1")
