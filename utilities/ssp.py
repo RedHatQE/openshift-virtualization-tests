@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -5,6 +7,7 @@ import re
 import shlex
 import urllib.request
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
@@ -16,6 +19,9 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+if TYPE_CHECKING:
+    from ocp_resources.resource import Resource
 
 import utilities.infra
 import utilities.storage
@@ -130,7 +136,7 @@ def wait_for_ssp_conditions(
     )
 
 
-def wait_for_condition_message_value(resource, expected_message):
+def wait_for_condition_message_value(resource: Resource, expected_message: str) -> None:
     LOGGER.info(f"Verify {resource.name} conditions contain expected message: {expected_message}")
     sample = None
     try:
@@ -139,7 +145,7 @@ def wait_for_condition_message_value(resource, expected_message):
             sleep=TIMEOUT_5SEC,
             func=lambda: resource.instance.status.conditions,
         ):
-            if any([condition["message"] == expected_message for condition in sample]):
+            if sample and any(condition.get("message") == expected_message for condition in sample):
                 return
     except TimeoutExpiredError:
         LOGGER.error(
