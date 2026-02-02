@@ -24,7 +24,7 @@ from utilities.infra import get_resources_by_name_prefix
 _CLUSTER_FRR_ASN: Final[int] = 64512
 _EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
-_FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-webhook-server"
+_FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-statuscleaner"
 _FRR_NS_NAME: Final[str] = "openshift-frr-k8s"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
