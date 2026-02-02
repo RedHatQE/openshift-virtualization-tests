@@ -11,7 +11,6 @@ from ocp_resources.service_account import ServiceAccount
 from ocp_resources.virtual_service import VirtualService
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.constants import HTTPBIN_IMAGE
 from tests.network.service_mesh.constants import (
     AUTH_COMMAND,
     DESTINATION_RULE_TYPE,
@@ -41,6 +40,7 @@ from utilities.infra import add_scc_to_service_account, create_ns, label_project
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
+HTTPBIN_IMAGE = "quay.io/openshifttest/httpbin:1.2.2"
 
 
 class GatewayForTests(Gateway):
