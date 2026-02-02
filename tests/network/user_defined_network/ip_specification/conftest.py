@@ -17,7 +17,6 @@ from tests.network.libs.vm_factory import udn_vm
 @pytest.fixture(scope="module")
 def vm_under_test(
     udn_namespace: Namespace,
-    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine, None, None]:
@@ -34,7 +33,6 @@ def vm_under_test(
 @pytest.fixture(scope="module")
 def vm_for_connectivity_ref(
     udn_namespace: Namespace,
-    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine, None, None]:

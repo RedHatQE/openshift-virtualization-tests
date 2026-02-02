@@ -5,7 +5,6 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
-from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
@@ -47,7 +46,6 @@ def passt_enabled_in_hco(
 @pytest.fixture(scope="module")
 def passt_running_vm_pair(
     udn_namespace: Namespace,
-    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
     passt_enabled_in_hco,

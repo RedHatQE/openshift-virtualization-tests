@@ -16,7 +16,7 @@ SERVER_PORT = 5201
 
 
 @pytest.fixture(scope="class")
-def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+def vma_udn(udn_namespace, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="vma-udn",
@@ -30,7 +30,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 
 
 @pytest.fixture(scope="class")
-def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+def vmb_udn(udn_namespace, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="vmb-udn",

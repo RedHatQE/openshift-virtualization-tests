@@ -6,7 +6,7 @@ from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import create_ns
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def udn_namespace(admin_client):
     yield from create_ns(
         admin_client=admin_client,
@@ -15,7 +15,7 @@ def udn_namespace(admin_client):
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package", autouse=True)
 def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
     with Layer2UserDefinedNetwork(
         name="layer2-udn",
@@ -32,6 +32,6 @@ def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
         yield udn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def udn_affinity_label():
     return affinity.new_label(key_prefix="udn")
