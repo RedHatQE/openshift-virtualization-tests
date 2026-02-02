@@ -12,7 +12,7 @@ from utilities.constants import (
 global config
 
 rhel_os_list = ["rhel-8-10", "rhel-9-6"]
-windows_os_list = ["win-10", "win-2019", "win-11", "win-2022", "win-2025"]
+windows_os_list = ["win-2019", "win-11", "win-2022", "win-2025"]
 fedora_os_list = ["fedora-43"]
 centos_os_list = ["centos-stream-9"]
 

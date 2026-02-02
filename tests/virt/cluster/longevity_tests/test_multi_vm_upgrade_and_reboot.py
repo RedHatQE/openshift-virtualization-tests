@@ -10,8 +10,8 @@ pytestmark = [pytest.mark.usefixtures("skip_test_if_no_ocs_sc"), pytest.mark.lon
     "multi_dv, multi_vms",
     [
         pytest.param(
-            {"dv_params": [WSL2_DV_PARAMS[0]]},
-            {"vm_params": [WSL2_VM_PARAMS[0]]},
+            {"dv_params": [WSL2_DV_PARAMS]},
+            {"vm_params": [WSL2_VM_PARAMS]},
             marks=pytest.mark.polarion("CNV-10152"),
         )
     ],
