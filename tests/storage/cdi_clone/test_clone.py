@@ -250,7 +250,6 @@ def test_successful_snapshot_clone(
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5607")
-@pytest.mark.smoke
 @pytest.mark.s390x
 def test_clone_from_fs_to_block_using_dv_template(
     skip_test_if_no_block_sc,
