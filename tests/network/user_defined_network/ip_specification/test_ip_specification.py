@@ -143,9 +143,13 @@ class TestVMWithExplicitIPAddressSpecification:
         assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-12585")
-    def test_ip_address_is_preserved_over_power_lifecycle(self) -> None:
+    def test_ip_address_is_preserved_over_power_cycle(
+        self,
+        vm_under_test: BaseVirtualMachine,
+        ip_to_request: ipaddress.IPv4Interface | ipaddress.IPv6Interface,
+    ) -> None:
         """
-        Test that a VM with an explicit IP address specified can preserve its IP address over a power lifecycle
+        Test that a VM with an explicit IP address specified can preserve its IP address over a power cycle
         (VM is stopped and started again).
 
         Preconditions:
@@ -159,5 +163,11 @@ class TestVMWithExplicitIPAddressSpecification:
         Expected:
             - IP address reported by VMI status and guest OS is the same as the one specified.
         """
+        vm_under_test.restart(wait=True)
+        vm_under_test.wait_for_agent_connected()
 
-    test_ip_address_is_preserved_over_power_lifecycle.__test__ = False
+        vm_logical_net_name = lookup_primary_network(vm=vm_under_test).name
+        assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
+
+        assert assigned_ip == ip_to_request.ip
+        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
