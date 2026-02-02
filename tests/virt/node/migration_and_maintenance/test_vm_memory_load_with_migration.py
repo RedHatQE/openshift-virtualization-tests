@@ -5,10 +5,10 @@ import pytest
 from tests.os_params import (
     FEDORA_LATEST,
     FEDORA_LATEST_LABELS,
-    WINDOWS_10_TEMPLATE_LABELS,
+    WINDOWS_11_TEMPLATE_LABELS,
 )
 from tests.utils import start_stress_on_vm
-from tests.virt.constants import WINDOWS_10_WSL
+from tests.virt.constants import WINDOWS_11_WSL
 from tests.virt.utils import get_stress_ng_pid, verify_stress_ng_pid_not_changed
 from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TIMEOUT_20MIN, Images
 from utilities.virt import migrate_vm_and_verify
@@ -73,10 +73,10 @@ class TestMigrationVMWithMemoryLoad:
         "golden_image_data_source_for_test_scope_function, vm_with_memory_load",
         [
             pytest.param(
-                {"os_dict": WINDOWS_10_WSL},
+                {"os_dict": WINDOWS_11_WSL},
                 {
                     "vm_name": "windows-vm-with-memory-load",
-                    "template_labels": WINDOWS_10_TEMPLATE_LABELS,
+                    "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                     "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
                     "cpu_cores": 16,
                     "cpu_threads": 1,
