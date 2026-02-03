@@ -167,7 +167,6 @@ def mtv_namespace_scope_session(admin_client: DynamicClient) -> Namespace:
 @pytest.fixture(scope="session", autouse=True)
 def network_sanity(
     admin_client,
-    hosts_common_available_ports,
     junitxml_plugin,
     request,
     istio_system_namespace,
@@ -205,6 +204,8 @@ def network_sanity(
             return
 
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
+        # Lazily resolve hosts_common_available_ports only when needed
+        hosts_common_available_ports = _request.getfixturevalue(argname="hosts_common_available_ports")
         if len(hosts_common_available_ports) <= 1:
             failure_msgs.append(
                 f"Cluster lacks multiple NICs, only {hosts_common_available_ports} common available ports found"
@@ -281,19 +282,20 @@ def network_sanity(
                 LOGGER.info(f"Validated network lane is running against an {family} supported cluster")
 
     def _verify_nmstate_running_pods(_admin_client, namespace):
-        # TODO: Only test if nmstate is required by the test(s)
-        if not namespace:
-            failure_msgs.append(f"Knmstate namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' does not exist.")
-            return
+        if any(test.get_closest_marker("nmstate") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running K-NMState dependent tests")
+            if not namespace:
+                failure_msgs.append(f"Knmstate namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' does not exist.")
+                return
 
-        LOGGER.info("Verifying all pods in nmstate namespace are running")
-        try:
-            wait_for_pods_running(
-                admin_client=_admin_client,
-                namespace=namespace,
-            )
-        except TimeoutExpiredError:
-            failure_msgs.append(f"Some pods are not running in nmstate namespace '{namespace.name}'")
+            LOGGER.info("Verifying all pods in nmstate namespace are running")
+            try:
+                wait_for_pods_running(
+                    admin_client=_admin_client,
+                    namespace=namespace,
+                )
+            except TimeoutExpiredError:
+                failure_msgs.append(f"Some pods are not running in nmstate namespace '{namespace.name}'")
 
     def _verify_mtv_installed():
         if any(test.get_closest_marker("mtv") for test in collected_tests):
