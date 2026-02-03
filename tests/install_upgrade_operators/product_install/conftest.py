@@ -43,18 +43,15 @@ from utilities.infra import (
     get_latest_stable_released_z_stream_info,
 )
 from utilities.operator import (
+    apply_icsp_idms,
     create_catalog_source,
-    create_icsp_idms_from_file,
     create_operator,
     create_operator_group,
     create_subscription,
     generate_icsp_idms_file,
     get_hco_csv_name_by_version,
     get_install_plan_from_subscription,
-    get_mcp_updating_transition_times,
     wait_for_catalogsource_ready,
-    wait_for_mcp_update_end,
-    wait_for_mcp_update_start,
 )
 from utilities.storage import (
     HppCsiStorageClass,
@@ -117,22 +114,22 @@ def generated_hyperconverged_icsp_idms(
 def updated_icsp_hyperconverged(
     is_production_source,
     generated_hyperconverged_icsp_idms,
+    is_idms_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
+    nodes,
 ):
-    initial_updating_transition_times = get_mcp_updating_transition_times(
-        mcp_conditions=machine_config_pools_conditions_scope_module
-    )
     if is_production_source:
         LOGGER.info("This is installation from production source, icsp/idms update is not needed.")
         return
-    create_icsp_idms_from_file(file_path=generated_hyperconverged_icsp_idms)
-    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
-    wait_for_mcp_update_start(
-        machine_config_pools_list=machine_config_pools,
-        initial_transition_times=initial_updating_transition_times,
+    apply_icsp_idms(
+        file_paths=[generated_hyperconverged_icsp_idms],
+        machine_config_pools=machine_config_pools,
+        mcp_conditions=machine_config_pools_conditions_scope_module,
+        nodes=nodes,
+        is_idms_file=is_idms_cluster,
+        delete_file=True,
     )
-    wait_for_mcp_update_end(machine_config_pools_list=machine_config_pools)
 
 
 @pytest.fixture(scope="module")
