@@ -15,7 +15,7 @@ from utilities.constants import KUBELET_READY_CONDITION, TIMEOUT_1MIN, TIMEOUT_5
 from utilities.hco import get_installed_hco_csv, wait_for_hco_conditions
 from utilities.infra import wait_for_pods_running
 from utilities.operator import wait_for_cluster_operator_stabilize
-from utilities.sanity import storage_sanity_check
+from utilities.sanity import check_vm_creation_capability, check_webhook_endpoints_health, storage_sanity_check
 from utilities.storage import get_data_sources_managed_by_data_import_cron
 
 # flake8: noqa: PID001
@@ -62,12 +62,14 @@ def data_import_cron_managed_datasources(unprivileged_client, golden_images_name
 
 @pytest.mark.cluster_health_check
 def test_node_sanity(admin_client, nodes):
+    """Test that all cluster nodes are healthy and schedulable."""
     assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
     assert_nodes_schedulable(nodes=nodes)
 
 
 @pytest.mark.cluster_health_check
 def test_pod_sanity(admin_client, hco_namespace):
+    """Test that all pods in the HCO namespace are running."""
     wait_for_pods_running(
         admin_client=admin_client,
         namespace=hco_namespace,
@@ -76,6 +78,7 @@ def test_pod_sanity(admin_client, hco_namespace):
 
 @pytest.mark.cluster_health_check
 def test_hyperconverged_sanity(admin_client, hco_namespace):
+    """Test that HyperConverged operator and dependent CRs are healthy."""
     wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
@@ -85,13 +88,13 @@ def test_hyperconverged_sanity(admin_client, hco_namespace):
 
 @pytest.mark.cluster_health_check
 def test_storage_sanity(cluster_storage_classes_names):
+    """Test that all required storage classes from configuration exist on the cluster."""
     assert storage_sanity_check(cluster_storage_classes_names=cluster_storage_classes_names)
 
 
 @pytest.mark.cluster_health_check
-def test_boot_volume_health(
-    golden_images_namespace, hco_managed_data_import_crons, data_import_cron_managed_datasources
-):
+def test_boot_volume_health(hco_managed_data_import_crons, data_import_cron_managed_datasources):
+    """Test that all DataImportCron-managed DataSources are ready."""
     assert len(hco_managed_data_import_crons) == len(data_import_cron_managed_datasources)
     LOGGER.info(f"All dataimport crons: {hco_managed_data_import_crons}")
     # Ensure all the datasources are in ready condition
@@ -105,6 +108,7 @@ def test_boot_volume_health(
 
 @pytest.mark.cluster_health_check
 def test_pvc_health(admin_client):
+    """Test that all PVCs in the cluster are in Bound state."""
     not_bound = []
     is_terminating_pvcs = False
     for pvc in PersistentVolumeClaim.get(client=admin_client):
@@ -128,6 +132,7 @@ def test_pvc_health(admin_client):
 
 @pytest.mark.cluster_health_check
 def test_namespace_health(admin_client):
+    """Test that all namespaces are in Active state."""
     if errored_namespaces := [
         f"{ns.name} found in status {ns.status}"
         for ns in Namespace.get(client=admin_client)
@@ -138,12 +143,14 @@ def test_namespace_health(admin_client):
 
 @pytest.mark.cluster_health_check
 def test_cluster_operator_health(admin_client):
+    """Test that all cluster operators are stable and healthy."""
     failed_operators = wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_10MIN)
     assert not failed_operators, f"Following cluster operators are in unhealthy conditions: {failed_operators}"
 
 
 @pytest.mark.cluster_health_check
 def test_machine_config_pool_health(admin_client):
+    """Test that all MachineConfigPools have all nodes ready."""
     failed_mcps = []
     for mcp in MachineConfigPool.get(client=admin_client):
         mcp_instance = mcp.instance
@@ -163,6 +170,7 @@ def test_machine_config_pool_health(admin_client):
 
 @pytest.mark.cluster_health_check
 def test_csv_health(admin_client, hco_namespace):
+    """Test that the HCO ClusterServiceVersion is in Succeeded state."""
     csv = get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
     csv.wait_for_status(
         status=csv.Status.SUCCEEDED,
@@ -173,6 +181,22 @@ def test_csv_health(admin_client, hco_namespace):
 
 @pytest.mark.cluster_health_check
 def test_common_node_cpu_model(cluster_node_cpus, cluster_common_node_cpu, cluster_common_modern_node_cpu):
+    """Test that the cluster has a common CPU model across all nodes."""
     assert cluster_common_node_cpu and cluster_common_modern_node_cpu, (
         f"This is a heterogeneous cluster with no common cpus: {cluster_node_cpus}"
     )
+
+
+@pytest.mark.cluster_health_check
+def test_webhook_endpoints_health(admin_client, hco_namespace):
+    """
+    Test that all webhook services in the HCO namespace have available endpoints and
+    each webhook service has at least one ready endpoint address.
+    """
+    check_webhook_endpoints_health(admin_client=admin_client, namespace=hco_namespace)
+
+
+@pytest.mark.cluster_health_check
+def test_vm_creation_capability(admin_client):
+    """Test VM creation capability by performing a dry-run VM creation."""
+    check_vm_creation_capability(admin_client=admin_client, namespace="default")
