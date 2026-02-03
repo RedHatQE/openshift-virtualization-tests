@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import shlex
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from ocp_resources.controller_revision import ControllerRevision
 from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.virt import VirtualMachineForTests
+if TYPE_CHECKING:
+    from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+    from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+
+    from utilities.virt import VirtualMachineForTests
 
 
-def get_mismatch_vendor_label(resources_list):
+def get_mismatch_vendor_label(
+    resources_list: list[VirtualMachineClusterInstancetype | VirtualMachineClusterPreference],
+) -> dict[str, str]:
     failed_labels = {}
     for resource in resources_list:
         vendor_label = resource.labels[f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/vendor"]
@@ -17,7 +25,9 @@ def get_mismatch_vendor_label(resources_list):
     return failed_labels
 
 
-def assert_mismatch_vendor_label(resources_list):
+def assert_mismatch_vendor_label(
+    resources_list: list[VirtualMachineClusterInstancetype | VirtualMachineClusterPreference],
+) -> None:
     failed_labels = get_mismatch_vendor_label(resources_list=resources_list)
     assert not failed_labels, f"The following resources have miss match vendor label: {failed_labels}"
 
@@ -42,10 +52,10 @@ def assert_instance_revision_and_memory_update(
 ) -> None:
     guest_memory = vm_for_test.vmi.instance.spec.domain.memory.guest
     assert vm_for_test.instance.status.instancetypeRef.controllerRevisionRef.name != old_revision_name, (
-        "The revisionName is still {old_revision_name}, not updated after editing"
+        f"The revisionName is still {old_revision_name}, not updated after editing"
     )
     assert guest_memory == updated_memory, (
-        "The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
+        f"The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
     )
 
 
