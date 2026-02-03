@@ -20,6 +20,7 @@ from tests.network.user_defined_network.ip_specification.libipspec import (
     ip_address_annotation,
     read_guest_interface_ipv4,
 )
+from utilities.constants import PUBLIC_DNS_SERVER_IP
 
 FIRST_GUEST_IFACE_NAME: Final[str] = "eth0"
 
@@ -97,7 +98,7 @@ class TestVMWithExplicitIPAddressSpecification:
             assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-12582")
-    def test_successful_external_connectivity(self) -> None:
+    def test_successful_external_connectivity(self, vm_under_test: BaseVirtualMachine) -> None:
         """
         Test that a VM with an explicit IP address specified is reaching an external IP address.
 
@@ -111,8 +112,7 @@ class TestVMWithExplicitIPAddressSpecification:
         Expected:
             - Verify that the ping command succeeds with 0% packet loss.
         """
-
-    test_successful_external_connectivity.__test__ = False
+        assert vm_under_test.console(commands=[f"ping -c 3 {PUBLIC_DNS_SERVER_IP}"], timeout=30)
 
     @pytest.mark.polarion("CNV-12586")
     def test_seamless_in_cluster_connectivity_is_preserved_over_live_migration(self) -> None:
