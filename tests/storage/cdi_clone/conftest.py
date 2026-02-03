@@ -38,7 +38,6 @@ def fedora_dv_with_filesystem_volume_mode(
     namespace,
     storage_class_with_filesystem_volume_mode,
 ):
-    """Create a Fedora DataVolume with filesystem volume mode using Quay registry."""
     with create_dv(
         dv_name="dv-fedora-fs",
         namespace=namespace.name,
@@ -59,7 +58,6 @@ def fedora_dv_with_block_volume_mode(
     namespace,
     storage_class_with_block_volume_mode,
 ):
-    """Create a Fedora DataVolume with block volume mode using Quay registry."""
     with create_dv(
         dv_name="dv-fedora-block",
         namespace=namespace.name,
