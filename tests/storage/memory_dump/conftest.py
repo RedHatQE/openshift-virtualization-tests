@@ -21,7 +21,7 @@ def windows_vm_for_memory_dump(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
     ) as vm:

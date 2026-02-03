@@ -87,7 +87,7 @@ def vm_instance_from_template_multi_storage_scope_class(
     """
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_multi_storage_scope_class,
         vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,

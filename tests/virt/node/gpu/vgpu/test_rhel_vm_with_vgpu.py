@@ -87,7 +87,7 @@ def node_mdevtype_gpu_vm(
     with vm_instance_from_template(
         request=request,
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_affinity=build_node_affinity_dict(values=[[*nodes_with_supported_gpus][1].name]),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],

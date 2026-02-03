@@ -127,7 +127,7 @@ def create_windows_vm_validate_guest_agent_info(
         request=vm_params,
         existing_data_volume=dv,
         namespace=namespace,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
     ) as vm_dv:
         wait_for_windows_vm(vm=vm_dv, version=vm_params["os_version"], timeout=TIMEOUT_30MIN)
         validate_os_info_vmi_vs_windows_os(vm=vm_dv)

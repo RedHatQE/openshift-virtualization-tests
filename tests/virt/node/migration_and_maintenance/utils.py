@@ -66,7 +66,7 @@ def assert_vm_migrated_through_dedicated_network_with_logs(source_node, vm, virt
 
 
 def assert_node_drain_and_vm_migration(admin_client, vm, virt_handler_pods):
-    source_node = vm.privileged_vmi.node
+    source_node = vm.vmi.node
     with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
         check_migration_process_after_node_drain(client=admin_client, vm=vm)
         assert_vm_migrated_through_dedicated_network_with_logs(

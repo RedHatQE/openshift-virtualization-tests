@@ -205,7 +205,7 @@ def vm_for_storage_class_migration_from_template_with_existing_dv(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_class,
     ) as vm:

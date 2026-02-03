@@ -28,7 +28,7 @@ def iothreads_policy_vm(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as iothreads_policy_vm:

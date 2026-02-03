@@ -173,9 +173,9 @@ def verify_vm_action(vm, vm_action, run_strategy):
 
 
 def pause_unpause_vmi_and_verify_status(vm):
-    vm.privileged_vmi.pause(wait=True)
+    vm.vmi.pause(wait=True)
     assert vm.printable_status == vm.Status.PAUSED, f"VM is not paused, status: {vm.printable_status}"
-    vm.privileged_vmi.unpause(wait=True)
+    vm.vmi.unpause(wait=True)
     verify_vm_ready_status(vm=vm)
 
 

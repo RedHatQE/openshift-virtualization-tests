@@ -33,7 +33,7 @@ def rdp_vm(
         request=request,
         namespace=namespace,
         data_source=golden_image_data_source_scope_function,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
     ) as rdp_vm:
         wait_for_windows_vm(vm=rdp_vm, version=request.param["os_version"])
         configure_rdp_on_server_windows_vm(vm=rdp_vm)

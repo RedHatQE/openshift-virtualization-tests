@@ -26,7 +26,7 @@ def hyperv_vm(
         request.param["vm_dict"] = {"spec": {"template": {"spec": {"domain": {"features": {"hyperv": hyperv_dict}}}}}}
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
     ) as vm:

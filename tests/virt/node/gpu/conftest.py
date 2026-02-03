@@ -25,7 +25,7 @@ def gpu_vma(
     params = request.param
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_affinity=build_node_affinity_dict(values=[nodes_with_supported_gpus[0].name]),

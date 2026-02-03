@@ -1932,7 +1932,7 @@ def prepare_cloud_init_user_data(section, data):
 @contextmanager
 def vm_instance_from_template(
     request,
-    unprivileged_client,
+    client,
     namespace,
     data_source=None,
     data_volume_template=None,
@@ -1964,7 +1964,7 @@ def vm_instance_from_template(
     with VirtualMachineForTestsFromTemplate(
         name=vm_name,
         namespace=namespace.name,
-        client=unprivileged_client,
+        client=client,
         labels=Template.generate_template_labels(**params["template_labels"]),
         data_source=data_source,
         data_volume_template=data_volume_template,

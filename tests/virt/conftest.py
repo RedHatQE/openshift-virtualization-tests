@@ -362,14 +362,14 @@ def golden_image_data_volume_template_for_test_scope_function(
 @pytest.fixture(scope="class")
 def vm_for_test_from_template_scope_class(
     request,
-    unprivileged_client,
+    admin_client,
     namespace,
     golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=admin_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         vm_cpu_model=modern_cpu_for_migration,

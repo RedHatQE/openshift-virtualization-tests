@@ -20,7 +20,7 @@ def unscheduled_node_vm(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         vm_affinity=build_node_affinity_dict(values=[worker_node1.hostname]),
@@ -61,7 +61,7 @@ def test_schedule_vm_on_cordoned_node(admin_client, worker_node1, unscheduled_no
         wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
-    vmi_node_name = unscheduled_node_vm.privileged_vmi.virt_launcher_pod.node.name
+    vmi_node_name = unscheduled_node_vm.vmi.node.name
     assert vmi_node_name == worker_node1.name, (
         f"VMI is running on {vmi_node_name} and not on the expected node {worker_node1.name}"
     )

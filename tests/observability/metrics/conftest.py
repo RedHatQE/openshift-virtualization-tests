@@ -689,7 +689,7 @@ def vm_with_rwo_dv(request, unprivileged_client, namespace):
     dv_res = dv.res
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
     ) as vm:

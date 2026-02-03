@@ -193,7 +193,7 @@ def rhel9_golden_image_vm(
 ):
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=rhel9_data_source_scope_session,

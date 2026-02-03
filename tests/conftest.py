@@ -899,7 +899,7 @@ def vm_instance_from_template_multi_storage_scope_function(
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_multi_storage_scope_function,
         vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
@@ -922,7 +922,7 @@ def golden_image_vm_instance_from_template_multi_storage_scope_function(
 
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         data_source=golden_image_data_source_multi_storage_scope_function,
         vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
@@ -2246,7 +2246,7 @@ def vm_from_template_with_existing_dv(
     """create VM from template using an existing DV (and not a golden image)"""
     with vm_instance_from_template(
         request=request,
-        unprivileged_client=unprivileged_client,
+        client=unprivileged_client,
         namespace=namespace,
         existing_data_volume=data_volume_scope_function,
     ) as vm:

@@ -43,7 +43,7 @@ def assert_vm_restarts_after_node_drain(source_node, vmi, vmi_old_uid):
 
 @pytest.fixture()
 def drained_node(admin_client, vm_for_test_from_template_scope_class):
-    source_node = vm_for_test_from_template_scope_class.privileged_vmi.node
+    source_node = vm_for_test_from_template_scope_class.vmi.node
     with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
         yield source_node
 
