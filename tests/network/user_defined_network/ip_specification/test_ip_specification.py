@@ -12,7 +12,8 @@ from typing import Final
 
 import pytest
 
-from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
+from libs.net.traffic_generator import TcpServer, client_server_active_connection, is_tcp_connection
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
@@ -21,6 +22,7 @@ from tests.network.user_defined_network.ip_specification.libipspec import (
     read_guest_interface_ipv4,
 )
 from utilities.constants import PUBLIC_DNS_SERVER_IP
+from utilities.virt import migrate_vm_and_verify
 
 FIRST_GUEST_IFACE_NAME: Final[str] = "eth0"
 
@@ -115,7 +117,10 @@ class TestVMWithExplicitIPAddressSpecification:
         assert vm_under_test.console(commands=[f"ping -c 3 {PUBLIC_DNS_SERVER_IP}"], timeout=30)
 
     @pytest.mark.polarion("CNV-12586")
-    def test_seamless_in_cluster_connectivity_is_preserved_over_live_migration(self) -> None:
+    def test_seamless_cluster_connectivity_is_preserved_over_live_migration(
+        self,
+        client_server_tcp_connectivity_between_vms: tuple[TcpClient, TcpServer],
+    ) -> None:
         """
         Test that a VM with an explicit IP address specified can preserve connectivity during live migration.
 
@@ -131,8 +136,11 @@ class TestVMWithExplicitIPAddressSpecification:
         Expected:
             - The initial TCP connection is preserved (no disconnection).
         """
+        client, server = client_server_tcp_connectivity_between_vms
 
-    test_seamless_in_cluster_connectivity_is_preserved_over_live_migration.__test__ = False
+        migrate_vm_and_verify(vm=server.vm)
+
+        assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-12585")
     def test_ip_address_is_preserved_over_power_lifecycle(self) -> None:

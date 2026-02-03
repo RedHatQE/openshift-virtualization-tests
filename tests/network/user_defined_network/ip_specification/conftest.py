@@ -6,6 +6,8 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
+from libs.net.traffic_generator import TcpServer, client_server_active_connection
+from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
@@ -70,3 +72,15 @@ def ip_to_request(
     new_ip = next(network_hosts)
 
     return ipaddress.ip_interface(address=(new_ip, ip_net.prefixlen))
+
+
+@pytest.fixture(scope="module")
+def client_server_tcp_connectivity_between_vms(
+    vm_for_connectivity_ref: BaseVirtualMachine, vm_under_test: BaseVirtualMachine
+) -> Generator[tuple[TcpClient, TcpServer], None, None]:
+    with client_server_active_connection(
+        client_vm=vm_for_connectivity_ref,
+        server_vm=vm_under_test,
+        spec_logical_network=lookup_primary_network(vm=vm_under_test).name,
+    ) as (client, server):
+        yield client, server
