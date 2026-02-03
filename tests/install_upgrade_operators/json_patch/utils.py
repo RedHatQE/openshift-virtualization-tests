@@ -67,7 +67,9 @@ def filter_metric_by_component(metrics, metric_name, component_name):
             metric.get("metric", {}).get("annotation_name") == annotation_name
             and metric.get("metric", {}).get("__name__") == metric_name
         ):
-            return int(metric.get("value")[1])
+            metric_value = metric.get("value", [])
+            if len(metric_value) > 1:
+                return int(metric_value[1])
     LOGGER.warning(f"No results found when filtering for {metric_name} and annotation {annotation_name} in {metrics}.")
     return 0
 
