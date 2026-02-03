@@ -7,6 +7,7 @@ from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
+from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
@@ -152,6 +153,11 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
 @pytest.fixture(scope="module")
 def created_cnv_namespace(admin_client):
     cnv_namespace_name = py_config["hco_namespace"]
+    # Delete existing namespace if it exists from previous test runs
+    existing_ns = Namespace(client=admin_client, name=cnv_namespace_name)
+    if existing_ns.exists:
+        LOGGER.info(f"Deleting existing namespace {cnv_namespace_name}")
+        existing_ns.delete(wait=True)
     yield from create_ns(
         admin_client=admin_client,
         name=cnv_namespace_name,
