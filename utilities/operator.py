@@ -38,7 +38,6 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
-    TIMEOUT_15MIN,
     TIMEOUT_20MIN,
     TIMEOUT_75MIN,
 )
@@ -248,7 +247,7 @@ def wait_for_mcp_update_start(machine_config_pools_list, initial_transition_time
         f"Waiting for MCPs {mcps_to_check} to reach desired condition: {updating_condition}"
     )
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_15MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_10SEC,
         func=get_mcps_with_different_transition_times,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
