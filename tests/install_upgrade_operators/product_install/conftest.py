@@ -44,13 +44,13 @@ from utilities.infra import (
 )
 from utilities.operator import (
     apply_icsp_idms,
-    create_catalog_source,
     create_operator,
     create_operator_group,
     create_subscription,
     generate_icsp_idms_file,
     get_hco_csv_name_by_version,
     get_install_plan_from_subscription,
+    update_image_in_catalog_source,
     wait_for_catalogsource_ready,
 )
 from utilities.storage import (
@@ -137,17 +137,16 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
     if is_production_source:
         LOGGER.info("No creation or update to catalogsource is needed for installation from production source.")
         return
-    LOGGER.info(f"Creating catalog source {HCO_CATALOG_SOURCE}")
-    catalog_source = create_catalog_source(
-        catalog_name=HCO_CATALOG_SOURCE,
+    update_image_in_catalog_source(
+        client=admin_client,
         image=cnv_image_url,
-        admin_client=admin_client,
+        catalog_source_name=HCO_CATALOG_SOURCE,
+        cr_name=py_config["hco_cr_name"],
     )
     wait_for_catalogsource_ready(
         admin_client=admin_client,
         catalog_name=HCO_CATALOG_SOURCE,
     )
-    return catalog_source
 
 
 @pytest.fixture(scope="module")
@@ -187,7 +186,7 @@ def installed_cnv_subscription(
         subscription_name=HCO_SUBSCRIPTION,
         package_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
-        catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name,
+        catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else HCO_CATALOG_SOURCE,
         admin_client=admin_client,
         channel_name=cnv_version_to_install_info["channel"],
     )
