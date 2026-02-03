@@ -651,6 +651,8 @@ ALL_CNV_CRDS = [
     f"objecttransfers.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
     f"ssps.{Resource.ApiGroup.SSP_KUBEVIRT_IO}",
     f"storageprofiles.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
+    f"virtualmachinebackups.backup.{Resource.ApiGroup.KUBEVIRT_IO}",
+    f"virtualmachinebackuptrackers.backup.{Resource.ApiGroup.KUBEVIRT_IO}",
     f"virtualmachineclusterinstancetypes.{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}",
     f"virtualmachineinstancetypes.{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}",
     f"virtualmachineinstancemigrations.{Resource.ApiGroup.KUBEVIRT_IO}",
