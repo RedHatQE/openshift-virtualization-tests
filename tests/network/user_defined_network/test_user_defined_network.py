@@ -10,7 +10,7 @@ from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm import affinity
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.vm_factory import udn_vm
-from utilities.constants import PUBLIC_DNS_SERVER_IP, TIMEOUT_1MIN
+from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
@@ -141,6 +141,10 @@ class TestPrimaryUdn:
 
     @pytest.mark.polarion("CNV-12177")
     @pytest.mark.single_nic
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Failed migration of vm in UDN: CNV-72782",
+        run=False,
+    )
     def test_connectivity_is_preserved_during_server_live_migration(self, server, client):
         migrate_vm_and_verify(vm=server.vm)
         assert is_tcp_connection(server=server, client=client)
