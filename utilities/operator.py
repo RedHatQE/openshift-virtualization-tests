@@ -41,7 +41,6 @@ from utilities.constants import (
     TIMEOUT_20MIN,
     TIMEOUT_75MIN,
 )
-from utilities.data_collector import collect_ocp_must_gather
 
 LOGGER = logging.getLogger(__name__)
 
@@ -288,7 +287,6 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
         f"condition {condition_type} before timeout.\n"
         f"Current MCP status={str({mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list})}"
     )
-    collect_ocp_must_gather(since_time=since_time)
 
 
 def get_machine_config_pool_by_name(mcp_name: str, admin_client: DynamicClient) -> MachineConfigPool:
