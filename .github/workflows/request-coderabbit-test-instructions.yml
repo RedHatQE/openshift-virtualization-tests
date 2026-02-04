@@ -77,6 +77,14 @@ jobs:
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
 
+              **Hardware-Related Checks (SR-IOV, GPU, DPDK):**
+
+              When PR modifies fixtures for hardware-specific resources:
+              - **Collection Safety**: Fixtures MUST have existence checks (return `None` when hardware unavailable)
+              - **Test Plan**: MUST verify both WITH and WITHOUT hardware:
+                - Run affected tests on cluster WITH hardware
+                - Verify collection succeeds on cluster WITHOUT hardware
+
               **CRITICAL WORKFLOW COMPLETION RULES:**
 
               When responding to this test execution plan request, you MUST follow these rules EXACTLY:
