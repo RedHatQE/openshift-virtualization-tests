@@ -59,6 +59,7 @@ The "no defensive programming" rule has these five exceptions:
 ### Test Requirements
 
 - **All new tests MUST have markers** - check pytest.ini for available markers, NEVER commit unmarked tests
+  - **Tier marker reviews**: tier3 marker - when warranted (complex/hardware/platform-specific/time-consuming tests). Tier2 marker is not needed. Tier1 is not relevant.
 - **Each test verifies ONE aspect only** - single purpose, easy to understand
 - **Tests MUST be independent** - use `pytest-dependency` ONLY when test B requires side effects from test A (e.g., cluster-wide configuration).
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
