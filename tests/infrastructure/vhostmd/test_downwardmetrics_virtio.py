@@ -163,6 +163,7 @@ def vm_ready_for_tests(vm_parameters_for_virtio_downward_metrics):
 
 
 @pytest.mark.polarion("CNV-10937")
+@pytest.mark.s390x
 def test_downward_metrics_virtio_serial_port_default(
     vm_parameters_for_virtio_downward_metrics,
 ):

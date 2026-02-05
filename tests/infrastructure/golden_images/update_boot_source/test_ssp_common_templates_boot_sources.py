@@ -150,6 +150,7 @@ def test_vm_from_auto_update_boot_source(
 
 
 @pytest.mark.polarion("CNV-7565")
+@pytest.mark.s390x
 def test_common_templates_boot_source_reference(base_templates):
     source_ref_str = "sourceRef"
     LOGGER.info(f"Verify all common templates use {source_ref_str} in dataVolumeTemplates")

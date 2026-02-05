@@ -52,11 +52,13 @@ class TestDataImportCronValidation:
     """verify existing DICs behavior"""
 
     @pytest.mark.polarion("CNV-7531")
+    @pytest.mark.s390x
     def test_opt_in_data_import_cron_creation(self, admin_client, golden_images_namespace):
         LOGGER.info("Verify all DataImportCrons are created when opted in")
         wait_for_existing_auto_update_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
     @pytest.mark.polarion("CNV-8032")
+    @pytest.mark.s390x
     def test_data_import_cron_blocked_update(self, golden_images_data_import_crons_scope_function):
         first_data_import_cron = golden_images_data_import_crons_scope_function[0]
         LOGGER.info(f"Verify dataImportCron {first_data_import_cron.name} cannot be updated.")
@@ -134,6 +136,7 @@ class TestDataImportCronReconciliation:
     """Tests for DIC recreation after deletion"""
 
     @pytest.mark.polarion("CNV-7569")
+    @pytest.mark.s390x
     def test_data_import_cron_auto_recreation_after_deletion(self, golden_images_data_import_crons_scope_function):
         data_import_cron = golden_images_data_import_crons_scope_function[0]
         LOGGER.info(f"Verify dataImportCron {data_import_cron.name} is reconciled after deletion.")
