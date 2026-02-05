@@ -503,9 +503,9 @@ def test_vm_from_dv_on_different_node(
     [
         pytest.param(
             {
-                "dv_name": "dv-win-19",
+                "dv_name": "dv-win-22",
                 "source": HTTP,
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN19_RAW}",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             {
