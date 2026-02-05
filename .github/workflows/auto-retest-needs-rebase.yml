@@ -1,0 +1,104 @@
+name: Auto-retest PRs after merge
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: auto-retest-main
+  cancel-in-progress: false
+
+jobs:
+  check-open-prs:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get merged PR changed files
+        id: merged-files
+        env:
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Get files changed in the merged PR
+          MERGED_FILES=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | sort)
+
+          if [ -z "$MERGED_FILES" ]; then
+            echo "No files found in merged PR #${{ github.event.pull_request.number }}"
+            exit 0
+          fi
+          echo "Merged PR #${{ github.event.pull_request.number }} changed files:"
+          echo "$MERGED_FILES"
+
+          # Save to file for later use
+          echo "$MERGED_FILES" > /tmp/merged_files.txt
+
+          # Also output for logging
+          echo "merged_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$MERGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check all open PRs for overlap
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Get all open PRs with main as base branch (excluding drafts)
+          OPEN_PRS=$(gh pr list --base main --state open --limit 100 --json number,isDraft --jq '.[] | select(.isDraft == false) | .number')
+
+          if [ -z "$OPEN_PRS" ]; then
+            echo "No open PRs targeting main branch"
+            exit 0
+          fi
+
+          echo "Open PRs targeting main: $OPEN_PRS"
+
+          for PR_NUM in $OPEN_PRS; do
+            echo "================================================"
+            echo "Checking PR #$PR_NUM"
+
+            # Check if PR has has-conflict, hold, or wip labels
+            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -E "^(has-conflict|hold|wip)$" || true)
+
+            if [ -n "$SKIP_LABELS" ]; then
+              echo "PR #$PR_NUM has skip label(s): $SKIP_LABELS, skipping retest"
+              continue
+            fi
+
+            # Get files changed in this open PR
+            PR_FILES=$(gh pr diff $PR_NUM --name-only | sort)
+            echo "PR #$PR_NUM changed files:"
+            echo "$PR_FILES"
+
+            # Find overlap with merged PR files
+            OVERLAP=$(comm -12 <(cat /tmp/merged_files.txt) <(echo "$PR_FILES"))
+
+            if [ -n "$OVERLAP" ]; then
+              echo "Overlap found for PR #$PR_NUM:"
+              echo "$OVERLAP"
+
+              # Post retest comment - use printf to avoid YAML heredoc parsing issues
+              printf '/retest all\n\n_Auto-triggered: Files in this PR were modified by merged PR #%s._\n\n<details>\n<summary>Overlapping files</summary>\n\n%s\n\n</details>\n' \
+                "${{ github.event.pull_request.number }}" \
+                "$OVERLAP" > /tmp/comment_body.md
+
+              gh pr comment $PR_NUM --body-file /tmp/comment_body.md
+
+              echo "Posted /retest all to PR #$PR_NUM"
+            else
+              echo "No overlap for PR #$PR_NUM"
+            fi
+          done
