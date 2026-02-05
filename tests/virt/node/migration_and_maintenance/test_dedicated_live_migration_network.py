@@ -212,6 +212,7 @@ class TestDedicatedLiveMigrationNetwork:
     @pytest.mark.polarion("CNV-7881")
     def test_migrate_multiple_vms_via_dedicated_network(
         self,
+        admin_client,
         virt_handler_pods_with_migration_network,
         restarted_migration_vm_1,
         migration_vm_2,
@@ -222,7 +223,7 @@ class TestDedicatedLiveMigrationNetwork:
         # is migrating through network
         source_node = vms_deployed_on_same_node
 
-        migrate_and_verify_multi_vms(vm_list=[restarted_migration_vm_1, migration_vm_2])
+        migrate_and_verify_multi_vms(client=admin_client, vm_list=[restarted_migration_vm_1, migration_vm_2])
         for vm in [restarted_migration_vm_1, migration_vm_2]:
             assert_vm_migrated_through_dedicated_network_with_logs(
                 source_node=source_node,

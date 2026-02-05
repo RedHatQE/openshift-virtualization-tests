@@ -1826,7 +1826,7 @@ def migrate_vm_and_verify(
     ) as migration:
         if not wait_for_migration_success:
             return migration
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+        wait_for_migration_finished(client=client, namespace=vm.namespace, migration=migration, timeout=timeout)
 
     verify_vm_migrated(
         vm=vm,
@@ -1837,7 +1837,7 @@ def migrate_vm_and_verify(
     return None
 
 
-def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
+def wait_for_migration_finished(client, namespace, migration, timeout=TIMEOUT_12MIN):
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
     counter = 0
@@ -1853,7 +1853,7 @@ def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
                 if counter >= TIMEOUT_4MIN / sleep:
                     # Get status/events for PODs in non-running or failed state
                     for pod in utilities.infra.get_pod_by_name_prefix(
-                        client=get_client(),
+                        client=client,
                         pod_prefix=VIRT_LAUNCHER,
                         namespace=namespace,
                         get_all=True,
@@ -2216,7 +2216,10 @@ def check_migration_process_after_node_drain(client, vm):
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
     wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
+        client=client,
+        namespace=vm.namespace,
+        migration=vmim,
+        timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN,
     )
 
     target_pod = vm.privileged_vmi.virt_launcher_pod
