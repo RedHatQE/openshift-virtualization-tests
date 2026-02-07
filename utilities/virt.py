@@ -274,6 +274,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
+        label=None,
     ):
         """
         Virtual machine creation
@@ -368,6 +369,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
+            label=label,
         )
         self.body = body
         self.interfaces = interfaces or []
@@ -1166,6 +1168,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
+        label=None,
     ):
         """
         VM creation using common templates.
@@ -1240,6 +1243,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             additional_labels=additional_labels,
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
+            label=label,
         )
         self.data_source = data_source
         self.data_volume_template = data_volume_template
@@ -2765,3 +2769,53 @@ def wait_for_virt_handler_pods_network_updated(
         )
         raise
     return False
+
+
+class CustomTemplate(Template):
+    def __init__(
+        self,
+        name,
+        client,
+        namespace,
+        source_template,
+        vm_validation_rule=None,
+    ):
+        """
+        Custom template based on a common template.
+
+        Args:
+            source_template (Template): Template to be based on
+            vm_validation_rule (str, optional): VM validation rule added to the VM annotation
+
+        """
+        super().__init__(
+            name=name,
+            client=client,
+            namespace=namespace,
+        )
+        self.source_template = source_template
+        self.vm_validation_rule = vm_validation_rule
+
+    def to_dict(self):
+        template_dict = self.source_template.instance.to_dict()
+        self.remove_template_metadata_unique_keys(template_metadata=template_dict["metadata"])
+        template_dict["metadata"].update({
+            "labels": {f"{self.ApiGroup.APP_KUBERNETES_IO}/name": self.name},
+            "name": self.name,
+            "namespace": self.namespace,
+        })
+        if self.vm_validation_rule:
+            template_dict = self.get_template_dict_with_added_vm_validation_rule(template_dict=template_dict)
+        self.res = template_dict
+
+    def get_template_dict_with_added_vm_validation_rule(self, template_dict):
+        modified_template_dict = template_dict.copy()
+        vm_annotation = modified_template_dict["objects"][0]["metadata"]["annotations"]
+        add_validation_rule_to_annotation(vm_annotation=vm_annotation, vm_validation_rule=self.vm_validation_rule)
+        return modified_template_dict
+
+    @staticmethod
+    def remove_template_metadata_unique_keys(template_metadata):
+        del template_metadata["resourceVersion"]
+        del template_metadata["uid"]
+        del template_metadata["creationTimestamp"]
