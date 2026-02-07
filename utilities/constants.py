@@ -168,18 +168,16 @@ class ArchImages:
         BASE_ALPINE_NAME = "alpine-s390x-disk"
         BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-s390x-disk"
         Cirros = Cirros(
-            # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
-            RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
-            RAW_IMG_GZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.gz",
-            RAW_IMG_XZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw.xz",
-            QCOW2_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2",
-            QCOW2_IMG_GZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.gz",
-            QCOW2_IMG_XZ="Fedora-Cloud-Base-Generic-41-1.4.s390x.qcow2.xz",
+            # S390X does not support Cirros; Alpine is used as a lightweight substitute
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            # DISK_DEMO: unused; kept as Fedora — alpine-container-disk-demo:latest lacks s390x manifest,
+            # though newer versioned builds include s390x
             DISK_DEMO=FEDORA_DISK_DEMO,
-            DIR=f"{BASE_IMAGES_DIR}/fedora-images",
-            DEFAULT_DV_SIZE="10Gi",
-            DEFAULT_MEMORY_SIZE="1Gi",
-            OS_FLAVOR=OS_FLAVOR_FEDORA,
+            DIR=f"{BASE_IMAGES_DIR}/alpine-images",
+            DEFAULT_DV_SIZE="1Gi",
+            DEFAULT_MEMORY_SIZE="128M",
+            OS_FLAVOR=OS_FLAVOR_ALPINE,
         )
 
         Alpine = Alpine(
@@ -201,17 +199,19 @@ class ArchImages:
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
+            FEDORA43_IMG="Fedora-Cloud-Base-Generic-43-1.6.s390x.qcow2",
+            # TODO: Replace with official quay.io/openshift-cnv/qe-cnv-tests-fedora:43-s390x
+            # once PR `#4066` merges and publishes the official Fedora 43 s390x container image.
+            FEDORA_CONTAINER_IMAGE="quay.io/nestor_acuna_blanco/openshift-cnv/fedora:43-s390x",
             DISK_DEMO=FEDORA_DISK_DEMO,
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
-
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA43_IMG
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.s390x.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
 
         Cdi = Cdi(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
-            QCOW2_IMG="Fedora-qcow2.img",
+            QCOW2_IMG="Fedora-qcow2-s390x.img",
             DIR=f"{BASE_IMAGES_DIR}/fedora-images",
             DEFAULT_DV_SIZE="10Gi",
         )
