@@ -76,7 +76,6 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
-from utilities.jira import is_jira_open
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
@@ -474,20 +473,6 @@ def windows_vm_for_test(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm
-
-
-@pytest.fixture(scope="session")
-def memory_metric_has_bug():
-    return is_jira_open(jira_id="CNV-71827")
-
-
-@pytest.fixture()
-def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
-    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metric_has_bug:
-        pytest.xfail(
-            f"Bug (CNV-71827), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
-            "any value for windows vm"
-        )
 
 
 @pytest.fixture()
