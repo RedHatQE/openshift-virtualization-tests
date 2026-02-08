@@ -22,8 +22,11 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
     KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
     KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
+    KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
+    SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
@@ -562,7 +565,7 @@ def initial_metric_value(request, prometheus):
     return int(get_metrics_value(prometheus=prometheus, metrics_name=request.param))
 
 
-@pytest.fixture()
+@pytest.fixture(scope="class")
 def deleted_vmi(running_metric_vm):
     running_metric_vm.delete(wait=True)
 
@@ -694,6 +697,18 @@ def vm_with_rwo_dv(request, unprivileged_client, namespace):
         data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
     ) as vm:
         yield vm
+
+
+@pytest.fixture(scope="class")
+def initial_vmi_deletion_metrics_values(prometheus):
+    return {
+        metric: int(get_metrics_value(prometheus=prometheus, metrics_name=metric))
+        for metric in [
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+            SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
+            KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
+        ]
+    }
 
 
 @pytest.fixture(scope="class")
