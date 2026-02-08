@@ -210,6 +210,7 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
             )
             dv.create()
             dvs.append(dv)
+            dv.pvc.wait(timeout=TIMEOUT_1MIN)
 
         for dv in dvs:
             vm = VirtualMachineForTests(
