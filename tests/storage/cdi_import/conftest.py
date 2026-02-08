@@ -197,6 +197,7 @@ def dvs_and_vms_from_public_registry(namespace, storage_class_name_scope_functio
             )
             dv.create()
             dvs.append(dv)
+            dv.pvc.wait(timeout=TIMEOUT_1MIN)
 
         for dv in dvs:
             vm = VirtualMachineForTests(
