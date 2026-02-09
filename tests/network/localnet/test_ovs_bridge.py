@@ -1,17 +1,12 @@
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 
 @pytest.mark.ipv4
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: fails in CI due to cluster issue; tracked in CNV-71535",
-    run=False,
-)
 def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
     localnet_ovs_bridge_server, localnet_ovs_bridge_client
 ):
