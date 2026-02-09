@@ -1,7 +1,3 @@
-"""
-SR-IOV Tests
-"""
-
 import logging
 import re
 import shlex
@@ -12,7 +8,7 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
-from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
+from tests.network.sriov.libsriov import VM_SRIOV_IFACE_NAME, sriov_cloud_init_data, sriov_vm, vm_sriov_mac
 from utilities.constants import (
     CNV_SUPPLEMENTAL_TEMPLATES_URL,
     MTU_9000,
@@ -23,86 +19,16 @@ from utilities.constants import (
 )
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
-    compose_cloud_init_data_dict,
     network_nad,
-    sriov_network_dict,
 )
 from utilities.ssp import create_custom_template_from_url
 from utilities.virt import (
-    VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
-    fedora_vm_body,
     running_vm,
     wait_for_vm_interfaces,
 )
 
 LOGGER = logging.getLogger(__name__)
-VM_SRIOV_IFACE_NAME = "sriov1"
-
-
-def vm_sriov_mac(mac_suffix_index):
-    return f"02:00:b5:b5:b5:{mac_suffix_index:02x}"
-
-
-def sriov_cloud_init_data(
-    sriov_mac,
-    net_seed,
-    host_address,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
-    ipv6_primary_interface_cloud_init_data=None,
-):
-    sriov_addresses = []
-    if ipv4_supported_cluster:
-        sriov_addresses.append(f"{random_ipv4_address(net_seed=net_seed, host_address=host_address)}/24")
-    if ipv6_supported_cluster:
-        sriov_addresses.append(f"{random_ipv6_address(net_seed=net_seed, host_address=host_address)}/64")
-
-    sriov_interface_data = {
-        "ethernets": {
-            "1": {
-                "addresses": sriov_addresses,
-                "match": {"macaddress": sriov_mac},
-                "set-name": VM_SRIOV_IFACE_NAME,
-            }
-        }
-    }
-    return compose_cloud_init_data_dict(
-        network_data=sriov_interface_data,
-        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-    )
-
-
-def sriov_vm(
-    mac_suffix_index,
-    unprivileged_client,
-    name,
-    namespace,
-    sriov_network,
-    cloud_init_data,
-    worker=None,
-):
-    sriov_mac = vm_sriov_mac(mac_suffix_index=mac_suffix_index)
-    networks = sriov_network_dict(namespace=namespace, network=sriov_network)
-
-    vm_kwargs = {
-        "namespace": namespace.name,
-        "name": name,
-        "body": fedora_vm_body(name=name),
-        "networks": networks,
-        "interfaces": networks.keys(),
-        "cloud_init_data": cloud_init_data,
-        "client": unprivileged_client,
-        "macs": {sriov_network.name: sriov_mac},
-        "interfaces_types": {name: SRIOV for name in networks.keys()},
-    }
-
-    if worker:
-        vm_kwargs["node_selector"] = get_node_selector_dict(node_selector=worker.name)
-    with VirtualMachineForTests(**vm_kwargs) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        yield vm
 
 
 @pytest.fixture(scope="module")
@@ -159,7 +85,6 @@ def sriov_vm1(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
-        mac_suffix_index=mac_suffix_index,
         unprivileged_client=unprivileged_client,
         name="sriov-vm1",
         namespace=namespace,
@@ -190,7 +115,6 @@ def sriov_vm2(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
-        mac_suffix_index=mac_suffix_index,
         unprivileged_client=unprivileged_client,
         name="sriov-vm2",
         namespace=namespace,
@@ -221,7 +145,6 @@ def sriov_vm3(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
-        mac_suffix_index=mac_suffix_index,
         unprivileged_client=unprivileged_client,
         name="sriov-vm3",
         namespace=namespace,
@@ -252,7 +175,6 @@ def sriov_vm4(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
-        mac_suffix_index=mac_suffix_index,
         unprivileged_client=unprivileged_client,
         name="sriov-vm4",
         namespace=namespace,
@@ -336,7 +258,6 @@ def sriov_vm_migrate(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
-        mac_suffix_index=mac_suffix_index,
         unprivileged_client=unprivileged_client,
         name="sriov-vm-migrate",
         namespace=namespace,
