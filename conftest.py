@@ -27,6 +27,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.cluster
 import utilities.infra
+from libs.net.cluster import is_ipv6_single_stack_cluster
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
@@ -810,6 +811,7 @@ def pytest_sessionstart(session):
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
         admin_client = utilities.cluster.cache_admin_client()
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
+        py_config["ipv6_single_stack_cluster"] = is_ipv6_single_stack_cluster(client=admin_client)
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
                 cluster_host_url=admin_client.configuration.host, session=session

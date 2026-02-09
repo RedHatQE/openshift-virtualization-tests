@@ -91,6 +91,9 @@ from utilities.constants import (
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
+from utilities.network import (
+    cloud_init_network_data,
+)
 from utilities.storage import get_default_storage_class
 
 if TYPE_CHECKING:
@@ -138,7 +141,7 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
     for sample in sampler:
         interfaces = sample.get("status", {}).get("interfaces", [])
         active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
-        if len(active_interfaces) == len(interfaces):
+        if len(active_interfaces) == len(interfaces) and all(iface.get("ipAddresses") for iface in interfaces):
             return True
     return False
 
@@ -772,7 +775,46 @@ class VirtualMachineForTests(VirtualMachine):
 
         return template_spec
 
+    def _apply_ipv6_masquerade_cloud_init(self) -> None:
+        """
+        Apply default IPv6 cloud-init configuration for masquerade interface on
+        IPv6 single-stack clusters to enable ssh to guest VM.
+        Merges with existing network data if present.
+        """
+        if not self.cloud_init_data:
+            self.cloud_init_data = {}
+
+        # Configure both interface names to ensure network configuration is applied as naming is not predictable
+        masquerade_primary_interface_dict = {
+            "addresses": ["fd10:0:2::2/120"],
+            "gateway6": "fd10:0:2::1",
+            "dhcp4": False,
+            "dhcp6": False,
+        }
+
+        ipv6_masquerade_interfaces = {
+            "eth0": masquerade_primary_interface_dict,
+            "enp1s0": masquerade_primary_interface_dict,
+        }
+
+        # Merge with existing network data if present
+        if "networkData" in self.cloud_init_data:
+            existing_ethernets = self.cloud_init_data["networkData"].get("ethernets", {})
+
+            # Merge the masquerade interfaces with existing ethernets, don't override user-defined eth0/enp1s0
+            merged_ethernets = {**ipv6_masquerade_interfaces, **existing_ethernets}
+            self.cloud_init_data["networkData"]["ethernets"] = merged_ethernets
+
+            if "version" not in self.cloud_init_data["networkData"]:
+                self.cloud_init_data["networkData"]["version"] = 2
+        else:
+            self.cloud_init_data.update(cloud_init_network_data(data={"ethernets": ipv6_masquerade_interfaces}))
+
     def update_vm_cloud_init_data(self, template_spec):
+        if py_config.get("ipv6_single_stack_cluster"):
+            LOGGER.info(f"IPv6 single-stack cluster detected, applying default IPv6 cloud-init for VM {self.name}")
+            self._apply_ipv6_masquerade_cloud_init()
+
         if self.cloud_init_data:
             cloud_init_volume = vm_cloud_init_volume(vm_spec=template_spec)
             cloud_init_volume_type = self.cloud_init_type or CLOUD_INIT_NO_CLOUD
@@ -780,9 +822,12 @@ class VirtualMachineForTests(VirtualMachine):
             existing_cloud_init_data = cloud_init_volume.get(cloud_init_volume_type)
             # If spec already contains cloud init data
             if existing_cloud_init_data:
-                cloud_init_volume[cloud_init_volume_type]["userData"] += generated_cloud_init["userData"].strip(
-                    "#cloud-config"
-                )
+                if "userData" in generated_cloud_init:
+                    cloud_init_volume[cloud_init_volume_type]["userData"] += generated_cloud_init[
+                        "userData"
+                    ].removeprefix("#cloud-config\n")
+                if "networkData" in generated_cloud_init:
+                    cloud_init_volume[cloud_init_volume_type]["networkData"] = generated_cloud_init["networkData"]
             else:
                 cloud_init_volume[cloud_init_volume_type] = generated_cloud_init
 
@@ -822,7 +867,8 @@ class VirtualMachineForTests(VirtualMachine):
 
         # Add RSA to authorized_keys to enable login using an SSH key
         authorized_key = utilities.data_utils.authorized_key(private_key_path=os.environ[CNV_VM_SSH_KEY_PATH])
-        cloud_init_user_data += f"\nssh_authorized_keys:\n [{authorized_key}]"
+        ssh_keys_yaml = yaml.safe_dump({"ssh_authorized_keys": [authorized_key]}, width=1000)
+        cloud_init_user_data += f"\n{ssh_keys_yaml}"
 
         # Enable LEGACY crypto policies - needed until keys updated to ECDSA
         # Enable PasswordAuthentication in /etc/ssh/sshd_config
@@ -838,18 +884,31 @@ class VirtualMachineForTests(VirtualMachine):
             "sudo systemctl restart sshd",
         ]
 
-        run_ssh_generated_data = generate_cloud_init_data(data={"runcmd": run_cmd_commands})
-
         # If runcmd already exists in userData, add run_cmd_commands before any other command
         runcmd_prefix = "runcmd:"
         if runcmd_prefix in cloud_init_user_data:
+            runcmd_items = yaml.safe_dump(run_cmd_commands, width=1000)
             cloud_init_user_data = re.sub(
                 runcmd_prefix,
-                f"{runcmd_prefix}\n{run_ssh_generated_data['runcmd']}",
+                f"{runcmd_prefix}\n{runcmd_items}",
                 cloud_init_user_data,
             )
         else:
-            cloud_init_user_data += f"\nruncmd: {run_cmd_commands}"
+            runcmd_yaml = yaml.safe_dump({"runcmd": run_cmd_commands}, width=1000)
+            cloud_init_user_data += f"\n{runcmd_yaml}"
+
+        # On IPv6 single-stack clusters, restart SSH daemon after cloud-init finishes on every boot
+        # This is required because cloud-init reconfigures network on each boot
+        # On single-stack IPv6 cluster we would see an addition in cloud-init:
+        # runcmd:
+        #   - cloud-init-per always restart-sshd systemctl restart sshd
+        if py_config.get("ipv6_single_stack_cluster"):
+            restart_ssh_cmd = yaml.safe_dump(["cloud-init-per always restart-sshd systemctl restart sshd"], width=1000)
+            cloud_init_user_data = re.sub(
+                runcmd_prefix,
+                f"{runcmd_prefix}\n{restart_ssh_cmd}",
+                cloud_init_user_data,
+            )
 
         cloud_init_volume[cloud_init_volume_type]["userData"] = cloud_init_user_data
 
@@ -1770,7 +1829,8 @@ def running_vm(
         check_ssh_connectivity=check_ssh_connectivity,
         ssh_timeout=ssh_timeout,
     )
-    if wait_for_cloud_init:
+    # For explicit cloud-init waiting requests
+    if wait_for_cloud_init and not py_config.get("ipv6_single_stack_cluster"):
         wait_for_cloud_init_complete(vm=vm)
     return vm
 
