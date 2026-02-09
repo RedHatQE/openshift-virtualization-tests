@@ -356,6 +356,8 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
+            label (dict, optional): Dict of labels for VM (e.g. {""vm.kubevirt.io/template"": "custom-fedora"})
+                                    those lables will be placed in a structure metadata.labels
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -2769,53 +2771,3 @@ def wait_for_virt_handler_pods_network_updated(
         )
         raise
     return False
-
-
-class CustomTemplate(Template):
-    def __init__(
-        self,
-        name,
-        client,
-        namespace,
-        source_template,
-        vm_validation_rule=None,
-    ):
-        """
-        Custom template based on a common template.
-
-        Args:
-            source_template (Template): Template to be based on
-            vm_validation_rule (str, optional): VM validation rule added to the VM annotation
-
-        """
-        super().__init__(
-            name=name,
-            client=client,
-            namespace=namespace,
-        )
-        self.source_template = source_template
-        self.vm_validation_rule = vm_validation_rule
-
-    def to_dict(self):
-        template_dict = self.source_template.instance.to_dict()
-        self.remove_template_metadata_unique_keys(template_metadata=template_dict["metadata"])
-        template_dict["metadata"].update({
-            "labels": {f"{self.ApiGroup.APP_KUBERNETES_IO}/name": self.name},
-            "name": self.name,
-            "namespace": self.namespace,
-        })
-        if self.vm_validation_rule:
-            template_dict = self.get_template_dict_with_added_vm_validation_rule(template_dict=template_dict)
-        self.res = template_dict
-
-    def get_template_dict_with_added_vm_validation_rule(self, template_dict):
-        modified_template_dict = template_dict.copy()
-        vm_annotation = modified_template_dict["objects"][0]["metadata"]["annotations"]
-        add_validation_rule_to_annotation(vm_annotation=vm_annotation, vm_validation_rule=self.vm_validation_rule)
-        return modified_template_dict
-
-    @staticmethod
-    def remove_template_metadata_unique_keys(template_metadata):
-        del template_metadata["resourceVersion"]
-        del template_metadata["uid"]
-        del template_metadata["creationTimestamp"]
