@@ -4,6 +4,7 @@ from functools import cache
 from ocp_resources.node import Node
 
 from utilities.cluster import cache_admin_client
+from utilities.exceptions import UnsupportedCPUArchitectureError
 
 
 @cache
@@ -26,6 +27,11 @@ def get_cluster_architecture() -> set[str]:
     if not arch:
         # cache_admin_client is used here as this function is used to get the architecture when initialing pytest config
         nodes: list[Node] = list(Node.get(client=cache_admin_client()))
-        return {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
+        cluster_archs = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
+        if not cluster_archs:
+            raise UnsupportedCPUArchitectureError(
+                "Cluster architecture could not be determined (no nodes found and env var unset)."
+            )
+        return cluster_archs
 
     return {arch}

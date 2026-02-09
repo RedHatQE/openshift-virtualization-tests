@@ -59,7 +59,7 @@ CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
 
 class ArchImages:
-    class AMD64:  # noqa: N801
+    class AMD64:
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
         Cirros = Cirros(

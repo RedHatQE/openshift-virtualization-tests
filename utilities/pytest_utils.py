@@ -427,7 +427,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = Non
 def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
     validate_cpu_arch_params(cpu_arch_option=cpu_arch_option)
 
-    cpu_arch = cpu_arch_option.split(",") if cpu_arch_option else get_cluster_architecture()
+    cpu_arch = cpu_arch_option.split(",") if cpu_arch_option else list(get_cluster_architecture())
 
     if len(cpu_arch) > 1:
         LOGGER.warning("OS matrix generation is not supported for multi-arch runs!")

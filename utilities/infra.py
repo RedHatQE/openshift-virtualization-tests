@@ -173,7 +173,7 @@ def generate_latest_os_dict(os_matrix: list[dict[str, Any]]) -> dict[str, Any]:
         os_matrix (list): [<os-name>]_os_matrix - a list of dicts.
 
     Returns:
-        dict: {Latest OS name: latest supported OS dict} else raises an exception.
+        dict: Latest supported OS dict (the os_values payload) or raises an exception.
 
     Raises:
         OsDictNotFoundError: If no os matched.

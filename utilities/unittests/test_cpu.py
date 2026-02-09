@@ -222,14 +222,14 @@ class TestGetHostModelCpu:
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
             "host-model-cpu.node.kubevirt.io/Skylake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         result = get_host_model_cpu([mock_node1, mock_node2])
@@ -246,13 +246,13 @@ class TestGetHostModelCpu:
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         with pytest.raises(AssertionError, match="All nodes did not have host-model-cpu label"):
@@ -265,14 +265,14 @@ class TestGetHostModelCpu:
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         result = get_host_model_cpu([mock_node1, mock_node2])
@@ -289,21 +289,21 @@ class TestGetHostModelCpu:
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
             "host-model-cpu.node.kubevirt.io/Skylake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node3 = MagicMock()
         mock_node3.name = "node3"
         mock_node3.labels = {
             "host-model-cpu.node.kubevirt.io/Haswell": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         result = get_host_model_cpu([mock_node1, mock_node2, mock_node3])
@@ -321,7 +321,7 @@ class TestGetHostModelCpu:
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "false",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         with pytest.raises(AssertionError, match="All nodes did not have host-model-cpu label"):
@@ -334,14 +334,14 @@ class TestGetHostModelCpu:
         mock_node_amd64.name = "node-amd64"
         mock_node_amd64.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
-            "beta.kubernetes.io/arch": "amd64",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node_arm64 = MagicMock()
         mock_node_arm64.name = "node-arm64"
         mock_node_arm64.labels = {
             "host-model-cpu.node.kubevirt.io/Neoverse-N1": "true",
-            "beta.kubernetes.io/arch": "arm64",
+            "kubernetes.io/arch": "arm64",
         }
 
         result = get_host_model_cpu([mock_node_amd64, mock_node_arm64])

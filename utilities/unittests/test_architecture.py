@@ -17,19 +17,19 @@ class TestGetClusterArchitecture:
 
     def test_get_cluster_architecture_from_env_arm64(self):
         """Test getting architecture from environment variable - arm64"""
-        with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "arm64"}):
+        with patch.dict(in_dict=os.environ, values={"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "arm64"}):
             result = get_cluster_architecture()
             assert result == {"arm64"}
 
     def test_get_cluster_architecture_from_env_s390x(self):
         """Test getting architecture from environment variable - s390x"""
-        with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "s390x"}):
+        with patch.dict(in_dict=os.environ, values={"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "s390x"}):
             result = get_cluster_architecture()
             assert result == {"s390x"}
 
     def test_get_cluster_architecture_from_env_amd64(self):
         """Test getting architecture from environment variable - amd64"""
-        with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "amd64"}):
+        with patch.dict(in_dict=os.environ, values={"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "amd64"}):
             result = get_cluster_architecture()
             assert result == {"amd64"}
 
@@ -38,7 +38,7 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_from_nodes_amd64(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - amd64"""
         # Clear env var to force reading from nodes
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             # Mock node with amd64 architecture
@@ -57,7 +57,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_from_nodes_arm64(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - arm64"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             # Mock node with arm64 architecture
@@ -74,7 +74,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_from_nodes_s390x(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - s390x"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             # Mock node with s390x architecture
@@ -91,7 +91,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_multiple_nodes_same_arch(self, mock_node_class, mock_cache_client):
         """Test getting architecture with multiple nodes of same arch returns set"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             # Mock multiple nodes with same architecture
@@ -110,7 +110,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_multiple_archs_returns_set(self, mock_node_class, mock_cache_client):
         """Test getting architecture with mixed nodes returns set of all archs"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             mock_node1 = MagicMock()
@@ -128,7 +128,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_uses_cache_admin_client(self, mock_node_class, mock_cache_client):
         """Test that cache_admin_client is used when getting nodes"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(in_dict=os.environ, values={}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
 
             mock_client = MagicMock()

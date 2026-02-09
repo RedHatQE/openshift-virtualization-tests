@@ -217,7 +217,11 @@ class TestGenerateOsMatrixDict:
         # When arch is set, getattr(ArchImages, "AMD64") is used
         mock_arch_images.AMD64 = mock_os_images["rhel"]
 
-        result = generate_os_matrix_dict("rhel", ["rhel-9-5"], arch="amd64")
+        result = generate_os_matrix_dict(
+            os_name="rhel",
+            supported_operating_systems=["rhel-9-5"],
+            arch="amd64",
+        )
 
         assert len(result) == 1
         rhel_config = result[0]["rhel-9-5"]
