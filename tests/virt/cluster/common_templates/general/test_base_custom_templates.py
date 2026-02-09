@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import pytest
@@ -10,9 +11,64 @@ from pytest_testconfig import config as py_config
 from tests.os_params import FEDORA_LATEST
 from utilities.constants import OS_FLAVOR_FEDORA, NamespacesNames
 from utilities.storage import data_volume_template_with_source_ref_dict
-from utilities.virt import CustomTemplate, VirtualMachineForTests, VirtualMachineForTestsFromTemplate, running_vm
+from utilities.virt import (
+    VirtualMachineForTests,
+    VirtualMachineForTestsFromTemplate,
+    add_validation_rule_to_annotation,
+    running_vm,
+)
 
 LOGGER = logging.getLogger(__name__)
+
+
+class CustomTemplate(Template):
+    def __init__(
+        self,
+        name,
+        client,
+        namespace,
+        source_template,
+        vm_validation_rule=None,
+    ):
+        """
+        Custom template based on a common template.
+
+        Args:
+            source_template (Template): Template to be based on
+            vm_validation_rule (str, optional): VM validation rule added to the VM annotation
+
+        """
+        super().__init__(
+            name=name,
+            client=client,
+            namespace=namespace,
+        )
+        self.source_template = source_template
+        self.vm_validation_rule = vm_validation_rule
+
+    def to_dict(self):
+        template_dict = self.source_template.instance.to_dict()
+        self.remove_template_metadata_unique_keys(template_metadata=template_dict["metadata"])
+        template_dict["metadata"].update({
+            "labels": {f"{self.ApiGroup.APP_KUBERNETES_IO}/name": self.name},
+            "name": self.name,
+            "namespace": self.namespace,
+        })
+        if self.vm_validation_rule:
+            template_dict = self.get_template_dict_with_added_vm_validation_rule(template_dict=template_dict)
+        self.res = template_dict
+
+    def get_template_dict_with_added_vm_validation_rule(self, template_dict):
+        modified_template_dict = copy.deepcopy(template_dict)
+        vm_annotation = modified_template_dict["objects"][0]["metadata"]["annotations"]
+        add_validation_rule_to_annotation(vm_annotation=vm_annotation, vm_validation_rule=self.vm_validation_rule)
+        return modified_template_dict
+
+    @staticmethod
+    def remove_template_metadata_unique_keys(template_metadata):
+        del template_metadata["resourceVersion"]
+        del template_metadata["uid"]
+        del template_metadata["creationTimestamp"]
 
 
 @pytest.fixture()
@@ -141,18 +197,14 @@ class TestCustomTemplatesChangesWebhookValidation:
     )
     @pytest.mark.polarion("CNV-13744")
     def test_no_validation_annotation_missing_parent_template(
-        self,
-        custom_template_from_base_template,
-        unprivileged_client,
-        namespace,
-        golden_images_namespace,
+        self, unprivileged_client, namespace, golden_images_namespace, custom_template_from_base_template
     ) -> None:
         """
         Tests uses VirtualMachineForTests and its label instance attribute due to a need to:
         - create a VM without metadata.annotations.validations entries
         and
         - adding labels to metadata.labels not to spec.metadata.labels
-        Detailed steps are desribed in Polarion CNV-13744
+        Detailed steps are described in Polarion CNV-13744
         """
         with VirtualMachineForTests(
             name="vm-from-custom-template-webhook-validation",
@@ -167,5 +219,9 @@ class TestCustomTemplatesChangesWebhookValidation:
                 "vm.kubevirt.io/template.namespace": namespace.name,
             },
         ) as custom_vm:
+            # Explicitly delete the template to test webhook validation with missing parent template
             custom_template_from_base_template.clean_up()
             ResourceEditor({custom_vm: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}}).update()
+            assert custom_vm.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
+                "Annotation update should succeed even when parent template is missing"
+            )
