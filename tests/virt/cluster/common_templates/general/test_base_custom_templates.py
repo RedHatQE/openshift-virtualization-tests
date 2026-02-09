@@ -220,6 +220,7 @@ class TestCustomTemplatesChangesWebhookValidation:
             },
         ) as custom_vm:
             # Explicitly delete the template to test webhook validation with missing parent template
+            LOGGER.info("Deleting custom template to test webhook validation with missing parent")
             custom_template_from_base_template.clean_up()
             ResourceEditor({custom_vm: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}}).update()
             assert custom_vm.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
