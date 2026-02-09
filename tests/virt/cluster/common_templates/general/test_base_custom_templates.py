@@ -215,7 +215,7 @@ class TestCustomTemplatesChangesWebhookValidation:
                 storage_class=py_config["default_storage_class"],
             ),
             label={
-                "vm.kubevirt.io/template": "custom-fedora-template-webhook-validation",
+                "vm.kubevirt.io/template": custom_template_from_base_template.name,
                 "vm.kubevirt.io/template.namespace": namespace.name,
             },
         ) as custom_vm:
