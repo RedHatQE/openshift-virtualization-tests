@@ -79,7 +79,7 @@ class TestConstants:
     def test_images_class_exists(self):
         """Test that ArchImages class exists"""
         assert hasattr(constants, "ArchImages")
-        assert hasattr(constants.ArchImages, "X86_64")
+        assert hasattr(constants.ArchImages, "AMD64")
 
     def test_data_import_cron_constants(self):
         """Test data import cron related constants are defined"""
