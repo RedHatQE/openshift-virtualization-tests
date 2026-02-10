@@ -1,4 +1,3 @@
-import os
 import shlex
 from collections.abc import Generator
 from pathlib import Path
@@ -9,19 +8,21 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
+from ocp_resources.network_attachment_definition import OVNOverlayNetworkAttachmentDefinition
 from ocp_resources.node import Node
-from ocp_resources.pod import Pod
 
 from libs.net import netattachdef as libnad
-from libs.net.traffic_generator import PodClient as TcpClient
-from libs.net.traffic_generator import Server as TcpServer
+from libs.net.traffic_generator import PodTcpClient as TcpClient
+from libs.net.traffic_generator import TcpServer
 from libs.net.udn import create_udn_namespace
 from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.bgp import (
+    EXTERNAL_FRR_POD_LABEL,
     POD_SECONDARY_IFACE_NAME,
+    ExternalFrrPodInfo,
     create_cudn_route_advertisements,
     create_frr_configuration,
     deploy_external_frr_pod,
@@ -31,7 +32,6 @@ from tests.network.libs.bgp import (
 )
 from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.label_selector import LabelSelector
-from tests.network.libs.nodenetworkstate import DEFAULT_ROUTE_V4, lookup_br_ex_gateway_v4
 from tests.network.libs.vm_factory import udn_vm
 from utilities.infra import get_node_selector_dict
 
@@ -42,66 +42,58 @@ CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
 EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=0)}/24"
 EXTERNAL_PROVIDER_IP_V4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=150)}/24"
 IPERF3_SERVER_PORT: Final[int] = 2354
+LOCALNET_NETWORK_NAME: Final[str] = "localnet-network-bgp"
 
 
-@pytest.fixture(scope="session")
-def vlan_nncp(vlan_base_iface: str, worker_node1: Node) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+@pytest.fixture(scope="module")
+def nncp_localnet_node1(
+    admin_client: DynamicClient, worker_node1: Node
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    desired_state = libnncp.DesiredState(
+        ovn=libnncp.OVN([
+            libnncp.BridgeMappings(
+                localnet=LOCALNET_NETWORK_NAME,
+                bridge=libnncp.DEFAULT_OVN_EXTERNAL_BRIDGE,
+                state=libnncp.BridgeMappings.State.PRESENT.value,
+            )
+        ])
+    )
     with libnncp.NodeNetworkConfigurationPolicy(
-        name="test-vlan-nncp",
-        desired_state=libnncp.DesiredState(
-            interfaces=[
-                libnncp.Interface(
-                    name=f"{vlan_base_iface}.{os.environ['PRIMARY_NODE_NETWORK_VLAN_TAG']}",
-                    state=libnncp.NodeNetworkConfigurationPolicy.Interface.State.UP,
-                    type="vlan",
-                    vlan=libnncp.Vlan(id=int(os.environ["PRIMARY_NODE_NETWORK_VLAN_TAG"]), base_iface=vlan_base_iface),
-                )
-            ]
-        ),
+        name="localnet-nncp-bgp",
+        desired_state=desired_state,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
     ) as nncp:
         nncp.wait_for_status_success()
         yield nncp
 
 
-@pytest.fixture(scope="session")
-def br_ex_gateway_v4(worker_node1: Node, admin_client: DynamicClient) -> str:
-    return lookup_br_ex_gateway_v4(node_name=worker_node1.name, client=admin_client)
-
-
-@pytest.fixture(scope="session")
-def macvlan_nad(
-    vlan_nncp: libnncp.NodeNetworkConfigurationPolicy,
-    cnv_tests_utilities_namespace: Namespace,
-    br_ex_gateway_v4: str,
+@pytest.fixture(scope="module")
+def nad_localnet(
     admin_client: DynamicClient,
-) -> Generator[libnad.NetworkAttachmentDefinition]:
-    macvlan_config = libnad.CNIPluginMacvlanConfig(
-        master=vlan_nncp.instance.spec.desiredState.interfaces[0].name,
-        ipam=libnad.IpamStatic(
-            addresses=[
-                libnad.IpamStatic.Address(address=os.environ["EXTERNAL_FRR_STATIC_IPV4"], gateway=br_ex_gateway_v4)
-            ],
-            routes=[libnad.IpamRoute(dst=DEFAULT_ROUTE_V4.dst, gw=br_ex_gateway_v4)],
-        ),
-    )
-
-    with libnad.NetworkAttachmentDefinition(
-        name="macvlan-nad-bgp",
-        namespace=cnv_tests_utilities_namespace.name,
-        config=libnad.NetConfig(name="macvlan-nad-bgp", plugins=[macvlan_config]),
+    nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
+    cnv_tests_utilities_namespace: Namespace,
+):
+    with OVNOverlayNetworkAttachmentDefinition(
         client=admin_client,
+        name="localnet-nad-bgp",
+        namespace=cnv_tests_utilities_namespace.name,
+        topology="localnet",
+        network_name=LOCALNET_NETWORK_NAME,
     ) as nad:
         yield nad
 
 
 @pytest.fixture(scope="module")
 def frr_configmap(
-    workers: list[Node], cnv_tests_utilities_namespace: Namespace, admin_client: DynamicClient
+    workers: list[Node],
+    cnv_tests_utilities_namespace: Namespace,
+    admin_client: DynamicClient,
+    nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[ConfigMap]:
+    node_name_with_nncp = nncp_localnet_node1.node_selector["kubernetes.io/hostname"]
     frr_conf = generate_frr_conf(
         external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
-        nodes_ipv4_list=[worker.internal_ip for worker in workers],
+        nodes_ipv4_list=[worker.internal_ip for worker in workers if worker.name != node_name_with_nncp],
     )
 
     with ConfigMap(
@@ -162,10 +154,10 @@ def cudn_route_advertisements(
 
 
 @pytest.fixture(scope="module")
-def frr_configuration_created(admin_client: DynamicClient) -> Generator[None]:
+def frr_configuration_created(admin_client: DynamicClient, frr_external_pod: ExternalFrrPodInfo) -> Generator[None]:
     with create_frr_configuration(
         name="frr-configuration-bgp",
-        frr_pod_ipv4=os.environ["EXTERNAL_FRR_STATIC_IPV4"].split("/")[0],
+        frr_pod_ipv4=frr_external_pod.ipv4,
         external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
         client=admin_client,
     ):
@@ -174,37 +166,35 @@ def frr_configuration_created(admin_client: DynamicClient) -> Generator[None]:
 
 @pytest.fixture(scope="module")
 def frr_external_pod(
-    macvlan_nad: libnad.NetworkAttachmentDefinition,
+    nad_localnet: libnad.NetworkAttachmentDefinition,
     worker_node1: Node,
     frr_configmap: ConfigMap,
     cnv_tests_utilities_namespace: Namespace,
-    br_ex_gateway_v4: str,
     admin_client: DynamicClient,
-) -> Generator[Pod]:
+) -> Generator[ExternalFrrPodInfo]:
     with deploy_external_frr_pod(
         namespace_name=cnv_tests_utilities_namespace.name,
         node_name=worker_node1.name,
-        nad_name=macvlan_nad.name,
+        nad_name=nad_localnet.name,
         frr_configmap_name=frr_configmap.name,
-        default_route=br_ex_gateway_v4,
         client=admin_client,
-    ) as pod:
+    ) as pod_info:
         # Assign a secondary IP on the secondary interface to emulate the external provider subnet
-        pod.execute(
+        pod_info.pod.execute(
             command=shlex.split(f"ip addr add {EXTERNAL_PROVIDER_IP_V4} dev {POD_SECONDARY_IFACE_NAME}"),
             container="frr",
         )
-        yield pod
+        yield pod_info
 
 
 @pytest.fixture(scope="module")
 def bgp_setup_ready(
-    frr_external_pod: Pod,
+    frr_external_pod: ExternalFrrPodInfo,
     cudn_route_advertisements: None,
     frr_configuration_created: None,
     workers: list[Node],
 ) -> None:
-    node_names = [worker.name for worker in workers]
+    node_names = [worker.name for worker in workers if worker.name != frr_external_pod.pod.instance.spec.nodeName]
     wait_for_bgp_connection_established(node_names=node_names)
 
 
@@ -213,8 +203,15 @@ def vm_cudn(
     namespace_cudn: Namespace,
     cudn_layer2: libcudn.ClusterUserDefinedNetwork,
     admin_client: DynamicClient,
+    frr_external_pod: ExternalFrrPodInfo,
 ) -> Generator[BaseVirtualMachine]:
-    with udn_vm(namespace_name=namespace_cudn.name, name="vm-cudn-bgp", client=admin_client) as vm:
+    with udn_vm(
+        namespace_name=namespace_cudn.name,
+        name="vm-cudn-bgp",
+        client=admin_client,
+        template_labels=EXTERNAL_FRR_POD_LABEL,
+        anti_affinity_namespaces=[frr_external_pod.pod.namespace],
+    ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
@@ -230,10 +227,10 @@ def tcp_server_cudn_vm(vm_cudn: BaseVirtualMachine) -> Generator[TcpServer]:
 
 @pytest.fixture(scope="module")
 def tcp_client_external_network(
-    frr_external_pod: Pod, vm_cudn: BaseVirtualMachine, tcp_server_cudn_vm: TcpServer
+    frr_external_pod: ExternalFrrPodInfo, vm_cudn: BaseVirtualMachine, tcp_server_cudn_vm: TcpServer
 ) -> Generator[TcpClient]:
     with TcpClient(
-        pod=frr_external_pod,
+        pod=frr_external_pod.pod,
         server_ip=lookup_iface_status(vm=vm_cudn, iface_name=lookup_primary_network(vm=vm_cudn).name)[IP_ADDRESS],
         server_port=IPERF3_SERVER_PORT,
         bind_interface=EXTERNAL_PROVIDER_IP_V4.split("/")[0],
