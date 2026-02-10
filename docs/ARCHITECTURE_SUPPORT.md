@@ -7,7 +7,7 @@ Note: to run on the default architecture `amd64`, there's no need to set the env
 
 Supported architectures include:
 
-- `amd64` (default, x86_64)
+- `amd64` (default, also refered to as x86_64)
 - `arm64`
 - `s390x` (currently work in progress)
 

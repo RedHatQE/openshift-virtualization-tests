@@ -590,7 +590,7 @@ def pytest_collection_modifyitems(session, config, items):
 
         mark_tests_by_team(item=item)
 
-        # All tests are verified on x86_64 platforms, adding `amd64` to all tests
+        # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
