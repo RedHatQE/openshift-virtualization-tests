@@ -16,20 +16,16 @@ import threading
 import time
 
 import pytest
-from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
-from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5MIN, TIMEOUT_10MIN
+from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5MIN
 from utilities.network import (
-    assert_ping_successful,
     get_vmi_ip_v4_by_name,
     network_nad,
 )
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    migrate_vm_and_verify,
     running_vm,
     wait_for_vm_interfaces,
 )
@@ -226,8 +222,7 @@ def wait_for_migration_complete(vm, timeout=TIMEOUT_5MIN):
             wait_timeout=timeout,
             sleep=5,
             func=lambda: (
-                vm.vmi.instance.status.migrationState is not None
-                and vm.vmi.instance.status.migrationState.completed
+                vm.vmi.instance.status.migrationState is not None and vm.vmi.instance.status.migrationState.completed
             ),
         ):
             if sample:
@@ -428,9 +423,7 @@ class TestLiveUpdateNADReference:
             assert new_ip, "VM must have IP on target NAD after swap"
 
             # Verify VM is running
-            assert vm.vmi.instance.status.phase == "Running", (
-                "VM should be running after NAD swap"
-            )
+            assert vm.vmi.instance.status.phase == "Running", "VM should be running after NAD swap"
 
     def test_ts_cnv72329_009_vlan_change_via_nad_update(
         self,
@@ -481,9 +474,7 @@ class TestLiveUpdateNADReference:
         assert vlan_200_ip, "VM must have IP on VLAN 200 after NAD update"
 
         # Verify VM is running
-        assert vm.vmi.instance.status.phase == "Running", (
-            "VM should be running after VLAN change"
-        )
+        assert vm.vmi.instance.status.phase == "Running", "VM should be running after VLAN change"
 
     def test_ts_cnv72329_010_vm_remains_functional_after_failed_nad_update(
         self,
@@ -537,14 +528,10 @@ class TestLiveUpdateNADReference:
                 LOGGER.info(f"NAD update rejected as expected: {e}")
 
             # Verify VM is still running
-            assert vm.vmi.instance.status.phase == "Running", (
-                "VM should remain running after failed NAD update"
-            )
+            assert vm.vmi.instance.status.phase == "Running", "VM should remain running after failed NAD update"
 
             # Verify original connectivity preserved
             current_ip = get_vmi_ip_v4_by_name(vm=vm, name=source_nad_scope_class.name)
             LOGGER.info(f"VM IP after failed update: {current_ip}")
             assert current_ip, "VM must retain connectivity on original NAD"
-            assert current_ip == initial_ip, (
-                "VM IP should be unchanged after failed NAD update"
-            )
+            assert current_ip == initial_ip, "VM IP should be unchanged after failed NAD update"
