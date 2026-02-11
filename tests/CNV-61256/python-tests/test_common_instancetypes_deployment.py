@@ -17,13 +17,9 @@ Phase 1: Design stubs with PSE docstrings for review
 # Exclude from test collection during Phase 1
 __test__ = False
 
-import pytest
 from typing import Generator
 
-from ocp_resources.hyperconverged import HyperConverged
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from ocp_resources.virtual_machine import VirtualMachine
+import pytest
 
 
 class TestCommonInstancetypesDeployment:
@@ -68,7 +64,6 @@ class TestCommonInstancetypesDeployment:
             - No VirtualMachineClusterInstancetype resources in cluster
             - No VirtualMachineClusterPreference resources in cluster
         """
-        pass
 
     @pytest.mark.tier2
     def test_enable_common_instancetypes_deployment(self) -> None:
@@ -95,7 +90,6 @@ class TestCommonInstancetypesDeployment:
             - Multiple VirtualMachineClusterInstancetype resources exist
             - Multiple VirtualMachineClusterPreference resources exist
         """
-        pass
 
     @pytest.mark.tier2
     def test_default_behavior_common_instancetypes(self) -> None:
@@ -120,7 +114,6 @@ class TestCommonInstancetypesDeployment:
             - Backward compatibility maintained
             - Existing installations continue to work without configuration
         """
-        pass
 
     @pytest.mark.tier2
     def test_configuration_persists_after_reconciliation(self) -> None:
@@ -146,7 +139,6 @@ class TestCommonInstancetypesDeployment:
             - No manual intervention required
             - User configuration not overwritten by reconciliation
         """
-        pass
 
     @pytest.mark.tier2
     def test_toggle_with_running_vms(self) -> None:
@@ -173,7 +165,6 @@ class TestCommonInstancetypesDeployment:
             - New VMs referencing removed instance types fail gracefully
             - Clear error message when instance type not found
         """
-        pass
 
     @pytest.mark.tier2
     @pytest.mark.upgrade
@@ -200,4 +191,3 @@ class TestCommonInstancetypesDeployment:
             - No disruption to existing common-instancetypes
             - Field is nil after upgrade (not explicitly set)
         """
-        pass

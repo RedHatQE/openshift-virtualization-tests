@@ -5,10 +5,7 @@ Shared fixtures for Tier 2 tests.
 """
 
 import pytest
-
 from ocp_resources.namespace import Namespace
-
-from utilities.constants import CNV_NAMESPACE
 
 
 @pytest.fixture(scope="class")

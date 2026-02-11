@@ -16,24 +16,22 @@ Phase 2: Full working implementation
 """
 
 import logging
-import pytest
 from typing import Generator
 
+import pytest
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.pod import Pod
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import (
+    CNV_NAMESPACE,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
-    CNV_NAMESPACE,
 )
 from utilities.hco import wait_for_hco_conditions
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,9 +78,7 @@ class TestCommonInstancetypesDeployment:
         )
 
     @pytest.fixture()
-    def save_and_restore_hco_config(
-        self, admin_client, hco_resource
-    ) -> Generator:
+    def save_and_restore_hco_config(self, admin_client, hco_resource) -> Generator:
         """
         Save original HCO configuration and restore after test.
 
@@ -104,32 +100,18 @@ class TestCommonInstancetypesDeployment:
             # Remove the field if it wasn't set originally
             self._remove_common_instancetypes_deployment(hco_resource)
         else:
-            self._set_common_instancetypes_deployment(
-                hco_resource, enabled=original_config.get("enabled", True)
-            )
+            self._set_common_instancetypes_deployment(hco_resource, enabled=original_config.get("enabled", True))
         wait_for_hco_conditions(admin_client=admin_client)
 
-    def _set_common_instancetypes_deployment(
-        self, hco_resource: HyperConverged, enabled: bool
-    ) -> None:
+    def _set_common_instancetypes_deployment(self, hco_resource: HyperConverged, enabled: bool) -> None:
         """Set the commonInstancetypesDeployment.enabled field in HCO CR."""
         LOGGER.info(f"Setting commonInstancetypesDeployment.enabled to {enabled}")
         hco_resource.reload()
         ResourceEditor = hco_resource.ResourceEditor
-        with ResourceEditor(
-            patches={
-                hco_resource: {
-                    "spec": {
-                        "commonInstancetypesDeployment": {"enabled": enabled}
-                    }
-                }
-            }
-        ):
+        with ResourceEditor(patches={hco_resource: {"spec": {"commonInstancetypesDeployment": {"enabled": enabled}}}}):
             pass  # Context manager applies the patch
 
-    def _remove_common_instancetypes_deployment(
-        self, hco_resource: HyperConverged
-    ) -> None:
+    def _remove_common_instancetypes_deployment(self, hco_resource: HyperConverged) -> None:
         """Remove the commonInstancetypesDeployment field from HCO CR."""
         LOGGER.info("Removing commonInstancetypesDeployment from HCO CR")
         hco_resource.reload()
@@ -179,9 +161,7 @@ class TestCommonInstancetypesDeployment:
         """
         # Step 1: Verify common-instancetypes are deployed by default
         instancetypes = self._get_cluster_instancetypes(admin_client)
-        assert len(instancetypes) > 0, (
-            "Expected common-instancetypes to be deployed by default"
-        )
+        assert len(instancetypes) > 0, "Expected common-instancetypes to be deployed by default"
         LOGGER.info(f"Found {len(instancetypes)} VirtualMachineClusterInstancetype resources")
 
         # Step 2: Disable common-instancetypes deployment
@@ -202,16 +182,12 @@ class TestCommonInstancetypesDeployment:
 
         instancetypes = self._get_cluster_instancetypes(admin_client)
         assert len(instancetypes) == 0, (
-            f"Expected no VirtualMachineClusterInstancetype resources, "
-            f"found {len(instancetypes)}"
+            f"Expected no VirtualMachineClusterInstancetype resources, found {len(instancetypes)}"
         )
 
         # Step 5: Verify no VirtualMachineClusterPreference resources exist
         preferences = self._get_cluster_preferences(admin_client)
-        assert len(preferences) == 0, (
-            f"Expected no VirtualMachineClusterPreference resources, "
-            f"found {len(preferences)}"
-        )
+        assert len(preferences) == 0, f"Expected no VirtualMachineClusterPreference resources, found {len(preferences)}"
 
         LOGGER.info("Successfully verified common-instancetypes are disabled")
 
@@ -274,15 +250,11 @@ class TestCommonInstancetypesDeployment:
                 break
 
         instancetypes = self._get_cluster_instancetypes(admin_client)
-        assert len(instancetypes) > 0, (
-            "Expected VirtualMachineClusterInstancetype resources after enabling"
-        )
+        assert len(instancetypes) > 0, "Expected VirtualMachineClusterInstancetype resources after enabling"
 
         # Step 6: Verify VirtualMachineClusterPreference resources exist
         preferences = self._get_cluster_preferences(admin_client)
-        assert len(preferences) > 0, (
-            "Expected VirtualMachineClusterPreference resources after enabling"
-        )
+        assert len(preferences) > 0, "Expected VirtualMachineClusterPreference resources after enabling"
 
         LOGGER.info(
             f"Successfully verified common-instancetypes enabled: "
@@ -328,17 +300,13 @@ class TestCommonInstancetypesDeployment:
                 break
 
         instancetypes = self._get_cluster_instancetypes(admin_client)
-        assert len(instancetypes) > 0, (
-            "Default behavior should deploy common-instancetypes"
-        )
+        assert len(instancetypes) > 0, "Default behavior should deploy common-instancetypes"
 
         # Verify field is not set in HCO CR
         hco_resource.reload()
         spec = hco_resource.instance.spec
         common_deployment = getattr(spec, "commonInstancetypesDeployment", None)
-        assert common_deployment is None, (
-            "commonInstancetypesDeployment should not be set (default)"
-        )
+        assert common_deployment is None, "commonInstancetypesDeployment should not be set (default)"
 
         LOGGER.info("Successfully verified default behavior deploys common-instancetypes")
 
@@ -373,12 +341,8 @@ class TestCommonInstancetypesDeployment:
         # Step 2: Verify configuration is applied
         hco_resource.reload()
         spec = hco_resource.instance.spec
-        assert hasattr(spec, "commonInstancetypesDeployment"), (
-            "commonInstancetypesDeployment should be set"
-        )
-        assert spec.commonInstancetypesDeployment.enabled is False, (
-            "enabled should be False"
-        )
+        assert hasattr(spec, "commonInstancetypesDeployment"), "commonInstancetypesDeployment should be set"
+        assert spec.commonInstancetypesDeployment.enabled is False, "enabled should be False"
 
         # Step 3: Delete HCO operator pod to trigger restart
         hco_pods = list(
@@ -513,15 +477,11 @@ class TestCommonInstancetypesDeployment:
         """
         # Step 1: Verify common-instancetypes are deployed
         instancetypes = self._get_cluster_instancetypes(admin_client)
-        assert len(instancetypes) > 0, (
-            "Common-instancetypes should be deployed (default behavior)"
-        )
+        assert len(instancetypes) > 0, "Common-instancetypes should be deployed (default behavior)"
         LOGGER.info(f"Found {len(instancetypes)} VirtualMachineClusterInstancetype resources")
 
         preferences = self._get_cluster_preferences(admin_client)
-        assert len(preferences) > 0, (
-            "Common preferences should be deployed (default behavior)"
-        )
+        assert len(preferences) > 0, "Common preferences should be deployed (default behavior)"
         LOGGER.info(f"Found {len(preferences)} VirtualMachineClusterPreference resources")
 
         # Step 2: Check HCO CR configuration
@@ -533,9 +493,7 @@ class TestCommonInstancetypesDeployment:
         if common_deployment is not None:
             enabled = getattr(common_deployment, "enabled", None)
             if enabled is not None:
-                assert enabled is True, (
-                    "If commonInstancetypesDeployment is set, enabled should be True"
-                )
+                assert enabled is True, "If commonInstancetypesDeployment is set, enabled should be True"
 
         # Step 3: Verify KubeVirt CR configuration if accessible
         kubevirt_resource.reload()
