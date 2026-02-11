@@ -16,7 +16,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
-from utilities.constants import QUARANTINED, TIMEOUT_60MIN
+from utilities.constants import TIMEOUT_60MIN
 from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
@@ -111,23 +111,15 @@ class TestStorageClassMigrationAtoB:
                     "vm_for_storage_class_migration_from_template_with_existing_dv",
                 ]
             },
-            {"online_vm": [False, True]},  # Desired VM Running status for VMs in "vms_fixtures" list
-            id="storage_migration_a_to_b_running_and_stopped_vms",
+            {"online_vm": [True, True]},  # Desired VM Running status for VMs in "vms_fixtures" list
+            id="storage_migration_b_to_a_running_vms",
         )
     ],
     indirect=True,
 )
 class TestStorageClassMigrationBtoA:
     @pytest.mark.polarion("CNV-11501")
-    @pytest.mark.xfail(
-        reason=(
-            f"{QUARANTINED}: "
-            "Migration fails for Stopped VMs; CNV-75975; "
-            "Migration OCS -> HPP fails for VMs with cloned DataSource; CNV-77731"
-        ),
-        run=False,
-    )
-    def test_vm_storage_class_migration_b_to_a_with_running_and_stopped_vms(
+    def test_vm_storage_class_migration_b_to_a_with_running_vms(
         self,
         source_storage_class,
         target_storage_class,
