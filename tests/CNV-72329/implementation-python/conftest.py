@@ -7,7 +7,6 @@ update testing scenarios.
 
 import pytest
 
-
 # Note: admin_client, unprivileged_client, and namespace fixtures
 # are provided by the main tests/conftest.py and should NOT be
 # redefined here.
@@ -48,4 +47,3 @@ def multi_node_cluster_required(admin_client):
     # worker_nodes = [n for n in nodes if "worker" in n.labels.get("node-role.kubernetes.io", "")]
     # if len(worker_nodes) < 2:
     #     pytest.skip("Multi-node cluster required for migration-based NAD update")
-    pass

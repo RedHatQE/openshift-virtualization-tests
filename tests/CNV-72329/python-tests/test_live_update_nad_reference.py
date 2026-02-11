@@ -5,8 +5,6 @@ STP Reference: tests/CNV-72329/CNV-72329_test_plan.md
 Jira: CNV-72329
 """
 
-import pytest
-
 
 class TestLiveUpdateNADReference:
     """
@@ -24,6 +22,7 @@ class TestLiveUpdateNADReference:
         - Multi-node cluster with shared storage for live migration
         - Multiple NetworkAttachmentDefinitions with different network configs
     """
+
     __test__ = False
 
     def test_tcp_connection_survives_nad_change(self):
@@ -46,7 +45,6 @@ class TestLiveUpdateNADReference:
             - TCP connection remains active throughout migration
             - No connection reset or timeout during the switch
         """
-        pass
 
     def test_complete_nad_swap_workflow(self):
         """
@@ -69,7 +67,6 @@ class TestLiveUpdateNADReference:
             - VM reachable on new network after NAD swap
             - Complete workflow succeeds end-to-end
         """
-        pass
 
     def test_vm_vlan_change_via_nad_update(self):
         """
@@ -93,7 +90,6 @@ class TestLiveUpdateNADReference:
             - VM is reachable on VLAN 200 after NAD update
             - VM is no longer reachable on VLAN 100
         """
-        pass
 
     def test_vm_remains_functional_after_failed_nad_update(self):
         """
@@ -115,4 +111,3 @@ class TestLiveUpdateNADReference:
             - VM remains running on original NAD after failed migration
             - Original network connectivity preserved
         """
-        pass
