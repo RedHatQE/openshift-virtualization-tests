@@ -11,7 +11,6 @@ from the main tests/conftest.py.
 import logging
 
 import pytest
-from ocp_resources.namespace import Namespace
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,15 +37,10 @@ def high_cpu_worker_node(admin_client, workers):
     for worker in workers:
         cpu_capacity = int(worker.instance.status.capacity.get("cpu", 0))
         if cpu_capacity >= min_cpus_required:
-            LOGGER.info(
-                f"Found high-CPU worker node: {worker.name} with {cpu_capacity} CPUs"
-            )
+            LOGGER.info(f"Found high-CPU worker node: {worker.name} with {cpu_capacity} CPUs")
             return worker.name
 
-    LOGGER.warning(
-        f"No worker node found with {min_cpus_required}+ CPUs. "
-        f"High vCPU tests may fail or be skipped."
-    )
+    LOGGER.warning(f"No worker node found with {min_cpus_required}+ CPUs. High vCPU tests may fail or be skipped.")
     return None
 
 
@@ -58,9 +52,7 @@ def skip_if_insufficient_cpus(high_cpu_worker_node):
     Use this fixture in tests that require 200+ vCPU VMs.
     """
     if high_cpu_worker_node is None:
-        pytest.skip(
-            "No worker node with 200+ CPUs available for high vCPU tests"
-        )
+        pytest.skip("No worker node with 200+ CPUs available for high vCPU tests")
 
 
 @pytest.fixture(scope="class")
@@ -77,14 +69,9 @@ def numa_capable_node(admin_client, workers):
         node_labels = worker.instance.metadata.labels or {}
 
         # Common indicators of NUMA capability
-        if any(
-            label.startswith("topology.kubernetes.io/")
-            for label in node_labels
-        ):
+        if any(label.startswith("topology.kubernetes.io/") for label in node_labels):
             LOGGER.info(f"Found NUMA-capable worker node: {worker.name}")
             return worker.name
 
-    LOGGER.warning(
-        "No NUMA-capable worker node found. NUMA tests may fail or be skipped."
-    )
+    LOGGER.warning("No NUMA-capable worker node found. NUMA tests may fail or be skipped.")
     return None

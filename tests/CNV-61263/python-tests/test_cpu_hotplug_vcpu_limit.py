@@ -56,7 +56,6 @@ class TestCPUHotplugVCPULimit:
             - VM reaches Running status
             - virt-launcher pod shows successful sync
         """
-        pass
 
     @pytest.mark.polarion_test_id("CNV-61263-002")
     def test_vm_100_sockets_starts_successfully(self, namespace):
@@ -80,7 +79,6 @@ class TestCPUHotplugVCPULimit:
             - VM reaches Running status
             - No libvirt errors about extended interrupt mode (eim)
         """
-        pass
 
     @pytest.mark.polarion_test_id("CNV-61263-004")
     def test_cpu_hotplug_with_capped_max_sockets(self, namespace):
@@ -104,7 +102,6 @@ class TestCPUHotplugVCPULimit:
             - CPU hotplug succeeds up to MaxSockets limit
             - Guest OS sees additional CPUs (192 = 64 * 3)
         """
-        pass
 
     @pytest.mark.polarion_test_id("CNV-61263-005")
     def test_explicit_max_sockets_override(self, namespace):
@@ -127,7 +124,6 @@ class TestCPUHotplugVCPULimit:
             - Total potential vCPUs stays at 432 (216 * 2 * 1)
             - User-specified configuration is respected
         """
-        pass
 
     @pytest.mark.polarion_test_id("CNV-61263-007")
     def test_numa_aware_high_vcpu_vm(self, namespace):
@@ -150,11 +146,9 @@ class TestCPUHotplugVCPULimit:
             - Socket topology is compatible with NUMA configuration
             - Guest sees expected NUMA topology
         """
-        pass
 
 
 # Fixtures would be defined here in Phase 2
 @pytest.fixture
 def namespace():
     """Create test namespace fixture."""
-    pass

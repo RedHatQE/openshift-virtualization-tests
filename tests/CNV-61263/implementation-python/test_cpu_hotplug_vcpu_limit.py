@@ -30,10 +30,9 @@ import logging
 import time
 
 import pytest
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_10MIN
+from utilities.constants import TIMEOUT_10MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -96,16 +95,15 @@ class TestCPUHotplugVCPULimit:
 
             # Verify VM is running
             assert vm.vmi.status.phase == VirtualMachineInstance.Status.RUNNING, (
-                f"VM {vm_name} failed to reach Running status, "
-                f"current phase: {vm.vmi.status.phase}"
+                f"VM {vm_name} failed to reach Running status, current phase: {vm.vmi.status.phase}"
             )
 
             # Check for vCPU limit error in events
             vmi_events = list(vm.vmi.events)
             for event in vmi_events:
-                assert "Maximum CPUs greater than specified machine type limit" not in (
-                    event.message or ""
-                ), f"vCPU limit error found in VMI events: {event.message}"
+                assert "Maximum CPUs greater than specified machine type limit" not in (event.message or ""), (
+                    f"vCPU limit error found in VMI events: {event.message}"
+                )
 
             LOGGER.info(f"VM {vm_name} with 216 cores started successfully")
 
@@ -147,8 +145,7 @@ class TestCPUHotplugVCPULimit:
 
             # Verify VM is running
             assert vm.vmi.status.phase == VirtualMachineInstance.Status.RUNNING, (
-                f"VM {vm_name} failed to reach Running status, "
-                f"current phase: {vm.vmi.status.phase}"
+                f"VM {vm_name} failed to reach Running status, current phase: {vm.vmi.status.phase}"
             )
 
             LOGGER.info(f"VM {vm_name} with 100 sockets started successfully")
@@ -201,21 +198,19 @@ class TestCPUHotplugVCPULimit:
 
             # Hotplug additional socket
             LOGGER.info(f"Hotplugging from {initial_sockets} to {target_sockets} sockets")
-            vm.update(
-                {
-                    "spec": {
-                        "template": {
-                            "spec": {
-                                "domain": {
-                                    "cpu": {
-                                        "sockets": target_sockets,
-                                    }
+            vm.update({
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "domain": {
+                                "cpu": {
+                                    "sockets": target_sockets,
                                 }
                             }
                         }
                     }
                 }
-            )
+            })
 
             # Wait for hotplug to complete
             time.sleep(30)
@@ -286,13 +281,11 @@ class TestCPUHotplugVCPULimit:
             # Verify maxSockets is the explicit value (not auto-calculated)
             vmi_max_sockets = vm.vmi.spec.domain.cpu.maxSockets
             assert vmi_max_sockets == explicit_max_sockets, (
-                f"Expected maxSockets={explicit_max_sockets}, "
-                f"but got maxSockets={vmi_max_sockets}"
+                f"Expected maxSockets={explicit_max_sockets}, but got maxSockets={vmi_max_sockets}"
             )
 
             LOGGER.info(
-                f"VM {vm_name} started with explicit maxSockets={explicit_max_sockets} "
-                f"(user configuration preserved)"
+                f"VM {vm_name} started with explicit maxSockets={explicit_max_sockets} (user configuration preserved)"
             )
 
     @pytest.mark.polarion("CNV-61263-007")
@@ -363,6 +356,4 @@ class TestCPUHotplugVCPULimit:
                     f"NUMA-aware VM {vm_name} failed to start: {e}. "
                     f"This may be expected if host lacks NUMA topology support."
                 )
-                pytest.skip(
-                    f"NUMA-aware VM failed to start due to host constraints: {e}"
-                )
+                pytest.skip(f"NUMA-aware VM failed to start due to host constraints: {e}")
