@@ -13,7 +13,7 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION, LS_COMMAND, HOTPLUG_DISK_VIRTIO_BUS
+from utilities.constants import DEPENDENCY_SCOPE_SESSION, HOTPLUG_DISK_VIRTIO_BUS, LS_COMMAND
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,

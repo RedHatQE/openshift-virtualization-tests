@@ -2,7 +2,7 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.kubevirt import KubeVirt 
+from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
 
@@ -12,7 +12,7 @@ from tests.storage.upgrade.utils import (
 )
 from tests.storage.utils import update_scratch_space_sc
 from utilities.constants import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
-from utilities.hco import ResourceEditorValidateHCOReconcile 
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import create_dv, virtctl_volume
 from utilities.virt import (
     VirtualMachineForTests,

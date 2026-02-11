@@ -531,4 +531,3 @@ def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus
     assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
     actual_bus = disk.get("disk", {}).get("bus")
     assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
-

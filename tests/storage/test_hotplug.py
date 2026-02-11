@@ -12,13 +12,7 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.storage.utils import assert_disk_bus
-from utilities.constants import (
-    HOTPLUG_DISK_SERIAL,
-    HOTPLUG_DISK_VIRTIO_BUS,
-    HOTPLUG_DISK_SCSI_BUS,
-    HOTPLUG_DISK_DEFAULT_BUS,
-    Images
-)
+from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 from utilities.storage import (
@@ -256,7 +250,7 @@ class TestHotPlugWithSerialPersist:
         fedora_vm_for_hotplug_scope_class,
     ):
         wait_for_vm_volume_ready(
-            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name 
+            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
         )
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_scope_class)
@@ -307,8 +301,8 @@ class TestHotPlugWindows:
         vm_instance_from_template_multi_storage_scope_class,
         started_windows_vm_scope_class,
     ):
-        wait_for_vm_volume_ready( 
-            vm=vm_instance_from_template_multi_storage_scope_class, 
+        wait_for_vm_volume_ready(
+            vm=vm_instance_from_template_multi_storage_scope_class,
             volume_name=blank_disk_dv_multi_storage_scope_class.name,
         )
         assert_disk_serial(
