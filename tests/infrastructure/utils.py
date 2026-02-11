@@ -3,10 +3,17 @@ import logging
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.deployment import Deployment
 from ocp_resources.kubelet_config import KubeletConfig
+from ocp_resources.node import Node
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from utilities.exceptions import ResourceMissingFieldError, ResourceValueError
 
 LOGGER = logging.getLogger(__name__)
+
+
+def node_for_vmi(admin_client: DynamicClient, vmi: VirtualMachineInstance) -> Node:
+    """Return the node running the given VMI, using admin client for cluster-scoped access."""
+    return Node(client=admin_client, name=vmi.instance.status.nodeName)
 
 
 def verify_tekton_operator_installed(client: DynamicClient) -> None:
