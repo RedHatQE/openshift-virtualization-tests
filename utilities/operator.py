@@ -90,12 +90,18 @@ def generate_icsp_idms_file(folder_name, command, is_idms_file, cnv_version=None
 
 
 def generate_unique_icsp_idms_file(file_name, version_string):
-    # update the metadata.name value to generate unique ICSP/IDMS
     with open(file_name) as fd:
-        file_yaml = yaml.safe_load(fd.read())
-    file_yaml["metadata"]["name"] = f"iib-{version_string}"
+        documents = list(yaml.safe_load_all(fd.read()))
+
+    document_index = 0
+    for document in documents:
+        if document and document.get("kind") in ["ImageContentSourcePolicy", "ImageDigestMirrorSet"]:
+            document["metadata"]["name"] = f"iib-{version_string}-{document_index}"
+            document_index += 1
+
     with open(file_name, "w") as current_mirror_file:
-        yaml.dump(file_yaml, current_mirror_file)
+        yaml.dump_all(documents, current_mirror_file, default_flow_style=False)
+
     new_file_name = file_name.replace(file_name, f"{file_name.replace('.yaml', '')}{version_string}.yaml")
     os.rename(file_name, new_file_name)
     return new_file_name
