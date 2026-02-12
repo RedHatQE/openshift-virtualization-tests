@@ -109,6 +109,22 @@ def vm_with_custom_template_label(
         yield vm
 
 
+@pytest.fixture()
+def template_removed(custom_template_from_base_template, vm_with_custom_template_label):
+    # vm_with_custom_template_label required for setup order: VM exists before template is removed
+    LOGGER.info("Deleting custom template to test webhook validation with missing parent")
+    custom_template_from_base_template.clean_up()
+    yield
+
+
+@pytest.fixture()
+def vm_with_test_annotation(template_removed, vm_with_custom_template_label):
+    ResourceEditor({
+        vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}
+    }).update()
+    yield vm_with_custom_template_label
+
+
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
     [pytest.param({"os_dict": FEDORA_LATEST})],
@@ -218,9 +234,7 @@ class TestCustomTemplatesChangesWebhookValidation:
         indirect=True,
     )
     @pytest.mark.polarion("CNV-13744")
-    def test_no_validation_annotation_missing_parent_template(
-        self, custom_template_from_base_template, vm_with_custom_template_label
-    ) -> None:
+    def test_no_validation_annotation_missing_parent_template(self, vm_with_test_annotation) -> None:
         """
         Tests uses VirtualMachineForTests and its label instance attribute due to a need to:
         - create a VM without metadata.annotations.validations entries
@@ -228,12 +242,6 @@ class TestCustomTemplatesChangesWebhookValidation:
         - adding labels to metadata.labels not to spec.metadata.labels
         Detailed steps are described in Polarion CNV-13744
         """
-        # Explicitly delete the template to test webhook validation with missing parent template
-        LOGGER.info("Deleting custom template to test webhook validation with missing parent")
-        custom_template_from_base_template.clean_up()
-        ResourceEditor({
-            vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}
-        }).update()
-        assert (
-            vm_with_custom_template_label.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1"
-        ), "Annotation update should succeed even when parent template is missing"
+        assert vm_with_test_annotation.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
+            "Annotation update should succeed even when parent template is missing"
+        )
