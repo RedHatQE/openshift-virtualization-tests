@@ -212,7 +212,6 @@ class TestCustomTemplatesChangesWebhookValidation:
                 {
                     "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
                     "new_template_name": "custom-fedora-template-webhook-validation",
-                    "validation_rule": None,
                 },
             )
         ],
