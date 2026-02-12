@@ -12,18 +12,18 @@ Preconditions:
 
 import logging
 import time
+
 import pytest
+from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
 from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Network, Multus, Interface
-from ocp_resources.resource import ResourceEditor
-from utilities.constants import TIMEOUT_5MIN
+from libs.vm.spec import Interface, Multus, Network
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
     migrate_vm_and_verify,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -58,22 +58,18 @@ class TestNADSwapMigration:
             namespace=namespace.name,
             name="nad-original",
             config=netattachdef.NetConfig(
-                "network-original",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-original", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-temporary",
                 config=netattachdef.NetConfig(
-                    "network-temporary",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-temporary", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_temp:
-
                 LOGGER.info("Creating VM with original NAD")
                 vm_name = "test-vm-rollback"
 
@@ -145,9 +141,7 @@ class TestNADSwapMigration:
 
                     LOGGER.info("Test passed: Rollback handled correctly")
 
-    def test_ts_cnv_72329_024_nad_swap_concurrent_vm_updates(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_024_nad_swap_concurrent_vm_updates(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-024: NAD swap with concurrent VM updates.
 
@@ -166,22 +160,18 @@ class TestNADSwapMigration:
             namespace=namespace.name,
             name="nad-orig-concurrent",
             config=netattachdef.NetConfig(
-                "network-orig-concurrent",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-orig-concurrent", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-target-concurrent",
                 config=netattachdef.NetConfig(
-                    "network-target-concurrent",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-target-concurrent", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM")
                 vm_name = "test-vm-concurrent"
 
@@ -203,11 +193,7 @@ class TestNADSwapMigration:
                     with ResourceEditor(
                         patches={
                             vm: {
-                                "metadata": {
-                                    "labels": {
-                                        "test-label": "concurrent-update"
-                                    }
-                                },
+                                "metadata": {"labels": {"test-label": "concurrent-update"}},
                                 "spec": {
                                     "template": {
                                         "spec": {
@@ -220,7 +206,7 @@ class TestNADSwapMigration:
                                             ]
                                         }
                                     }
-                                }
+                                },
                             }
                         }
                     ):
@@ -232,13 +218,13 @@ class TestNADSwapMigration:
                     LOGGER.info("Verifying NAD change and metadata update")
                     iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
                     assert nad_target.name in str(iface_status), "Target NAD should be active"
-                    assert vm.instance.metadata.labels.get("test-label") == "concurrent-update", "Label should be updated"
+                    assert vm.instance.metadata.labels.get("test-label") == "concurrent-update", (
+                        "Label should be updated"
+                    )
 
                     LOGGER.info("Test passed: Concurrent updates handled correctly")
 
-    def test_ts_cnv_72329_025_nad_change_with_running_workload(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_025_nad_change_with_running_workload(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-025: Change NAD on VM with running workload.
 
@@ -257,22 +243,18 @@ class TestNADSwapMigration:
             namespace=namespace.name,
             name="nad-workload-orig",
             config=netattachdef.NetConfig(
-                "network-workload-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-workload-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-workload-target",
                 config=netattachdef.NetConfig(
-                    "network-workload-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-workload-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with workload")
                 vm_name = "test-vm-workload"
 
@@ -292,9 +274,7 @@ class TestNADSwapMigration:
 
                     LOGGER.info("Starting workload (ping loop)")
                     # Start a continuous ping as workload
-                    vm.ssh_exec.executor().run_command(
-                        "nohup ping -i 1 8.8.8.8 > /tmp/ping.log 2>&1 &"
-                    )
+                    vm.ssh_exec.executor().run_command("nohup ping -i 1 8.8.8.8 > /tmp/ping.log 2>&1 &")
 
                     LOGGER.info("Changing NAD during workload")
                     with ResourceEditor(
@@ -328,9 +308,7 @@ class TestNADSwapMigration:
 
                     LOGGER.info("Test passed: Workload recovered after NAD swap migration")
 
-    def test_ts_cnv_72329_028_nad_change_with_persistent_volumes(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_028_nad_change_with_persistent_volumes(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-028: NAD change on VM with persistent volumes.
 
@@ -350,22 +328,18 @@ class TestNADSwapMigration:
             namespace=namespace.name,
             name="nad-pv-orig",
             config=netattachdef.NetConfig(
-                "network-pv-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-pv-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-pv-target",
                 config=netattachdef.NetConfig(
-                    "network-pv-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-pv-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with persistent storage")
                 vm_name = "test-vm-with-pv"
 
@@ -386,9 +360,7 @@ class TestNADSwapMigration:
                     running_vm(vm=vm)
 
                     LOGGER.info("Writing data to VM storage")
-                    vm.ssh_exec.executor().run_command(
-                        "echo 'test-data-before-migration' > /tmp/test-file.txt"
-                    )
+                    vm.ssh_exec.executor().run_command("echo 'test-data-before-migration' > /tmp/test-file.txt")
 
                     LOGGER.info("Changing NAD")
                     with ResourceEditor(
@@ -424,9 +396,7 @@ class TestNADSwapMigration:
 
                     LOGGER.info("Test passed: VM migrated with PV and NAD swap successful")
 
-    def test_ts_cnv_72329_029_monitor_migration_performance(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_029_monitor_migration_performance(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-029: Monitor migration performance impact.
 
@@ -445,22 +415,18 @@ class TestNADSwapMigration:
             namespace=namespace.name,
             name="nad-perf-orig",
             config=netattachdef.NetConfig(
-                "network-perf-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-perf-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-perf-target",
                 config=netattachdef.NetConfig(
-                    "network-perf-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-perf-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM for performance test")
                 vm_name = "test-vm-performance"
 
@@ -518,4 +484,3 @@ class TestNADSwapMigration:
                     assert nad_target.name in str(iface_status), "Target NAD should be active"
 
                     LOGGER.info(f"Test passed: Migration completed in {migration_time:.2f}s")
-

@@ -10,15 +10,16 @@ Preconditions:
 """
 
 import logging
+
 import pytest
+from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
-from libs.vm.spec import Network, Multus, Interface
-from ocp_resources.resource import ResourceEditor
+from libs.vm.spec import Interface, Multus, Network
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -32,9 +33,7 @@ pytestmark = [
 class TestNADSwapNegative:
     """Tests for negative NAD swap scenarios."""
 
-    def test_ts_cnv_72329_019_change_nad_to_nonexistent_network(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_019_change_nad_to_nonexistent_network(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-019: Change NAD to non-existent network.
 
@@ -54,12 +53,10 @@ class TestNADSwapNegative:
             namespace=namespace.name,
             name="nad-exists",
             config=netattachdef.NetConfig(
-                "network-exists",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-exists", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             LOGGER.info("Creating VM with valid NAD")
             vm_name = "test-vm-nonexistent-nad"
 
@@ -116,4 +113,3 @@ class TestNADSwapNegative:
                     # Verify VM is still functional
                     assert vm.vmi.instance.metadata.uid == original_vmi_uid, "VM should remain on source"
                     LOGGER.info("Test passed: Error handled gracefully")
-

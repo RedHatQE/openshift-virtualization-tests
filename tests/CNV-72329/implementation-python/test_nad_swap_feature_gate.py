@@ -10,18 +10,18 @@ Preconditions:
 """
 
 import logging
-import pytest
 
-from libs.net import netattachdef
-from libs.vm.spec import Network, Multus, Interface
+import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
+
+from libs.net import netattachdef
+from libs.vm.spec import Interface, Multus, Network
 from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
-    migrate_vm_and_verify,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -35,9 +35,7 @@ pytestmark = [
 class TestNADSwapFeatureGate:
     """Tests for NAD swap feature gate scenarios."""
 
-    def test_ts_cnv_72329_016_disable_feature_gate(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_016_disable_feature_gate(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-016: Disable LiveUpdateNADRef feature gate.
 
@@ -58,23 +56,19 @@ class TestNADSwapFeatureGate:
             namespace=namespace.name,
             name="original-nad",
             config=netattachdef.NetConfig(
-                "original-network",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "original-network", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as original_nad:
-
             # Create target NAD (VLAN 200)
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="target-nad",
                 config=netattachdef.NetConfig(
-                    "target-network",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "target-network", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as target_nad:
-
                 LOGGER.info("Creating VM with original NAD")
                 vm_name = "test-vm-feature-gate-disabled"
 
@@ -127,9 +121,7 @@ class TestNADSwapFeatureGate:
                     assert vm.vmi.name == vm.vmi.name, "VMI should not have changed"
                     LOGGER.info("Test passed: RestartRequired condition set, no migration triggered")
 
-    def test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-017: Change NAD when feature gate disabled.
 
@@ -150,22 +142,18 @@ class TestNADSwapFeatureGate:
             namespace=namespace.name,
             name="nad-vlan100",
             config=netattachdef.NetConfig(
-                "network-vlan100",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-vlan100", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_vlan100:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-vlan200",
                 config=netattachdef.NetConfig(
-                    "network-vlan200",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-vlan200", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_vlan200:
-
                 LOGGER.info("Creating VM with VLAN 100 NAD")
                 vm_name = "test-vm-nad-change-disabled"
 
@@ -212,4 +200,3 @@ class TestNADSwapFeatureGate:
                     assert vm.vmi.name == original_vmi_name, "VMI should not have changed (no migration)"
 
                     LOGGER.info("Test passed: NAD change blocked without migration")
-

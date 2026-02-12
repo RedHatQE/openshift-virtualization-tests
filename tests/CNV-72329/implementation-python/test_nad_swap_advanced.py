@@ -11,18 +11,19 @@ Preconditions:
 """
 
 import logging
+
 import pytest
+from ocp_resources.resource import ResourceEditor
+from tests.network.l2_bridge.utils import hot_plug_interface
 
 from libs.net import netattachdef
 from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Network, Multus, Interface
-from ocp_resources.resource import ResourceEditor
-from tests.network.l2_bridge.utils import hot_plug_interface
+from libs.vm.spec import Interface, Multus, Network
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
     migrate_vm_and_verify,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -36,9 +37,7 @@ pytestmark = [
 class TestNADSwapAdvanced:
     """Tests for advanced NAD swap scenarios."""
 
-    def test_ts_cnv_72329_022_nad_swap_hotplugged_interface(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_022_nad_swap_hotplugged_interface(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-022: NAD swap on VM with hotplugged interface.
 
@@ -58,22 +57,18 @@ class TestNADSwapAdvanced:
             namespace=namespace.name,
             name="nad-hotplug-orig",
             config=netattachdef.NetConfig(
-                "network-hotplug-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-hotplug-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_hotplug_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-hotplug-target",
                 config=netattachdef.NetConfig(
-                    "network-hotplug-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-hotplug-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_hotplug_target:
-
                 LOGGER.info("Creating VM without secondary network")
                 vm_name = "test-vm-hotplug"
 
@@ -123,9 +118,7 @@ class TestNADSwapAdvanced:
 
                     LOGGER.info("Test passed: Hotplugged interface NAD swap successful")
 
-    def test_ts_cnv_72329_027_verify_dnc_compatibility(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_027_verify_dnc_compatibility(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-027: Verify Dynamic Networks Controller compatibility.
 
@@ -144,22 +137,18 @@ class TestNADSwapAdvanced:
             namespace=namespace.name,
             name="nad-dnc-orig",
             config=netattachdef.NetConfig(
-                "network-dnc-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-dnc-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-dnc-target",
                 config=netattachdef.NetConfig(
-                    "network-dnc-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-dnc-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with DNC-managed network")
                 vm_name = "test-vm-dnc"
 
@@ -208,9 +197,7 @@ class TestNADSwapAdvanced:
 
                     LOGGER.info("Test passed: DNC does not interfere with NAD swap")
 
-    def test_ts_cnv_72329_030_nad_swap_with_network_policy(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_030_nad_swap_with_network_policy(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-030: NAD swap with network policy applied.
 
@@ -230,22 +217,18 @@ class TestNADSwapAdvanced:
             namespace=namespace.name,
             name="nad-policy-orig",
             config=netattachdef.NetConfig(
-                "network-policy-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-policy-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-policy-target",
                 config=netattachdef.NetConfig(
-                    "network-policy-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-policy-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with network policy")
                 vm_name = "test-vm-policy"
 
@@ -295,4 +278,3 @@ class TestNADSwapAdvanced:
                     assert nad_target.name in str(iface_status), "Target NAD should be active"
 
                     LOGGER.info("Test passed: Network policy compatible with NAD swap")
-

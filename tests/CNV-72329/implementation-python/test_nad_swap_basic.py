@@ -10,18 +10,18 @@ Preconditions:
 """
 
 import logging
+
 import pytest
+from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
 from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Network, Multus, Interface
-from ocp_resources.resource import ResourceEditor
-from utilities.constants import TIMEOUT_5MIN
+from libs.vm.spec import Interface, Multus, Network
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
     migrate_vm_and_verify,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -35,9 +35,7 @@ pytestmark = [
 class TestNADSwapBasic:
     """Tests for basic NAD swap scenarios."""
 
-    def test_ts_cnv_72329_018_multiple_nad_changes_before_migration(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_018_multiple_nad_changes_before_migration(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-018: Multiple NAD reference changes before migration.
 
@@ -56,32 +54,26 @@ class TestNADSwapBasic:
             namespace=namespace.name,
             name="nad-first",
             config=netattachdef.NetConfig(
-                "network-first",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-first", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_first:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-second",
                 config=netattachdef.NetConfig(
-                    "network-second",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-second", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_second:
-
                 with netattachdef.NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-third",
                     config=netattachdef.NetConfig(
-                        "network-third",
-                        [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=300)]
+                        "network-third", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=300)]
                     ),
                     client=admin_client,
                 ) as nad_third:
-
                     LOGGER.info("Creating VM with first NAD")
                     vm_name = "test-vm-multiple-changes"
 
@@ -174,32 +166,26 @@ class TestNADSwapBasic:
             namespace=namespace.name,
             name="nad-iface1-original",
             config=netattachdef.NetConfig(
-                "network-iface1-original",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-iface1-original", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_iface1_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-iface1-target",
                 config=netattachdef.NetConfig(
-                    "network-iface1-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
+                    "network-iface1-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
                 ),
                 client=admin_client,
             ) as nad_iface1_target:
-
                 with netattachdef.NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-iface2",
                     config=netattachdef.NetConfig(
-                        "network-iface2",
-                        [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                        "network-iface2", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                     ),
                     client=admin_client,
                 ) as nad_iface2:
-
                     LOGGER.info("Creating VM with two secondary interfaces")
                     vm_name = "test-vm-multi-iface"
 
@@ -257,9 +243,7 @@ class TestNADSwapBasic:
 
                         LOGGER.info("Test passed: Only specified interface NAD changed")
 
-    def test_ts_cnv_72329_021_change_multiple_nads_simultaneously(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_021_change_multiple_nads_simultaneously(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-021: Change multiple NAD references simultaneously.
 
@@ -279,43 +263,35 @@ class TestNADSwapBasic:
             namespace=namespace.name,
             name="nad-a-orig",
             config=netattachdef.NetConfig(
-                "network-a-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-a-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_a_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b-orig",
                 config=netattachdef.NetConfig(
-                    "network-b-orig",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-b-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_b_orig:
-
                 # Target NADs
                 with netattachdef.NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-a-target",
                     config=netattachdef.NetConfig(
-                        "network-a-target",
-                        [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
+                        "network-a-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
                     ),
                     client=admin_client,
                 ) as nad_a_target:
-
                     with netattachdef.NetworkAttachmentDefinition(
                         namespace=namespace.name,
                         name="nad-b-target",
                         config=netattachdef.NetConfig(
-                            "network-b-target",
-                            [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=201)]
+                            "network-b-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=201)]
                         ),
                         client=admin_client,
                     ) as nad_b_target:
-
                         LOGGER.info("Creating VM with original NADs")
                         vm_name = "test-vm-multi-nad-change"
 
@@ -373,9 +349,7 @@ class TestNADSwapBasic:
 
                             LOGGER.info("Test passed: All interfaces updated successfully")
 
-    def test_ts_cnv_72329_026_nad_swap_different_bridge(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_026_nad_swap_different_bridge(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-026: NAD swap with different bridge configuration.
 
@@ -393,23 +367,17 @@ class TestNADSwapBasic:
         with netattachdef.NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-br1",
-            config=netattachdef.NetConfig(
-                "network-br1",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=netattachdef.NetConfig("network-br1", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_br1:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-br2",
                 config=netattachdef.NetConfig(
-                    "network-br2",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br2", vlan=100)]
+                    "network-br2", [netattachdef.CNIPluginBridgeConfig(bridge="br2", vlan=100)]
                 ),
                 client=admin_client,
             ) as nad_br2:
-
                 LOGGER.info("Creating VM with br1 bridge")
                 vm_name = "test-vm-bridge-swap"
 
@@ -458,9 +426,7 @@ class TestNADSwapBasic:
 
                     LOGGER.info("Test passed: Bridge changed successfully")
 
-    def test_ts_cnv_72329_031_change_nad_back_to_original(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_031_change_nad_back_to_original(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-031: Change NAD back to original network.
 
@@ -479,23 +445,17 @@ class TestNADSwapBasic:
         with netattachdef.NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-a",
-            config=netattachdef.NetConfig(
-                "network-a",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=netattachdef.NetConfig("network-a", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_a:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b",
                 config=netattachdef.NetConfig(
-                    "network-b",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-b", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_b:
-
                 LOGGER.info("Creating VM with NAD A")
                 vm_name = "test-vm-reverse-swap"
 
@@ -567,9 +527,7 @@ class TestNADSwapBasic:
 
                     LOGGER.info("Test passed: Reverse NAD swap successful")
 
-    def test_ts_cnv_72329_032_nad_swap_ipv4_ipv6(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_032_nad_swap_ipv4_ipv6(self, admin_client, unprivileged_client, namespace):
         """
         Test TS-CNV-72329-032: NAD swap with IPv4 and IPv6 networks.
 
@@ -588,22 +546,18 @@ class TestNADSwapBasic:
             namespace=namespace.name,
             name="nad-dualstack-orig",
             config=netattachdef.NetConfig(
-                "network-dualstack-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-dualstack-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-dualstack-target",
                 config=netattachdef.NetConfig(
-                    "network-dualstack-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-dualstack-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with dual-stack network")
                 vm_name = "test-vm-dualstack"
 
@@ -651,4 +605,3 @@ class TestNADSwapBasic:
                     assert nad_target.name in str(iface_status), "Target NAD should be active"
 
                     LOGGER.info("Test passed: Dual-stack NAD swap successful")
-

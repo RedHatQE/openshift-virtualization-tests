@@ -11,19 +11,20 @@ Preconditions:
 """
 
 import logging
+
 import pytest
+from ocp_resources.resource import ResourceEditor
+from ocp_resources.virtual_machine import VirtualMachine
 
 from libs.net import netattachdef
 from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Network, Multus, Interface
-from ocp_resources.resource import ResourceEditor
-from ocp_resources.virtual_machine import VirtualMachine
+from libs.vm.spec import Interface, Multus, Network
 from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import (
     VirtualMachineForTests,
-    running_vm,
     fedora_vm_body,
     migrate_vm_and_verify,
+    running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -59,22 +60,18 @@ class TestNADSwapControllerVerification:
             namespace=namespace.name,
             name="nad-restart-orig",
             config=netattachdef.NetConfig(
-                "network-restart-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-restart-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-restart-target",
                 config=netattachdef.NetConfig(
-                    "network-restart-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-restart-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM")
                 vm_name = "test-vm-restart-logic"
 
@@ -152,22 +149,18 @@ class TestNADSwapControllerVerification:
             namespace=namespace.name,
             name="nad-sync-orig",
             config=netattachdef.NetConfig(
-                "network-sync-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-sync-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-sync-target",
                 config=netattachdef.NetConfig(
-                    "network-sync-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-sync-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM")
                 vm_name = "test-vm-network-sync"
 
@@ -186,7 +179,7 @@ class TestNADSwapControllerVerification:
                     running_vm(vm=vm)
 
                     # Capture original VMI spec
-                    original_vmi_networks = vm.vmi.instance.spec.networks
+                    vm.vmi.instance.spec.networks
 
                     LOGGER.info("Changing NAD in VM spec")
                     with ResourceEditor(
@@ -221,7 +214,9 @@ class TestNADSwapControllerVerification:
                     sync_net_found = False
                     for network in updated_vmi_networks:
                         if network.name == "sync-net":
-                            assert network.multus.networkName == nad_target.name, "VMI should have updated NAD reference"
+                            assert network.multus.networkName == nad_target.name, (
+                                "VMI should have updated NAD reference"
+                            )
                             sync_net_found = True
                             break
 
@@ -250,22 +245,18 @@ class TestNADSwapControllerVerification:
             namespace=namespace.name,
             name="nad-workload-orig",
             config=netattachdef.NetConfig(
-                "network-workload-orig",
-                [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+                "network-workload-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-
             with netattachdef.NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-workload-target",
                 config=netattachdef.NetConfig(
-                    "network-workload-target",
-                    [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    "network-workload-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
-
                 LOGGER.info("Creating VM with bridge binding")
                 vm_name = "test-vm-workload-controller"
 
@@ -318,5 +309,6 @@ class TestNADSwapControllerVerification:
                     iface_status = lookup_iface_status(vm=vm, iface_name="bridge-net")
                     assert nad_target.name in str(iface_status), "Target NAD should be active"
 
-                    LOGGER.info("Test passed: WorkloadUpdateController triggered immediate migration for bridge binding")
-
+                    LOGGER.info(
+                        "Test passed: WorkloadUpdateController triggered immediate migration for bridge binding"
+                    )

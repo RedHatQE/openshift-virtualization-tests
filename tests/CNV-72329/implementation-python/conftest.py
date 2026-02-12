@@ -6,6 +6,7 @@ Jira: CNV-72329
 """
 
 import logging
+
 import pytest
 
 from utilities.infra import create_ns
@@ -26,4 +27,3 @@ def namespace(admin_client, unprivileged_client):
         unprivileged_client=unprivileged_client,
         name="cnv-72329-nad-swap",
     )
-
