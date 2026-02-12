@@ -68,3 +68,73 @@ def test_drain_vm_node_during_backup(
     oadp_backup_in_progress.wait_for_status(
         status=oadp_backup_in_progress.Backup.Status.COMPLETED, timeout=TIMEOUT_10MIN
     )
+
+
+@pytest.mark.destructive
+@pytest.mark.tier3
+@pytest.mark.chaos
+@pytest.mark.parametrize(
+    ("pod_deleting_thread_during_oadp_operations", "expected_status"),
+    [
+        pytest.param(
+            {
+                "pod_prefix": "openshift-adp-controller-manager",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 20,
+                "max_duration": 180,
+            },
+            "Completed",
+            marks=pytest.mark.polarion("CNV-12024"),
+            id="openshift-adp-controller-manager",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "velero",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 30,
+                "max_duration": 300,
+            },
+            "Failed",
+            marks=pytest.mark.polarion("CNV-12026"),
+            id="velero",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "node-agent",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 10,
+                "max_duration": 180,
+            },
+            "PartiallyFailed",
+            marks=pytest.mark.polarion("CNV-12022"),
+            id="node-agent",
+        ),
+    ],
+    indirect=[
+        "pod_deleting_thread_during_oadp_operations",
+    ],
+)
+def test_delete_pods_during_backup(
+    backup_with_pod_deletion_orchestration,
+    expected_status,
+):
+    """
+    This test verifies OADP Backup resilience under control-plane disruptions.
+
+    Test flow:
+    1. Create a healthy VM and persist data inside the guest.
+    2. Trigger an OADP Backup.
+    3. Start a background process that continuously deletes critical OADP-related
+       pods (e.g. controller-manager, node-agent, velero, minio) while the Backup
+       is in progress.
+    4. Wait for the OADP Backup to reach a terminal state.
+    5. Stop the pod deletion process once the Backup finishes.
+    6. Verify the final Backup status matches the expected result.
+    """
+
+    assert backup_with_pod_deletion_orchestration == expected_status, (
+        f"Expected backup status {expected_status}, got {backup_with_pod_deletion_orchestration}"
+    )

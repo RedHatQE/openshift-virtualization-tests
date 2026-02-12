@@ -6,7 +6,6 @@ from tests.network.localnet.liblocalnet import (
     LINK_STATE_UP,
     LOCALNET_OVS_BRIDGE_INTERFACE,
 )
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 
@@ -14,10 +13,6 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: fails in CI due to cluster issue; tracked in CNV-71535",
-    run=False,
-)
 def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
     localnet_ovs_bridge_server, localnet_ovs_bridge_client
 ):
@@ -28,10 +23,6 @@ def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
 @pytest.mark.ipv4
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-12006")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: fails in CI due to cluster issue; tracked in CNV-71535",
-    run=False,
-)
 def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     ovs_bridge_localnet_running_vms_one_with_interface_down,
 ):

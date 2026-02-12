@@ -765,21 +765,24 @@ class TestGenerateUniqueIcspIdmsFile:
     """Test cases for generate_unique_icsp_idms_file function"""
 
     @patch("utilities.operator.os.rename")
-    @patch("utilities.operator.yaml.dump")
-    @patch("utilities.operator.yaml.safe_load")
+    @patch("utilities.operator.yaml.dump_all")
+    @patch("utilities.operator.yaml.safe_load_all")
     @patch("builtins.open", create=True)
     def test_generate_unique_file_success(
         self,
         mock_open,
-        mock_safe_load,
-        mock_dump,
+        mock_safe_load_all,
+        mock_dump_all,
         mock_rename,
     ):
         """Test generating unique ICSP/IDMS file"""
-        mock_safe_load.return_value = {
-            "metadata": {"name": "original-name"},
-            "spec": {},
-        }
+        mock_safe_load_all.return_value = [
+            {
+                "metadata": {"name": "original-name"},
+                "kind": "ImageContentSourcePolicy",
+                "spec": {},
+            }
+        ]
 
         result = generate_unique_icsp_idms_file(
             file_name="/tmp/imageContentSourcePolicy.yaml",
@@ -793,28 +796,28 @@ class TestGenerateUniqueIcspIdmsFile:
         )
 
     @patch("utilities.operator.os.rename")
-    @patch("utilities.operator.yaml.dump")
-    @patch("utilities.operator.yaml.safe_load")
+    @patch("utilities.operator.yaml.dump_all")
+    @patch("utilities.operator.yaml.safe_load_all")
     @patch("builtins.open", create=True)
     def test_generate_unique_file_metadata_update(
         self,
         mock_open,
-        mock_safe_load,
-        mock_dump,
+        mock_safe_load_all,
+        mock_dump_all,
         mock_rename,
     ):
-        """Test metadata name is updated correctly"""
-        original_yaml = {"metadata": {"name": "original-name"}, "spec": {}}
-        mock_safe_load.return_value = original_yaml
+        """Test metadata name is updated correctly with unique index"""
+        original_yaml = {"metadata": {"name": "original-name"}, "kind": "ImageContentSourcePolicy", "spec": {}}
+        mock_safe_load_all.return_value = [original_yaml]
 
         generate_unique_icsp_idms_file(
             file_name="/tmp/imageDigestMirrorSet.yaml",
             version_string="4210",
         )
 
-        # Verify yaml.dump was called with updated metadata
-        call_args = mock_dump.call_args[0]
-        assert call_args[0]["metadata"]["name"] == "iib-4210"
+        # Verify yaml.dump_all was called with updated metadata containing index
+        call_args = mock_dump_all.call_args[0]
+        assert call_args[0][0]["metadata"]["name"] == "iib-4210-0"
 
 
 class TestCreateIcspIdmsFromFile:
