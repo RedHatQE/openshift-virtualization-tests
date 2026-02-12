@@ -274,7 +274,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
-        label=None,
+        metadata_labels=None,
     ):
         """
         Virtual machine creation
@@ -356,7 +356,7 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
-            label (dict, optional): Dict of labels for VM (e.g. {"vm.kubevirt.io/template": "custom-fedora"})
+            metadata_labels (dict, optional): Dict of labels for VM (e.g. {"vm.kubevirt.io/template": "custom-fedora"})
                                     those labels will be placed in a structure metadata.labels
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
@@ -371,7 +371,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
-            label=label,
+            label=metadata_labels,
         )
         self.body = body
         self.interfaces = interfaces or []
