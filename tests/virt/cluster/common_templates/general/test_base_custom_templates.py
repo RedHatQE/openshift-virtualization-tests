@@ -101,7 +101,7 @@ def vm_with_custom_template_label(
             data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
             storage_class=py_config["default_storage_class"],
         ),
-        label={
+        metadata_labels={
             "vm.kubevirt.io/template": custom_template_from_base_template.name,
             "vm.kubevirt.io/template.namespace": namespace.name,
         },
