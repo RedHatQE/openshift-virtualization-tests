@@ -6,8 +6,9 @@ from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
 from ocp_resources.resource import Resource
 
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import create_role_binding
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_RHEL, TIMEOUT_10MIN, Images
+from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_10MIN, Images
 from utilities.infra import create_ns
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -21,14 +22,13 @@ def data_import_cron_pvc_target_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def dv_source_for_data_import_cron(
-    namespace, storage_class_name_scope_module, rhel9_http_image_url, unprivileged_client
-):
+def dv_source_for_data_import_cron(namespace, storage_class_name_scope_module, unprivileged_client):
     with create_dv(
-        dv_name="dv-source-rhel",
+        dv_name="dv-source-fedora",
         namespace=namespace.name,
-        url=rhel9_http_image_url,
-        size=Images.Rhel.DEFAULT_DV_SIZE,
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
         client=unprivileged_client,
     ) as dv:
@@ -43,14 +43,14 @@ def vm_for_data_source_import(
         name="vm-with-imported-data-source",
         namespace=data_import_cron_pvc_target_namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_RHEL,
+        os_flavor=OS_FLAVOR_FEDORA,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
                 name=imported_data_source.name, namespace=data_import_cron_pvc_target_namespace.name
             ),
             storage_class=storage_class_name_scope_module,
         ),
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     ) as vm:
         running_vm(vm=vm)
         yield vm
