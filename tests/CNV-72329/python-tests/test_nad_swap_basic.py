@@ -30,11 +30,10 @@ class TestNADSwapBasic:
         - Multiple NetworkAttachmentDefinitions created
         - Cluster with live migration support
     """
+
     __test__ = False
 
-    def test_ts_cnv_72329_018_multiple_nad_changes_before_migration(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_018_multiple_nad_changes_before_migration(self, admin_client, unprivileged_client, namespace):
         """
         Test that multiple NAD reference changes use the last NAD for target pod.
 
@@ -50,7 +49,6 @@ class TestNADSwapBasic:
         Expected:
             - Last NAD reference (NAD-C) is used for target pod
         """
-        pass
 
     def test_ts_cnv_72329_020_nad_swap_multiple_secondary_interfaces(
         self, admin_client, unprivileged_client, namespace
@@ -72,11 +70,8 @@ class TestNADSwapBasic:
         Expected:
             - Only specified interface NAD changes, others unchanged
         """
-        pass
 
-    def test_ts_cnv_72329_021_change_multiple_nads_simultaneously(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_021_change_multiple_nads_simultaneously(self, admin_client, unprivileged_client, namespace):
         """
         Test that multiple NAD references can be changed simultaneously.
 
@@ -93,11 +88,8 @@ class TestNADSwapBasic:
         Expected:
             - All interfaces migrate with updated NAD references
         """
-        pass
 
-    def test_ts_cnv_72329_026_nad_swap_different_bridge(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_026_nad_swap_different_bridge(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD swap works when changing to a different bridge.
 
@@ -114,11 +106,8 @@ class TestNADSwapBasic:
         Expected:
             - VM connects to different bridge (br1 → br2) successfully
         """
-        pass
 
-    def test_ts_cnv_72329_031_change_nad_back_to_original(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_031_change_nad_back_to_original(self, admin_client, unprivileged_client, namespace):
         """
         Test that reverse NAD swap (A→B→A) works correctly.
 
@@ -135,11 +124,8 @@ class TestNADSwapBasic:
         Expected:
             - Reverse NAD swap (A→B→A) works correctly
         """
-        pass
 
-    def test_ts_cnv_72329_032_nad_swap_ipv4_ipv6(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_032_nad_swap_ipv4_ipv6(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD swap works with IPv4 and IPv6 networks.
 
@@ -157,7 +143,6 @@ class TestNADSwapBasic:
         Expected:
             - Both IP stacks work correctly after migration
         """
-        pass
 
 
 # Mark tests as not ready for collection
@@ -167,4 +152,3 @@ TestNADSwapBasic.test_ts_cnv_72329_021_change_multiple_nads_simultaneously.__tes
 TestNADSwapBasic.test_ts_cnv_72329_026_nad_swap_different_bridge.__test__ = False
 TestNADSwapBasic.test_ts_cnv_72329_031_change_nad_back_to_original.__test__ = False
 TestNADSwapBasic.test_ts_cnv_72329_032_nad_swap_ipv4_ipv6.__test__ = False
-

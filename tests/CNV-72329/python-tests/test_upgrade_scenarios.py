@@ -35,11 +35,10 @@ class TestNADSwapUpgrade:
         - CNV upgrade infrastructure available
         - Multiple NetworkAttachmentDefinitions with different VLAN configurations
     """
+
     __test__ = False
 
-    def test_ts_cnv_72329_056_cnv_upgrade_with_swapped_nad(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_056_cnv_upgrade_with_swapped_nad(self, admin_client, unprivileged_client, namespace):
         """
         Test that VMs with swapped NAD configurations persist through CNV upgrades.
 
@@ -61,11 +60,8 @@ class TestNADSwapUpgrade:
         Expected:
             - VM persists with swapped NAD configuration post-upgrade
         """
-        pass
 
-    def test_ts_cnv_72329_057_post_upgrade_nad_swap(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_057_post_upgrade_nad_swap(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD swap functionality remains operational after CNV upgrade.
 
@@ -85,10 +81,8 @@ class TestNADSwapUpgrade:
         Expected:
             - VM can perform new NAD swap after CNV upgrade completes
         """
-        pass
 
 
 # Mark individual tests as not ready for collection
 TestNADSwapUpgrade.test_ts_cnv_72329_056_cnv_upgrade_with_swapped_nad.__test__ = False
 TestNADSwapUpgrade.test_ts_cnv_72329_057_post_upgrade_nad_swap.__test__ = False
-

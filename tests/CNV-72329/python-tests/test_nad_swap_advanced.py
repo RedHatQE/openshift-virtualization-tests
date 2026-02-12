@@ -23,11 +23,10 @@ class TestNADSwapAdvanced:
         - LiveUpdateNADRef feature gate enabled
         - Network infrastructure configured
     """
+
     __test__ = False
 
-    def test_ts_cnv_72329_022_nad_swap_hotplugged_interface(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_022_nad_swap_hotplugged_interface(self, admin_client, unprivileged_client, namespace):
         """
         Test that previously hotplugged interfaces can swap NADs.
 
@@ -45,11 +44,8 @@ class TestNADSwapAdvanced:
         Expected:
             - Previously hotplugged interface swaps NAD successfully
         """
-        pass
 
-    def test_ts_cnv_72329_027_verify_dnc_compatibility(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_027_verify_dnc_compatibility(self, admin_client, unprivileged_client, namespace):
         """
         Test that Dynamic Networks Controller does not interfere with NAD swap.
 
@@ -66,11 +62,8 @@ class TestNADSwapAdvanced:
         Expected:
             - DNC does not interfere with migration-based NAD swap
         """
-        pass
 
-    def test_ts_cnv_72329_030_nad_swap_with_network_policy(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_030_nad_swap_with_network_policy(self, admin_client, unprivileged_client, namespace):
         """
         Test that network policies apply correctly after NAD swap.
 
@@ -87,11 +80,9 @@ class TestNADSwapAdvanced:
         Expected:
             - Network policy applies correctly to new NAD
         """
-        pass
 
 
 # Mark tests as not ready for collection
 TestNADSwapAdvanced.test_ts_cnv_72329_022_nad_swap_hotplugged_interface.__test__ = False
 TestNADSwapAdvanced.test_ts_cnv_72329_027_verify_dnc_compatibility.__test__ = False
 TestNADSwapAdvanced.test_ts_cnv_72329_030_nad_swap_with_network_policy.__test__ = False
-

@@ -23,11 +23,10 @@ class TestNADSwapFeatureGate:
         - LiveUpdateNADRef feature gate configurable
         - Access to feature gate management
     """
+
     __test__ = False
 
-    def test_ts_cnv_72329_016_disable_feature_gate(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_016_disable_feature_gate(self, admin_client, unprivileged_client, namespace):
         """
         Test that disabling LiveUpdateNADRef feature gate prevents NAD hot-swap.
 
@@ -46,11 +45,8 @@ class TestNADSwapFeatureGate:
             - NAD change requires RestartRequired condition
             - No automatic migration triggered
         """
-        pass
 
-    def test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD changes when feature gate disabled require VM restart.
 
@@ -69,10 +65,8 @@ class TestNADSwapFeatureGate:
             - VM gets RestartRequired condition
             - No migration triggered
         """
-        pass
 
 
 # Mark tests as not ready for collection
 TestNADSwapFeatureGate.test_ts_cnv_72329_016_disable_feature_gate.__test__ = False
 TestNADSwapFeatureGate.test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled.__test__ = False
-

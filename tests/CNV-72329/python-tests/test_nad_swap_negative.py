@@ -23,11 +23,10 @@ class TestNADSwapNegative:
         - LiveUpdateNADRef feature gate enabled
         - Test environment configured for error scenarios
     """
+
     __test__ = False
 
-    def test_ts_cnv_72329_019_change_nad_to_nonexistent_network(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_019_change_nad_to_nonexistent_network(self, admin_client, unprivileged_client, namespace):
         """
         Test that changing NAD to non-existent network is handled gracefully.
 
@@ -46,9 +45,7 @@ class TestNADSwapNegative:
             - VM remains on source
             - VM continues to function with original NAD
         """
-        pass
 
 
 # Mark tests as not ready for collection
 TestNADSwapNegative.test_ts_cnv_72329_019_change_nad_to_nonexistent_network.__test__ = False
-

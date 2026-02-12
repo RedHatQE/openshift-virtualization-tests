@@ -23,6 +23,7 @@ class TestNADSwapControllerVerification:
         - Access to controller logs and metrics
         - LiveUpdateNADRef feature gate enabled
     """
+
     __test__ = False
 
     def test_ts_cnv_72329_033_verify_virt_controller_restart_required_logic(
@@ -43,7 +44,6 @@ class TestNADSwapControllerVerification:
         Expected:
             - Controller correctly identifies NAD-only changes
         """
-        pass
 
     def test_ts_cnv_72329_034_verify_virt_controller_network_sync_logic(
         self, admin_client, unprivileged_client, namespace
@@ -63,7 +63,6 @@ class TestNADSwapControllerVerification:
         Expected:
             - Controller syncs networkName field from VM to VMI
         """
-        pass
 
     def test_ts_cnv_72329_035_verify_workloadupdate_controller_migration_logic(
         self, admin_client, unprivileged_client, namespace
@@ -83,11 +82,11 @@ class TestNADSwapControllerVerification:
         Expected:
             - Controller requests immediate migration for bridge binding
         """
-        pass
 
 
 # Mark tests as not ready for collection
 TestNADSwapControllerVerification.test_ts_cnv_72329_033_verify_virt_controller_restart_required_logic.__test__ = False
 TestNADSwapControllerVerification.test_ts_cnv_72329_034_verify_virt_controller_network_sync_logic.__test__ = False
-TestNADSwapControllerVerification.test_ts_cnv_72329_035_verify_workloadupdate_controller_migration_logic.__test__ = False
-
+TestNADSwapControllerVerification.test_ts_cnv_72329_035_verify_workloadupdate_controller_migration_logic.__test__ = (
+    False
+)

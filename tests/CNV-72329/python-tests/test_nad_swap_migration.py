@@ -24,6 +24,7 @@ class TestNADSwapMigration:
         - Migration support enabled
         - Multiple worker nodes available
     """
+
     __test__ = False
 
     def test_ts_cnv_72329_023_rollback_nad_before_migration_completes(
@@ -45,11 +46,8 @@ class TestNADSwapMigration:
         Expected:
             - Migration cancels or uses original NAD if already started
         """
-        pass
 
-    def test_ts_cnv_72329_024_nad_swap_concurrent_vm_updates(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_024_nad_swap_concurrent_vm_updates(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD swap works correctly with concurrent VM updates.
 
@@ -65,11 +63,8 @@ class TestNADSwapMigration:
         Expected:
             - NAD change processed correctly alongside other updates
         """
-        pass
 
-    def test_ts_cnv_72329_025_nad_change_with_running_workload(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_025_nad_change_with_running_workload(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD change handles running workload appropriately.
 
@@ -89,11 +84,8 @@ class TestNADSwapMigration:
             - Workload experiences expected network interruption
             - Workload recovers after migration
         """
-        pass
 
-    def test_ts_cnv_72329_028_nad_change_with_persistent_volumes(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_028_nad_change_with_persistent_volumes(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD change works correctly on VMs with persistent volumes.
 
@@ -114,11 +106,8 @@ class TestNADSwapMigration:
             - NAD swap succeeds
             - Data persists after migration
         """
-        pass
 
-    def test_ts_cnv_72329_029_monitor_migration_performance(
-        self, admin_client, unprivileged_client, namespace
-    ):
+    def test_ts_cnv_72329_029_monitor_migration_performance(self, admin_client, unprivileged_client, namespace):
         """
         Test that NAD swap migration completes within expected time window.
 
@@ -137,7 +126,6 @@ class TestNADSwapMigration:
         Expected:
             - NAD swap migration completes within expected time window (< 5 minutes)
         """
-        pass
 
 
 # Mark tests as not ready for collection
@@ -146,4 +134,3 @@ TestNADSwapMigration.test_ts_cnv_72329_024_nad_swap_concurrent_vm_updates.__test
 TestNADSwapMigration.test_ts_cnv_72329_025_nad_change_with_running_workload.__test__ = False
 TestNADSwapMigration.test_ts_cnv_72329_028_nad_change_with_persistent_volumes.__test__ = False
 TestNADSwapMigration.test_ts_cnv_72329_029_monitor_migration_performance.__test__ = False
-
