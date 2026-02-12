@@ -86,6 +86,29 @@ def custom_template_from_base_template(request, admin_client, unprivileged_clien
         yield custom_template
 
 
+@pytest.fixture()
+def vm_with_custom_template_label(
+    unprivileged_client,
+    namespace,
+    golden_images_namespace,
+    custom_template_from_base_template,
+):
+    with VirtualMachineForTests(
+        name="vm-from-custom-template-webhook-validation",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        label={
+            "vm.kubevirt.io/template": custom_template_from_base_template.name,
+            "vm.kubevirt.io/template.namespace": namespace.name,
+        },
+    ) as vm:
+        yield vm
+
+
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
     [pytest.param({"os_dict": FEDORA_LATEST})],
@@ -197,7 +220,7 @@ class TestCustomTemplatesChangesWebhookValidation:
     )
     @pytest.mark.polarion("CNV-13744")
     def test_no_validation_annotation_missing_parent_template(
-        self, unprivileged_client, namespace, golden_images_namespace, custom_template_from_base_template
+        self, custom_template_from_base_template, vm_with_custom_template_label
     ) -> None:
         """
         Tests uses VirtualMachineForTests and its label instance attribute due to a need to:
@@ -206,23 +229,12 @@ class TestCustomTemplatesChangesWebhookValidation:
         - adding labels to metadata.labels not to spec.metadata.labels
         Detailed steps are described in Polarion CNV-13744
         """
-        with VirtualMachineForTests(
-            name="vm-from-custom-template-webhook-validation",
-            namespace=namespace.name,
-            client=unprivileged_client,
-            data_volume_template=data_volume_template_with_source_ref_dict(
-                data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
-                storage_class=py_config["default_storage_class"],
-            ),
-            label={
-                "vm.kubevirt.io/template": custom_template_from_base_template.name,
-                "vm.kubevirt.io/template.namespace": namespace.name,
-            },
-        ) as custom_vm:
-            # Explicitly delete the template to test webhook validation with missing parent template
-            LOGGER.info("Deleting custom template to test webhook validation with missing parent")
-            custom_template_from_base_template.clean_up()
-            ResourceEditor({custom_vm: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}}).update()
-            assert custom_vm.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
-                "Annotation update should succeed even when parent template is missing"
-            )
+        # Explicitly delete the template to test webhook validation with missing parent template
+        LOGGER.info("Deleting custom template to test webhook validation with missing parent")
+        custom_template_from_base_template.clean_up()
+        ResourceEditor({
+            vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}
+        }).update()
+        assert (
+            vm_with_custom_template_label.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1"
+        ), "Annotation update should succeed even when parent template is missing"
