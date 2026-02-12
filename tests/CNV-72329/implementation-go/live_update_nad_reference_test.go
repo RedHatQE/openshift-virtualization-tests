@@ -135,7 +135,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Migration object created after NAD update
 		*/
-		It("[test_id:TS-CNV72329-001] should trigger live migration when NAD reference is updated", func() {
+		It("[test_id:TS-CNV-72329-001] should trigger live migration when NAD reference is updated", func() {
 			By("Updating VM spec to use target NAD")
 			patchData := []byte(fmt.Sprintf(
 				`[{"op": "replace", "path": "/spec/template/spec/networks/1/multus/networkName", "value": "%s"}]`,
@@ -198,7 +198,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - VM has IP address and responds to network requests after NAD update
 		*/
-		It("[test_id:TS-CNV72329-002] should preserve network connectivity after NAD update completes", func() {
+		It("[test_id:TS-CNV-72329-002] should preserve network connectivity after NAD update completes", func() {
 			By("Verifying initial network connectivity")
 			vmi, err = kubevirt.Client().VirtualMachineInstance(namespace).Get(ctx, vm.Name, metav1.GetOptions{})
 			ExpectWithOffset(1, err).ToNot(HaveOccurred())
@@ -255,7 +255,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - NAD update rejected with error indicating feature is disabled
 		*/
-		It("[test_id:TS-CNV72329-003] should reject NAD update when feature gate is disabled", func() {
+		It("[test_id:TS-CNV-72329-016] should reject NAD update when feature gate is disabled", func() {
 			// Check if feature gate is enabled - skip if it is
 			// This allows the test to run in CI when the feature gate is disabled
 			kv, err := kubevirt.Client().KubeVirt(testsuite.GetTestNamespace(nil)).List(ctx, metav1.ListOptions{})
@@ -318,7 +318,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Error returned indicating NAD not found
 		*/
-		It("[test_id:TS-CNV72329-004] should return error for non-existent NAD reference", func() {
+		It("[test_id:TS-CNV-72329-019] should return error for non-existent NAD reference", func() {
 			By("Attempting to update to non-existent NAD")
 			patchData := []byte(`[{"op": "replace", "path": "/spec/template/spec/networks/1/multus/networkName", "value": "non-existent-nad"}]`)
 			_, err = kubevirt.Client().VirtualMachine(namespace).Patch(ctx, vm.Name, types.JSONPatchType, patchData, metav1.PatchOptions{})
@@ -372,7 +372,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Spec update accepted but migration deferred until VM starts
 		*/
-		It("[test_id:TS-CNV72329-005] should handle NAD update for stopped VM appropriately", func() {
+		It("[test_id:TS-CNV-72329-037] should handle NAD update for stopped VM appropriately", func() {
 			By("Attempting NAD update on stopped VM")
 			patchData := []byte(fmt.Sprintf(
 				`[{"op": "replace", "path": "/spec/template/spec/networks/1/multus/networkName", "value": "%s"}]`,
@@ -451,7 +451,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		       - Only the targeted interface uses new NAD
 		       - Other interfaces remain on original NADs
 		*/
-		It("[test_id:TS-CNV72329-006] should update single interface NAD on multi-interface VM", func() {
+		It("[test_id:TS-CNV-72329-020] should update single interface NAD on multi-interface VM", func() {
 			By("Updating NAD reference for first secondary interface only")
 			// Update only the first secondary network (index 1, as index 0 is default network)
 			patchData := []byte(fmt.Sprintf(

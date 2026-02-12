@@ -40,7 +40,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Migration object created after NAD update
 		*/
-		PendingIt("[test_id:TS-CNV72329-001] should trigger live migration when NAD reference is updated", func() {
+		PendingIt("[test_id:TS-CNV-72329-001] should trigger live migration when NAD reference is updated", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
@@ -60,7 +60,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - VM has IP address and responds to network requests after NAD update
 		*/
-		PendingIt("[test_id:TS-CNV72329-002] should preserve network connectivity after NAD update completes", func() {
+		PendingIt("[test_id:TS-CNV-72329-002] should preserve network connectivity after NAD update completes", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
@@ -80,7 +80,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - NAD update rejected with error indicating feature is disabled
 		*/
-		PendingIt("[test_id:TS-CNV72329-003] should reject NAD update when feature gate is disabled", func() {
+		PendingIt("[test_id:TS-CNV-72329-016] should reject NAD update when feature gate is disabled", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
@@ -99,7 +99,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Error returned indicating NAD not found
 		*/
-		PendingIt("[test_id:TS-CNV72329-004] should return error for non-existent NAD reference", func() {
+		PendingIt("[test_id:TS-CNV-72329-019] should return error for non-existent NAD reference", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
@@ -117,7 +117,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		   Expected:
 		       - Spec update accepted but migration deferred until VM starts
 		*/
-		PendingIt("[test_id:TS-CNV72329-005] should handle NAD update for stopped VM appropriately", func() {
+		PendingIt("[test_id:TS-CNV-72329-037] should handle NAD update for stopped VM appropriately", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
@@ -138,7 +138,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		       - Only the targeted interface uses new NAD
 		       - Other interfaces remain on original NADs
 		*/
-		PendingIt("[test_id:TS-CNV72329-006] should update single interface NAD on multi-interface VM", func() {
+		PendingIt("[test_id:TS-CNV-72329-020] should update single interface NAD on multi-interface VM", func() {
 			Skip("Phase 1: Design only - awaiting implementation")
 		})
 	})
