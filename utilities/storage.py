@@ -229,8 +229,14 @@ def data_volume(
         dv_name = (params_dict.get("dv_name") or "").replace(".", "-").lower()
         dv_size = params_dict.get("dv_size")
 
-    # Don't need URL for DVs that are not http
-    url = f"{get_test_artifact_server_url()}{image}" if source == "http" else None
+    # Construct URL based on source type
+    if source == "http":
+        url = f"{get_test_artifact_server_url()}{image}"
+    elif source == "registry":
+        # For registry source, use the image parameter directly as the URL
+        url = image if image else params_dict.get("url")
+    else:
+        url = params_dict.get("url")
 
     # For golden images; images are created once per module in
     # golden images namepace and cloned when using common templates.
@@ -497,6 +503,7 @@ class ErrorMsg:
         "Unable to process data: qemu-img: curl: The requested URL returned error: 416 Requested Range Not Satisfiable"
     )
     CANNOT_CREATE_RESOURCE = r".*cannot create resource.*|.*has insufficient permissions in clone source namespace.*"
+    CANNOT_GET_RESOURCE = r".*cannot get resource.*|.*has insufficient permissions in clone source namespace.*"
     CANNOT_DELETE_RESOURCE = r".*cannot delete resource.*|.*has insufficient permissions in clone source namespace.*"
     ASSUMING_PVC_SUCCESSFULLY_POPULATED = "PVC {pvc_name} already successfully {populated}"
 

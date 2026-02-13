@@ -30,7 +30,7 @@ from tests.storage.utils import (
     create_role_binding,
     set_permissions,
 )
-from utilities.constants import PVC, UNPRIVILEGED_USER, Images
+from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
 from utilities.storage import create_dv
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -294,10 +294,10 @@ def vm_for_restricted_namespace_cloning_test(
     with VirtualMachineForTests(
         name=VM_FOR_TEST,
         namespace=destination_namespace.name,
-        os_flavor=Images.Cirros.OS_FLAVOR,
+        os_flavor=OS_FLAVOR_FEDORA,
         service_accounts=[restricted_namespace_service_account.name],
         client=unprivileged_client,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False)
