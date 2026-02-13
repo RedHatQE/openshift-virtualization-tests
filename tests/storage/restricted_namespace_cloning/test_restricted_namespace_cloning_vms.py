@@ -28,7 +28,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VM_FOR_TEST,
 )
 from tests.storage.restricted_namespace_cloning.utils import verify_snapshot_used_namespace_transfer
-from utilities.constants import QUARANTINED, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, Images
 from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 
@@ -56,15 +56,15 @@ def create_vm_negative(
 ):
     with pytest.raises(
         ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        match=ErrorMsg.CANNOT_GET_RESOURCE,
     ):
         with VirtualMachineForTests(
             name=VM_FOR_TEST,
             namespace=namespace,
-            os_flavor=Images.Cirros.OS_FLAVOR,
+            os_flavor=OS_FLAVOR_FEDORA,
             service_accounts=service_accounts,
             client=unprivileged_client,
-            memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             data_volume_template=get_dv_template(data_volume_clone_settings=data_volume_clone_settings),
         ):
             return
