@@ -93,6 +93,7 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
             name=golden_image_data_volume_scope_module.name,
             namespace=golden_image_data_volume_scope_module.namespace,
             client=unprivileged_client,
+            api_name="pvc",
         ).delete()
 
 

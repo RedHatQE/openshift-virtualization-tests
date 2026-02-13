@@ -40,6 +40,7 @@ def dv_dict(namespace, priority_class, unprivileged_client):
         volume_mode=py_config["default_volume_mode"],
         access_modes=py_config["default_access_mode"],
         client=unprivileged_client,
+        api_name="pvc",
     )
     dv.to_dict()
     dv_priority_class = priority_class["dv_priority_class"]

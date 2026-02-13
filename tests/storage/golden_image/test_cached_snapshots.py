@@ -119,6 +119,7 @@ def updated_rhel9_boot_source(
             name=rhel9_boot_source_name,
             namespace=golden_images_namespace.name,
             client=admin_client,
+            api_name="pvc",
         ).clean_up()
 
 

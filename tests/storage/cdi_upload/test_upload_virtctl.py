@@ -182,7 +182,7 @@ def test_virtctl_image_upload_dv(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client, api_name="pvc")
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 

@@ -58,7 +58,7 @@ def uploaded_dv_with_immediate_binding(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client, api_name="pvc")
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         assert dv.pvc.bound(), f"PVC status is {dv.pvc.status}"
         yield dv

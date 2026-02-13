@@ -269,7 +269,9 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 def deleted_old_dvs_of_online_vms(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
         dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
-        dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)
+        dv = DataVolume(
+            client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True, api_name="pvc"
+        )
         assert dv.delete(wait=True)
 
 

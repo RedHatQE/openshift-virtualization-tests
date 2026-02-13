@@ -1736,7 +1736,7 @@ def running_vm(
         LOGGER.info(f"VM {_vm.name} status before dv check: {_vm.printable_status}")
         LOGGER.info(f"Volume(s) in VM spec: {_vm_dv_volumes_names_list} ")
         for dv_name in _vm_dv_volumes_names_list:
-            DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client).wait_for_dv_success(
+            DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client, api_name="pvc").wait_for_dv_success(
                 timeout=_dv_wait_timeout
             )
 
