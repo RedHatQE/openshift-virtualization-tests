@@ -116,10 +116,12 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 
 			By("Cleaning up NADs")
 			if sourceNAD != nil {
-				_ = kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, sourceNAD.Name, metav1.DeleteOptions{})
+				nadErr := kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, sourceNAD.Name, metav1.DeleteOptions{})
+				ExpectWithOffset(1, nadErr).ToNot(HaveOccurred())
 			}
 			if targetNAD != nil {
-				_ = kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, targetNAD.Name, metav1.DeleteOptions{})
+				nadErr := kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, targetNAD.Name, metav1.DeleteOptions{})
+				ExpectWithOffset(1, nadErr).ToNot(HaveOccurred())
 			}
 		})
 
@@ -432,7 +434,8 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 			}
 			for _, nad := range []*networkv1.NetworkAttachmentDefinition{nad1, nad2, nad1New} {
 				if nad != nil {
-					_ = kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, nad.Name, metav1.DeleteOptions{})
+					nadErr := kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, nad.Name, metav1.DeleteOptions{})
+					ExpectWithOffset(1, nadErr).ToNot(HaveOccurred())
 				}
 			}
 		})
@@ -525,7 +528,8 @@ func cleanupVMAndNADs(ctx context.Context, namespace string, vm *v1.VirtualMachi
 	}
 	for _, nad := range nads {
 		if nad != nil {
-			_ = kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, nad.Name, metav1.DeleteOptions{})
+			nadErr := kubevirt.Client().NetworkClient().K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Delete(ctx, nad.Name, metav1.DeleteOptions{})
+			ExpectWithOffset(2, nadErr).ToNot(HaveOccurred())
 		}
 	}
 }
