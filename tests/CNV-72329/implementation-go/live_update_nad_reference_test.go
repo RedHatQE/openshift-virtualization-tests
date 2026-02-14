@@ -24,7 +24,7 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1 "kubevirt.io/api/core/v1"
 
@@ -90,7 +90,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 					Namespace: namespace,
 				},
 				Spec: v1.VirtualMachineSpec{
-					Running: pointer.Bool(true),
+					Running: ptr.To(true),
 					Template: &v1.VirtualMachineInstanceTemplateSpec{
 						Spec: vmiSpec.Spec,
 					},
@@ -226,7 +226,6 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		var (
 			sourceNAD *networkv1.NetworkAttachmentDefinition
 			vm        *v1.VirtualMachine
-			vmi       *v1.VirtualMachineInstance
 		)
 
 		BeforeAll(func() {
@@ -235,8 +234,9 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 				libvmi.WithInterface(libvmi.InterfaceDeviceWithBridgeBinding("secondary")),
 				libvmi.WithNetwork(libvmi.MultusNetwork("secondary", sourceNAD.Name)),
 			)
+			var vmi *v1.VirtualMachineInstance
 			vm, vmi = createAndStartVMWithVMI(ctx, namespace, "feature-gate-test-vm", vmiSpec)
-			vmi = libwait.WaitUntilVMIReady(vmi, console.LoginToFedora)
+			_ = libwait.WaitUntilVMIReady(vmi, console.LoginToFedora)
 		})
 
 		AfterAll(func() {
@@ -289,7 +289,6 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 		var (
 			sourceNAD *networkv1.NetworkAttachmentDefinition
 			vm        *v1.VirtualMachine
-			vmi       *v1.VirtualMachineInstance
 		)
 
 		BeforeAll(func() {
@@ -298,8 +297,9 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 				libvmi.WithInterface(libvmi.InterfaceDeviceWithBridgeBinding("secondary")),
 				libvmi.WithNetwork(libvmi.MultusNetwork("secondary", sourceNAD.Name)),
 			)
+			var vmi *v1.VirtualMachineInstance
 			vm, vmi = createAndStartVMWithVMI(ctx, namespace, "invalid-nad-test-vm", vmiSpec)
-			vmi = libwait.WaitUntilVMIReady(vmi, console.LoginToFedora)
+			_ = libwait.WaitUntilVMIReady(vmi, console.LoginToFedora)
 		})
 
 		AfterAll(func() {
@@ -348,7 +348,7 @@ var _ = Describe("[CNV-72329] Live Update NAD Reference", decorators.SigNetwork,
 					Namespace: namespace,
 				},
 				Spec: v1.VirtualMachineSpec{
-					Running: pointer.Bool(false), // VM is stopped
+					Running: ptr.To(false), // VM is stopped
 					Template: &v1.VirtualMachineInstanceTemplateSpec{
 						Spec: vmiSpec.Spec,
 					},
@@ -492,7 +492,7 @@ func createAndStartVMWithVMI(ctx context.Context, namespace, name string, vmiSpe
 			Namespace: namespace,
 		},
 		Spec: v1.VirtualMachineSpec{
-			Running: pointer.Bool(true),
+			Running: ptr.To(true),
 			Template: &v1.VirtualMachineInstanceTemplateSpec{
 				Spec: vmiSpec.Spec,
 			},
