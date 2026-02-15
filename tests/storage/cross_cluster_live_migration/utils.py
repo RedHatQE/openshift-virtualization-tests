@@ -75,99 +75,108 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     )
 
 
-def verify_compute_live_migration_after_cclm(
-    client: DynamicClient, namespace: Namespace, vms_list: list[VirtualMachineForTests]
-) -> None:
+def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
     """
     Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
 
-    This function creates local VM references for each VM that was migrated from the remote cluster,
-    preserves their credentials, and attempts to perform compute live migration on each VM.
-
     Args:
-        client: DynamicClient
-        namespace: The namespace where the VMs are located in the target cluster
-        vms_list: List of VirtualMachineForTests objects to be migrated
+        local_vms: List of VirtualMachineForTests objects in the local cluster
 
     Raises:
         AssertionError: If any VM migration fails, with details of all failed migrations
     """
     vms_failed_migration = {}
-    for vm in vms_list:
-        local_vm = VirtualMachineForTests(
-            name=vm.name, namespace=namespace.name, client=client, generate_unique_name=False
-        )
-        local_vm.username = vm.username
-        local_vm.password = vm.password
+    for vm in local_vms:
         try:
-            migrate_vm_and_verify(vm=local_vm, check_ssh_connectivity=True)
+            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
         except Exception as migration_exception:
-            vms_failed_migration[local_vm.name] = migration_exception
+            vms_failed_migration[vm.name] = migration_exception
     assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
+
+
+def parse_boot_time_from_console_output(raw_output: str | bytes) -> str:
+    """
+    Parse system boot time from console output.
+
+    Args:
+        raw_output: Raw console output
+
+    Returns:
+        Cleaned boot time string, e.g., "system boot  2026-01-08 11:17"
+
+    Raises:
+        ValueError: If boot time cannot be determined from output
+    """
+    if isinstance(raw_output, bytes):
+        output = raw_output.decode("utf-8", errors="ignore")
+    else:
+        output = str(raw_output)
+
+    # Matches "system boot" followed by date/time in format "2026-01-08 11:17"
+    match = re.search(r"(system boot\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})", output)
+    if match:
+        boot_time = match.group(1)
+        LOGGER.info(f"Boot time: '{boot_time}'")
+        return boot_time
+    raise ValueError(f"Could not determine boot time from output: {output}")
 
 
 def get_vm_boot_time_via_console(
     vm: VirtualMachineForTests, kubeconfig: str | None = None, username: str | None = None, password: str | None = None
 ) -> str:
     """
-    Returns the boot time string, e.g., "system boot  2026-01-08 11:17"
+    Returns the boot time string, e.g., "system boot 2026-01-08 11:17"
     """
     with console.Console(vm=vm, kubeconfig=kubeconfig, username=username, password=password) as vm_console:
         vm_console.sendline("who -b")
-
-        # Wait for the prompt to return
         vm_console.expect([r"#", r"\$"])
         raw_output = vm_console.before
-
-        # Decode if bytes
-        if isinstance(raw_output, bytes):
-            output = raw_output.decode("utf-8", errors="ignore")
-        else:
-            output = str(raw_output)
-
-        # Remove ANSI escape sequences and control characters
-        output = re.sub(r"\x1b\[\?[0-9]+[hl]", "", output)  # Remove bracketed paste mode
-        output = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", output)  # Remove ANSI sequences
-        output = output.replace("\r", "")  # Remove carriage returns
-
-        lines = output.strip().split("\n")
-        for line in lines:
-            if "system boot" in line:
-                # Extract and return just the date/time part
-                # Format: "         system boot  2026-01-08 11:17"
-                boot_info = line.strip()
-                # Remove extra spaces
-                boot_info = re.sub(r"\s+", " ", boot_info)
-                LOGGER.info(f"Boot time: {boot_info}")
-                return boot_info
-
-        raise ValueError(f"Could not determine boot time from output: {raw_output}")
+        return parse_boot_time_from_console_output(raw_output=raw_output)
 
 
 def verify_vms_boot_time_after_migration(
-    client: DynamicClient,
-    namespace: Namespace,
-    vms_list: list[VirtualMachineForTests],
+    local_vms: list[VirtualMachineForTests],
     initial_boot_time: dict[str, str],
 ) -> None:
     """
     Verify that VMs have not rebooted after storage migration.
 
     Args:
-        vms_list: List of VMs to check
+        local_vms: List of VirtualMachineForTests objects in the local cluster
         initial_boot_time: Dictionary mapping VM names to their initial boot times
 
     Raises:
         AssertionError: If any VM has rebooted (boot time changed)
     """
     rebooted_vms = {}
-    for vm in vms_list:
-        local_vm = VirtualMachineForTests(
-            name=vm.name, namespace=namespace.name, client=client, generate_unique_name=False
-        )
-        # local_vm.username = vm.username
-        # local_vm.password = vm.password
-        current_boot_time = get_vm_boot_time_via_console(vm=local_vm, username=vm.username, password=vm.password)
-        if initial_boot_time[local_vm.name] != current_boot_time:
-            rebooted_vms[local_vm.name] = {"initial": initial_boot_time[local_vm.name], "current": current_boot_time}
+    for vm in local_vms:
+        current_boot_time = get_vm_boot_time_via_console(vm=vm, username=vm.username, password=vm.password)
+        if initial_boot_time[vm.name] != current_boot_time:
+            rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+def delete_file_in_vm(
+    vm: VirtualMachineForTests, file_name: str, username: str | None = None, password: str | None = None
+) -> None:
+    """
+    Delete a file in a VM and verify it was deleted.
+
+    Args:
+        vm: VirtualMachine instance
+        file_name: Name of the file to delete
+        username: Optional username for console login (defaults to vm.username)
+        password: Optional password for console login (defaults to vm.password)
+    """
+    if not vm.ready:
+        vm.start(wait=True)
+    with console.Console(vm=vm, username=username, password=password) as vm_console:
+        vm_console.sendline(f"rm -f {file_name}")
+        vm_console.expect([r"#", r"\$"])
+        # Verify file is deleted
+        vm_console.sendline(f"ls {file_name}")
+        vm_console.expect([r"#", r"\$"])
+        output = vm_console.before
+        assert "No such file or directory" in output, (
+            f"File '{file_name}' should have been deleted from VM '{vm.name}', output: '{output}'"
+        )
