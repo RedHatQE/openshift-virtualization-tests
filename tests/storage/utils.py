@@ -573,4 +573,3 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
                 storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
             )
         )
-        

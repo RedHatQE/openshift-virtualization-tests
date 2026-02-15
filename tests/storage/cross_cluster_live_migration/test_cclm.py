@@ -49,7 +49,7 @@ pytestmark = [
     indirect=True,
 )
 @pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class")
-class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class 
+class TestCCLMvmFromTemplateWithDataSource:  # TODO rename test class
     @pytest.mark.polarion("CNV-11910")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"
