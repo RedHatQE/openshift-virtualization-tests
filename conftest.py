@@ -3,6 +3,7 @@
 Pytest conftest file for CNV tests
 """
 
+import copy
 import datetime
 import logging
 import os
@@ -25,6 +26,7 @@ from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
 
+import tests.upgrade_params
 import utilities.cluster
 import utilities.infra
 from libs.storage.config import StorageClassConfig
@@ -123,13 +125,19 @@ def pytest_addoption(parser):
     # Upgrade addoption
     install_upgrade_group.addoption(
         "--upgrade",
-        choices=["cnv", "ocp", "eus"],
-        help="Run OCP or CNV or EUS upgrade tests",
+        choices=["cnv", "ocp", "eus", "ocp_cnv"],
+        help="Run OCP or CNV or EUS or combined OCP+CNV upgrade tests",
     )
     install_upgrade_group.addoption(
         "--upgrade_custom",
         choices=["cnv", "ocp"],
         help="Run OCP or CNV upgrade tests with custom lanes",
+    )
+    install_upgrade_group.addoption(
+        "--ocp-cnv-gate-cnv-on-post-ocp",
+        action="store_true",
+        default=False,
+        help="For ocp_cnv upgrade: require all post-OCP tests to pass before CNV upgrade starts",
     )
 
     # CNV upgrade options
@@ -375,6 +383,17 @@ def pytest_cmdline_main(config):
                 f" Provided images: {eus_ocp_images}"
             )
 
+    if upgrade_option == "ocp_cnv":
+        # Require OCP image
+        if not config.getoption("ocp_image"):
+            raise ValueError("Running with --upgrade ocp_cnv: Missing --ocp-image")
+        # Require CNV version
+        if not config.getoption("cnv_version"):
+            raise ValueError("Running with --upgrade ocp_cnv: Missing --cnv-version")
+        # Require CNV image unless using production source
+        if not config.getoption("cnv_image") and config.getoption("cnv_source") != "production":
+            raise ValueError("Running with --upgrade ocp_cnv: Missing --cnv-image")
+
     if config.getoption("data_collector_output_dir") and not config.getoption("data_collector"):
         raise ValueError(
             "Data will not be collected because `--data-collector-output-dir` is set without `--data-collector`"
@@ -550,6 +569,143 @@ def pytest_configure(config):
         py_config["default_storage_class"] = conformance_storage_class
 
 
+def clone_post_upgrade_tests_for_combined_mode(items: list[Item], config: Config) -> None:
+    """
+    When running ocp_cnv combined upgrade, clone all post-upgrade tests to run twice:
+    - Once after OCP upgrade (suffix: _after_ocp)
+    - Once after CNV upgrade (suffix: _after_cnv)
+
+    Updates dependencies to ensure correct ordering:
+    - _after_ocp tests depend on OCP_PHASE_NODE_ID
+    - _after_cnv tests depend on CNV_PHASE_NODE_ID
+    - CNV_PHASE_NODE_ID depends on all _after_ocp tests completing
+
+    Args:
+        items: List of collected pytest items
+        config: Pytest config object
+    """
+    if py_config.get("upgraded_product") != "ocp_cnv":
+        return
+
+    # In ocp_cnv mode, these values are guaranteed to be set
+    ocp_phase_node_id = tests.upgrade_params.OCP_PHASE_NODE_ID
+    cnv_phase_node_id = tests.upgrade_params.CNV_PHASE_NODE_ID
+    iuo_dependency_node_id = tests.upgrade_params.IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
+    assert ocp_phase_node_id is not None, "OCP_PHASE_NODE_ID must be set for ocp_cnv mode"
+    assert cnv_phase_node_id is not None, "CNV_PHASE_NODE_ID must be set for ocp_cnv mode"
+    assert iuo_dependency_node_id is not None, "IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID must be set for ocp_cnv mode"
+
+    # Find all post-upgrade tests by checking for:
+    # 1. Tests with @pytest.mark.post_upgrade marker, OR
+    # 2. Tests with dependency on IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID (excluding main upgrade tests)
+    post_upgrade_tests = []
+    for item in items:
+        # Skip the main upgrade tests themselves
+        if item.nodeid in [ocp_phase_node_id, cnv_phase_node_id]:
+            continue
+
+        # Check for post_upgrade marker
+        if "post_upgrade" in item.keywords:
+            post_upgrade_tests.append(item)
+            continue
+
+        # Check for dependency on IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
+        for marker in item.own_markers:
+            if marker.name == "dependency" and "depends" in marker.kwargs:
+                depends = marker.kwargs["depends"]
+                if isinstance(depends, list) and iuo_dependency_node_id in depends:
+                    if "before_upgrade" not in item.name:
+                        post_upgrade_tests.append(item)
+                        break
+
+    if not post_upgrade_tests:
+        return
+
+    # Clone each test twice
+    cloned_items = []
+    after_ocp_node_ids = []
+    for test in post_upgrade_tests:
+        # Phase 1: After OCP upgrade
+        ocp_test = copy.copy(test)
+        ocp_test.name = f"{test.name}_after_ocp"
+        ocp_test._nodeid = f"{test.nodeid}_after_ocp"
+        after_ocp_node_ids.append(ocp_test._nodeid)
+
+        # Update dependency markers to depend on OCP_PHASE_NODE_ID
+        update_dependency_marker(
+            item=ocp_test,
+            new_dependency=ocp_phase_node_id,
+            old_dependency=iuo_dependency_node_id,
+        )
+
+        # Phase 2: After CNV upgrade
+        cnv_test = copy.copy(test)
+        cnv_test.name = f"{test.name}_after_cnv"
+        cnv_test._nodeid = f"{test.nodeid}_after_cnv"
+
+        # Update dependency markers to depend on CNV_PHASE_NODE_ID (keep existing)
+        update_dependency_marker(
+            item=cnv_test,
+            new_dependency=cnv_phase_node_id,
+            old_dependency=iuo_dependency_node_id,
+        )
+
+        cloned_items.extend([ocp_test, cnv_test])
+
+    # Remove original post-upgrade tests and add cloned ones
+    items[:] = [item for item in items if item not in post_upgrade_tests] + cloned_items
+
+    # If gating is enabled, add all _after_ocp tests as dependencies for CNV phase
+    if config.getoption("ocp_cnv_gate_cnv_on_post_ocp"):
+        for item in items:
+            if item.nodeid == cnv_phase_node_id:
+                add_dependencies_to_item(item=item, dependencies=after_ocp_node_ids)
+                break
+
+
+def update_dependency_marker(item: Item, new_dependency: str, old_dependency: str) -> None:
+    """
+    Update pytest-dependency markers by replacing old dependency with new dependency.
+
+    Args:
+        item: Pytest item to update
+        new_dependency: New dependency node ID
+        old_dependency: Old dependency node ID to replace
+    """
+    for marker in item.own_markers:
+        if marker.name == "dependency":
+            if "depends" in marker.kwargs:
+                depends = marker.kwargs["depends"]
+                if isinstance(depends, list):
+                    marker.kwargs["depends"] = [new_dependency if dep == old_dependency else dep for dep in depends]
+                elif isinstance(depends, str) and depends == old_dependency:
+                    marker.kwargs["depends"] = new_dependency
+
+
+def add_dependencies_to_item(item: Item, dependencies: list[str]) -> None:
+    """
+    Add additional dependencies to an item's existing dependency marker.
+
+    Args:
+        item: Pytest item to update
+        dependencies: List of node IDs to add as dependencies
+    """
+    for marker in item.own_markers:
+        if marker.name == "dependency":
+            if "depends" in marker.kwargs:
+                existing = marker.kwargs["depends"]
+                if isinstance(existing, list):
+                    marker.kwargs["depends"] = existing + dependencies
+                elif isinstance(existing, str):
+                    marker.kwargs["depends"] = [existing] + dependencies
+            else:
+                marker.kwargs["depends"] = dependencies
+            return
+
+    # No existing dependency marker, add one
+    item.add_marker(pytest.mark.dependency(depends=dependencies))
+
+
 def pytest_collection_modifyitems(session, config, items):
     """
     Pytest builtin function.
@@ -592,6 +748,10 @@ def pytest_collection_modifyitems(session, config, items):
 
         # All tests are verified on X86_64 platforms, adding `x86_64` to all tests
         item.add_marker(marker=X86_64)
+
+    # Handle combined OCP+CNV upgrade mode - clone post-upgrade tests to run twice
+    clone_post_upgrade_tests_for_combined_mode(items=items, config=config)
+
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep

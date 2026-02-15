@@ -612,3 +612,19 @@ def upgraded_odf(
     updated_odf_subscription_source,
 ):
     wait_for_odf_update(target_version=odf_version, admin_client=admin_client)
+
+
+@pytest.fixture(scope="session")
+def post_ocp_tests_completed():
+    """
+    Fixture that ensures all post-OCP upgrade tests have completed.
+    Used in combined OCP+CNV upgrade mode to gate CNV upgrade phase.
+
+    This fixture doesn't perform any actions - its presence in the dependency graph
+    ensures pytest-dependency enforces the correct ordering where the CNV upgrade
+    phase waits for all post-OCP tests to complete.
+
+    Returns:
+        bool: Always returns True
+    """
+    return True
