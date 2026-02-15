@@ -3,6 +3,7 @@ import logging
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
+from tests.storage.utils import assert_disk_bus
 from tests.upgrade_params import (
     CDI_SCRATCH_PRESERVE_NODE_ID,
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
@@ -12,7 +13,7 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION, LS_COMMAND
+from utilities.constants import DEPENDENCY_SCOPE_SESSION, HOTPLUG_DISK_VIRTIO_BUS, LS_COMMAND
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
@@ -97,13 +98,19 @@ class TestUpgradeStorage:
     def test_vm_with_hotplug_before_upgrade(
         self,
         skip_if_config_default_storage_class_access_mode_rwo,
+        enabled_feature_gate_for_declarative_hotplug_volumes_upg,
         upgrade_namespace_scope_session,
         blank_disk_dv_with_default_sc,
         fedora_vm_for_hotplug_upg,
         hotplug_volume_upg,
     ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg)
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
+        assert_disk_bus(
+            vm=fedora_vm_for_hotplug_upg,
+            volume=blank_disk_dv_with_default_sc,
+            expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
+        )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
 
     """ Post-upgrade tests """
@@ -202,6 +209,12 @@ class TestUpgradeStorage:
         hotplug_volume_upg,
         fedora_vm_for_hotplug_upg_ssh_connectivity,
     ):
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
+        assert_disk_bus(
+            vm=fedora_vm_for_hotplug_upg,
+            volume=blank_disk_dv_with_default_sc,
+            expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
+        )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
         migrate_vm_and_verify(vm=fedora_vm_for_hotplug_upg, check_ssh_connectivity=True)

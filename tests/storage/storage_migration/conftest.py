@@ -322,7 +322,10 @@ def vm_for_storage_class_migration_with_hotplugged_volume(
     ) as res:
         status, out, err = res
         assert status, f"Failed to add volume to VM, out: {out}, err: {err}."
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_and_storage_migration)
+        wait_for_vm_volume_ready(
+            vm=fedora_vm_for_hotplug_and_storage_migration,
+            volume_name=blank_disk_dv_for_storage_migration.name,
+        )
         yield fedora_vm_for_hotplug_and_storage_migration
 
 
