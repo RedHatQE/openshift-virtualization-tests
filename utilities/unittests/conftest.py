@@ -13,7 +13,7 @@ from ocp_resources import resource
 
 import utilities
 
-os.environ["OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"] = "x86_64"
+os.environ["OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"] = "amd64"
 
 # Add utilities to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -76,7 +76,7 @@ def mock_node():
     """Mock Node resource"""
     node = MagicMock()
     node.name = "test-node"
-    node.labels = {"kubernetes.io/arch": "x86_64"}
+    node.labels = {"kubernetes.io/arch": "amd64"}
     node.status = {"conditions": []}
     return node
 

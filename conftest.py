@@ -26,14 +26,16 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.cluster
-import utilities.infra
+
+# TODO: Remove this import when utilities modules are refactored...
+import utilities.infra  # noqa
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AMD_64,
     QUARANTINED,
     SETUP_ERROR,
     TIMEOUT_5MIN,
-    X86_64,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -52,6 +54,7 @@ from utilities.pytest_utils import (
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
+    get_cpu_arch_choices,
     get_matrix_params,
     get_tests_cluster_markers,
     reorder_early_fixtures,
@@ -59,6 +62,8 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_cpu_arch_related_config,
+    validate_collected_tests_arch_params,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -79,6 +84,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "numa",
     "cclm",
     "mtv",
+    "multiarch",
 ]
 
 TEAM_MARKERS = {
@@ -107,6 +113,7 @@ INSPECT_BASE_COMMAND = "oc adm inspect"
 def pytest_addoption(parser):
     matrix_group = parser.getgroup(name="Matrix")
     os_group = parser.getgroup(name="OS")
+    arch_group = parser.getgroup(name="Architecture")
     install_upgrade_group = parser.getgroup(name="Upgrade")
     storage_group = parser.getgroup(name="Storage")
     cluster_sanity_group = parser.getgroup(name="ClusterSanity")
@@ -206,6 +213,16 @@ def pytest_addoption(parser):
         "--latest-centos",
         action="store_true",
         help="Run matrix tests with latest CentOS",
+    )
+
+    arch_group.addoption(
+        "--cpu-arch",
+        choices=get_cpu_arch_choices(),
+        help="""
+             CPU architecture to use when running tests on heterogeneous clusters.
+             Single arch (e.g. amd64) or comma-separated combination (e.g. amd64,arm64).
+             Defines what OS matrix params to use and what CPU architecture to use for VMs.
+             """,
     )
 
     # Storage addoption
@@ -590,8 +607,8 @@ def pytest_collection_modifyitems(session, config, items):
 
         mark_tests_by_team(item=item)
 
-        # All tests are verified on X86_64 platforms, adding `x86_64` to all tests
-        item.add_marker(marker=X86_64)
+        # All tests are verified on x86_64 platforms, adding `amd64` to all tests
+        item.add_marker(marker=AMD_64)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep
@@ -751,19 +768,26 @@ def pytest_sessionstart(session):
 
         # Update OS matrix list with the latest OS if running with os_group
         if session.config.getoption("latest_rhel") and rhel_os_matrix:
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
+            latest_rhel_os_dict = py_config.get("latest_rhel_os_dict", {})
+            py_config["rhel_os_matrix"] = [
+                {f"rhel.{latest_rhel_os_dict.get('os_version', 'latest')}": latest_rhel_os_dict}
+            ]
+            latest_instance_type_rhel_os_dict = py_config.get("latest_instance_type_rhel_os_dict", {})
             py_config["instance_type_rhel_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
+                {latest_instance_type_rhel_os_dict.get("preference", "rhel.latest"): latest_instance_type_rhel_os_dict}
             ]
 
         if session.config.getoption("latest_windows") and windows_os_matrix:
-            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
+            latest_windows_os_dict = py_config.get("latest_windows_os_dict", {})
+            py_config["windows_os_matrix"] = [{"windows.latest": latest_windows_os_dict}]
 
-        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
-            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
+        if session.config.getoption("latest_centos") and (py_config.get("centos_os_matrix")):
+            latest_centos_os_dict = py_config.get("latest_centos_os_dict", {})
+            py_config["centos_os_matrix"] = [{"centos.latest": latest_centos_os_dict}]
 
-        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
-            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
+        if session.config.getoption("latest_fedora") and (py_config.get("fedora_os_matrix")):
+            latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
+            py_config["fedora_os_matrix"] = [{"fedora.latest": latest_fedora_os_dict}]
 
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
@@ -784,6 +808,7 @@ def pytest_sessionstart(session):
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
 
+    update_cpu_arch_related_config(cpu_arch_option=session.config.getoption("--cpu-arch") or "")
     _update_os_related_config()
 
     matrix_addoptions = [matrix for matrix in session.config.invocation_params.args if "-matrix=" in matrix]
@@ -826,6 +851,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_finish(session):
+    validate_collected_tests_arch_params(session=session)
     if session.config.getoption("--collect-tests-markers"):
         get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))
         pytest.exit(reason="Run with --collect-tests-markers. no tests are executed", returncode=0)
