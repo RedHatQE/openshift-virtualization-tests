@@ -20,6 +20,7 @@ from utilities.pytest_utils import (
     get_current_running_data,
     get_matrix_params,
     get_tests_cluster_markers,
+    mark_nmstate_dependent_tests,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -439,6 +440,56 @@ class TestReorderEarlyFixtures:
 
         # autouse_fixtures should be at position 0 (first position in use_early_fixture_names)
         assert mock_metafunc.fixturenames == ["autouse_fixtures", "fixture1", "fixture2", "fixture3"]
+
+
+class TestMarkNmstateDependentTests:
+    """Test cases for mark_nmstate_dependent_tests function."""
+
+    def test_adds_nmstate_marker_when_fixture_present(self):
+        """Items that request nmstate_dependent_placeholder get the nmstate marker."""
+        item_with_nmstate = MagicMock()
+        item_with_nmstate.fixturenames = ["some_fixture", "nmstate_dependent_placeholder"]
+        item_without = MagicMock()
+        item_without.fixturenames = ["other_fixture"]
+        items = [item_with_nmstate, item_without]
+
+        result = mark_nmstate_dependent_tests(items=items)
+
+        assert result is items
+        item_with_nmstate.add_marker.assert_called_once_with(marker=pytest.mark.nmstate)
+        item_without.add_marker.assert_not_called()
+
+    def test_no_marker_when_placeholder_absent(self):
+        """Items that do not request the placeholder are unchanged."""
+        item = MagicMock()
+        item.fixturenames = ["other_fixture"]
+        items = [item]
+
+        result = mark_nmstate_dependent_tests(items=items)
+
+        assert result is items
+        item.add_marker.assert_not_called()
+
+    def test_empty_fixturenames_unchanged(self):
+        """Items with empty fixturenames are not marked."""
+        item = MagicMock()
+        item.fixturenames = []
+        items = [item]
+
+        result = mark_nmstate_dependent_tests(items=items)
+
+        assert result is items
+        item.add_marker.assert_not_called()
+
+    def test_item_missing_fixturenames_unchanged(self):
+        """Items without a fixturenames attribute use getattr default and are not marked."""
+        item = MagicMock(spec=["add_marker"])
+        items = [item]
+
+        result = mark_nmstate_dependent_tests(items=items)
+
+        assert result is items
+        item.add_marker.assert_not_called()
 
 
 class TestStopIfRunInProgress:
