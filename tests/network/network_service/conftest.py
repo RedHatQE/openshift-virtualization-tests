@@ -73,6 +73,7 @@ def virtctl_expose_service(
         ensure_exists=True,
     )
     yield svc
+    svc.clean_up()
 
 
 @pytest.fixture()
