@@ -52,7 +52,6 @@ def cluster_sanity_scope_session():
 @pytest.fixture(scope="session")
 def cluster_sanity_scope_module():
     """Override: skip module-scope cluster sanity check."""
-    pass
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -15,9 +15,9 @@ import logging
 import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 
 from libs.net import netattachdef
-from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import (
     VirtualMachineForTests,

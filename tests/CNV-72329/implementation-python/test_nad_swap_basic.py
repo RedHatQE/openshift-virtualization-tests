@@ -13,9 +13,9 @@ import logging
 
 import pytest
 from ocp_resources.resource import ResourceEditor
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 
 from libs.net import netattachdef
-from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
