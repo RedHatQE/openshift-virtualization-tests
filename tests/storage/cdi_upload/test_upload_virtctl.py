@@ -5,6 +5,7 @@ Upload using virtctl
 """
 
 import logging
+import subprocess
 
 import pytest
 from kubernetes.dynamic.exceptions import NotFoundError
@@ -51,6 +52,30 @@ def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_name
 def skip_no_reencrypt_route(upload_proxy_route):
     if not upload_proxy_route.termination == "reencrypt":
         pytest.skip("Skip testing. The upload proxy route is not re-encrypt.")
+
+
+@pytest.fixture(scope="function")
+def cdi_uploadproxy_url(admin_client, hco_namespace):
+    """
+    Get CDI upload proxy URL.
+
+    On IPv6 single-stack clusters, set up port-forward to the CDI upload proxy service
+    and return localhost URL instead of the route (which resolves to IPv4).
+    """
+    if py_config.get("ipv6_single_stack_cluster"):
+        port = 8443
+        port_forward_process = subprocess.Popen(
+            ["oc", "port-forward", f"svc/{CDI_UPLOADPROXY}", f"{port}:443", "-n", hco_namespace.name],
+        )
+        LOGGER.info(f"Started port-forward (PID={port_forward_process.pid}) to {CDI_UPLOADPROXY}")
+
+        yield f"https://localhost:{port}"
+
+        LOGGER.info(f"Terminating port-forward process (PID={port_forward_process.pid})")
+        port_forward_process.terminate()
+        port_forward_process.wait(timeout=10)
+    else:
+        yield None
 
 
 @pytest.mark.sno
@@ -241,7 +266,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-3728")
 @pytest.mark.s390x
-def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_scope_module):
+def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_scope_module, cdi_uploadproxy_url):
     """
     Check that virtctl can create a new PVC and upload an image to it
     """
@@ -254,6 +279,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         size=DEFAULT_DV_SIZE,
         image_path=LOCAL_PATH,
         storage_class=storage_class_name_scope_module,
+        uploadproxy_url=cdi_uploadproxy_url,
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
