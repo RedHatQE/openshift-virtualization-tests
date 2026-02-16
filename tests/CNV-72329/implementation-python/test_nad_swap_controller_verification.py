@@ -17,7 +17,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from tests.network.nad_swap.utils import get_vmi_network_nad_name
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import (
     VirtualMachineForTests,
@@ -55,19 +55,19 @@ class TestNADSwapControllerVerification:
         """
         LOGGER.info("Creating NADs for RestartRequired logic test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-restart-orig",
-            config=netattachdef.NetConfig(
-                "network-restart-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-restart-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-restart-target",
-                config=netattachdef.NetConfig(
-                    "network-restart-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-restart-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -139,19 +139,19 @@ class TestNADSwapControllerVerification:
         """
         LOGGER.info("Creating NADs for network sync test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-sync-orig",
-            config=netattachdef.NetConfig(
-                "network-sync-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-sync-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-sync-target",
-                config=netattachdef.NetConfig(
-                    "network-sync-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-sync-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -167,9 +167,6 @@ class TestNADSwapControllerVerification:
                     interfaces=["sync-net"],
                 ) as vm:
                     running_vm(vm=vm)
-
-                    # Capture original VMI spec
-                    vm.vmi.instance.spec.networks
 
                     LOGGER.info("Changing NAD in VM spec")
                     ResourceEditor(
@@ -230,19 +227,19 @@ class TestNADSwapControllerVerification:
         """
         LOGGER.info("Creating NADs for WorkloadUpdateController test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-workload-orig",
-            config=netattachdef.NetConfig(
-                "network-workload-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-workload-target",
-                config=netattachdef.NetConfig(
-                    "network-workload-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-workload-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:

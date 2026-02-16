@@ -17,8 +17,9 @@ import time
 import pytest
 from ocp_resources.resource import ResourceEditor
 from tests.network.nad_swap.utils import get_vmi_network_nad_name
+from timeout_sampler import TimeoutSampler
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -54,19 +55,19 @@ class TestNADSwapMigration:
         """
         LOGGER.info("Creating NADs for rollback test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-original",
-            config=netattachdef.NetConfig(
-                "network-original", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-temporary",
-                config=netattachdef.NetConfig(
-                    "network-temporary", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-temporary", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_temp:
@@ -104,8 +105,14 @@ class TestNADSwapMigration:
                         }
                     ).update()
 
-                    # Wait briefly, then rollback before migration completes
-                    time.sleep(2)
+                    # Wait for migration to start, then rollback before it completes
+                    for sample in TimeoutSampler(
+                        wait_timeout=10,
+                        sleep=1,
+                        func=lambda: vm.vmi.instance.status.migrationState,
+                    ):
+                        if sample is not None:
+                            break
 
                     LOGGER.info("Rolling back to original NAD")
                     ResourceEditor(
@@ -150,19 +157,19 @@ class TestNADSwapMigration:
         """
         LOGGER.info("Creating NADs for concurrent updates test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-orig-concurrent",
-            config=netattachdef.NetConfig(
-                "network-orig-concurrent", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-orig-concurrent", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-target-concurrent",
-                config=netattachdef.NetConfig(
-                    "network-target-concurrent", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-target-concurrent", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -228,19 +235,19 @@ class TestNADSwapMigration:
         """
         LOGGER.info("Creating NADs for running workload test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-workload-orig",
-            config=netattachdef.NetConfig(
-                "network-workload-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-workload-target",
-                config=netattachdef.NetConfig(
-                    "network-workload-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-workload-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -306,19 +313,19 @@ class TestNADSwapMigration:
         """
         LOGGER.info("Creating NADs for PV test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-pv-orig",
-            config=netattachdef.NetConfig(
-                "network-pv-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-pv-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-pv-target",
-                config=netattachdef.NetConfig(
-                    "network-pv-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-pv-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -382,19 +389,19 @@ class TestNADSwapMigration:
         """
         LOGGER.info("Creating NADs for performance test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-perf-orig",
-            config=netattachdef.NetConfig(
-                "network-perf-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-perf-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-perf-target",
-                config=netattachdef.NetConfig(
-                    "network-perf-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-perf-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:

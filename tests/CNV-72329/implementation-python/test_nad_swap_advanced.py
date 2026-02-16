@@ -16,7 +16,7 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from tests.network.nad_swap.utils import get_vmi_network_nad_name
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from tests.network.l2_bridge.libl2bridge import hot_plug_interface
 from utilities.virt import (
     VirtualMachineForTests,
@@ -52,19 +52,19 @@ class TestNADSwapAdvanced:
         """
         LOGGER.info("Creating NADs for hotplug test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-hotplug-orig",
-            config=netattachdef.NetConfig(
-                "network-hotplug-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-hotplug-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_hotplug_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-hotplug-target",
-                config=netattachdef.NetConfig(
-                    "network-hotplug-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-hotplug-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_hotplug_target:
@@ -131,19 +131,19 @@ class TestNADSwapAdvanced:
         """
         LOGGER.info("Creating NADs for DNC compatibility test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-dnc-orig",
-            config=netattachdef.NetConfig(
-                "network-dnc-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-dnc-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-dnc-target",
-                config=netattachdef.NetConfig(
-                    "network-dnc-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-dnc-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:
@@ -206,19 +206,19 @@ class TestNADSwapAdvanced:
         """
         LOGGER.info("Creating NADs for network policy test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-policy-orig",
-            config=netattachdef.NetConfig(
-                "network-policy-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-policy-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-policy-target",
-                config=netattachdef.NetConfig(
-                    "network-policy-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-policy-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:

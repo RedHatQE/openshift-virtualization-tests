@@ -15,7 +15,7 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from tests.network.nad_swap.utils import get_vmi_network_nad_name
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -49,27 +49,27 @@ class TestNADSwapBasic:
         """
         LOGGER.info("Creating NADs for multiple changes test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-first",
-            config=netattachdef.NetConfig(
-                "network-first", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-first", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_first:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-second",
-                config=netattachdef.NetConfig(
-                    "network-second", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-second", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_second:
-                with netattachdef.NetworkAttachmentDefinition(
+                with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-third",
-                    config=netattachdef.NetConfig(
-                        "network-third", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=300)]
+                    config=NetConfig(
+                        name="network-third", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=300)]
                     ),
                     client=admin_client,
                 ) as nad_third:
@@ -155,27 +155,27 @@ class TestNADSwapBasic:
         """
         LOGGER.info("Creating multiple NADs for multi-interface test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-iface1-original",
-            config=netattachdef.NetConfig(
-                "network-iface1-original", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-iface1-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_iface1_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-iface1-target",
-                config=netattachdef.NetConfig(
-                    "network-iface1-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
+                config=NetConfig(
+                    name="network-iface1-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]
                 ),
                 client=admin_client,
             ) as nad_iface1_target:
-                with netattachdef.NetworkAttachmentDefinition(
+                with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-iface2",
-                    config=netattachdef.NetConfig(
-                        "network-iface2", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                    config=NetConfig(
+                        name="network-iface2", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                     ),
                     client=admin_client,
                 ) as nad_iface2:
@@ -246,36 +246,36 @@ class TestNADSwapBasic:
         LOGGER.info("Creating NADs for simultaneous change test")
 
         # Original NADs
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-a-orig",
-            config=netattachdef.NetConfig(
-                "network-a-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-a-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_a_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b-orig",
-                config=netattachdef.NetConfig(
-                    "network-b-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-b-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_b_orig:
                 # Target NADs
-                with netattachdef.NetworkAttachmentDefinition(
+                with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-a-target",
-                    config=netattachdef.NetConfig(
-                        "network-a-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=101)]
+                    config=NetConfig(
+                        name="network-a-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]
                     ),
                     client=admin_client,
                 ) as nad_a_target:
-                    with netattachdef.NetworkAttachmentDefinition(
+                    with NetworkAttachmentDefinition(
                         namespace=namespace.name,
                         name="nad-b-target",
-                        config=netattachdef.NetConfig(
-                            "network-b-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=201)]
+                        config=NetConfig(
+                            name="network-b-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=201)]
                         ),
                         client=admin_client,
                     ) as nad_b_target:
@@ -345,17 +345,17 @@ class TestNADSwapBasic:
         """
         LOGGER.info("Creating NADs with different bridges")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-br1",
-            config=netattachdef.NetConfig("network-br1", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
+            config=NetConfig(name="network-br1", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_br1:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-br2",
-                config=netattachdef.NetConfig(
-                    "network-br2", [netattachdef.CNIPluginBridgeConfig(bridge="br2", vlan=100)]
+                config=NetConfig(
+                    name="network-br2", plugins=[CNIPluginBridgeConfig(bridge="br2", vlan=100)]
                 ),
                 client=admin_client,
             ) as nad_br2:
@@ -418,17 +418,17 @@ class TestNADSwapBasic:
         """
         LOGGER.info("Creating NADs for reverse swap test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-a",
-            config=netattachdef.NetConfig("network-a", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
+            config=NetConfig(name="network-a", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_a:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b",
-                config=netattachdef.NetConfig(
-                    "network-b", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-b", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_b:
@@ -512,19 +512,19 @@ class TestNADSwapBasic:
         """
         LOGGER.info("Creating dual-stack NADs")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-dualstack-orig",
-            config=netattachdef.NetConfig(
-                "network-dualstack-orig", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-dualstack-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-dualstack-target",
-                config=netattachdef.NetConfig(
-                    "network-dualstack-target", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-dualstack-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_target:

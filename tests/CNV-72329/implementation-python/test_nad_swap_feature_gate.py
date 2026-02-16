@@ -14,7 +14,7 @@ import logging
 import pytest
 from ocp_resources.resource import ResourceEditor
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from tests.utils import assert_restart_required_condition
 from utilities.virt import (
     VirtualMachineForTests,
@@ -50,20 +50,20 @@ class TestNADSwapFeatureGate:
         LOGGER.info("Creating original and target NADs with different VLANs")
 
         # Create original NAD (VLAN 100)
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="original-nad",
-            config=netattachdef.NetConfig(
-                "original-network", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="original-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as original_nad:
             # Create target NAD (VLAN 200)
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="target-nad",
-                config=netattachdef.NetConfig(
-                    "target-network", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="target-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as target_nad:
@@ -127,19 +127,19 @@ class TestNADSwapFeatureGate:
         LOGGER.info("Creating NADs for feature gate disabled test")
 
         # Create NADs with different configurations
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-vlan100",
-            config=netattachdef.NetConfig(
-                "network-vlan100", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-vlan100", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_vlan100:
-            with netattachdef.NetworkAttachmentDefinition(
+            with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-vlan200",
-                config=netattachdef.NetConfig(
-                    "network-vlan200", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=200)]
+                config=NetConfig(
+                    name="network-vlan200", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
                 ),
                 client=admin_client,
             ) as nad_vlan200:
@@ -155,7 +155,7 @@ class TestNADSwapFeatureGate:
                     interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
-                    original_vmi_name = vm.vmi.name
+                    original_vmi_uid = vm.vmi.instance.metadata.uid
 
                     LOGGER.info("Changing NAD reference to VLAN 200")
                     ResourceEditor(
@@ -181,6 +181,7 @@ class TestNADSwapFeatureGate:
                     LOGGER.info("Verifying VM gets RestartRequired condition")
                     # With feature gate disabled, RestartRequired should be set
                     # VMI should remain the same (no migration)
-                    assert vm.vmi.name == original_vmi_name, "VMI should not have changed (no migration)"
+                    current_vmi_uid = vm.vmi.instance.metadata.uid
+                    assert current_vmi_uid == original_vmi_uid, "VMI should not have changed (no migration)"
 
                     LOGGER.info("Test passed: NAD change blocked without migration")

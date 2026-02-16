@@ -14,7 +14,7 @@ import logging
 import pytest
 from ocp_resources.resource import ResourceEditor
 
-from libs.net import netattachdef
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -48,11 +48,11 @@ class TestNADSwapNegative:
         """
         LOGGER.info("Creating original NAD for negative test")
 
-        with netattachdef.NetworkAttachmentDefinition(
+        with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-exists",
-            config=netattachdef.NetConfig(
-                "network-exists", [netattachdef.CNIPluginBridgeConfig(bridge="br1", vlan=100)]
+            config=NetConfig(
+                name="network-exists", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
             ),
             client=admin_client,
         ) as nad_orig:
@@ -73,37 +73,27 @@ class TestNADSwapNegative:
                 LOGGER.info("Changing NAD to non-existent network")
                 nonexistent_nad_name = "nad-does-not-exist"
 
-                try:
-                    ResourceEditor(
-                        patches={
-                            vm: {
-                                "spec": {
-                                    "template": {
-                                        "spec": {
-                                            "networks": [
-                                                {"name": "default", "pod": {}},
-                                                {
-                                                    "name": "test-net",
-                                                    "multus": {"networkName": nonexistent_nad_name},
-                                                },
-                                            ]
-                                        }
+                ResourceEditor(
+                    patches={
+                        vm: {
+                            "spec": {
+                                "template": {
+                                    "spec": {
+                                        "networks": [
+                                            {"name": "default", "pod": {}},
+                                            {
+                                                "name": "test-net",
+                                                "multus": {"networkName": nonexistent_nad_name},
+                                            },
+                                        ]
                                     }
                                 }
                             }
                         }
-                    ).update()
+                    }
+                ).update()
 
-                    LOGGER.info("Verifying migration fails or VM condition set")
-                    # Migration should fail or RestartRequired condition should be set
-                    # VM should remain on source
-                    current_vmi_uid = vm.vmi.instance.metadata.uid
-                    assert current_vmi_uid == original_vmi_uid, "VM should remain on source after failed NAD change"
-
-                    LOGGER.info("Test passed: Non-existent NAD handled correctly")
-
-                except Exception as e:
-                    LOGGER.info(f"Expected error occurred: {str(e)}")
-                    # Verify VM is still functional
-                    assert vm.vmi.instance.metadata.uid == original_vmi_uid, "VM should remain on source"
-                    LOGGER.info("Test passed: Error handled gracefully")
+                LOGGER.info("Verifying VM remains unchanged with non-existent NAD reference")
+                current_vmi_uid = vm.vmi.instance.metadata.uid
+                assert current_vmi_uid == original_vmi_uid, "VM should remain on source after invalid NAD change"
+                LOGGER.info("Test passed: Non-existent NAD handled correctly")
