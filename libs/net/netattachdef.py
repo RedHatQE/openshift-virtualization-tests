@@ -84,6 +84,16 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
 
 @dataclass
+class OvnK8sConfigWithSubnets(CNIPluginOvnK8sConfig):
+    """
+    CNI OVN-Kubernetes Plugin with subnet configuration.
+    Extends CNIPluginOvnK8sConfig to include subnet specification for DHCP.
+    """
+
+    subnets: str | None = None
+
+
+@dataclass
 class CNIPluginMacvlanConfig(CNIPluginConfig):
     """
     CNI Macvlan Plugin
