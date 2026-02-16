@@ -9,6 +9,7 @@ from tests.network.network_service.libservice import (
 )
 from utilities.constants import SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
+from utilities.jira import is_jira_open
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
@@ -73,6 +74,8 @@ def virtctl_expose_service(
         ensure_exists=True,
     )
     yield svc
+    if is_jira_open(jira_id="CNV-79964"):  # Service not deleted with VM due to bug
+        svc.clean_up()
 
 
 @pytest.fixture()
