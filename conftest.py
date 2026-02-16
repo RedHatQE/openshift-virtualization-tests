@@ -4,6 +4,7 @@ Pytest conftest file for CNV tests
 """
 
 import datetime
+import ipaddress
 import logging
 import os
 import os.path
@@ -21,6 +22,7 @@ from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
+from ocp_resources.network_config_openshift_io import Network
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
@@ -30,6 +32,7 @@ import utilities.infra
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    CLUSTER,
     QUARANTINED,
     SETUP_ERROR,
     TIMEOUT_5MIN,
@@ -809,6 +812,20 @@ def pytest_sessionstart(session):
     # Send --tc=server_url:<url> to override servers URL
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
         admin_client = utilities.cluster.cache_admin_client()
+
+        # Detect IPv6 single-stack cluster
+        service_network = Network(client=admin_client, name=CLUSTER).instance.status.serviceNetwork
+        if service_network:
+            ipv4_supported = any(ipaddress.ip_network(ip).version == 4 for ip in service_network)
+            ipv6_supported = any(ipaddress.ip_network(ip).version == 6 for ip in service_network)
+            py_config["ipv6_single_stack_cluster"] = ipv6_supported and not ipv4_supported
+            LOGGER.info(
+                f"Cluster network detection: IPv4={ipv4_supported}, IPv6={ipv6_supported}, "
+                f"IPv6-only={py_config['ipv6_single_stack_cluster']}"
+            )
+        else:
+            py_config["ipv6_single_stack_cluster"] = False
+
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
