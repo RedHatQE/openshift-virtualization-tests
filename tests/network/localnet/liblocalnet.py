@@ -22,6 +22,7 @@ LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_BR_EX_INTERFACE = "localnet-iface-vlan"
 LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
 LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
+LOCALNET_IPAM_INTERFACE = "localnet-ipam-iface"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
