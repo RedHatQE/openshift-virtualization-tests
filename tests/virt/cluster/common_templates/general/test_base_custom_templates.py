@@ -215,33 +215,20 @@ class TestBaseCustomTemplates:
                 pytest.fail(f"VM validation failed on {vm_from_template.name}")
 
 
-class TestCustomTemplatesChangesWebhookValidation:
-    """
-    Test class contains test for covering change webhook validation.
-    Additional class added for lowering code complexity
-    """
-
-    @pytest.mark.parametrize(
-        "custom_template_from_base_template",
-        [
-            pytest.param(
-                {
-                    "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
-                    "new_template_name": "custom-fedora-template-webhook-validation",
-                },
-            )
-        ],
-        indirect=True,
-    )
-    @pytest.mark.polarion("CNV-13744")
-    def test_no_validation_annotation_missing_parent_template(self, vm_with_test_annotation) -> None:
-        """
-        Tests uses VirtualMachineForTests and its label instance attribute due to a need to:
-        - create a VM without metadata.annotations.validations entries
-        and
-        - adding labels to metadata.labels not to spec.metadata.labels
-        Detailed steps are described in Polarion CNV-13744
-        """
-        assert vm_with_test_annotation.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
-            "Annotation update should succeed even when parent template is missing"
+@pytest.mark.parametrize(
+    "custom_template_from_base_template",
+    [
+        pytest.param(
+            {
+                "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
+                "new_template_name": "custom-fedora-template-webhook-validation",
+            },
         )
+    ],
+    indirect=True,
+)
+@pytest.mark.polarion("CNV-13744")
+def test_no_validation_annotation_missing_parent_template(vm_with_test_annotation) -> None:
+    assert vm_with_test_annotation.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
+        "Annotation update should succeed even when parent template is missing"
+    )
