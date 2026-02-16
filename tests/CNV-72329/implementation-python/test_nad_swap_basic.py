@@ -52,25 +52,19 @@ class TestNADSwapBasic:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-first",
-            config=NetConfig(
-                name="network-first", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-first", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_first:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-second",
-                config=NetConfig(
-                    name="network-second", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-second", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_second:
                 with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-third",
-                    config=NetConfig(
-                        name="network-third", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=300)]
-                    ),
+                    config=NetConfig(name="network-third", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=300)]),
                     client=admin_client,
                 ) as nad_third:
                     LOGGER.info("Creating VM with first NAD")
@@ -158,25 +152,19 @@ class TestNADSwapBasic:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-iface1-original",
-            config=NetConfig(
-                name="network-iface1-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-iface1-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_iface1_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-iface1-target",
-                config=NetConfig(
-                    name="network-iface1-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]
-                ),
+                config=NetConfig(name="network-iface1-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]),
                 client=admin_client,
             ) as nad_iface1_target:
                 with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-iface2",
-                    config=NetConfig(
-                        name="network-iface2", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                    ),
+                    config=NetConfig(name="network-iface2", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                     client=admin_client,
                 ) as nad_iface2:
                     LOGGER.info("Creating VM with two secondary interfaces")
@@ -249,26 +237,20 @@ class TestNADSwapBasic:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-a-orig",
-            config=NetConfig(
-                name="network-a-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-a-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_a_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b-orig",
-                config=NetConfig(
-                    name="network-b-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-b-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_b_orig:
                 # Target NADs
                 with NetworkAttachmentDefinition(
                     namespace=namespace.name,
                     name="nad-a-target",
-                    config=NetConfig(
-                        name="network-a-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]
-                    ),
+                    config=NetConfig(name="network-a-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=101)]),
                     client=admin_client,
                 ) as nad_a_target:
                     with NetworkAttachmentDefinition(
@@ -354,9 +336,7 @@ class TestNADSwapBasic:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-br2",
-                config=NetConfig(
-                    name="network-br2", plugins=[CNIPluginBridgeConfig(bridge="br2", vlan=100)]
-                ),
+                config=NetConfig(name="network-br2", plugins=[CNIPluginBridgeConfig(bridge="br2", vlan=100)]),
                 client=admin_client,
             ) as nad_br2:
                 LOGGER.info("Creating VM with br1 bridge")
@@ -427,9 +407,7 @@ class TestNADSwapBasic:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-b",
-                config=NetConfig(
-                    name="network-b", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-b", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_b:
                 LOGGER.info("Creating VM with NAD A")
@@ -515,9 +493,7 @@ class TestNADSwapBasic:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-dualstack-orig",
-            config=NetConfig(
-                name="network-dualstack-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-dualstack-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(

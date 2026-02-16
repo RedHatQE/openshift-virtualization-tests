@@ -58,17 +58,13 @@ class TestNADSwapMigration:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-original",
-            config=NetConfig(
-                name="network-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-original", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-temporary",
-                config=NetConfig(
-                    name="network-temporary", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-temporary", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_temp:
                 LOGGER.info("Creating VM with original NAD")
@@ -160,9 +156,7 @@ class TestNADSwapMigration:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-orig-concurrent",
-            config=NetConfig(
-                name="network-orig-concurrent", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-orig-concurrent", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
@@ -238,9 +232,7 @@ class TestNADSwapMigration:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-workload-orig",
-            config=NetConfig(
-                name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
@@ -316,17 +308,13 @@ class TestNADSwapMigration:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-pv-orig",
-            config=NetConfig(
-                name="network-pv-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-pv-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-pv-target",
-                config=NetConfig(
-                    name="network-pv-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-pv-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_target:
                 LOGGER.info("Creating VM with persistent storage")
@@ -392,17 +380,13 @@ class TestNADSwapMigration:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-perf-orig",
-            config=NetConfig(
-                name="network-perf-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-perf-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-perf-target",
-                config=NetConfig(
-                    name="network-perf-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-perf-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_target:
                 LOGGER.info("Creating VM for performance test")

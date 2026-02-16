@@ -53,18 +53,14 @@ class TestNADSwapFeatureGate:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="original-nad",
-            config=NetConfig(
-                name="original-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="original-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as original_nad:
             # Create target NAD (VLAN 200)
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="target-nad",
-                config=NetConfig(
-                    name="target-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="target-network", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as target_nad:
                 LOGGER.info("Creating VM with original NAD")
@@ -130,17 +126,13 @@ class TestNADSwapFeatureGate:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-vlan100",
-            config=NetConfig(
-                name="network-vlan100", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-vlan100", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_vlan100:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-vlan200",
-                config=NetConfig(
-                    name="network-vlan200", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-vlan200", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_vlan200:
                 LOGGER.info("Creating VM with VLAN 100 NAD")

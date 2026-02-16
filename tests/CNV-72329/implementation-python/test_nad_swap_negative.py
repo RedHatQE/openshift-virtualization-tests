@@ -51,9 +51,7 @@ class TestNADSwapNegative:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-exists",
-            config=NetConfig(
-                name="network-exists", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-exists", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             LOGGER.info("Creating VM with valid NAD")

@@ -55,9 +55,7 @@ class TestNADSwapAdvanced:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-hotplug-orig",
-            config=NetConfig(
-                name="network-hotplug-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-hotplug-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_hotplug_orig:
             with NetworkAttachmentDefinition(
@@ -134,17 +132,13 @@ class TestNADSwapAdvanced:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-dnc-orig",
-            config=NetConfig(
-                name="network-dnc-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-dnc-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-dnc-target",
-                config=NetConfig(
-                    name="network-dnc-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-dnc-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_target:
                 LOGGER.info("Creating VM with DNC-managed network")
@@ -209,17 +203,13 @@ class TestNADSwapAdvanced:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-policy-orig",
-            config=NetConfig(
-                name="network-policy-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-policy-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-policy-target",
-                config=NetConfig(
-                    name="network-policy-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-policy-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_target:
                 LOGGER.info("Creating VM with network policy")

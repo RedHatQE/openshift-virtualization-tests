@@ -58,9 +58,7 @@ class TestNADSwapControllerVerification:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-restart-orig",
-            config=NetConfig(
-                name="network-restart-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-restart-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
@@ -142,17 +140,13 @@ class TestNADSwapControllerVerification:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-sync-orig",
-            config=NetConfig(
-                name="network-sync-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-sync-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
                 namespace=namespace.name,
                 name="nad-sync-target",
-                config=NetConfig(
-                    name="network-sync-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]
-                ),
+                config=NetConfig(name="network-sync-target", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=200)]),
                 client=admin_client,
             ) as nad_target:
                 LOGGER.info("Creating VM")
@@ -230,9 +224,7 @@ class TestNADSwapControllerVerification:
         with NetworkAttachmentDefinition(
             namespace=namespace.name,
             name="nad-workload-orig",
-            config=NetConfig(
-                name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]
-            ),
+            config=NetConfig(name="network-workload-orig", plugins=[CNIPluginBridgeConfig(bridge="br1", vlan=100)]),
             client=admin_client,
         ) as nad_orig:
             with NetworkAttachmentDefinition(
