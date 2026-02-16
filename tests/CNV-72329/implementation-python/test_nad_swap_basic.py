@@ -15,12 +15,11 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
-from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Interface, Multus, Network
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -82,17 +81,13 @@ class TestNADSwapBasic:
                         namespace=namespace.name,
                         body=fedora_vm_body(name=vm_name),
                         client=unprivileged_client,
-                        networks=[
-                            Network(name="test-net", multus=Multus(networkName=nad_first.name)),
-                        ],
-                        interfaces=[
-                            Interface(name="test-net", bridge={}),
-                        ],
+                        networks={"test-net": nad_first.name},
+                        interfaces=["test-net"],
                     ) as vm:
                         running_vm(vm=vm)
 
                         LOGGER.info("Changing NAD reference to second NAD")
-                        with ResourceEditor(
+                        ResourceEditor(
                             patches={
                                 vm: {
                                     "spec": {
@@ -110,11 +105,10 @@ class TestNADSwapBasic:
                                     }
                                 }
                             }
-                        ):
-                            pass
+                        ).update()
 
                         LOGGER.info("Changing NAD reference to third NAD (final)")
-                        with ResourceEditor(
+                        ResourceEditor(
                             patches={
                                 vm: {
                                     "spec": {
@@ -132,15 +126,14 @@ class TestNADSwapBasic:
                                     }
                                 }
                             }
-                        ):
-                            pass
+                        ).update()
 
-                        LOGGER.info("Waiting for migration to complete")
-                        migrate_vm_and_verify(vm=vm)
+                        LOGGER.info("Restarting VM to apply NAD change")
+                        restart_vm_wait_for_running_vm(vm=vm)
 
                         LOGGER.info("Verifying third NAD (last change) is active")
-                        iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
-                        assert nad_third.name in str(iface_status), "Third NAD should be active after migration"
+                        actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="test-net")
+                        assert actual_nad == nad_third.name, "Third NAD should be active after restart"
 
                         LOGGER.info("Test passed: Last NAD reference used")
 
@@ -194,19 +187,13 @@ class TestNADSwapBasic:
                         namespace=namespace.name,
                         body=fedora_vm_body(name=vm_name),
                         client=unprivileged_client,
-                        networks=[
-                            Network(name="iface1", multus=Multus(networkName=nad_iface1_orig.name)),
-                            Network(name="iface2", multus=Multus(networkName=nad_iface2.name)),
-                        ],
-                        interfaces=[
-                            Interface(name="iface1", bridge={}),
-                            Interface(name="iface2", bridge={}),
-                        ],
+                        networks={"iface1": nad_iface1_orig.name, "iface2": nad_iface2.name},
+                        interfaces=["iface1", "iface2"],
                     ) as vm:
                         running_vm(vm=vm)
 
                         LOGGER.info("Changing only iface1 NAD reference")
-                        with ResourceEditor(
+                        ResourceEditor(
                             patches={
                                 vm: {
                                     "spec": {
@@ -228,18 +215,18 @@ class TestNADSwapBasic:
                                     }
                                 }
                             }
-                        ):
-                            pass
+                        ).update()
 
                         LOGGER.info("Migrating VM")
-                        migrate_vm_and_verify(vm=vm)
+                        restart_vm_wait_for_running_vm(vm=vm)
 
                         LOGGER.info("Verifying iface1 changed, iface2 unchanged")
-                        iface1_status = lookup_iface_status(vm=vm, iface_name="iface1")
-                        iface2_status = lookup_iface_status(vm=vm, iface_name="iface2")
-
-                        assert nad_iface1_target.name in str(iface1_status), "iface1 should use new NAD"
-                        assert nad_iface2.name in str(iface2_status), "iface2 should remain unchanged"
+                        assert get_vmi_network_nad_name(vm=vm, iface_name="iface1") == nad_iface1_target.name, (
+                            "iface1 should use new NAD"
+                        )
+                        assert get_vmi_network_nad_name(vm=vm, iface_name="iface2") == nad_iface2.name, (
+                            "iface2 should remain unchanged"
+                        )
 
                         LOGGER.info("Test passed: Only specified interface NAD changed")
 
@@ -300,19 +287,13 @@ class TestNADSwapBasic:
                             namespace=namespace.name,
                             body=fedora_vm_body(name=vm_name),
                             client=unprivileged_client,
-                            networks=[
-                                Network(name="net-a", multus=Multus(networkName=nad_a_orig.name)),
-                                Network(name="net-b", multus=Multus(networkName=nad_b_orig.name)),
-                            ],
-                            interfaces=[
-                                Interface(name="net-a", bridge={}),
-                                Interface(name="net-b", bridge={}),
-                            ],
+                            networks={"net-a": nad_a_orig.name, "net-b": nad_b_orig.name},
+                            interfaces=["net-a", "net-b"],
                         ) as vm:
                             running_vm(vm=vm)
 
                             LOGGER.info("Changing both NAD references simultaneously")
-                            with ResourceEditor(
+                            ResourceEditor(
                                 patches={
                                     vm: {
                                         "spec": {
@@ -334,18 +315,18 @@ class TestNADSwapBasic:
                                         }
                                     }
                                 }
-                            ):
-                                pass
+                            ).update()
 
                             LOGGER.info("Migrating VM")
-                            migrate_vm_and_verify(vm=vm)
+                            restart_vm_wait_for_running_vm(vm=vm)
 
                             LOGGER.info("Verifying all NADs changed")
-                            net_a_status = lookup_iface_status(vm=vm, iface_name="net-a")
-                            net_b_status = lookup_iface_status(vm=vm, iface_name="net-b")
-
-                            assert nad_a_target.name in str(net_a_status), "net-a should use new NAD"
-                            assert nad_b_target.name in str(net_b_status), "net-b should use new NAD"
+                            assert get_vmi_network_nad_name(vm=vm, iface_name="net-a") == nad_a_target.name, (
+                                "net-a should use new NAD"
+                            )
+                            assert get_vmi_network_nad_name(vm=vm, iface_name="net-b") == nad_b_target.name, (
+                                "net-b should use new NAD"
+                            )
 
                             LOGGER.info("Test passed: All interfaces updated successfully")
 
@@ -386,17 +367,13 @@ class TestNADSwapBasic:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="bridge-net", multus=Multus(networkName=nad_br1.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="bridge-net", bridge={}),
-                    ],
+                    networks={"bridge-net": nad_br1.name},
+                    interfaces=["bridge-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing NAD to br2 bridge")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -414,15 +391,14 @@ class TestNADSwapBasic:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying VM connected to br2")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="bridge-net")
-                    assert nad_br2.name in str(iface_status), "VM should be connected to br2"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="bridge-net")
+                    assert actual_nad == nad_br2.name, "VM should be connected to br2"
 
                     LOGGER.info("Test passed: Bridge changed successfully")
 
@@ -464,17 +440,13 @@ class TestNADSwapBasic:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="test-net", multus=Multus(networkName=nad_a.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="test-net", bridge={}),
-                    ],
+                    networks={"test-net": nad_a.name},
+                    interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing to NAD B")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -492,13 +464,12 @@ class TestNADSwapBasic:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Changing back to NAD A")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -516,14 +487,13 @@ class TestNADSwapBasic:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying NAD A is active again")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
-                    assert nad_a.name in str(iface_status), "VM should be back on NAD A"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="test-net")
+                    assert actual_nad == nad_a.name, "VM should be back on NAD A"
 
                     LOGGER.info("Test passed: Reverse NAD swap successful")
 
@@ -566,17 +536,13 @@ class TestNADSwapBasic:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="dualstack-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="dualstack-net", bridge={}),
-                    ],
+                    networks={"dualstack-net": nad_orig.name},
+                    interfaces=["dualstack-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing to target dual-stack NAD")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -594,14 +560,13 @@ class TestNADSwapBasic:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying dual-stack connectivity")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="dualstack-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="dualstack-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info("Test passed: Dual-stack NAD swap successful")

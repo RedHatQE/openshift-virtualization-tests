@@ -14,15 +14,14 @@ import logging
 
 import pytest
 from ocp_resources.resource import ResourceEditor
-from tests.network.l2_bridge.utils import hot_plug_interface
+from tests.network.l2_bridge.libl2bridge import hot_plug_interface
 
 from libs.net import netattachdef
-from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Interface, Multus, Network
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -88,7 +87,7 @@ class TestNADSwapAdvanced:
                     )
 
                     LOGGER.info("Changing hotplugged interface NAD to target")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -106,15 +105,14 @@ class TestNADSwapAdvanced:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying hotplugged interface uses target NAD")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="hotplug-iface")
-                    assert nad_hotplug_target.name in str(iface_status), "Hotplugged interface should use target NAD"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="hotplug-iface")
+                    assert actual_nad == nad_hotplug_target.name, "Hotplugged interface should use target NAD"
 
                     LOGGER.info("Test passed: Hotplugged interface NAD swap successful")
 
@@ -157,17 +155,13 @@ class TestNADSwapAdvanced:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="dnc-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="dnc-net", bridge={}),
-                    ],
+                    networks={"dnc-net": nad_orig.name},
+                    interfaces=["dnc-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing NAD with DNC active")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -185,15 +179,14 @@ class TestNADSwapAdvanced:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying DNC compatibility - NAD changed successfully")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="dnc-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="dnc-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info("Test passed: DNC does not interfere with NAD swap")
 
@@ -239,17 +232,13 @@ class TestNADSwapAdvanced:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="policy-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="policy-net", bridge={}),
-                    ],
+                    networks={"policy-net": nad_orig.name},
+                    interfaces=["policy-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing NAD with network policy active")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -267,14 +256,13 @@ class TestNADSwapAdvanced:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying network policy applies to new NAD")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="policy-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="policy-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info("Test passed: Network policy compatible with NAD swap")

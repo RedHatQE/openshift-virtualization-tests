@@ -17,13 +17,12 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 
 from libs.net import netattachdef
-from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Interface, Multus, Network
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.constants import TIMEOUT_5MIN
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -80,17 +79,13 @@ class TestNADSwapControllerVerification:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="test-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="test-net", bridge={}),
-                    ],
+                    networks={"test-net": nad_orig.name},
+                    interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing NAD reference (NAD-only change)")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -108,12 +103,11 @@ class TestNADSwapControllerVerification:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying controller identifies NAD-only change")
                     # With feature gate enabled, migration should be triggered (not RestartRequired)
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     # Verify no RestartRequired condition
                     vm.wait_for_condition(
@@ -123,8 +117,8 @@ class TestNADSwapControllerVerification:
                     )
 
                     LOGGER.info("Verifying NAD changed without RestartRequired")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="test-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info("Test passed: Controller correctly identified NAD-only change")
 
@@ -169,12 +163,8 @@ class TestNADSwapControllerVerification:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="sync-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="sync-net", bridge={}),
-                    ],
+                    networks={"sync-net": nad_orig.name},
+                    interfaces=["sync-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
@@ -182,7 +172,7 @@ class TestNADSwapControllerVerification:
                     vm.vmi.instance.spec.networks
 
                     LOGGER.info("Changing NAD in VM spec")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -200,11 +190,10 @@ class TestNADSwapControllerVerification:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying controller syncs networkName to VMI")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     # After migration, VMI should have updated network spec
                     updated_vmi_networks = vm.vmi.instance.spec.networks
@@ -265,19 +254,15 @@ class TestNADSwapControllerVerification:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="bridge-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="bridge-net", bridge={}),
-                    ],
+                    networks={"bridge-net": nad_orig.name},
+                    interfaces=["bridge-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     original_vmi_uid = vm.vmi.instance.metadata.uid
 
                     LOGGER.info("Changing NAD reference (bridge binding)")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -295,19 +280,18 @@ class TestNADSwapControllerVerification:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying controller requests immediate migration")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     # Verify migration occurred (new VMI created)
                     new_vmi_uid = vm.vmi.instance.metadata.uid
                     assert new_vmi_uid != original_vmi_uid, "Migration should create new VMI"
 
                     LOGGER.info("Verifying bridge binding with new NAD")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="bridge-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="bridge-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info(
                         "Test passed: WorkloadUpdateController triggered immediate migration for bridge binding"

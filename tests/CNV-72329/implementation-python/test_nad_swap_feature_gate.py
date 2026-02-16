@@ -13,11 +13,9 @@ import logging
 
 import pytest
 from ocp_resources.resource import ResourceEditor
-from ocp_resources.virtual_machine import VirtualMachine
 
 from libs.net import netattachdef
-from libs.vm.spec import Interface, Multus, Network
-from utilities.constants import TIMEOUT_5MIN
+from tests.utils import assert_restart_required_condition
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -77,18 +75,14 @@ class TestNADSwapFeatureGate:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="secondary-net", multus=Multus(networkName=original_nad.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="secondary-net", bridge={}),
-                    ],
+                    networks={"secondary-net": original_nad.name},
+                    interfaces=["secondary-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Updating VM to reference target NAD")
                     # Patch VM spec to change NAD reference
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -106,19 +100,14 @@ class TestNADSwapFeatureGate:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying RestartRequired condition is set")
-                    # Wait for condition to appear (feature gate disabled)
-                    vm.wait_for_condition(
-                        condition=VirtualMachine.Condition.FAILURE,
-                        status=VirtualMachine.Condition.Status.TRUE,
-                        timeout=TIMEOUT_5MIN,
+                    assert_restart_required_condition(
+                        vm=vm,
+                        expected_message="a non-live-updatable field was changed in the template spec",
                     )
 
-                    # Verify no migration was triggered
-                    assert vm.vmi.name == vm.vmi.name, "VMI should not have changed"
                     LOGGER.info("Test passed: RestartRequired condition set, no migration triggered")
 
     def test_ts_cnv_72329_017_change_nad_when_feature_gate_disabled(self, admin_client, unprivileged_client, namespace):
@@ -162,18 +151,14 @@ class TestNADSwapFeatureGate:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="test-net", multus=Multus(networkName=nad_vlan100.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="test-net", bridge={}),
-                    ],
+                    networks={"test-net": nad_vlan100.name},
+                    interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
                     original_vmi_name = vm.vmi.name
 
                     LOGGER.info("Changing NAD reference to VLAN 200")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -191,8 +176,7 @@ class TestNADSwapFeatureGate:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying VM gets RestartRequired condition")
                     # With feature gate disabled, RestartRequired should be set

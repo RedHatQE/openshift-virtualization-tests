@@ -15,7 +15,6 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
-from libs.vm.spec import Interface, Multus, Network
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -65,12 +64,8 @@ class TestNADSwapNegative:
                 namespace=namespace.name,
                 body=fedora_vm_body(name=vm_name),
                 client=unprivileged_client,
-                networks=[
-                    Network(name="test-net", multus=Multus(networkName=nad_orig.name)),
-                ],
-                interfaces=[
-                    Interface(name="test-net", bridge={}),
-                ],
+                networks={"test-net": nad_orig.name},
+                interfaces=["test-net"],
             ) as vm:
                 running_vm(vm=vm)
                 original_vmi_uid = vm.vmi.instance.metadata.uid
@@ -79,7 +74,7 @@ class TestNADSwapNegative:
                 nonexistent_nad_name = "nad-does-not-exist"
 
                 try:
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -97,8 +92,7 @@ class TestNADSwapNegative:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying migration fails or VM condition set")
                     # Migration should fail or RestartRequired condition should be set

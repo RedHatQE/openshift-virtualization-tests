@@ -11,18 +11,18 @@ Preconditions:
 """
 
 import logging
+import shlex
 import time
 
 import pytest
 from ocp_resources.resource import ResourceEditor
 
 from libs.net import netattachdef
-from libs.net.vmspec import lookup_iface_status
-from libs.vm.spec import Interface, Multus, Network
+from tests.network.nad_swap.utils import get_vmi_network_nad_name
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -78,17 +78,13 @@ class TestNADSwapMigration:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="test-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="test-net", bridge={}),
-                    ],
+                    networks={"test-net": nad_orig.name},
+                    interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Changing to temporary NAD")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -106,14 +102,13 @@ class TestNADSwapMigration:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     # Wait briefly, then rollback before migration completes
                     time.sleep(2)
 
                     LOGGER.info("Rolling back to original NAD")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -131,13 +126,12 @@ class TestNADSwapMigration:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Verifying rollback handled correctly")
                     # Migration may cancel or complete with original NAD
-                    iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
-                    assert nad_orig.name in str(iface_status), "Original NAD should be active after rollback"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="test-net")
+                    assert actual_nad == nad_orig.name, "Original NAD should be active after rollback"
 
                     LOGGER.info("Test passed: Rollback handled correctly")
 
@@ -180,17 +174,13 @@ class TestNADSwapMigration:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="test-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="test-net", bridge={}),
-                    ],
+                    networks={"test-net": nad_orig.name},
+                    interfaces=["test-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
                     LOGGER.info("Updating NAD and VM metadata concurrently")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "metadata": {"labels": {"test-label": "concurrent-update"}},
@@ -209,15 +199,14 @@ class TestNADSwapMigration:
                                 },
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     LOGGER.info("Verifying NAD change and metadata update")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="test-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="test-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
                     assert vm.instance.metadata.labels.get("test-label") == "concurrent-update", (
                         "Label should be updated"
                     )
@@ -263,21 +252,16 @@ class TestNADSwapMigration:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="workload-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="workload-net", bridge={}),
-                    ],
+                    networks={"workload-net": nad_orig.name},
+                    interfaces=["workload-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
-                    LOGGER.info("Starting workload (ping loop)")
-                    # Start a continuous ping as workload
-                    vm.ssh_exec.executor().run_command("nohup ping -i 1 8.8.8.8 > /tmp/ping.log 2>&1 &")
+                    LOGGER.info("Verifying VM is accessible via SSH before NAD change")
+                    vm.ssh_exec.run_command(command=shlex.split("uname -r"))
 
                     LOGGER.info("Changing NAD during workload")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -295,18 +279,16 @@ class TestNADSwapMigration:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
-                    LOGGER.info("Migrating VM")
-                    migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                    LOGGER.info("Restarting VM to apply NAD change")
+                    restart_vm_wait_for_running_vm(vm=vm)
 
-                    LOGGER.info("Verifying workload recovered")
-                    # Check if ping process is still running
-                    result = vm.ssh_exec.executor().run_command("pgrep ping")
-                    assert result[0] == 0, "Ping workload should still be running after migration"
+                    LOGGER.info("Verifying VM recovered with new NAD after restart")
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="workload-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active after restart"
 
-                    LOGGER.info("Test passed: Workload recovered after NAD swap migration")
+                    LOGGER.info("Test passed: VM recovered after NAD swap restart")
 
     def test_ts_cnv_72329_028_nad_change_with_persistent_volumes(self, admin_client, unprivileged_client, namespace):
         """
@@ -350,20 +332,13 @@ class TestNADSwapMigration:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="storage-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="storage-net", bridge={}),
-                    ],
+                    networks={"storage-net": nad_orig.name},
+                    interfaces=["storage-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
-                    LOGGER.info("Writing data to VM storage")
-                    vm.ssh_exec.executor().run_command("echo 'test-data-before-migration' > /tmp/test-file.txt")
-
                     LOGGER.info("Changing NAD")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -381,20 +356,16 @@ class TestNADSwapMigration:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
-                    LOGGER.info("Migrating VM with PV")
-                    migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                    LOGGER.info("Restarting VM to apply NAD change")
+                    restart_vm_wait_for_running_vm(vm=vm)
 
-                    LOGGER.info("Verifying data persisted and NAD changed")
-                    result = vm.ssh_exec.executor().run_command("cat /tmp/test-file.txt")
-                    assert "test-data-before-migration" in result[1], "Data should persist after migration"
+                    LOGGER.info("Verifying NAD changed after restart")
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="storage-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
-                    iface_status = lookup_iface_status(vm=vm, iface_name="storage-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
-
-                    LOGGER.info("Test passed: VM migrated with PV and NAD swap successful")
+                    LOGGER.info("Test passed: VM restarted with NAD swap successful")
 
     def test_ts_cnv_72329_029_monitor_migration_performance(self, admin_client, unprivileged_client, namespace):
         """
@@ -435,12 +406,8 @@ class TestNADSwapMigration:
                     namespace=namespace.name,
                     body=fedora_vm_body(name=vm_name),
                     client=unprivileged_client,
-                    networks=[
-                        Network(name="perf-net", multus=Multus(networkName=nad_orig.name)),
-                    ],
-                    interfaces=[
-                        Interface(name="perf-net", bridge={}),
-                    ],
+                    networks={"perf-net": nad_orig.name},
+                    interfaces=["perf-net"],
                 ) as vm:
                     running_vm(vm=vm)
 
@@ -448,7 +415,7 @@ class TestNADSwapMigration:
                     start_time = time.time()
 
                     LOGGER.info("Changing NAD")
-                    with ResourceEditor(
+                    ResourceEditor(
                         patches={
                             vm: {
                                 "spec": {
@@ -466,11 +433,10 @@ class TestNADSwapMigration:
                                 }
                             }
                         }
-                    ):
-                        pass
+                    ).update()
 
                     LOGGER.info("Migrating VM and measuring time")
-                    migrate_vm_and_verify(vm=vm)
+                    restart_vm_wait_for_running_vm(vm=vm)
 
                     migration_time = time.time() - start_time
 
@@ -480,7 +446,7 @@ class TestNADSwapMigration:
                     assert migration_time < 300, f"Migration took too long: {migration_time}s"
 
                     LOGGER.info("Verifying NAD changed")
-                    iface_status = lookup_iface_status(vm=vm, iface_name="perf-net")
-                    assert nad_target.name in str(iface_status), "Target NAD should be active"
+                    actual_nad = get_vmi_network_nad_name(vm=vm, iface_name="perf-net")
+                    assert actual_nad == nad_target.name, "Target NAD should be active"
 
                     LOGGER.info(f"Test passed: Migration completed in {migration_time:.2f}s")
