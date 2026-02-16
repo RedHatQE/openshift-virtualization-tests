@@ -57,7 +57,7 @@ CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
 
 class ArchImages:
-    class X86_64:  # noqa: N801
+    class AMD64:
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
         Cirros = Cirros(
@@ -202,7 +202,7 @@ class ArchImages:
         Windows = Windows()
 
 
-# Choose the Image class according to the architecture. Default: x86_64
+# Choose the Image class according to the architecture. Default: amd64
 Images = getattr(ArchImages, get_cluster_architecture().upper())
 
 
@@ -360,9 +360,6 @@ KUBECONFIG = "KUBECONFIG"
 
 # commands
 LS_COMMAND = "ls -1 | sort | tr '\n' ' '"
-
-# hotplug
-HOTPLUG_DISK_SERIAL = "1234567890"
 
 ONE_CPU_CORE = 1
 ONE_CPU_THREAD = 1
@@ -584,6 +581,11 @@ NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"
 CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
 TSC_FREQUENCY = "tsc-frequency"
+
+# hotplug
+HOTPLUG_DISK_SERIAL = "1234567890"
+HOTPLUG_DISK_VIRTIO_BUS = VIRTIO
+HOTPLUG_DISK_SCSI_BUS = "scsi"
 
 # Container constants
 CNV_TESTS_CONTAINER = "CNV_TESTS_CONTAINER"

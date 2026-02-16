@@ -336,6 +336,7 @@ def virtctl_volume(
     namespace,
     vm_name,
     volume_name,
+    bus=None,
     serial=None,
     persist=None,
 ):
@@ -350,6 +351,8 @@ def virtctl_volume(
         command.append(f"--serial={serial}")
     if persist:
         command.append("--persist")
+    if bus:
+        command.append(f"--bus={bus}")
 
     yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
     # clean up:
@@ -665,15 +668,36 @@ def assert_hotplugvolume_nonexist(vm):
     )
 
 
-def wait_for_vm_volume_ready(vm):
+def wait_for_vm_volume_ready(
+    vm: virt_util.VirtualMachineForTests, volume_name: str, wait_for_disk_in_spec: bool = True
+) -> None:
+    """Wait for a volume to be ready in the VM.
+
+    Args:
+        vm: Virtual machine instance
+        volume_name: Name of the volume to wait for
+        wait_for_disk_in_spec: If True, also waits for the disk to appear in VM spec (needed for persist=True)
+    """
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_1SEC,
         func=lambda: vm.vmi.instance,
     )
     for sample in sampler:
-        if sample.status.volumeStatus[0]["reason"] == "VolumeReady":
-            return
+        volume_status = next(
+            (
+                volume_status_entry
+                for volume_status_entry in sample.status.volumeStatus
+                if volume_status_entry.get("name") == volume_name
+            ),
+            None,
+        )
+        if volume_status and volume_status.get("reason") == "VolumeReady":
+            # If persist is used, also wait for disk in spec
+            if not wait_for_disk_in_spec or any(
+                disk.get("name") == volume_name for disk in sample.spec.domain.devices.disks
+            ):
+                return
 
 
 def generate_data_source_dict(dv):

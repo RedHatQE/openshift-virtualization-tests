@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
 
@@ -10,7 +11,8 @@ from tests.storage.upgrade.utils import (
     create_vm_for_snapshot_upgrade_tests,
 )
 from tests.storage.utils import update_scratch_space_sc
-from utilities.constants import HOTPLUG_DISK_SERIAL
+from utilities.constants import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
+from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import create_dv, virtctl_volume
 from utilities.virt import (
     VirtualMachineForTests,
@@ -134,6 +136,20 @@ def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
 
 
 @pytest.fixture(scope="session")
+def enabled_feature_gate_for_declarative_hotplug_volumes_upg(
+    hyperconverged_resource_scope_session,
+):
+    with ResourceEditorValidateHCOReconcile(
+        patches={
+            hyperconverged_resource_scope_session: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
+        },
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture(scope="session")
 def fedora_vm_for_hotplug_upg(upgrade_namespace_scope_session, cluster_common_node_cpu):
     name = "fedora-hotplug-upg"
     with VirtualMachineForTests(
@@ -156,6 +172,7 @@ def hotplug_volume_upg(fedora_vm_for_hotplug_upg):
         volume_name="blank-dv",
         persist=True,
         serial=HOTPLUG_DISK_SERIAL,
+        bus=HOTPLUG_DISK_VIRTIO_BUS,
     ) as res:
         status, out, err = res
         assert status, f"Failed to add volume to VM, out: {out}, err: {err}."
