@@ -195,7 +195,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     create_vm_cloning_job,
     fedora_vm_body,
-    get_all_virt_pods_with_running_status,
     get_base_templates_list,
     get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
@@ -2010,11 +2009,6 @@ def compact_cluster(nodes, workers, control_plane_nodes):
 def skip_if_compact_cluster(compact_cluster):
     if compact_cluster:
         pytest.skip("Test cannot run on compact cluster")
-
-
-@pytest.fixture()
-def virt_pods_with_running_status(admin_client, hco_namespace):
-    return get_all_virt_pods_with_running_status(dyn_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")

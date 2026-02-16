@@ -1,7 +1,5 @@
 import logging
 
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.namespace import Namespace
 from ocp_utilities.monitoring import Prometheus
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -51,10 +49,3 @@ def verify_no_listed_alerts_on_cluster(prometheus: Prometheus, alerts_list: list
                 continue
             fired_alerts[alert] = alerts_by_name
     assert not fired_alerts, f"Alerts should not be fired on healthy cluster.\n {fired_alerts}"
-
-
-def get_olm_namespace() -> Namespace:
-    olm_ns = Namespace(name="openshift-operator-lifecycle-manager")
-    if olm_ns.exists:
-        return olm_ns
-    raise ResourceNotFoundError(f"Namespace: {olm_ns.name} not found.")
