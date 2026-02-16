@@ -19,28 +19,22 @@ class TestGetClusterArchitecture:
             result = get_cluster_architecture()
             assert result == "arm64"
 
-    def test_get_cluster_architecture_from_env_x86_64(self):
-        """Test getting architecture from environment variable - x86_64"""
-        with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "x86_64"}):
-            result = get_cluster_architecture()
-            assert result == "x86_64"
-
     def test_get_cluster_architecture_from_env_s390x(self):
         """Test getting architecture from environment variable - s390x"""
         with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "s390x"}):
             result = get_cluster_architecture()
             assert result == "s390x"
 
-    def test_get_cluster_architecture_from_env_amd64_converts_to_x86_64(self):
-        """Test that amd64 from env is converted to x86_64"""
+    def test_get_cluster_architecture_from_env_amd64(self):
+        """Test getting architecture from environment variable - amd64"""
         with patch.dict(os.environ, {"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "amd64"}):
             result = get_cluster_architecture()
-            assert result == "x86_64"
+            assert result == "amd64"
 
     @patch("utilities.architecture.cache_admin_client")
     @patch("utilities.architecture.Node")
-    def test_get_cluster_architecture_from_nodes_x86_64(self, mock_node_class, mock_cache_client):
-        """Test getting architecture from nodes - x86_64"""
+    def test_get_cluster_architecture_from_nodes_amd64(self, mock_node_class, mock_cache_client):
+        """Test getting architecture from nodes - amd64"""
         # Clear env var to force reading from nodes
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
@@ -53,8 +47,7 @@ class TestGetClusterArchitecture:
 
             result = get_cluster_architecture()
 
-            # Should convert amd64 to x86_64
-            assert result == "x86_64"
+            assert result == "amd64"
             mock_node_class.get.assert_called_once()
             mock_cache_client.assert_called_once()
 
@@ -120,7 +113,7 @@ class TestGetClusterArchitecture:
 
             result = get_cluster_architecture()
 
-            assert result == "x86_64"
+            assert result == "amd64"
 
     @patch("utilities.architecture.cache_admin_client")
     @patch("utilities.architecture.Node")

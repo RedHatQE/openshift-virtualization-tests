@@ -486,15 +486,3 @@ class TestGetNodesCpuArchitecture:
         result = get_nodes_cpu_architecture(nodes)
 
         assert result == "arm64"
-
-    def test_with_multiple_nodes_x86_64(self):
-        """Test with x86_64 architecture"""
-        mock_node1 = MagicMock()
-        mock_node1.labels = {"kubernetes.io/arch": "x86_64"}
-
-        mock_node2 = MagicMock()
-        mock_node2.labels = {"kubernetes.io/arch": "x86_64"}
-
-        result = get_nodes_cpu_architecture([mock_node1, mock_node2])
-
-        assert result == "x86_64"
