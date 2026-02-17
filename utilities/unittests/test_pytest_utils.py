@@ -1229,3 +1229,329 @@ class TestGetMatrixParamsAdditionalCoverage:
             # Should return empty list and log warning (lines 94-96)
             assert result == []
             mock_logger.warning.assert_called_with("test_matrix is missing in config file")
+
+
+class TestGenerateOsMatrixDicts:
+    """Test cases for generate_os_matrix_dicts function"""
+
+    @pytest.fixture
+    def mock_py_config(self):
+        """Fixture to create a mock py_config dict that can be modified"""
+        return {}
+
+    @pytest.fixture
+    def sample_rhel_matrix(self):
+        """Sample RHEL OS matrix for testing"""
+        return [
+            {
+                "rhel-9-6": {
+                    "os_version": "9.6",
+                    "image_name": "rhel-9.6.qcow2",
+                    "latest_released": True,
+                }
+            }
+        ]
+
+    @pytest.fixture
+    def sample_fedora_matrix(self):
+        """Sample Fedora OS matrix for testing"""
+        return [
+            {
+                "fedora-43": {
+                    "os_version": "43",
+                    "image_name": "fedora-43.qcow2",
+                    "latest_released": True,
+                }
+            }
+        ]
+
+    @pytest.fixture
+    def sample_instance_type_matrix(self):
+        """Sample instance type OS matrix for testing"""
+        return [
+            {
+                "rhel.9": {
+                    "preference": "rhel.9",
+                    "latest_released": True,
+                }
+            }
+        ]
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_rhel_os_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_rhel_matrix,
+    ):
+        """Test generating RHEL OS matrix from rhel_os_list"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        mock_generate_os_matrix.return_value = sample_rhel_matrix
+        mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-6"]
+
+        os_dict = {"rhel_os_list": ["rhel-9-6"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_os_matrix.assert_called_once_with(os_name="rhel", supported_operating_systems=["rhel-9-6"])
+        mock_generate_latest.assert_called_once()
+        assert mock_py_config["rhel_os_matrix"] == sample_rhel_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_fedora_os_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_fedora_matrix,
+    ):
+        """Test generating Fedora OS matrix from fedora_os_list"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        mock_generate_os_matrix.return_value = sample_fedora_matrix
+        mock_generate_latest.return_value = sample_fedora_matrix[0]["fedora-43"]
+
+        os_dict = {"fedora_os_list": ["fedora-43"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_os_matrix.assert_called_once_with(os_name="fedora", supported_operating_systems=["fedora-43"])
+        assert mock_py_config["fedora_os_matrix"] == sample_fedora_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_centos_os_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test generating CentOS OS matrix from centos_os_list"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        sample_centos_matrix = [{"centos-stream-9": {"os_version": "9", "latest_released": True}}]
+        mock_generate_os_matrix.return_value = sample_centos_matrix
+        mock_generate_latest.return_value = sample_centos_matrix[0]["centos-stream-9"]
+
+        os_dict = {"centos_os_list": ["centos-stream-9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_os_matrix.assert_called_once_with(
+            os_name="centos", supported_operating_systems=["centos-stream-9"]
+        )
+        assert mock_py_config["centos_os_matrix"] == sample_centos_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_windows_os_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test generating Windows OS matrix from windows_os_list"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        sample_windows_matrix = [{"win-10": {"os_version": "10", "latest_released": True}}]
+        mock_generate_os_matrix.return_value = sample_windows_matrix
+        mock_generate_latest.return_value = sample_windows_matrix[0]["win-10"]
+
+        os_dict = {"windows_os_list": ["win-10"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_os_matrix.assert_called_once_with(os_name="windows", supported_operating_systems=["win-10"])
+        assert mock_py_config["windows_os_matrix"] == sample_windows_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_rhel_matrix_amd64(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_instance_type_matrix,
+    ):
+        """Test generating instance type RHEL matrix on amd64 architecture"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
+
+        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        # On amd64, arch_suffix should be None
+        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix=None)
+        assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_rhel_matrix_arm64(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_instance_type_matrix,
+    ):
+        """Test generating instance type RHEL matrix on arm64 architecture"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "arm64"
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
+
+        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        # On arm64, arch_suffix should be "arm64"
+        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="arm64")
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_fedora_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test generating instance type Fedora matrix"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        sample_fedora_instance_type = [{"fedora": {"preference": "fedora"}}]
+        mock_generate_instance_type.return_value = sample_fedora_instance_type
+
+        os_dict = {"instance_type_fedora_os_list": ["fedora"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_instance_type.assert_called_once_with(os_name="fedora", preferences=["fedora"], arch_suffix=None)
+        assert mock_py_config["instance_type_fedora_os_matrix"] == sample_fedora_instance_type
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_centos_matrix(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test generating instance type CentOS matrix"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
+        mock_generate_instance_type.return_value = sample_centos_instance_type
+
+        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_instance_type.assert_called_once_with(
+            os_name="centos", preferences=["centos.stream9"], arch_suffix=None
+        )
+        assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_empty_os_dict_does_nothing(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test that empty os_dict doesn't call any generation functions"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+
+        os_dict = {}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_os_matrix.assert_not_called()
+        mock_generate_instance_type.assert_not_called()
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_multiple_os_matrices(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_rhel_matrix,
+        sample_fedora_matrix,
+    ):
+        """Test generating multiple OS matrices in a single call"""
+        from utilities.pytest_utils import generate_os_matrix_dicts
+
+        mock_get_arch.return_value = "amd64"
+        mock_generate_os_matrix.side_effect = [sample_rhel_matrix, sample_fedora_matrix]
+        mock_generate_latest.side_effect = [
+            sample_rhel_matrix[0]["rhel-9-6"],
+            sample_fedora_matrix[0]["fedora-43"],
+        ]
+
+        os_dict = {
+            "rhel_os_list": ["rhel-9-6"],
+            "fedora_os_list": ["fedora-43"],
+        }
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        assert mock_generate_os_matrix.call_count == 2
+        assert mock_py_config["rhel_os_matrix"] == sample_rhel_matrix
+        assert mock_py_config["fedora_os_matrix"] == sample_fedora_matrix
