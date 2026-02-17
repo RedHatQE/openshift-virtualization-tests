@@ -15,8 +15,10 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
 
+from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AMD_64,
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
@@ -31,6 +33,11 @@ from utilities.data_collector import (
     write_to_file,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
+from utilities.infra import generate_latest_os_dict
+from utilities.os_utils import (
+    generate_linux_instance_type_os_matrix,
+    generate_os_matrix_dict,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -355,3 +362,42 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
             item.add_marker(marker=pytest.mark.nmstate)
 
     return items
+
+
+def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
+    if rhel_os_list := os_dict.get("rhel_os_list"):
+        py_config["rhel_os_matrix"] = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=rhel_os_list)
+        py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
+    if fedora_os_list := os_dict.get("fedora_os_list"):
+        py_config["fedora_os_matrix"] = generate_os_matrix_dict(
+            os_name="fedora", supported_operating_systems=fedora_os_list
+        )
+        py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_matrix=py_config["fedora_os_matrix"])
+    if centos_os_list := os_dict.get("centos_os_list"):
+        py_config["centos_os_matrix"] = generate_os_matrix_dict(
+            os_name="centos", supported_operating_systems=centos_os_list
+        )
+        py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_matrix=py_config["centos_os_matrix"])
+    if windows_os_list := os_dict.get("windows_os_list"):
+        py_config["windows_os_matrix"] = generate_os_matrix_dict(
+            os_name="windows", supported_operating_systems=windows_os_list
+        )
+        py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
+
+    arch = get_cluster_architecture()
+    cpu_arch = arch if arch != AMD_64 else None
+    if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
+        py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
+        )
+        py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
+            os_matrix=py_config["instance_type_rhel_os_matrix"]
+        )
+    if instance_type_fedora_os_list := os_dict.get("instance_type_fedora_os_list"):
+        py_config["instance_type_fedora_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="fedora", preferences=instance_type_fedora_os_list, arch_suffix=cpu_arch
+        )
+    if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
+        py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch
+        )
