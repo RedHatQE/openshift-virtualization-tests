@@ -142,7 +142,6 @@ def dv_of_multi_storage_cirros_vm(unprivileged_client, data_volume_template_meta
         name=data_volume_template_metadata["name"],
         namespace=data_volume_template_metadata["namespace"],
         client=unprivileged_client,
-        api_name="pvc",
     )
 
 
@@ -201,7 +200,7 @@ def test_upload_after_certs_renewal(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client, api_name="pvc")
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 
@@ -267,7 +266,7 @@ def test_upload_after_validate_aggregated_api_cert(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, api_name="pvc")
+        dv = DataVolume(namespace=namespace.name, name=dv_name)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 

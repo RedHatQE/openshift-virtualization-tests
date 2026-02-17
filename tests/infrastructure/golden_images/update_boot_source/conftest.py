@@ -234,7 +234,6 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
                     name=sample.name,
                     namespace=sample.namespace,
                     client=unprivileged_client,
-                    api_name="pvc",
                 )
                 created_dv.wait_for_dv_success()
                 yield sample

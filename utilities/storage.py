@@ -425,9 +425,7 @@ def virtctl_upload_dv(
         f"--size={size}",
     ]
     resource_to_cleanup = (
-        PersistentVolumeClaim(namespace=namespace, name=name)
-        if pvc
-        else DataVolume(namespace=namespace, name=name, api_name="pvc")
+        PersistentVolumeClaim(namespace=namespace, name=name) if pvc else DataVolume(namespace=namespace, name=name)
     )
     if pvc:
         command[1] = "pvc"
@@ -1016,7 +1014,7 @@ def update_default_sc(default, storage_class):
 
 
 def verify_dv_and_pvc_does_not_exist(name, namespace, timeout=TIMEOUT_10MIN):
-    dv = DataVolume(namespace=namespace, name=name, api_name="pvc")
+    dv = DataVolume(namespace=namespace, name=name)
     pvc = PersistentVolumeClaim(namespace=namespace, name=name)
 
     samples = TimeoutSampler(wait_timeout=timeout, sleep=TIMEOUT_5SEC, func=lambda: dv.exists or pvc.exists)
@@ -1050,7 +1048,7 @@ def wait_for_volume_snapshot_ready_to_use(namespace, name):
 
 
 def wait_for_succeeded_dv(namespace, dv_name):
-    dv = DataVolume(namespace=namespace, name=dv_name, api_name="pvc")
+    dv = DataVolume(namespace=namespace, name=dv_name)
     try:
         samples = TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,

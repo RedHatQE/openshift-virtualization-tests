@@ -312,7 +312,6 @@ def user_has_get_permissions_in_source_namespace(
         namespace=namespace.name,
         name=data_volume_multi_storage_scope_module.name,
         client=unprivileged_client,
-        api_name="pvc",
     ).instance
 
 

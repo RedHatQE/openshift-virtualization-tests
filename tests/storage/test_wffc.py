@@ -104,7 +104,7 @@ def validate_vm_and_disk_count(vm):
 
 @pytest.fixture(scope="class")
 def uploaded_wffc_dv(namespace, unprivileged_client):
-    return DataVolume(namespace=namespace.name, name=WFFC_DV_NAME, client=unprivileged_client, api_name="pvc")
+    return DataVolume(namespace=namespace.name, name=WFFC_DV_NAME, client=unprivileged_client)
 
 
 @pytest.fixture(scope="class")

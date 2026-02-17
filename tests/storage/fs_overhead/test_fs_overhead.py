@@ -83,7 +83,7 @@ def uploaded_cirros_dv(
         volume_mode=DataVolume.VolumeMode.FILE,
         insecure=True,
     ):
-        yield DataVolume(name=dv_name, namespace=namespace.name, api_name="pvc")
+        yield DataVolume(name=dv_name, namespace=namespace.name)
 
 
 @pytest.mark.polarion("CNV-8635")

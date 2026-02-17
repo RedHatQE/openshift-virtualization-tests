@@ -37,10 +37,8 @@ def dv_dict(namespace, priority_class, unprivileged_client):
         url=f"{get_test_artifact_server_url()}{RHEL_LATEST['image_path']}",
         size=RHEL_LATEST["dv_size"],
         storage_class=py_config["default_storage_class"],
-        volume_mode=py_config["default_volume_mode"],
-        access_modes=py_config["default_access_mode"],
         client=unprivileged_client,
-        api_name="pvc",
+        api_name="storage",
     )
     dv.to_dict()
     dv_priority_class = priority_class["dv_priority_class"]
