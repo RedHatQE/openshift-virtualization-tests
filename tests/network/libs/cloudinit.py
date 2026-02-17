@@ -26,6 +26,7 @@ class EthernetDevice:
     """
 
     dhcp4: bool | None = None
+    dhcp6: bool | None = None
     addresses: list[str] | None = None
     gateway4: str | None = None
     gateway6: str | None = None
