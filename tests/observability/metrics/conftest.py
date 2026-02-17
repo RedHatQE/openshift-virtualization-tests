@@ -40,12 +40,6 @@ from utilities import console
 from utilities.constants import (
     DEFAULT_FEDORA_REGISTRY_URL,
     IPV4_STR,
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
@@ -67,7 +61,6 @@ from utilities.infra import (
     create_ns,
     get_node_selector_dict,
     get_pod_by_name_prefix,
-    is_jira_open,
     unique_name,
 )
 from utilities.monitoring import get_metrics_value
@@ -91,14 +84,6 @@ CDI_UPLOAD_PRIME = "cdi-upload-prime"
 IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
 IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
 LOGGER = logging.getLogger(__name__)
-METRICS_WITH_WINDOWS_VM_BUGS = [
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-]
 
 
 @pytest.fixture(scope="module")
@@ -485,20 +470,6 @@ def windows_vm_for_test(namespace, unprivileged_client):
         storage_class=py_config["default_storage_class"],
     ) as vm:
         yield vm
-
-
-@pytest.fixture(scope="session")
-def memory_metric_has_bug():
-    return is_jira_open(jira_id="CNV-64560")
-
-
-@pytest.fixture()
-def xfail_if_memory_metric_has_bug(memory_metric_has_bug, cnv_vmi_monitoring_metrics_matrix__function__):
-    if cnv_vmi_monitoring_metrics_matrix__function__ in METRICS_WITH_WINDOWS_VM_BUGS and memory_metric_has_bug:
-        pytest.xfail(
-            f"Bug (CNV-64560), Metric: {cnv_vmi_monitoring_metrics_matrix__function__} not showing "
-            "any value for windows vm"
-        )
 
 
 @pytest.fixture()
