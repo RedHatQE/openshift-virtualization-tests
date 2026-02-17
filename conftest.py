@@ -26,6 +26,9 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.cluster
+
+# TODO: Remove this import when utilities modules are refactored...
+import utilities.infra  # noqa
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
