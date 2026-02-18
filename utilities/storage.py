@@ -229,14 +229,14 @@ def data_volume(
         dv_name = (params_dict.get("dv_name") or "").replace(".", "-").lower()
         dv_size = params_dict.get("dv_size")
 
-    # Construct URL based on source type
+    # Note: "http" and "registry" sources require a URL (HTTP URL or container image URL respectively)
+    url: str | None
     if source == "http":
         url = f"{get_test_artifact_server_url()}{image}"
     elif source == "registry":
-        # For registry source, use the image parameter directly as the URL
         url = image if image else params_dict.get("url")
     else:
-        url = params_dict.get("url")
+        url = None
 
     # For golden images; images are created once per module in
     # golden images namepace and cloned when using common templates.
