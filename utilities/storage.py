@@ -235,6 +235,11 @@ def data_volume(
         url = f"{get_test_artifact_server_url()}{image}"
     elif source == "registry":
         url = image if image else params_dict.get("url")
+        if not url:
+            raise ValueError(
+                "URL is required for source='registry' but was not provided. "
+                "Either 'image' or 'url' parameter must be set. "
+            )
     else:
         url = None
 
