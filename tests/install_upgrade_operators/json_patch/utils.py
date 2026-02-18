@@ -63,8 +63,15 @@ def get_metrics_value_with_annotation(prometheus, query_string, component_name):
 def filter_metric_by_component(metrics, metric_name, component_name):
     annotation_name = get_annotation_name_for_component(component_name=component_name)
     for metric in metrics:
-        if metric["metric"]["annotation_name"] == annotation_name and metric["metric"]["__name__"] == metric_name:
-            return int(metric["value"][1])
+        if (
+            metric.get("metric", {}).get("annotation_name") == annotation_name
+            and metric.get("metric", {}).get("__name__") == metric_name
+        ):
+            metric_value = metric.get("value", [])
+            if len(metric_value) > 1:
+                return int(metric_value[1])
+    LOGGER.warning(f"No results found when filtering for {metric_name} and annotation {annotation_name} in {metrics}.")
+    return 0
 
 
 def wait_for_metrics_value_update(prometheus, component_name, query_string, previous_value):
@@ -78,7 +85,7 @@ def wait_for_metrics_value_update(prometheus, component_name, query_string, prev
     )
     try:
         for sample in samples:
-            if sample == previous_value + 1:
+            if sample and sample == previous_value + 1:
                 return sample
     except TimeoutExpiredError:
         LOGGER.error(f"Query string: {query_string} for component: {component_name}, previous value: {previous_value}.")
