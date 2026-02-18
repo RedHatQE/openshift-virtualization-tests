@@ -115,7 +115,11 @@ def updated_rhel9_boot_source(
 ):
     if original_rhel9_boot_source_pvc:
         # deleting the dv to create the cached snapshot
-        DataVolume(name=rhel9_boot_source_name, namespace=golden_images_namespace.name, client=admin_client).clean_up()
+        DataVolume(
+            name=rhel9_boot_source_name,
+            namespace=golden_images_namespace.name,
+            client=admin_client,
+        ).clean_up()
 
 
 @pytest.fixture(scope="module")

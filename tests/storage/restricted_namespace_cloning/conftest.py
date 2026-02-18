@@ -309,9 +309,7 @@ def user_has_get_permissions_in_source_namespace(
     namespace, unprivileged_client, data_volume_multi_storage_scope_module
 ):
     _ = DataVolume(
-        namespace=namespace.name,
-        name=data_volume_multi_storage_scope_module.name,
-        client=unprivileged_client,
+        namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
     ).instance
 
 
