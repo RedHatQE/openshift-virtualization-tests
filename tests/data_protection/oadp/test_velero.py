@@ -121,6 +121,8 @@ def test_restore_uploaded_dv(
     wait_for_restored_dv(dv=uploaded_rhel_dv)
 
 
+# Same image and flow as storage create_windows19_vm (HTTP import + template VM + running_vm).
+@pytest.mark.tier3
 @pytest.mark.parametrize(
     "windows_vm_with_data_volume_template",
     [
@@ -129,7 +131,9 @@ def test_restore_uploaded_dv(
                 "dv_name": "windows-dv",
                 "vm_name": "windows-vm",
                 "windows_image": Images.Windows.WIN2k19_IMG,
+                "image_directory": Images.Windows.UEFI_WIN_DIR,
             },
+            id="win2k19_uefi",
             marks=pytest.mark.polarion("CNV-8696"),
         ),
     ],
