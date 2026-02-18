@@ -236,10 +236,7 @@ def data_volume(
     elif source == "registry":
         url = image if image else params_dict.get("url")
         if not url:
-            raise ValueError(
-                "URL is required for source='registry' but was not provided. "
-                "Either 'image' or 'url' parameter must be set. "
-            )
+            raise ValueError("source='registry' requires 'image' or 'url' to be set in params_dict.")
     else:
         url = None
 
