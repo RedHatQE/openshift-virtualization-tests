@@ -78,19 +78,10 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
     topology: str
     netAttachDefName: str  # noqa: N815
     vlanID: int | None = None  # noqa: N815
+    subnets: str | None = None
 
     class Topology(Enum):
         LOCALNET = "localnet"
-
-
-@dataclass
-class OvnK8sConfigWithSubnets(CNIPluginOvnK8sConfig):
-    """
-    CNI OVN-Kubernetes Plugin with subnet configuration.
-    Extends CNIPluginOvnK8sConfig to include subnet specification for DHCP.
-    """
-
-    subnets: str | None = None
 
 
 @dataclass

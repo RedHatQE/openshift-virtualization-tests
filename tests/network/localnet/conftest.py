@@ -43,6 +43,19 @@ from utilities.virt import migrate_vm_and_verify
 PRIMARY_INTERFACE_NAME = "eth0"
 
 
+@pytest.fixture(scope="package")
+def nncp_localnet_on_secondary_node_nic(
+    nmstate_dependent_placeholder: None,
+    admin_client: DynamicClient,
+    hosts_common_available_ports: list[str],
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    with create_nncp_localnet_on_secondary_node_nic(
+        node_nic_name=(hosts_common_available_ports[-1]),
+        client=admin_client,
+    ) as nncp:
+        yield nncp
+
+
 @pytest.fixture(scope="module")
 def nncp_localnet(
     nmstate_dependent_placeholder: None, admin_client: DynamicClient
@@ -365,19 +378,6 @@ def migrated_localnet_vm(
 
 
 @pytest.fixture(scope="module")
-def nncp_localnet_on_secondary_node_nic(
-    nmstate_dependent_placeholder: None,
-    admin_client: DynamicClient,
-    hosts_common_available_ports: list[str],
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with create_nncp_localnet_on_secondary_node_nic(
-        node_nic_name=(hosts_common_available_ports[-1]),
-        client=admin_client,
-    ) as nncp:
-        yield nncp
-
-
-@pytest.fixture(scope="module")
 def nncp_localnet_on_secondary_node_nic_with_jumbo_frame(
     nmstate_dependent_placeholder: None,
     admin_client: DynamicClient,
@@ -482,37 +482,33 @@ def localnet_ovs_bridge_jumbo_frame_client_and_server_vms(
 
 
 @pytest.fixture()
-def secondary_localnet_bridge_vlan_id(vlan_index_number: Generator[int]) -> int:
-    return next(vlan_index_number)
-
-
-@pytest.fixture()
 def localnet_nad_ipv4_subnets() -> str:
     return f"{random_ipv4_address(net_seed=0, host_address=0)}/24"
 
 
 @pytest.fixture()
-def nad_localnet_secondary_nic(
+def nad_localnet_secondary_node_nic(
     admin_client: DynamicClient,
-    secondary_localnet_bridge_vlan_id: int,
+    nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
+    vlan_id: int,
     localnet_nad_ipv4_subnets: str,
     namespace_localnet_1: Namespace,
-    nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[libnad.NetworkAttachmentDefinition]:
+    localnet_secondary_nad_name = "localnet-secondary-nic-nad"
     config = libnad.NetConfig(
         name=LOCALNET_OVS_BRIDGE_NETWORK,
         plugins=[
-            libnad.OvnK8sConfigWithSubnets(
-                topology="localnet",
-                netAttachDefName=f"{namespace_localnet_1.name}/localnet-secondary-nic-nad",
-                vlanID=secondary_localnet_bridge_vlan_id,
+            libnad.CNIPluginOvnK8sConfig(
+                topology=libnad.CNIPluginOvnK8sConfig.Topology.LOCALNET.value,
+                netAttachDefName=f"{namespace_localnet_1.name}/{localnet_secondary_nad_name}",
+                vlanID=vlan_id,
                 subnets=localnet_nad_ipv4_subnets,
             )
         ],
     )
 
     with libnad.NetworkAttachmentDefinition(
-        name="localnet-secondary-nic-nad",
+        name=localnet_secondary_nad_name,
         namespace=namespace_localnet_1.name,
         config=config,
         client=admin_client,
@@ -523,7 +519,7 @@ def nad_localnet_secondary_nic(
 @pytest.fixture()
 def vm_primary_localnet_1(
     namespace_localnet_1: Namespace,
-    nad_localnet_secondary_nic: libnad.NetworkAttachmentDefinition,
+    nad_localnet_secondary_node_nic: libnad.NetworkAttachmentDefinition,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
@@ -531,7 +527,7 @@ def vm_primary_localnet_1(
         name="vm-primary-localnet-1",
         client=unprivileged_client,
         networks=[
-            Network(name=PRIMARY_INTERFACE_NAME, multus=Multus(networkName=nad_localnet_secondary_nic.name)),
+            Network(name=PRIMARY_INTERFACE_NAME, multus=Multus(networkName=nad_localnet_secondary_node_nic.name)),
         ],
         interfaces=[
             Interface(name=PRIMARY_INTERFACE_NAME, bridge={}),
@@ -548,7 +544,7 @@ def vm_primary_localnet_1(
 @pytest.fixture()
 def vm_primary_localnet_2(
     namespace_localnet_1: Namespace,
-    nad_localnet_secondary_nic: libnad.NetworkAttachmentDefinition,
+    nad_localnet_secondary_node_nic: libnad.NetworkAttachmentDefinition,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
@@ -556,7 +552,7 @@ def vm_primary_localnet_2(
         name="vm-primary-localnet-2",
         client=unprivileged_client,
         networks=[
-            Network(name=PRIMARY_INTERFACE_NAME, multus=Multus(networkName=nad_localnet_secondary_nic.name)),
+            Network(name=PRIMARY_INTERFACE_NAME, multus=Multus(networkName=nad_localnet_secondary_node_nic.name)),
         ],
         interfaces=[
             Interface(name=PRIMARY_INTERFACE_NAME, bridge={}),
