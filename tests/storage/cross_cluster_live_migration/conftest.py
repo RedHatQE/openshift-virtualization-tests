@@ -490,6 +490,7 @@ def vm_for_cclm_from_template_with_data_source(
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
+        vm.start()
         yield vm
 
 
@@ -513,6 +514,7 @@ def vm_for_cclm_with_instance_type(
             storage_class=remote_cluster_source_storage_class,
         ),
     ) as vm:
+        vm.start()
         yield vm
 
 
@@ -543,6 +545,7 @@ def vm_for_cclm_from_template_with_dv(
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
     ) as vm:
+        vm.start()
         yield vm
 
 

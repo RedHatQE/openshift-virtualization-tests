@@ -539,9 +539,9 @@ def check_file_in_vm(
 def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
     if storage_class in cluster_storage_classes_names:
         return storage_class
-    else:
-        pytest.fail(
-            NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
-                storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
-            )
+
+    pytest.fail(
+        NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+            storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
         )
+    )
