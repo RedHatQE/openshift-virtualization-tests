@@ -5,6 +5,7 @@ SR-IOV Tests
 import logging
 
 import pytest
+from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.utils import assert_no_ping
@@ -90,7 +91,23 @@ class TestPingConnectivity:
         restarted_sriov_vm4,
     ):
         # Check only the second interface (SR-IOV interface).
-        assert restarted_sriov_vm4.vmi.interfaces[1] == vm4_interfaces[1]
+        # Grace the check with a timeout rather than immediately declaring failure. The reason is that although
+        # the interface already appears in the VMI status, it's not immediately fully updated with all the
+        # required fields.
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=120,
+                sleep=5,
+                func=lambda: restarted_sriov_vm4.vmi.interfaces[1] == vm4_interfaces[1],
+            ):
+                if sample:
+                    return
+        except ValueError:
+            LOGGER.error(
+                f"Mismatch between the interface status before reboot:\n{vm4_interfaces[1]}\n"
+                f"and after:\n {restarted_sriov_vm4.vmi.interfaces[1]}"
+            )
+            raise
 
 
 @pytest.mark.special_infra
