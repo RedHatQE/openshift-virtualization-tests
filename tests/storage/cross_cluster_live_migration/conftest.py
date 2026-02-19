@@ -470,27 +470,25 @@ def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden
 
 
 @pytest.fixture(scope="class")
-def local_vms_after_cclm_migration(admin_client, namespace, vms_for_cclm):
-    """
-    Create local VM references for VMs after CCLM migration.
-
-    Args:
-        admin_client: DynamicClient for the local cluster
-        namespace: The namespace where the VMs are located in the local cluster
-        vms_for_cclm: List of VirtualMachineForTests objects from the remote cluster
-
-    Returns:
-        List of VirtualMachineForTests objects referencing VMs in the local cluster
-    """
-    local_vms = []
-    for vm in vms_for_cclm:
-        local_vm = VirtualMachineForTests(
-            name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
-        )
-        local_vm.username = vm.username
-        local_vm.password = vm.password
-        local_vms.append(local_vm)
-    return local_vms
+def vm_for_cclm_from_template_with_data_source(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_kubeconfig,
+    remote_cluster_source_storage_class,
+):
+    with VirtualMachineForTests(
+        name="vm-from-template-and-data-source",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=remote_cluster_rhel10_data_source,
+            storage_class=remote_cluster_source_storage_class,
+        ),
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture(scope="class")
@@ -512,28 +510,6 @@ def vm_for_cclm_with_instance_type(
             data_source=remote_cluster_rhel10_data_source,
             storage_class=remote_cluster_source_storage_class,
         ),
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client,
-    remote_cluster_source_test_namespace,
-    remote_cluster_rhel10_data_source,
-    remote_cluster_kubeconfig,
-    remote_cluster_source_storage_class,
-):
-    with VirtualMachineForTests(
-        name="vm-from-template-and-data-source",
-        namespace=remote_cluster_source_test_namespace.name,
-        client=remote_admin_client,
-        os_flavor=OS_FLAVOR_RHEL,
-        data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=remote_cluster_rhel10_data_source,
-            storage_class=remote_cluster_source_storage_class,
-        ),
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         yield vm
 
@@ -604,6 +580,30 @@ def written_file_to_vms_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconf
             kubeconfig=remote_cluster_kubeconfig,
         )
     yield booted_vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def local_vms_after_cclm_migration(admin_client, namespace, vms_for_cclm):
+    """
+    Create local VM references for VMs after CCLM migration.
+
+    Args:
+        admin_client: DynamicClient for the local cluster
+        namespace: The namespace where the VMs are located in the local cluster
+        vms_for_cclm: List of VirtualMachineForTests objects from the remote cluster
+
+    Returns:
+        List of VirtualMachineForTests objects referencing VMs in the local cluster
+    """
+    local_vms = []
+    for vm in vms_for_cclm:
+        local_vm = VirtualMachineForTests(
+            name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
+        )
+        local_vm.username = vm.username
+        local_vm.password = vm.password
+        local_vms.append(local_vm)
+    return local_vms
 
 
 @pytest.fixture(scope="class")
