@@ -4,13 +4,11 @@ import shlex
 
 import pytest
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -29,11 +27,8 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms
 from utilities import console
 from utilities.constants import (
-    DEFAULT_FEDORA_REGISTRY_URL,
-    NODE_STR,
     ONE_CPU_CORE,
     OS_FLAVOR_FEDORA,
-    REGISTRY_STR,
     SSP_OPERATOR,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
@@ -58,7 +53,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    vm_instance_from_template,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -192,17 +186,6 @@ def generated_network_traffic(vm_for_test):
 @pytest.fixture(scope="class")
 def vm_for_test_interface_name(vm_for_test):
     return vm_for_test.vmi.interfaces[0].interfaceName
-
-
-@pytest.fixture()
-def single_metric_vmi_guest_os_kernel_release_info(single_metric_vm):
-    return {
-        "guest_os_kernel_release": run_ssh_commands(host=single_metric_vm.ssh_exec, commands=shlex.split("uname -r"))[
-            0
-        ].strip(),
-        "namespace": single_metric_vm.namespace,
-        NODE_STR: single_metric_vm.vmi.virt_launcher_pod.node.name,
-    }
 
 
 @pytest.fixture(scope="class")
@@ -413,27 +396,3 @@ def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
-
-
-@pytest.fixture()
-def vm_with_rwo_dv(request, unprivileged_client, namespace):
-    dv = DataVolume(
-        client=unprivileged_client,
-        source=REGISTRY_STR,
-        name="non-evictable-vm-dv-for-test",
-        namespace=namespace.name,
-        url=DEFAULT_FEDORA_REGISTRY_URL,
-        size=Images.Fedora.DEFAULT_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-        access_modes=DataVolume.AccessMode.RWO,
-        api_name="storage",
-    )
-    dv.to_dict()
-    dv_res = dv.res
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
-    ) as vm:
-        yield vm

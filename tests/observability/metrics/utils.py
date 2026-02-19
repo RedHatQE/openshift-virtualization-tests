@@ -21,13 +21,11 @@ from tests.observability.metrics.constants import (
 )
 from utilities.constants import (
     CAPACITY,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
-    TIMEOUT_20SEC,
     TIMEOUT_30SEC,
     USED,
     VIRT_HANDLER,
@@ -347,57 +345,6 @@ def metric_result_output_dict_by_mountpoint(
         .get("data")
         .get("result")
     }
-
-
-def compare_kubevirt_vmi_info_metric_with_vm_info(
-    prometheus: Prometheus, query: str, expected_value: str, values_to_compare: dict
-) -> None:
-    """
-    This function waiting of Prometheus query output to match expected value
-    Args:
-        prometheus (Prometheus): Prometheus object
-        query (str): Prometheus query string
-        expected_value (str): expected_value for the query
-        values_to_compare (dict): entries with values from the vm to compare with prometheus
-
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_20SEC,
-        func=prometheus.query_sampler,
-        query=query,
-    )
-    missing_entries = None
-    metric_value_field = None
-    values_mismatch = None
-    expected_entries = values_to_compare.keys()
-    try:
-        for sample in sampler:
-            if sample and sample[0].get("metric"):
-                query_result = sample[0]
-                metric_fields = query_result["metric"]
-                metric_value_field = query_result.get("value")[1]
-                missing_entries = [entry for entry in expected_entries if entry not in metric_fields]
-                if not missing_entries:
-                    values_mismatch = {
-                        field_name: (
-                            f"Value from vm: {vm_command_value}, value from prometheus query: "
-                            f"{metric_fields.get(field_name)}"
-                        )
-                        for field_name, vm_command_value in values_to_compare.items()
-                        if metric_fields.get(field_name) != vm_command_value
-                    }
-                    if metric_value_field == expected_value and not values_mismatch:
-                        return
-                missing_entries = None
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"timeout exception waiting Prometheus query to match expected value: {expected_value}\n"
-            f"query: {query}, results: {metric_value_field}\n"
-            f"missing entries: {missing_entries}, expected entries: {expected_entries}\n"
-            f"The following values has a mismatch between metric and vm values: {values_mismatch}\n"
-        )
-        raise
 
 
 def timestamp_to_seconds(timestamp: str) -> int:

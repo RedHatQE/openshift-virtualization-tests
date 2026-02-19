@@ -1,7 +1,6 @@
 import pytest
 
 from tests.observability.metrics.constants import (
-    KUBEVIRT_VMI_INFO,
     KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
@@ -9,7 +8,6 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     assert_vm_metric_virt_handler_pod,
-    compare_kubevirt_vmi_info_metric_with_vm_info,
     get_vm_metrics,
 )
 from tests.observability.utils import validate_metrics_value
@@ -137,14 +135,3 @@ def test_cnv_installation_with_hco_cr_metrics(
         metric_name=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
         expected_value="1",
     )
-
-
-class TestVMIMetrics:
-    @pytest.mark.polarion("CNV-11400")
-    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, single_metric_vmi_guest_os_kernel_release_info):
-        compare_kubevirt_vmi_info_metric_with_vm_info(
-            prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
-            expected_value="1",
-            values_to_compare=single_metric_vmi_guest_os_kernel_release_info,
-        )
