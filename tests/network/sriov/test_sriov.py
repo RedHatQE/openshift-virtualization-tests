@@ -1,53 +1,48 @@
-"""
-SR-IOV Tests
-"""
-
-import logging
-
 import pytest
 
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.vmspec import lookup_iface_status
+from tests.network.libs.ip import filter_link_local_addresses
 from tests.network.utils import assert_no_ping
 from utilities.constants import MTU_9000, QUARANTINED
 from utilities.network import assert_ping_successful
 from utilities.virt import migrate_vm_and_verify
-
-LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.sriov]
 
 
 class TestPingConnectivity:
     @pytest.mark.post_upgrade
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-3963")
     def test_sriov_basic_connectivity(
         self,
+        subtests,
         sriov_network,
         sriov_vm1,
         sriov_vm2,
     ):
-        assert_ping_successful(
-            src_vm=sriov_vm1,
-            dst_ip=lookup_iface_status_ip(vm=sriov_vm2, iface_name=sriov_network.name, ip_family=4),
+        dst_ips = filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=sriov_vm2, iface_name=sriov_network.name)["ipAddresses"]
         )
+        for dst_ip in dst_ips:
+            with subtests.test(msg=f"Testing connectivity to {dst_ip}"):
+                assert_ping_successful(src_vm=sriov_vm1, dst_ip=dst_ip)
 
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-4505")
+    @pytest.mark.usefixtures("sriov_network_mtu_9000")
     def test_sriov_custom_mtu_connectivity(
         self,
+        subtests,
         sriov_network,
         sriov_vm1,
         sriov_vm2,
-        sriov_network_mtu_9000,
     ):
-        assert_ping_successful(
-            src_vm=sriov_vm1,
-            dst_ip=lookup_iface_status_ip(vm=sriov_vm2, iface_name=sriov_network.name, ip_family=4),
-            packet_size=MTU_9000,
+        dst_ips = filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=sriov_vm2, iface_name=sriov_network.name)["ipAddresses"]
         )
+        for dst_ip in dst_ips:
+            with subtests.test(msg=f"Testing connectivity to {dst_ip} with MTU {MTU_9000}"):
+                assert_ping_successful(src_vm=sriov_vm1, dst_ip=dst_ip, packet_size=MTU_9000)
 
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-3958")
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: fails in CI due to issue in specific cluster; tracked in CNV-75730",
@@ -55,16 +50,18 @@ class TestPingConnectivity:
     )
     def test_sriov_basic_connectivity_vlan(
         self,
+        subtests,
         sriov_network_vlan,
         sriov_vm3,
         sriov_vm4,
     ):
-        assert_ping_successful(
-            src_vm=sriov_vm3,
-            dst_ip=lookup_iface_status_ip(vm=sriov_vm4, iface_name=sriov_network_vlan.name, ip_family=4),
+        dst_ips = filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=sriov_vm4, iface_name=sriov_network_vlan.name)["ipAddresses"]
         )
+        for dst_ip in dst_ips:
+            with subtests.test(msg=f"Testing VLAN connectivity to {dst_ip}"):
+                assert_ping_successful(src_vm=sriov_vm3, dst_ip=dst_ip)
 
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-4713")
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: fails in CI due to issue in specific cluster; tracked in CNV-75730",
@@ -72,20 +69,24 @@ class TestPingConnectivity:
     )
     def test_sriov_no_connectivity_no_vlan_to_vlan(
         self,
+        subtests,
         sriov_network_vlan,
         sriov_vm1,
         sriov_vm4,
     ):
-        assert_no_ping(
-            src_vm=sriov_vm1,
-            dst_ip=lookup_iface_status_ip(vm=sriov_vm4, iface_name=sriov_network_vlan.name, ip_family=4),
+        dst_ips = filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=sriov_vm4, iface_name=sriov_network_vlan.name)["ipAddresses"]
         )
+        for dst_ip in dst_ips:
+            with subtests.test(msg=f"Testing no connectivity to {dst_ip}"):
+                assert_no_ping(src_vm=sriov_vm1, dst_ip=dst_ip)
 
+
+class TestSriovInterfacePersistence:
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-4768")
     def test_sriov_interfaces_post_reboot(
         self,
-        sriov_vm4,
         vm4_interfaces,
         restarted_sriov_vm4,
     ):
@@ -93,21 +94,22 @@ class TestPingConnectivity:
         assert restarted_sriov_vm4.vmi.interfaces[1] == vm4_interfaces[1]
 
 
-@pytest.mark.special_infra
 class TestSriovLiveMigration:
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-6455")
     def test_sriov_migration(
         self,
+        subtests,
         sriov_network,
         sriov_vm_migrate,
         sriov_vm2,
     ):
         migrate_vm_and_verify(vm=sriov_vm_migrate, check_ssh_connectivity=True)
-        assert_ping_successful(
-            src_vm=sriov_vm2,
-            dst_ip=lookup_iface_status_ip(vm=sriov_vm_migrate, iface_name=sriov_network.name, ip_family=4),
+        dst_ips = filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=sriov_vm_migrate, iface_name=sriov_network.name)["ipAddresses"]
         )
+        for dst_ip in dst_ips:
+            with subtests.test(msg=f"Testing connectivity to migrated VM at {dst_ip}"):
+                assert_ping_successful(src_vm=sriov_vm2, dst_ip=dst_ip)
 
 
 @pytest.mark.sno
