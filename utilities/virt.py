@@ -341,6 +341,7 @@ class VirtualMachineForTests(VirtualMachine):
             priority_class_name (str, optional): The name of the priority class used for the VM
             dry_run (str, default=None): If "All", the resource will be created using the dry_run flag
             additional_labels (dict, optional): Dict of additional labels for VM (e.g. {"vm-label": "best-vm"})
+                              those labels will be placed in structure spec.template.metadata.labels
             generate_unique_name: if True then it will set dynamic name for the vm, False will use the name of vm passed
             node_selector_labels (str, optional): Labels for node selector.
             vm_instance_type (VirtualMachineInstancetype, optional): instance type object for the VM
