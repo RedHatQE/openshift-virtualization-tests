@@ -1,7 +1,7 @@
 # Permissions and Verbs for set_permissions
 from ocp_resources.resource import Resource
 
-from tests.storage.constants import CIRROS_QCOW2_IMG
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from utilities.constants import Images
 
 DATAVOLUMES = ["datavolumes"]
@@ -34,7 +34,7 @@ RBAC_AUTHORIZATION_API_GROUP = Resource.ApiGroup.RBAC_AUTHORIZATION_K8S_IO
 
 DV_PARAMS = {
     "dv_name": "source-dv",
-    "source": "http",
-    "image": CIRROS_QCOW2_IMG,
-    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
+    "source": "registry",
+    "image": QUAY_FEDORA_CONTAINER_IMAGE,
+    "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
 }
