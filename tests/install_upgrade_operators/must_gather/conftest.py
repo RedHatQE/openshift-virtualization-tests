@@ -238,7 +238,7 @@ def must_gather_vm_scope_class(
 
 
 @pytest.fixture(scope="function")
-def resource_type(request, admin_client):
+def resource_type(admin_client, request):
     resource_type = request.param
     if not next(resource_type.get(client=admin_client), None):
         raise MissingResourceException(resource_type.__name__)
@@ -246,7 +246,7 @@ def resource_type(request, admin_client):
 
 
 @pytest.fixture(scope="function")
-def config_map_by_name(request, admin_client):
+def config_map_by_name(admin_client, request):
     cm_name, cm_namespace = request.param
     return ConfigMap(name=cm_name, namespace=cm_namespace, client=admin_client)
 
@@ -270,10 +270,11 @@ def nad_mac_address(must_gather_nad, must_gather_vm):
 
 
 @pytest.fixture(scope="package")
-def vm_interface_name(nad_mac_address, must_gather_vm):
+def vm_interface_name(admin_client, nad_mac_address, must_gather_vm):
     bridge_command = f"bridge fdb show | grep {nad_mac_address}"
     output = (
-        must_gather_vm.privileged_vmi.virt_launcher_pod
+        must_gather_vm.vmi
+        .get_virt_launcher_pod(privileged_client=admin_client)
         .execute(
             command=shlex.split(f"bash -c {shlex.quote(bridge_command)}"),
             container="compute",
@@ -338,9 +339,10 @@ def extracted_data_from_must_gather_file(
 
 
 @pytest.fixture(scope="class")
-def executed_bridge_link_show_command(must_gather_vm):
+def executed_bridge_link_show_command(admin_client, must_gather_vm):
     output = (
-        must_gather_vm.privileged_vmi.virt_launcher_pod
+        must_gather_vm.vmi
+        .get_virt_launcher_pod(privileged_client=admin_client)
         .execute(
             command=shlex.split(f"bash -c {shlex.quote(BRIDGE_COMMAND)}"),
             container="compute",

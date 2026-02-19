@@ -39,6 +39,7 @@ def hco_vm(unprivileged_client, namespace):
         vm.stop(wait=True)
 
 
+@pytest.mark.usefixtures("node_placement_labels")
 @pytest.mark.parametrize(
     "hyperconverged_with_node_placement",
     [
@@ -49,14 +50,13 @@ def hco_vm(unprivileged_client, namespace):
     ],
     indirect=True,
 )
-def test_remove_workload_label_from_node_while_vm_running(
-    node_placement_labels, hyperconverged_with_node_placement, hco_vm
-):
-    node_name = hco_vm.privileged_vmi.node.name
+def test_remove_workload_label_from_node_while_vm_running(admin_client, hyperconverged_with_node_placement, hco_vm):
+    vmi_node = hco_vm.vmi.get_node(privileged_client=admin_client)
+    node_name = vmi_node.name
     LOGGER.info(f"Removing workload label from node: {node_name}")
     try:
-        with ResourceEditor(patches={hco_vm.privileged_vmi.node: {"metadata": {"labels": {"work-comp": None}}}}):
-            LOGGER.info("Workload label removed from node: {node_name} while VM is running as expected")
+        with ResourceEditor(patches={vmi_node: {"metadata": {"labels": {"work-comp": None}}}}):
+            LOGGER.info(f"Workload label removed from node: {node_name} while VM is running as expected")
 
     except ForbiddenError:
         LOGGER.error(f"Unable to remove workload label from node: {node_name} while vm/workload is present")

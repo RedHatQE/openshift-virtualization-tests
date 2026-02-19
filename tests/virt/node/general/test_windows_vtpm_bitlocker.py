@@ -98,7 +98,7 @@ def windows_vtpm_vm(
     modern_cpu_for_migration,
 ):
     windows_version = request.param["windows_version"]
-    presistent_enabled = {"persistent": True}
+    persistent_enabled = {"persistent": True}
     with VirtualMachineForTestsFromTemplate(
         name=f"{windows_version}-vtpm-vm",
         labels=Template.generate_template_labels(
@@ -107,8 +107,8 @@ def windows_vtpm_vm(
         namespace=namespace.name,
         client=unprivileged_client,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
-        tpm_params=presistent_enabled,
-        efi_params=presistent_enabled,
+        tpm_params=persistent_enabled,
+        efi_params=persistent_enabled,
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
@@ -149,10 +149,10 @@ def migrated_encrypted_vm(bitlocker_encrypted_vm):
 class TestBitLockerVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::persistent_tpm")
     @pytest.mark.polarion("CNV-10318")
-    def test_persistent_tpm(self, windows_vtpm_vm):
-        xml_dict_tpm = windows_vtpm_vm.privileged_vmi.xml_dict["domain"]["devices"]["tpm"]
+    def test_persistent_tpm(self, admin_client, windows_vtpm_vm):
+        xml_dict_tpm = windows_vtpm_vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["tpm"]
         assert xml_dict_tpm["@model"] == "tpm-crb", "TPM model should be tpm-crb!"
-        assert xml_dict_tpm["backend"].get("@persistent_state") == "yes", "TPM is not peristent state in dumpxml!"
+        assert xml_dict_tpm["backend"].get("@persistent_state") == "yes", "TPM is not persistent state in dumpxml!"
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::bitlocker_encryption",

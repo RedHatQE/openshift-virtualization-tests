@@ -37,19 +37,19 @@ class TestBasicCx1Numa:
         )
 
     @pytest.mark.polarion("CNV-12367")
-    def test_numa_cpu_allocation(self, created_vm_cx1_instancetype):
+    def test_numa_cpu_allocation(self, admin_client, created_vm_cx1_instancetype):
         assert_numa_cpu_allocation(
-            vm_cpus=get_vm_cpu_list(vm=created_vm_cx1_instancetype),
-            numa_nodes=get_numa_node_cpu_dict(vm=created_vm_cx1_instancetype),
+            vm_cpus=get_vm_cpu_list(vm=created_vm_cx1_instancetype, admin_client=admin_client),
+            numa_nodes=get_numa_node_cpu_dict(vm=created_vm_cx1_instancetype, admin_client=admin_client),
         )
 
     @pytest.mark.usefixtures("migrated_numa_cx1_vm")
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-12368")
-    def test_live_migrate_numa_vm(self, created_vm_cx1_instancetype):
-        validate_libvirt_persistent_domain(vm=created_vm_cx1_instancetype)
+    def test_live_migrate_numa_vm(self, admin_client, created_vm_cx1_instancetype):
+        validate_libvirt_persistent_domain(vm=created_vm_cx1_instancetype, admin_client=admin_client)
         assert_qos_guaranteed(vm=created_vm_cx1_instancetype)
         assert_numa_cpu_allocation(
-            vm_cpus=get_vm_cpu_list(vm=created_vm_cx1_instancetype),
-            numa_nodes=get_numa_node_cpu_dict(vm=created_vm_cx1_instancetype),
+            vm_cpus=get_vm_cpu_list(vm=created_vm_cx1_instancetype, admin_client=admin_client),
+            numa_nodes=get_numa_node_cpu_dict(vm=created_vm_cx1_instancetype, admin_client=admin_client),
         )
