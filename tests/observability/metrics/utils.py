@@ -390,53 +390,6 @@ def validate_network_traffic_metrics_value(
         raise
 
 
-def get_metric_sum_value(prometheus: Prometheus, metric: str) -> int:
-    metrics = prometheus.query(query=metric)
-    metrics_result = metrics["data"].get("result", [])
-    if metrics_result:
-        return sum(int(metric_metrics_result["value"][1]) for metric_metrics_result in metrics_result)
-    LOGGER.warning(f"For Query {metric}, empty results found.")
-    return 0
-
-
-def wait_for_expected_metric_value_sum(
-    prometheus: Prometheus,
-    metric_name: str,
-    expected_value: int,
-    check_times: int = 3,
-    timeout: int = TIMEOUT_4MIN,
-) -> None:
-    sampler = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metric_sum_value,
-        prometheus=prometheus,
-        metric=metric_name,
-    )
-    sample = None
-    current_check = 0
-    comparison_values_log = {}
-    try:
-        for sample in sampler:
-            if sample:
-                comparison_values_log[datetime.now()] = (
-                    f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
-                )
-            if sample == expected_value:
-                current_check += 1
-                if current_check >= check_times:
-                    return
-            else:
-                current_check = 0
-
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Metric: {metric_name}, metrics value: {sample}, expected: {expected_value}, "
-            f"comparison log: {comparison_values_log}"
-        )
-        raise
-
-
 def metric_result_output_dict_by_mountpoint(
     prometheus: Prometheus, capacity_or_used: str, vm_name: str
 ) -> dict[str, str]:
