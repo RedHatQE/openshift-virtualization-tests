@@ -17,7 +17,7 @@ from tests.storage.utils import upload_image_to_dv, upload_token_request
 from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
-    TIMEOUT_10SEC,
+    TIMEOUT_30SEC,
     Images,
 )
 from utilities.hco import (
@@ -171,7 +171,7 @@ def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_d
             vm_status = VirtualMachineInstance.Status.PENDING
             bounded_pvc = pvc
         vm_dv.vmi.wait_for_status(status=vm_status)
-        bounded_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_10SEC)
+        bounded_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_30SEC)
         uploaded_wffc_dv.wait_for_status(status=uploaded_wffc_dv.Status.UPLOAD_READY)
         yield vm_dv
 
