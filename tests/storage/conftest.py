@@ -56,6 +56,7 @@ from utilities.constants import (
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -586,3 +587,8 @@ def rhel10_data_source_scope_module(golden_images_namespace):
 @pytest.fixture(scope="class")
 def unique_suffix():
     return shortuuid.ShortUUID().random(length=4).lower()
+
+
+@pytest.fixture(scope="class")
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
