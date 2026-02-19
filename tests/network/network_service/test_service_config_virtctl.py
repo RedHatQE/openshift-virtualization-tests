@@ -28,7 +28,11 @@ class TestServiceConfigurationViaVirtctl:
                 SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
                 SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
                 SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
-                marks=(pytest.mark.polarion("CNV-6482")),
+                marks=(
+                    pytest.mark.polarion("CNV-6482"),
+                    pytest.mark.ipv4,
+                    pytest.mark.ipv6,
+                ),
             ),
         ],
         indirect=["virtctl_expose_service", "expected_num_families_in_service"],
@@ -37,9 +41,7 @@ class TestServiceConfigurationViaVirtctl:
     def test_virtctl_expose_services(
         self,
         expected_num_families_in_service,
-        running_vm_for_exposure,
         virtctl_expose_service,
-        dual_stack_cluster,
         ip_family_policy,
     ):
         assert_svc_ip_params(
