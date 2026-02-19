@@ -156,6 +156,25 @@ def verify_vms_boot_time_after_migration(
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
 
 
+def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+    not_stopped_vms = {}
+    for vm in vms:
+        vm_status = vm.printable_status
+        if vm_status != vm.Status.STOPPED:
+            not_stopped_vms[vm.name] = vm_status
+    assert not not_stopped_vms, f"Source VMs are not stopped: {not_stopped_vms}"
+
+
+def assert_vms_cleanup_successful(vms: list[VirtualMachineForTests]) -> None:
+    vms_failed_cleanup = {}
+    for vm in vms:
+        try:
+            assert vm.clean_up(), f"Failed to clean up source VM {vm.name}"
+        except Exception as cleanup_exception:
+            vms_failed_cleanup[vm.name] = cleanup_exception
+    assert not vms_failed_cleanup, f"Failed to clean up source VMs: {vms_failed_cleanup}"
+
+
 def delete_file_in_vm(
     vm: VirtualMachineForTests, file_name: str, username: str | None = None, password: str | None = None
 ) -> None:

@@ -9,16 +9,18 @@ from tests.storage.cross_cluster_live_migration.constants import (
     TEST_FILE_NAME,
 )
 from tests.storage.cross_cluster_live_migration.utils import (
+    assert_vms_are_stopped,
+    assert_vms_cleanup_successful,
     delete_file_in_vm,
     verify_compute_live_migration_after_cclm,
     verify_vms_boot_time_after_migration,
 )
 from tests.storage.utils import check_file_in_vm
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants import TIMEOUT_10MIN, TIMEOUT_15MIN, TIMEOUT_60MIN
 from utilities.virt import running_vm
 
-TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE = "CCLMvmFromTemplateWithDataSource"
-TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE = "CCLMvmWithInstanceType"
+TESTS_CLASS_NAME_SEVERAL_VMS = "TestCCLMSeveralVMs"
+TESTS_CLASS_NAME_WINDOWS_WITH_VTPM = "TestCCLMWindowsWithVTPM"
 
 pytestmark = [
     pytest.mark.cclm,
@@ -49,11 +51,9 @@ pytestmark = [
     indirect=True,
 )
 @pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class")
-class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class 
-    @pytest.mark.polarion("CNV-11910")
-    @pytest.mark.dependency(
-        name=f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"
-    )
+class TestCCLMSeveralVMs:
+    @pytest.mark.polarion("CNV-11995")
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster")
     def test_migrate_vm_from_remote_to_local_cluster(
         self,
         written_file_to_vms_before_cclm,
@@ -67,19 +67,15 @@ class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class
             stop_condition=mtv_migration.Status.FAILED,
         )
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"]
-    )
-    @pytest.mark.polarion("CNV-XXXXX")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
+    @pytest.mark.polarion("CNV-11910")
     def test_verify_vms_boot_time_after_migration(self, local_vms_after_cclm_migration, vms_boot_time_before_cclm):
         verify_vms_boot_time_after_migration(
             local_vms=local_vms_after_cclm_migration, initial_boot_time=vms_boot_time_before_cclm
         )
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"]
-    )
-    @pytest.mark.polarion("CNV-XXXXX")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
+    @pytest.mark.polarion("CNV-14332")
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         for vm in local_vms_after_cclm_migration:
             check_file_in_vm(
@@ -90,17 +86,18 @@ class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class
                 password=vm.password,
             )
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"]
-    )
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
+    @pytest.mark.polarion("CNV-14333")
+    def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
+        assert_vms_are_stopped(vms=vms_for_cclm)
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
     @pytest.mark.polarion("CNV-12038")
     def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
         verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_VM_FROM_TEMPLATE_WITH_DATA_SOURCE}::test_migrate_vm_from_remote_to_local_cluster"]
-    )
-    @pytest.mark.polarion("CNV-XXXXX")
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
+    @pytest.mark.polarion("CNV-11997")
     def test_snapshot_and_restore_vms_after_cclm(self, unprivileged_client, local_vms_after_cclm_migration):
         for vm in local_vms_after_cclm_migration:
             # Create snapshot
@@ -118,11 +115,11 @@ class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class
                 # Stop VM and restore from snapshot
                 vm.stop(wait=True)
                 with VirtualMachineRestore(
-                    client=unprivileged_client,
                     name=f"restore-{vm.name}",
                     namespace=vm.namespace,
                     vm_name=vm.name,
                     snapshot_name=snapshot.name,
+                    client=unprivileged_client,
                 ) as vm_restore:
                     vm_restore.wait_restore_done()
                     running_vm(vm=vm)
@@ -136,32 +133,28 @@ class TestCCLMvmFromTemplateWithDataSource: # TODO rename test class
                         password=vm.password,
                     )
 
-    @pytest.mark.polarion("CNV-XXXXX")
+    @pytest.mark.polarion("CNV-14334")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
-        source_vms_failed_cleanup = {}
-        for vm in vms_for_cclm:
-            try:
-                assert vm.clean_up(), f"Failed to clean up source VM {vm.name}"
-            except Exception as cleanup_exception:
-                source_vms_failed_cleanup[vm.name] = cleanup_exception
-        assert not source_vms_failed_cleanup, f"Failed to clean up source VMs: {source_vms_failed_cleanup}"
+        assert_vms_cleanup_successful(vms=vms_for_cclm)
 
 
 @pytest.mark.parametrize(
-    "vms_for_cclm",
+    "remote_cluster_source_storage_class, local_cluster_target_storage_class, dv_wait_timeout, vms_for_cclm",
     [
         pytest.param(
-            {"vms_fixtures": ["vm_for_cclm_with_instance_type"]},
+            {"source_storage_class": py_config[STORAGE_CLASS_B]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            {"dv_wait_timeout": TIMEOUT_60MIN},
+            {"vms_fixtures": ["windows_vm_with_vtpm_for_cclm"]},
         ),
     ],
     indirect=True,
 )
-class TestCCLMvmWithInstanceType:
-    @pytest.mark.polarion("CNV-12013")
-    @pytest.mark.dependency(
-        name=f"{TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE}::test_migrate_vm_from_remote_to_local_cluster"
-    )
-    def test_migrate_vm_from_remote_to_local_cluster(
+@pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class", "dv_wait_timeout")
+class TestCCLMWindowsWithVTPM:
+    @pytest.mark.polarion("CNV-11999")
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS_WITH_VTPM}::test_migrate_windows_vm_with_vtpm")
+    def test_migrate_windows_vm_with_vtpm(
         self,
         mtv_migration,
     ):
@@ -172,9 +165,41 @@ class TestCCLMvmWithInstanceType:
             stop_condition=mtv_migration.Status.FAILED,
         )
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_VM_WITH_INSTANCE_TYPE}::test_migrate_vm_from_remote_to_local_cluster"]
-    )
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_WINDOWS_WITH_VTPM}::test_migrate_windows_vm_with_vtpm"])
     @pytest.mark.polarion("CNV-12474")
-    def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
+    def test_compute_live_migrate_windows_vms_after_cclm(self, local_vms_after_cclm_migration):
         verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_WINDOWS_WITH_VTPM}::test_migrate_windows_vm_with_vtpm"])
+    @pytest.mark.polarion("CNV-14335")
+    def test_source_windows_vms_are_stopped_after_cclm(self, vms_for_cclm):
+        assert_vms_are_stopped(vms=vms_for_cclm)
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_WINDOWS_WITH_VTPM}::test_migrate_windows_vm_with_vtpm"])
+    @pytest.mark.polarion("CNV-14337")
+    def test_snapshot_and_restore_windows_vms_after_cclm(self, unprivileged_client, local_vms_after_cclm_migration):
+        for vm in local_vms_after_cclm_migration:
+            # Create snapshot
+            with VirtualMachineSnapshot(
+                name=f"snapshot-{vm.name}",
+                namespace=vm.namespace,
+                vm_name=vm.name,
+                client=unprivileged_client,
+            ) as snapshot:
+                snapshot.wait_snapshot_done()
+
+                # Stop VM and restore from snapshot
+                vm.stop(wait=True, timeout=TIMEOUT_15MIN)
+                with VirtualMachineRestore(
+                    name=f"restore-{vm.name}",
+                    namespace=vm.namespace,
+                    vm_name=vm.name,
+                    snapshot_name=snapshot.name,
+                    client=unprivileged_client,
+                ) as vm_restore:
+                    vm_restore.wait_restore_done()
+                    running_vm(vm=vm)
+
+    @pytest.mark.polarion("CNV-14336")
+    def test_source_windows_vms_can_be_deleted(self, vms_for_cclm):
+        assert_vms_cleanup_successful(vms=vms_for_cclm)

@@ -40,9 +40,15 @@ from tests.storage.cross_cluster_live_migration.utils import (
     get_vm_boot_time_via_console,
 )
 from tests.storage.utils import get_storage_class_for_storage_migration
+from utilities.artifactory import (
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
+)
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
     RHEL10_PREFERENCE,
     RHEL10_STR,
@@ -601,6 +607,62 @@ def written_file_to_vms_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconf
 
 
 @pytest.fixture(scope="class")
+def remote_cluster_artifactory_secret_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_secret = get_artifactory_secret(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_secret
+    if artifactory_secret:
+        artifactory_secret.clean_up()
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_config_map = get_artifactory_config_map(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_config_map
+    if artifactory_config_map:
+        artifactory_config_map.clean_up()
+
+
+@pytest.fixture(scope="class")
+def windows_vm_with_vtpm_for_cclm(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_source_storage_class,
+    remote_cluster_artifactory_secret_scope_class,
+    remote_cluster_artifactory_config_map_scope_class,
+):
+    dv = DataVolume(
+        name="windows-11-dv",
+        namespace=remote_cluster_source_test_namespace.name,
+        storage_class=remote_cluster_source_storage_class,
+        source="http",
+        # Using WSL image to avoid the issue of the Windows VM not being able to boot
+        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=remote_admin_client,
+        api_name="storage",
+        secret=remote_cluster_artifactory_secret_scope_class,
+        cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,
+    )
+    dv.to_dict()
+    dv.res["metadata"].pop("namespace", None)
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
+        name="windows-11-vm",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large", client=remote_admin_client),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11", client=remote_admin_client),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def mtv_migration_plan(
     admin_client,
     mtv_namespace,
@@ -609,7 +671,7 @@ def mtv_migration_plan(
     local_cluster_mtv_storage_map,
     local_cluster_mtv_network_map,
     namespace,
-    vms_for_cclm,
+    booted_vms_for_cclm,
     unique_suffix,
 ):
     """
@@ -622,7 +684,7 @@ def mtv_migration_plan(
             "name": vm.name,
             "namespace": vm.namespace,
         }
-        for vm in vms_for_cclm
+        for vm in booted_vms_for_cclm
     ]
     with Plan(
         client=admin_client,
