@@ -11,8 +11,9 @@ exclude =
     Pipfile.*,
     ansible/*,
     docs/*,
-    .cache/*
-    utilities/unittests/*
+    .cache/*,
+    utilities/unittests/*,
+    utilities/junit_ai_utils.py,
 
 fcn_exclude_functions =
     Path,
@@ -82,6 +83,7 @@ fcn_exclude_functions =
     as_completed,
     mkdtemp,
     tempfile,
+    urllib3,
 
 nit_exclude_imports =
     os_params,
