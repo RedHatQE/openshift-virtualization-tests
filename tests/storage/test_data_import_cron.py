@@ -3,7 +3,9 @@ Automation for DataImportCron
 """
 
 import logging
+import os
 import re
+import shutil
 
 import pytest
 from ocp_resources.data_import_cron import DataImportCron
@@ -18,13 +20,14 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     OUTDATED,
-    QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     WILDCARD_CRON_EXPRESSION,
     Images,
 )
+from utilities.data_collector import get_data_collector_base_directory
+from utilities.must_gather import collect_must_gather
 from utilities.storage import (
     wait_for_succeeded_dv,
     wait_for_volume_snapshot_ready_to_use,
@@ -36,8 +39,21 @@ RHEL8_DIGEST = "947541648d7f12fd56d2224d55ce708d369f76ffeb4938c8846b287197f30970
 # Login Red Hat Registry using the Customer Portal credentials,
 # and get the rhel8 digest from oc image info registry.redhat.io/rhel8/rhel-guest-image:8.4.0-423
 
-
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture()
+def collect_must_gather_on_failure(request, must_gather_image_url):
+    before_fail_count = request.session.testsfailed
+    target_path = os.path.join(get_data_collector_base_directory(), "data-import-cron-must-gather")
+    yield collect_must_gather(
+        must_gather_tmpdir=target_path,
+        must_gather_image_url=must_gather_image_url,
+    )
+    if request.session.testsfailed > before_fail_count:
+        LOGGER.warning("Test failed. Keeping must-gather data for debugging.")
+    else:
+        shutil.rmtree(target_path, ignore_errors=True)
 
 
 def wait_for_succeeded_imported_object(namespace, name, storage_with_import_cron_source_snapshot):
@@ -209,13 +225,10 @@ def second_object_cleanup(
     resource_class(namespace=namespace.name, name=second_object_name).clean_up()
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Volume snapshot fails to become ready during test setup. Tracked in CNV-75955",
-    run=False,
-)
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-7602")
 @pytest.mark.s390x
+@pytest.mark.usefixtures("collect_must_gather_on_failure")
 def test_data_import_cron_garbage_collection(
     namespace,
     second_object_cleanup,
