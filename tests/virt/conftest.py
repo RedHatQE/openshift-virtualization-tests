@@ -1,17 +1,24 @@
 import collections
 import logging
 import shlex
+import time
 
 import bitmath
 import pytest
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
+from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
+from tests.utils import (
+    verify_cpumanager_workers,
+    verify_hugepages_1gi,
+    verify_rwx_default_storage,
+)
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
+    MDEV_NAME_STR,
     NVIDIA_VGPU_MANAGER_DS,
 )
 from tests.virt.node.gpu.utils import (
@@ -219,18 +226,49 @@ def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource
 
 
 @pytest.fixture(scope="session")
-def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
+def gpu_nodes_labeled_with_vgpu_config(nodes_with_supported_gpus, supported_gpu_device):
+    vgpu_config = supported_gpu_device[MDEV_NAME_STR].split()[-1]
+    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/vgpu.config": vgpu_config})
+
+
+@pytest.fixture(scope="session")
+def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus, gpu_nodes_labeled_with_vgpu_config):
     yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/gpu.workload.config": "vm-vgpu"})
 
 
 @pytest.fixture(scope="session")
 def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
     wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name="nvidia-vgpu-device-manager")
     yield gpu_nodes_labeled_with_vm_vgpu
 
 
+def update_nodes_vgpu_config_label(nodes, label_value):
+    for node in nodes:
+        ResourceEditor({node: {"metadata": {"labels": {"nvidia.com/vgpu.config": label_value}}}}).update()
+
+
 @pytest.fixture(scope="session")
-def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
+def vgpu_sandbox_ready_nodes(admin_client, vgpu_ready_nodes, nodes_with_supported_gpus, supported_gpu_device):
+    vgpu_config = supported_gpu_device[MDEV_NAME_STR].split()[-1]
+
+    # Unlabel vgpu.config
+    update_nodes_vgpu_config_label(nodes=nodes_with_supported_gpus, label_value=None)
+
+    time.sleep(5)
+
+    # Relabel vgpu.config
+    update_nodes_vgpu_config_label(nodes=nodes_with_supported_gpus, label_value=vgpu_config)
+
+    # Wait for sandbox daemonsets to be running
+    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name="nvidia-sandbox-device-plugin-daemonset")
+    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name="nvidia-sandbox-validator")
+
+    yield vgpu_ready_nodes
+
+
+@pytest.fixture(scope="session")
+def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_sandbox_ready_nodes):
     """
     Check if the mdev_bus needed for vGPU is available.
 
@@ -241,7 +279,7 @@ def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
     """
     desired_bus = "mdev_bus"
     non_existent_mdev_bus_nodes = []
-    for node in vgpu_ready_nodes:
+    for node in vgpu_sandbox_ready_nodes:
         pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
         try:
             for sample in TimeoutSampler(
