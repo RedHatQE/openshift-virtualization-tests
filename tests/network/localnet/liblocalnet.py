@@ -7,7 +7,11 @@ from kubernetes.dynamic import DynamicClient
 
 from libs.net.traffic_generator import TcpServer
 from libs.net.traffic_generator import VMTcpClient as TcpClient
-from libs.net.vmspec import IP_ADDRESS, add_network_interface, add_volume_disk, lookup_iface_status
+from libs.net.vmspec import (
+    add_network_interface,
+    add_volume_disk,
+    lookup_iface_status_ip,
+)
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Metadata, Multus, Network
@@ -48,7 +52,7 @@ def create_traffic_client(
 ) -> TcpClient:
     return TcpClient(
         vm=client_vm,
-        server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+        server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=4)),
         server_port=_IPERF_SERVER_PORT,
     )
 
@@ -151,11 +155,12 @@ def client_server_active_connection(
     server_vm: BaseVirtualMachine,
     spec_logical_network: str,
     port: int = _IPERF_SERVER_PORT,
+    ip_family: int = 4,
 ) -> Generator[tuple[TcpClient, TcpServer], None, None]:
     with TcpServer(vm=server_vm, port=port) as server:
         with TcpClient(
             vm=client_vm,
-            server_ip=lookup_iface_status(vm=server_vm, iface_name=spec_logical_network)[IP_ADDRESS],
+            server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family)),
             server_port=port,
         ) as client:
             yield client, server

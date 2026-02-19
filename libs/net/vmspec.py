@@ -1,11 +1,14 @@
+import ipaddress
 from collections.abc import Callable
 from typing import Any, Final
 
 from kubernetes.dynamic.client import ResourceField
+from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.vm.spec import Devices, Interface, Network, SpecDisk, VMISpec, Volume
 from libs.vm.vm import BaseVirtualMachine
+from utilities.network import IpNotFound
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 WAIT_FOR_MISSING_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 120
@@ -140,3 +143,42 @@ def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpe
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.domain.devices.disks.append(disk)
     return vmi_spec
+
+
+def lookup_iface_status_ip(
+    vm: VirtualMachine, iface_name: str, ip_family: int
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """
+    Return the IP address of the specified family for a VM interface.
+
+    Args:
+        vm: The virtual machine to query.
+        iface_name: The name of the network interface.
+        ip_family: The IP version (4 for IPv4, 6 for IPv6).
+
+    Returns:
+        The IP address matching the specified family.
+
+    Raises:
+        IpNotFound: If no IP address of the specified family is found.
+    """
+    try:
+        iface = lookup_iface_status(
+            vm=vm,
+            iface_name=iface_name,
+            predicate=lambda iface_status: bool(
+                _lookup_first_ip_address(ip_addresses=iface_status.get("ipAddresses", []), ip_family=ip_family)
+            ),
+            timeout=120,
+        )
+    except VMInterfaceStatusNotFoundError:
+        raise IpNotFound(f"IPv{ip_family} address not found for interface {iface_name} on VM {vm.name}.")
+
+    return _lookup_first_ip_address(ip_addresses=iface["ipAddresses"], ip_family=ip_family)
+
+
+def _lookup_first_ip_address(
+    ip_addresses: list[str],
+    ip_family: int,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    return next((ip for ip_addr in ip_addresses if (ip := ipaddress.ip_address(ip_addr)).version == ip_family), None)
