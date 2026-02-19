@@ -624,7 +624,13 @@ def get_hyperconverged_cdi(admin_client):
         return cdi
 
 
-def write_file(vm, filename, content, stop_vm=True, kubeconfig=None):
+def write_file(
+    vm: virt_util.VirtualMachineForTests,
+    filename: str,
+    content: str,
+    stop_vm: bool = True,
+    kubeconfig: str | None = None,
+) -> None:
     """
     Start VM if not running, write a file in the VM and stop the VM.
 

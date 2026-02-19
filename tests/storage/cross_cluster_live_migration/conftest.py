@@ -154,8 +154,10 @@ def remote_cluster_kubeconfig(remote_admin_client, remote_cluster_auth_token):
     temp_dir = tempfile.mkdtemp(suffix="-remote-kubeconfig")
     kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
 
-    with open(kubeconfig_path, "w") as f:
-        yaml.safe_dump(kubeconfig_dict, f)
+    # Create file with 0o600 rw------- permissions (owner read/write only)
+    file_descriptor = os.open(kubeconfig_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(file_descriptor, "w") as kubeconfig_file:
+        yaml.safe_dump(kubeconfig_dict, kubeconfig_file)
 
     LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
 
@@ -556,17 +558,19 @@ def vms_for_cclm(request):
 
 
 @pytest.fixture(scope="class")
-def vms_boot_time_before_cclm(vms_for_cclm, remote_cluster_kubeconfig):
-    yield {vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in vms_for_cclm}
-
-
-@pytest.fixture(scope="class")
 def booted_vms_for_cclm(vms_for_cclm, dv_wait_timeout):
     for vm in vms_for_cclm:
         running_vm(
             vm=vm, dv_wait_timeout=dv_wait_timeout, check_ssh_connectivity=False
         )  # False because we can't ssh to a VM in the remote cluster
-    yield vms_for_cclm
+    return vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def vms_boot_time_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+    yield {
+        vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
+    }
 
 
 @pytest.fixture(scope="class")

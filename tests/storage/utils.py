@@ -531,9 +531,9 @@ def check_file_in_vm(
         vm.start(wait=True)
     with console.Console(vm=vm, username=username, password=password) as vm_console:
         vm_console.sendline(LS_COMMAND)
-        vm_console.expect(file_name, timeout=TIMEOUT_20SEC)
+        vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
-        vm_console.expect(file_content, timeout=TIMEOUT_20SEC)
+        vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
 
 
 def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
