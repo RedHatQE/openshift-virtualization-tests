@@ -20,6 +20,8 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
+TEST_ANNOTATION = "my-test-annotation-1"
+
 
 class CustomTemplate(Template):
     def __init__(
@@ -102,15 +104,15 @@ def vm_with_custom_template_label(
             storage_class=py_config["default_storage_class"],
         ),
         metadata_labels={
-            "vm.kubevirt.io/template": custom_template_from_base_template.name,
-            "vm.kubevirt.io/template.namespace": namespace.name,
+            f"{VirtualMachineForTests.ApiGroup.VM_KUBEVIRT_IO}/template": custom_template_from_base_template.name,
+            f"{VirtualMachineForTests.ApiGroup.VM_KUBEVIRT_IO}/template.namespace": namespace.name,
         },
     ) as vm:
         yield vm
 
 
 @pytest.fixture()
-def template_removed(custom_template_from_base_template, vm_with_custom_template_label):
+def template_removed(custom_template_from_base_template):
     # vm_with_custom_template_label required for setup order: VM exists before template is removed
     LOGGER.info("Deleting custom template to test webhook validation with missing parent")
     custom_template_from_base_template.clean_up()
@@ -118,9 +120,9 @@ def template_removed(custom_template_from_base_template, vm_with_custom_template
 
 
 @pytest.fixture()
-def vm_with_test_annotation(template_removed, vm_with_custom_template_label):
+def existing_vm_annotation_updated(vm_with_custom_template_label, template_removed):
     ResourceEditor({
-        vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": "my-test-annotation-1"}}}
+        vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": TEST_ANNOTATION}}}
     }).update()
     yield vm_with_custom_template_label
 
@@ -228,7 +230,7 @@ class TestBaseCustomTemplates:
     indirect=True,
 )
 @pytest.mark.polarion("CNV-13744")
-def test_no_validation_annotation_missing_parent_template(vm_with_test_annotation) -> None:
-    assert vm_with_test_annotation.instance.metadata.annotations.get("test.annot") == "my-test-annotation-1", (
+def test_no_validation_annotation_missing_parent_template(existing_vm_annotation_updated):
+    assert existing_vm_annotation_updated.instance.metadata.annotations.get("test.annot") == TEST_ANNOTATION, (
         "Annotation update should succeed even when parent template is missing"
     )
