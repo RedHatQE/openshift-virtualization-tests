@@ -17,6 +17,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def assert_log_verbosity_level_in_virt_pods(virt_pods_list):
+    """
+    Assert that all pods in the list have the expected log verbosity level.
+    """
     failed_log_verbosity_level_pods = [
         pod.name for pod in virt_pods_list if f"verbosity to {VIRT_LOG_VERBOSITY_LEVEL_6}" not in pod.log()
     ]
@@ -28,20 +31,26 @@ def assert_log_verbosity_level_in_virt_pods(virt_pods_list):
 
 @pytest.fixture()
 def virt_component_pods(admin_client, hco_namespace):
-    virt_pods_list = []
+    """
+    Fixture to get all pods in the HCO namespace.
+    """
+    virt_pods = []
     for virt_component in [VIRT_HANDLER, VIRT_API, VIRT_CONTROLLER]:
-        virt_pods_list.extend(
+        virt_pods.extend(
             get_pods(
                 client=admin_client,
                 namespace=hco_namespace,
                 label=f"{Pod.ApiGroup.KUBEVIRT_IO}={virt_component}",
             )
         )
-    yield virt_pods_list
+    yield virt_pods
 
 
 @pytest.fixture()
 def virt_component_pods_in_first_node(worker_node1, virt_component_pods):
+    """
+    Fixture to filter pods running on the first worker node.
+    """
     return [pod for pod in virt_component_pods if pod.node.name == worker_node1.name]
 
 
@@ -57,6 +66,9 @@ def virt_component_pods_in_first_node(worker_node1, virt_component_pods):
     indirect=True,
 )
 def test_component_log_verbosity(updated_log_verbosity_config, virt_component_pods):
+    """
+    Test that all KubeVirt component pods have the correct log verbosity level when set at the component level.
+    """
     assert_log_verbosity_level_in_virt_pods(
         virt_pods_list=virt_component_pods,
     )
@@ -74,6 +86,9 @@ def test_component_log_verbosity(updated_log_verbosity_config, virt_component_po
     indirect=True,
 )
 def test_node_log_verbosity(updated_log_verbosity_config, virt_component_pods_in_first_node):
+    """
+    Test that pods on the first worker node have the correct log verbosity level when set at the node level.
+    """
     assert_log_verbosity_level_in_virt_pods(
         virt_pods_list=virt_component_pods_in_first_node,
     )
