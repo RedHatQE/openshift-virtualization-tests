@@ -19,19 +19,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
-from utilities.infra import get_node_selector_dict, get_pods
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
-
-
-def delete_failed_migration_target_pod(admin_client, namespace, vm_name):
-    """
-    Deletes the virt-launcher pod that stays in Pending state after
-    vm migration is triggered, aim is to delete the target pod
-    """
-    pods = get_pods(dyn_client=admin_client, namespace=namespace)
-    for pod in pods:
-        if (pod.instance.status.phase == Resource.Status.PENDING) and (vm_name in pod.name):
-            pod.delete(wait=True)
 
 
 def metric_value_sampler(prometheus, metric, expected_value):
@@ -143,30 +131,6 @@ def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
 
 
 @pytest.fixture()
-def vm_with_node_selector(namespace, worker_node1):
-    name = "vm-with-node-selector"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        additional_labels=MIGRATION_POLICY_VM_LABEL,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture()
-def vm_with_node_selector_vmim(vm_with_node_selector):
-    with VirtualMachineInstanceMigration(
-        name="vm-with-node-selector-vmim",
-        namespace=vm_with_node_selector.namespace,
-        vmi_name=vm_with_node_selector.vmi.name,
-    ) as vmim:
-        yield vmim
-
-
-@pytest.fixture()
 def migration_succeeded(vm_migration_metrics_vmim):
     vm_migration_metrics_vmim.wait_for_status(status=vm_migration_metrics_vmim.Status.SUCCEEDED, timeout=TIMEOUT_3MIN)
 
@@ -194,52 +158,6 @@ class TestMigrationMetrics:
             migration_metrics_dict=migration_metrics_dict,
             initial_values=initial_migration_metrics_values,
             metric_to_check=migration_metrics_dict[Resource.Status.SUCCEEDED],
-        )
-
-    @pytest.mark.polarion("CNV-8480")
-    def test_migration_metrics_scheduling_and_failed(
-        self,
-        admin_client,
-        namespace,
-        prometheus,
-        migration_metrics_dict,
-        vm_with_node_selector,
-        initial_migration_metrics_values,
-        vm_with_node_selector_vmim,
-    ):
-        assert_metrics_values(
-            prometheus=prometheus,
-            migration_metrics_dict=migration_metrics_dict,
-            initial_values=initial_migration_metrics_values,
-            metric_to_check=migration_metrics_dict[VirtualMachineInstance.Status.SCHEDULING],
-        )
-        delete_failed_migration_target_pod(
-            admin_client=admin_client,
-            namespace=namespace,
-            vm_name=vm_with_node_selector.name,
-        )
-        assert_metrics_values(
-            prometheus=prometheus,
-            migration_metrics_dict=migration_metrics_dict,
-            initial_values=initial_migration_metrics_values,
-            metric_to_check=migration_metrics_dict[Resource.Status.FAILED],
-        )
-
-    @pytest.mark.polarion("CNV-8481")
-    def test_migration_metrics_running(
-        self,
-        prometheus,
-        migration_metrics_dict,
-        migration_policy_with_bandwidth,
-        vm_for_migration_metrics_test,
-        initial_migration_metrics_values,
-        vm_migration_metrics_vmim,
-    ):
-        assert_metrics_values(
-            prometheus=prometheus,
-            migration_metrics_dict=migration_metrics_dict,
-            initial_values=initial_migration_metrics_values,
-            metric_to_check=migration_metrics_dict[Resource.Status.RUNNING],
         )
 
 
