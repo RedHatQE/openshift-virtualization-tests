@@ -99,7 +99,7 @@ class ArchImages:
             WIN2022_ISO_IMG="Windows_Server_2022_x64FRE_en-us.iso",
             WIN2025_ISO_IMG="windows_server_2025_x64_dvd_eval.iso",
         )
-        Windows.LATEST_RELEASE_STR = Windows.WIN2k19_IMG
+        Windows.LATEST_RELEASE_STR = Windows.WIN2022_IMG
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
