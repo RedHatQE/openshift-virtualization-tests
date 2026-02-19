@@ -7,7 +7,7 @@ import logging
 import pytest
 from ocp_resources.template import Template
 
-from tests.os_params import WINDOWS_10, WINDOWS_10_TEMPLATE_LABELS
+from tests.os_params import WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
 from tests.virt.node.gpu.constants import VGPU_DEVICE_NAME_STR, VGPU_PRETTY_NAME_STR
 from tests.virt.node.gpu.utils import (
     install_nvidia_drivers_on_windows_vm,
@@ -50,10 +50,10 @@ def gpu_vmc(
     VM Fixture for second VM for vGPU based Tests.
     """
     with VirtualMachineForTestsFromTemplate(
-        name="win10-vgpu-gpus-spec-vm2",
+        name="win11-vgpu-gpus-spec-vm2",
         namespace=namespace.name,
         client=unprivileged_client,
-        labels=Template.generate_template_labels(**WINDOWS_10_TEMPLATE_LABELS),
+        labels=Template.generate_template_labels(**WINDOWS_11_TEMPLATE_LABELS),
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         node_selector=gpu_vma.node_selector,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
@@ -68,14 +68,14 @@ def gpu_vmc(
     "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            {"os_dict": WINDOWS_10},
+            {"os_dict": WINDOWS_11},
             {
-                "vm_name": "win10-vgpu-gpus-spec-vm",
-                "template_labels": WINDOWS_10_TEMPLATE_LABELS,
+                "vm_name": "win11-vgpu-gpus-spec-vm",
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                 "gpu_device": VGPU_DEVICE_NAME_STR,
                 "cloned_dv_size": DV_SIZE,
             },
-            id="test_win10_vgpu",
+            id="test_win11_vgpu",
         ),
     ],
     indirect=True,
@@ -114,9 +114,9 @@ class TestVGPUWindowsGPUSSpec:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm"])
     @pytest.mark.polarion("CNV-8573")
-    def test_access_vgpus_in_both_win10_vm(self, gpu_vma, gpu_vmc, supported_gpu_device):
+    def test_access_vgpus_in_both_win11_vm(self, gpu_vma, gpu_vmc, supported_gpu_device):
         """
-        Test vGPU is accessible in both the Windows10 VMs using same GPU, using GPUs spec.
+        Test vGPU is accessible in both the Windows11 VMs using same GPU, using GPUs spec.
         """
         vm_with_no_gpu = [
             vm.name
