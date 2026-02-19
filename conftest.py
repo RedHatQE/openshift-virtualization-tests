@@ -54,6 +54,7 @@ from utilities.pytest_utils import (
     get_cnv_version_explorer_url,
     get_matrix_params,
     get_tests_cluster_markers,
+    mark_nmstate_dependent_tests,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -561,6 +562,7 @@ def pytest_collection_modifyitems(session, config, items):
     3. Adds the tier2 marker for tests without an exclusion marker.
     4. Marks tests by team.
     5. Filters upgrade tests based on the --upgrade option.
+    6. Dynamically mark NMState-dependent tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -599,6 +601,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = mark_nmstate_dependent_tests(items=items)
 
 
 def pytest_report_teststatus(report, config):
