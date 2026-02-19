@@ -38,11 +38,9 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
-    TIMEOUT_15MIN,
     TIMEOUT_20MIN,
     TIMEOUT_75MIN,
 )
-from utilities.data_collector import collect_ocp_must_gather
 
 LOGGER = logging.getLogger(__name__)
 
@@ -254,7 +252,7 @@ def wait_for_mcp_update_start(machine_config_pools_list, initial_transition_time
         f"Waiting for MCPs {mcps_to_check} to reach desired condition: {updating_condition}"
     )
     sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_15MIN,
+        wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_10SEC,
         func=get_mcps_with_different_transition_times,
         exceptions_dict=BASE_EXCEPTIONS_DICT,
@@ -295,7 +293,6 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
         f"condition {condition_type} before timeout.\n"
         f"Current MCP status={str({mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list})}"
     )
-    collect_ocp_must_gather(since_time=since_time)
 
 
 def get_machine_config_pool_by_name(mcp_name: str, admin_client: DynamicClient) -> MachineConfigPool:
