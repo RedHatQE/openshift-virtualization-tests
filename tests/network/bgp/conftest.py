@@ -15,7 +15,7 @@ from libs.net import netattachdef as libnad
 from libs.net.traffic_generator import PodTcpClient as TcpClient
 from libs.net.traffic_generator import TcpServer
 from libs.net.udn import create_udn_namespace
-from libs.net.vmspec import IP_ADDRESS, lookup_iface_status, lookup_primary_network
+from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
@@ -231,7 +231,9 @@ def tcp_client_external_network(
 ) -> Generator[TcpClient]:
     with TcpClient(
         pod=frr_external_pod.pod,
-        server_ip=lookup_iface_status(vm=vm_cudn, iface_name=lookup_primary_network(vm=vm_cudn).name)[IP_ADDRESS],
+        server_ip=str(
+            lookup_iface_status_ip(vm=vm_cudn, iface_name=lookup_primary_network(vm=vm_cudn).name, ip_family=4)
+        ),
         server_port=IPERF3_SERVER_PORT,
         bind_interface=EXTERNAL_PROVIDER_IP_V4.split("/")[0],
     ) as client:

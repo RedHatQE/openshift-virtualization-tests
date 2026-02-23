@@ -511,10 +511,10 @@ def get_vmi_ip_v4_by_name(vm, name):
 
 
 class IpNotFound(Exception):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"IP address not found for interface {self.name}"
 
 

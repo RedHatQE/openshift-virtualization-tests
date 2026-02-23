@@ -4,7 +4,6 @@ import shlex
 import bitmath
 import pytest
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
@@ -20,8 +19,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.observability.metrics.constants import (
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
-    KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE,
-    KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
 )
@@ -30,7 +27,6 @@ from tests.observability.metrics.utils import (
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
-    get_metric_sum_value,
     get_vm_comparison_info_dict,
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     metric_result_output_dict_by_mountpoint,
@@ -41,13 +37,11 @@ from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
-    DEFAULT_FEDORA_REGISTRY_URL,
     IPV4_STR,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     ONE_CPU_THREAD,
     OS_FLAVOR_FEDORA,
-    REGISTRY_STR,
     SSP_OPERATOR,
     STRESS_CPU_MEM_IO_COMMAND,
     TIMEOUT_2MIN,
@@ -66,7 +60,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
     get_linux_guest_agent_version,
-    get_node_selector_dict,
     get_pod_by_name_prefix,
     unique_name,
 )
@@ -82,7 +75,6 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    vm_instance_from_template,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -428,11 +420,6 @@ def vnic_info_from_vmi_windows(windows_vm_for_test):
 
 
 @pytest.fixture()
-def vmi_guest_os_kernel_release_info_linux(single_metric_vm):
-    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=single_metric_vm)
-
-
-@pytest.fixture()
 def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
     return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=windows_vm_for_test, windows=True)
 
@@ -459,14 +446,6 @@ def windows_vm_for_test(namespace, unprivileged_client):
         yield vm
 
 
-@pytest.fixture()
-def initial_migration_metrics_values(prometheus):
-    yield {
-        metric: get_metric_sum_value(prometheus=prometheus, metric=metric)
-        for metric in [KUBEVIRT_VMI_MIGRATIONS_IN_SCHEDULING_PHASE, KUBEVIRT_VMI_MIGRATIONS_IN_RUNNING_PHASE]
-    }
-
-
 @pytest.fixture(scope="class")
 def vm_for_migration_metrics_test(namespace, cpu_for_migration):
     name = "vm-for-migration-metrics-test"
@@ -481,16 +460,6 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration):
         yield vm
 
 
-@pytest.fixture()
-def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
-    with VirtualMachineInstanceMigration(
-        name="vm-migration-metrics-vmim",
-        namespace=vm_for_migration_metrics_test.namespace,
-        vmi_name=vm_for_migration_metrics_test.vmi.name,
-    ) as vmim:
-        yield vmim
-
-
 @pytest.fixture(scope="class")
 def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
@@ -499,30 +468,6 @@ def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
         vmi_name=vm_for_migration_metrics_test.vmi.name,
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
-        yield vmim
-
-
-@pytest.fixture()
-def vm_with_node_selector(namespace, worker_node1):
-    name = "vm-with-node-selector"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        additional_labels=MIGRATION_POLICY_VM_LABEL,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture()
-def vm_with_node_selector_vmim(vm_with_node_selector):
-    with VirtualMachineInstanceMigration(
-        name="vm-with-node-selector-vmim",
-        namespace=vm_with_node_selector.namespace,
-        vmi_name=vm_with_node_selector.vmi.name,
-    ) as vmim:
         yield vmim
 
 
@@ -649,27 +594,3 @@ def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
-
-
-@pytest.fixture()
-def vm_with_rwo_dv(request, unprivileged_client, namespace):
-    dv = DataVolume(
-        client=unprivileged_client,
-        source=REGISTRY_STR,
-        name="non-evictable-vm-dv-for-test",
-        namespace=namespace.name,
-        url=DEFAULT_FEDORA_REGISTRY_URL,
-        size=Images.Fedora.DEFAULT_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-        access_modes=DataVolume.AccessMode.RWO,
-        api_name="storage",
-    )
-    dv.to_dict()
-    dv_res = dv.res
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_volume_template={"metadata": dv_res["metadata"], "spec": dv_res["spec"]},
-    ) as vm:
-        yield vm
