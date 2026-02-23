@@ -9,7 +9,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 @dataclass
 class VMSpec:
     template: Template
-    runStrategy: str = VirtualMachine.RunStrategy.HALTED  # noqa: N815
+    runStrategy: str = VirtualMachine.RunStrategy.HALTED
 
 
 @dataclass
@@ -29,7 +29,7 @@ class VMISpec:
     domain: Domain
     networks: list[Network] | None = None
     volumes: list[Volume] | None = None
-    terminationGracePeriodSeconds: int | None = None  # noqa: N815
+    terminationGracePeriodSeconds: int | None = None
     affinity: Affinity | None = None
 
 
@@ -92,30 +92,30 @@ class Network:
 
 @dataclass
 class Multus:
-    networkName: str  # noqa: N815
+    networkName: str
 
 
 @dataclass
 class Affinity:
-    podAntiAffinity: PodAntiAffinity  # noqa: N815
+    podAntiAffinity: PodAntiAffinity
 
 
 @dataclass
 class PodAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
+    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]
 
 
 @dataclass
 class PodAffinityTerm:
-    labelSelector: LabelSelector  # noqa: N815
-    topologyKey: str  # noqa: N815
-    namespaceSelector: dict[str, Any] | None = None  # noqa: N815
+    labelSelector: LabelSelector
+    topologyKey: str
+    namespaceSelector: dict[str, Any] | None = None
     namespaces: list[str] | None = None
 
 
 @dataclass
 class LabelSelector:
-    matchExpressions: list[LabelSelectorRequirement]  # noqa: N815
+    matchExpressions: list[LabelSelectorRequirement]
 
 
 @dataclass
@@ -128,8 +128,8 @@ class LabelSelectorRequirement:
 @dataclass
 class Volume:
     name: str
-    containerDisk: ContainerDisk | None = None  # noqa: N815
-    cloudInitNoCloud: CloudInitNoCloud | None = None  # noqa: N815
+    containerDisk: ContainerDisk | None = None
+    cloudInitNoCloud: CloudInitNoCloud | None = None
 
 
 @dataclass
@@ -139,5 +139,5 @@ class ContainerDisk:
 
 @dataclass
 class CloudInitNoCloud:
-    networkData: str  # noqa: N815
-    userData: str | None = None  # noqa: N815
+    networkData: str
+    userData: str | None = None

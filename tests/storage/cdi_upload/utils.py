@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.resource import Resource
@@ -8,7 +7,7 @@ from ocp_resources.storage_profile import StorageProfile
 LOGGER = logging.getLogger(__name__)
 
 
-def get_storage_profile_minimum_supported_pvc_size(storage_class_name: str, client: DynamicClient) -> Optional[str]:
+def get_storage_profile_minimum_supported_pvc_size(storage_class_name: str, client: DynamicClient) -> str | None:
     """
     Get the minimum supported PVC size from the storage profile annotations.
 

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests to check, HCO Namespace Pod's, Security Context Constraint
 """

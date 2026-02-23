@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 from subprocess import check_output
 
@@ -265,7 +265,7 @@ def session_start_time() -> datetime:
     Returns:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")
@@ -2258,16 +2258,16 @@ def rhel_vm_with_instance_type_and_preference(
     with (
         instance_type_for_test_scope_class as vm_instance_type,
         vm_preference_for_test as vm_preference,
-    ):
-        with VirtualMachineForTests(
+        VirtualMachineForTests(
             client=unprivileged_client,
             name="rhel-vm-with-instance-type",
             namespace=namespace.name,
             image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
             vm_instance_type=vm_instance_type,
             vm_preference=vm_preference,
-        ) as vm:
-            yield vm
+        ) as vm,
+    ):
+        yield vm
 
 
 @pytest.fixture(scope="session")

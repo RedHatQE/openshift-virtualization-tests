@@ -212,15 +212,17 @@ def test_machine_type_kubevirt_config_update(updated_kubevirt_config_machine_typ
 def test_unsupported_machine_type(namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"
 
-    with pytest.raises(UnprocessibleEntityError):
-        with VirtualMachineForTests(
+    with (
+        pytest.raises(UnprocessibleEntityError),
+        VirtualMachineForTests(
             name=vm_name,
             namespace=namespace.name,
             body=fedora_vm_body(name=vm_name),
             client=unprivileged_client,
             machine_type=MachineTypesNames.pc_i440fx_rhel7_6,
-        ):
-            pytest.fail("VM created with invalid machine type.")
+        ),
+    ):
+        pytest.fail("VM created with invalid machine type.")
 
 
 @pytest.mark.arm64

@@ -255,9 +255,8 @@ class TestGetArtifactoryHeader:
 
     def test_get_artifactory_header_raises_key_error_if_not_set(self):
         """Test raises KeyError if ARTIFACTORY_TOKEN not set"""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(KeyError):
-                get_artifactory_header()
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(KeyError):
+            get_artifactory_header()
 
     def test_get_artifactory_header_with_special_characters(self):
         """Test handles tokens with special characters"""
@@ -340,16 +339,14 @@ class TestGetArtifactorySecret:
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_user_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_USER not set"""
-        with patch.dict(os.environ, {"ARTIFACTORY_TOKEN": "test-token"}, clear=True):
-            with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+        with patch.dict(os.environ, {"ARTIFACTORY_TOKEN": "test-token"}, clear=True), pytest.raises(KeyError):
+            get_artifactory_secret(namespace="test-namespace")
 
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_token_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_TOKEN not set"""
-        with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user"}, clear=True):
-            with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+        with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user"}, clear=True), pytest.raises(KeyError):
+            get_artifactory_secret(namespace="test-namespace")
 
     @patch("utilities.artifactory.Secret")
     @patch("utilities.artifactory.base64_encode_str")

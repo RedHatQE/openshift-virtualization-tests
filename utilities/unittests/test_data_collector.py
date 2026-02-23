@@ -274,7 +274,7 @@ class TestWriteToFile:
         mock_file_open.assert_called_once_with("/test/dir/test.txt", "a")
 
     @patch("os.makedirs")
-    @patch("builtins.open", side_effect=IOError("Permission denied"))
+    @patch("builtins.open", side_effect=OSError("Permission denied"))
     @patch("utilities.data_collector.LOGGER")
     def test_write_to_file_exception_handling(self, mock_logger, mock_file_open, mock_makedirs):
         """Test write_to_file handles exceptions gracefully"""

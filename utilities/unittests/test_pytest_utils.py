@@ -789,9 +789,7 @@ class TestGetArtifactoryServerUrl:
         mock_session.config.getoption.return_value = False
 
         def mock_secret_side_effect(secret_name, session):
-            if secret_name == "artifactory_servers":
-                return {}
-            elif secret_name == "default_artifactory_server":
+            if secret_name == "artifactory_servers" or secret_name == "default_artifactory_server":
                 return {}
 
         mock_get_secret.side_effect = mock_secret_side_effect

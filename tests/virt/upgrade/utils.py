@@ -81,7 +81,7 @@ def get_workload_update_migrations_list(
             if migration_job.name.startswith("kubevirt-workload-update"):
                 job_instance = migration_job.instance
                 vmi_name = job_instance.spec.vmiName
-                if vmi_name not in workload_migrations.keys() or datetime.strptime(
+                if vmi_name not in workload_migrations or datetime.strptime(
                     job_instance.metadata.creationTimestamp, TIMESTAMP_FORMAT
                 ) > datetime.strptime(
                     workload_migrations[vmi_name].metadata.creationTimestamp,

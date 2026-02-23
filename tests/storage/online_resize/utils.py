@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Utility functions and context managers for online resize tests
 """

@@ -256,22 +256,24 @@ def windows_vm(
         size=latest_windows_dict["dv_size"],
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
-        with DataSource(
-            name=dv.name,
-            namespace=dv.namespace,
-            client=admin_client,
-            source=generate_data_source_dict(dv=dv),
-        ) as ds:
-            with vm_from_template(
+        with (
+            DataSource(
+                name=dv.name,
+                namespace=dv.namespace,
+                client=admin_client,
+                source=generate_data_source_dict(dv=dv),
+            ) as ds,
+            vm_from_template(
                 vm_name="windows-vm",
                 namespace=virt_upgrade_namespace.name,
                 client=unprivileged_client,
                 template_labels=latest_windows_dict["template_labels"],
                 data_source=ds,
                 cpu_model=modern_cpu_for_migration,
-            ) as vm:
-                running_vm(vm=vm)
-                yield vm
+            ) as vm,
+        ):
+            running_vm(vm=vm)
+            yield vm
 
 
 @pytest.fixture()

@@ -140,13 +140,15 @@ def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
     negative case: CPU requests is larger then limits
     """
     name = "vm-cpu-limitation-negative"
-    with pytest.raises(UnprocessibleEntityError):
-        with VirtualMachineForTests(
+    with (
+        pytest.raises(UnprocessibleEntityError),
+        VirtualMachineForTests(
             name=name,
             namespace=namespace.name,
             cpu_limits=2,
             cpu_requests=4,
             body=fedora_vm_body(name=name),
             client=unprivileged_client,
-        ):
-            return
+        ),
+    ):
+        return

@@ -39,7 +39,7 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.hco import (  # noqa: E402
+from utilities.hco import (
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
     HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT,
     ResourceEditorValidateHCOReconcile,
@@ -1103,13 +1103,15 @@ class TestEnabledAaqInHco:
         mock_sampler_instance.__iter__ = MagicMock(side_effect=TimeoutExpiredError("Timeout", "aaq-pod"))
         mock_sampler.return_value = mock_sampler_instance
 
-        with pytest.raises(TimeoutExpiredError):
-            with enabled_aaq_in_hco(
+        with (
+            pytest.raises(TimeoutExpiredError),
+            enabled_aaq_in_hco(
                 client=mock_client,
                 hco_namespace=mock_namespace,
                 hyperconverged_resource=mock_hco,
-            ):
-                pass
+            ),
+        ):
+            pass
 
     @patch("utilities.hco.LOGGER")
     @patch("utilities.hco.TimeoutSampler")

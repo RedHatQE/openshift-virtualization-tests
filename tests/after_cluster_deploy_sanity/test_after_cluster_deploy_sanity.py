@@ -18,7 +18,6 @@ from utilities.operator import wait_for_cluster_operator_stabilize
 from utilities.sanity import check_vm_creation_capability, check_webhook_endpoints_health, storage_sanity_check
 from utilities.storage import get_data_sources_managed_by_data_import_cron
 
-# flake8: noqa: PID001
 LOGGER = logging.getLogger(__name__)
 
 

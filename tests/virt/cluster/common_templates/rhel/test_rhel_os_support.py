@@ -109,9 +109,9 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-3320")
     def test_expose_ssh(self, matrix_rhel_os_vm_from_template):
         """CNV common templates access VM via SSH"""
-        assert matrix_rhel_os_vm_from_template.ssh_exec.executor().is_connective(  # noqa: E501
-            tcp_timeout=120
-        ), "Failed to login via SSH"
+        assert matrix_rhel_os_vm_from_template.ssh_exec.executor().is_connective(tcp_timeout=120), (
+            "Failed to login via SSH"
+        )
 
     @pytest.mark.arm64
     @pytest.mark.sno

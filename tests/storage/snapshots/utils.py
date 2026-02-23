@@ -31,17 +31,19 @@ def expected_output_after_restore(snapshot_number):
 
 
 def fail_to_create_snapshot_no_permissions(snapshot_name, namespace, vm_name, client):
-    with pytest.raises(
-        ApiException,
-        match=ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS,
-    ):
-        with VirtualMachineSnapshot(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS,
+        ),
+        VirtualMachineSnapshot(
             name=snapshot_name,
             namespace=namespace,
             vm_name=vm_name,
             client=client,
-        ):
-            return
+        ),
+    ):
+        return
 
 
 def start_windows_vm_after_restore(vm_restore, windows_vm):

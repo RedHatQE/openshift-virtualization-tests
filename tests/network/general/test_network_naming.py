@@ -17,15 +17,17 @@ def invalid_network_names():
 def test_vm_with_illegal_network_name(namespace, unprivileged_client, invalid_network_names):
     vm_name = "unsupported-network-name-vm"
 
-    with pytest.raises(
-        UnprocessibleEntityError,
-        match="r.*Network interface name can only contain alphabetical characters*",
-    ):
-        with VirtualMachineForTests(
+    with (
+        pytest.raises(
+            UnprocessibleEntityError,
+            match="r.*Network interface name can only contain alphabetical characters*",
+        ),
+        VirtualMachineForTests(
             namespace=namespace.name,
             name=vm_name,
             body=fedora_vm_body(name=vm_name),
             client=unprivileged_client,
             **invalid_network_names,
-        ):
-            return
+        ),
+    ):
+        return

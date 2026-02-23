@@ -38,11 +38,12 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
     blank_dv_created_by_admin_user,
     unprivileged_client,
 ):
-    with pytest.raises(
-        ApiException,
-        match=ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT,
-    ):
-        with VirtualMachineExport(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT,
+        ),
+        VirtualMachineExport(
             name="vmexport-unprivileged",
             namespace=blank_dv_created_by_admin_user.namespace,
             client=unprivileged_client,
@@ -51,8 +52,9 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
                 "kind": PersistentVolumeClaim.kind,
                 "name": blank_dv_created_by_admin_user.name,
             },
-        ) as vmexport:
-            assert not vmexport, "VMExport created by unprivileged client"
+        ) as vmexport,
+    ):
+        assert not vmexport, "VMExport created by unprivileged client"
 
 
 @pytest.mark.polarion("CNV-9903")

@@ -76,9 +76,9 @@ class TestCommonTemplatesCentos:
     def test_expose_ssh(self, matrix_centos_os_vm_from_template):
         """CNV common templates access VM via SSH"""
 
-        assert matrix_centos_os_vm_from_template.ssh_exec.executor().is_connective(  # noqa: E501
-            tcp_timeout=120
-        ), "Failed to login via SSH"
+        assert matrix_centos_os_vm_from_template.ssh_exec.executor().is_connective(tcp_timeout=120), (
+            "Failed to login via SSH"
+        )
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]

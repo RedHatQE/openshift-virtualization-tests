@@ -54,19 +54,21 @@ def test_regular_user_cant_create_dv_in_ns(
     unprivileged_client,
 ):
     LOGGER.info("Try as a regular user, to create a DV in golden image NS and receive the proper error")
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
-    ):
-        with create_dv(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        ),
+        create_dv(
             dv_name="cnv-4755",
             namespace=golden_images_namespace.name,
             url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
             size=RHEL_IMAGE_SIZE,
             storage_class=py_config["default_storage_class"],
             client=unprivileged_client,
-        ):
-            return
+        ),
+    ):
+        return
 
 
 @pytest.mark.sno
@@ -137,11 +139,12 @@ def test_regular_user_cant_clone_dv_in_ns(
     storage_class = golden_image_data_volume_scope_module.storage_class
     golden_images_namespace = golden_image_data_volume_scope_module.namespace
 
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
-    ):
-        with create_dv(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        ),
+        create_dv(
             dv_name=f"cnv-4760-{storage_class}",
             namespace=golden_images_namespace,
             source=PVC,
@@ -150,8 +153,9 @@ def test_regular_user_cant_clone_dv_in_ns(
             source_namespace=golden_images_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
-        ):
-            return
+        ),
+    ):
+        return
 
 
 @pytest.mark.sno

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """CDIConfig tests"""
 
 import logging
@@ -279,13 +277,14 @@ def test_cdiconfig_changing_storage_class_default(
                 images_https_server=get_test_artifact_server_url(schema="https"),
                 file_name=Images.Cirros.QCOW2_IMG,
             )
-            with ConfigMap(
-                client=unprivileged_client,
-                name="https-cert-configmap",
-                namespace=namespace.name,
-                data={"tlsregistry.crt": https_server_certificate},
-            ) as configmap:
-                with create_dv(
+            with (
+                ConfigMap(
+                    client=unprivileged_client,
+                    name="https-cert-configmap",
+                    namespace=namespace.name,
+                    data={"tlsregistry.crt": https_server_certificate},
+                ) as configmap,
+                create_dv(
                     client=unprivileged_client,
                     source="http",
                     dv_name="import-cdiconfig-scratch-space-not-default",
@@ -293,9 +292,10 @@ def test_cdiconfig_changing_storage_class_default(
                     url=url,
                     storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
                     cert_configmap=configmap.name,
-                ) as dv:
-                    dv.wait_for_dv_success()
-                    create_vm_from_dv(client=unprivileged_client, dv=dv)
+                ) as dv,
+            ):
+                dv.wait_for_dv_success()
+                create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
 @pytest.mark.sno

@@ -2,8 +2,9 @@ import logging
 import math
 import os
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator
+from typing import Any
 
 import cachetools.func
 import kubernetes
@@ -180,13 +181,13 @@ def create_dv(
 def data_volume(
     namespace: Namespace,
     client: DynamicClient,
-    storage_class_matrix: Dict[str, Dict[str, Any]] | None = None,
+    storage_class_matrix: dict[str, dict[str, Any]] | None = None,
     storage_class: str | None = None,
     request: FixtureRequest | None = None,
-    os_matrix: Dict[str, Dict[str, Any]] | None = None,
+    os_matrix: dict[str, dict[str, Any]] | None = None,
     check_dv_exists: bool = False,
     bind_immediate: bool | None = None,
-) -> Generator[DataVolume, None, None]:
+) -> Generator[DataVolume]:
     """
     DV creation using create_dv.
 
@@ -304,8 +305,7 @@ def get_downloaded_artifact(remote_name, local_name):
     with requests.get(url, headers=artifactory_header, verify=False, stream=True) as created_request:
         created_request.raise_for_status()
         with open(local_name, "wb") as file_downloaded:
-            for chunk in created_request.iter_content(chunk_size=8192):
-                file_downloaded.write(chunk)
+            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
     try:
         assert os.path.isfile(local_name)
         return True

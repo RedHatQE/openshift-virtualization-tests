@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pytest conftest file for CNV tests
 """
@@ -678,10 +677,9 @@ def pytest_runtest_makereport(item, call):
 
         elif report.failed:
             if reprcrash := getattr(report.longrepr, "reprcrash", None):
-                if message := getattr(report.longrepr, "message", None):
-                    setattr(report, SETUP_ERROR, message)
-
-                elif message := getattr(reprcrash, "message", None):
+                if (message := getattr(report.longrepr, "message", None)) or (
+                    message := getattr(reprcrash, "message", None)
+                ):
                     setattr(report, SETUP_ERROR, message)
 
 
@@ -895,7 +893,7 @@ def is_skip_must_gather(node: Node) -> bool:
 
 def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     namespace_str = ""
-    components = [key for key in NAMESPACE_COLLECTION.keys() if f"tests/{key}/" in test_name]
+    components = [key for key in NAMESPACE_COLLECTION if f"tests/{key}/" in test_name]
     if not components:
         LOGGER.warning(f"{test_name} does not require special data collection on failure")
     else:

@@ -49,7 +49,7 @@ class Localnet:
         SECONDARY = "Secondary"
 
     role: str
-    physicalNetworkName: str  # noqa: N815
+    physicalNetworkName: str
     ipam: Ipam
     vlan: Vlan | None = None
     mtu: int | None = None

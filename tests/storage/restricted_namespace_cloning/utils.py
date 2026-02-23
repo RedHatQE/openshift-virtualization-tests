@@ -35,11 +35,12 @@ def create_dv_negative(
     source_namespace: str,
     unprivileged_client: DynamicClient,
 ) -> None:
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
-    ):
-        with create_dv(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        ),
+        create_dv(
             dv_name=TARGET_DV,
             namespace=namespace,
             source=PVC,
@@ -48,5 +49,6 @@ def create_dv_negative(
             source_namespace=source_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
-        ):
-            LOGGER.error("Target dv was created, but shouldn't have been")
+        ),
+    ):
+        LOGGER.error("Target dv was created, but shouldn't have been")

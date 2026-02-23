@@ -3,9 +3,10 @@ import math
 import re
 import shlex
 import urllib
+from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Any, Generator, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
@@ -222,7 +223,7 @@ def enable_swap_fedora_vm(vm: VirtualMachineForTests) -> None:
     vm.ssh_exec.executor(sudo=True).run_cmd(cmd=shlex.split("sysctl vm.swappiness=100"))
 
 
-def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Optional[int]:
+def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> int | None:
     query = urllib.parse.quote_plus(
         f'kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain="{vm_name}"}}'
     )
@@ -453,7 +454,7 @@ def compare_kubevirt_vmi_info_metric_with_vm_info(
 def timestamp_to_seconds(timestamp: str) -> int:
     # Parse the timestamp with UTC timezone and convert to seconds
     dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
-    dt = dt.replace(tzinfo=timezone.utc)  # Ensure it is treated as UTC
+    dt = dt.replace(tzinfo=UTC)  # Ensure it is treated as UTC
     return int(dt.timestamp())
 
 

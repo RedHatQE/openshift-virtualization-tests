@@ -54,11 +54,12 @@ def create_vm_negative(
     unprivileged_client,
     data_volume_clone_settings,
 ):
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
-    ):
-        with VirtualMachineForTests(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        ),
+        VirtualMachineForTests(
             name=VM_FOR_TEST,
             namespace=namespace,
             os_flavor=Images.Cirros.OS_FLAVOR,
@@ -66,8 +67,9 @@ def create_vm_negative(
             client=unprivileged_client,
             memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
             data_volume_template=get_dv_template(data_volume_clone_settings=data_volume_clone_settings),
-        ):
-            return
+        ),
+    ):
+        return
 
 
 @pytest.mark.sno

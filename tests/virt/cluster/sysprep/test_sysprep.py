@@ -127,8 +127,9 @@ def sysprep_vm(
     namespace,
     instance_type_for_test_scope_class,
 ):
-    with instance_type_for_test_scope_class as vm_instance_type:
-        with VirtualMachineForTests(
+    with (
+        instance_type_for_test_scope_class as vm_instance_type,
+        VirtualMachineForTests(
             name=f"sysprep-{sysprep_source_matrix__class__.lower()}-vm",
             namespace=namespace.name,
             client=unprivileged_client,
@@ -138,9 +139,10 @@ def sysprep_vm(
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,
             cpu_model=modern_cpu_for_migration,
-        ) as vm:
-            running_vm(vm=vm)
-            yield vm
+        ) as vm,
+    ):
+        running_vm(vm=vm)
+        yield vm
 
 
 @pytest.fixture(scope="class")

@@ -53,11 +53,14 @@ def verify_label(cdi_resources):
 
 def verify_cdi_app_label(cdi_resources, cnv_version):
     for resource in cdi_resources:
-        if resource.kind == "Secret" and resource.name not in CDI_SECRETS:
-            continue
-        elif resource.kind == "ServiceAccount" and resource.name == CDI_OPERATOR:
-            continue
-        elif resource.kind == "ConfigMap" and resource.name not in CDI_CONFIGMAPS:
+        if (
+            resource.kind == "Secret"
+            and resource.name not in CDI_SECRETS
+            or resource.kind == "ServiceAccount"
+            and resource.name == CDI_OPERATOR
+            or resource.kind == "ConfigMap"
+            and resource.name not in CDI_CONFIGMAPS
+        ):
             continue
         else:
             assert resource.labels[f"{Resource.ApiGroup.APP_KUBERNETES_IO}/component"] == "storage", (

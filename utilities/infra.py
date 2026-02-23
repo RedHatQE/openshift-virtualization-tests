@@ -12,10 +12,11 @@ import tarfile
 import tempfile
 import time
 import zipfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
-from typing import Any, Generator
+from typing import Any
 
 import netaddr
 import requests
@@ -731,8 +732,7 @@ def download_and_extract_file_from_cluster(tmpdir, url):
     with requests.get(url, verify=False, stream=True) as created_request:
         created_request.raise_for_status()
         with open(local_file_name, "wb") as file_downloaded:
-            for chunk in created_request.iter_content(chunk_size=8192):
-                file_downloaded.write(chunk)
+            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
     LOGGER.info("Extract the downloaded archive.")
     if url.endswith(zip_file_extension):
         archive_file_object = zipfile.ZipFile(file=local_file_name)
@@ -888,7 +888,7 @@ def get_node_audit_log_entries(log: str, node: str, log_entry: str) -> tuple[boo
     return True, lines
 
 
-def get_node_audit_log_line_dict(logs: list[str], node: str, log_entry: str) -> Generator[dict[str, Any], None, None]:
+def get_node_audit_log_line_dict(logs: list[str], node: str, log_entry: str) -> Generator[dict[str, Any]]:
     """
     Parse audit log entries into dictionaries.
 
@@ -1118,8 +1118,7 @@ def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, st
         if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
             build_version = Version(version=build["csv_version"])
             if latest_z_stream:
-                if build_version > latest_z_stream:
-                    latest_z_stream = build_version
+                latest_z_stream = max(latest_z_stream, build_version)
             else:
                 latest_z_stream = build_version
     return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None

@@ -153,9 +153,9 @@ class BaseVirtualMachine(VirtualMachine):
         Returns:
             BaseVirtualMachine instance bound to an existing cluster resource.
         """
-        obj = cls.__new__(cls)  # noqa: FCN001
+        obj = cls.__new__(cls)
 
-        VirtualMachine.__init__(  # noqa: FCN001
+        VirtualMachine.__init__(
             obj,
             namespace=namespace,
             name=name,

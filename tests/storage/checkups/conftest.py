@@ -176,12 +176,14 @@ def checkup_job(
 @pytest.fixture()
 def updated_two_default_storage_classes(removed_default_storage_classes, cluster_storage_classes):
     first_sc, second_sc = cluster_storage_classes[:2]
-    with update_default_sc(default=True, storage_class=first_sc):
-        with update_default_sc(
+    with (
+        update_default_sc(default=True, storage_class=first_sc),
+        update_default_sc(
             default=True,
             storage_class=second_sc,
-        ):
-            yield
+        ),
+    ):
+        yield
 
 
 @pytest.fixture()

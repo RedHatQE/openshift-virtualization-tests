@@ -76,12 +76,14 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
 def test_invalid_cpu_feature_policy_negative(unprivileged_client, namespace, features):
     """VM should not be created successfully"""
     vm_name = "invalid-cpu-feature-policy-vm"
-    with pytest.raises(UnprocessibleEntityError):
-        with VirtualMachineForTests(
+    with (
+        pytest.raises(UnprocessibleEntityError),
+        VirtualMachineForTests(
             name=vm_name,
             namespace=namespace.name,
             cpu_flags={"features": features},
             body=fedora_vm_body(name=vm_name),
             client=unprivileged_client,
-        ):
-            pytest.fail("VM was created with an invalid cpu feature policy.")
+        ),
+    ):
+        pytest.fail("VM was created with an invalid cpu feature policy.")

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import bitmath
 import pytest
@@ -47,9 +47,7 @@ def get_last_transition_time(vm):
     for condition in vm.instance.get("status", {}).get("conditions"):
         if condition.get("type") == vm.Condition.READY:
             last_transition_time = condition.get("lastTransitionTime")
-            return int(
-                (datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)).timestamp()
-            )
+            return int((datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)).timestamp())
 
 
 def check_vm_last_transition_metric_value(prometheus, metric, vm):

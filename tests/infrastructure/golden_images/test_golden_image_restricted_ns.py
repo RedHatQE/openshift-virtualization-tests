@@ -8,17 +8,19 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
 def check_pod_creation_failed(pod_name, client, namespace):
-    with pytest.raises(
-        ApiException,
-        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
-    ):
-        with Pod(
+    with (
+        pytest.raises(
+            ApiException,
+            match=ErrorMsg.CANNOT_CREATE_RESOURCE,
+        ),
+        Pod(
             name=pod_name,
             namespace=namespace.name,
             client=client,
             containers=[{"name": "dummy", "image": "kubevirt/cdi-importer:latest"}],
-        ):
-            return
+        ),
+    ):
+        return
 
 
 @pytest.mark.polarion("CNV-4900")

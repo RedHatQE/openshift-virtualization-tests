@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
 
 
-def assert_windows_efi(vm: "VirtualMachineForTests") -> None:
+def assert_windows_efi(vm: VirtualMachineForTests) -> None:
     """
     Verify guest OS is using EFI.
 
@@ -29,7 +29,7 @@ def assert_windows_efi(vm: "VirtualMachineForTests") -> None:
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
 
 
-def check_vm_xml_hyperv(vm: "VirtualMachineForTests") -> None:
+def check_vm_xml_hyperv(vm: VirtualMachineForTests) -> None:
     """
     Verify HyperV values in VMI XML configuration.
 
@@ -62,7 +62,7 @@ def check_vm_xml_hyperv(vm: "VirtualMachineForTests") -> None:
     )
 
 
-def check_windows_vm_hvinfo(vm: "VirtualMachineForTests") -> None:
+def check_windows_vm_hvinfo(vm: VirtualMachineForTests) -> None:
     """
     Verify HyperV values in Windows VM using hvinfo.exe tool.
 

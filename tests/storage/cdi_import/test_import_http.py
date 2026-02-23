@@ -161,16 +161,18 @@ def test_invalid_url(dv_non_exist_url):
 @pytest.mark.polarion("CNV-674")
 @pytest.mark.s390x
 def test_empty_url(namespace, storage_class_name_scope_module, unprivileged_client):
-    with pytest.raises(UnprocessibleEntityError):
-        with create_dv(
+    with (
+        pytest.raises(UnprocessibleEntityError),
+        create_dv(
             client=unprivileged_client,
             dv_name=f"cnv-674-{storage_class_name_scope_module}",
             namespace=namespace.name,
             url="",
             size=DEFAULT_DV_SIZE,
             storage_class=storage_class_name_scope_module,
-        ):
-            pass
+        ),
+    ):
+        pass
 
 
 @pytest.mark.sno
@@ -477,16 +479,18 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 @pytest.mark.sno
 def test_disk_falloc(data_volume_multi_storage_scope_function, unprivileged_client):
     data_volume_multi_storage_scope_function.wait_for_dv_success()
-    with create_vm_from_dv(
-        client=unprivileged_client,
-        dv=data_volume_multi_storage_scope_function,
-        os_flavor=OS_FLAVOR_ALPINE,
-        memory_guest=Images.Alpine.DEFAULT_MEMORY_SIZE,
-    ) as vm_dv:
-        with console.Console(vm=vm_dv) as vm_console:
-            LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/urandom of=file bs=1M")
-            vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
+    with (
+        create_vm_from_dv(
+            client=unprivileged_client,
+            dv=data_volume_multi_storage_scope_function,
+            os_flavor=OS_FLAVOR_ALPINE,
+            memory_guest=Images.Alpine.DEFAULT_MEMORY_SIZE,
+        ) as vm_dv,
+        console.Console(vm=vm_dv) as vm_console,
+    ):
+        LOGGER.info("Fill disk space.")
+        vm_console.sendline("dd if=/dev/urandom of=file bs=1M")
+        vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.destructive

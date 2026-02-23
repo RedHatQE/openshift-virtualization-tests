@@ -2,7 +2,6 @@
 
 # Generated using Claude cli
 
-# flake8: noqa: N802
 
 """
 Pytest Marker Analyzer
@@ -772,10 +771,9 @@ def _process_test_file_for_markers(
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if node.name.startswith("test_"):
                         for decorator in node.decorator_list:
-                            if is_marker(decorator=decorator, marker_names=marker_names):
-                                tests.append(node.name)
-                                break
-                            elif check_parametrize_marks(decorator=decorator, marker_names=marker_names):
+                            if is_marker(decorator=decorator, marker_names=marker_names) or check_parametrize_marks(
+                                decorator=decorator, marker_names=marker_names
+                            ):
                                 tests.append(node.name)
                                 break
                 elif isinstance(node, ast.ClassDef):
@@ -794,10 +792,9 @@ def _process_test_file_for_markers(
                             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                                 if item.name.startswith("test_"):
                                     for decorator in item.decorator_list:
-                                        if is_marker(decorator=decorator, marker_names=marker_names):
-                                            tests.append(f"{node.name}::{item.name}")
-                                            break
-                                        elif check_parametrize_marks(decorator=decorator, marker_names=marker_names):
+                                        if is_marker(
+                                            decorator=decorator, marker_names=marker_names
+                                        ) or check_parametrize_marks(decorator=decorator, marker_names=marker_names):
                                             tests.append(f"{node.name}::{item.name}")
                                             break
 
@@ -1568,11 +1565,9 @@ class MarkerTestAnalyzer:
                     # Module-level function with marker
                     if node.name.startswith("test_"):
                         for decorator in node.decorator_list:
-                            if is_marker(decorator=decorator, marker_names=self.marker_names):
-                                tests.append(node.name)
-                                break
-                            # Also check for markers in parametrize pytest.param(..., marks=...)
-                            elif check_parametrize_marks(decorator=decorator, marker_names=self.marker_names):
+                            if is_marker(
+                                decorator=decorator, marker_names=self.marker_names
+                            ) or check_parametrize_marks(decorator=decorator, marker_names=self.marker_names):
                                 tests.append(node.name)
                                 break
 
@@ -1597,11 +1592,9 @@ class MarkerTestAnalyzer:
                                 if item.name.startswith("test_"):
                                     # Check method-level markers
                                     for decorator in item.decorator_list:
-                                        if is_marker(decorator=decorator, marker_names=self.marker_names):
-                                            tests.append(f"{node.name}::{item.name}")
-                                            break
-                                        # Also check parametrize marks
-                                        elif check_parametrize_marks(
+                                        if is_marker(
+                                            decorator=decorator, marker_names=self.marker_names
+                                        ) or check_parametrize_marks(
                                             decorator=decorator, marker_names=self.marker_names
                                         ):
                                             tests.append(f"{node.name}::{item.name}")

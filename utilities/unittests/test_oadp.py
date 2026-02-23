@@ -2,7 +2,6 @@
 
 """Unit tests for oadp module"""
 
-# flake8: noqa: E402
 import sys
 from re import escape
 from shlex import quote
@@ -481,8 +480,9 @@ class TestCreateRhelVm:
         # Make VirtualMachineForTests raise exception on enter
         mock_vm_class.return_value.__enter__.side_effect = Exception("VM creation failed")
 
-        with pytest.raises(Exception, match="VM creation failed"):
-            with create_rhel_vm(
+        with (
+            pytest.raises(Exception, match="VM creation failed"),
+            create_rhel_vm(
                 storage_class="ocs-storagecluster-ceph-rbd",
                 namespace="test-namespace",
                 dv_name="test-dv",
@@ -490,8 +490,9 @@ class TestCreateRhelVm:
                 rhel_image="rhel-9.6.qcow2",
                 client=mock_client,
                 wait_running=True,
-            ):
-                pass
+            ),
+        ):
+            pass
 
         # Cleanup should still be called
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
@@ -588,8 +589,9 @@ class TestCreateRhelVm:
 
         mock_running_vm.side_effect = Exception("VM failed to start")
 
-        with pytest.raises(Exception, match="VM failed to start"):
-            with create_rhel_vm(
+        with (
+            pytest.raises(Exception, match="VM failed to start"),
+            create_rhel_vm(
                 storage_class="ocs-storagecluster-ceph-rbd",
                 namespace="test-namespace",
                 dv_name="test-dv",
@@ -597,8 +599,9 @@ class TestCreateRhelVm:
                 rhel_image="rhel-9.6.qcow2",
                 client=mock_client,
                 wait_running=True,
-            ):
-                pass
+            ),
+        ):
+            pass
 
         # Cleanup should still be called
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)

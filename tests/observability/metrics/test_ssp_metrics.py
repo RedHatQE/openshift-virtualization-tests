@@ -41,8 +41,9 @@ def created_multiple_failed_vms(
     """
     with instance_type_for_test_scope_class as vm_instance_type:
         for _ in range(request.param["vm_count"]):
-            with pytest.raises(UnprocessibleEntityError):
-                with VirtualMachineForTests(
+            with (
+                pytest.raises(UnprocessibleEntityError),
+                VirtualMachineForTests(
                     name="non-creatable-vm",
                     namespace=namespace.name,
                     client=unprivileged_client,
@@ -55,8 +56,9 @@ def created_multiple_failed_vms(
                         "message": "This VM requires more memory.",
                         "min": 1073741824,
                     },
-                ) as vm:
-                    return vm
+                ) as vm,
+            ):
+                return vm
 
 
 class TestSSPTemplate:

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Fixtures for online resize tests
 """

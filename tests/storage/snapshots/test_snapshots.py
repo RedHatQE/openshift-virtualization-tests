@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Snapshots tests
 """
@@ -209,18 +207,20 @@ class TestRestoreSnapshots:
     ):
         if rhel_vm_for_snapshot.ready:
             rhel_vm_for_snapshot.stop(wait=True)
-        with pytest.raises(
-            ApiException,
-            match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
-        ):
-            with VirtualMachineRestore(
+        with (
+            pytest.raises(
+                ApiException,
+                match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
+            ),
+            VirtualMachineRestore(
                 client=unprivileged_client,
                 name="restore-snapshot-cnv-5049-unprivileged",
                 namespace=rhel_vm_for_snapshot.namespace,
                 vm_name=rhel_vm_for_snapshot.name,
                 snapshot_name=snapshot_with_content[0].name,
-            ):
-                return
+            ),
+        ):
+            return
 
     @pytest.mark.sno
     @pytest.mark.parametrize(

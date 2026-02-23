@@ -167,12 +167,14 @@ def vm_ready_for_tests(vm_parameters_for_virtio_downward_metrics):
 def test_downward_metrics_virtio_serial_port_default(
     vm_parameters_for_virtio_downward_metrics,
 ):
-    with pytest.raises(
-        UnprocessibleEntityError,
-        match=r".*DownwardMetrics feature gate is not enabled*",
+    with (
+        pytest.raises(
+            UnprocessibleEntityError,
+            match=r".*DownwardMetrics feature gate is not enabled*",
+        ),
+        VirtualMachineWithDownwardMetrics(**vm_parameters_for_virtio_downward_metrics),
     ):
-        with VirtualMachineWithDownwardMetrics(**vm_parameters_for_virtio_downward_metrics):
-            pytest.fail("Expected Failure due to UnprocessibleEntityError")
+        pytest.fail("Expected Failure due to UnprocessibleEntityError")
 
 
 @pytest.mark.polarion("CNV-10808")

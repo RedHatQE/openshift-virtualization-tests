@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Online resize (PVC expanded while VM running)
 """

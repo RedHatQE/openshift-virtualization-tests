@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Test to check, SELinuxLauncher Type in kubevirt config map
 """

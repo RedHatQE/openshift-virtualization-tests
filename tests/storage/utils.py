@@ -1,8 +1,8 @@
 import ast
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -67,13 +67,14 @@ def import_image_to_dv(
     client,
 ):
     url = get_file_url_https_server(images_https_server=images_https_server_name, file_name=Images.Cirros.QCOW2_IMG)
-    with ConfigMap(
-        name="https-cert-configmap",
-        namespace=storage_ns_name,
-        data={"tlsregistry.crt": https_server_certificate},
-        client=client,
-    ) as configmap:
-        with create_dv(
+    with (
+        ConfigMap(
+            name="https-cert-configmap",
+            namespace=storage_ns_name,
+            data={"tlsregistry.crt": https_server_certificate},
+            client=client,
+        ) as configmap,
+        create_dv(
             source="http",
             dv_name=dv_name,
             namespace=configmap.namespace,
@@ -81,8 +82,9 @@ def import_image_to_dv(
             cert_configmap=configmap.name,
             storage_class=py_config["default_storage_class"],
             client=client,
-        ) as dv:
-            yield dv
+        ) as dv,
+    ):
+        yield dv
 
 
 @contextmanager
@@ -236,14 +238,15 @@ def set_permissions(
     subjects_api_group: str | None = None,
     subjects_namespace: str | None = None,
 ) -> Generator:
-    with create_cluster_role(
-        client=client,
-        name=role_name,
-        api_groups=role_api_groups,
-        permissions_to_resources=permissions_to_resources,
-        verbs=verbs,
-    ) as cluster_role:
-        with create_role_binding(
+    with (
+        create_cluster_role(
+            client=client,
+            name=role_name,
+            api_groups=role_api_groups,
+            permissions_to_resources=permissions_to_resources,
+            verbs=verbs,
+        ) as cluster_role,
+        create_role_binding(
             client=client,
             name=binding_name,
             namespace=namespace,
@@ -253,8 +256,9 @@ def set_permissions(
             subjects_namespace=subjects_namespace,
             role_ref_kind=cluster_role.kind,
             role_ref_name=cluster_role.name,
-        ):
-            yield
+        ),
+    ):
+        yield
 
 
 def get_importer_pod(
