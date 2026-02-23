@@ -18,11 +18,12 @@ from pytest_testconfig import config as py_config
 from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
-    ARM_64,
+    AMD_64,
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
     POD_SECURITY_NAMESPACE_LABELS,
+    S390X,
     SANITY_TESTS_FAILURE,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -400,7 +401,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
     arch = get_cluster_architecture()
-    cpu_arch = arch if arch == ARM_64 else None
+    cpu_arch = arch if arch != AMD_64 else None
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
@@ -414,7 +415,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch
+            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch if arch != S390X else None
         )
 
 

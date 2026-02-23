@@ -303,7 +303,7 @@ def generate_latest_os_dict(os_matrix: list[dict[str, Any]]) -> dict[str, Any]:
     """
     for matrix in os_matrix:
         for os_values in matrix.values():
-            if os_values.get("latest_released"):
+            if os_values.get(LATEST_RELEASE_STR):
                 return os_values
 
-    raise OsDictNotFoundError(f"No OS is marked as 'latest_released': {os_matrix}")
+    raise OsDictNotFoundError(f"No OS is marked as '{LATEST_RELEASE_STR}': {os_matrix}")

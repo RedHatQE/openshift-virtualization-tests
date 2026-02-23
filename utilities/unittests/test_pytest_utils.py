@@ -27,6 +27,7 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_latest_os_config,
 )
 
 
@@ -1531,3 +1532,251 @@ class TestGenerateOsMatrixDicts:
         assert mock_generate_os_matrix.call_count == 2
         assert mock_py_config["rhel_os_matrix"] == sample_rhel_matrix
         assert mock_py_config["fedora_os_matrix"] == sample_fedora_matrix
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_centos_matrix_s390x(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+    ):
+        """Test that CentOS instance type on s390x uses None for arch_suffix"""
+        mock_get_arch.return_value = "s390x"
+        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
+        mock_generate_instance_type.return_value = sample_centos_instance_type
+
+        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_instance_type.assert_called_once_with(
+            os_name="centos", preferences=["centos.stream9"], arch_suffix=None
+        )
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_rhel_matrix_s390x(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_instance_type_matrix,
+    ):
+        """Test generating instance type RHEL matrix on s390x architecture"""
+        mock_get_arch.return_value = "s390x"
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
+
+        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="s390x")
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_sets_latest_rhel_os_dict(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_rhel_matrix,
+    ):
+        """Test that latest_rhel_os_dict is populated correctly"""
+        mock_get_arch.return_value = "amd64"
+        mock_generate_os_matrix.return_value = sample_rhel_matrix
+        expected_latest = {"os_version": "9.6", "image_name": "rhel-9.6.qcow2", "latest_released": True}
+        mock_generate_latest.return_value = expected_latest
+
+        os_dict = {"rhel_os_list": ["rhel-9-6"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        assert mock_py_config["latest_rhel_os_dict"] == expected_latest
+
+    @patch("utilities.pytest_utils.get_cluster_architecture")
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.generate_os_matrix_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_sets_latest_instance_type_rhel_os_dict(
+        self,
+        mock_py_config,
+        mock_generate_os_matrix,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        mock_get_arch,
+        sample_instance_type_matrix,
+    ):
+        """Test that latest_instance_type_rhel_os_dict is populated correctly"""
+        mock_get_arch.return_value = "amd64"
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        expected_latest = {"preference": "rhel.9", "latest_released": True}
+        mock_generate_latest.return_value = expected_latest
+
+        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        generate_os_matrix_dicts(os_dict=os_dict)
+
+        assert mock_py_config["latest_instance_type_rhel_os_dict"] == expected_latest
+
+
+class TestUpdateLatestOsConfig:
+    """Test cases for update_latest_os_config function"""
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_saves_system_windows_os_matrix(self, mock_py_config):
+        """Test that windows_os_matrix is saved to system_windows_os_matrix"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.return_value = False
+        windows_matrix = [{"win-10": {"os_version": "10"}}]
+        mock_py_config["windows_os_matrix"] = windows_matrix
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["system_windows_os_matrix"] == windows_matrix
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_saves_system_rhel_os_matrix(self, mock_py_config):
+        """Test that rhel_os_matrix is saved to system_rhel_os_matrix"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.return_value = False
+        rhel_matrix = [{"rhel-9-6": {"os_version": "9.6"}}]
+        mock_py_config["rhel_os_matrix"] = rhel_matrix
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["system_rhel_os_matrix"] == rhel_matrix
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_updates_rhel_matrix_with_latest_rhel_option(self, mock_py_config):
+        """Test updating rhel_os_matrix when latest_rhel option is set"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_rhel"
+        mock_py_config["rhel_os_matrix"] = [
+            {"rhel-8-10": {"os_version": "8.10"}},
+            {"rhel-9-6": {"os_version": "9.6", "latest_released": True}},
+        ]
+        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.6", "latest_released": True}
+        mock_py_config["latest_instance_type_rhel_os_dict"] = {"preference": "rhel.9", "latest_released": True}
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.6": {"os_version": "9.6", "latest_released": True}}]
+        assert mock_py_config["instance_type_rhel_os_matrix"] == [
+            {"rhel.9": {"preference": "rhel.9", "latest_released": True}}
+        ]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_updates_windows_matrix_with_latest_windows_option(self, mock_py_config):
+        """Test updating windows_os_matrix when latest_windows option is set"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
+        mock_py_config["windows_os_matrix"] = [
+            {"win-10": {"os_version": "10"}},
+            {"win-2025": {"os_version": "2025", "latest_released": True}},
+        ]
+        mock_py_config["latest_windows_os_dict"] = {"os_version": "2025", "latest_released": True}
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["windows_os_matrix"] == [
+            {"windows.2025": {"os_version": "2025", "latest_released": True}}
+        ]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_updates_centos_matrix_with_latest_centos_option(self, mock_py_config):
+        """Test updating centos_os_matrix when latest_centos option is set"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_centos"
+        mock_py_config["centos_os_matrix"] = [{"centos-stream-9": {"os_version": "9", "latest_released": True}}]
+        mock_py_config["latest_centos_os_dict"] = {"os_version": "9", "latest_released": True}
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["centos_os_matrix"] == [{"centos-stream.9": {"os_version": "9", "latest_released": True}}]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_updates_fedora_matrix_with_latest_fedora_option(self, mock_py_config):
+        """Test updating fedora_os_matrix when latest_fedora option is set"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_fedora"
+        mock_py_config["fedora_os_matrix"] = [{"fedora-43": {"os_version": "43", "latest_released": True}}]
+        mock_py_config["latest_fedora_os_dict"] = {"os_version": "43", "latest_released": True}
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["fedora_os_matrix"] == [{"fedora": {"os_version": "43", "latest_released": True}}]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_no_update_without_latest_option(self, mock_py_config):
+        """Test that matrices are not updated when latest_* options are not set"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.return_value = False
+        original_rhel_matrix = [{"rhel-8-10": {"os_version": "8.10"}}, {"rhel-9-6": {"os_version": "9.6"}}]
+        mock_py_config["rhel_os_matrix"] = original_rhel_matrix.copy()
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["rhel_os_matrix"] == original_rhel_matrix
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_latest_rhel_with_missing_latest_dict_uses_defaults(self, mock_py_config):
+        """Test fallback to default values when latest_rhel_os_dict is missing"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_rhel"
+        mock_py_config["rhel_os_matrix"] = [{"rhel-9-6": {"os_version": "9.6"}}]
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.latest": {}}]
+        assert mock_py_config["instance_type_rhel_os_matrix"] == [{"rhel.latest": {}}]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_latest_windows_with_missing_latest_dict_uses_defaults(self, mock_py_config):
+        """Test fallback to default values when latest_windows_os_dict is missing"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
+        mock_py_config["windows_os_matrix"] = [{"win-10": {"os_version": "10"}}]
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["windows_os_matrix"] == [{"windows.latest": {}}]
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_no_update_when_matrix_is_missing(self, mock_py_config):
+        """Test that latest_* options are ignored when corresponding matrix is missing"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt == "latest_rhel"
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert "rhel_os_matrix" not in mock_py_config
+
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_multiple_latest_options(self, mock_py_config):
+        """Test handling multiple latest_* options simultaneously"""
+        mock_session_config = MagicMock()
+        mock_session_config.getoption.side_effect = lambda opt: opt in ("latest_rhel", "latest_windows")
+        mock_py_config["rhel_os_matrix"] = [{"rhel-9-6": {"os_version": "9.6"}}]
+        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.6"}
+        mock_py_config["latest_instance_type_rhel_os_dict"] = {"preference": "rhel.9"}
+        mock_py_config["windows_os_matrix"] = [{"win-2025": {"os_version": "2025"}}]
+        mock_py_config["latest_windows_os_dict"] = {"os_version": "2025"}
+
+        update_latest_os_config(session_config=mock_session_config)
+
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.6": {"os_version": "9.6"}}]
+        assert mock_py_config["windows_os_matrix"] == [{"windows.2025": {"os_version": "2025"}}]
