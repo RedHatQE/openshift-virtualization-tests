@@ -151,8 +151,12 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
 
 
 @pytest.fixture(scope="module")
-def created_cnv_namespace(admin_client):
-    cnv_namespace_name = py_config["hco_namespace"]
+def created_cnv_namespace(admin_client, request):
+    try:
+        hco_ns = request.getfixturevalue("hco_namespace")
+        cnv_namespace_name = hco_ns.name
+    except AttributeError:
+        cnv_namespace_name = py_config["hco_namespace"]
     # Delete existing namespace if it exists from previous test runs
     existing_ns = Namespace(client=admin_client, name=cnv_namespace_name)
     if existing_ns.exists:
