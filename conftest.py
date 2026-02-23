@@ -781,11 +781,11 @@ def pytest_sessionstart(session):
             latest_windows_os_dict = py_config.get("latest_windows_os_dict", {})
             py_config["windows_os_matrix"] = [{"windows.latest": latest_windows_os_dict}]
 
-        if session.config.getoption("latest_centos") and (py_config.get("centos_os_matrix")):
+        if session.config.getoption("latest_centos") and py_config.get("centos_os_matrix"):
             latest_centos_os_dict = py_config.get("latest_centos_os_dict", {})
             py_config["centos_os_matrix"] = [{"centos.latest": latest_centos_os_dict}]
 
-        if session.config.getoption("latest_fedora") and (py_config.get("fedora_os_matrix")):
+        if session.config.getoption("latest_fedora") and py_config.get("fedora_os_matrix"):
             latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
             py_config["fedora_os_matrix"] = [{"fedora.latest": latest_fedora_os_dict}]
 

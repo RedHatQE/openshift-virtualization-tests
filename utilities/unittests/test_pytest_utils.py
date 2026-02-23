@@ -14,6 +14,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
+    generate_os_matrix_dicts,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -1235,11 +1236,6 @@ class TestGenerateOsMatrixDicts:
     """Test cases for generate_os_matrix_dicts function"""
 
     @pytest.fixture
-    def mock_py_config(self):
-        """Fixture to create a mock py_config dict that can be modified"""
-        return {}
-
-    @pytest.fixture
     def sample_rhel_matrix(self):
         """Sample RHEL OS matrix for testing"""
         return [
@@ -1292,8 +1288,6 @@ class TestGenerateOsMatrixDicts:
         sample_rhel_matrix,
     ):
         """Test generating RHEL OS matrix from rhel_os_list"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         mock_generate_os_matrix.return_value = sample_rhel_matrix
         mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-6"]
@@ -1320,8 +1314,6 @@ class TestGenerateOsMatrixDicts:
         sample_fedora_matrix,
     ):
         """Test generating Fedora OS matrix from fedora_os_list"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         mock_generate_os_matrix.return_value = sample_fedora_matrix
         mock_generate_latest.return_value = sample_fedora_matrix[0]["fedora-43"]
@@ -1346,8 +1338,6 @@ class TestGenerateOsMatrixDicts:
         mock_get_arch,
     ):
         """Test generating CentOS OS matrix from centos_os_list"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         sample_centos_matrix = [{"centos-stream-9": {"os_version": "9", "latest_released": True}}]
         mock_generate_os_matrix.return_value = sample_centos_matrix
@@ -1375,8 +1365,6 @@ class TestGenerateOsMatrixDicts:
         mock_get_arch,
     ):
         """Test generating Windows OS matrix from windows_os_list"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         sample_windows_matrix = [{"win-10": {"os_version": "10", "latest_released": True}}]
         mock_generate_os_matrix.return_value = sample_windows_matrix
@@ -1403,8 +1391,6 @@ class TestGenerateOsMatrixDicts:
         sample_instance_type_matrix,
     ):
         """Test generating instance type RHEL matrix on amd64 architecture"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
@@ -1431,8 +1417,6 @@ class TestGenerateOsMatrixDicts:
         sample_instance_type_matrix,
     ):
         """Test generating instance type RHEL matrix on arm64 architecture"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "arm64"
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
@@ -1457,8 +1441,6 @@ class TestGenerateOsMatrixDicts:
         mock_get_arch,
     ):
         """Test generating instance type Fedora matrix"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         sample_fedora_instance_type = [{"fedora": {"preference": "fedora"}}]
         mock_generate_instance_type.return_value = sample_fedora_instance_type
@@ -1483,8 +1465,6 @@ class TestGenerateOsMatrixDicts:
         mock_get_arch,
     ):
         """Test generating instance type CentOS matrix"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
         mock_generate_instance_type.return_value = sample_centos_instance_type
@@ -1511,8 +1491,6 @@ class TestGenerateOsMatrixDicts:
         mock_get_arch,
     ):
         """Test that empty os_dict doesn't call any generation functions"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
 
         os_dict = {}
@@ -1537,8 +1515,6 @@ class TestGenerateOsMatrixDicts:
         sample_fedora_matrix,
     ):
         """Test generating multiple OS matrices in a single call"""
-        from utilities.pytest_utils import generate_os_matrix_dicts
-
         mock_get_arch.return_value = "amd64"
         mock_generate_os_matrix.side_effect = [sample_rhel_matrix, sample_fedora_matrix]
         mock_generate_latest.side_effect = [

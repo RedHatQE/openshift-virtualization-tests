@@ -26,6 +26,7 @@ from utilities.constants import (
     WORKLOAD_STR,
     Images,
 )
+from utilities.exceptions import OsDictNotFoundError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -285,3 +286,24 @@ def generate_linux_instance_type_os_matrix(
 
         instance_types.append({arch_preference: preference_config})
     return instance_types
+
+
+def generate_latest_os_dict(os_matrix: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Get latest os dict.
+
+    Args:
+        os_matrix (list): [<os-name>]_os_matrix - a list of dicts.
+
+    Returns:
+        dict: Latest supported OS dict (the os_values payload) or raises an exception.
+
+    Raises:
+        OsDictNotFoundError: If no os matched.
+    """
+    for matrix in os_matrix:
+        for os_values in matrix.values():
+            if os_values.get("latest_released"):
+                return os_values
+
+    raise OsDictNotFoundError(f"No OS is marked as 'latest_released': {os_matrix}")

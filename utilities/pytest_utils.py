@@ -18,7 +18,7 @@ from pytest_testconfig import config as py_config
 from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
-    AMD_64,
+    ARM_64,
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
@@ -33,8 +33,8 @@ from utilities.data_collector import (
     write_to_file,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
-from utilities.infra import generate_latest_os_dict
 from utilities.os_utils import (
+    generate_latest_os_dict,
     generate_linux_instance_type_os_matrix,
     generate_os_matrix_dict,
 )
@@ -365,6 +365,25 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
 
 
 def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
+    """Generate and populate OS matrix and related dictionaries in py_config.
+
+    For each supported OS key in the input dictionary, generates the appropriate OS matrix
+    using helper functions and stores the results in the `py_config` configuration dictionary.
+    Also generates and stores the 'latest' OS dictionaries. Supports handling for RHEL, Fedora,
+    CentOS, and Windows. Additionally generates and stores instance-type OS matrices and their 'latest'
+    dicts, including architecture-specific variations (e.g., ARM_64).
+
+    Args:
+        os_dict (dict[str, list[str]]): A dictionary containing lists of supported OS names for each
+            relevant OS family. Keys can include:
+              - "rhel_os_list"
+              - "fedora_os_list"
+              - "centos_os_list"
+              - "windows_os_list"
+              - "instance_type_rhel_os_list"
+              - "instance_type_fedora_os_list"
+              - "instance_type_centos_os_list"
+    """
     if rhel_os_list := os_dict.get("rhel_os_list"):
         py_config["rhel_os_matrix"] = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=rhel_os_list)
         py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
@@ -385,7 +404,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
     arch = get_cluster_architecture()
-    cpu_arch = arch if arch != AMD_64 else None
+    cpu_arch = arch if arch == ARM_64 else None
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch

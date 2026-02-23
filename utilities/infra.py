@@ -70,7 +70,6 @@ from utilities.constants import (
     NamespacesNames,
 )
 from utilities.exceptions import (
-    OsDictNotFoundError,
     UrlNotFoundError,
     UtilityPodNotFoundError,
 )
@@ -163,27 +162,6 @@ def get_pod_by_name_prefix(client, pod_prefix, namespace, get_all=False):
 
 def generate_namespace_name(file_path):
     return (file_path.strip(".py").replace("/", "-").replace("_", "-"))[-63:].split("-", 1)[-1]
-
-
-def generate_latest_os_dict(os_matrix: list[dict[str, Any]]) -> dict[str, Any]:
-    """
-    Get latest os dict.
-
-    Args:
-        os_matrix (list): [<os-name>]_os_matrix - a list of dicts.
-
-    Returns:
-        dict: Latest supported OS dict (the os_values payload) or raises an exception.
-
-    Raises:
-        OsDictNotFoundError: If no os matched.
-    """
-    for matrix in os_matrix:
-        for os_values in matrix.values():
-            if os_values.get("latest_released"):
-                return os_values
-
-    raise OsDictNotFoundError(f"No OS is marked as 'latest_released': {os_matrix}")
 
 
 def get_pods(client: DynamicClient, namespace: Namespace, label: str = "") -> list[Pod]:
