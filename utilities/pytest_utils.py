@@ -425,6 +425,13 @@ def update_latest_os_config(session_config: pytest.Config) -> None:
 
     Args:
         session_config (pytest.Config): The pytest session configuration object.
+
+    Side effects:
+        Mutates the module-level py_config dict. Preserves original matrices in
+        system_windows_os_matrix and system_rhel_os_matrix. Updates rhel_os_matrix
+        and instance_type_rhel_os_matrix when --latest_rhel is set, windows_os_matrix
+        when --latest_windows is set, centos_os_matrix when --latest_centos is set,
+        and fedora_os_matrix when --latest_fedora is set.
     """
 
     # Save the default windows_os_matrix before it is updated
