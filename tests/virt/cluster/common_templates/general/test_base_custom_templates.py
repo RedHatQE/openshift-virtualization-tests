@@ -1,18 +1,26 @@
+import copy
 import logging
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
+from ocp_resources.data_source import DataSource
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
+from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST
-from utilities.constants import NamespacesNames
+from utilities.constants import OS_FLAVOR_FEDORA, NamespacesNames
+from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import (
+    VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     add_validation_rule_to_annotation,
     running_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
+
+TEST_ANNOTATION = "my-test-annotation-1"
 
 
 class CustomTemplate(Template):
@@ -53,7 +61,7 @@ class CustomTemplate(Template):
         self.res = template_dict
 
     def get_template_dict_with_added_vm_validation_rule(self, template_dict):
-        modified_template_dict = template_dict.copy()
+        modified_template_dict = copy.deepcopy(template_dict)
         vm_annotation = modified_template_dict["objects"][0]["metadata"]["annotations"]
         add_validation_rule_to_annotation(vm_annotation=vm_annotation, vm_validation_rule=self.vm_validation_rule)
         return modified_template_dict
@@ -78,6 +86,45 @@ def custom_template_from_base_template(request, admin_client, unprivileged_clien
         vm_validation_rule=request.param.get("validation_rule"),
     ) as custom_template:
         yield custom_template
+
+
+@pytest.fixture()
+def vm_with_custom_template_label(
+    unprivileged_client,
+    namespace,
+    golden_images_namespace,
+    custom_template_from_base_template,
+):
+    with VirtualMachineForTests(
+        name="vm-from-custom-template-webhook-validation",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=DataSource(name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name),
+            storage_class=py_config["default_storage_class"],
+        ),
+        metadata_labels={
+            f"{VirtualMachineForTests.ApiGroup.VM_KUBEVIRT_IO}/template": custom_template_from_base_template.name,
+            f"{VirtualMachineForTests.ApiGroup.VM_KUBEVIRT_IO}/template.namespace": namespace.name,
+        },
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def template_removed(custom_template_from_base_template):
+    # vm_with_custom_template_label required for setup order: VM exists before template is removed
+    LOGGER.info("Deleting custom template to test webhook validation with missing parent")
+    custom_template_from_base_template.clean_up()
+    yield
+
+
+@pytest.fixture()
+def existing_vm_annotation_updated(vm_with_custom_template_label, template_removed):
+    ResourceEditor({
+        vm_with_custom_template_label: {"metadata": {"annotations": {"test.annot": TEST_ANNOTATION}}}
+    }).update()
+    yield vm_with_custom_template_label
 
 
 @pytest.mark.parametrize(
@@ -168,3 +215,22 @@ class TestBaseCustomTemplates:
                 cpu_cores=3,
             ) as vm_from_template:
                 pytest.fail(f"VM validation failed on {vm_from_template.name}")
+
+
+@pytest.mark.parametrize(
+    "custom_template_from_base_template",
+    [
+        pytest.param(
+            {
+                "base_template_name": f"fedora-{Template.Workload.DESKTOP}-{Template.Flavor.SMALL}",
+                "new_template_name": "custom-fedora-template-webhook-validation",
+            },
+        )
+    ],
+    indirect=True,
+)
+@pytest.mark.polarion("CNV-13744")
+def test_no_validation_annotation_missing_parent_template(existing_vm_annotation_updated):
+    assert existing_vm_annotation_updated.instance.metadata.annotations.get("test.annot") == TEST_ANNOTATION, (
+        "Annotation update should succeed even when parent template is missing"
+    )
