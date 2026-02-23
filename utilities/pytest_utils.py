@@ -365,13 +365,8 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
 
 
 def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
-    """Generate and populate OS matrix and related dictionaries in py_config.
-
-    For each supported OS key in the input dictionary, generates the appropriate OS matrix
-    using helper functions and stores the results in the `py_config` configuration dictionary.
-    Also generates and stores the 'latest' OS dictionaries. Supports handling for RHEL, Fedora,
-    CentOS, and Windows. Additionally generates and stores instance-type OS matrices and their 'latest'
-    dicts, including architecture-specific variations (e.g., ARM_64).
+    """
+    Generate and populate OS matrix and related dictionaries in py_config.
 
     Args:
         os_dict (dict[str, list[str]]): A dictionary containing lists of supported OS names for each
@@ -384,6 +379,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
               - "instance_type_fedora_os_list"
               - "instance_type_centos_os_list"
     """
+
     if rhel_os_list := os_dict.get("rhel_os_list"):
         py_config["rhel_os_matrix"] = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=rhel_os_list)
         py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
@@ -420,3 +416,47 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch
         )
+
+
+def update_latest_os_config(session_config: pytest.Config) -> None:
+    """
+    Update py_config with OS-related configuration based on session configuration.
+
+    Args:
+        session_config (pytest.Config): The pytest session configuration object.
+    """
+
+    # Save the default windows_os_matrix before it is updated
+    # with runtime windows_os_matrix value(s).
+    # Some tests extract a single OS from the matrix and may fail if running with
+    # passed values from cli
+    if windows_os_matrix := py_config.get("windows_os_matrix"):
+        py_config["system_windows_os_matrix"] = windows_os_matrix
+
+    if rhel_os_matrix := py_config.get("rhel_os_matrix"):
+        py_config["system_rhel_os_matrix"] = rhel_os_matrix
+
+    # Update OS matrix list with the latest OS if running with os_group
+    if session_config.getoption("latest_rhel") and rhel_os_matrix:
+        latest_rhel_os_dict = py_config.get("latest_rhel_os_dict", {})
+        py_config["rhel_os_matrix"] = [{f"rhel.{latest_rhel_os_dict.get('os_version', 'latest')}": latest_rhel_os_dict}]
+        latest_instance_type_rhel_os_dict = py_config.get("latest_instance_type_rhel_os_dict", {})
+        py_config["instance_type_rhel_os_matrix"] = [
+            {latest_instance_type_rhel_os_dict.get("preference", "rhel.latest"): latest_instance_type_rhel_os_dict}
+        ]
+
+    if session_config.getoption("latest_windows") and windows_os_matrix:
+        latest_windows_os_dict = py_config.get("latest_windows_os_dict", {})
+        py_config["windows_os_matrix"] = [
+            {f"windows.{latest_windows_os_dict.get('os_version', 'latest')}": latest_windows_os_dict}
+        ]
+
+    if session_config.getoption("latest_centos") and py_config.get("centos_os_matrix"):
+        latest_centos_os_dict = py_config.get("latest_centos_os_dict", {})
+        py_config["centos_os_matrix"] = [
+            {f"centos-stream.{latest_centos_os_dict.get('os_version', 'latest')}": latest_centos_os_dict}
+        ]
+
+    if session_config.getoption("latest_fedora") and py_config.get("fedora_os_matrix"):
+        latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
+        py_config["fedora_os_matrix"] = [{"fedora": latest_fedora_os_dict}]
