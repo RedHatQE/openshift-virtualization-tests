@@ -40,7 +40,6 @@ class TestMetricsWindows:
     def test_cnv_vmi_monitoring_metrics_windows_vm(
         self,
         prometheus,
-        xfail_if_memory_metric_has_bug,
         windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
