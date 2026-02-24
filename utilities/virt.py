@@ -1889,11 +1889,15 @@ def verify_vm_migrated(
     assert vm.vmi.instance.status.migrationState.completed, (
         f"VMI {vmi_name} migration state is: {vm.vmi.instance.status.migrationState}"
     )
-    if wait_for_interfaces:
-        wait_for_vm_interfaces(vmi=vm.vmi)
+    try:
+        if wait_for_interfaces:
+            wait_for_vm_interfaces(vmi=vm.vmi)
 
-    if check_ssh_connectivity:
-        wait_for_ssh_connectivity(vm=vm)
+        if check_ssh_connectivity:
+            wait_for_ssh_connectivity(vm=vm)
+    except TimeoutExpiredError:
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        raise
 
 
 def vm_cloud_init_volume(vm_spec):
