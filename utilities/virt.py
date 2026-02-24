@@ -1896,6 +1896,7 @@ def verify_vm_migrated(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} unresponsive after migration; getting VNC screenshot")
         collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
         raise
 
