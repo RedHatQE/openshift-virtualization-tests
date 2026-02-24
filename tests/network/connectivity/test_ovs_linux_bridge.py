@@ -5,7 +5,7 @@ VM to VM connectivity via secondary (bridged) interfaces.
 import pytest
 
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
-from tests.network.connectivity.utils import filter_link_local_addresses
+from tests.network.libs.ip import filter_link_local_addresses
 from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful
 
