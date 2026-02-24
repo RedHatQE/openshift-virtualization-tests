@@ -2,6 +2,7 @@ KUBEVIRT_VIRT_OPERATOR_READY = "kubevirt_virt_operator_ready"
 SSP_HIGH_RATE_REJECTED_VMS = "SSPHighRateRejectedVms"
 BAD_HTTPGET_PATH = "/metrics-fake"
 SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED = "SSPCommonTemplatesModificationReverted"
+KUBEVIRT_VMI_NUMBER_OF_OUTDATED = "kubevirt_vmi_number_of_outdated"
 VIRT_ALERTS_LIST = [
     "VirtOperatorDown",
     "NoReadyVirtOperator",
