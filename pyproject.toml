@@ -81,6 +81,7 @@ dependencies = [
   "marshmallow==3.26.1",
   "cachetools>=6.2.2",
   "dacite>=1.9.2",
+  "python-dotenv>=1.2.1",
 ]
 
 [project.optional-dependencies]
@@ -144,6 +145,7 @@ omit = [
   "utilities/network.py",
   "utilities/storage.py",
   "utilities/virt.py",
+  "utilities/junit_ai_utils.py",
 ]
 
 [tool.coverage.report]
