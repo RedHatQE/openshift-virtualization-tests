@@ -1,6 +1,9 @@
 import logging
 import re
 
+from ocp_resources.resource import Resource
+
+from tests.install_upgrade_operators.utils import get_resource_container_env_image_mismatch
 from utilities.exceptions import ResourceMismatch
 
 LOGGER = logging.getLogger(__name__)
@@ -42,4 +45,31 @@ def validate_daemonset_request_fields(daemonset, cpu_min_value):
         raise ResourceMismatch(
             f"For daemonset {daemonset.name} mismatch in cpu values found: {invalid_cpus}, "
             f"expected cpu values < {cpu_min_value}"
+        )
+
+
+def assert_cnv_daemonset_container_image_not_in_upstream(cnv_daemonset):
+    cnv_daemonsets_with_upstream_image_reference = {
+        container["name"]: container["image"]
+        for container in cnv_daemonset.instance.spec.template.spec.containers
+        if not container["image"].startswith(Resource.ApiGroup.IMAGE_REGISTRY)
+    }
+
+    if cnv_daemonsets_with_upstream_image_reference:
+        raise ResourceMismatch(
+            f"For following deployments upstream image references found: {cnv_daemonsets_with_upstream_image_reference}"
+        )
+
+
+def assert_cnv_daemonset_container_env_image_not_in_upstream(cnv_daemonset):
+    cnv_daemonset_env_with_upstream_image_reference = {}
+    for container in cnv_daemonset.instance.spec.template.spec.containers:
+        resource_env_image_mismatch = get_resource_container_env_image_mismatch(container=container)
+        if resource_env_image_mismatch:
+            cnv_daemonset_env_with_upstream_image_reference[container["name"]] = resource_env_image_mismatch
+
+    if cnv_daemonset_env_with_upstream_image_reference:
+        raise ResourceMismatch(
+            f"For following deployments upstream image references "
+            f"found: {cnv_daemonset_env_with_upstream_image_reference}"
         )
