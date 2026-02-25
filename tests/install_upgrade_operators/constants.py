@@ -53,3 +53,9 @@ HCO_DEFAULT_FEATUREGATES = {
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
+VALID_PRIORITY_CLASS = [
+    "openshift-user-critical",
+    "system-cluster-critical",
+    "system-node-critical",
+    "kubevirt-cluster-critical",
+]

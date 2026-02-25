@@ -43,7 +43,7 @@ def validate_liveness_probe_fields(deployment):
         )
 
 
-def validate_request_fields(deployment, cpu_min_value):
+def validate_deployment_request_fields(deployment, cpu_min_value):
     """
     Validates that for a given deployment object, for each containers: resources.requests contains cpu and memory
     fields. Cpu values can not be less than cpu_min_value
