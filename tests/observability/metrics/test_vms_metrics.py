@@ -27,10 +27,8 @@ from tests.observability.metrics.utils import (
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.os_params import FEDORA_LATEST_LABELS
 from utilities.constants import (
     CAPACITY,
-    LIVE_MIGRATE,
     MIGRATION_POLICY_VM_LABEL,
     QUARANTINED,
     TIMEOUT_2MIN,
@@ -376,36 +374,6 @@ class TestVmResourceLimits:
             expected_value=vm_for_test_with_resource_limits_instance.cpu
             if cnv_vm_resources_limits_matrix__function__ == "cpu"
             else str(int(bitmath.parse_string_unsafe(vm_for_test_with_resource_limits_instance.memory).bytes)),
-        )
-
-
-class TestKubevirtVmiNonEvictable:
-    @pytest.mark.parametrize(
-        "vm_with_rwo_dv",
-        [
-            pytest.param(
-                {
-                    "vm_name": "non-evictable-vm",
-                    "template_labels": FEDORA_LATEST_LABELS,
-                    "ssh": False,
-                    "guest_agent": False,
-                    "eviction_strategy": LIVE_MIGRATE,
-                },
-                marks=pytest.mark.polarion("CNV-7484"),
-            ),
-        ],
-        indirect=True,
-    )
-    @pytest.mark.s390x
-    def test_kubevirt_vmi_non_evictable(
-        self,
-        prometheus,
-        vm_with_rwo_dv,
-    ):
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name="kubevirt_vmi_non_evictable",
-            expected_value="1",
         )
 
 

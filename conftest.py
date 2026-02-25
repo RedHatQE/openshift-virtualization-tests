@@ -26,7 +26,9 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.cluster
-import utilities.infra
+
+# TODO: Remove this import when utilities modules are refactored...
+import utilities.infra  # noqa
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
@@ -44,11 +46,13 @@ from utilities.data_collector import (
 )
 from utilities.database import Database
 from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityError
+from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
 from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    generate_os_matrix_dicts,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -60,6 +64,7 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_latest_os_config,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -94,7 +99,7 @@ TEAM_MARKERS = {
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
-    "network": [NamespacesNames.OPENSHIFT_NMSTATE],
+    "network": [],
     "virt": [],
 }
 MUST_GATHER_IGNORE_EXCEPTION_LIST = [
@@ -119,6 +124,8 @@ def pytest_addoption(parser):
     csv_group = parser.getgroup(name="CSV")
     ci_group = parser.getgroup(name="CI")
     component_sanity_group = parser.getgroup(name="ComponentSanity")
+    ai_insights_group = parser.getgroup(name="ai-job-insight")
+
     csv_group.addoption("--update-csv", action="store_true")
 
     # Upgrade addoption
@@ -349,6 +356,14 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Skip infrastructure prerequisite sanity checks",
+    )
+
+    # AI
+    ai_insights_group.addoption(
+        "--analyze-with-ai",
+        action="store_true",
+        default=False,
+        help="Enrich JUnit XML with AI-powered analysis from jenkins-job-insight. `JJI_SERVER_URL` env var is required",
     )
 
 
@@ -740,34 +755,6 @@ def pytest_generate_tests(metafunc):
 
 
 def pytest_sessionstart(session):
-    # TODO: Reduce cognitive complexity
-    def _update_os_related_config():
-        # Save the default windows_os_matrix before it is updated
-        # with runtime windows_os_matrix value(s).
-        # Some tests extract a single OS from the matrix and may fail if running with
-        # passed values from cli
-        if windows_os_matrix := py_config.get("windows_os_matrix"):
-            py_config["system_windows_os_matrix"] = windows_os_matrix
-
-        if rhel_os_matrix := py_config.get("rhel_os_matrix"):
-            py_config["system_rhel_os_matrix"] = rhel_os_matrix
-
-        # Update OS matrix list with the latest OS if running with os_group
-        if session.config.getoption("latest_rhel") and rhel_os_matrix:
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
-            py_config["instance_type_rhel_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
-            ]
-
-        if session.config.getoption("latest_windows") and windows_os_matrix:
-            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
-
-        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
-            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
-
-        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
-            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
-
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
         data_collector_dict["data_collector_base_directory"],
@@ -787,7 +774,8 @@ def pytest_sessionstart(session):
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
 
-    _update_os_related_config()
+    generate_os_matrix_dicts(os_dict=py_config)
+    update_latest_os_config(session_config=session.config)
 
     matrix_addoptions = [matrix for matrix in session.config.invocation_params.args if "-matrix=" in matrix]
     for matrix_addoption in matrix_addoptions:
@@ -827,6 +815,11 @@ def pytest_sessionstart(session):
         deploy_run_in_progress_namespace(client=admin_client)
         deploy_run_in_progress_config_map(client=admin_client, session=session)
 
+    # Set up AI analysis if --analyze-with-ai is passed.
+    # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
+    if session.config.option.analyze_with_ai:
+        setup_ai_analysis(session=session)
+
 
 def pytest_collection_finish(session):
     if session.config.getoption("--collect-tests-markers"):
@@ -856,6 +849,16 @@ def pytest_sessionfinish(session, exitstatus):
                 dir_path = os.path.join(root, _dir)
                 if not os.listdir(dir_path):
                     shutil.rmtree(dir_path, ignore_errors=True)
+
+    # Enrich JUnit XML with AI analysis after all tests complete.
+    # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
+    if session.config.option.analyze_with_ai:
+        try:
+            enrich_junit_xml(session=session)
+        # Do not fail on any AI analysis failures
+        except Exception:
+            LOGGER.exception("Failed to enrich JUnit XML, original preserved")
+
     session.config.option.log_listener.stop()
 
 
@@ -887,7 +890,8 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
                 namespaces_to_collect.extend([NamespacesNames.OPENSHIFT_FRR_K8S, NamespacesNames.CNV_TESTS_UTILITIES])
             if "mtv" in all_markers:
                 namespaces_to_collect.append(NamespacesNames.OPENSHIFT_MTV)
-
+            if "nmstate" in all_markers:
+                namespaces_to_collect.append(NamespacesNames.OPENSHIFT_NMSTATE)
         namespace_str = " ".join([f"namespace/{namespace}" for namespace in namespaces_to_collect])
     return namespace_str
 
