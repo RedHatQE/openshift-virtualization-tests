@@ -30,10 +30,12 @@ VM_PREFERENCES_LIST = {
     "windows": [
         "windows.10",
         "windows.11",
+        "windows.2k3",
         "windows.2k16",
         "windows.2k19",
         "windows.2k22",
         "windows.2k25",
+        "windows.xp",
         "windows.7",
         "windows.2k8",
         "windows.2k12",
