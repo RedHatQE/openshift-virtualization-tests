@@ -6,9 +6,6 @@ from typing import Generator
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 
-from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer
-from libs.net.traffic_generator import VMTcpClient as TcpClient
-from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
@@ -32,6 +29,20 @@ NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
 LOGGER = logging.getLogger(__name__)
 
 
+def random_ip_addresses(
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+) -> list[str]:
+    addresses = []
+    if ipv4_supported_cluster:
+        addresses.append(next(ipv4_localnet_address_pool))
+    if ipv6_supported_cluster:
+        addresses.append(next(ipv6_localnet_address_pool))
+    return addresses
+
+
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
         try:
@@ -44,20 +55,6 @@ def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ..
         vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
         vm.wait_for_agent_connected()
     return vms
-
-
-def create_traffic_server(vm: BaseVirtualMachine) -> TcpServer:
-    return TcpServer(vm=vm, port=IPERF_SERVER_PORT)
-
-
-def create_traffic_client(
-    server_vm: BaseVirtualMachine, client_vm: BaseVirtualMachine, spec_logical_network: str
-) -> TcpClient:
-    return TcpClient(
-        vm=client_vm,
-        server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=4)),
-        server_port=IPERF_SERVER_PORT,
-    )
 
 
 def localnet_vm(
