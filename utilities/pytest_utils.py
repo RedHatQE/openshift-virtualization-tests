@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+import pathlib
 import re
 import shutil
 import socket
@@ -263,33 +264,71 @@ def get_cnv_version_explorer_url(pytest_config):
         return version_explorer_url
 
 
-def get_tests_cluster_markers(items, filepath=None) -> None:
-    test_markers = set([marker.name for item in items for marker in item.iter_markers()])
+def get_tests_cluster_markers(items: list[pytest.Item], filepath: str | None = None) -> dict[str, list[str]]:
+    """Extract cluster-related markers from collected tests, grouped by category.
 
-    pytest_cluster_markers = []
-    is_config_section = False
-    with open("pytest.ini") as fd:
+    Parses pytest.ini to find markers under Architecture support, Hardware requirements,
+    Configuration requirements, and Required operators sections. Returns only markers
+    that are present in the collected test items.
+
+    Args:
+        items: List of collected pytest items.
+        filepath: Optional path to write the results as JSON.
+
+    Returns:
+        Dictionary mapping category names to lists of matching marker names.
+    """
+    test_markers = {marker.name for item in items for marker in item.iter_markers()}
+
+    section_headers = {
+        "## Architecture support": "architecture",
+        "## Hardware requirements": "hardware",
+        "## Configuration requirements": "configuration",
+        "## Required operators": "operators",
+    }
+
+    markers_by_section: dict[str, list[str]] = {section_name: [] for section_name in section_headers.values()}
+
+    pytest_ini_path = pathlib.Path(__file__).resolve().parent.parent / "pytest.ini"
+    current_section: str | None = None
+    with open(pytest_ini_path) as fd:
         for line in fd:
-            # Get markers from configuration and hardware sections only
-            if "## Configuration requirements" in line or "## Hardware requirements" in line:
-                is_config_section = True
-                continue
+            stripped = line.strip()
 
-            if is_config_section:
-                # Skip empty lines and sections which are not configuration or hardware requirements
-                if (_line := line.strip()) and _line.startswith("#") or line == "\n":
-                    is_config_section = False
-                    continue
-                else:
-                    pytest_cluster_markers.append(line.strip().split(":")[0])
+            # Check if this line starts a tracked section
+            for header, section_name in section_headers.items():
+                if header in line:
+                    current_section = section_name
+                    break
+            else:
+                if current_section:
+                    # End section on empty lines or other section headers
+                    if not stripped or stripped.startswith("#"):
+                        current_section = None
+                        continue
 
-    tests_cluster_markers = [marker for marker in test_markers if marker in pytest_cluster_markers]
-    LOGGER.info(f"Cluster-related test markers: {tests_cluster_markers}")
+                    marker_name = stripped.split(":")[0]
+                    if marker_name in test_markers:
+                        markers_by_section[current_section].append(marker_name)
+
+    empty_sections = [section for section, markers in markers_by_section.items() if not markers]
+    if empty_sections:
+        LOGGER.warning(
+            f"No markers found in sections: {', '.join(empty_sections)}."
+            " Verify pytest.ini section headers match expected format."
+        )
+
+    # Remove empty sections
+    result = {section: markers for section, markers in markers_by_section.items() if markers}
+
+    LOGGER.info(f"Cluster-related test markers: {result}")
 
     if filepath:
         LOGGER.info(f"Write cluster-related test markers in {filepath}")
-        with open(filepath, "w") as fd:
-            fd.write(json.dumps(tests_cluster_markers))
+        with open(filepath, mode="w") as fd:
+            fd.write(json.dumps(result))
+
+    return result
 
 
 def exit_pytest_execution(
