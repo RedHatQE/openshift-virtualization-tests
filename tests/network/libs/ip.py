@@ -93,3 +93,7 @@ def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4A
         List of IP address objects with link-local addresses removed.
     """
     return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]
+
+
+def ip_header_size(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> int:
+    return IPV4_HEADER_SIZE if ip.version == 4 else IPV6_HEADER_SIZE

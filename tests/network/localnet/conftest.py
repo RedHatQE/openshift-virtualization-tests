@@ -5,14 +5,13 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from libs.net.traffic_generator import TcpServer, client_server_active_connection
-from libs.net.traffic_generator import VMTcpClient as TcpClient
+from libs.net.traffic_generator import IPERF_SERVER_PORT, client_server_active_connection
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.ip import IPV4_HEADER_SIZE, TCP_HEADER_SIZE, random_ipv4_address
+from tests.network.libs.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from tests.network.localnet.liblocalnet import (
     LINK_STATE_DOWN,
     LOCALNET_BR_EX_INTERFACE,
@@ -23,10 +22,9 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
     create_nncp_localnet_on_secondary_node_nic,
-    create_traffic_client,
-    create_traffic_server,
     localnet_cudn,
     localnet_vm,
+    random_ip_addresses,
     run_vms,
 )
 from utilities.constants import (
@@ -35,7 +33,8 @@ from utilities.constants import (
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
-PRIMARY_INTERFACE_NAME = "eth0"
+FIRST_IFACE_NAME = "eth0"
+SECOND_IFACE_NAME = "eth1"
 
 
 @pytest.fixture(scope="module")
@@ -126,23 +125,57 @@ def ipv4_localnet_address_pool() -> Generator[str]:
 
 
 @pytest.fixture(scope="module")
-def vm_localnet_1_secondary_ip(ipv4_localnet_address_pool: Generator[str]) -> str:
-    return next(ipv4_localnet_address_pool)
+def ipv6_localnet_address_pool() -> Generator[str]:
+    return (f"{random_ipv6_address(net_seed=0, host_address=host_value)}/64" for host_value in range(1, 254))
+
+
+@pytest.fixture(scope="module")
+def vm_localnet_1_vlan_iface_addresses(
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+) -> list[str]:
+    return random_ip_addresses(
+        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+    )
+
+
+@pytest.fixture(scope="module")
+def vm_localnet_1_no_vlan_iface_addresses(
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+) -> list[str]:
+    return random_ip_addresses(
+        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+    )
 
 
 @pytest.fixture(scope="module")
 def vm_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
-    vm_localnet_1_secondary_ip: str,
+    ipv6_localnet_address_pool: Generator[str],
+    vm_localnet_1_vlan_iface_addresses: list[str],
+    vm_localnet_1_no_vlan_iface_addresses: list[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     cudn_localnet_no_vlan: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     """
     Creates a VM with two interfaces:
-    - Primary interface (eth0): connected to VLAN-enabled localnet
-    - Secondary interface (eth1): connected to no-VLAN localnet
+    - First localnet interface (eth0): connected to VLAN-enabled localnet (IPv4/IPv6 based on cluster support)
+    - Second localnet interface (eth1): connected to no-VLAN localnet (IPv4/IPv6 based on cluster support)
     """
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -158,8 +191,12 @@ def vm_localnet_1(
         ],
         network_data=cloudinit.NetworkData(
             ethernets={
-                PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)]),
-                "eth1": cloudinit.EthernetDevice(addresses=[vm_localnet_1_secondary_ip]),
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=vm_localnet_1_vlan_iface_addresses,
+                ),
+                SECOND_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=vm_localnet_1_no_vlan_iface_addresses,
+                ),
             }
         ),
     ) as vm:
@@ -170,8 +207,11 @@ def vm_localnet_1(
 def vm_localnet_2(
     namespace_localnet_2: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_2.name,
@@ -180,7 +220,16 @@ def vm_localnet_2(
         networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
         interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    ),
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -195,21 +244,40 @@ def localnet_running_vms(
 
 
 @pytest.fixture()
-def localnet_server(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpServer]:
-    with create_traffic_server(vm=localnet_running_vms[0]) as server:
-        assert server.is_running()
-        yield server
+def localnet_active_connections(
+    localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+) -> Generator[list[tuple]]:
+    server_vm, client_vm = localnet_running_vms
+    iface = lookup_iface_status(vm=server_vm, iface_name=LOCALNET_BR_EX_INTERFACE)
+    addresses = filter_link_local_addresses(ip_addresses=iface.ipAddresses)
 
-
-@pytest.fixture()
-def localnet_client(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> Generator[TcpClient]:
-    with create_traffic_client(
-        server_vm=localnet_running_vms[0],
-        client_vm=localnet_running_vms[1],
-        spec_logical_network=LOCALNET_BR_EX_INTERFACE,
-    ) as client:
-        assert client.is_running()
-        yield client
+    if len(addresses) == 1:
+        with client_server_active_connection(
+            client_vm=client_vm,
+            server_vm=server_vm,
+            spec_logical_network=LOCALNET_BR_EX_INTERFACE,
+            port=IPERF_SERVER_PORT,
+            ip_family=addresses[0].version,
+        ) as (client0, server0):
+            yield [(addresses[0], client0, server0)]
+    else:
+        with (
+            client_server_active_connection(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                spec_logical_network=LOCALNET_BR_EX_INTERFACE,
+                port=IPERF_SERVER_PORT,
+                ip_family=addresses[0].version,
+            ) as (client0, server0),
+            client_server_active_connection(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                spec_logical_network=LOCALNET_BR_EX_INTERFACE,
+                port=IPERF_SERVER_PORT + 1,
+                ip_family=addresses[1].version,
+            ) as (client1, server1),
+        ):
+            yield [(addresses[0], client0, server0), (addresses[1], client1, server1)]
 
 
 @pytest.fixture(scope="module")
@@ -233,8 +301,11 @@ def cudn_localnet_ovs_bridge(
 def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -245,7 +316,16 @@ def vm_ovs_bridge_localnet_link_down(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={}, state=LINK_STATE_DOWN)],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    )
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -255,8 +335,11 @@ def vm_ovs_bridge_localnet_link_down(
 def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -267,7 +350,16 @@ def vm_ovs_bridge_localnet_1(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    )
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -277,8 +369,11 @@ def vm_ovs_bridge_localnet_1(
 def vm_ovs_bridge_localnet_2(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -289,7 +384,16 @@ def vm_ovs_bridge_localnet_2(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    )
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -319,25 +423,40 @@ def ovs_bridge_localnet_running_vms(
 
 
 @pytest.fixture()
-def localnet_ovs_bridge_server(
+def ovs_bridge_localnet_active_connections(
     ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[TcpServer]:
-    with create_traffic_server(vm=ovs_bridge_localnet_running_vms[0]) as server:
-        assert server.is_running()
-        yield server
+) -> Generator[list[tuple]]:
+    server_vm, client_vm = ovs_bridge_localnet_running_vms
+    iface = lookup_iface_status(vm=server_vm, iface_name=LOCALNET_OVS_BRIDGE_INTERFACE)
+    addresses = filter_link_local_addresses(ip_addresses=iface.ipAddresses)
 
-
-@pytest.fixture()
-def localnet_ovs_bridge_client(
-    ovs_bridge_localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-) -> Generator[TcpClient]:
-    with create_traffic_client(
-        server_vm=ovs_bridge_localnet_running_vms[0],
-        client_vm=ovs_bridge_localnet_running_vms[1],
-        spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
-    ) as client:
-        assert client.is_running()
-        yield client
+    if len(addresses) == 1:
+        with client_server_active_connection(
+            client_vm=client_vm,
+            server_vm=server_vm,
+            spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
+            port=IPERF_SERVER_PORT,
+            ip_family=addresses[0].version,
+        ) as (client0, server0):
+            yield [(addresses[0], client0, server0)]
+    else:
+        with (
+            client_server_active_connection(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
+                port=IPERF_SERVER_PORT,
+                ip_family=addresses[0].version,
+            ) as (client0, server0),
+            client_server_active_connection(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
+                port=IPERF_SERVER_PORT + 1,
+                ip_family=addresses[1].version,
+            ) as (client1, server1),
+        ):
+            yield [(addresses[0], client0, server0), (addresses[1], client1, server1)]
 
 
 @pytest.fixture()
@@ -410,8 +529,11 @@ def cudn_localnet_ovs_bridge_jumbo_frame(
 def vm1_ovs_bridge_localnet_jumbo_frame(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -424,7 +546,16 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    )
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -434,8 +565,11 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
 def vm2_ovs_bridge_localnet_jumbo_frame(
     namespace_localnet_1: Namespace,
     ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -448,7 +582,16 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={
+                FIRST_IFACE_NAME: cloudinit.EthernetDevice(
+                    addresses=random_ip_addresses(
+                        ipv4_localnet_address_pool=ipv4_localnet_address_pool,
+                        ipv6_localnet_address_pool=ipv6_localnet_address_pool,
+                        ipv4_supported_cluster=ipv4_supported_cluster,
+                        ipv6_supported_cluster=ipv6_supported_cluster,
+                    )
+                )
+            }
         ),
     ) as vm:
         yield vm
@@ -460,17 +603,3 @@ def ovs_bridge_localnet_running_jumbo_frame_vms(
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm1_ovs_bridge_localnet_jumbo_frame, vm2_ovs_bridge_localnet_jumbo_frame))
     yield vm1, vm2
-
-
-@pytest.fixture()
-def localnet_ovs_bridge_jumbo_frame_client_and_server_vms(
-    ovs_bridge_localnet_running_jumbo_frame_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
-    cluster_hardware_mtu: int,
-) -> Generator[tuple[TcpClient, TcpServer], None, None]:
-    with client_server_active_connection(
-        client_vm=ovs_bridge_localnet_running_jumbo_frame_vms[1],
-        server_vm=ovs_bridge_localnet_running_jumbo_frame_vms[0],
-        spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
-        maximum_segment_size=cluster_hardware_mtu - IPV4_HEADER_SIZE - TCP_HEADER_SIZE,
-    ) as (client, server):
-        yield client, server
