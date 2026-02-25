@@ -34,13 +34,18 @@ def test_no_new_cnv_daemonset_added(hpp_cr_installed, cnv_daemonset_names):
 
 @pytest.mark.polarion("CNV-14634")
 def test_daemonset_priority_class_name(cnv_daemonset_by_name):
-    assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName, (
-        f"For daemonset {cnv_daemonset_by_name.name}, spec.template.spec.priorityClassName has not been set."
-    )
-    assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName in VALID_PRIORITY_CLASS, (
-        f"For daemonset {cnv_daemonset_by_name.name}, \
-        unexpected priority class found: {cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName}"
-    )
+    if cnv_daemonset_by_name == HOSTPATH_PROVISIONER_CSI:
+        assert not cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName, (
+            "HPP daemonset shouldn't have priority class name."
+        )
+    else:
+        assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName, (
+            f"For daemonset {cnv_daemonset_by_name.name}, spec.template.spec.priorityClassName has not been set."
+        )
+        assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName in VALID_PRIORITY_CLASS, (
+            f"For daemonset {cnv_daemonset_by_name.name}, \
+            unexpected priority class found: {cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName}"
+        )
 
 
 @pytest.mark.polarion("CNV-14636")
