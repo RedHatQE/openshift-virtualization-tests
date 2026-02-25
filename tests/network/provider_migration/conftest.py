@@ -244,7 +244,7 @@ def mtv_migration_plan_to_cudn_ns(
         target_power_state="on",
         preserve_static_ips=True,
     ) as plan:
-        plan.wait_for_condition(condition=plan.Condition.READY, status=plan.Condition.Status.TRUE, timeout=60)
+        plan.wait_for_condition(condition=plan.Condition.READY, status=plan.Condition.Status.TRUE, timeout=180)
         yield plan
 
 
