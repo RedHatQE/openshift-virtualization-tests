@@ -7,7 +7,6 @@ from utilities.constants import (
     ARM_64,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
-    HPP_CAPABILITIES,
     OS_FLAVOR_FEDORA,
     RHEL8_PREFERENCE,
     RHEL9_PREFERENCE,
@@ -15,21 +14,11 @@ from utilities.constants import (
     S390X,
     StorageClassNames,
 )
-from utilities.storage import HppCsiStorageClass
 
 global config
 
 
 storage_class_matrix = [
-    {
-        StorageClassNames.TRIDENT_CSI_NFS: {
-            "volume_mode": DataVolume.VolumeMode.FILE,
-            "access_mode": DataVolume.AccessMode.RWX,
-            "snapshot": True,
-            "online_resize": True,
-            "wffc": False,
-        }
-    },
     {
         StorageClassNames.IO2_CSI: {
             "volume_mode": DataVolume.VolumeMode.BLOCK,
@@ -40,7 +29,6 @@ storage_class_matrix = [
             "default": True,
         }
     },
-    {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
 ]
 
 storage_class_a = StorageClassNames.IO2_CSI

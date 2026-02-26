@@ -20,11 +20,13 @@ from pytest_testconfig import config as py_config
 from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AMD_64,
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
     MULTIARCH,
     POD_SECURITY_NAMESPACE_LABELS,
+    S390X,
     SANITY_TESTS_FAILURE,
     SUPPORTED_CPU_ARCHITECTURES,
     TIMEOUT_2MIN,
@@ -386,11 +388,10 @@ def validate_cpu_arch_params(cpu_arch_option: str) -> None:
     Raises:
         UnsupportedCPUArchitectureError: On architecture mismatch or invalid usage.
     """
-    valid_arch = set(SUPPORTED_CPU_ARCHITECTURES)
     cluster_arch = get_cluster_architecture()
     cli_param_arch = cpu_arch_option.split(",")
 
-    if not all(arch in valid_arch for arch in cluster_arch):
+    if not all(arch in set(SUPPORTED_CPU_ARCHITECTURES) for arch in cluster_arch):
         raise UnsupportedCPUArchitectureError(f"Node/s have unsupported CPU architecture/s: {cluster_arch}!")
     if len(cluster_arch) > 1 and not cpu_arch_option:
         raise UnsupportedCPUArchitectureError(
@@ -429,8 +430,8 @@ def validate_collected_tests_arch_params(session: pytest.Session) -> None:
         )
 
 
-def generate_os_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = None) -> None:
-    """Generate OS matrix dictionaries in py_config from OS lists.
+def generate_common_template_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = None) -> None:
+    """Generate common template matrix dictionaries in py_config from OS lists.
 
     Args:
         os_dict: Dict with OS lists (e.g., "rhel_os_list", "windows_os_list",
@@ -458,6 +459,15 @@ def generate_os_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = Non
         )
         py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
+
+def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = None) -> None:
+    """Generate instance type matrix dictionaries in py_config from OS lists.
+
+    Args:
+        os_dict: Dict with OS lists (e.g., "rhel_os_list", "windows_os_list",
+            "instance_type_rhel_os_list").
+        cpu_arch: Optional architecture suffix.
+    """
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
@@ -471,7 +481,9 @@ def generate_os_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = Non
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch
+            os_name="centos",
+            preferences=instance_type_centos_os_list,
+            arch_suffix=cpu_arch if cpu_arch != S390X else None,
         )
 
 
@@ -539,7 +551,7 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
     if len(cpu_arch) > 1:
         LOGGER.warning("OS matrix generation is not supported for multi-arch runs!")
     else:
-        arch = next(iter(cpu_arch))
+        arch = cpu_arch[0]
         py_config["cpu_arch"] = arch
 
         # TODO: remove this when utilities modules are refactored
@@ -548,6 +560,11 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         constants_module.Images = getattr(constants_module.ArchImages, arch.upper())
 
         if py_config["cluster_type"] == MULTIARCH:
-            generate_os_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+            generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+            generate_instance_type_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
         else:
-            generate_os_matrix_dicts(os_dict=py_config)
+            generate_common_template_matrix_dicts(os_dict=py_config)
+            if py_config["cluster_type"] != AMD_64:
+                generate_instance_type_matrix_dicts(os_dict=py_config, cpu_arch=arch)
+            else:
+                generate_instance_type_matrix_dicts(os_dict=py_config)

@@ -52,7 +52,6 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
-    generate_os_matrix_dicts,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -65,8 +64,8 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
-    update_latest_os_config,
     update_cpu_arch_related_config,
+    update_latest_os_config,
     validate_collected_tests_arch_params,
 )
 
