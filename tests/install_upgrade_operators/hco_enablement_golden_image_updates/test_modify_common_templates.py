@@ -16,6 +16,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
 )
 from utilities.constants import (
     DATA_IMPORT_CRON_ENABLE,
+    QUARANTINED,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     WILDCARD_CRON_EXPRESSION,
 )
@@ -159,7 +160,16 @@ class TestModifyCommonTemplateSpec:
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_STORAGE_CLASS_IN_SPEC},
                 UPDATE_STORAGE_CLASS_IN_SPEC,
-                marks=pytest.mark.polarion("CNV-8740"),
+                marks=(
+                    pytest.mark.polarion("CNV-8740"),
+                    pytest.mark.xfail(
+                        reason=(
+                            f"{QUARANTINED}: VolumeSnapshot source causes DV leftover when applying "
+                            f"non-existent storage class. DV is in pending not cleaned up; Tracked in CNV-80607"
+                        ),
+                        run=False,
+                    ),
+                ),
             ),
         ],
         indirect=["updated_common_template"],
