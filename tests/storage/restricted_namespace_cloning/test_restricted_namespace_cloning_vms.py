@@ -56,7 +56,7 @@ def create_vm_negative(
 ):
     with pytest.raises(
         ApiException,
-        match=ErrorMsg.CANNOT_GET_RESOURCE,
+        match=ErrorMsg.CANNOT_CREATE_RESOURCE,
     ):
         with VirtualMachineForTests(
             name=VM_FOR_TEST,
