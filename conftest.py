@@ -26,7 +26,9 @@ from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.cluster
-import utilities.infra
+
+# TODO: Remove this import when utilities modules are refactored...
+import utilities.infra  # noqa
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
@@ -50,6 +52,7 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    generate_os_matrix_dicts,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -61,6 +64,7 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_latest_os_config,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -751,34 +755,6 @@ def pytest_generate_tests(metafunc):
 
 
 def pytest_sessionstart(session):
-    # TODO: Reduce cognitive complexity
-    def _update_os_related_config():
-        # Save the default windows_os_matrix before it is updated
-        # with runtime windows_os_matrix value(s).
-        # Some tests extract a single OS from the matrix and may fail if running with
-        # passed values from cli
-        if windows_os_matrix := py_config.get("windows_os_matrix"):
-            py_config["system_windows_os_matrix"] = windows_os_matrix
-
-        if rhel_os_matrix := py_config.get("rhel_os_matrix"):
-            py_config["system_rhel_os_matrix"] = rhel_os_matrix
-
-        # Update OS matrix list with the latest OS if running with os_group
-        if session.config.getoption("latest_rhel") and rhel_os_matrix:
-            py_config["rhel_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=rhel_os_matrix)]
-            py_config["instance_type_rhel_os_matrix"] = [
-                utilities.infra.generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
-            ]
-
-        if session.config.getoption("latest_windows") and windows_os_matrix:
-            py_config["windows_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=windows_os_matrix)]
-
-        if session.config.getoption("latest_centos") and (centos_os_matrix := py_config.get("centos_os_matrix")):
-            py_config["centos_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=centos_os_matrix)]
-
-        if session.config.getoption("latest_fedora") and (fedora_os_matrix := py_config.get("fedora_os_matrix")):
-            py_config["fedora_os_matrix"] = [utilities.infra.generate_latest_os_dict(os_list=fedora_os_matrix)]
-
     data_collector_dict = set_data_collector_values(base_dir=session.config.getoption("data_collector_output_dir"))
     shutil.rmtree(
         data_collector_dict["data_collector_base_directory"],
@@ -798,7 +774,8 @@ def pytest_sessionstart(session):
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
 
-    _update_os_related_config()
+    generate_os_matrix_dicts(os_dict=py_config)
+    update_latest_os_config(session_config=session.config)
 
     matrix_addoptions = [matrix for matrix in session.config.invocation_params.args if "-matrix=" in matrix]
     for matrix_addoption in matrix_addoptions:

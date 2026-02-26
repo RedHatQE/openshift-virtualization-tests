@@ -274,7 +274,6 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
-        metadata_labels=None,
     ):
         """
         Virtual machine creation
@@ -341,7 +340,6 @@ class VirtualMachineForTests(VirtualMachine):
             priority_class_name (str, optional): The name of the priority class used for the VM
             dry_run (str, default=None): If "All", the resource will be created using the dry_run flag
             additional_labels (dict, optional): Dict of additional labels for VM (e.g. {"vm-label": "best-vm"})
-                              those labels will be placed in structure spec.template.metadata.labels
             generate_unique_name: if True then it will set dynamic name for the vm, False will use the name of vm passed
             node_selector_labels (str, optional): Labels for node selector.
             vm_instance_type (VirtualMachineInstancetype, optional): instance type object for the VM
@@ -357,8 +355,6 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
-            metadata_labels (dict, optional): Dict of labels for VM (e.g. {"vm.kubevirt.io/template": "custom-fedora"})
-                                    those labels will be placed in a structure metadata.labels
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -372,7 +368,6 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
-            label=metadata_labels,
         )
         self.body = body
         self.interfaces = interfaces or []
@@ -1171,7 +1166,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
-        label=None,
     ):
         """
         VM creation using common templates.
@@ -1246,7 +1240,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             additional_labels=additional_labels,
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
-            label=label,
         )
         self.data_source = data_source
         self.data_volume_template = data_volume_template
@@ -1896,11 +1889,16 @@ def verify_vm_migrated(
     assert vm.vmi.instance.status.migrationState.completed, (
         f"VMI {vmi_name} migration state is: {vm.vmi.instance.status.migrationState}"
     )
-    if wait_for_interfaces:
-        wait_for_vm_interfaces(vmi=vm.vmi)
+    try:
+        if wait_for_interfaces:
+            wait_for_vm_interfaces(vmi=vm.vmi)
 
-    if check_ssh_connectivity:
-        wait_for_ssh_connectivity(vm=vm)
+        if check_ssh_connectivity:
+            wait_for_ssh_connectivity(vm=vm)
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} unresponsive after migration; getting VNC screenshot")
+        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        raise
 
 
 def vm_cloud_init_volume(vm_spec):

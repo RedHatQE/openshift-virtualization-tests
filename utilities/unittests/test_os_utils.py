@@ -6,11 +6,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from utilities.exceptions import OsDictNotFoundError
 from utilities.os_utils import (
     CENTOS_OS_MAPPING,
     FEDORA_OS_MAPPING,
     RHEL_OS_MAPPING,
     WINDOWS_OS_MAPPING,
+    generate_latest_os_dict,
     generate_linux_instance_type_os_matrix,
     generate_os_matrix_dict,
 )
@@ -314,3 +316,120 @@ class TestOsMappingsConstants:
         assert "workload" in CENTOS_OS_MAPPING
         assert "flavor" in CENTOS_OS_MAPPING
         assert "centos-stream-9" in CENTOS_OS_MAPPING
+
+
+class TestGenerateLatestOsDict:
+    """Test cases for generate_latest_os_dict function"""
+
+    def test_returns_latest_os_dict_when_found(self):
+        """Test returning the OS dict marked as latest_released"""
+        os_matrix = [
+            {"rhel-8-10": {"os_version": "8.10", "image_name": "rhel-8.10.qcow2"}},
+            {"rhel-9-6": {"os_version": "9.6", "image_name": "rhel-9.6.qcow2", "latest_released": True}},
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result == {"os_version": "9.6", "image_name": "rhel-9.6.qcow2", "latest_released": True}
+
+    def test_returns_latest_os_dict_from_first_position(self):
+        """Test finding latest_released when it's in the first matrix entry"""
+        os_matrix = [
+            {"fedora-43": {"os_version": "43", "latest_released": True}},
+            {"fedora-42": {"os_version": "42"}},
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result == {"os_version": "43", "latest_released": True}
+
+    def test_returns_latest_os_dict_from_middle_position(self):
+        """Test finding latest_released when it's in a middle matrix entry"""
+        os_matrix = [
+            {"rhel-7-9": {"os_version": "7.9"}},
+            {"rhel-9-6": {"os_version": "9.6", "latest_released": True}},
+            {"rhel-8-10": {"os_version": "8.10"}},
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result == {"os_version": "9.6", "latest_released": True}
+
+    def test_raises_error_when_no_latest_released(self):
+        """Test raising OsDictNotFoundError when no OS is marked as latest_released"""
+        os_matrix = [
+            {"rhel-8-10": {"os_version": "8.10"}},
+            {"rhel-9-5": {"os_version": "9.5"}},
+        ]
+
+        with pytest.raises(OsDictNotFoundError, match="No OS is marked as 'latest_released'"):
+            generate_latest_os_dict(os_matrix=os_matrix)
+
+    def test_raises_error_on_empty_list(self):
+        """Test raising OsDictNotFoundError when os_matrix is empty"""
+        with pytest.raises(OsDictNotFoundError, match="No OS is marked as 'latest_released'"):
+            generate_latest_os_dict(os_matrix=[])
+
+    def test_returns_first_latest_when_multiple_marked(self):
+        """Test returning the first latest_released when multiple OS dicts are marked"""
+        os_matrix = [
+            {"rhel-8-10": {"os_version": "8.10", "latest_released": True}},
+            {"rhel-9-6": {"os_version": "9.6", "latest_released": True}},
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result["os_version"] == "8.10"
+
+    def test_handles_complex_os_matrix_structure(self):
+        """Test with full OS matrix structure including all fields"""
+        os_matrix = [
+            {
+                "win-2022": {
+                    "os_version": "2022",
+                    "image_name": "win2022.qcow2",
+                    "image_path": "cnv-tests/windows-images/win2022.qcow2",
+                    "dv_size": "60Gi",
+                    "template_labels": {"os": "win2k22", "workload": "server", "flavor": "medium"},
+                    "data_source": "win2k22",
+                }
+            },
+            {
+                "win-2025": {
+                    "os_version": "2025",
+                    "image_name": "win2k25.qcow2",
+                    "image_path": "cnv-tests/windows-uefi-images/win2k25.qcow2",
+                    "dv_size": "60Gi",
+                    "template_labels": {"os": "win2k25", "workload": "server", "flavor": "medium"},
+                    "data_source": "win2k25",
+                    "latest_released": True,
+                }
+            },
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result["os_version"] == "2025"
+        assert result["image_name"] == "win2k25.qcow2"
+        assert result["latest_released"] is True
+
+    def test_handles_latest_released_false_value(self):
+        """Test that latest_released=False is not treated as latest"""
+        os_matrix = [
+            {"rhel-8-10": {"os_version": "8.10", "latest_released": False}},
+            {"rhel-9-6": {"os_version": "9.6", "latest_released": True}},
+        ]
+
+        result = generate_latest_os_dict(os_matrix=os_matrix)
+
+        assert result["os_version"] == "9.6"
+
+    def test_raises_error_when_all_latest_released_false(self):
+        """Test raising OsDictNotFoundError when all latest_released values are False"""
+        os_matrix = [
+            {"rhel-8-10": {"os_version": "8.10", "latest_released": False}},
+            {"rhel-9-5": {"os_version": "9.5", "latest_released": False}},
+        ]
+
+        with pytest.raises(OsDictNotFoundError, match="No OS is marked as 'latest_released'"):
+            generate_latest_os_dict(os_matrix=os_matrix)
