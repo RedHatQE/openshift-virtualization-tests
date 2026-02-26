@@ -40,10 +40,7 @@ class TestGetClusterArchitecture:
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_from_nodes_amd64(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - amd64"""
-        # Clear env var to force reading from nodes
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             # Mock node with amd64 architecture
             mock_node = MagicMock()
             mock_node.labels = {"kubernetes.io/arch": "amd64"}
@@ -61,8 +58,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_from_nodes_arm64(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - arm64"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             # Mock node with arm64 architecture
             mock_node = MagicMock()
             mock_node.labels = {"kubernetes.io/arch": "arm64"}
@@ -78,8 +73,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_from_nodes_s390x(self, mock_node_class, mock_cache_client):
         """Test getting architecture from nodes - s390x"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             # Mock node with s390x architecture
             mock_node = MagicMock()
             mock_node.labels = {"kubernetes.io/arch": "s390x"}
@@ -95,8 +88,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_multiple_nodes_same_arch(self, mock_node_class, mock_cache_client):
         """Test getting architecture with multiple nodes of same arch returns set"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             # Mock multiple nodes with same architecture
             mock_node1 = MagicMock()
             mock_node1.labels = {"kubernetes.io/arch": "amd64"}
@@ -114,8 +105,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_multiple_archs_returns_set(self, mock_node_class, mock_cache_client):
         """Test getting architecture with mixed nodes returns set of all archs"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             mock_node1 = MagicMock()
             mock_node1.labels = {"kubernetes.io/arch": "amd64"}
             mock_node2 = MagicMock()
@@ -132,8 +121,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_uses_cache_admin_client(self, mock_node_class, mock_cache_client):
         """Test that cache_admin_client is used when getting nodes"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             mock_client = MagicMock()
             mock_cache_client.return_value = mock_client
 
@@ -152,8 +139,6 @@ class TestGetClusterArchitecture:
     def test_get_cluster_architecture_raises_error_when_no_nodes(self, mock_node_class, mock_cache_client):
         """Test that UnsupportedCPUArchitectureError is raised when no nodes are found"""
         with patch.dict(in_dict=os.environ, values={}, clear=True):
-            os.environ.pop("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", None)
-
             mock_cache_client.return_value = MagicMock()
             mock_node_class.get.return_value = []
 
