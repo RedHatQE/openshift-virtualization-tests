@@ -33,6 +33,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HypervStrictCheck",
     "VideoConfig",
     "HotplugVolumes",
+    "DecentralizedLiveMigration",
 }
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
@@ -46,10 +47,11 @@ HCO_DEFAULT_FEATUREGATES = {
     "alignCPUs": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
     "enableMultiArchBootImageImport": FG_DISABLED,
-    "decentralizedLiveMigration": FG_DISABLED,
+    "decentralizedLiveMigration": FG_ENABLED,
     "declarativeHotplugVolumes": FG_DISABLED,
     "videoConfig": FG_ENABLED,
     "objectGraph": FG_DISABLED,
+    "incrementalBackup": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
