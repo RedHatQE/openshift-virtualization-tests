@@ -92,8 +92,6 @@ Example for SNO cluster:
 
 `--tc-file=tests/global_config_sno.py --storage-class-matrix=lvms-vg1`
 
-Architecture-specific configs (OS matrix and storage per arch): `global_config_amd64.py`, `global_config_arm64.py`, `global_config_s390x.py`. For heterogeneous (multi-arch) clusters use `global_config_multiarch.py` together with `--cpu-arch` (see below).
-
 ### Running tests on multi-arch / heterogeneous clusters
 
 On clusters where nodes have different CPU architectures, you must pass `--cpu-arch` to select the architecture for the run. Use a single value (e.g. `--cpu-arch=amd64`) or, for tests marked with `multiarch`, a comma-separated list (e.g. `--cpu-arch=amd64,arm64`). Do not pass `--cpu-arch` on homogeneous clusters.
