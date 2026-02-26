@@ -25,7 +25,6 @@ from tests.infrastructure.tekton.utils import (
 )
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
 from utilities.constants import (
-    BREW_REGISTERY_SOURCE,
     OS_FLAVOR_FEDORA,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
@@ -115,12 +114,22 @@ def csv_instance(csv_scope_session):
 
 
 @pytest.fixture(scope="session")
-def extracted_tekton_test_image(csv_instance):
-    annotation = csv_instance.metadata.annotations.get("test-images-nvrs", "")
-    for image in annotation.split(","):
-        if KUBEVIRT_TEKTON_AVAILABLE_TASKS_TEST in image:
-            return f"{BREW_REGISTERY_SOURCE}/rh-osbs/container-native-virtualization-{image.strip()}"
-    raise ValueError("Tekton test image not found in CSV annotations.")
+def tekton_test_image_name_and_digest(csv_scope_session):
+    annotations = csv_scope_session.instance.metadata.annotations or {}
+    test_images_nvrs = annotations.get("test-images-nvrs")
+    if not test_images_nvrs:
+        raise ValueError("CSV annotation 'test-images-nvrs' is missing or empty.")
+
+    for test_image in test_images_nvrs.split(","):
+        if KUBEVIRT_TEKTON_AVAILABLE_TASKS_TEST in test_image:
+            return test_image.strip()
+    raise ValueError(f"{KUBEVIRT_TEKTON_AVAILABLE_TASKS_TEST} not found in CSV 'test-images-nvrs' annotation.")
+
+
+@pytest.fixture(scope="session")
+def tekton_test_image(tekton_test_image_name_and_digest, cnv_current_version):
+    major, minor = cnv_current_version.split(".")[:2]
+    return f"quay.io/openshift-virtualization/konflux-builds/v{major}-{minor}/{tekton_test_image_name_and_digest}"
 
 
 @pytest.fixture(scope="session")
@@ -132,11 +141,11 @@ def extracted_virtio_image_container(csv_instance):
 
 
 @pytest.fixture(scope="session")
-def extracted_kubevirt_tekton_resources(tekton_manifests_dir, extracted_tekton_test_image, generated_pulled_secret):
+def extracted_kubevirt_tekton_resources(tekton_manifests_dir, tekton_test_image, generated_pulled_secret):
     run_command(
         command=shlex.split(
             f"oc image extract --registry-config={generated_pulled_secret} "
-            f"--path release/*:{tekton_manifests_dir} {extracted_tekton_test_image}"
+            f"--path release/*:{tekton_manifests_dir} {tekton_test_image}"
         )
     )
 
