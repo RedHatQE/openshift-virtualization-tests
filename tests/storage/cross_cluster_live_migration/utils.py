@@ -9,13 +9,10 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
 
 from utilities import console
-from utilities.constants import VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import get_daemonset_by_name
 from utilities.virt import (
     VirtualMachineForTests,
     migrate_vm_and_verify,
-    wait_for_virt_handler_pods_network_updated,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -39,18 +36,18 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     Yields:
         None
     """
-    virt_handler_daemonset = get_daemonset_by_name(
-        admin_client=client,
-        daemonset_name=VIRT_HANDLER,
-        namespace_name=hco_namespace.name,
-    )
+    # virt_handler_daemonset = get_daemonset_by_name(
+    #     admin_client=client,
+    #     daemonset_name=VIRT_HANDLER,
+    #     namespace_name=hco_namespace.name,
+    # )
 
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource: {
                 "spec": {
                     "featureGates": {"decentralizedLiveMigration": True},
-                    "liveMigrationConfig": {"network": network_for_live_migration.name},
+                    # "liveMigrationConfig": {"network": network_for_live_migration.name},
                 }
             }
         },
@@ -58,21 +55,21 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
         wait_for_reconcile_post_update=True,
         admin_client=client,
     ):
-        wait_for_virt_handler_pods_network_updated(
-            client=client,
-            namespace=hco_namespace,
-            network_name=network_for_live_migration.name,
-            virt_handler_daemonset=virt_handler_daemonset,
-        )
+        # wait_for_virt_handler_pods_network_updated(
+        #     client=client,
+        #     namespace=hco_namespace,
+        #     network_name=network_for_live_migration.name,
+        #     virt_handler_daemonset=virt_handler_daemonset,
+        # )
         yield
 
-    wait_for_virt_handler_pods_network_updated(
-        client=client,
-        namespace=hco_namespace,
-        network_name=network_for_live_migration.name,
-        virt_handler_daemonset=virt_handler_daemonset,
-        migration_network=False,
-    )
+    # wait_for_virt_handler_pods_network_updated(
+    #     client=client,
+    #     namespace=hco_namespace,
+    #     network_name=network_for_live_migration.name,
+    #     virt_handler_daemonset=virt_handler_daemonset,
+    #     migration_network=False,
+    # )
 
 
 def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:

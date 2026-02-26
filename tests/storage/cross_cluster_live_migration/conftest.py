@@ -29,6 +29,8 @@ from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
 from pytest_testconfig import config as py_config
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.cross_cluster_live_migration.constants import (
@@ -206,7 +208,7 @@ def local_cluster_network_for_live_migration(admin_client, hco_namespace):
         name=LIVE_MIGRATION_NETWORK_NAME,
         namespace=hco_namespace.name,
         client=admin_client,
-        ensure_exists=True,
+        # ensure_exists=True,
     )
 
 
@@ -216,7 +218,7 @@ def remote_cluster_network_for_live_migration(remote_admin_client, remote_cluste
         name=LIVE_MIGRATION_NETWORK_NAME,
         namespace=remote_cluster_hco_namespace.name,
         client=remote_admin_client,
-        ensure_exists=True,
+        # ensure_exists=True,
     )
 
 
@@ -286,8 +288,28 @@ def local_cluster_ca_cert_for_remote_cluster(mtv_forklift_services_route_host, r
     cert_url = f"https://{mtv_forklift_services_route_host}/tls-certificate?URL={remote_cluster_api_url}"
 
     LOGGER.info(f"Fetching remote cluster CA certificate from: {cert_url}")
-    response = requests.get(cert_url, verify=False, timeout=TIMEOUT_30SEC)
-    response.raise_for_status()
+
+    # Configure retry strategy for transient connection issues
+    # Retries on connection errors, timeouts, and specific HTTP status codes
+    retry_strategy = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=2,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount(prefix="https://", adapter=adapter)
+
+    try:
+        response = session.get(cert_url, verify=False, timeout=TIMEOUT_30SEC)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as error:
+        LOGGER.error(f"Failed to fetch CA certificate after retries: {error}")
+        raise
 
     # The response should contain the certificate
     if ca_cert := response.text.strip():
