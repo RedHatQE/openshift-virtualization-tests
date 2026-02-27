@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import json
 import logging
 import os
@@ -303,6 +304,77 @@ def get_pr_file_diff(repo: str, pr_number: int, file_path: str, token: str | Non
     return ""
 
 
+def _prefetch_pr_diffs(repo: str, pr_number: int, token: str | None = None) -> tuple[dict[str, str], dict[str, str]]:
+    """Pre-fetch all file diffs and statuses from a PR in a single paginated API call.
+
+    Avoids N separate API calls when analyzing N changed files by fetching
+    all file patches and their statuses in one pass.
+
+    Args:
+        repo: Repository in owner/repo format.
+        pr_number: PR number.
+        token: Optional GitHub token for authentication.
+
+    Returns:
+        Tuple of (diffs, statuses) where diffs maps file path to unified diff
+        content (patch field) and statuses maps file path to the GitHub file
+        status string (``"added"``, ``"modified"``, ``"removed"``, ``"renamed"``).
+    """
+    validate_repo_name(repo=repo)
+    if pr_number <= 0:
+        raise ValueError(f"Invalid PR number: {pr_number}. Must be positive integer")
+
+    diffs: dict[str, str] = {}
+    statuses: dict[str, str] = {}
+    page = 1
+    per_page = GITHUB_API_MAX_PER_PAGE
+
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "pytest-marker-analyzer",
+    }
+    if token:
+        headers["Authorization"] = f"token {token}"
+
+    while True:
+        url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files?per_page={per_page}&page={page}"
+        request = urllib.request.Request(url, headers=headers)
+
+        try:
+            with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT_SECONDS) as response:
+                content_length = response.headers.get("Content-Length")
+                if content_length and int(content_length) > MAX_RESPONSE_SIZE:
+                    raise RuntimeError(f"Response too large: {content_length} bytes")
+
+                files = json.loads(response.read().decode())
+                for file_data in files:
+                    filename = file_data["filename"]
+                    patch = file_data.get("patch", "")
+                    if patch:
+                        diffs[filename] = patch
+                    statuses[filename] = file_data.get("status", "modified")
+
+                if len(files) < per_page:
+                    break
+                page += 1
+
+        except urllib.error.HTTPError as exc:
+            logger.warning(
+                msg="Failed to prefetch PR diffs",
+                extra={"pr_number": pr_number, "http_code": exc.code},
+            )
+            break
+        except (urllib.error.URLError, json.JSONDecodeError, OSError) as exc:
+            logger.warning(
+                msg="Failed to prefetch PR diffs",
+                extra={"pr_number": pr_number, "error": str(exc)},
+            )
+            break
+
+    logger.info(msg="Pre-fetched PR file diffs", extra={"file_count": len(diffs)})
+    return diffs, statuses
+
+
 def checkout_pr(repo: str, pr_number: int, workdir: Path, token: str | None = None) -> bool:
     """Clone repository and checkout PR head.
 
@@ -579,13 +651,26 @@ def extract_usefixtures_from_decorator(decorator: ast.AST) -> set[str]:
 
 @dataclass
 class MarkedTest:
-    """Represents a test with specified markers and its dependencies."""
+    """Represents a test with specified markers and its dependencies.
+
+    Attributes:
+        file_path: Absolute path to the test file.
+        test_name: Name of the test function/method.
+        node_id: Pytest node id for the test.
+        dependencies: Set of resolved file paths that this test depends on.
+        fixtures: Set of fixture names used by this test.
+        symbol_imports: Mapping of resolved dependency file path to the set of
+            symbol names imported from that file. Files present in
+            ``dependencies`` but absent from ``symbol_imports`` are treated as
+            opaque (file-level fallback).
+    """
 
     file_path: Path
     test_name: str
     node_id: str
     dependencies: set[Path] = field(default_factory=set)
     fixtures: set[str] = field(default_factory=set)
+    symbol_imports: dict[Path, set[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -610,21 +695,75 @@ class Fixture:
     function_calls: set[str] = field(default_factory=set)  # Functions it calls
 
 
+@dataclass
+class SymbolClassification:
+    """Classification of symbols in a changed file.
+
+    Separates symbols into those that were modified (existing symbols that
+    changed) and those that are entirely new additions.  New symbols cannot
+    break existing tests, so they can be safely excluded from impact analysis.
+    """
+
+    modified_symbols: set[str]
+    new_symbols: set[str]
+
+
 class ImportVisitor(ast.NodeVisitor):
-    """AST visitor to extract import statements from Python files."""
+    """AST visitor to extract import statements from Python files.
+
+    Captures both module-level imports (backward compatible via ``imports``)
+    and per-module imported symbol names for symbol-level dependency tracking.
+
+    Attributes:
+        imports: Set of module names (backward compatible).
+        symbol_imports: Mapping of module name to the specific symbol names
+            imported via ``from module import name1, name2`` statements.
+        opaque_imports: Modules imported without specific names (bare
+            ``import module`` or ``from module import *``), which cannot be
+            analyzed at the symbol level and must fall back to file-level
+            dependency tracking.
+    """
 
     def __init__(self) -> None:
         self.imports: set[str] = set()
+        self.symbol_imports: dict[str, set[str]] = {}
+        self.opaque_imports: set[str] = set()
 
     def visit_Import(self, node: ast.Import) -> None:
-        """Visit import statements (import x)."""
+        """Visit import statements (import x).
+
+        Bare imports are opaque because we cannot determine which specific
+        symbols are used without analyzing every attribute access.
+        """
         for alias in node.names:
-            self.imports.add(alias.name.split(".")[0])
+            self.imports.add(alias.name)
+            self.opaque_imports.add(alias.name)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        """Visit from-import statements (from x import y)."""
-        if node.module:
-            self.imports.add(node.module.split(".")[0])
+        """Visit from-import statements (from x import y).
+
+        Star imports are treated as opaque since every symbol in the module
+        could potentially be used.
+
+        Relative imports (``from . import x`` where ``node.module`` is None,
+        or ``from .submodule import func`` where ``node.level > 0``) are
+        skipped because they cannot be resolved to a file path without
+        knowing the importing module's package context.
+        """
+        if not node.module or node.level > 0:
+            return
+
+        self.imports.add(node.module)
+        if any(alias.name == "*" for alias in node.names):
+            self.opaque_imports.add(node.module)
+        else:
+            if node.module not in self.symbol_imports:
+                self.symbol_imports[node.module] = set()
+            for alias in node.names:
+                self.symbol_imports[node.module].add(alias.name)
+                # Track potential submodule imports:
+                # "from pkg import submod" may refer to pkg/submod.py
+                self.imports.add(f"{node.module}.{alias.name}")
 
 
 class FixtureVisitor(ast.NodeVisitor):
@@ -815,29 +954,53 @@ def _process_test_file_for_markers(
     return results
 
 
-def _process_conftest_file(conftest: Path) -> dict[str, Fixture]:
-    """Process a single conftest file to extract fixtures.
+def _process_conftest_with_imports(
+    conftest: Path, repo_root: Path
+) -> tuple[dict[str, Fixture], dict[Path, set[str]], set[Path]]:
+    """Process conftest: extract fixtures + symbol imports + opaque deps in single parse.
+
+    Parses the conftest file once and runs both ``FixtureDefinitionVisitor``
+    and ``ImportVisitor`` on the same AST tree.  This provides the caller
+    with fixture definitions alongside the conftest's own import metadata,
+    enabling symbol-level dependency tracking through conftest files.
 
     Args:
-        conftest: Path to conftest.py file
+        conftest: Path to conftest.py file.
+        repo_root: Repository root path.
 
     Returns:
-        Dictionary of fixture name to Fixture object
+        Tuple of (fixtures, symbol_imports, opaque_deps) where:
+        - fixtures: dict of fixture name to Fixture object
+        - symbol_imports: mapping of resolved file path to imported symbol names
+        - opaque_deps: set of file paths imported opaquely (bare import / star import)
     """
-    fixtures = {}
+    fixtures: dict[str, Fixture] = {}
+    symbol_imports: dict[Path, set[str]] = {}
+    opaque_deps: set[Path] = set()
+
     try:
         source = conftest.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(conftest))
 
-        visitor = FixtureDefinitionVisitor()
-        visitor.file_path = conftest
-        visitor.visit(node=tree)
-        fixtures = visitor.fixtures
+        # Extract fixtures
+        fixture_visitor = FixtureDefinitionVisitor()
+        fixture_visitor.file_path = conftest
+        fixture_visitor.visit(node=tree)
+        fixtures = fixture_visitor.fixtures
+
+        # Extract imports
+        import_visitor = ImportVisitor()
+        import_visitor.visit(node=tree)
+
+        symbol_imports, opaque_deps = _resolve_visitor_symbol_imports(visitor=import_visitor, repo_root=repo_root)
 
     except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
-        logger.info(msg="Skipping conftest file due to parsing error", extra={"file": str(conftest), "error": str(e)})
+        logger.info(
+            msg="Skipping conftest file due to parsing error",
+            extra={"file": str(conftest), "error": str(e)},
+        )
 
-    return fixtures
+    return fixtures, symbol_imports, opaque_deps
 
 
 def _extract_imports_from_file(file_path: Path) -> set[str]:
@@ -883,37 +1046,543 @@ def _extract_fixtures_from_file(file_path: Path, marker_names: set[str]) -> set[
     return fixtures
 
 
+def _resolve_module_to_path(module: str, repo_root: Path) -> Path | None:
+    """Resolve a single dotted module name to a file path.
+
+    Checks for a matching Python package (``__init__.py``) or module (``.py``)
+    relative to *repo_root*, then falls back to the ``tests/`` subdirectory.
+
+    Args:
+        module: Dotted module name (e.g. ``utilities.virt``).
+        repo_root: Repository root path.
+
+    Returns:
+        Resolved file path, or ``None`` if the module cannot be resolved.
+    """
+    module_path = repo_root / module.replace(".", "/")
+
+    if (module_path / "__init__.py").exists():
+        return module_path / "__init__.py"
+    if module_path.with_suffix(".py").exists():
+        return module_path.with_suffix(".py")
+
+    tests_module_path = repo_root / "tests" / module.replace(".", "/")
+    if (tests_module_path / "__init__.py").exists():
+        return tests_module_path / "__init__.py"
+    if tests_module_path.with_suffix(".py").exists():
+        return tests_module_path.with_suffix(".py")
+
+    return None
+
+
 def _resolve_imports_helper(imports: set[str], repo_root: Path) -> set[Path]:
     """Resolve import module names to file paths.
 
     Args:
-        imports: Set of module names
-        repo_root: Repository root path
+        imports: Set of module names.
+        repo_root: Repository root path.
 
     Returns:
-        Set of resolved file paths
+        Set of resolved file paths.
     """
     resolved = set()
-
     for module in imports:
-        # Try to resolve relative to repo root
-        module_path = repo_root / module.replace(".", "/")
-
-        # Check for Python package
-        if (module_path / "__init__.py").exists():
-            resolved.add(module_path / "__init__.py")
-        # Check for Python module
-        elif module_path.with_suffix(".py").exists():
-            resolved.add(module_path.with_suffix(".py"))
-        # Check in tests directory
-        else:
-            tests_module_path = repo_root / "tests" / module.replace(".", "/")
-            if (tests_module_path / "__init__.py").exists():
-                resolved.add(tests_module_path / "__init__.py")
-            elif tests_module_path.with_suffix(".py").exists():
-                resolved.add(tests_module_path.with_suffix(".py"))
-
+        path = _resolve_module_to_path(module=module, repo_root=repo_root)
+        if path is not None:
+            resolved.add(path)
     return resolved
+
+
+def _resolve_visitor_symbol_imports(visitor: ImportVisitor, repo_root: Path) -> tuple[dict[Path, set[str]], set[Path]]:
+    """Resolve ImportVisitor results to file paths, separating symbol and opaque imports.
+
+    Args:
+        visitor: ImportVisitor that has already visited an AST tree.
+        repo_root: Repository root path for module resolution.
+
+    Returns:
+        Tuple of (symbol_imports, opaque_deps) where:
+        - symbol_imports maps resolved file paths to imported symbol names
+          (only modules with explicit ``from module import name`` imports,
+          excluding opaque ones).
+        - opaque_deps is the set of resolved file paths imported opaquely
+          (bare ``import`` or ``from module import *``).
+    """
+    symbol_imports: dict[Path, set[str]] = {}
+    opaque_deps: set[Path] = set()
+
+    for module, symbols in visitor.symbol_imports.items():
+        if module in visitor.opaque_imports:
+            continue
+        resolved_path = _resolve_module_to_path(module=module, repo_root=repo_root)
+        if resolved_path is not None:
+            if resolved_path in symbol_imports:
+                symbol_imports[resolved_path].update(symbols)
+            else:
+                symbol_imports[resolved_path] = set(symbols)
+
+    for module in visitor.opaque_imports:
+        resolved_path = _resolve_module_to_path(module=module, repo_root=repo_root)
+        if resolved_path is not None:
+            opaque_deps.add(resolved_path)
+
+    return symbol_imports, opaque_deps
+
+
+def _extract_symbol_imports_from_file(file_path: Path, repo_root: Path) -> dict[Path, set[str]]:
+    """Extract symbol-level imports from a Python file and resolve to file paths.
+
+    Parses the file with ``ImportVisitor`` and resolves each module with
+    specific imported names to its file path.  Modules imported opaquely
+    (bare ``import`` or ``from x import *``) are intentionally excluded so
+    that their absence from the returned dict triggers file-level fallback
+    in the caller.
+
+    Args:
+        file_path: Path to the Python file to analyze.
+        repo_root: Repository root path for module resolution.
+
+    Returns:
+        Mapping of resolved file path to set of imported symbol names.
+        Only includes modules with explicit symbol imports (not opaque).
+    """
+    symbol_imports: dict[Path, set[str]] = {}
+    try:
+        source = file_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(file_path))
+        visitor = ImportVisitor()
+        visitor.visit(node=tree)
+
+        symbol_imports, _ = _resolve_visitor_symbol_imports(visitor=visitor, repo_root=repo_root)
+    except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
+        logger.info(
+            msg="Error extracting symbol imports from file",
+            extra={"file": str(file_path), "error": str(e)},
+        )
+    return symbol_imports
+
+
+def _build_line_to_symbol_map(source: str) -> list[tuple[int, int, str]]:
+    """Build a mapping from line ranges to top-level symbol names.
+
+    Parses the AST of the given source to identify top-level definitions
+    (functions, async functions, classes, and module-level assignments) and
+    their line ranges.
+
+    Args:
+        source: Python source code text.
+
+    Returns:
+        Sorted list of ``(start_line, end_line, symbol_name)`` tuples.
+    """
+    tree = ast.parse(source)
+    symbols: list[tuple[int, int, str]] = []
+
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            symbols.append((node.lineno, node.end_lineno or node.lineno, node.name))
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    symbols.append((
+                        node.lineno,
+                        node.end_lineno or node.lineno,
+                        target.id,
+                    ))
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            symbols.append((
+                node.lineno,
+                node.end_lineno or node.lineno,
+                node.target.id,
+            ))
+
+    symbols.sort(key=lambda entry: entry[0])
+    return symbols
+
+
+def _get_old_file_symbols(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> set[str] | None:
+    """Fetch the base-branch version of a file and return its top-level symbol names.
+
+    Used to distinguish genuinely new symbols (not present in the base version)
+    from modified ones (present in both versions).
+
+    Args:
+        file_path: Absolute path to the file in the working tree.
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        Set of top-level symbol names from the base version of the file.
+        Returns an empty set if the file is new (does not exist in the base).
+        Returns ``None`` on unexpected errors, signaling the caller to use
+        conservative (file-level) fallback behavior.
+    """
+    old_source: str | None = None
+
+    try:
+        relative_path = str(file_path.relative_to(repo_root))
+    except ValueError:
+        relative_path = str(file_path)
+
+    if github_pr_info:
+        # Remote mode: use GitHub Contents API
+        repo = github_pr_info["repo"]
+        token = github_pr_info.get("token")
+        encoded_path = urllib.parse.quote(string=relative_path, safe="/")
+        url = f"https://api.github.com/repos/{repo}/contents/{encoded_path}?ref={base_branch}"
+
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "pytest-marker-analyzer",
+        }
+        if token:
+            headers["Authorization"] = f"token {token}"
+
+        request = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT_SECONDS) as response:
+                data = json.loads(response.read().decode())
+                if data.get("encoding") == "base64":
+                    old_source = base64.b64decode(data["content"]).decode("utf-8")
+                else:
+                    logger.warning(
+                        msg="Unexpected encoding from GitHub Contents API",
+                        extra={"file": relative_path, "encoding": data.get("encoding")},
+                    )
+                    return None
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return set()  # File is new
+            logger.warning(
+                msg="GitHub Contents API error fetching base file",
+                extra={"file": relative_path, "http_code": exc.code},
+            )
+            return None
+        except (urllib.error.URLError, json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+            logger.warning(
+                msg="Error fetching base file from GitHub",
+                extra={"file": relative_path, "error": str(exc)},
+            )
+            return None
+    else:
+        # Local mode: use git show
+        try:
+            result = subprocess.run(
+                ["git", "show", f"{base_branch}:{relative_path}"],
+                capture_output=True,
+                text=True,
+                cwd=repo_root,
+                timeout=10,
+            )
+            if result.returncode != 0:
+                stderr_lower = result.stderr.lower()
+                if (
+                    "does not exist" in stderr_lower
+                    or "not exist" in stderr_lower
+                    or "exists on disk, but not in" in stderr_lower
+                ):
+                    return set()  # File is new (path not found in base branch)
+                logger.warning(
+                    msg="git show failed for base file",
+                    extra={"file": relative_path, "returncode": result.returncode, "stderr": result.stderr.strip()},
+                )
+                return None
+            old_source = result.stdout
+        except (subprocess.SubprocessError, OSError) as exc:
+            logger.warning(
+                msg="Error running git show for base file",
+                extra={"file": relative_path, "error": str(exc)},
+            )
+            return None
+
+    if old_source is None:
+        return None
+
+    # Parse old source to extract top-level symbol names
+    try:
+        tree = ast.parse(old_source)
+    except SyntaxError:
+        logger.warning(
+            msg="Failed to parse base version of file",
+            extra={"file": relative_path},
+        )
+        return None
+
+    symbols: set[str] = set()
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            symbols.add(node.name)
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    symbols.add(target.id)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            symbols.add(node.target.id)
+
+    return symbols
+
+
+def _parse_diff_for_changed_lines(diff_content: str) -> set[int]:
+    """Parse unified diff to extract changed line numbers on the new-file side.
+
+    Processes ``@@ -a,b +c,d @@`` hunk headers and counts context (`` ``)
+    and addition (``+``) lines to compute actual line numbers.  Only
+    addition lines are reported since they represent the changed code in
+    the current version of the file.
+
+    Args:
+        diff_content: Unified diff text (e.g. from ``git diff`` or GitHub
+            API patch field).
+
+    Returns:
+        Set of 1-based line numbers that were added or modified.
+    """
+    changed_lines: set[int] = set()
+    current_line = 0
+
+    for line in diff_content.splitlines():
+        if line.startswith("@@"):
+            match = re.search(pattern=r"\+(\d+)", string=line)
+            if match:
+                current_line = int(match.group(1))
+            continue
+
+        if line.startswith(("---", "+++")):
+            continue
+
+        if current_line == 0:
+            continue
+
+        if line.startswith("+"):
+            changed_lines.add(current_line)
+            current_line += 1
+        elif line.startswith("-"):
+            # Removed lines do not advance the new-file line counter
+            pass
+        elif line.startswith("\\"):
+            # "\ No newline at end of file" marker — not a real line
+            pass
+        else:
+            # Context line — advances new-file counter without marking
+            current_line += 1
+
+    return changed_lines
+
+
+def _diff_has_deletions(diff_content: str) -> bool:
+    """Check if a unified diff contains any deletion lines.
+
+    Deletion lines start with ``-`` but are not the ``---`` file header.
+    A diff with no deletions means only additions were made, which is a
+    strong signal that symbols touching only added lines are genuinely new.
+
+    Args:
+        diff_content: Unified diff text.
+
+    Returns:
+        ``True`` if the diff contains at least one deletion line.
+    """
+    return any(line.startswith("-") and not line.startswith("---") for line in diff_content.splitlines())
+
+
+def _get_diff_content(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+    pr_diffs_cache: dict[str, str] | None = None,
+) -> str | None:
+    """Retrieve unified diff content for a file.
+
+    Uses a pre-fetched cache when available, falls back to the GitHub API
+    when ``github_pr_info`` is provided, or local ``git diff`` otherwise.
+
+    Args:
+        file_path: Absolute path to the file.
+        base_branch: Base branch for the diff.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+        pr_diffs_cache: Optional pre-fetched mapping of relative file paths
+            to their unified diff content.
+
+    Returns:
+        Diff content string, or ``None`` if retrieval fails.
+    """
+    # Try cache first
+    if pr_diffs_cache is not None:
+        try:
+            relative_path = str(file_path.relative_to(other=repo_root))
+        except ValueError:
+            relative_path = str(file_path)
+        cached = pr_diffs_cache.get(relative_path)
+        if cached is not None:
+            return cached
+        # File not in cache — may not have changed or cache incomplete
+        # Fall through to other methods
+
+    if github_pr_info:
+        repo = github_pr_info["repo"]
+        pr_number = github_pr_info["pr_number"]
+        token = github_pr_info.get("token")
+        try:
+            relative_path = file_path.relative_to(other=repo_root)
+        except ValueError:
+            relative_path = file_path
+        diff_content = get_pr_file_diff(
+            repo=repo,
+            pr_number=pr_number,
+            file_path=str(relative_path),
+            token=token,
+        )
+        return diff_content if diff_content else None
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "-U0", f"{base_branch}...HEAD", "--", str(file_path)],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+    except (subprocess.SubprocessError, OSError) as e:  # fmt: skip
+        logger.info(
+            msg="Error getting diff content",
+            extra={"file": str(file_path), "error": str(e)},
+        )
+
+    return None
+
+
+def _extract_modified_symbols(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+    pr_diffs_cache: dict[str, str] | None = None,
+    file_status: str | None = None,
+) -> SymbolClassification | None:
+    """Determine which top-level symbols were modified or added in a file.
+
+    Orchestrates diff retrieval, line-number parsing, AST line-to-symbol
+    mapping, and classifies each changed symbol as either **modified**
+    (existed in the base version) or **new** (entirely added by the PR).
+    New symbols cannot break existing tests and are excluded from impact
+    analysis.
+
+    Args:
+        file_path: Absolute path to the changed Python file.
+        base_branch: Base branch for the diff.
+        repo_root: Repository root path.
+        github_pr_info: Optional GitHub PR info for API-based diffs.
+        pr_diffs_cache: Optional pre-fetched mapping of relative file paths
+            to their unified diff content.
+        file_status: Optional file status from GitHub PR files API
+            (``"added"``, ``"modified"``, ``"removed"``, ``"renamed"``).
+
+    Returns:
+        ``SymbolClassification`` with modified and new symbol sets, or
+        ``None`` when symbol-level analysis is not possible (diff failure,
+        module-level changes outside any symbol, or parse errors).
+        A ``None`` return signals the caller to fall back to file-level
+        dependency tracking.
+    """
+    diff_content = _get_diff_content(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+        pr_diffs_cache=pr_diffs_cache,
+    )
+    if diff_content is None:
+        return None
+
+    has_deletions = _diff_has_deletions(diff_content=diff_content)
+
+    changed_lines = _parse_diff_for_changed_lines(diff_content=diff_content)
+    if not changed_lines:
+        if has_deletions:
+            return None  # Pure deletion — cannot safely narrow impact
+        return SymbolClassification(modified_symbols=set(), new_symbols=set())
+
+    try:
+        source = file_path.read_text(encoding="utf-8")
+        symbol_map = _build_line_to_symbol_map(source=source)
+    except (SyntaxError, UnicodeDecodeError, OSError) as exc:  # fmt: skip
+        logger.info(
+            msg="Error building symbol map",
+            extra={"file": str(file_path), "error": str(exc)},
+        )
+        return None
+
+    modified_symbols: set[str] = set()
+    for line_number in changed_lines:
+        found = False
+        for start_line, end_line, symbol_name in symbol_map:
+            if start_line <= line_number <= end_line:
+                modified_symbols.add(symbol_name)
+                found = True
+                break
+        if not found:
+            # Changed line is outside any top-level symbol (module-level code).
+            # Conservative fallback: cannot safely narrow impact.
+            return None
+
+    # --- Additive-change classification ---
+
+    # If the entire file is new, all symbols are new additions.
+    if file_status == "added":
+        return SymbolClassification(modified_symbols=set(), new_symbols=modified_symbols)
+
+    # Identify candidate new symbols: symbols whose ENTIRE line range
+    # falls within the changed lines (i.e. every line is an addition).
+    candidate_new: set[str] = set()
+    for start_line, end_line, symbol_name in symbol_map:
+        if symbol_name not in modified_symbols:
+            continue
+        all_lines_changed = all(line_num in changed_lines for line_num in range(start_line, end_line + 1))
+        if all_lines_changed:
+            candidate_new.add(symbol_name)
+
+    if not candidate_new:
+        # No candidates — all modified symbols are truly modified
+        return SymbolClassification(modified_symbols=modified_symbols, new_symbols=set())
+
+    # Optimization: if the diff has no deletions, existing code was not
+    # removed, so fully-added symbols are confirmed as new.
+    if not has_deletions:
+        truly_new = candidate_new
+        truly_modified = modified_symbols - truly_new
+        return SymbolClassification(modified_symbols=truly_modified, new_symbols=truly_new)
+
+    # Deletions exist — need to check old file to distinguish rewrites
+    # from genuine additions.
+    old_symbols = _get_old_file_symbols(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
+    if old_symbols is None:
+        # Error fetching old file — conservative: treat all candidates as modified
+        return SymbolClassification(modified_symbols=modified_symbols, new_symbols=set())
+
+    truly_new: set[str] = set()
+    for symbol_name in candidate_new:
+        if symbol_name not in old_symbols:
+            truly_new.add(symbol_name)
+
+    truly_modified = modified_symbols - truly_new
+    return SymbolClassification(modified_symbols=truly_modified, new_symbols=truly_new)
 
 
 def _find_relevant_conftests_helper(test_file: Path, repo_root: Path) -> set[Path]:
@@ -954,19 +1623,24 @@ def _find_relevant_conftests_helper(test_file: Path, repo_root: Path) -> set[Pat
 
 def _analyze_single_test_dependencies(
     marked_test: MarkedTest, repo_root: Path, marker_names: set[str]
-) -> tuple[set[Path], set[str]]:
+) -> tuple[set[Path], set[str], dict[Path, set[str]]]:
     """Analyze dependencies for a single marked test (static method for parallel execution).
 
     Args:
-        marked_test: Test to analyze
-        repo_root: Repository root path
-        marker_names: Set of marker names
+        marked_test: Test to analyze.
+        repo_root: Repository root path.
+        marker_names: Set of marker names.
 
     Returns:
-        Tuple of (dependencies, fixtures)
+        Tuple of (dependencies, fixtures, symbol_imports) where
+        ``symbol_imports`` maps resolved dependency paths to the set of
+        specific symbol names imported from that file.  Dependencies
+        absent from ``symbol_imports`` are opaque and require file-level
+        fallback.
     """
-    dependencies = set()
-    fixtures = set()
+    dependencies: set[Path] = set()
+    fixtures: set[str] = set()
+    symbol_imports: dict[Path, set[str]] = {}
 
     try:
         # Add the test file itself as a dependency
@@ -976,6 +1650,12 @@ def _analyze_single_test_dependencies(
         imports = _extract_imports_from_file(file_path=marked_test.file_path)
         dependencies.update(_resolve_imports_helper(imports=imports, repo_root=repo_root))
 
+        # Extract symbol-level imports for non-conftest dependencies
+        symbol_imports = _extract_symbol_imports_from_file(
+            file_path=marked_test.file_path,
+            repo_root=repo_root,
+        )
+
         # Extract fixtures used by the test
         fixtures = _extract_fixtures_from_file(file_path=marked_test.file_path, marker_names=marker_names)
 
@@ -984,7 +1664,7 @@ def _analyze_single_test_dependencies(
         dependencies.update(conftest_deps)
 
         # Analyze transitive imports (1-2 levels deep)
-        visited = set()
+        visited: set[Path] = set()
         to_visit = list(dependencies)
         current_depth = 0
         max_depth = MAX_TRANSITIVE_IMPORT_DEPTH
@@ -1013,7 +1693,113 @@ def _analyze_single_test_dependencies(
             msg="Error analyzing test dependencies", extra={"file": str(marked_test.file_path), "error": str(e)}
         )
 
-    return dependencies, fixtures
+    return dependencies, fixtures, symbol_imports
+
+
+def _check_conftest_pathway(
+    changed_file: Path,
+    marked_test: MarkedTest,
+    conftest_symbol_imports: dict[Path, dict[Path, set[str]]],
+    conftest_opaque_deps: dict[Path, set[Path]],
+    modified_symbols_cache: dict[Path, SymbolClassification | None],
+    fixtures_dict: dict[str, Fixture],
+    repo_root: Path,
+) -> tuple[bool, list[str]]:
+    """Check if a changed file affects a test via conftest transitive imports.
+
+    When a changed file is in a test's dependency set but not directly in
+    the test's ``symbol_imports``, checks whether any conftest file in the
+    test's hierarchy provides a pathway to the changed file via its own
+    imports.
+
+    Args:
+        changed_file: The changed file to check.
+        marked_test: The test being checked for impact.
+        conftest_symbol_imports: Mapping of conftest paths to their resolved
+            symbol imports.
+        conftest_opaque_deps: Mapping of conftest paths to file paths they
+            import opaquely.
+        modified_symbols_cache: Pre-computed mapping of changed file paths
+            to their symbol classifications.
+        fixtures_dict: Dictionary of all fixtures.
+        repo_root: Repository root path.
+
+    Returns:
+        Tuple of (is_affected, matching_deps) where is_affected is True if
+        the test is affected via a conftest pathway, and matching_deps is
+        the list of dependency description strings.
+    """
+    matching_deps: list[str] = []
+    conftest_resolved = False
+
+    for conftest_path in marked_test.dependencies:
+        if conftest_path.name != "conftest.py":
+            continue
+
+        # Check if conftest opaquely imports the changed file
+        opaque_set = conftest_opaque_deps.get(conftest_path, set())
+        if changed_file in opaque_set:
+            # Can't determine which symbols — conservative: flag test
+            matching_deps.append(
+                f"{changed_file.relative_to(repo_root)} (opaque import via {conftest_path.relative_to(repo_root)})"
+            )
+            return True, matching_deps
+
+        # Check if conftest imports specific symbols from the changed file
+        conftest_syms = conftest_symbol_imports.get(conftest_path, {})
+        if changed_file not in conftest_syms:
+            continue
+
+        # Conftest imports specific symbols from the changed file
+        conftest_imported = conftest_syms[changed_file]
+        classification = modified_symbols_cache.get(changed_file)
+        if classification is None:
+            # Can't determine what changed — conservative: flag test
+            matching_deps.append(
+                f"{changed_file.relative_to(repo_root)} (via {conftest_path.relative_to(repo_root)}, diff unavailable)"
+            )
+            return True, matching_deps
+
+        overlapping = conftest_imported & classification.modified_symbols
+        if not overlapping:
+            # Conftest imports from this file but none of the modified symbols
+            # — this conftest pathway is resolved as safe
+            conftest_resolved = True
+            continue
+
+        # Overlap found — check if any fixture from this conftest calls the overlapping symbols
+        # AND the test uses that fixture
+        fixture_match = False
+        for fixture_name, fixture in fixtures_dict.items():
+            if (
+                fixture.file_path == conftest_path
+                and fixture_name in marked_test.fixtures
+                and fixture.function_calls & overlapping
+            ):
+                symbols_str = ", ".join(sorted(fixture.function_calls & overlapping))
+                matching_deps.append(
+                    f"{changed_file.relative_to(repo_root)} (via fixture {fixture_name}: {symbols_str})"
+                )
+                fixture_match = True
+                break
+
+        if not fixture_match:
+            # Overlap exists but no fixture calls them — could be module-level usage
+            # Conservative: flag test
+            symbols_str = ", ".join(sorted(overlapping))
+            matching_deps.append(
+                f"{changed_file.relative_to(repo_root)} (via {conftest_path.relative_to(repo_root)}, symbols: {symbols_str})"
+            )
+
+        conftest_resolved = True
+        break
+
+    if not conftest_resolved:
+        # No conftest pathway found — file-level fallback (conservative)
+        matching_deps.append(str(changed_file.relative_to(repo_root)))
+        return True, matching_deps
+
+    return bool(matching_deps), matching_deps
 
 
 def _check_test_impact(
@@ -1024,29 +1810,77 @@ def _check_test_impact(
     fixtures_dict: dict[str, Fixture],
     base_branch: str,
     github_pr_info: dict[str, Any] | None,
+    modified_symbols_cache: dict[Path, SymbolClassification | None] | None = None,
+    conftest_symbol_imports: dict[Path, dict[Path, set[str]]] | None = None,
+    conftest_opaque_deps: dict[Path, set[Path]] | None = None,
+    pr_diffs_cache: dict[str, str] | None = None,
+    pr_file_statuses: dict[str, str] | None = None,
 ) -> dict[str, Any] | None:
     """Check if a single test is affected by changed files (for parallel execution).
 
+    Uses symbol-level analysis for non-conftest dependencies when
+    ``modified_symbols_cache`` is provided and the test has symbol-level
+    import information.  Falls back to file-level dependency tracking
+    when symbol-level data is unavailable (opaque imports, diff failures,
+    or module-level changes).
+
+    For dependencies that are in the test's dependency set but not in
+    the test's direct ``symbol_imports``, checks whether any conftest
+    file in the test's hierarchy provides a pathway to the changed file,
+    enabling symbol-level analysis through conftest transitive imports.
+
     Args:
-        node_id: Test node ID
-        marked_test: Test to check
-        changed_set: Set of changed file paths
-        repo_root: Repository root path
-        fixtures_dict: Dictionary of all fixtures
-        base_branch: Base branch name
-        github_pr_info: GitHub PR info for API calls
+        node_id: Test node ID.
+        marked_test: Test to check.
+        changed_set: Set of changed file paths.
+        repo_root: Repository root path.
+        fixtures_dict: Dictionary of all fixtures.
+        base_branch: Base branch name.
+        github_pr_info: GitHub PR info for API calls.
+        modified_symbols_cache: Pre-computed mapping of changed file paths
+            to their symbol classifications, or ``None`` for file-level
+            fallback.
+        conftest_symbol_imports: Mapping of conftest path to its resolved
+            symbol imports (file path -> symbol names).
+        conftest_opaque_deps: Mapping of conftest path to file paths it
+            imports opaquely (bare import / star import).
+        pr_diffs_cache: Optional pre-fetched mapping of relative file paths
+            to their unified diff content.
+        pr_file_statuses: Optional mapping of relative file paths to their
+            GitHub file status strings.
 
     Returns:
-        Dictionary with test info if affected, None otherwise
+        Dictionary with test info if affected, ``None`` otherwise.
     """
+    if modified_symbols_cache is None:
+        modified_symbols_cache = {}
+    if conftest_symbol_imports is None:
+        conftest_symbol_imports = {}
+    if conftest_opaque_deps is None:
+        conftest_opaque_deps = {}
+
     test_affected = False
-    matching_deps = []
+    matching_deps: list[str] = []
 
     for changed_file in changed_set:
         # Special handling for conftest.py: use fixture-level analysis
         if changed_file.name == "conftest.py" and changed_file in marked_test.dependencies:
+            # Resolve file status for the conftest file
+            file_status_conftest: str | None = None
+            if pr_file_statuses:
+                try:
+                    rel = str(changed_file.relative_to(repo_root))
+                except ValueError:
+                    rel = str(changed_file)
+                file_status_conftest = pr_file_statuses.get(rel)
+
             modified_fixtures, modified_functions = _extract_modified_items_from_conftest(
-                changed_file=changed_file, base_branch=base_branch, repo_root=repo_root, github_pr_info=github_pr_info
+                changed_file=changed_file,
+                base_branch=base_branch,
+                repo_root=repo_root,
+                github_pr_info=github_pr_info,
+                pr_diffs_cache=pr_diffs_cache,
+                file_status=file_status_conftest,
             )
 
             # Get all transitively affected fixtures
@@ -1063,10 +1897,47 @@ def _check_test_impact(
                 fixtures_str = ", ".join(sorted(common_fixtures))
                 matching_deps.append(f"{changed_file.relative_to(repo_root)} (fixtures: {fixtures_str})")
 
-        # Direct dependency check for non-conftest files
+        # Symbol-level dependency check for non-conftest files
         elif changed_file in marked_test.dependencies and changed_file.name != "conftest.py":
-            test_affected = True
-            matching_deps.append(str(changed_file.relative_to(repo_root)))
+            if changed_file in marked_test.symbol_imports:
+                # We have symbol-level import information for this dependency
+                classification = modified_symbols_cache.get(changed_file)
+                if classification is None:
+                    # Diff parsing failed or module-level changes — file-level fallback
+                    test_affected = True
+                    matching_deps.append(str(changed_file.relative_to(repo_root)))
+                else:
+                    test_imported_symbols = marked_test.symbol_imports[changed_file]
+                    common_symbols = test_imported_symbols & classification.modified_symbols
+                    if common_symbols:
+                        test_affected = True
+                        symbols_str = ", ".join(sorted(common_symbols))
+                        matching_deps.append(f"{changed_file.relative_to(repo_root)} (symbols: {symbols_str})")
+                    else:
+                        # Check transitive impact via fixtures that call modified symbols
+                        for fixture_name, fixture in fixtures_dict.items():
+                            if (
+                                fixture_name in marked_test.fixtures
+                                and fixture.function_calls & classification.modified_symbols
+                            ):
+                                test_affected = True
+                                matching_deps.append(
+                                    f"{changed_file.relative_to(repo_root)} (via fixture: {fixture_name})"
+                                )
+                                break
+            else:
+                is_affected, deps = _check_conftest_pathway(
+                    changed_file=changed_file,
+                    marked_test=marked_test,
+                    conftest_symbol_imports=conftest_symbol_imports,
+                    conftest_opaque_deps=conftest_opaque_deps,
+                    modified_symbols_cache=modified_symbols_cache,
+                    fixtures_dict=fixtures_dict,
+                    repo_root=repo_root,
+                )
+                if is_affected:
+                    test_affected = True
+                    matching_deps.extend(deps)
 
     if test_affected:
         return {
@@ -1118,25 +1989,42 @@ def _get_affected_fixtures_helper(
 
 
 def _extract_modified_items_from_conftest(
-    changed_file: Path, base_branch: str, repo_root: Path, github_pr_info: dict[str, Any] | None
+    changed_file: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+    pr_diffs_cache: dict[str, str] | None = None,
+    file_status: str | None = None,
 ) -> tuple[set[str], set[str]]:
     """Extract modified fixtures and functions from conftest.py.
 
+    Filters out purely new functions and fixtures that did not exist in
+    the base version of the file, since new additions cannot break
+    existing tests.
+
     Args:
-        changed_file: Path to conftest.py
-        base_branch: Base branch name
-        repo_root: Repository root
-        github_pr_info: GitHub PR info for API calls
+        changed_file: Path to conftest.py.
+        base_branch: Base branch name.
+        repo_root: Repository root.
+        github_pr_info: GitHub PR info for API calls.
+        pr_diffs_cache: Optional pre-fetched mapping of relative file paths
+            to their unified diff content.
+        file_status: Optional file status from GitHub PR files API
+            (``"added"``, ``"modified"``, ``"removed"``, ``"renamed"``).
 
     Returns:
-        Tuple of (modified_fixtures, modified_functions)
+        Tuple of (modified_fixtures, modified_functions) containing only
+        symbols that existed in the base version and were modified.
     """
-    modified_fixtures = set()
-    modified_functions = set()
+    if file_status == "added":
+        return set(), set()  # New conftest cannot break existing tests
+
+    modified_fixtures: set[str] = set()
+    modified_functions: set[str] = set()
 
     try:
         # Get all fixtures in the file
-        all_fixtures = set()
+        all_fixtures: set[str] = set()
         try:
             source = changed_file.read_text(encoding="utf-8")
             tree = ast.parse(source, filename=str(changed_file))
@@ -1147,13 +2035,34 @@ def _extract_modified_items_from_conftest(
                         if _is_fixture_decorator_helper(decorator=decorator):
                             all_fixtures.add(node.name)
                             break
-        except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
-            logger.info(msg="Error parsing conftest for fixtures", extra={"file": str(changed_file), "error": str(e)})
+        except (SyntaxError, UnicodeDecodeError, OSError) as exc:  # fmt: skip
+            logger.info(msg="Error parsing conftest for fixtures", extra={"file": str(changed_file), "error": str(exc)})
 
         # Get modified function names
         modified_function_names = _get_modified_function_names_helper(
-            file_path=changed_file, base_branch=base_branch, repo_root=repo_root, github_pr_info=github_pr_info
+            file_path=changed_file,
+            base_branch=base_branch,
+            repo_root=repo_root,
+            github_pr_info=github_pr_info,
+            pr_diffs_cache=pr_diffs_cache,
         )
+
+        # Preserve the raw set before additive filtering for fallback logic:
+        # if diff parsing found functions but additive filtering emptied the
+        # set, the conftest only contains new additions and should NOT trigger
+        # the conservative all-fixtures fallback.
+        raw_modified_function_names = set(modified_function_names)
+
+        # Filter out purely new functions/fixtures (additive-change detection)
+        if modified_function_names and file_status != "added":
+            old_symbols = _get_old_file_symbols(
+                file_path=changed_file,
+                base_branch=base_branch,
+                repo_root=repo_root,
+                github_pr_info=github_pr_info,
+            )
+            if old_symbols is not None:
+                modified_function_names = {name for name in modified_function_names if name in old_symbols}
 
         # Classify
         for func_name in modified_function_names:
@@ -1162,13 +2071,14 @@ def _extract_modified_items_from_conftest(
             else:
                 modified_functions.add(func_name)
 
-        # Fallback
-        if not modified_function_names and changed_file.exists():
+        # Fallback: only trigger when diff parsing itself failed (raw set empty),
+        # NOT when additive filtering legitimately emptied the set.
+        if not raw_modified_function_names and changed_file.exists():
             return all_fixtures, set()
 
-    except (SyntaxError, UnicodeDecodeError, OSError, subprocess.SubprocessError) as e:  # fmt: skip
+    except (SyntaxError, UnicodeDecodeError, OSError, subprocess.SubprocessError) as exc:  # fmt: skip
         logger.info(
-            msg="Error extracting modified items from conftest", extra={"file": str(changed_file), "error": str(e)}
+            msg="Error extracting modified items from conftest", extra={"file": str(changed_file), "error": str(exc)}
         )
 
     return modified_fixtures, modified_functions
@@ -1186,10 +2096,24 @@ def _is_fixture_decorator_helper(decorator: ast.AST) -> bool:
 
 
 def _get_modified_function_names_helper(
-    file_path: Path, base_branch: str, repo_root: Path, github_pr_info: dict[str, Any] | None
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+    pr_diffs_cache: dict[str, str] | None = None,
 ) -> set[str]:
     """Get modified function names - helper for parallelization."""
-    modified = set()
+    modified: set[str] = set()
+
+    # Try pre-fetched cache first
+    if pr_diffs_cache is not None:
+        try:
+            relative_path = str(file_path.relative_to(repo_root))
+        except ValueError:
+            relative_path = str(file_path)
+        cached = pr_diffs_cache.get(relative_path)
+        if cached is not None:
+            return _parse_diff_for_functions_helper(diff_content=cached)
 
     # Use GitHub API if available
     if github_pr_info:
@@ -1272,6 +2196,10 @@ class MarkerTestAnalyzer:
         self.marked_tests: dict[str, MarkedTest] = {}
         self.conftest_files: list[Path] = []
         self.fixtures: dict[str, Fixture] = {}  # name -> Fixture
+        self.conftest_symbol_imports: dict[Path, dict[Path, set[str]]] = {}
+        # conftest_path -> {imported_file_path -> {symbol_names}}
+        self.conftest_opaque_deps: dict[Path, set[Path]] = {}
+        # conftest_path -> {file_paths imported opaquely (bare import / star import)}
         self.fixture_usage: dict[str, set[str]] = {}  # test_node_id -> set of fixture names
         self.infrastructure_dirs = {
             self.repo_root / "utilities",
@@ -1624,22 +2552,25 @@ class MarkerTestAnalyzer:
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             # Submit all tasks
             future_to_conftest = {
-                executor.submit(_process_conftest_file, conftest=conftest): conftest for conftest in self.conftest_files
+                executor.submit(_process_conftest_with_imports, conftest=conftest, repo_root=self.repo_root): conftest
+                for conftest in self.conftest_files
             }
 
             # Collect results first, then merge after parallel execution completes
-            all_fixtures = []
+            all_results: list[tuple[Path, dict[str, Fixture], dict[Path, set[str]], set[Path]]] = []
             for future in as_completed(future_to_conftest):
                 conftest = future_to_conftest[future]
                 try:
-                    fixtures = future.result()
-                    all_fixtures.append(fixtures)
+                    fixtures, sym_imports, opaque_deps = future.result()
+                    all_results.append((conftest, fixtures, sym_imports, opaque_deps))
                 except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
                     logger.info(msg="Error processing conftest", extra={"file": str(conftest), "error": str(e)})
 
             # Merge after parallel execution completes (thread-safe)
-            for fixtures in all_fixtures:
+            for conftest, fixtures, sym_imports, opaque_deps in all_results:
                 self.fixtures.update(fixtures)
+                self.conftest_symbol_imports[conftest] = sym_imports
+                self.conftest_opaque_deps[conftest] = opaque_deps
 
         logger.info(
             msg="Found fixtures across conftest files",
@@ -1937,20 +2868,25 @@ class MarkerTestAnalyzer:
             }
 
             # Collect results first, then update sequentially after parallel execution completes
-            results = {}
+            results: dict[str, tuple[set[Path], set[str], dict[Path, set[str]]]] = {}
             for future in as_completed(future_to_node_id):
                 node_id = future_to_node_id[future]
                 try:
-                    deps, fixtures = future.result()
-                    results[node_id] = (deps, fixtures)
+                    deps, fixtures, sym_imports = future.result()
+                    results[node_id] = (deps, fixtures, sym_imports)
                 except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
                     logger.info(msg="Error analyzing dependencies", extra={"node_id": node_id, "error": str(e)})
 
             # Update sequentially after all parallel work completes (thread-safe)
-            for node_id, (deps, fixtures) in results.items():
+            for node_id, (deps, fixtures, sym_imports) in results.items():
                 marked_test = self.marked_tests[node_id]
                 marked_test.dependencies.update(deps)
                 marked_test.fixtures.update(fixtures)
+                for resolved_path, symbols in sym_imports.items():
+                    if resolved_path in marked_test.symbol_imports:
+                        marked_test.symbol_imports[resolved_path].update(symbols)
+                    else:
+                        marked_test.symbol_imports[resolved_path] = set(symbols)
 
                 # If we got fixture usage from pytest --setup-plan, use it
                 if node_id in self.fixture_usage:
@@ -1964,150 +2900,6 @@ class MarkerTestAnalyzer:
         if tests_dir.exists():
             self.conftest_files = list(tests_dir.rglob("conftest.py"))
         logger.info(msg="Found conftest.py files", extra={"file_count": len(self.conftest_files)})
-
-    def _analyze_test_dependencies(self, marked_test: MarkedTest) -> None:
-        """Analyze dependencies for a single marked test."""
-        # Add the test file itself as a dependency
-        marked_test.dependencies.add(marked_test.file_path)
-
-        # Extract direct imports from test file
-        try:
-            imports = self._extract_imports(file_path=marked_test.file_path)
-            marked_test.dependencies.update(self._resolve_imports(imports=imports, base_file=marked_test.file_path))
-
-            # Extract fixtures used by the test
-            fixtures = self._extract_fixtures(file_path=marked_test.file_path)
-            marked_test.fixtures.update(fixtures)
-
-            # Add conftest files in the test's directory hierarchy
-            conftest_deps = self._find_relevant_conftests(test_file=marked_test.file_path)
-            marked_test.dependencies.update(conftest_deps)
-
-            # Analyze transitive imports (1-2 levels deep)
-            self._analyze_transitive_imports(marked_test=marked_test, max_depth=MAX_TRANSITIVE_IMPORT_DEPTH)
-
-        except (SyntaxError, UnicodeDecodeError, OSError) as e:  # fmt: skip
-            logger.info(
-                msg="Error analyzing test dependencies", extra={"file": str(marked_test.file_path), "error": str(e)}
-            )
-
-    def _extract_imports(self, file_path: Path) -> set[str]:
-        """Extract import statements from a Python file."""
-        imports = set()
-        try:
-            source = file_path.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(file_path))
-            visitor = ImportVisitor()
-            visitor.visit(node=tree)
-            imports = visitor.imports
-        except SyntaxError as e:
-            logger.warning(msg="Syntax error in file", extra={"file": str(file_path), "error": str(e)})
-        except UnicodeDecodeError as e:
-            logger.warning(msg="Encoding error in file", extra={"file": str(file_path), "error": str(e)})
-        except OSError as e:
-            logger.info(msg="Unexpected error parsing file", extra={"file": str(file_path), "error": str(e)})
-
-        return imports
-
-    def _extract_fixtures(self, file_path: Path) -> set[str]:
-        """Extract fixture names used in test file."""
-        fixtures = set()
-        try:
-            source = file_path.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(file_path))
-            visitor = FixtureVisitor(marker_names=self.marker_names)
-            visitor.visit(node=tree)
-            fixtures = visitor.fixtures
-        except SyntaxError as e:
-            logger.warning(msg="Syntax error in file", extra={"file": str(file_path), "error": str(e)})
-        except UnicodeDecodeError as e:
-            logger.warning(msg="Encoding error in file", extra={"file": str(file_path), "error": str(e)})
-        except OSError as e:
-            logger.info(msg="Unexpected error parsing file", extra={"file": str(file_path), "error": str(e)})
-
-        return fixtures
-
-    def _resolve_imports(self, imports: set[str], base_file: Path) -> set[Path]:
-        """Resolve import module names to file paths."""
-        resolved = set()
-
-        for module in imports:
-            # Try to resolve relative to repo root
-            module_path = self.repo_root / module.replace(".", "/")
-
-            # Check for Python package
-            if (module_path / "__init__.py").exists():
-                resolved.add(module_path / "__init__.py")
-            # Check for Python module
-            elif module_path.with_suffix(".py").exists():
-                resolved.add(module_path.with_suffix(".py"))
-            # Check in tests directory
-            else:
-                tests_module_path = self.repo_root / "tests" / module.replace(".", "/")
-                if (tests_module_path / "__init__.py").exists():
-                    resolved.add(tests_module_path / "__init__.py")
-                elif tests_module_path.with_suffix(".py").exists():
-                    resolved.add(tests_module_path.with_suffix(".py"))
-
-        return resolved
-
-    def _find_relevant_conftests(self, test_file: Path) -> set[Path]:
-        """Find conftest.py files in the test's directory hierarchy."""
-        relevant = set()
-        current = test_file.parent.resolve()
-        repo_root_resolved = self.repo_root.resolve()
-
-        # Safety limit to prevent infinite loops on unusual filesystems
-        max_iterations = MAX_CONFTEST_SEARCH_ITERATIONS
-        iteration = 0
-
-        while iteration < max_iterations:
-            iteration += 1
-            conftest = current / "conftest.py"
-            if conftest.exists():
-                relevant.add(conftest)
-
-            if current == repo_root_resolved:
-                break
-
-            # Safety check to prevent infinite loop
-            parent = current.parent.resolve()
-            if parent == current:  # Reached filesystem root
-                break
-            current = parent
-
-        if iteration >= max_iterations:
-            logger.warning(
-                f"Hit iteration limit while finding conftests for {test_file}. "
-                f"Current path: {current}, repo root: {repo_root_resolved}"
-            )
-
-        return relevant
-
-    def _analyze_transitive_imports(self, marked_test: MarkedTest, max_depth: int) -> None:
-        """Analyze transitive imports up to max_depth levels."""
-        visited = set()
-        to_visit = list(marked_test.dependencies)
-        current_depth = 0
-
-        while to_visit and current_depth < max_depth:
-            current_level = to_visit[:]
-            to_visit = []
-
-            for dep_file in current_level:
-                if dep_file in visited or not dep_file.suffix == ".py":
-                    continue
-
-                visited.add(dep_file)
-                imports = self._extract_imports(file_path=dep_file)
-                resolved = self._resolve_imports(imports=imports, base_file=dep_file)
-
-                for resolved_file in resolved:
-                    if resolved_file not in marked_test.dependencies:
-                        marked_test.dependencies.add(resolved_file)
-                        to_visit.append(resolved_file)
-
-            current_depth += 1
 
     def get_changed_files(self, base_branch: str = "main", files: list[str] | None = None) -> list[Path]:
         """Get list of changed files either from git or from provided list."""
@@ -2158,15 +2950,53 @@ class MarkerTestAnalyzer:
         """Analyze if changed files impact marked tests (parallelized).
 
         Only triggers tests when changed files are actually in the dependency
-        tree of at least one marked test. For conftest.py changes, uses fixture-level
-        dependency tracking to minimize false positives.
+        tree of at least one marked test.  For conftest.py changes, uses
+        fixture-level dependency tracking.  For all other Python files, uses
+        symbol-level dependency tracking to minimize false positives.
+
+        New symbols (functions, constants, fixtures) added by the PR are
+        excluded from impact analysis since they cannot break existing tests.
         """
-        affected_tests = []
+        affected_tests: list[dict[str, Any]] = []
         should_run = False
-        reasons = []
+        reasons: list[str] = []
 
         # Convert changed files to set for faster lookup
         changed_set = {f.resolve() for f in changed_files}
+
+        # Pre-fetch all PR file diffs and file statuses in a single API pass
+        # to avoid N separate paginated API calls (O(N^2) -> O(N)).
+        pr_diffs_cache: dict[str, str] | None = None
+        pr_file_statuses: dict[str, str] | None = None
+        if self.github_pr_info:
+            pr_diffs_cache, pr_file_statuses = _prefetch_pr_diffs(
+                repo=self.github_pr_info["repo"],
+                pr_number=self.github_pr_info["pr_number"],
+                token=self.github_pr_info.get("token"),
+            )
+
+        # Pre-compute modified symbols for each changed non-conftest Python file.
+        # This cache is shared across all test impact checks to avoid redundant
+        # diff parsing and AST analysis.
+        modified_symbols_cache: dict[Path, SymbolClassification | None] = {}
+        for changed_file in changed_set:
+            if changed_file.suffix == ".py" and changed_file.name != "conftest.py":
+                file_status: str | None = None
+                if pr_file_statuses:
+                    try:
+                        rel = str(changed_file.relative_to(self.repo_root))
+                    except ValueError:
+                        rel = str(changed_file)
+                    file_status = pr_file_statuses.get(rel)
+
+                modified_symbols_cache[changed_file] = _extract_modified_symbols(
+                    file_path=changed_file,
+                    base_branch=self.base_branch,
+                    repo_root=self.repo_root,
+                    github_pr_info=self.github_pr_info,
+                    pr_diffs_cache=pr_diffs_cache,
+                    file_status=file_status,
+                )
 
         # Check each marked test for dependency matches in parallel using ThreadPoolExecutor
         # (I/O-bound: git operations and file reading)
@@ -2182,6 +3012,11 @@ class MarkerTestAnalyzer:
                     fixtures_dict=self.fixtures,
                     base_branch=self.base_branch,
                     github_pr_info=self.github_pr_info,
+                    modified_symbols_cache=modified_symbols_cache,
+                    conftest_symbol_imports=self.conftest_symbol_imports,
+                    conftest_opaque_deps=self.conftest_opaque_deps,
+                    pr_diffs_cache=pr_diffs_cache,
+                    pr_file_statuses=pr_file_statuses,
                 ): node_id
                 for node_id, marked_test in self.marked_tests.items()
             }
@@ -2194,8 +3029,8 @@ class MarkerTestAnalyzer:
                     if result is not None:
                         affected_tests.append(result)
                         should_run = True
-                except (SyntaxError, UnicodeDecodeError, OSError, subprocess.SubprocessError) as e:  # fmt: skip
-                    logger.info(msg="Error checking impact", extra={"node_id": node_id, "error": str(e)})
+                except (SyntaxError, UnicodeDecodeError, OSError, subprocess.SubprocessError) as exc:  # fmt: skip
+                    logger.info(msg="Error checking impact", extra={"node_id": node_id, "error": str(exc)})
 
         if affected_tests:
             reasons.append(
