@@ -28,6 +28,10 @@ def updated_fg_hco(
         yield
 
 
+@pytest.mark.xfail(
+    reason="Feature gate being replaced with different spec; Tracked in CNV-79304",
+    run=False,
+)
 @pytest.mark.parametrize(
     ("updated_fg_hco", "kubevirt_featuregate_name", "hco_featuregate"),
     [
