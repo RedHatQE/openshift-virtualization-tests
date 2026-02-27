@@ -141,6 +141,22 @@ def restricted_role_binding_for_vms_in_destination_namespace(destination_namespa
 
 
 @pytest.fixture()
+def restricted_role_binding_for_vms_get_only_in_destination_namespace(destination_namespace, admin_client):
+    with set_permissions(
+        client=admin_client,
+        role_name="vm-get-only-role",
+        role_api_groups=[Resource.ApiGroup.KUBEVIRT_IO],
+        verbs=LIST_GET,
+        permissions_to_resources=["virtualmachines"],
+        binding_name="allow-unprivileged-client-to-get-vms-on-dst-ns",
+        namespace=destination_namespace.name,
+        subjects_name=UNPRIVILEGED_USER,
+        subjects_api_group=RBAC_AUTHORIZATION_API_GROUP,
+    ):
+        yield
+
+
+@pytest.fixture()
 def perm_src_service_account(
     request, namespace, destination_namespace, restricted_namespace_service_account, admin_client
 ):
