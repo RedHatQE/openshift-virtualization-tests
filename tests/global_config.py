@@ -24,6 +24,7 @@ from utilities.constants import (
     HPP_CAPABILITIES,
     LINUX_BRIDGE,
     MONITORING_METRICS,
+    MULTIARCH,
     OS_FLAVOR_FEDORA,
     OVS_BRIDGE,
     PRODUCTION_CATALOG_SOURCE,
@@ -45,9 +46,10 @@ from utilities.constants import (
 )
 from utilities.storage import HppCsiStorageClass
 
-arch = get_cluster_architecture()
 global config
-global_config = pytest_testconfig.load_python(py_file=f"tests/global_config_{arch}.py", encoding="utf-8")
+cluster_arch = get_cluster_architecture()
+cluster_type = MULTIARCH if len(cluster_arch) > 1 else next(iter(cluster_arch))
+global_config = pytest_testconfig.load_python(py_file=f"tests/global_config_{cluster_type}.py", encoding="utf-8")
 
 
 def _get_default_storage_class(sc_list):
@@ -250,7 +252,7 @@ for _dir in dir():
     if not config:  # noqa: F821
         config: dict[str, Any] = {}
     val = locals()[_dir]
-    if type(val) not in [bool, list, dict, str, int]:
+    if type(val) not in [bool, list, dict, str, int, set]:
         continue
 
     if _dir in ["encoding", "py_file"]:

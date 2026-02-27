@@ -108,6 +108,10 @@ class UnsupportedGPUDeviceError(Exception):
     """Exception raised when a GPU device ID is not supported."""
 
 
+class UnsupportedCPUArchitectureError(Exception):
+    """Exception raised when a CPU architecture is not supported."""
+
+
 def raise_multiple_exceptions(exceptions):
     """Raising multiple exceptions
 

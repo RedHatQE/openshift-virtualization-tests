@@ -8,6 +8,8 @@ import re
 import shutil
 import socket
 import sys
+from itertools import combinations
+from typing import Any
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -23,9 +25,11 @@ from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
+    MULTIARCH,
     POD_SECURITY_NAMESPACE_LABELS,
     S390X,
     SANITY_TESTS_FAILURE,
+    SUPPORTED_CPU_ARCHITECTURES,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
@@ -34,7 +38,7 @@ from utilities.data_collector import (
     get_data_collector_base_directory,
     write_to_file,
 )
-from utilities.exceptions import MissingEnvironmentVariableError
+from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 from utilities.os_utils import (
     generate_latest_os_dict,
     generate_linux_instance_type_os_matrix,
@@ -404,43 +408,105 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
     return items
 
 
-def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
+def get_cpu_arch_choices() -> list[str]:
+    """Generate all CPU architecture combinations for `--cpu-arch` CLI choices.
+
+    Returns:
+        list[str]: All valid architecture combinations as comma-separated strings.
     """
-    Generate and populate OS matrix and related dictionaries in py_config.
+    archs = list(SUPPORTED_CPU_ARCHITECTURES)
+    return [",".join(combo) for combo_length in range(1, len(archs) + 1) for combo in combinations(archs, combo_length)]
+
+
+def validate_cpu_arch_params(cpu_arch_option: str) -> None:
+    """Validate `--cpu-arch` CLI option against cluster architecture.
 
     Args:
-        os_dict (dict[str, list[str]]): A dictionary containing lists of supported OS names for each
-            relevant OS family. Keys can include:
-              - "rhel_os_list"
-              - "fedora_os_list"
-              - "centos_os_list"
-              - "windows_os_list"
-              - "instance_type_rhel_os_list"
-              - "instance_type_fedora_os_list"
-              - "instance_type_centos_os_list"
-    """
+        cpu_arch_option: Comma-separated architecture(s) from CLI, or empty string.
 
+    Raises:
+        UnsupportedCPUArchitectureError: On architecture mismatch or invalid usage.
+    """
+    cluster_arch = get_cluster_architecture()
+    cli_param_arch = cpu_arch_option.split(",")
+
+    if not all(arch in set(SUPPORTED_CPU_ARCHITECTURES) for arch in cluster_arch):
+        raise UnsupportedCPUArchitectureError(f"Node/s have unsupported CPU architecture/s: {cluster_arch}!")
+    if len(cluster_arch) > 1 and not cpu_arch_option:
+        raise UnsupportedCPUArchitectureError(
+            f"`--cpu-arch` cmdline arg must be provided for heterogeneous cluster: {cluster_arch}!"
+        )
+    if len(cluster_arch) > 1 and not all(arch in cluster_arch for arch in cli_param_arch):
+        raise UnsupportedCPUArchitectureError(
+            f"`--cpu-arch` value/s {cli_param_arch} not in the cluster's arch list: {cluster_arch}!"
+        )
+    if len(cluster_arch) == 1 and cpu_arch_option:
+        raise UnsupportedCPUArchitectureError(
+            f"`--cpu-arch` cmdline arg shouldn't be passed for homogeneous cluster: {cluster_arch}!"
+        )
+
+
+def validate_collected_tests_arch_params(session: pytest.Session) -> None:
+    """Validate collected tests' `multiarch` markers against cluster/CLI settings.
+
+    Args:
+        session: The pytest session with collected test items.
+
+    Raises:
+        UnsupportedCPUArchitectureError: On marker/architecture mismatch.
+    """
+    session_items = session.items
+    session_config = session.config
+    are_all_multiarch_marked_tests = all(item.get_closest_marker("multiarch") for item in session_items)
+    is_any_multiarch_marked_test = any(item.get_closest_marker("multiarch") for item in session_items)
+    cpu_arch_option = session_config.getoption("--cpu-arch") or ""
+
+    if is_any_multiarch_marked_test and py_config["cluster_type"] != MULTIARCH:
+        raise UnsupportedCPUArchitectureError("Tests marked with `multiarch` are not allowed for homogeneous cluster!")
+    if not are_all_multiarch_marked_tests and len(cpu_arch_option.split(",")) > 1:
+        raise UnsupportedCPUArchitectureError(
+            f"Tests not marked with `multiarch` should not run with multiple values in `--cpu-arch` {cpu_arch_option}!"
+        )
+
+
+def generate_common_template_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = None) -> None:
+    """Generate common template matrix dictionaries in py_config from OS lists.
+
+    Args:
+        os_dict: Dict with OS lists (e.g., "rhel_os_list", "windows_os_list",
+            "instance_type_rhel_os_list").
+        cpu_arch: Optional architecture suffix for multi-arch clusters.
+    """
     if rhel_os_list := os_dict.get("rhel_os_list"):
-        py_config["rhel_os_matrix"] = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=rhel_os_list)
+        py_config["rhel_os_matrix"] = generate_os_matrix_dict(
+            os_name="rhel", supported_operating_systems=rhel_os_list, arch=cpu_arch
+        )
         py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
     if fedora_os_list := os_dict.get("fedora_os_list"):
         py_config["fedora_os_matrix"] = generate_os_matrix_dict(
-            os_name="fedora", supported_operating_systems=fedora_os_list
+            os_name="fedora", supported_operating_systems=fedora_os_list, arch=cpu_arch
         )
         py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_matrix=py_config["fedora_os_matrix"])
     if centos_os_list := os_dict.get("centos_os_list"):
         py_config["centos_os_matrix"] = generate_os_matrix_dict(
-            os_name="centos", supported_operating_systems=centos_os_list
+            os_name="centos", supported_operating_systems=centos_os_list, arch=cpu_arch
         )
         py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_matrix=py_config["centos_os_matrix"])
     if windows_os_list := os_dict.get("windows_os_list"):
         py_config["windows_os_matrix"] = generate_os_matrix_dict(
-            os_name="windows", supported_operating_systems=windows_os_list
+            os_name="windows", supported_operating_systems=windows_os_list, arch=cpu_arch
         )
         py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
-    arch = get_cluster_architecture()
-    cpu_arch = arch if arch != AMD_64 else None
+
+def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str | None = None) -> None:
+    """Generate instance type matrix dictionaries in py_config from OS lists.
+
+    Args:
+        os_dict: Dict with OS lists (e.g., "rhel_os_list", "windows_os_list",
+            "instance_type_rhel_os_list").
+        cpu_arch: Optional architecture suffix.
+    """
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
@@ -454,7 +520,9 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch if arch != S390X else None
+            os_name="centos",
+            preferences=instance_type_centos_os_list,
+            arch_suffix=cpu_arch if cpu_arch != S390X else None,
         )
 
 
@@ -507,3 +575,35 @@ def update_latest_os_config(session_config: pytest.Config) -> None:
     if session_config.getoption("latest_fedora") and py_config.get("fedora_os_matrix"):
         latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
         py_config["fedora_os_matrix"] = [{"fedora": latest_fedora_os_dict}]
+
+
+def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
+    """Update py_config with CPU architecture settings and OS matrices.
+
+    Args:
+        cpu_arch_option: Comma-separated architecture(s) from CLI, or empty string.
+    """
+    validate_cpu_arch_params(cpu_arch_option=cpu_arch_option)
+
+    cpu_arch = cpu_arch_option.split(",") if cpu_arch_option else list(get_cluster_architecture())
+
+    if len(cpu_arch) > 1:
+        LOGGER.warning("OS matrix generation is not supported for multi-arch runs!")
+    else:
+        arch = cpu_arch[0]
+        py_config["cpu_arch"] = arch
+
+        # TODO: remove this when utilities modules are refactored
+        import utilities.constants as constants_module
+
+        constants_module.Images = getattr(constants_module.ArchImages, arch.upper())
+
+        if py_config["cluster_type"] == MULTIARCH:
+            generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+            generate_instance_type_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+        else:
+            generate_common_template_matrix_dicts(os_dict=py_config)
+            if py_config["cluster_type"] != AMD_64:
+                generate_instance_type_matrix_dicts(os_dict=py_config, cpu_arch=arch)
+            else:
+                generate_instance_type_matrix_dicts(os_dict=py_config)

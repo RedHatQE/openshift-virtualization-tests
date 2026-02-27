@@ -43,6 +43,8 @@ AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
+MULTIARCH = "multiarch"
+SUPPORTED_CPU_ARCHITECTURES = (AMD_64, ARM_64, S390X)
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
@@ -203,7 +205,9 @@ class ArchImages:
 
 
 # Choose the Image class according to the architecture. Default: amd64
-Images = getattr(ArchImages, get_cluster_architecture().upper())
+# Value is re-assigned in pytest_utils.py update_arch_related_config()
+# TODO: remove this when utilities modules are refactored
+Images = getattr(ArchImages, next(iter(get_cluster_architecture())).upper())
 
 
 # Virtctl constants
