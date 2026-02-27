@@ -7,6 +7,7 @@ from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.installplan import InstallPlan
+from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
@@ -43,18 +44,15 @@ from utilities.infra import (
     get_latest_stable_released_z_stream_info,
 )
 from utilities.operator import (
-    create_catalog_source,
-    create_icsp_idms_from_file,
+    apply_icsp_idms,
     create_operator,
     create_operator_group,
     create_subscription,
     generate_icsp_idms_file,
     get_hco_csv_name_by_version,
     get_install_plan_from_subscription,
-    get_mcp_updating_transition_times,
+    update_image_in_catalog_source,
     wait_for_catalogsource_ready,
-    wait_for_mcp_update_end,
-    wait_for_mcp_update_start,
 )
 from utilities.storage import (
     HppCsiStorageClass,
@@ -117,22 +115,22 @@ def generated_hyperconverged_icsp_idms(
 def updated_icsp_hyperconverged(
     is_production_source,
     generated_hyperconverged_icsp_idms,
+    is_idms_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
+    nodes,
 ):
-    initial_updating_transition_times = get_mcp_updating_transition_times(
-        mcp_conditions=machine_config_pools_conditions_scope_module
-    )
     if is_production_source:
         LOGGER.info("This is installation from production source, icsp/idms update is not needed.")
         return
-    create_icsp_idms_from_file(file_path=generated_hyperconverged_icsp_idms)
-    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
-    wait_for_mcp_update_start(
-        machine_config_pools_list=machine_config_pools,
-        initial_transition_times=initial_updating_transition_times,
+    apply_icsp_idms(
+        file_paths=[generated_hyperconverged_icsp_idms],
+        machine_config_pools=machine_config_pools,
+        mcp_conditions=machine_config_pools_conditions_scope_module,
+        nodes=nodes,
+        is_idms_file=is_idms_cluster,
+        delete_file=True,
     )
-    wait_for_mcp_update_end(machine_config_pools_list=machine_config_pools)
 
 
 @pytest.fixture(scope="module")
@@ -140,22 +138,30 @@ def hyperconverged_catalog_source(admin_client, is_production_source, cnv_image_
     if is_production_source:
         LOGGER.info("No creation or update to catalogsource is needed for installation from production source.")
         return
-    LOGGER.info(f"Creating catalog source {HCO_CATALOG_SOURCE}")
-    catalog_source = create_catalog_source(
-        catalog_name=HCO_CATALOG_SOURCE,
+    update_image_in_catalog_source(
+        client=admin_client,
         image=cnv_image_url,
-        admin_client=admin_client,
+        catalog_source_name=HCO_CATALOG_SOURCE,
+        cr_name=py_config["hco_cr_name"],
     )
     wait_for_catalogsource_ready(
         admin_client=admin_client,
         catalog_name=HCO_CATALOG_SOURCE,
     )
-    return catalog_source
 
 
 @pytest.fixture(scope="module")
-def created_cnv_namespace(admin_client):
-    cnv_namespace_name = py_config["hco_namespace"]
+def created_cnv_namespace(admin_client, request):
+    try:
+        hco_ns = request.getfixturevalue("hco_namespace")
+        cnv_namespace_name = hco_ns.name
+    except AttributeError:
+        cnv_namespace_name = py_config["hco_namespace"]
+    # Delete existing namespace if it exists from previous test runs
+    existing_ns = Namespace(client=admin_client, name=cnv_namespace_name)
+    if existing_ns.exists:
+        LOGGER.info(f"Deleting existing namespace {cnv_namespace_name}")
+        existing_ns.delete(wait=True)
     yield from create_ns(
         admin_client=admin_client,
         name=cnv_namespace_name,
@@ -190,7 +196,7 @@ def installed_cnv_subscription(
         subscription_name=HCO_SUBSCRIPTION,
         package_name=py_config["hco_cr_name"],
         namespace_name=created_cnv_namespace.name,
-        catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else hyperconverged_catalog_source.name,
+        catalogsource_name=PRODUCTION_CATALOG_SOURCE if is_production_source else HCO_CATALOG_SOURCE,
         admin_client=admin_client,
         channel_name=cnv_version_to_install_info["channel"],
     )
