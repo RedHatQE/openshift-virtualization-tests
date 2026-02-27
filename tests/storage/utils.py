@@ -4,6 +4,7 @@ import shlex
 from contextlib import contextmanager
 from typing import Generator
 
+import pytest
 import requests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cdi import CDI
@@ -25,6 +26,8 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
+from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -33,7 +36,9 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     CDI_UPLOADPROXY,
+    LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
@@ -503,3 +508,43 @@ def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus
     assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
     actual_bus = disk.get("disk", {}).get("bus")
     assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
+
+
+def check_file_in_vm(
+    vm: VirtualMachineForTests,
+    file_name: str,
+    file_content: str,
+    username: str | None = None,
+    password: str | None = None,
+) -> None:
+    """
+    Check that a file exists in a VM with expected content.
+
+    Args:
+        vm: VirtualMachine instance
+        file_name: Name of the file to check
+        file_content: Expected content in the file
+        username: Optional username for console login (defaults to vm.username)
+        password: Optional password for console login (defaults to vm.password)
+    """
+    LOGGER.info(f"Verifying file {file_name} exists in VM {vm.name}")
+    if not vm.ready:
+        LOGGER.info(f"Starting VM {vm.name}")
+        vm.start(wait=True)
+    with console.Console(vm=vm, username=username, password=password) as vm_console:
+        LOGGER.info(f"Checking file contents for {file_name} in VM {vm.name}")
+        vm_console.sendline(LS_COMMAND)
+        vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
+        vm_console.sendline(f"cat {file_name}")
+        vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
+
+
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    if storage_class in cluster_storage_classes_names:
+        return storage_class
+
+    pytest.fail(
+        NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+            storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
+        )
+    )

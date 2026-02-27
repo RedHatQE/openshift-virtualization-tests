@@ -1,11 +1,15 @@
 import logging
+import os
 import re
+import tempfile
 from copy import deepcopy
 
 import pytest
 import requests
+import yaml
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.migration import Migration
 from ocp_resources.namespace import Namespace
@@ -16,6 +20,7 @@ from ocp_resources.provider import Provider
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
+from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_map import StorageMap
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -25,11 +30,26 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from tests.storage.cross_cluster_live_migration.constants import (
+    TEST_FILE_CONTENT,
+    TEST_FILE_NAME,
+)
 from tests.storage.cross_cluster_live_migration.utils import (
     enable_feature_gate_and_configure_hco_live_migration_network,
+    get_vm_boot_time_via_console,
+)
+from tests.storage.utils import get_storage_class_for_storage_migration
+from utilities.artifactory import (
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_http_image_url,
 )
 from utilities.constants import (
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WINDOWS,
+    REGISTRY_STR,
     RHEL10_PREFERENCE,
     RHEL10_STR,
     TIMEOUT_1MIN,
@@ -38,7 +58,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
-from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.storage import data_volume_template_with_source_ref_dict, write_file
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -98,6 +118,58 @@ def remote_cluster_auth_token(remote_admin_client):
     if token_match := re.match(r"Bearer (.*)", remote_admin_client.configuration.api_key.get("authorization", "")):
         return token_match.group(1)
     raise NotFoundError("Unable to extract authentication token from remote admin client")
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_kubeconfig(remote_admin_client, remote_cluster_auth_token):
+    """
+    Generate a kubeconfig file from the remote admin client credentials.
+    Returns the path to the generated kubeconfig file.
+    """
+    # Extract cluster information from the client
+    cluster_host = remote_admin_client.configuration.host
+    cluster_name = "remote-cluster"
+    user_name = "remote-admin"
+    context_name = "remote-context"
+
+    # Create kubeconfig structure
+    kubeconfig_dict = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [
+            {
+                "name": cluster_name,
+                "cluster": {
+                    "server": cluster_host,
+                    "insecure-skip-tls-verify": True,  # Since we're using verify_ssl=False
+                },
+            }
+        ],
+        "users": [{"name": user_name, "user": {"token": remote_cluster_auth_token}}],
+        "contexts": [{"name": context_name, "context": {"cluster": cluster_name, "user": user_name}}],
+        "current-context": context_name,
+    }
+
+    # Create temporary file for kubeconfig
+    temp_dir = tempfile.mkdtemp(suffix="-remote-kubeconfig")
+    kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
+
+    # Create file with 0o600 rw------- permissions (owner read/write only)
+    file_descriptor = os.open(kubeconfig_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(file_descriptor, "w") as kubeconfig_file:
+        yaml.safe_dump(kubeconfig_dict, kubeconfig_file)
+
+    LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
+
+    yield kubeconfig_path
+
+    # Cleanup
+    try:
+        os.remove(kubeconfig_path)
+        os.rmdir(temp_dir)
+        LOGGER.info(f"Cleaned up remote cluster kubeconfig at: {kubeconfig_path}")
+    except Exception as e:
+        LOGGER.warning(f"Failed to cleanup remote cluster kubeconfig: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -290,8 +362,35 @@ def local_cluster_mtv_provider_for_local_cluster(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
+def remote_cluster_storage_classes_names(remote_admin_client):
+    return [sc.name for sc in list(StorageClass.get(client=remote_admin_client))]
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_source_storage_class(request, remote_cluster_storage_classes_names):
+    # Storage class for the original VMs creation in the remote cluster
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["source_storage_class"],
+        cluster_storage_classes_names=remote_cluster_storage_classes_names,
+    )
+
+
+@pytest.fixture(scope="class")
+def local_cluster_target_storage_class(request, cluster_storage_classes_names):
+    # Storage class for the target VMs in the local cluster
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["target_storage_class"], cluster_storage_classes_names=cluster_storage_classes_names
+    )
+
+
+@pytest.fixture(scope="class")
 def local_cluster_mtv_storage_map(
-    admin_client, local_cluster_mtv_provider_for_local_cluster, local_cluster_mtv_provider_for_remote_cluster
+    admin_client,
+    local_cluster_mtv_provider_for_local_cluster,
+    local_cluster_mtv_provider_for_remote_cluster,
+    unique_suffix,
+    remote_cluster_source_storage_class,
+    local_cluster_target_storage_class,
 ):
     """
     Create a StorageMap resource for MTV migration.
@@ -299,13 +398,13 @@ def local_cluster_mtv_storage_map(
     """
     mapping = [
         {
-            "source": {"name": py_config["default_storage_class"]},
-            "destination": {"storageClass": py_config["default_storage_class"]},
+            "source": {"name": remote_cluster_source_storage_class},
+            "destination": {"storageClass": local_cluster_target_storage_class},
         }
     ]
     with StorageMap(
         client=admin_client,
-        name="storage-map",
+        name=f"storage-map-{unique_suffix}",
         namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
         source_provider_name=local_cluster_mtv_provider_for_remote_cluster.name,
         source_provider_namespace=local_cluster_mtv_provider_for_remote_cluster.namespace,
@@ -374,7 +473,11 @@ def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_kubeconfig,
+    remote_cluster_source_storage_class,
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
@@ -383,17 +486,21 @@ def vm_for_cclm_from_template_with_data_source(
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=remote_cluster_rhel10_data_source,
-            storage_class=py_config["default_storage_class"],
+            storage_class=remote_cluster_source_storage_class,
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
         yield vm
 
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_with_instance_type(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_kubeconfig,
+    remote_cluster_source_storage_class,
 ):
     with VirtualMachineForTests(
         name="vm-with-instance-type",
@@ -404,10 +511,41 @@ def vm_for_cclm_with_instance_type(
         vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE, client=remote_admin_client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=remote_cluster_rhel10_data_source,
-            storage_class=py_config["default_storage_class"],
+            storage_class=remote_cluster_source_storage_class,
         ),
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_from_template_with_dv(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_kubeconfig,
+    remote_cluster_source_storage_class,
+):
+    dv = DataVolume(
+        name="dv-fedora-imported-cclm",
+        namespace=remote_cluster_source_test_namespace.name,
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=remote_cluster_source_storage_class,
+        api_name="storage",
+        client=remote_admin_client,
+    )
+    dv.to_dict()
+    dv.res["metadata"].pop("namespace", None)
+    with VirtualMachineForTests(
+        name="vm-from-template-and-imported-dv",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        vm.start()
         yield vm
 
 
@@ -423,6 +561,115 @@ def vms_for_cclm(request):
 
 
 @pytest.fixture(scope="class")
+def booted_vms_for_cclm(vms_for_cclm, dv_wait_timeout):
+    for vm in vms_for_cclm:
+        running_vm(
+            vm=vm, dv_wait_timeout=dv_wait_timeout, check_ssh_connectivity=False
+        )  # False because we can't ssh to a VM in the remote cluster
+    return vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def vms_boot_time_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+    yield {
+        vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
+    }
+
+
+@pytest.fixture(scope="class")
+def written_file_to_vms_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+    for vm in booted_vms_for_cclm:
+        write_file(
+            vm=vm,
+            filename=TEST_FILE_NAME,
+            content=TEST_FILE_CONTENT,
+            stop_vm=False,
+            kubeconfig=remote_cluster_kubeconfig,
+        )
+    yield booted_vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def local_vms_after_cclm_migration(admin_client, namespace, vms_for_cclm):
+    """
+    Create local VM references for VMs after CCLM migration.
+
+    Args:
+        admin_client: DynamicClient for the local cluster
+        namespace: The namespace where the VMs are located in the local cluster
+        vms_for_cclm: List of VirtualMachineForTests objects from the remote cluster
+
+    Returns:
+        List of VirtualMachineForTests objects referencing VMs in the local cluster
+    """
+    local_vms = []
+    for vm in vms_for_cclm:
+        local_vm = VirtualMachineForTests(
+            name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
+        )
+        local_vm.username = vm.username
+        local_vm.password = vm.password
+        local_vms.append(local_vm)
+    return local_vms
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_artifactory_secret_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_secret = get_artifactory_secret(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_secret
+    if artifactory_secret:
+        artifactory_secret.clean_up()
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_config_map = get_artifactory_config_map(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_config_map
+    if artifactory_config_map:
+        artifactory_config_map.clean_up()
+
+
+@pytest.fixture(scope="class")
+def windows_vm_with_vtpm_for_cclm(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_source_storage_class,
+    remote_cluster_artifactory_secret_scope_class,
+    remote_cluster_artifactory_config_map_scope_class,
+):
+    dv = DataVolume(
+        name="windows-11-dv",
+        namespace=remote_cluster_source_test_namespace.name,
+        storage_class=remote_cluster_source_storage_class,
+        source="http",
+        # Using WSL image to avoid the issue of the Windows VM not being able to boot
+        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        client=remote_admin_client,
+        api_name="storage",
+        secret=remote_cluster_artifactory_secret_scope_class,
+        cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,
+    )
+    dv.to_dict()
+    dv.res["metadata"].pop("namespace", None)
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
+        name="windows-11-vm",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large", client=remote_admin_client),
+        vm_preference=VirtualMachineClusterPreference(name="windows.11", client=remote_admin_client),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def mtv_migration_plan(
     admin_client,
     mtv_namespace,
@@ -431,7 +678,7 @@ def mtv_migration_plan(
     local_cluster_mtv_storage_map,
     local_cluster_mtv_network_map,
     namespace,
-    vms_for_cclm,
+    booted_vms_for_cclm,
     unique_suffix,
 ):
     """
@@ -444,7 +691,7 @@ def mtv_migration_plan(
             "name": vm.name,
             "namespace": vm.namespace,
         }
-        for vm in vms_for_cclm
+        for vm in booted_vms_for_cclm
     ]
     with Plan(
         client=admin_client,
