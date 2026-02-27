@@ -1,5 +1,4 @@
 import logging
-import os
 
 import bitmath
 import pytest
@@ -16,7 +15,6 @@ from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
     OPENSHIFT_VIRTUALIZATION,
 )
-from tests.install_upgrade_operators.product_install.utils import get_all_resources
 from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     CRITICAL_STR,
@@ -31,9 +29,6 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     StorageClassNames,
-)
-from utilities.data_collector import (
-    get_data_collector_base_directory,
 )
 from utilities.infra import (
     create_ns,
@@ -67,21 +62,6 @@ from utilities.storage import (
 INSTALLATION_VERSION_MISMATCH = "98"
 LOCAL_BLOCK_HPP = "local-block-hpp"
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session")
-def installation_data_dir():
-    return os.path.join(get_data_collector_base_directory(), "resource_information")
-
-
-@pytest.fixture(scope="session")
-def before_installation_all_resources(installation_data_dir):
-    return get_all_resources(file_name="before_installation", base_directory=installation_data_dir)
-
-
-@pytest.fixture(scope="module")
-def after_installation_all_resources(installation_data_dir):
-    return get_all_resources(file_name="after_installation", base_directory=installation_data_dir)
 
 
 @pytest.fixture(scope="module")
