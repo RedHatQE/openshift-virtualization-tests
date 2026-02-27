@@ -32,6 +32,20 @@ NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
 LOGGER = logging.getLogger(__name__)
 
 
+def random_ip_addresses(
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+) -> list[str]:
+    addresses = []
+    if ipv4_supported_cluster:
+        addresses.append(next(ipv4_localnet_address_pool))
+    if ipv6_supported_cluster:
+        addresses.append(next(ipv6_localnet_address_pool))
+    return addresses
+
+
 def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
     for vm in vms:
         try:
