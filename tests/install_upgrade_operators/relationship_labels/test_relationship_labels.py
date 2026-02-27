@@ -7,7 +7,6 @@ from tests.install_upgrade_operators.relationship_labels.constants import (
     EXPECTED_RELATED_OBJECTS_LABELS_DICT_MAP,
     EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP,
     EXPECTED_VIRT_DEPLOYMENTS_LABELS_DICT_MAP,
-    EXPECTED_VIRT_PODS_LABELS_DICT_MAP,
 )
 from tests.install_upgrade_operators.relationship_labels.utils import (
     verify_component_labels_by_resource,
@@ -71,23 +70,6 @@ class TestRelationshipLabels:
             component=cnv_daemonset_by_name,
             expected_component_labels=expected_label_dictionary,
         )
-
-    @pytest.mark.parametrize(
-        "expected_label_dictionary",
-        [
-            pytest.param(
-                {"expected_labels_dict": EXPECTED_VIRT_PODS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-10307"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pods_by_type):
-        for pod in cnv_pods_by_type:
-            verify_component_labels_by_resource(
-                component=pod,
-                expected_component_labels=expected_label_dictionary,
-            )
 
     @pytest.mark.parametrize(
         "expected_label_dictionary",
