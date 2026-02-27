@@ -65,17 +65,17 @@ class TestGenerateOsMatrixDict:
         """Test Windows OS matrix generation with UEFI support"""
         mock_images.Windows = mock_os_images["windows"]
 
-        result = generate_os_matrix_dict("windows", ["win-10", "win-2019"])
+        result = generate_os_matrix_dict("windows", ["win-11", "win-2019"])
 
         assert len(result) == 2
 
-        # Check Windows 10 (UEFI + desktop workload)
-        win10 = next(item for item in result if "win-10" in item)["win-10"]
-        assert win10["os_version"] == "10"
-        assert win10["image_name"] == "win10.qcow2"
-        assert win10["image_path"] == "cnv-tests/windows-uefi-images/win10.qcow2"
-        assert win10["template_labels"]["workload"] == "desktop"
-        assert win10["template_labels"]["flavor"] == "medium"
+        # Check Windows 11 (desktop workload)
+        win11 = next(item for item in result if "win-11" in item)["win-11"]
+        assert win11["os_version"] == "11"
+        assert win11["image_name"] == "win11.qcow2"
+        assert win11["image_path"] == "cnv-tests/windows-images/win11.qcow2"
+        assert win11["template_labels"]["workload"] == "desktop"
+        assert win11["template_labels"]["flavor"] == "medium"
 
         # Check Windows 2019 (UEFI + server workload)
         win2019 = next(item for item in result if "win-2019" in item)["win-2019"]
@@ -201,13 +201,13 @@ class TestGenerateOsMatrixDict:
         mock_class = MagicMock()
         mock_class.LATEST_RELEASE_STR = "win2k25.qcow2"
         mock_class.DEFAULT_DV_SIZE = "60Gi"
-        mock_class.WIN10_IMG = "win10.qcow2"
+        mock_class.WIN2k19_IMG = "win2k19.qcow2"
         # Missing UEFI_WIN_DIR
         del mock_class.UEFI_WIN_DIR
         mock_images.Windows = mock_class
 
         with pytest.raises(ValueError, match="windows is missing `UEFI_WIN_DIR` attribute"):
-            generate_os_matrix_dict("windows", ["win-10"])
+            generate_os_matrix_dict("windows", ["win-2019"])
 
 
 class TestGenerateInstanceTypeRhelOsMatrix:
@@ -301,8 +301,8 @@ class TestOsMappingsConstants:
         assert "flavor" in WINDOWS_OS_MAPPING
 
         # Check for UEFI flag where expected
-        assert WINDOWS_OS_MAPPING["win-10"]["uefi"] is True
         assert WINDOWS_OS_MAPPING["win-2019"]["uefi"] is True
+        assert WINDOWS_OS_MAPPING["win-2025"]["uefi"] is True
         assert "uefi" not in WINDOWS_OS_MAPPING["win-2022"]
 
     def test_fedora_os_mapping_structure(self):

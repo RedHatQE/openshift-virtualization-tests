@@ -12,9 +12,9 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
+from tests.os_params import WINDOWS_11_TEMPLATE_LABELS
 from tests.utils import start_stress_on_vm
-from tests.virt.constants import WINDOWS_10_WSL
+from tests.virt.constants import WINDOWS_11_WSL
 from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
@@ -105,10 +105,10 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
     "golden_image_data_source_for_test_scope_function, vm_with_memory_load",
     [
         pytest.param(
-            {"os_dict": WINDOWS_10_WSL},
+            {"os_dict": WINDOWS_11_WSL},
             {
                 "vm_name": "windows-vm-with-memory-load",
-                "template_labels": WINDOWS_10_TEMPLATE_LABELS,
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                 "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
                 "cpu_cores": 16,
                 "cpu_threads": 1,

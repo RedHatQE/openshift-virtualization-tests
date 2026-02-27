@@ -36,7 +36,7 @@ def verify_gpu_expected_count_updated_on_node(gpu_nodes, device_name, expected_c
 
 
 def install_nvidia_drivers_on_windows_vm(vm, supported_gpu_device):
-    # Installs NVIDIA Drivers placed on the Windows-10 or win2k19 Images.
+    # Installs NVIDIA Drivers placed on the Windows-11 or win2k19 Images.
     # vGPU uses NVIDIA GRID Drivers and GPU Passthrough uses normal NVIDIA Drivers.
     vgpu_device_name = supported_gpu_device[VGPU_DEVICE_NAME_STR]
     gpu_mode = "vgpu" if fetch_gpu_device_name_from_vm_instance(vm) == vgpu_device_name else "gpu"
