@@ -1031,7 +1031,7 @@ def wait_for_volume_snapshot_ready_to_use(namespace, name):
     ready_to_use_status = "readyToUse"
     LOGGER.info(f"Wait for VolumeSnapshot '{name}' in '{namespace}' to be '{ready_to_use_status}'")
     volume_snapshot = VolumeSnapshot(namespace=namespace, name=name)
-    volume_snapshot.wait()
+    volume_snapshot.wait(timeout=TIMEOUT_6MIN)
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
