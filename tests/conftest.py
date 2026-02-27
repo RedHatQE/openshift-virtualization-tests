@@ -1753,11 +1753,12 @@ def determine_upgrade_stream(current_version, target_version):
 
 
 @pytest.fixture(scope="session")
-def upgrade_namespace_scope_session(admin_client, unprivileged_client):
+def upgrade_namespace_scope_session(admin_client, unprivileged_client, keep_upgrade_test_resources):
     yield from create_ns(
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
         name="test-upgrade-namespace",
+        teardown=not keep_upgrade_test_resources,
     )
 
 
@@ -2439,6 +2440,11 @@ def upgrade_skip_default_sc_setup(pytestconfig):
 
 
 @pytest.fixture(scope="session")
+def keep_upgrade_test_resources(pytestconfig):
+    return pytestconfig.option.keep_upgrade_test_resources
+
+
+@pytest.fixture(scope="session")
 def updated_default_storage_class_ocs_virt(
     admin_client,
     upgrade_skip_default_sc_setup,
@@ -2488,6 +2494,7 @@ def dvs_for_upgrade(
     worker_node1,
     rhel_latest_os_params,
     updated_default_storage_class_ocs_virt,
+    keep_upgrade_test_resources,
 ):
     golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
@@ -2509,19 +2516,21 @@ def dvs_for_upgrade(
             bind_immediate_annotation=True,
             api_name="storage",
         )
-        dv.create()
+        if not dv.exists:
+            dv.create()
         dvs_list.append(dv)
     for dv in dvs_list:
         dv.wait_for_dv_success()
 
     yield dvs_list
 
-    for dv in dvs_list:
-        dv.clean_up()
-    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
+    if not keep_upgrade_test_resources:
+        for dv in dvs_list:
+            dv.clean_up()
+        utilities.artifactory.cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret,
+            artifactory_config_map=artifactory_config_map,
+        )
 
 
 @pytest.fixture(scope="class")

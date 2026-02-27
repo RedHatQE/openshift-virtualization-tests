@@ -179,6 +179,11 @@ def pytest_addoption(parser):
         help="Runs cnv install tests",
         action="store_true",
     )
+    install_upgrade_group.addoption(
+        "--keep-upgrade-test-resources",
+        help="Keep upgrade test resources (VMs, DVs, namespaces) after the session ends",
+        action="store_true",
+    )
     # Matrix addoption
     matrix_group.addoption("--storage-class-matrix", help="Storage class matrix to use")
     matrix_group.addoption("--bridge-device-matrix", help="Bridge device matrix to use")
@@ -482,6 +487,11 @@ def filter_upgrade_tests(
             upgrade_tests=upgrade_tests,
         )
         return upgrade_tests, [*non_upgrade_tests, *discard]
+
+    # When --keep-upgrade-test-resources is set without --upgrade/--upgrade_custom,
+    # keep upgrade tests to allow running before_upgrade fixtures without the full upgrade pipeline.
+    if config.getoption("keep_upgrade_test_resources"):
+        return items, []
 
     # If no upgrade marker in config, discard all upgrade tests.
     return non_upgrade_tests, upgrade_tests
