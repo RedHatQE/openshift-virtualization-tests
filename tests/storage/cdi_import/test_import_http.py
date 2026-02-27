@@ -421,7 +421,7 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "number_of_processes",
+    "number_of_dvs",
     [
         pytest.param(
             1,
@@ -434,10 +434,9 @@ def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_funct
     ],
 )
 def test_successful_concurrent_blank_disk_import(
-    dv_list_created_by_multiprocess,
-    vm_list_created_by_multiprocess,
+    created_vm_list,
 ):
-    for vm in vm_list_created_by_multiprocess:
+    for vm in created_vm_list:
         running_vm(vm=vm)
 
 
