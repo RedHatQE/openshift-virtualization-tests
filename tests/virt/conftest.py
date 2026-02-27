@@ -9,12 +9,18 @@ from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
+from tests.utils import (
+    verify_cpumanager_workers,
+    verify_hugepages_1gi,
+    verify_rwx_default_storage,
+)
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
+    MDEV_NAME_STR,
     NVIDIA_VGPU_MANAGER_DS,
 )
 from tests.virt.node.gpu.utils import (
+    restart_vgpu_device_manager,
     wait_for_manager_pods_deployed,
 )
 from tests.virt.utils import (
@@ -26,9 +32,16 @@ from tests.virt.utils import (
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
 )
-from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants import (
+    AMD,
+    INTEL,
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+    NamespacesNames,
+)
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
 from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
+from utilities.jira import is_jira_open
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
@@ -219,14 +232,33 @@ def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource
 
 
 @pytest.fixture(scope="session")
-def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
+def gpu_nodes_labeled_with_vgpu_config(nodes_with_supported_gpus, supported_gpu_device):
+    vgpu_config = supported_gpu_device[MDEV_NAME_STR].split()[-1]
+    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/vgpu.config": vgpu_config})
+
+
+@pytest.fixture(scope="session")
+def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus, gpu_nodes_labeled_with_vgpu_config):
     yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/gpu.workload.config": "vm-vgpu"})
 
 
 @pytest.fixture(scope="session")
-def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
+def vgpu_ready_nodes(
+    admin_client,
+    gpu_nodes_labeled_with_vm_vgpu,
+    nodes_with_supported_gpus,
+    jira_cnv_77535_open,
+):
     wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name="nvidia-vgpu-device-manager")
+    if jira_cnv_77535_open:
+        restart_vgpu_device_manager(admin_client=admin_client, nodes=nodes_with_supported_gpus)
     yield gpu_nodes_labeled_with_vm_vgpu
+
+
+@pytest.fixture(scope="session")
+def jira_cnv_77535_open():
+    return is_jira_open(jira_id="CNV-77535")
 
 
 @pytest.fixture(scope="session")

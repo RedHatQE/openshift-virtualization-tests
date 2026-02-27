@@ -263,10 +263,10 @@ def patch_hco_cr_with_mdev_permitted_hostdevices(hyperconverged_resource, suppor
         patches={
             hyperconverged_resource: {
                 "spec": {
-                    "mediatedDevicesConfiguration": {"mediatedDeviceTypes": [supported_gpu_device[MDEV_TYPE_STR]]},
                     "permittedHostDevices": {
                         "mediatedDevices": [
                             {
+                                "externalResourceProvider": True,
                                 "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
                                 "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
                             }
