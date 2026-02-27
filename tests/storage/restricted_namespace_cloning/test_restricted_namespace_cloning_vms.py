@@ -72,7 +72,7 @@ def create_vm_negative(
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account, "
+    "namespace, dv_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account, "
     "permissions_datavolume_destination",
     [
         pytest.param(
@@ -108,8 +108,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     run=False,
 )
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, "
-    "permissions_datavolume_source, permissions_datavolume_destination",
+    "namespace, dv_multi_storage_scope_module, permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -141,7 +140,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
 
 
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
+    "namespace, dv_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
@@ -173,7 +172,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
 
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_destination",
+    "namespace, dv_multi_storage_scope_module, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
