@@ -38,6 +38,8 @@ Before writing ANY new code:
 - **NEVER use single-letter variable names** - ALWAYS use descriptive, meaningful names
 - **No dead code** - every function, variable, fixture MUST be used or removed. Code marked with `# skip-unused-code` is excluded from dead code analysis (enforced via custom ruff plugin).
 - **Prefer direct attribute access** - use `foo.attr` directly. Save to variables only when: reusing the same attribute multiple times improves readability, or extracting clarifies intent.
+- **Imports always at the top of the module** - do not import inside functions
+- **New functions and helpers don't belong in `conftest.py`** - new functions and helpers belong in libs, conftest is for fixtures
 
 ### Acceptable Defensive Checks (Exceptions Only)
 
@@ -64,6 +66,7 @@ The "no defensive programming" rule has these five exceptions:
 - **Tests MUST be independent** - use `pytest-dependency` ONLY when test B requires side effects from test A (e.g., cluster-wide configuration).
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
 - **ALWAYS use `@pytest.mark.usefixtures`** - REQUIRED when fixture return value is not used by test
+- **Do not offer to use `pytest.skip()` or `@pytest.mark.skip` or `@pytest.mark.skipif`** - programmatic skips in this repo are not allowed
 
 ### Fixture Guidelines (CRITICAL)
 
