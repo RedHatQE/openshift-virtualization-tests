@@ -84,6 +84,7 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    TIMEOUT_30SEC,
     VIRT_HANDLER,
     VIRT_LAUNCHER,
     VIRTCTL,
@@ -2660,19 +2661,27 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
     }
 
     LOGGER.info("Stopping user agent")
-    run_os_command(vm=vm, command=commands["stop-user-agent"][os_type])
+    run_os_command(
+        vm=vm,
+        command=commands["stop-user-agent"][os_type],
+        ssh_timeout=TIMEOUT_30SEC if os_type == OS_FLAVOR_WINDOWS else TIMEOUT_5SEC,
+    )
     wait_for_user_agent_down(vm=vm, timeout=TIMEOUT_2MIN)
 
     LOGGER.info(f"Rebooting {vm.name} from guest")
-    run_os_command(vm=vm, command=commands["reboot"][os_type])
+    run_os_command(
+        vm=vm,
+        command=commands["reboot"][os_type],
+        ssh_timeout=TIMEOUT_30SEC if os_type == OS_FLAVOR_WINDOWS else TIMEOUT_5SEC,
+    )
 
 
-def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
+def run_os_command(vm: VirtualMachineForTests, command: str, ssh_timeout: int = TIMEOUT_5SEC) -> Optional[str]:
     try:
         return run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(command),
-            timeout=5,
+            timeout=ssh_timeout,
             tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     except ProxyCommandFailure:
