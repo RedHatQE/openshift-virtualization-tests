@@ -12,7 +12,6 @@ from tests.chaos.utils import (
     create_cluster_monitoring_process,
     create_nginx_monitoring_process,
     create_pod_deleting_process,
-    create_vm_with_nginx_service,
     get_instance_type,
     pod_deleting_process_recover,
     terminate_process,
@@ -43,9 +42,10 @@ from utilities.infra import (
     utility_daemonset_for_custom_tests,
     wait_for_node_status,
 )
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, create_vm_with_nginx_service, running_vm
 
 LOGGER = logging.getLogger(__name__)
+NGINX = "nginx"
 
 
 @pytest.fixture(scope="module")
@@ -278,8 +278,9 @@ def nginx_monitoring_process(
 @pytest.fixture()
 def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
-        chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        name=NGINX,
+        namespace=chaos_namespace,
+        client=admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
     )
@@ -288,8 +289,9 @@ def vm_with_nginx_service(chaos_namespace, admin_client, workers_utility_pods, w
 @pytest.fixture()
 def vm_with_nginx_service_and_node_selector(chaos_namespace, admin_client, workers_utility_pods, workers):
     yield from create_vm_with_nginx_service(
-        chaos_namespace=chaos_namespace,
-        admin_client=admin_client,
+        name=NGINX,
+        namespace=chaos_namespace,
+        client=admin_client,
         utility_pods=workers_utility_pods,
         node=random.choice(workers),
         node_selector_label=HOST_LABEL,
