@@ -138,6 +138,14 @@ class VeleroBackup(Backup):
         return super().__exit__(exception_type, exception_value, traceback)
 
 
+OADP_BACKUP_TERMINAL_STATUSES = {
+    VeleroBackup.Backup.Status.COMPLETED,
+    VeleroBackup.Backup.Status.FAILED,
+    VeleroBackup.Backup.Status.PARTIALLYFAILED,
+    VeleroBackup.Backup.Status.FAILEDVALIDATION,
+}
+
+
 @contextmanager
 def create_rhel_vm(
     storage_class: str,

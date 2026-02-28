@@ -14,6 +14,7 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 from ocp_resources.service import Service
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -45,7 +46,7 @@ from utilities.infra import (
     get_resources_by_name_prefix,
     wait_for_node_status,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def create_pod_deleting_process(
                 wait_timeout=max_duration,
                 sleep=interval,
                 func=delete_pods,
-                _client=client,
+                client=client,
                 pod_prefix=pod_prefix,
                 namespace_name=namespace_name,
                 ratio=ratio,
@@ -393,13 +394,13 @@ def pod_deleting_process_recover(resources, namespace, pod_prefix):
         found_any = True
 
         for resource_obj in resource_objs:
-            if resource_obj.kind == Deployment.kind:
-                LOGGER.info(f"Waiting for Deployment {resource_obj.name} to recover replicas")
+            LOGGER.info(f"Waiting for {resource.kind} {resource_obj.name} to recover")
+            if resource is Deployment:
                 resource_obj.wait_for_replicas()
-
-            elif resource_obj.kind == DaemonSet.kind:
-                LOGGER.info(f"Waiting for DaemonSet {resource_obj.name} to recover")
+            elif resource is DaemonSet:
                 resource_obj.wait_until_deployed()
+            else:
+                raise ValueError(f"Unsupported resource type {resource} passed to pod_deleting_process_recover")
 
     if found_any:
         LOGGER.info("Pod recovery process completed successfully.")
@@ -428,11 +429,15 @@ def delete_pods(client, pod_prefix, namespace_name, ratio):
         client: OpenShift/Kubernetes client used to query and delete pods.
         pod_prefix (str): Prefix of pod names to match.
         namespace_name (str): Namespace where pods are located.
-        ratio (float): Fraction of pods to delete (0 < ratio <= 1).
+        ratio (float): Fraction of pods to delete (0 <= ratio <= 1). If ratio is 0, no pods are deleted.
 
     Raises:
         ResourceNotFoundError: If no matching pods are found.
     """
+    if ratio <= 0:
+        LOGGER.info(f"Ratio is {ratio}, skipping pod deletion for prefix {pod_prefix}")
+        return
+
     pods = get_pod_by_name_prefix(
         client=client,
         pod_prefix=pod_prefix,
@@ -501,7 +506,8 @@ def delete_pods_continuously(
             )
         except ResourceNotFoundError:
             LOGGER.info(f"No pods found with prefix {pod_prefix} in this iteration")
-
+        # Using stop_event.wait() intentionally to support cooperative thread cancellation via threading.Event.
+        # Because TimeoutSampler doesn't support threading.Event based shutdown.
         stop_event.wait(timeout=interval)
 
 
@@ -550,3 +556,99 @@ def create_pod_deleting_thread(
     )
 
     return thread, stop_event
+
+
+def wait_for_restored_vm(
+    admin_client,
+    namespace,
+    vm_name_prefix,
+    timeout=TIMEOUT_5MIN,
+    sleep=5,
+):
+    """
+    Wait for a restored VirtualMachine to appear, stabilize, and reach Running state.
+
+    This helper performs a multi-stage wait for a VirtualMachine recreated by OADP restore:
+
+    1. Polls until a VM with the given name prefix appears in the namespace.
+    2. Waits for the VM to become stable (i.e., no longer temporarily disappearing due to
+       reconciliation or recreation).
+    3. Waits until the VM reaches the Running phase.
+
+    The returned object is wrapped as a ``VirtualMachineForTests`` instance. This function
+    has side effects, including polling the Kubernetes API, invoking ``wait_for_running_vm()``,
+    and logging intermediate VM states.
+
+    Args:
+        admin_client:
+            OpenShift/Kubernetes client used to query VM resources.
+        namespace (str):
+            Namespace where the restored VM is expected to appear.
+        vm_name_prefix (str):
+            Prefix of the restored VM name.
+        timeout (int, optional):
+            Total timeout in seconds for each waiting stage. Defaults to ``TIMEOUT_5MIN``.
+        sleep (int, optional):
+            Polling interval in seconds. Defaults to 5.
+
+    Returns:
+        VirtualMachineForTests:
+            Wrapper object representing the restored VM, guaranteed to be in Running state.
+
+    Raises:
+        TimeoutError:
+            If no VM with the specified prefix appears within the timeout, or if the VM
+            fails to stabilize or reach Running state within the allowed time.
+
+    """
+
+    LOGGER.info(f"Waiting for restored VM with prefix {vm_name_prefix}")
+
+    # Step 1: wait until VM appears
+    def find_vm():
+        try:
+            vms = VirtualMachine.get(client=admin_client, namespace=namespace)
+        except ResourceNotFoundError:
+            return None
+
+        for vm in vms:
+            if vm.name.startswith(vm_name_prefix):
+                LOGGER.info(f"Found restored VM {vm.name}")
+                return vm
+
+        return None
+
+    vm = None
+    try:
+        for sample in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=find_vm):
+            if sample:
+                vm = sample
+                break
+    except TimeoutExpiredError as error:
+        raise TimeoutError(f"VM with prefix {vm_name_prefix} not found in namespace {namespace}") from error
+
+    # Wrap into QE VM object
+    vm_wrapper = VirtualMachineForTests(name=vm.name, namespace=namespace, client=admin_client)
+
+    # Step 2: wait until VM becomes stable (no more recreate / 404)
+    LOGGER.info(f"Waiting for VM {vm.name} to stabilize")
+
+    def vm_stable():
+        try:
+            vm_wrapper.instance.get()
+            return True
+        except ResourceNotFoundError:
+            LOGGER.info(f"VM {vm.name} temporarily disappeared, waiting...")
+            return False
+
+    for _ in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=vm_stable):
+        pass
+
+    # Step 3: wait until VM Running
+    LOGGER.info(f"Waiting for VM {vm.name} to reach Running")
+
+    wait_for_running_vm(vm=vm_wrapper)
+
+    LOGGER.info(f"Restored VM {vm.name} is Running")
+
+    return vm_wrapper
