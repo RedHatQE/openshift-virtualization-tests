@@ -14,6 +14,7 @@ from utilities.constants import (
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     RHEL8_PREFERENCE,
     Images,
 )
@@ -133,7 +134,7 @@ def golden_image_windows_vm(
             name=windows_os_matrix__module__[os_name][DATA_SOURCE_STR].replace("win", "windows."),
         ),
         data_volume_template=windows_data_volume_template.res,
-        os_flavor="win-container-disk",
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         disk_type=None,
         cpu_model=modern_cpu_for_migration,
     )
