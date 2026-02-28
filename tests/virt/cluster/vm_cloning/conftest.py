@@ -5,14 +5,15 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
+from pytest_testconfig import config as py_config
 
 from utilities.constants import (
     OS_FLAVOR_RHEL,
-    RHEL9_PREFERENCE,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     U1_SMALL,
     Images,
 )
+from utilities.infra import generate_latest_os_dict
 from utilities.virt import (
     VirtualMachineForCloning,
     create_vm_cloning_job,
@@ -20,6 +21,12 @@ from utilities.virt import (
     running_vm,
     target_vm_from_cloning_job,
 )
+
+
+@pytest.fixture(scope="class")
+def latest_rhel_vm_preference():
+    latest_rhel_dict = generate_latest_os_dict(os_list=py_config["instance_type_rhel_os_matrix"])
+    return latest_rhel_dict[next(iter(latest_rhel_dict))]["preference"]
 
 
 @pytest.fixture(scope="class")
@@ -40,14 +47,14 @@ def fedora_vm_for_cloning(request, unprivileged_client, namespace, cpu_for_migra
 
 
 @pytest.fixture(scope="class")
-def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client):
+def rhel_vm_with_instancetype_and_preference_for_cloning(namespace, unprivileged_client, latest_rhel_vm_preference):
     with VirtualMachineForCloning(
         name=RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
         image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=RHEL9_PREFERENCE),
+        vm_preference=VirtualMachineClusterPreference(name=latest_rhel_vm_preference),
         os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(vm=vm)
