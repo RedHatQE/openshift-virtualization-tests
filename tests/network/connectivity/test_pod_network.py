@@ -99,7 +99,7 @@ def cloud_init_ipv6_network_data(ipv6_primary_interface_cloud_init_data):
 @pytest.mark.gating
 @pytest.mark.single_nic
 @pytest.mark.s390x
-# Not marked as `conformance`; requires NMState
+# conformance candidate
 def test_connectivity_over_pod_network(
     ip_family,
     pod_net_vma,
