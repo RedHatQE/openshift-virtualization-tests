@@ -873,11 +873,14 @@ def pytest_sessionfinish(session, exitstatus):
     # Enrich JUnit XML with AI analysis after all tests complete.
     # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
     if session.config.option.analyze_with_ai:
-        try:
-            enrich_junit_xml(session=session)
-        # Do not fail on any AI analysis failures
-        except Exception:
-            LOGGER.exception("Failed to enrich JUnit XML, original preserved")
+        if exitstatus == 0:
+            LOGGER.info("No test failures (exit code %d), skipping AI analysis", exitstatus)
+
+        else:
+            try:
+                enrich_junit_xml(session)
+            except Exception:
+                LOGGER.exception("Failed to enrich JUnit XML, original preserved")
 
     session.config.option.log_listener.stop()
 
