@@ -294,27 +294,30 @@ def assert_restart_required_condition(vm, expected_message):
         raise
 
 
-def get_vm_cpu_list(vm):
-    vcpuinfo = vm.privileged_vmi.virt_launcher_pod.execute(
+def get_vm_cpu_list(vm, admin_client):
+    vcpuinfo = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
         command=shlex.split(f"virsh vcpuinfo {vm.namespace}_{vm.name}")
     )
 
     return [cpu.split()[1] for cpu in vcpuinfo.split("\n") if re.search(r"^CPU:", cpu)]
 
 
-def get_numa_node_cpu_dict(vm):
+def get_numa_node_cpu_dict(vm, admin_client):
     """
     Extract NUMA nodes from libvirt
 
     Args:
         vm (VirtualMachine): VM
+        admin_client: Privileged client for accessing virt-launcher pod
 
     Returns:
         dict with numa id as key and cpu list as value.
         Example:
             {'<numa_node_id>': [cpu_list]}
     """
-    out = vm.privileged_vmi.virt_launcher_pod.execute(command=shlex.split("virsh capabilities"))
+    out = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
+        command=shlex.split("virsh capabilities")
+    )
     numa = xmltodict.parse(out)["capabilities"]["host"]["cache"]["bank"]
 
     return {elem["@id"]: elem["@cpus"].split(",") for elem in numa}
@@ -340,12 +343,13 @@ def get_numa_cpu_allocation(vm_cpus, numa_nodes):
             return node
 
 
-def get_sriov_pci_address(vm):
+def get_sriov_pci_address(vm, admin_client):
     """
     Get PCI address of SRIOV device in virsh.
 
     Args:
         vm (VirtualMachine): VM object
+        admin_client: Privileged client for XML dict access
 
     Returns:
         list: PCI address(es) of SRIOV device
@@ -353,7 +357,7 @@ def get_sriov_pci_address(vm):
             ['0000:3b:0a.2']
     """
     sriov_pci_addresses = []
-    hostdev_devices = vm.privileged_vmi.xml_dict["domain"]["devices"]["hostdev"]
+    hostdev_devices = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["hostdev"]
     for device in hostdev_devices:
         addr = device["source"]["address"]
         sriov_pci_addresses.append(
@@ -363,12 +367,12 @@ def get_sriov_pci_address(vm):
     return sriov_pci_addresses
 
 
-def get_numa_sriov_allocation(vm, utility_pods):
+def get_numa_sriov_allocation(vm, utility_pods, admin_client):
     """
     Find NUMA node number where SR-IOV device is allocated.
     """
     sriov_alocation_list = []
-    sriov_addresses = get_sriov_pci_address(vm=vm)
+    sriov_addresses = get_sriov_pci_address(vm=vm, admin_client=admin_client)
     for address in sriov_addresses:
         sriov_alocation_list.append(
             ExecCommandOnPod(utility_pods=utility_pods, node=vm.vmi.node)
@@ -379,7 +383,7 @@ def get_numa_sriov_allocation(vm, utility_pods):
     return sriov_alocation_list
 
 
-def validate_dedicated_emulatorthread(vm):
+def validate_dedicated_emulatorthread(vm, admin_client):
     cpu = vm.instance.spec.template.spec.domain.cpu
     template_flavor_expected_cpu_count = cpu.threads * cpu.cores * cpu.sockets
     nproc_output = int(
@@ -395,7 +399,7 @@ def validate_dedicated_emulatorthread(vm):
         f"Guest CPU count {nproc_output} is not as expected, {template_flavor_expected_cpu_count}"
     )
     LOGGER.info("Verify VM XML - Isolate Emulator Thread.")
-    cputune = vm.privileged_vmi.xml_dict["domain"]["cputune"]
+    cputune = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["cputune"]
     emulatorpin_cpuset = cputune["emulatorpin"]["@cpuset"]
     if template_flavor_expected_cpu_count == 1:
         vcpupin_cpuset = cputune["vcpupin"]["@cpuset"]
@@ -410,9 +414,9 @@ def validate_dedicated_emulatorthread(vm):
         )
 
 
-def validate_iothreads_emulatorthread_on_same_pcpu(vm):
+def validate_iothreads_emulatorthread_on_same_pcpu(vm, admin_client):
     LOGGER.info(f"Verify IO Thread Policy in VM {vm.name} domain XML.")
-    cputune = vm.privileged_vmi.xml_dict["domain"]["cputune"]
+    cputune = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["cputune"]
     emulatorpin_cpuset = cputune["emulatorpin"]["@cpuset"]
     iothreadpin_cpuset = cputune["iothreadpin"]["@cpuset"]
     # When dedicatedCPUPlacement is True, isolateEmulatorThread is True,
@@ -443,12 +447,12 @@ def assert_numa_cpu_allocation(vm_cpus, numa_nodes):
     )
 
 
-def assert_cpus_and_sriov_on_same_node(vm, utility_pods):
+def assert_cpus_and_sriov_on_same_node(vm, utility_pods, admin_client):
     cpu_alloc = get_numa_cpu_allocation(
-        vm_cpus=get_vm_cpu_list(vm=vm),
-        numa_nodes=get_numa_node_cpu_dict(vm=vm),
+        vm_cpus=get_vm_cpu_list(vm=vm, admin_client=admin_client),
+        numa_nodes=get_numa_node_cpu_dict(vm=vm, admin_client=admin_client),
     )
-    sriov_alloc = get_numa_sriov_allocation(vm=vm, utility_pods=utility_pods)
+    sriov_alloc = get_numa_sriov_allocation(vm=vm, utility_pods=utility_pods, admin_client=admin_client)
 
     assert set(cpu_alloc) == set(sriov_alloc), (
         f"SR-IOV and CPUs are on different NUMA nodes! CPUs allocated to node {cpu_alloc}, SR-IOV to node {sriov_alloc}"

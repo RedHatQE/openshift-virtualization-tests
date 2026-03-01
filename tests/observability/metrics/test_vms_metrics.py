@@ -257,6 +257,7 @@ class TestVmiFileSystemMetricsLinux:
     @pytest.mark.s390x
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
         self,
+        admin_client,
         prometheus,
         vm_for_test,
         file_system_metric_mountpoints_existence,
@@ -268,6 +269,7 @@ class TestVmiFileSystemMetricsLinux:
             vm_for_test=vm_for_test,
             mount_point=[*disk_file_system_info_linux][0],
             capacity_or_used=capacity_or_used,
+            admin_client=admin_client,
         )
 
 
@@ -290,6 +292,7 @@ class TestVmiFileSystemMetricsWindows:
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
         self,
+        admin_client,
         prometheus,
         windows_vm_for_test,
         disk_file_system_info_windows,
@@ -300,6 +303,7 @@ class TestVmiFileSystemMetricsWindows:
             vm_for_test=windows_vm_for_test,
             mount_point=[*disk_file_system_info_windows][0],
             capacity_or_used=capacity_or_used,
+            admin_client=admin_client,
         )
 
 

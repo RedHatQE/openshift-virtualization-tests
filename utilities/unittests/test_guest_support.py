@@ -76,6 +76,7 @@ class TestCheckVmXmlHyperv:
     def test_check_vm_xml_hyperv_all_features_on(self):
         """Test successful validation when all HyperV features are enabled"""
         mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
 
         # Mock VM XML with all features enabled
         hyperv_features = {
@@ -93,14 +94,15 @@ class TestCheckVmXmlHyperv:
             "reenlightenment": {"@state": "on"},
         }
 
-        mock_vm.privileged_vmi.xml_dict = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
 
         # Should not raise any exception
-        check_vm_xml_hyperv(mock_vm)
+        check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
 
     def test_check_vm_xml_hyperv_feature_off(self):
         """Test assertion failure when one HyperV feature is disabled"""
         mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
 
         # Mock VM XML with one feature disabled
         hyperv_features = {
@@ -118,14 +120,15 @@ class TestCheckVmXmlHyperv:
             "reenlightenment": {"@state": "on"},
         }
 
-        mock_vm.privileged_vmi.xml_dict = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm)
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
 
     def test_check_vm_xml_hyperv_spinlocks_wrong(self):
         """Test assertion failure when spinlocks retries value is incorrect"""
         mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
 
         # Mock VM XML with wrong spinlocks value
         hyperv_features = {
@@ -143,14 +146,15 @@ class TestCheckVmXmlHyperv:
             "reenlightenment": {"@state": "on"},
         }
 
-        mock_vm.privileged_vmi.xml_dict = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm)
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
 
     def test_check_vm_xml_hyperv_stimer_direct_off(self):
         """Test assertion failure when stimer direct feature is disabled"""
         mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
 
         # Mock VM XML with stimer direct disabled
         hyperv_features = {
@@ -168,14 +172,15 @@ class TestCheckVmXmlHyperv:
             "reenlightenment": {"@state": "on"},
         }
 
-        mock_vm.privileged_vmi.xml_dict = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm)
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
 
     def test_check_vm_xml_hyperv_multiple_failures(self):
         """Test assertion failure with multiple incorrect HyperV settings"""
         mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
 
         # Mock VM XML with multiple failures
         hyperv_features = {
@@ -193,10 +198,10 @@ class TestCheckVmXmlHyperv:
             "reenlightenment": {"@state": "on"},
         }
 
-        mock_vm.privileged_vmi.xml_dict = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm)
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
 
 
 class TestCheckWindowsVmHvinfo:

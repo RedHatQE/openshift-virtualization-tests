@@ -1096,10 +1096,6 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.error(f"Status of {self.kind} {self.name} is {status}")
             raise
 
-    @property
-    def privileged_vmi(self):
-        return VirtualMachineInstance(client=get_client(), name=self.name, namespace=self.namespace)
-
     def wait_for_agent_connected(self, timeout: int = TIMEOUT_5MIN):
         self.vmi.wait_for_condition(
             condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
@@ -2211,12 +2207,12 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
         raise
 
 
-def check_migration_process_after_node_drain(client, vm):
+def check_migration_process_after_node_drain(client, vm, admin_client):
     """
     Wait for migration process to succeed and verify that VM indeed moved to new node.
     """
     vmi_old_uid = vm.vmi.instance.metadata.uid
-    source_node = vm.privileged_vmi.virt_launcher_pod.node
+    source_node = vm.vmi.get_node(privileged_client=admin_client)
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
@@ -2224,7 +2220,7 @@ def check_migration_process_after_node_drain(client, vm):
         namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
     )
 
-    target_pod = vm.privileged_vmi.virt_launcher_pod
+    target_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
     target_node = target_pod.node
     LOGGER.info(f"The VMI is currently running on {target_node.name}")
@@ -2455,8 +2451,8 @@ def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
     return ssh_exec.package_manager.exist(package="qemu-guest-agent")
 
 
-def validate_libvirt_persistent_domain(vm):
-    domain = vm.privileged_vmi.virt_launcher_pod.execute(
+def validate_libvirt_persistent_domain(vm, admin_client):
+    domain = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
         command=shlex.split("virsh list --persistent"), container="compute"
     )
     assert vm.vmi.Status.RUNNING.lower() in domain
@@ -2493,14 +2489,14 @@ def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: i
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], admin_client: DynamicClient) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
     """
 
     LOGGER.info("Verify VM XML - SMBIOS values.")
-    smbios_vm = vm.privileged_vmi.xml_dict["domain"]["sysinfo"]["system"]["entry"]
+    smbios_vm = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["sysinfo"]["system"]["entry"]
     smbios_vm_dict = {entry["@name"]: entry["#text"] for entry in smbios_vm}
     assert smbios_vm, "VM XML missing SMBIOS values."
     results = {
@@ -2516,9 +2512,11 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str]) -
     assert all(results.values())
 
 
-def assert_vm_xml_efi(vm: VirtualMachineForTests, secure_boot_enabled: bool = True) -> None:
+def assert_vm_xml_efi(
+    vm: VirtualMachineForTests, admin_client: DynamicClient, *, secure_boot_enabled: bool = True
+) -> None:
     LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.privileged_vmi.xml_dict["domain"]["os"]
+    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
     ovmf_path = "/usr/share/OVMF"
     efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
     # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd

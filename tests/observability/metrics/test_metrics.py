@@ -21,7 +21,7 @@ class TestMetricsLinux:
     @pytest.mark.polarion("CNV-11906")
     @pytest.mark.s390x
     def test_cnv_vmi_monitoring_metrics_linux_vm(
-        self, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
+        self, admin_client, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
     ):
         """
         Tests validating ability to perform various prometheus api queries on various metrics against a given vm.
@@ -31,7 +31,9 @@ class TestMetricsLinux:
         assert_vm_metric(
             prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=single_metric_vm.name
         )
-        assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm)
+        assert_vm_metric_virt_handler_pod(
+            query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm, admin_client=admin_client
+        )
 
 
 @pytest.mark.tier3
@@ -39,6 +41,7 @@ class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
         self,
+        admin_client,
         prometheus,
         windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
@@ -48,7 +51,9 @@ class TestMetricsWindows:
             query=cnv_vmi_monitoring_metrics_matrix__function__,
             vm_name=windows_vm_for_test.name,
         )
-        assert_vm_metric_virt_handler_pod(query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test)
+        assert_vm_metric_virt_handler_pod(
+            query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test, admin_client=admin_client
+        )
 
 
 @pytest.mark.polarion("CNV-10438")

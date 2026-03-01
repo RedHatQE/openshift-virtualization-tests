@@ -79,6 +79,7 @@ class TestVMFeatures:
     @pytest.mark.polarion("CNV-11834")
     def test_efi_secureboot_disabled_and_enabled(
         self,
+        admin_client,
         golden_image_fedora_vm_with_instance_type,
     ):
         vm = golden_image_fedora_vm_with_instance_type
@@ -86,7 +87,7 @@ class TestVMFeatures:
         def _update_and_verify_secure_boot(vm, secure_boot_value):
             update_vm_efi_spec_and_restart(vm=vm, spec={"secureBoot": secure_boot_value})
             # assert vm config at hypervisor level
-            assert_vm_xml_efi(vm=vm, secure_boot_enabled=secure_boot_value)
+            assert_vm_xml_efi(vm=vm, admin_client=admin_client, secure_boot_enabled=secure_boot_value)
             assert_linux_efi(vm=vm)
 
         # Disable secureboot
@@ -96,8 +97,14 @@ class TestVMFeatures:
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11835")
-    def test_vm_smbios_default(self, smbios_from_kubevirt_config, golden_image_fedora_vm_with_instance_type):
-        check_vm_xml_smbios(vm=golden_image_fedora_vm_with_instance_type, cm_values=smbios_from_kubevirt_config)
+    def test_vm_smbios_default(
+        self, admin_client, smbios_from_kubevirt_config, golden_image_fedora_vm_with_instance_type
+    ):
+        check_vm_xml_smbios(
+            vm=golden_image_fedora_vm_with_instance_type,
+            cm_values=smbios_from_kubevirt_config,
+            admin_client=admin_client,
+        )
 
 
 @pytest.mark.arm64

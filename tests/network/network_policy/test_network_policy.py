@@ -18,8 +18,9 @@ def test_network_policy_deny_all_http(
     subtests,
     network_policy_vma,
     network_policy_vmb,
+    admin_client,
 ):
-    pod_ips = network_policy_vma.vmi.virt_launcher_pod.instance.status.podIPs
+    pod_ips = network_policy_vma.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance.status.podIPs
     for pod_ip_entry in pod_ips:
         dst_ip = pod_ip_entry["ip"]
         with subtests.test(msg=f"Testing {dst_ip}"):
@@ -40,8 +41,9 @@ def test_network_policy_allow_single_http_port(
     subtests,
     network_policy_vma,
     network_policy_vmb,
+    admin_client,
 ):
-    pod_ips = network_policy_vma.vmi.virt_launcher_pod.instance.status.podIPs
+    pod_ips = network_policy_vma.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance.status.podIPs
     for pod_ip_entry in pod_ips:
         dst_ip = pod_ip_entry["ip"]
         with subtests.test(msg=f"Testing {dst_ip}"):
@@ -65,8 +67,9 @@ def test_network_policy_allow_all_http(
     subtests,
     network_policy_vma,
     network_policy_vmb,
+    admin_client,
 ):
-    pod_ips = network_policy_vma.vmi.virt_launcher_pod.instance.status.podIPs
+    pod_ips = network_policy_vma.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance.status.podIPs
     for pod_ip_entry in pod_ips:
         dst_ip = pod_ip_entry["ip"]
         with subtests.test(msg=f"Testing {dst_ip}"):

@@ -365,7 +365,7 @@ def vm_migration_info(scale_vms, admin_client):
         for vm in batch:
             vm_migration_info[vm.name] = {
                 NODE_STR: vm.vmi.node,
-                VMI_SOURCE_POD_STR: vm.vmi.virt_launcher_pod,
+                VMI_SOURCE_POD_STR: vm.vmi.get_virt_launcher_pod(privileged_client=admin_client),
                 MIGRATION_INSTANCE_STR: start_live_migration(vm=vm, client=admin_client),
             }
     return vm_migration_info

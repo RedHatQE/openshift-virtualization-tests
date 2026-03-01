@@ -55,7 +55,7 @@ def vm_os_version(vm):
 
 
 # Guest agent data comparison functions.
-def validate_os_info_virtctl_vs_linux_os(vm):
+def validate_os_info_virtctl_vs_linux_os(vm, admin_client):
     data_mismatch = []
     virtctl_info = get_virtctl_os_info(vm=vm)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
@@ -68,11 +68,11 @@ def validate_os_info_virtctl_vs_linux_os(vm):
 
     assert not data_mismatch, (
         f"Data mismatch {data_mismatch}!\nVirtctl: {virtctl_info}\nCNV: {get_cnv_os_info(vm=vm)}\n"
-        f"Libvirt: {get_libvirt_os_info(vm=vm)}\nOS: {linux_info}"
+        f"Libvirt: {get_libvirt_os_info(vm=vm, admin_client=admin_client)}\nOS: {linux_info}"
     )
 
 
-def validate_fs_info_virtctl_vs_linux_os(vm):
+def validate_fs_info_virtctl_vs_linux_os(vm, admin_client):
     orig_virtctl_info = None
     orig_linux_info = get_linux_fs_info(ssh_exec=vm.ssh_exec)
     try:
@@ -90,11 +90,11 @@ def validate_fs_info_virtctl_vs_linux_os(vm):
     except TimeoutExpiredError:
         raise ValueError(
             f"Data mismatch!\nVirtctl: {orig_virtctl_info}\nCNV: {get_cnv_fs_info(vm=vm)}\n"
-            f"Libvirt: {get_libvirt_fs_info(vm=vm)}\nOS: {orig_linux_info}"
+            f"Libvirt: {get_libvirt_fs_info(vm=vm, admin_client=admin_client)}\nOS: {orig_linux_info}"
         )
 
 
-def validate_user_info_virtctl_vs_linux_os(vm):
+def validate_user_info_virtctl_vs_linux_os(vm, admin_client):
     data_mismatch = []
     virtctl_info = None
     linux_info = get_linux_user_info(vm=vm)
@@ -116,11 +116,11 @@ def validate_user_info_virtctl_vs_linux_os(vm):
 
     assert not data_mismatch, (
         f"Data mismatch {data_mismatch}!\nVirtctl: {virtctl_info}\nCNV: {get_cnv_user_info(vm=vm)}\n"
-        f"Libvirt: {get_libvirt_user_info(vm=vm)}\nOS: {linux_info}"
+        f"Libvirt: {get_libvirt_user_info(vm=vm, admin_client=admin_client)}\nOS: {linux_info}"
     )
 
 
-def validate_os_info_virtctl_vs_windows_os(vm):
+def validate_os_info_virtctl_vs_windows_os(vm, admin_client):
     virtctl_info = get_virtctl_os_info(vm=vm)
     windows_info = get_windows_os_info(ssh_exec=vm.ssh_exec)
 
@@ -137,11 +137,11 @@ def validate_os_info_virtctl_vs_windows_os(vm):
 
     assert not data_mismatch, (
         f"Data mismatch {data_mismatch}!\nVirtctl: {virtctl_info}\nCNV: {get_cnv_os_info(vm=vm)}\n"
-        f"Libvirt: {get_libvirt_os_info(vm=vm)}\nOS: {windows_info}"
+        f"Libvirt: {get_libvirt_os_info(vm=vm, admin_client=admin_client)}\nOS: {windows_info}"
     )
 
 
-def validate_fs_info_virtctl_vs_windows_os(vm):
+def validate_fs_info_virtctl_vs_windows_os(vm, admin_client):
     orig_virtctl_info = None
     orig_windows_info = get_windows_fs_info(ssh_exec=vm.ssh_exec)
     try:
@@ -159,11 +159,11 @@ def validate_fs_info_virtctl_vs_windows_os(vm):
     except TimeoutExpiredError:
         raise ValueError(
             f"Data mismatch!\nVirtctl: {orig_virtctl_info}\nCNV: {get_cnv_fs_info(vm=vm)}\n"
-            f"Libvirt: {get_libvirt_fs_info(vm=vm)}\nOS: {orig_windows_info}"
+            f"Libvirt: {get_libvirt_fs_info(vm=vm, admin_client=admin_client)}\nOS: {orig_windows_info}"
         )
 
 
-def validate_user_info_virtctl_vs_windows_os(vm):
+def validate_user_info_virtctl_vs_windows_os(vm, admin_client):
     def _get_vm_timezone_diff():
         vm_timezone_diff = get_virtctl_os_info(vm=vm)["timezone"]
         # Get timezone diff from UTC
@@ -183,7 +183,7 @@ def validate_user_info_virtctl_vs_windows_os(vm):
 
     assert not data_mismatch, (
         f"Data mismatch {data_mismatch}!\nVirtctl: {virtctl_info}\nCNV: {get_cnv_user_info(vm=vm)}"
-        f"\nLibvirt: {get_libvirt_user_info(vm=vm)}\nOS: {windows_info}"
+        f"\nLibvirt: {get_libvirt_user_info(vm=vm, admin_client=admin_client)}\nOS: {windows_info}"
     )
 
 
@@ -210,11 +210,11 @@ def get_cnv_os_info(vm):
     return delete_guestosinfo_keys(data=data)
 
 
-def get_libvirt_os_info(vm):
-    agentinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-info")
-    hostname = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-host-name")
-    osinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-osinfo")
-    timezone = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-timezone")
+def get_libvirt_os_info(vm, admin_client):
+    agentinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-info", admin_client=admin_client)
+    hostname = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-host-name", admin_client=admin_client)
+    osinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-osinfo", admin_client=admin_client)
+    timezone = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-timezone", admin_client=admin_client)
 
     return {
         "guestAgentVersion": agentinfo["version"],
@@ -281,7 +281,7 @@ def get_cnv_fs_info(vm):
     return guest_agent_disk_info_parser(disk_info=vm.vmi.guest_fs_info["items"])
 
 
-def get_libvirt_fs_info(vm):
+def get_libvirt_fs_info(vm, admin_client):
     """
     Returns FS data dict in format:
     {
@@ -292,7 +292,7 @@ def get_libvirt_fs_info(vm):
         "total": <total bytes>,
     }
     """
-    fsinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-fsinfo")
+    fsinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-fsinfo", admin_client=admin_client)
     return guest_agent_disk_info_parser(disk_info=fsinfo)
 
 
@@ -363,8 +363,8 @@ def get_cnv_user_info(vm):
         }
 
 
-def get_libvirt_user_info(vm):
-    userinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-users")
+def get_libvirt_user_info(vm, admin_client):
+    userinfo = execute_virsh_qemu_agent_command(vm=vm, command="guest-get-users", admin_client=admin_client)
     for user in userinfo:
         return {
             "userName": user.get("user"),
@@ -419,9 +419,9 @@ def windows_disk_space_parser(fsinfo_list):
     return f"used {used}, total {total}\n"
 
 
-def execute_virsh_qemu_agent_command(vm, command):
+def execute_virsh_qemu_agent_command(vm, command, admin_client):
     domain = f"{vm.namespace}_{vm.vmi.name}"
-    output = vm.privileged_vmi.virt_launcher_pod.execute(
+    output = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
         command=["virsh", "qemu-agent-command", domain, f'{{"execute":"{command}"}}'],
         container="compute",
     )
@@ -441,12 +441,12 @@ def check_machine_type(vm):
     assert vm_machine_type != "", f"Machine type does not exist in VM: {vm_machine_type}"
 
 
-def check_vm_xml_clock(vm):
+def check_vm_xml_clock(vm, admin_client):
     """Verify clock values in VMI"""
 
-    clock_timer_list = vm.privileged_vmi.xml_dict["domain"]["clock"]["timer"]
-    assert [i for i in clock_timer_list if i["@name"] == "hpet"][0]["@present"] == "no"
-    assert [i for i in clock_timer_list if i["@name"] == "hypervclock"][0]["@present"] == "yes"
+    clock_timer_list = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["clock"]["timer"]
+    assert [timer for timer in clock_timer_list if timer["@name"] == "hpet"][0]["@present"] == "no"
+    assert [timer for timer in clock_timer_list if timer["@name"] == "hypervclock"][0]["@present"] == "yes"
 
 
 def set_vm_tablet_device_dict(tablet_params):
@@ -455,7 +455,7 @@ def set_vm_tablet_device_dict(tablet_params):
     return {"spec": {"template": {"spec": {"domain": {"devices": {"inputs": [tablet_params]}}}}}}
 
 
-def check_vm_xml_tablet_device(vm):
+def check_vm_xml_tablet_device(vm, admin_client):
     """Verifies vm tablet device info in VM XML vs VM instance attributes
     values.
     """
@@ -465,7 +465,9 @@ def check_vm_xml_tablet_device(vm):
     vm_instance_tablet_device_dict = vm.instance["spec"]["template"]["spec"]["domain"]["devices"]["inputs"][0]
 
     tablet_dict_from_xml = [
-        i for i in vm.privileged_vmi.xml_dict["domain"]["devices"]["input"] if i["@type"] == "tablet"
+        input_device
+        for input_device in vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["input"]
+        if input_device["@type"] == "tablet"
     ][0]
 
     assert tablet_dict_from_xml["@type"] == vm_instance_tablet_device_dict["type"], "Wrong device type"

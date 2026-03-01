@@ -489,8 +489,8 @@ def sap_hana_template(admin_client, tmpdir_factory):
 
 
 @pytest.fixture(scope="class")
-def vmi_domxml(sap_hana_vm):
-    return sap_hana_vm.vmi.xml_dict["domain"]
+def vmi_domxml(admin_client, sap_hana_vm):
+    return sap_hana_vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]
 
 
 @pytest.fixture(scope="class")
@@ -520,18 +520,18 @@ def vm_dump_metrics(sap_hana_vm):
 
 
 @pytest.fixture(scope="class")
-def vm_virt_launcher_pod_instance(sap_hana_vm):
-    return sap_hana_vm.vmi.virt_launcher_pod.instance
+def vm_virt_launcher_pod_instance(admin_client, sap_hana_vm):
+    return sap_hana_vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance
 
 
 @pytest.fixture(scope="class")
-def vm_cpu_list(sap_hana_vm):
-    return get_vm_cpu_list(vm=sap_hana_vm)
+def vm_cpu_list(admin_client, sap_hana_vm):
+    return get_vm_cpu_list(vm=sap_hana_vm, admin_client=admin_client)
 
 
 @pytest.fixture()
-def numa_node_dict(sap_hana_vm):
-    return get_numa_node_cpu_dict(vm=sap_hana_vm)
+def numa_node_dict(admin_client, sap_hana_vm):
+    return get_numa_node_cpu_dict(vm=sap_hana_vm, admin_client=admin_client)
 
 
 @pytest.fixture()
@@ -723,19 +723,19 @@ class TestSAPHANAVirtualMachine:
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
     @pytest.mark.polarion("CNV-7761")
-    def test_sap_hana_vm_isolate_emulator_thread(self, sap_hana_vm):
+    def test_sap_hana_vm_isolate_emulator_thread(self, admin_client, sap_hana_vm):
         vm_isolated_emulator_thread = sap_hana_vm.instance.spec.template.spec.domain.cpu.isolateEmulatorThread
         assert vm_isolated_emulator_thread, (
             f"VM isolateEmulatorThread is not enabled, value: {vm_isolated_emulator_thread}"
         )
-        validate_iothreads_emulatorthread_on_same_pcpu(vm=sap_hana_vm)
+        validate_iothreads_emulatorthread_on_same_pcpu(vm=sap_hana_vm, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
     @pytest.mark.polarion("CNV-7762")
-    def test_sap_hana_vm_dedicated_cpu_placement(self, sap_hana_vm):
+    def test_sap_hana_vm_dedicated_cpu_placement(self, admin_client, sap_hana_vm):
         vm_dedicate_cpu_placement = sap_hana_vm.instance.spec.template.spec.domain.cpu.dedicatedCpuPlacement
         assert vm_dedicate_cpu_placement, f"VM isolateEmulatorThread is not enabled, value: {vm_dedicate_cpu_placement}"
-        validate_dedicated_emulatorthread(vm=sap_hana_vm)
+        validate_dedicated_emulatorthread(vm=sap_hana_vm, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
     @pytest.mark.polarion("CNV-7765")
@@ -793,6 +793,7 @@ class TestSAPHANAVirtualMachine:
     @pytest.mark.polarion("CNV-7764")
     def test_sap_hana_vm_numa_topology(
         self,
+        admin_client,
         sap_hana_vm,
         vm_virt_launcher_pod_instance,
         workers_utility_pods,
@@ -803,7 +804,7 @@ class TestSAPHANAVirtualMachine:
         assert_virt_launcher_pod_cpu_manager_node_selector(virt_launcher_pod=vm_virt_launcher_pod_instance)
         assert_numa_cpu_allocation(vm_cpus=vm_cpu_list, numa_nodes=numa_node_dict)
 
-        assert_cpus_and_sriov_on_same_node(vm=sap_hana_vm, utility_pods=workers_utility_pods)
+        assert_cpus_and_sriov_on_same_node(vm=sap_hana_vm, utility_pods=workers_utility_pods, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
     @pytest.mark.polarion("CNV-7766")

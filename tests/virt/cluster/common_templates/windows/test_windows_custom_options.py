@@ -87,8 +87,8 @@ class CustomWindowsVM(VirtualMachineForTestsFromTemplate):
         })
 
 
-def assert_firmware_uuid_in_domxml(vm, uuid):
-    xml_domain = vm.privileged_vmi.xml_dict["domain"]
+def assert_firmware_uuid_in_domxml(vm, uuid, admin_client):
+    xml_domain = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]
     assert xml_domain.get("uuid", "").lower() == uuid.lower(), f"Firmware UUID not found in domxml for {vm.name}"
 
 
@@ -196,8 +196,8 @@ class TestCustomWindowsOptions:
 
     @pytest.mark.polarion("CNV-7960")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::domxml", depends=[f"{TESTS_CLASS_NAME}::boot"])
-    def test_windows_custom_options_fw_uuid_in_domxml(self, custom_windows_vm):
-        assert_firmware_uuid_in_domxml(vm=custom_windows_vm, uuid=FIRMWARE_UUID)
+    def test_windows_custom_options_fw_uuid_in_domxml(self, admin_client, custom_windows_vm):
+        assert_firmware_uuid_in_domxml(vm=custom_windows_vm, uuid=FIRMWARE_UUID, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-7956")
     @pytest.mark.dependency(

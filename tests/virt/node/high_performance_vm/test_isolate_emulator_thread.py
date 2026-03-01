@@ -63,6 +63,7 @@ class TestIsolateEmulatorThread:
     @pytest.mark.polarion("CNV-6744")
     def test_isolate_emulator_thread(
         self,
+        admin_client,
         isolated_emulatorthread_vm,
     ):
         """
@@ -75,7 +76,7 @@ class TestIsolateEmulatorThread:
         # One additional Dedicated cpu is allocated for QEMU Emulator.
         # nproc should still show the CPU count as 2 ( threads(1) * cores(2) * socket(1))
         # even though the VM is allocated overall 3 dedicated cpus.
-        validate_dedicated_emulatorthread(vm=isolated_emulatorthread_vm)
+        validate_dedicated_emulatorthread(vm=isolated_emulatorthread_vm, admin_client=admin_client)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[ISOLATE_EMULATOR_THREAD])

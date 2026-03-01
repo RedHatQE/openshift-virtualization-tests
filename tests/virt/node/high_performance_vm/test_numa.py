@@ -85,12 +85,12 @@ def vm_numa_sriov(namespace, unprivileged_client, sriov_net):
 
 
 @pytest.mark.polarion("CNV-4216")
-def test_numa(vm_numa):
-    numa_pod = vm_numa.vmi.virt_launcher_pod.instance
+def test_numa(admin_client, vm_numa):
+    numa_pod = vm_numa.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance
     pod_limits = numa_pod.spec.containers[0].resources.limits
     pod_requests = numa_pod.spec.containers[0].resources.requests
-    vm_cpu_list = get_vm_cpu_list(vm=vm_numa)
-    numa_node_dict = get_numa_node_cpu_dict(vm=vm_numa)
+    vm_cpu_list = get_vm_cpu_list(vm=vm_numa, admin_client=admin_client)
+    numa_node_dict = get_numa_node_cpu_dict(vm=vm_numa, admin_client=admin_client)
 
     assert pod_limits == pod_requests, (
         f"NUMA Pod has mismatch in resources limits and requests. Limits {pod_limits}, requests {pod_requests}"
@@ -105,7 +105,8 @@ def test_numa(vm_numa):
 @pytest.mark.sriov
 @pytest.mark.polarion("CNV-4309")
 def test_numa_with_sriov(
+    admin_client,
     vm_numa_sriov,
     workers_utility_pods,
 ):
-    assert_cpus_and_sriov_on_same_node(vm=vm_numa_sriov, utility_pods=workers_utility_pods)
+    assert_cpus_and_sriov_on_same_node(vm=vm_numa_sriov, utility_pods=workers_utility_pods, admin_client=admin_client)

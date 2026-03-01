@@ -25,12 +25,12 @@ def developer_vm(
 
 
 @pytest.fixture()
-def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client):
+def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client, admin_client):
     return next(
         Pod.get(
             client=unprivileged_client,
             namespace=namespace.name,
-            name=developer_vm.vmi.virt_launcher_pod.instance.metadata.name,
+            name=developer_vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance.metadata.name,
         )
     )
 

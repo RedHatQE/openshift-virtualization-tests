@@ -57,6 +57,7 @@ class TestMustGatherVmDetailsWithParams:
     )
     def test_must_gather_params(
         self,
+        admin_client,
         must_gather_vm,
         collected_vm_details_must_gather_with_params,
         expected,
@@ -69,6 +70,7 @@ class TestMustGatherVmDetailsWithParams:
             must_gather_vm=must_gather_vm,
             must_gather_vms_from_alternate_namespace=must_gather_vms_from_alternate_namespace,
             nftables_ruleset_from_utility_pods=nftables_ruleset_from_utility_pods,
+            admin_client=admin_client,
         )
 
     @pytest.mark.polarion("CNV-9039")
