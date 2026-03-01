@@ -134,7 +134,7 @@ def get_nodes_cpu_architecture(nodes: list[Node]) -> str:
         nodes: List of Node objects to extract architecture information from.
 
     Returns:
-        CPU architecture string (e.g., "x86_64", "arm64", "s390x").
+        CPU architecture string (e.g., "amd64", "arm64", "s390x").
 
     Raises:
         AssertionError: If nodes have mixed CPU architectures.

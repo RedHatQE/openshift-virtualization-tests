@@ -17,7 +17,7 @@ def get_cluster_architecture() -> str:
     Raises:
         ValueError: if architecture is not supported.
     """
-    from utilities.constants import AMD_64, ARM_64, KUBERNETES_ARCH_LABEL, S390X, X86_64
+    from utilities.constants import AMD_64, ARM_64, KUBERNETES_ARCH_LABEL, S390X
 
     # Needed for CI
     arch = os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH")
@@ -29,9 +29,7 @@ def get_cluster_architecture() -> str:
         nodes_cpu_arch = {node.labels[KUBERNETES_ARCH_LABEL] for node in nodes}
         arch = next(iter(nodes_cpu_arch))
 
-    arch = X86_64 if arch == AMD_64 else arch
-
-    if arch not in (X86_64, ARM_64, S390X):
+    if arch not in (AMD_64, ARM_64, S390X):
         raise ValueError(f"{arch} architecture in not supported")
 
     return arch

@@ -1280,6 +1280,7 @@ dependencies = [
     { name = "pytest-progress" },
     { name = "pytest-testconfig" },
     { name = "python-benedict" },
+    { name = "python-dotenv" },
     { name = "python-rrmngmnt" },
     { name = "python-simple-logger" },
     { name = "python-utility-scripts" },
@@ -1352,6 +1353,7 @@ requires-dist = [
     { name = "pytest-watch", marker = "extra == 'utilities-test'", specifier = ">=4.2.0" },
     { name = "pytest-xdist", marker = "extra == 'utilities-test'", specifier = ">=3.5.0" },
     { name = "python-benedict", specifier = ">=0.34.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "python-rrmngmnt", specifier = ">=0.1.32" },
     { name = "python-simple-logger", specifier = ">=2.0.13" },
     { name = "python-utility-scripts", specifier = ">=1.0.1" },
@@ -2183,16 +2185,16 @@ wheels = [
 
 [[package]]
 name = "python-rrmngmnt"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "netaddr" },
     { name = "paramiko" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/80/81321015909e9f7a1c56f67b0e5c84350cdd96c829a6bab49725a23f5956/python_rrmngmnt-0.2.1.tar.gz", hash = "sha256:f03c2332db56d78f72db4f6ad9cab374c5afd42d964c4453a4e989b7ebc0cec0", size = 150909, upload-time = "2025-12-05T08:28:26.195Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/ba/c6625d8754f9f963f854fdd7b731d174ae23bf663da0e7dc4bdcc1ba0ca8/python_rrmngmnt-0.2.2.tar.gz", hash = "sha256:5f8e61ca33cffc9084eadf69a83f05d59f7a5a2fd349cc5cc664698c0c672b39", size = 152757, upload-time = "2026-02-11T07:03:10.616Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/07/ad9fc7c3c25f3e02aad0cff8e59d7643ebebe8368229da0a5f8a214f0b2c/python_rrmngmnt-0.2.1-py3-none-any.whl", hash = "sha256:317679b72dcf24b11274fd6a6207f4b2f74f0d550f8bdab28a4bca15ddfe0556", size = 49920, upload-time = "2025-12-05T08:28:25.136Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/4c/1296147b5c157c79a83ddb9d8e76a0f96c8dfc086d25de1b7ed104511efd/python_rrmngmnt-0.2.2-py3-none-any.whl", hash = "sha256:353c5cf03c46ba27c7a70065e0417816115212af722d03a7cea49bb3eb3432ae", size = 50073, upload-time = "2026-02-11T07:03:08.915Z" },
 ]
 
 [[package]]

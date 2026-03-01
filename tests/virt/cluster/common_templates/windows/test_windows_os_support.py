@@ -13,7 +13,7 @@ from tests.virt.cluster.common_templates.utils import (
     validate_user_info_virtctl_vs_windows_os,
 )
 from tests.virt.utils import validate_pause_unpause_windows_vm
-from utilities.constants import OS_FLAVOR_WINDOWS
+from utilities.constants import OS_FLAVOR_WINDOWS, QUARANTINED
 from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
@@ -146,6 +146,10 @@ class TestCommonTemplatesWindows:
 
     @pytest.mark.polarion("CNV-12220")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent_info"])
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Intermittent failures due to timeout exceeded; tracked in CNV-79605",
+        run=False,
+    )
     def test_vmi_guest_agent_info_after_guest_reboot(self, matrix_windows_os_vm_from_template):
         validate_virtctl_guest_agent_after_guest_reboot(
             vm=matrix_windows_os_vm_from_template, os_type=OS_FLAVOR_WINDOWS

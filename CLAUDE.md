@@ -46,7 +46,7 @@ The "no defensive programming" rule has these five exceptions:
 1. **Destructors/Cleanup** - May be called during incomplete initialization
 2. **Optional Parameters** - Explicitly typed as `Type | None` with default `None`
 3. **Lazy Initialization** - Attributes intentionally starting as `None` before first use
-4. **Platform/Architecture Constants** - Features unavailable on all platforms (x86_64, arm64, s390x)
+4. **Platform/Architecture Constants** - Features unavailable on all platforms (amd64, arm64, s390x)
 5. **Unversioned External Libraries** - External dependencies with unknown API stability
 
 **Still Prohibited (with examples):**

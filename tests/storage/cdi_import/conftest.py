@@ -2,6 +2,7 @@
 CDI Import
 """
 
+import gc
 import logging
 
 import pytest
@@ -14,20 +15,16 @@ from tests.storage.constants import (
     QUAY_FEDORA_CONTAINER_IMAGE,
 )
 from tests.storage.utils import (
-    clean_up_multiprocess,
     create_pod_for_pvc,
     get_file_url,
-    wait_for_processes_exit_successfully,
 )
 from utilities.constants import (
     LINUX_BRIDGE,
     OS_FLAVOR_FEDORA,
     REGISTRY_STR,
     TIMEOUT_1MIN,
-    TIMEOUT_4MIN,
     Images,
 )
-from utilities.exceptions import ProcessWithException
 from utilities.infra import NON_EXIST_URL
 from utilities.network import network_device, network_nad
 from utilities.storage import create_dv, sc_volume_binding_mode_is_wffc
@@ -136,60 +133,55 @@ def running_pod_with_dv_pvc(
 
 
 @pytest.fixture()
-def dv_list_created_by_multiprocess(
-    unprivileged_client, namespace, storage_class_name_scope_module, number_of_processes
-):
+def created_blank_dv_list(unprivileged_client, namespace, storage_class_name_scope_module, number_of_dvs):
     dvs_list = []
-    processes = {}
-    for i in range(number_of_processes):
-        dv = DataVolume(
-            client=unprivileged_client,
-            source="blank",
-            name=f"dv-{i}",
-            namespace=namespace.name,
-            size=Images.Fedora.DEFAULT_DV_SIZE,
-            storage_class=storage_class_name_scope_module,
-            api_name="storage",
-        )
-        dv_process = ProcessWithException(target=dv.create)
-        dv_process.start()
-        processes[dv.name] = dv_process
-        dvs_list.append(dv)
-    wait_for_processes_exit_successfully(processes=processes, timeout=TIMEOUT_1MIN)
-    yield dvs_list
-    clean_up_multiprocess(processes=processes, object_list=dvs_list)
+    try:
+        for dv_index in range(number_of_dvs):
+            dv = DataVolume(
+                client=unprivileged_client,
+                source="blank",
+                name=f"dv-{dv_index}",
+                namespace=namespace.name,
+                size=Images.Fedora.DEFAULT_DV_SIZE,
+                storage_class=storage_class_name_scope_module,
+                api_name="storage",
+            )
+            dv.create()
+            dvs_list.append(dv)
+        yield dvs_list
+    finally:
+        for dv in dvs_list:
+            dv.clean_up()
 
 
 @pytest.fixture()
-def vm_list_created_by_multiprocess(
-    unprivileged_client, dv_list_created_by_multiprocess, storage_class_name_scope_module
-):
+def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_name_scope_module):
+    """Create VMs sequentially from DVs and start them one by one."""
     vms_list = []
-    processes = {}
-    for dv in dv_list_created_by_multiprocess:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
-            dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
-        else:
-            dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        vm = VirtualMachineForTests(
-            client=unprivileged_client,
-            name=f"vm-{dv.name}",
-            namespace=dv.namespace,
-            os_flavor=OS_FLAVOR_FEDORA,
-            data_volume=dv,
-            image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
-            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        )
-        vm.deploy()
-        vms_list.append(vm)
-    for vm in vms_list:
-        vm_process = ProcessWithException(target=vm.start)
-        vm_process.start()
-        processes[vm.name] = vm_process
-
-    wait_for_processes_exit_successfully(processes=processes, timeout=TIMEOUT_4MIN)
-    yield vms_list
-    clean_up_multiprocess(processes=processes, object_list=vms_list)
+    try:
+        for dv in created_blank_dv_list:
+            if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
+                dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
+            else:
+                dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+            vm = VirtualMachineForTests(
+                client=unprivileged_client,
+                name=f"vm-{dv.name}",
+                namespace=dv.namespace,
+                os_flavor=OS_FLAVOR_FEDORA,
+                data_volume=dv,
+                image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
+                memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            )
+            vm.deploy(wait=True)
+            vms_list.append(vm)
+            vm.start()
+        yield vms_list
+    finally:
+        for vm in vms_list:
+            vm.clean_up()
+        # Force garbage collection to prevent memory leaks due to paramiko/paramiko#2568
+        gc.collect()
 
 
 @pytest.fixture()
@@ -210,6 +202,7 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
             )
             dv.create()
             dvs.append(dv)
+            dv.pvc.wait(timeout=TIMEOUT_1MIN)
 
         for dv in dvs:
             vm = VirtualMachineForTests(

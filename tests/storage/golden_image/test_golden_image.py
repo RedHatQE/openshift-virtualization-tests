@@ -6,11 +6,10 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
+from tests.os_params import RHEL_LATEST
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import PVC, QUARANTINED, TIMEOUT_20MIN
+from utilities.constants import PVC, TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv
-from utilities.virt import wait_for_ssh_connectivity
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -94,42 +93,6 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
             namespace=golden_image_data_volume_scope_module.namespace,
             client=unprivileged_client,
         ).delete()
-
-
-@pytest.mark.sno
-@pytest.mark.gating
-@pytest.mark.parametrize(
-    "golden_image_data_volume_multi_storage_scope_function,"
-    "golden_image_vm_instance_from_template_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-4757",
-                "image": LATEST_RHEL_IMAGE,
-                "dv_size": RHEL_IMAGE_SIZE,
-            },
-            {
-                "vm_name": "rhel-vm",
-                "template_labels": RHEL_LATEST_LABELS,
-            },
-            marks=pytest.mark.polarion("CNV-4757"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.xfail(
-    reason=(
-        f"{QUARANTINED}: Template label selector fails with BadRequestError "
-        "during VM creation from template. Tracked in CNV-75736"
-    ),
-    run=False,
-)
-@pytest.mark.s390x
-def test_regular_user_can_create_vm_from_cloned_dv(
-    golden_image_data_volume_multi_storage_scope_function,
-    golden_image_vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_ssh_connectivity(vm=golden_image_vm_instance_from_template_multi_storage_scope_function)
 
 
 @pytest.mark.sno

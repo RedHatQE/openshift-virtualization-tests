@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+import pathlib
 import re
 import shutil
 import socket
@@ -15,12 +16,15 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
 
+from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
+    AMD_64,
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
     POD_SECURITY_NAMESPACE_LABELS,
+    S390X,
     SANITY_TESTS_FAILURE,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -31,6 +35,11 @@ from utilities.data_collector import (
     write_to_file,
 )
 from utilities.exceptions import MissingEnvironmentVariableError
+from utilities.os_utils import (
+    generate_latest_os_dict,
+    generate_linux_instance_type_os_matrix,
+    generate_os_matrix_dict,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -263,33 +272,71 @@ def get_cnv_version_explorer_url(pytest_config):
         return version_explorer_url
 
 
-def get_tests_cluster_markers(items, filepath=None) -> None:
-    test_markers = set([marker.name for item in items for marker in item.iter_markers()])
+def get_tests_cluster_markers(items: list[pytest.Item], filepath: str | None = None) -> dict[str, list[str]]:
+    """Extract cluster-related markers from collected tests, grouped by category.
 
-    pytest_cluster_markers = []
-    is_config_section = False
-    with open("pytest.ini") as fd:
+    Parses pytest.ini to find markers under Architecture support, Hardware requirements,
+    Configuration requirements, and Required operators sections. Returns only markers
+    that are present in the collected test items.
+
+    Args:
+        items: List of collected pytest items.
+        filepath: Optional path to write the results as JSON.
+
+    Returns:
+        Dictionary mapping category names to lists of matching marker names.
+    """
+    test_markers = {marker.name for item in items for marker in item.iter_markers()}
+
+    section_headers = {
+        "## Architecture support": "architecture",
+        "## Hardware requirements": "hardware",
+        "## Configuration requirements": "configuration",
+        "## Required operators": "operators",
+    }
+
+    markers_by_section: dict[str, list[str]] = {section_name: [] for section_name in section_headers.values()}
+
+    pytest_ini_path = pathlib.Path(__file__).resolve().parent.parent / "pytest.ini"
+    current_section: str | None = None
+    with open(pytest_ini_path) as fd:
         for line in fd:
-            # Get markers from configuration and hardware sections only
-            if "## Configuration requirements" in line or "## Hardware requirements" in line:
-                is_config_section = True
-                continue
+            stripped = line.strip()
 
-            if is_config_section:
-                # Skip empty lines and sections which are not configuration or hardware requirements
-                if (_line := line.strip()) and _line.startswith("#") or line == "\n":
-                    is_config_section = False
-                    continue
-                else:
-                    pytest_cluster_markers.append(line.strip().split(":")[0])
+            # Check if this line starts a tracked section
+            for header, section_name in section_headers.items():
+                if header in line:
+                    current_section = section_name
+                    break
+            else:
+                if current_section:
+                    # End section on empty lines or other section headers
+                    if not stripped or stripped.startswith("#"):
+                        current_section = None
+                        continue
 
-    tests_cluster_markers = [marker for marker in test_markers if marker in pytest_cluster_markers]
-    LOGGER.info(f"Cluster-related test markers: {tests_cluster_markers}")
+                    marker_name = stripped.split(":")[0]
+                    if marker_name in test_markers:
+                        markers_by_section[current_section].append(marker_name)
+
+    empty_sections = [section for section, markers in markers_by_section.items() if not markers]
+    if empty_sections:
+        LOGGER.warning(
+            f"No markers found in sections: {', '.join(empty_sections)}."
+            " Verify pytest.ini section headers match expected format."
+        )
+
+    # Remove empty sections
+    result = {section: markers for section, markers in markers_by_section.items() if markers}
+
+    LOGGER.info(f"Cluster-related test markers: {result}")
 
     if filepath:
         LOGGER.info(f"Write cluster-related test markers in {filepath}")
-        with open(filepath, "w") as fd:
-            fd.write(json.dumps(tests_cluster_markers))
+        with open(filepath, mode="w") as fd:
+            fd.write(json.dumps(result))
+
+    return result
 
 
 def exit_pytest_execution(
@@ -332,3 +379,131 @@ def exit_pytest_execution(
     if junitxml_property:
         junitxml_property(name="exit_code", value=return_code)
     pytest.exit(reason=log_message, returncode=return_code)
+
+
+def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
+    """
+    Dynamically mark tests that depend on NMState with the 'nmstate' marker.
+
+    Tests are identified by checking if they depend (directly or indirectly) on the
+    nmstate_dependent_placeholder fixture. This placeholder is used as a dependency tracker
+    by all fixtures that interact with NMState Custom Resources (NNCP, NNCE, NNS) either
+    for viewing or for changing the network configuration.
+    This allows filtering tests using pytest markers (e.g., -m nmstate or -m "not nmstate").
+
+    Args:
+        items: List of collected test items.
+
+    Returns:
+        List of collected test items.
+    """
+    for item in items:
+        if "nmstate_dependent_placeholder" in getattr(item, "fixturenames", []):
+            item.add_marker(marker=pytest.mark.nmstate)
+
+    return items
+
+
+def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
+    """
+    Generate and populate OS matrix and related dictionaries in py_config.
+
+    Args:
+        os_dict (dict[str, list[str]]): A dictionary containing lists of supported OS names for each
+            relevant OS family. Keys can include:
+              - "rhel_os_list"
+              - "fedora_os_list"
+              - "centos_os_list"
+              - "windows_os_list"
+              - "instance_type_rhel_os_list"
+              - "instance_type_fedora_os_list"
+              - "instance_type_centos_os_list"
+    """
+
+    if rhel_os_list := os_dict.get("rhel_os_list"):
+        py_config["rhel_os_matrix"] = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=rhel_os_list)
+        py_config["latest_rhel_os_dict"] = generate_latest_os_dict(os_matrix=py_config["rhel_os_matrix"])
+    if fedora_os_list := os_dict.get("fedora_os_list"):
+        py_config["fedora_os_matrix"] = generate_os_matrix_dict(
+            os_name="fedora", supported_operating_systems=fedora_os_list
+        )
+        py_config["latest_fedora_os_dict"] = generate_latest_os_dict(os_matrix=py_config["fedora_os_matrix"])
+    if centos_os_list := os_dict.get("centos_os_list"):
+        py_config["centos_os_matrix"] = generate_os_matrix_dict(
+            os_name="centos", supported_operating_systems=centos_os_list
+        )
+        py_config["latest_centos_os_dict"] = generate_latest_os_dict(os_matrix=py_config["centos_os_matrix"])
+    if windows_os_list := os_dict.get("windows_os_list"):
+        py_config["windows_os_matrix"] = generate_os_matrix_dict(
+            os_name="windows", supported_operating_systems=windows_os_list
+        )
+        py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
+
+    arch = get_cluster_architecture()
+    cpu_arch = arch if arch != AMD_64 else None
+    if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
+        py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
+        )
+        py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
+            os_matrix=py_config["instance_type_rhel_os_matrix"]
+        )
+    if instance_type_fedora_os_list := os_dict.get("instance_type_fedora_os_list"):
+        py_config["instance_type_fedora_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="fedora", preferences=instance_type_fedora_os_list, arch_suffix=cpu_arch
+        )
+    if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
+        py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
+            os_name="centos", preferences=instance_type_centos_os_list, arch_suffix=cpu_arch if arch != S390X else None
+        )
+
+
+def update_latest_os_config(session_config: pytest.Config) -> None:
+    """
+    Update py_config with OS-related configuration based on session configuration.
+
+    Args:
+        session_config (pytest.Config): The pytest session configuration object.
+
+    Side effects:
+        Mutates the module-level py_config dict. Preserves original matrices in
+        system_windows_os_matrix and system_rhel_os_matrix. Updates rhel_os_matrix
+        and instance_type_rhel_os_matrix when --latest_rhel is set, windows_os_matrix
+        when --latest_windows is set, centos_os_matrix when --latest_centos is set,
+        and fedora_os_matrix when --latest_fedora is set.
+    """
+
+    # Save the default windows_os_matrix before it is updated
+    # with runtime windows_os_matrix value(s).
+    # Some tests extract a single OS from the matrix and may fail if running with
+    # passed values from cli
+    if windows_os_matrix := py_config.get("windows_os_matrix"):
+        py_config["system_windows_os_matrix"] = windows_os_matrix
+
+    if rhel_os_matrix := py_config.get("rhel_os_matrix"):
+        py_config["system_rhel_os_matrix"] = rhel_os_matrix
+
+    # Update OS matrix list with the latest OS if running with os_group
+    if session_config.getoption("latest_rhel") and rhel_os_matrix:
+        latest_rhel_os_dict = py_config.get("latest_rhel_os_dict", {})
+        py_config["rhel_os_matrix"] = [{f"rhel.{latest_rhel_os_dict.get('os_version', 'latest')}": latest_rhel_os_dict}]
+        latest_instance_type_rhel_os_dict = py_config.get("latest_instance_type_rhel_os_dict", {})
+        py_config["instance_type_rhel_os_matrix"] = [
+            {latest_instance_type_rhel_os_dict.get("preference", "rhel.latest"): latest_instance_type_rhel_os_dict}
+        ]
+
+    if session_config.getoption("latest_windows") and windows_os_matrix:
+        latest_windows_os_dict = py_config.get("latest_windows_os_dict", {})
+        py_config["windows_os_matrix"] = [
+            {f"windows.{latest_windows_os_dict.get('os_version', 'latest')}": latest_windows_os_dict}
+        ]
+
+    if session_config.getoption("latest_centos") and py_config.get("centos_os_matrix"):
+        latest_centos_os_dict = py_config.get("latest_centos_os_dict", {})
+        py_config["centos_os_matrix"] = [
+            {f"centos-stream.{latest_centos_os_dict.get('os_version', 'latest')}": latest_centos_os_dict}
+        ]
+
+    if session_config.getoption("latest_fedora") and py_config.get("fedora_os_matrix"):
+        latest_fedora_os_dict = py_config.get("latest_fedora_os_dict", {})
+        py_config["fedora_os_matrix"] = [{"fedora": latest_fedora_os_dict}]

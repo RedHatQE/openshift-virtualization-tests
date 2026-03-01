@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -70,8 +70,8 @@ jobs:
             echo "================================================"
             echo "Checking PR #$PR_NUM"
 
-            # Check if PR has has-conflict, hold, or wip labels
-            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -E "^(has-conflict|hold|wip)$" || true)
+            # Check if PR has has-conflict, hold, wip, or stale labels
+            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -iE "^(has-conflicts|hold|wip|stale)$" || true)
 
             if [ -n "$SKIP_LABELS" ]; then
               echo "PR #$PR_NUM has skip label(s): $SKIP_LABELS, skipping retest"

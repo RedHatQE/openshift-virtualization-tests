@@ -461,34 +461,6 @@ def assert_use_populator(pvc, storage_class, cluster_csi_drivers_names):
     assert pvc.use_populator == expected_use_populator_value
 
 
-def wait_for_processes_exit_successfully(processes, timeout):
-    try:
-        for object_name in processes:
-            process = processes[object_name]
-            process.join(timeout)
-            if process.exception:
-                raise process.exception
-            assert process.exitcode == 0, f"The object {object_name} wasn't created in the given time"
-    except Exception as e:
-        LOGGER.error(f"failed with the exception - {e}")
-        raise
-
-
-def clean_up_multiprocess(processes, object_list):
-    # deleting objects and closing processes
-    for obj in object_list:
-        obj.clean_up()
-    for object_name in processes:
-        process = processes[object_name]
-        try:
-            if process.is_alive():
-                process.kill()
-        except Exception as e:
-            print(f"Error killing process {process}, associated with {object_name}: {e}")
-        finally:
-            process.close()
-
-
 def assert_windows_directory_existence(
     expected_result: bool, windows_vm: VirtualMachineForTests, directory_path: str
 ) -> None:
@@ -507,3 +479,27 @@ def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path:
         windows_vm=windows_vm,
         directory_path=directory_path,
     )
+
+
+def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus: str) -> None:
+    """Assert that a hotplugged volume has the expected disk bus type.
+
+    Args:
+        vm: Virtual machine instance.
+        volume: DataVolume expected to be hotplugged.
+        expected_bus: Expected bus type (e.g., "virtio", "scsi")
+
+    Raises:
+        AssertionError: If disk is not found or bus type does not match.
+    """
+    disk = next(
+        (
+            disk_entry
+            for disk_entry in vm.vmi.instance.spec.domain.devices.disks
+            if disk_entry.get("name") == volume.name
+        ),
+        None,
+    )
+    assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
+    actual_bus = disk.get("disk", {}).get("bus")
+    assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"

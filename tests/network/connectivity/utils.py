@@ -1,4 +1,3 @@
-import ipaddress
 from collections import OrderedDict
 
 from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
@@ -50,7 +49,3 @@ def secondary_interfaces_cloud_init_data(
         ethernets[interface_name] = {"addresses": addresses}
 
     return {"ethernets": ethernets}
-
-
-def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
-    return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]

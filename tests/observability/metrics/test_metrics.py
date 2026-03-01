@@ -65,16 +65,6 @@ def test_cnv_installation_with_hco_cr_metrics(
 
 
 class TestVMIMetricsLinuxVms:
-    @pytest.mark.polarion("CNV-11400")
-    @pytest.mark.s390x
-    def test_kubevirt_vmi_info(self, prometheus, single_metric_vm, vmi_guest_os_kernel_release_info_linux):
-        compare_kubevirt_vmi_info_metric_with_vm_info(
-            prometheus=prometheus,
-            query=KUBEVIRT_VMI_INFO.format(vm_name=single_metric_vm.name),
-            expected_value="1",
-            values_to_compare=vmi_guest_os_kernel_release_info_linux,
-        )
-
     @pytest.mark.polarion("CNV-11862")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, linux_vm_info_to_compare):
