@@ -2,9 +2,9 @@ import json
 import logging
 import re
 import shlex
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta, timezone
 from functools import cache
-from typing import Generator, Optional
 
 import bitmath
 import pytest
@@ -178,7 +178,7 @@ def validate_user_info_virtctl_vs_windows_os(vm):
     if virtctl_info["userName"].lower() not in windows_info:
         data_mismatch.append("user name mismatch")
     # Windows date format - 11/4/2020 (-m/-d/Y)
-    if datetime.fromtimestamp(timestamp=virtctl_time, tz=timezone.utc).strftime("%-m/%-d/%Y") not in windows_info:
+    if datetime.fromtimestamp(timestamp=virtctl_time, tz=UTC).strftime("%-m/%-d/%Y") not in windows_info:
         data_mismatch.append("login time mismatch")
 
     assert not data_mismatch, (
@@ -478,7 +478,7 @@ def check_vm_xml_tablet_device(vm):
 
 def get_matrix_os_golden_image_data_source(
     admin_client: DynamicClient, golden_images_namespace: Namespace, os_matrix: dict[str, dict]
-) -> Generator[DataSource, None, None]:
+) -> Generator[DataSource]:
     """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
 
     Args:
@@ -501,8 +501,8 @@ def matrix_os_vm_from_template(
     data_source_object: DataSource,
     os_matrix: dict[str, dict],
     cpu_model: str | None = None,
-    request: Optional[FixtureRequest] = None,
-    data_volume_template: Optional[dict[str, dict]] = None,
+    request: FixtureRequest | None = None,
+    data_volume_template: dict[str, dict] | None = None,
 ) -> VirtualMachineForTestsFromTemplate:
     param_dict = request.param if request else {}
     os_matrix_key = [*os_matrix][0]
