@@ -49,6 +49,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 import utilities.cpu
 import utilities.data_utils
 import utilities.infra
+from libs.net.cluster import is_ipv6_single_stack_cluster
 from utilities.console import Console
 from utilities.constants import (
     CLOUD_INIT_DISK_NAME,
@@ -91,6 +92,9 @@ from utilities.constants import (
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
+from utilities.network import (
+    cloud_init_network_data,
+)
 from utilities.storage import get_default_storage_class
 
 if TYPE_CHECKING:
@@ -772,7 +776,94 @@ class VirtualMachineForTests(VirtualMachine):
 
         return template_spec
 
+    def _apply_ipv6_masquerade_cloud_init(self) -> None:
+        """Apply default IPv6 cloud-init network configuration for the masquerade interface.
+
+        Configures both eth0 and enp1s0 with a fixed IPv6 address and gateway to enable
+        SSH on IPv6 single-stack clusters. Both interface names are configured since
+        naming is not predictable across VMs. If networkData already exists in
+        cloud_init_data, the masquerade interfaces are merged without overriding
+        user-defined eth0 or enp1s0 values.
+        """
+        if not self.cloud_init_data:
+            self.cloud_init_data = {}
+
+        primary_interface_data = {
+            "addresses": ["fd10:0:2::2/120"],
+            "gateway6": "fd10:0:2::1",
+            "dhcp4": False,
+            "dhcp6": False,
+        }
+
+        # Configure both interface names to ensure network configuration is applied as naming is not predictable
+        ipv6_interfaces = {
+            "eth0": {"match": {"name": "eth0"}, **primary_interface_data},
+            "enp1s0": {"match": {"name": "enp1s0"}, **primary_interface_data},
+        }
+
+        if "networkData" in self.cloud_init_data:
+            existing_ethernets = self.cloud_init_data["networkData"].get("ethernets", {})
+            merged_ethernets = {**ipv6_interfaces, **existing_ethernets}
+            self.cloud_init_data["networkData"]["ethernets"] = merged_ethernets
+
+            if "version" not in self.cloud_init_data["networkData"]:
+                self.cloud_init_data["networkData"]["version"] = 2
+        else:
+            self.cloud_init_data.update(cloud_init_network_data(data={"ethernets": ipv6_interfaces}))
+
     def update_vm_cloud_init_data(self, template_spec):
+        """Update the VM template spec with cloud-init data.
+
+        On IPv6 single-stack clusters, applies default IPv6 network
+        configuration before merging any user-provided cloud-init data.
+
+        If the template spec already contains cloud-init data, userData is
+        appended and networkData is replaced. Otherwise the generated cloud-init
+        data is set directly.
+
+        Args:
+            template_spec (dict): The VM template spec to update.
+
+        Returns:
+            dict: The updated template spec.
+
+        Example:
+            IPv6 single-stack cluster result (networkData injected automatically)::
+
+                - cloudInitNoCloud:
+                    networkData: |
+                      ethernets:
+                        enp1s0: &id001
+                          addresses:
+                          - fd10:0:2::2/120
+                          dhcp4: false
+                          dhcp6: false
+                          gateway6: fd10:0:2::1
+                        eth0: *id001
+                      version: 2
+                    userData: |-
+                      #cloud-config
+                      chpasswd:
+                        expire: false
+                      password: password
+                      user: fedora
+                  name: cloudinitdisk
+
+            Non-IPv6-only cluster result (userData only, no networkData injected)::
+
+                - cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      chpasswd:
+                        expire: false
+                      password: password
+                      user: fedora
+                  name: cloudinitdisk
+        """
+        if is_ipv6_single_stack_cluster():
+            LOGGER.info(f"IPv6 single-stack cluster detected, applying default IPv6 cloud-init for VM {self.name}")
+            self._apply_ipv6_masquerade_cloud_init()
+
         if self.cloud_init_data:
             cloud_init_volume = vm_cloud_init_volume(vm_spec=template_spec)
             cloud_init_volume_type = self.cloud_init_type or CLOUD_INIT_NO_CLOUD
@@ -780,9 +871,12 @@ class VirtualMachineForTests(VirtualMachine):
             existing_cloud_init_data = cloud_init_volume.get(cloud_init_volume_type)
             # If spec already contains cloud init data
             if existing_cloud_init_data:
-                cloud_init_volume[cloud_init_volume_type]["userData"] += generated_cloud_init["userData"].strip(
-                    "#cloud-config"
-                )
+                if "userData" in generated_cloud_init:
+                    cloud_init_volume[cloud_init_volume_type]["userData"] += generated_cloud_init[
+                        "userData"
+                    ].removeprefix("#cloud-config\n")
+                if "networkData" in generated_cloud_init:
+                    cloud_init_volume[cloud_init_volume_type]["networkData"] = generated_cloud_init["networkData"]
             else:
                 cloud_init_volume[cloud_init_volume_type] = generated_cloud_init
 
