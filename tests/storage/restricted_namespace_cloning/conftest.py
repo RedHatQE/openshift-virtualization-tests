@@ -83,7 +83,7 @@ def dv_multi_storage_scope_module(
     When cloning from a DataSource, the target DV must be at least as large as the source.
     """
     storage_class = [*storage_class_matrix__module__][0] if storage_class_matrix__module__ else None
-    params_dict = request.param if request else {}
+    params_dict = request.param or {}
     dv_name = (params_dict.get("dv_name") or "source-dv").replace(".", "-").lower()
 
     source_dict = fedora_ds_scope_module.source.instance.to_dict()
@@ -91,6 +91,8 @@ def dv_multi_storage_scope_module(
     dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
         "status", {}
     ).get("restoreSize")
+    if not dv_size:
+        raise ValueError(f"Cannot determine size from DataSource {fedora_ds_scope_module.name}")
 
     with create_dv(
         dv_name=f"{dv_name}-{storage_class}",
