@@ -54,7 +54,7 @@ jobs:
           podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
           echo "Saved image to artifacts/fedora-image.tar"
       - name: Upload container image artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fedora-container-image
           path: artifacts/fedora-image.tar
