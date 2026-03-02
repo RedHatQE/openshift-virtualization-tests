@@ -138,12 +138,22 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
         timeout=timeout,
     )
     LOGGER.info(f"Wait for {vmi.name} network interfaces")
+    expected_count = len(vmi.instance.spec.domain.devices.interfaces)
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
-    for sample in sampler:
-        interfaces = sample.get("status", {}).get("interfaces", [])
-        active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
-        if len(active_interfaces) == len(interfaces):
-            return True
+    interfaces = []
+    try:
+        for sample in sampler:
+            interfaces = sample.get("status", {}).get("interfaces", [])
+            if len(interfaces) == expected_count and all(iface.get("interfaceName") for iface in interfaces):
+                return True
+    except TimeoutExpiredError:
+        inactive = [iface for iface in interfaces if not iface.get("interfaceName")]
+        LOGGER.error(
+            f"Timed out waiting for network interfaces on VMI {vmi.name} after {timeout}s. "
+            f"Expected interfaces: {expected_count}, reported: {len(interfaces)}. "
+            f"Inactive: {inactive}."
+        )
+        raise
     return False
 
 
@@ -1636,7 +1646,7 @@ def wait_for_ssh_connectivity(
 
     for sample in TimeoutSampler(
         wait_timeout=timeout,
-        sleep=5,
+        sleep=TIMEOUT_5SEC,
         func=vm.ssh_exec.run_command,
         command=["exit"],
         tcp_timeout=tcp_timeout,
@@ -1794,7 +1804,7 @@ def wait_for_running_vm(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)  # type: ignore[arg-type]
+        collect_vnc_screenshot_for_vms(vm=vm)
         raise
 
 
@@ -1990,8 +2000,7 @@ def verify_vm_migrated(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} unresponsive after migration; getting VNC screenshot")
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        collect_vnc_screenshot_for_vms(vm=vm)
         raise
 
 
