@@ -43,6 +43,19 @@ from utilities.virt import migrate_vm_and_verify
 PRIMARY_INTERFACE_NAME = "eth0"
 
 
+@pytest.fixture(scope="package")
+def nncp_localnet_on_secondary_node_nic(
+    nmstate_dependent_placeholder: None,
+    admin_client: DynamicClient,
+    hosts_common_available_ports: list[str],
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    with create_nncp_localnet_on_secondary_node_nic(
+        node_nic_name=(hosts_common_available_ports[-1]),
+        client=admin_client,
+    ) as nncp:
+        yield nncp
+
+
 @pytest.fixture(scope="module")
 def nncp_localnet(
     nmstate_dependent_placeholder: None, admin_client: DynamicClient
@@ -362,19 +375,6 @@ def migrated_localnet_vm(
     vm, _ = localnet_running_vms
     migrate_vm_and_verify(vm=vm)
     return vm
-
-
-@pytest.fixture(scope="package")
-def nncp_localnet_on_secondary_node_nic(
-    nmstate_dependent_placeholder: None,
-    admin_client: DynamicClient,
-    hosts_common_available_ports: list[str],
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with create_nncp_localnet_on_secondary_node_nic(
-        node_nic_name=(hosts_common_available_ports[-1]),
-        client=admin_client,
-    ) as nncp:
-        yield nncp
 
 
 @pytest.fixture(scope="module")
