@@ -956,7 +956,10 @@ def cnv_current_version(installing_cnv, csv_scope_session):
     if installing_cnv:
         return CNV_NOT_INSTALLED
     if csv_scope_session:
-        return csv_scope_session.instance.spec.version
+        version = csv_scope_session.instance.spec.version
+        if not version:
+            raise ValueError("CSV spec.version is missing (field is optional in schema).")
+        return version
 
 
 @pytest.fixture(scope="session")
