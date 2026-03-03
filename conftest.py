@@ -332,7 +332,7 @@ def pytest_addoption(parser):
         "--network-for-live-migration",
         help=(
             "Network name for live migration in cross-cluster tests. "
-            "If not provided, network configuration will be skipped."
+            "If not provided, HCO's liveMigrationConfig.network will not be set by the tests setup"
         ),
     )
 

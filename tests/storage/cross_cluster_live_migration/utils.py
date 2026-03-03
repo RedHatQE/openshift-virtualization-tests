@@ -19,7 +19,7 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     hyperconverged_resource: HyperConverged,
     client: DynamicClient,
     hco_namespace: Namespace,
-    network_for_live_migration: NetworkAttachmentDefinition | None,
+    network_for_live_migration: NetworkAttachmentDefinition | None = None,
 ) -> Generator[None, None, None]:
     """
     Enable decentralized live migration feature gate and optionally configure HCO live migration network.
