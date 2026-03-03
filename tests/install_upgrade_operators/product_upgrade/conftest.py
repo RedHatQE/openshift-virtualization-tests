@@ -4,6 +4,7 @@ import re
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
+from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.resource import ResourceEditor
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
@@ -11,6 +12,9 @@ from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.product_upgrade.utils import (
+    KONFLUX_IDMS_NAME,
+    KONFLUX_MIRROR_BASE_URL,
+    apply_konflux_idms,
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
@@ -19,6 +23,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     get_nodes_labels,
     get_nodes_taints,
     get_shortest_upgrade_path,
+    idms_has_all_mirrors,
     perform_cnv_upgrade,
     run_ocp_upgrade_command,
     set_workload_update_methods_hco,
@@ -31,7 +36,12 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import wait_for_operator_condition
 from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, NamespacesNames
+from utilities.constants import (
+    HCO_CATALOG_SOURCE,
+    HOTFIX_STR,
+    TIMEOUT_10MIN,
+    NamespacesNames,
+)
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
@@ -85,47 +95,45 @@ def nodes_labels_before_upgrade(nodes, cnv_upgrade):
     return get_nodes_labels(nodes=nodes, cnv_upgrade=cnv_upgrade)
 
 
+@pytest.fixture(scope="session")
+def required_konflux_mirrors(cnv_target_version, cnv_current_version):
+    target = Version(version=cnv_target_version)
+    current = Version(version=cnv_current_version)
+    return [
+        f"{KONFLUX_MIRROR_BASE_URL}/v{target.major}-{minor}" for minor in range(target.minor, current.minor - 1, -1)
+    ]
+
+
 @pytest.fixture()
-def updated_image_content_source_policy(
-    admin_client,
+def updated_konflux_idms(
+    cnv_image_name,
     nodes,
-    tmpdir_factory,
+    cnv_source,
+    required_konflux_mirrors,
+    is_disconnected_cluster,
     active_machine_config_pools,
     machine_config_pools_conditions,
-    cnv_image_url,
-    cnv_image_name,
-    cnv_source,
-    cnv_target_version,
-    cnv_registry_source,
-    pull_secret_directory,
-    generated_pulled_secret,
-    is_disconnected_cluster,
-    is_idms_cluster,
 ):
-    """
-    Creates a new ImageContentSourcePolicy file with a given CNV image and applies it to the cluster.
-    """
+    """Ensures the Konflux IDMS contains the required mirror entries for the CNV upgrade target version."""
     if is_disconnected_cluster:
-        LOGGER.warning("Skip applying ICSP/IDMS in a disconnected setup.")
+        LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
 
     if cnv_source == HOTFIX_STR:
-        LOGGER.info("ICSP updates skipped as upgrading using production source/upgrade to hotfix")
+        LOGGER.info("IDMS updates skipped as upgrading using production source/upgrade to hotfix")
         return
-    file_path = get_generated_icsp_idms(
-        image_url=cnv_image_url,
-        registry_source=cnv_registry_source["source_map"],
-        generated_pulled_secret=generated_pulled_secret,
-        pull_secret_directory=pull_secret_directory,
-        is_idms_cluster=is_idms_cluster,
-    )
-    apply_icsp_idms(
-        file_paths=[file_path],
+
+    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME)
+    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_konflux_mirrors):
+        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains all required mirrors.")
+        return
+
+    apply_konflux_idms(
+        idms=idms,
+        required_mirrors=required_konflux_mirrors,
         machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
-        is_idms_file=is_idms_cluster,
-        delete_file=True,
     )
 
 
