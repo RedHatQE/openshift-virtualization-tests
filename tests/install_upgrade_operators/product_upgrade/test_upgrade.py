@@ -54,7 +54,7 @@ class TestUpgrade:
         cnv_upgrade_stream,
         fired_alerts_before_upgrade,
         disabled_default_sources_in_operatorhub,
-        updated_image_content_source_policy,
+        updated_konflux_idms,
         updated_custom_hco_catalog_source_image,
         updated_cnv_subscription_source,
         approved_cnv_upgrade_install_plan,
