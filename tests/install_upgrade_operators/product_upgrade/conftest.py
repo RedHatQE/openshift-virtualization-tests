@@ -4,6 +4,7 @@ import re
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
+from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.resource import ResourceEditor
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
@@ -29,9 +30,21 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     wait_for_odf_update,
     wait_for_pods_replacement_by_type,
 )
-from tests.install_upgrade_operators.utils import wait_for_operator_condition
+from tests.install_upgrade_operators.utils import (
+    KONFLUX_IDMS_NAME,
+    KONFLUX_MIRROR_BASE_URL,
+    apply_konflux_idms,
+    idms_has_all_mirrors,
+    wait_for_operator_condition,
+)
 from tests.upgrade_params import EUS
-from utilities.constants import HCO_CATALOG_SOURCE, HOTFIX_STR, TIMEOUT_10MIN, TIMEOUT_180MIN, NamespacesNames
+from utilities.constants import (
+    HCO_CATALOG_SOURCE,
+    HOTFIX_STR,
+    TIMEOUT_10MIN,
+    TIMEOUT_180MIN,
+    NamespacesNames,
+)
 from utilities.data_collector import (
     get_data_collector_base_directory,
 )
@@ -43,8 +56,6 @@ from utilities.infra import (
     get_subscription,
 )
 from utilities.operator import (
-    apply_icsp_idms,
-    get_generated_icsp_idms,
     get_machine_config_pool_by_name,
     get_machine_config_pools_conditions,
     update_image_in_catalog_source,
@@ -83,47 +94,46 @@ def nodes_labels_before_upgrade(nodes, cnv_upgrade):
     return get_nodes_labels(nodes=nodes, cnv_upgrade=cnv_upgrade)
 
 
+@pytest.fixture(scope="session")
+def required_konflux_mirrors(cnv_target_version, cnv_current_version):
+    target = Version(version=cnv_target_version)
+    current = Version(version=cnv_current_version)
+    return [
+        f"{KONFLUX_MIRROR_BASE_URL}/v{target.major}-{minor}" for minor in range(target.minor, current.minor - 1, -1)
+    ]
+
+
 @pytest.fixture()
-def updated_image_content_source_policy(
+def updated_konflux_idms(
     admin_client,
+    cnv_image_name,
     nodes,
-    tmpdir_factory,
+    cnv_source,
+    required_konflux_mirrors,
+    is_disconnected_cluster,
     active_machine_config_pools,
     machine_config_pools_conditions,
-    cnv_image_url,
-    cnv_image_name,
-    cnv_source,
-    cnv_target_version,
-    cnv_registry_source,
-    pull_secret_directory,
-    generated_pulled_secret,
-    is_disconnected_cluster,
-    is_idms_cluster,
 ):
-    """
-    Creates a new ImageContentSourcePolicy file with a given CNV image and applies it to the cluster.
-    """
+    """Ensures the Konflux IDMS contains the required mirror entries for the CNV upgrade target version."""
     if is_disconnected_cluster:
-        LOGGER.warning("Skip applying ICSP/IDMS in a disconnected setup.")
+        LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
 
     if cnv_source == HOTFIX_STR:
-        LOGGER.info("ICSP updates skipped as upgrading using production source/upgrade to hotfix")
+        LOGGER.info("IDMS updates skipped as upgrading using production source/upgrade to hotfix")
         return
-    file_path = get_generated_icsp_idms(
-        image_url=cnv_image_url,
-        registry_source=cnv_registry_source["source_map"],
-        generated_pulled_secret=generated_pulled_secret,
-        pull_secret_directory=pull_secret_directory,
-        is_idms_cluster=is_idms_cluster,
-    )
-    apply_icsp_idms(
-        file_paths=[file_path],
+
+    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
+    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_konflux_mirrors):
+        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains all required mirrors.")
+        return
+
+    apply_konflux_idms(
+        idms=idms,
+        required_mirrors=required_konflux_mirrors,
         machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
-        is_idms_file=is_idms_cluster,
-        delete_file=True,
     )
 
 
@@ -384,6 +394,8 @@ def default_workload_update_strategy(hyperconverged_resource_scope_session):
 @pytest.fixture()
 def eus_paused_worker_mcp(
     worker_machine_config_pools,
+    worker_machine_config_pools_conditions,
+    eus_updated_konflux_idms,
 ):
     LOGGER.info("Pausing worker MCP updates before starting EUS upgrade.")
     update_mcp_paused_spec(mcp=worker_machine_config_pools)
@@ -431,44 +443,32 @@ def eus_unpaused_workload_update(
 
 
 @pytest.fixture(scope="module")
-def created_eus_icsps(
-    pull_secret_directory,
-    generated_pulled_secret,
-    cnv_registry_source,
+def eus_updated_konflux_idms(
+    admin_client,
     eus_cnv_upgrade_path,
-    is_idms_cluster,
-):
-    icsp_files = []
-    for entry in eus_cnv_upgrade_path:
-        for version in eus_cnv_upgrade_path[entry]:
-            icsp_file = get_generated_icsp_idms(
-                image_url=eus_cnv_upgrade_path[entry][version],
-                registry_source=cnv_registry_source["source_map"],
-                generated_pulled_secret=generated_pulled_secret,
-                pull_secret_directory=pull_secret_directory,
-                is_idms_cluster=is_idms_cluster,
-                cnv_version=version,
-            )
-            icsp_files.append(icsp_file)
-    LOGGER.info(f"EUS ICSP Files created: {icsp_files}")
-    return icsp_files
-
-
-@pytest.fixture(scope="module")
-def eus_applied_all_icsp(
     nodes,
-    generated_pulled_secret,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
-    created_eus_icsps,
-    is_idms_cluster,
 ):
-    apply_icsp_idms(
-        file_paths=created_eus_icsps,
+    required_mirrors = []
+    for phase in eus_cnv_upgrade_path:
+        for version in eus_cnv_upgrade_path[phase]:
+            ver = Version(version=version)
+            mirror = f"{KONFLUX_MIRROR_BASE_URL}/v{ver.major}-{ver.minor}"
+            if mirror not in required_mirrors:
+                required_mirrors.append(mirror)
+
+    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
+    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_mirrors):
+        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already has all EUS mirrors.")
+        return
+
+    apply_konflux_idms(
+        idms=idms,
+        required_mirrors=required_mirrors,
         machine_config_pools=machine_config_pools,
         mcp_conditions=machine_config_pools_conditions_scope_module,
         nodes=nodes,
-        is_idms_file=is_idms_cluster,
     )
 
 

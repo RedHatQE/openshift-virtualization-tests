@@ -1,38 +1,28 @@
 # TODO: Remove ### unused_code: ignore ### from function docstring once it's used.
 
 import logging
-import os
-import shlex
 from contextlib import contextmanager
 from datetime import datetime
 from pprint import pformat
 
-import yaml
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.cluster_service_version import ClusterServiceVersion
-from ocp_resources.image_content_source_policy import ImageContentSourcePolicy
-from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
-from ocp_resources.node import Node
 from ocp_resources.operator_group import OperatorGroup
 from ocp_resources.operator_hub import OperatorHub
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.subscription import Subscription
-from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
-    BREW_REGISTERY_SOURCE,
     DEFAULT_RESOURCE_CONDITIONS,
-    ICSP_FILE,
-    IDMS_FILE,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -44,80 +34,6 @@ from utilities.constants import (
 from utilities.data_collector import collect_ocp_must_gather
 
 LOGGER = logging.getLogger(__name__)
-
-
-def create_icsp_idms_command(image, source_url, folder_name, pull_secret=None, filter_options=""):
-    """
-        Create ImageContentSourcePolicy command.
-
-    Args:
-        image (str): name of image to be mirrored.
-        source_url (str): source url of image registry to which contents mirror.
-        folder_name (str): local path to store manifests.
-        pull_secret (str): Path to your registry credentials, default set to None(until passed)
-        filter_options (str): when filter passed it will choose image from multiple variants.
-
-    Returns:
-        str: base command to create icsp in the cluster.
-    """
-    base_command = (
-        f"oc adm catalog mirror {image} {source_url} --manifests-only --to-manifests {folder_name} {filter_options}"
-    )
-    if pull_secret:
-        base_command = f"{base_command} --registry-config={pull_secret}"
-
-    return base_command
-
-
-def generate_icsp_idms_file(folder_name, command, is_idms_file, cnv_version=None):
-    rc, _, _ = run_command(
-        command=shlex.split(command),
-        verify_stderr=False,
-        check=False,
-    )
-    assert rc
-    file_name = IDMS_FILE if is_idms_file else ICSP_FILE
-
-    absolute_file_name = os.path.join(folder_name, file_name)
-    assert os.path.isfile(absolute_file_name), f"file does not exist in path {absolute_file_name}"
-    if cnv_version:
-        absolute_file_name = generate_unique_icsp_idms_file(
-            file_name=absolute_file_name,
-            version_string=cnv_version.lstrip("v").replace(".", ""),
-        )
-    return absolute_file_name
-
-
-def generate_unique_icsp_idms_file(file_name, version_string):
-    # update the metadata.name value to generate unique ICSP/IDMS
-    with open(file_name, "r") as fd:
-        file_yaml = yaml.safe_load(fd.read())
-    file_yaml["metadata"]["name"] = f"iib-{version_string}"
-    with open(file_name, "w") as current_mirror_file:
-        yaml.dump(file_yaml, current_mirror_file)
-    new_file_name = file_name.replace(file_name, f"{file_name.replace('.yaml', '')}{version_string}.yaml")
-    os.rename(file_name, new_file_name)
-    return new_file_name
-
-
-def create_icsp_idms_from_file(file_path):
-    LOGGER.info(f"Creating icsp/idms using file: {file_path}")
-    rc, _, _ = run_command(
-        command=shlex.split(f"oc create -f {file_path}"),
-        verify_stderr=False,
-        check=False,
-    )
-    assert rc
-
-
-def delete_existing_icsp_idms(name, is_idms_file):
-    resource_class = ImageDigestMirrorSet if is_idms_file else ImageContentSourcePolicy
-    LOGGER.info(f"Deleting {resource_class}.")
-    for resource_obj in resource_class.get():
-        object_name = resource_obj.name
-        if object_name.startswith(name):
-            LOGGER.info(f"Deleting {resource_class} {object_name}.")
-            resource_obj.delete(wait=True)
 
 
 def get_mcps_with_different_transition_times(condition_type, machine_config_pools_list, initial_transition_times):
@@ -629,11 +545,6 @@ def update_subscription_source(
     }).update()
 
 
-def cluster_with_icsp():
-    icsp_list = list(ImageContentSourcePolicy.get())
-    return len(icsp_list) > 0
-
-
 def get_cluster_operator_status_conditions(admin_client, operator_conditions=None):
     operator_conditions = operator_conditions or DEFAULT_RESOURCE_CONDITIONS
     cluster_operator_status = {}
@@ -697,59 +608,3 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
 
 def get_hco_csv_name_by_version(cnv_target_version: str) -> str:
     return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
-
-
-def get_generated_icsp_idms(
-    image_url: str,
-    registry_source: str,
-    generated_pulled_secret: str,
-    pull_secret_directory: str,
-    is_idms_cluster: bool,
-    cnv_version: str | None = None,
-    filter_options: str = "",
-) -> str:
-    pull_secret = None
-    if image_url.startswith(tuple([BREW_REGISTERY_SOURCE, "quay.io"])):
-        registry_source = BREW_REGISTERY_SOURCE
-        pull_secret = generated_pulled_secret
-    cnv_mirror_cmd = create_icsp_idms_command(
-        image=image_url,
-        source_url=registry_source,
-        folder_name=pull_secret_directory,
-        pull_secret=pull_secret,
-        filter_options=filter_options,
-    )
-    icsp_file_path = generate_icsp_idms_file(
-        folder_name=pull_secret_directory,
-        command=cnv_mirror_cmd,
-        is_idms_file=is_idms_cluster,
-        cnv_version=cnv_version,
-    )
-
-    return icsp_file_path
-
-
-def apply_icsp_idms(
-    file_paths: list[str],
-    machine_config_pools: list[MachineConfigPool],
-    mcp_conditions: dict[str, list[dict[str, str]]],
-    nodes: list[Node],
-    is_idms_file: bool,
-    delete_file: bool = False,
-) -> None:
-    LOGGER.info("pausing MCP updates while modifying ICSP/IDMS")
-    with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
-        if delete_file:
-            # Due to the amount of annotations in ICSP/IDMS yaml, `oc apply` may fail. Existing ICSP/IDMS is deleted.
-            LOGGER.info("Deleting existing ICSP/IDMS.")
-            delete_existing_icsp_idms(name="iib", is_idms_file=is_idms_file)
-        LOGGER.info("Creating new ICSP/IDMS")
-        for file_path in file_paths:
-            create_icsp_idms_from_file(file_path=file_path)
-
-    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
-    wait_for_mcp_update_completion(
-        machine_config_pools_list=machine_config_pools,
-        initial_mcp_conditions=mcp_conditions,
-        nodes=nodes,
-    )
