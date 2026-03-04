@@ -65,6 +65,15 @@ The "no defensive programming" rule has these five exceptions:
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
 - **ALWAYS use `@pytest.mark.usefixtures`** - REQUIRED when fixture return value is not used by test
 
+**`__test__ = False` Usage Rules:**
+
+- ✅ **ALLOWED for STD placeholder tests** - tests that contain ONLY:
+  - Docstrings describing expected behavior
+  - No actual implementation code (no assertions, no test logic)
+- ❌ **FORBIDDEN for implemented tests** - if a test has actual implementation code (assertions, test logic, setup/teardown), do NOT use `__test__ = False`
+
+**Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Once a test has implementation code, `__test__ = False` must be removed.
+
 ### Fixture Guidelines (CRITICAL)
 
 1. **Single Action REQUIRED**: Fixtures MUST do ONE action only (single responsibility)
