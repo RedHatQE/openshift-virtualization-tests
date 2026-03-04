@@ -290,6 +290,7 @@ class TestGetArtifactorySecret:
             mock_secret_class.assert_called_once_with(
                 name=ARTIFACTORY_SECRET_NAME,
                 namespace="test-namespace",
+                client=None,
                 accesskeyid="base64_test-user",
                 secretkey="base64_test-token",
             )
@@ -393,6 +394,7 @@ class TestGetArtifactoryConfigMap:
         mock_cm_class.assert_called_once_with(
             name="artifactory-configmap",
             namespace="test-namespace",
+            client=None,
             data={"tlsregistry.crt": mock_cert},
         )
 

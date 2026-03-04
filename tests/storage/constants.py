@@ -18,3 +18,15 @@ HTTP = "http"
 HTTPS = "https"
 
 QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+
+STORAGE_CLASS_A = "storage_class_a"
+STORAGE_CLASS_B = "storage_class_b"
+
+NO_STORAGE_CLASS_FAILURE_MESSAGE = (
+    f"Test failed: {'{storage_class}'} storage class is not deployed. "
+    f"Available storage classes: {'{cluster_storage_classes_names}'}. "
+    "Ensure the correct storage_class is set in the global_config, "
+    "or override it with the pytest params: "
+    f"--tc={STORAGE_CLASS_A}:<storage_class_name> "
+    f"--tc={STORAGE_CLASS_B}:<storage_class_name>"
+)
