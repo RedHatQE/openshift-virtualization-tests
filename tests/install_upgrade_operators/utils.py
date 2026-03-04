@@ -7,10 +7,13 @@ from typing import Any
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ConflictError, ResourceNotFoundError
+from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.installplan import InstallPlan
+from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.network_addons_config import NetworkAddonsConfig
+from ocp_resources.node import Node
 from ocp_resources.operator_condition import OperatorCondition
-from ocp_resources.resource import Resource
+from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
@@ -24,8 +27,12 @@ from utilities.constants import (
     TIMEOUT_40MIN,
 )
 from utilities.infra import get_subscription
+from utilities.operator import wait_for_mcp_update_completion
 
 LOGGER = logging.getLogger(__name__)
+KONFLUX_IDMS_NAME = "zz-cnv-icsp-fallback"
+KONFLUX_MIRROR_BASE_URL = "quay.io/openshift-virtualization/konflux-builds"
+KONFLUX_IDMS_SOURCE = "registry.redhat.io/container-native-virtualization"
 
 
 def wait_for_operator_condition(dyn_client, hco_namespace, name, upgradable):
@@ -278,3 +285,58 @@ def get_resource_key_value(resource, key_name):
         resource.instance.to_dict()["spec"],
         keypath_separator=KEY_PATH_SEPARATOR,
     ).get(key_name)
+
+
+def apply_konflux_idms(
+    idms: ImageDigestMirrorSet,
+    required_mirrors: list[str],
+    machine_config_pools: list[MachineConfigPool],
+    mcp_conditions: dict[str, list[dict[str, str]]],
+    nodes: list[Node],
+) -> None:
+    """Creates or patches the Konflux IDMS with the required mirror entries.
+
+    Args:
+        idms: The Konflux IDMS resource to create or patch.
+        required_mirrors: Konflux mirror URLs to set on the IDMS.
+        machine_config_pools: Active machine config pools to pause/wait.
+        mcp_conditions: Initial MCP conditions for tracking update progress.
+        nodes: Cluster nodes to verify readiness after MCP update.
+    """
+    image_digest_mirrors = [{"source": KONFLUX_IDMS_SOURCE, "mirrors": required_mirrors}]
+    LOGGER.info("Pausing MCP updates while modifying IDMS.")
+    with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
+        if idms.exists:
+            LOGGER.info(f"Patching IDMS {KONFLUX_IDMS_NAME} with mirrors: {required_mirrors}")
+            ResourceEditor(patches={idms: {"spec": {"imageDigestMirrors": image_digest_mirrors}}}).update()
+        else:
+            LOGGER.info(f"Creating IDMS {KONFLUX_IDMS_NAME} with mirrors: {required_mirrors}")
+            ImageDigestMirrorSet(
+                name=KONFLUX_IDMS_NAME,
+                client=idms.client,
+                image_digest_mirrors=image_digest_mirrors,
+                teardown=False,
+            ).deploy(wait=True)
+    LOGGER.info("Wait for MCP update after IDMS modification.")
+    wait_for_mcp_update_completion(
+        machine_config_pools_list=machine_config_pools,
+        initial_mcp_conditions=mcp_conditions,
+        nodes=nodes,
+    )
+
+
+def idms_has_all_mirrors(idms: ImageDigestMirrorSet, required_mirrors: list[str]) -> bool:
+    """Returns True if the IDMS already contains all required Konflux mirror entries."""
+    existing_mirrors = idms.instance.spec.imageDigestMirrors
+    source_entry = next(
+        (entry for entry in existing_mirrors if entry["source"] == KONFLUX_IDMS_SOURCE),
+        None,
+    )
+    if not source_entry:
+        LOGGER.info(
+            f"IDMS {idms.name} has no entry for source {KONFLUX_IDMS_SOURCE}, mirrors need to be added."
+            f" Current IDMS mirrors: {existing_mirrors}"
+        )
+        return False
+    existing_urls = {str(mirror) for mirror in source_entry["mirrors"]}
+    return all(mirror in existing_urls for mirror in required_mirrors)
