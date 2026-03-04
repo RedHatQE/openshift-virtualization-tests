@@ -328,6 +328,13 @@ def pytest_addoption(parser):
         "--remote_cluster_password",
         help="Password for the remote cluster for cross-cluster tests",
     )
+    session_group.addoption(
+        "--network-for-live-migration",
+        help=(
+            "Network name for live migration in cross-cluster tests. "
+            "If not provided, HCO's liveMigrationConfig.network will not be set by the tests setup"
+        ),
+    )
 
     # CI group
     ci_group.addoption(

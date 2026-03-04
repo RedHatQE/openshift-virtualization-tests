@@ -43,7 +43,16 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
-LIVE_MIGRATION_NETWORK_NAME = "lm-network"
+
+@pytest.fixture(scope="session")
+def network_for_live_migration_name(request):
+    """
+    Get the network name for live migration from CLI arguments.
+    """
+    network_name = request.session.config.getoption("--network-for-live-migration")
+    if not network_name:
+        LOGGER.info("--network-for-live-migration not provided, skipping network configuration")
+    return network_name
 
 
 @pytest.fixture(scope="session")
@@ -129,9 +138,11 @@ def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network
 
 
 @pytest.fixture(scope="package")
-def local_cluster_network_for_live_migration(admin_client, hco_namespace):
+def local_cluster_network_for_live_migration(admin_client, hco_namespace, network_for_live_migration_name):
+    if not network_for_live_migration_name:
+        return None
     return NetworkAttachmentDefinition(
-        name=LIVE_MIGRATION_NETWORK_NAME,
+        name=network_for_live_migration_name,
         namespace=hco_namespace.name,
         client=admin_client,
         ensure_exists=True,
@@ -139,9 +150,13 @@ def local_cluster_network_for_live_migration(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="package")
-def remote_cluster_network_for_live_migration(remote_admin_client, remote_cluster_hco_namespace):
+def remote_cluster_network_for_live_migration(
+    remote_admin_client, remote_cluster_hco_namespace, network_for_live_migration_name
+):
+    if not network_for_live_migration_name:
+        return None
     return NetworkAttachmentDefinition(
-        name=LIVE_MIGRATION_NETWORK_NAME,
+        name=network_for_live_migration_name,
         namespace=remote_cluster_hco_namespace.name,
         client=remote_admin_client,
         ensure_exists=True,
