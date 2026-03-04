@@ -89,5 +89,4 @@ def extract_vm_primary_network_data(vm: vim.VirtualMachine) -> tuple[str, str]:
             for net in getattr(vm.guest, "net", []):
                 if net.macAddress == device.macAddress and net.ipAddress:
                     return net.macAddress, net.ipAddress[0]
-    else:
-        raise IfaceNotFoundError("No network interface found in the VM or no IP address assigned.")
+    raise IfaceNotFoundError("No network interface found in the VM or no IP address assigned.")

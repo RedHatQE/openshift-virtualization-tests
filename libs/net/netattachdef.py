@@ -35,7 +35,7 @@ class IpamStatic(Ipam):
     """
 
     type: str = field(default="static", init=False)
-    addresses: list["IpamStatic.Address"]
+    addresses: list[IpamStatic.Address]
     routes: list[IpamRoute] | None = None
 
     @dataclass
@@ -61,7 +61,7 @@ class CNIPluginBridgeConfig(CNIPluginConfig):
     mtu: int | None = None
     vlan: int | None = None
     macspoofchk: bool | None = None
-    disableContainerInterface: bool | None = None  # noqa: N815
+    disableContainerInterface: bool | None = None
 
 
 @dataclass
@@ -76,8 +76,8 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
     type: str = field(default="ovn-k8s-cni-overlay", init=False)
     topology: str
-    netAttachDefName: str  # noqa: N815
-    vlanID: int | None = None  # noqa: N815
+    netAttachDefName: str
+    vlanID: int | None = None
 
     class Topology(Enum):
         LOCALNET = "localnet"
@@ -105,7 +105,7 @@ class NetConfig:
 
     name: str
     plugins: list[CNIPluginConfig]
-    cniVersion: str = _DEFAULT_CNI_VERSION  # noqa: N815
+    cniVersion: str = _DEFAULT_CNI_VERSION
 
 
 class NetworkAttachmentDefinition(NamespacedResource):
