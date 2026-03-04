@@ -6,24 +6,28 @@ import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.storage_class import StorageClass
+from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutSampler
 
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
-    OPENSHIFT_VIRTUALIZATION,
 )
 from tests.install_upgrade_operators.product_install.utils import get_all_resources
+from tests.install_upgrade_operators.utils import (
+    KONFLUX_IDMS_NAME,
+    KONFLUX_MIRROR_BASE_URL,
+    apply_konflux_idms,
+    idms_has_all_mirrors,
+)
 from utilities.constants import (
-    BREW_REGISTERY_SOURCE,
     CRITICAL_STR,
     HCO_CATALOG_SOURCE,
     HCO_SUBSCRIPTION,
-    ICSP_FILE,
-    IDMS_FILE,
     INFO_STR,
     PENDING_STR,
     PRODUCTION_CATALOG_SOURCE,
@@ -44,17 +48,12 @@ from utilities.infra import (
 )
 from utilities.operator import (
     create_catalog_source,
-    create_icsp_idms_from_file,
     create_operator,
     create_operator_group,
     create_subscription,
-    generate_icsp_idms_file,
     get_hco_csv_name_by_version,
     get_install_plan_from_subscription,
-    get_mcp_updating_transition_times,
     wait_for_catalogsource_ready,
-    wait_for_mcp_update_end,
-    wait_for_mcp_update_start,
 )
 from utilities.storage import (
     HppCsiStorageClass,
@@ -85,54 +84,33 @@ def after_installation_all_resources(installation_data_dir):
 
 
 @pytest.fixture(scope="module")
-def hyperconverged_directory(tmpdir_factory, is_production_source):
-    if is_production_source:
-        yield
-    else:
-        yield tmpdir_factory.mktemp(f"{OPENSHIFT_VIRTUALIZATION}-folder")
-
-
-@pytest.fixture(scope="module")
-def generated_hyperconverged_icsp_idms(
+def installed_konflux_idms(
+    admin_client,
     is_production_source,
-    is_idms_cluster,
-    hyperconverged_directory,
-    generated_pulled_secret,
-    cnv_image_url,
-):
-    if is_production_source:
-        LOGGER.info("This is installation from production source, icsp update is not needed.")
-        return
-    folder_name = f"{hyperconverged_directory}/{OPENSHIFT_VIRTUALIZATION}-manifest"
-    LOGGER.info(f"Create CNV ICSP/IDMS file {ICSP_FILE}/{IDMS_FILE} in {hyperconverged_directory}")
-    mirror_cmd = (
-        f"oc adm catalog mirror {cnv_image_url} {BREW_REGISTERY_SOURCE} --manifests-only"
-        f" --to-manifests {folder_name} --registry-config={generated_pulled_secret}"
-    )
-
-    return generate_icsp_idms_file(folder_name=folder_name, command=mirror_cmd, is_idms_file=is_idms_cluster)
-
-
-@pytest.fixture(scope="module")
-def updated_icsp_hyperconverged(
-    is_production_source,
-    generated_hyperconverged_icsp_idms,
+    cnv_version_to_install_info,
+    nodes,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
 ):
-    initial_updating_transition_times = get_mcp_updating_transition_times(
-        mcp_conditions=machine_config_pools_conditions_scope_module
-    )
     if is_production_source:
-        LOGGER.info("This is installation from production source, icsp/idms update is not needed.")
+        LOGGER.info("Production source install, IDMS update not needed.")
         return
-    create_icsp_idms_from_file(file_path=generated_hyperconverged_icsp_idms)
-    LOGGER.info("Wait for MCP update after ICSP/IDMS modification.")
-    wait_for_mcp_update_start(
-        machine_config_pools_list=machine_config_pools,
-        initial_transition_times=initial_updating_transition_times,
+
+    version = Version(version=cnv_version_to_install_info["version"])
+    required_mirrors = [f"{KONFLUX_MIRROR_BASE_URL}/v{version.major}-{version.minor}"]
+
+    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
+    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_mirrors):
+        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains required mirrors.")
+        return
+
+    apply_konflux_idms(
+        idms=idms,
+        required_mirrors=required_mirrors,
+        machine_config_pools=machine_config_pools,
+        mcp_conditions=machine_config_pools_conditions_scope_module,
+        nodes=nodes,
     )
-    wait_for_mcp_update_end(machine_config_pools_list=machine_config_pools)
 
 
 @pytest.fixture(scope="module")
@@ -226,7 +204,7 @@ def cnv_install_plan_installed(
 def installed_openshift_virtualization(
     admin_client,
     disabled_default_sources_in_operatorhub_scope_module,
-    updated_icsp_hyperconverged,
+    installed_konflux_idms,
     hyperconverged_catalog_source,
     created_cnv_namespace,
     created_cnv_operator_group,
