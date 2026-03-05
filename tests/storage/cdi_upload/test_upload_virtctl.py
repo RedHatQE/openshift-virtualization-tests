@@ -14,6 +14,7 @@ from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
+from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
@@ -245,6 +246,10 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
     """
     Check that virtctl can create a new PVC and upload an image to it
     """
+    if is_ipv6_single_stack_cluster():
+        pytest.xfail(
+            reason=f"{QUARANTINED}: virtctl image-upload PVC fails on IPv6 single-stack cluster; tracked in CNV-81258"
+        )
     pvc_name = "cnv-3728"
     with virtctl_upload_dv(
         client=namespace.client,
