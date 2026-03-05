@@ -202,6 +202,7 @@ def l2_bridge_running_vm_a(
         mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=2),
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        dhcp_interface_config={"addresses": [f"{interface_ip_addresses[2]}/24"]},
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -228,6 +229,7 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
         mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=1),
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
+        dhcp_interface_config={"dhcp4": False},
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
