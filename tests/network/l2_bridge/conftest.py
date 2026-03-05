@@ -37,6 +37,11 @@ VMB_MPLS_ROUTE_TAG = 200
 
 
 @pytest.fixture(scope="class")
+def bridge_device_type(request):
+    return request.param
+
+
+@pytest.fixture(scope="class")
 def l2_bridge_device_name(index_number):
     yield f"br{next(index_number)}test"
 
@@ -45,13 +50,13 @@ def l2_bridge_device_name(index_number):
 def l2_bridge_device_worker_1(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     hosts_common_available_ports,
     worker_node1,
+    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=bridge_device_type,
         nncp_name=f"l2-bridge-{name_prefix(worker_node1.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -65,13 +70,13 @@ def l2_bridge_device_worker_1(
 def l2_bridge_device_worker_2(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     hosts_common_available_ports,
     worker_node2,
+    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=bridge_device_type,
         nncp_name=f"l2-bridge-{name_prefix(worker_node2.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -84,17 +89,17 @@ def l2_bridge_device_worker_2(
 @pytest.fixture(scope="class")
 def dhcp_nad(
     admin_client,
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
-    l2_bridge_device_name,
     vlan_index_number,
+    bridge_device_type,
+    l2_bridge_device_name,
 ):
     vlan_tag = next(vlan_index_number)
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=bridge_device_type,
         nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad-vlan-{vlan_tag}",
         interface_name=l2_bridge_device_name,
         vlan=vlan_tag,
@@ -106,15 +111,15 @@ def dhcp_nad(
 @pytest.fixture(scope="class")
 def custom_eth_type_llpd_nad(
     admin_client,
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
+    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=bridge_device_type,
         nad_name=f"{l2_bridge_device_name}-custom-eth-type-icmp-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
@@ -125,15 +130,15 @@ def custom_eth_type_llpd_nad(
 @pytest.fixture(scope="class")
 def mpls_nad(
     admin_client,
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
+    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=bridge_device_type,
         nad_name=f"{l2_bridge_device_name}-mpls-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
@@ -144,15 +149,15 @@ def mpls_nad(
 @pytest.fixture(scope="class")
 def dot1q_nad(
     admin_client,
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
+    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=bridge_device_type,
         nad_name=f"{l2_bridge_device_name}-dot1q-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
