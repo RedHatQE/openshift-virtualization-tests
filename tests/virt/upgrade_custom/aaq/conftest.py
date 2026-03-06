@@ -62,7 +62,7 @@ def vm_for_arq_upgrade_test(unprivileged_client, namespace_for_arq_upgrade_test,
 
 
 @pytest.fixture(scope="session")
-def vm_for_arq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_arq_upgrade_test):
+def vm_for_arq_upgrade_test_in_gated_state(admin_client, unprivileged_client, namespace_for_arq_upgrade_test):
     vm_name = "vm-for-arq-upgrade-test-gated"
     with VirtualMachineForTests(
         name=vm_name,
@@ -72,8 +72,8 @@ def vm_for_arq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_ar
         client=unprivileged_client,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
-        wait_for_virt_launcher_pod(vmi=vm.vmi)
-        wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
+        wait_for_virt_launcher_pod(vmi=vm.vmi, privileged_client=admin_client)
+        wait_when_pod_in_gated_state(pod=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client))
         yield vm
 
 
@@ -113,7 +113,7 @@ def vm_for_acrq_upgrade_test(unprivileged_client, namespace_for_acrq_upgrade_tes
 
 
 @pytest.fixture(scope="session")
-def vm_for_acrq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_acrq_upgrade_test):
+def vm_for_acrq_upgrade_test_in_gated_state(admin_client, unprivileged_client, namespace_for_acrq_upgrade_test):
     vm_name = "vm-for-acrq-upgrade-test-gated"
     with VirtualMachineForTests(
         name=vm_name,
@@ -123,5 +123,5 @@ def vm_for_acrq_upgrade_test_in_gated_state(unprivileged_client, namespace_for_a
         client=unprivileged_client,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
-        wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
+        wait_when_pod_in_gated_state(pod=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client))
         yield vm
