@@ -91,6 +91,7 @@ class TestSriovInterfacePersistence:
         restarted_sriov_vm4,
     ):
         # Check only the second interface (SR-IOV interface).
+        lookup_iface_status(vm=restarted_sriov_vm4, iface_name=vm4_interfaces[1].name)
         assert restarted_sriov_vm4.vmi.interfaces[1] == vm4_interfaces[1]
 
 
