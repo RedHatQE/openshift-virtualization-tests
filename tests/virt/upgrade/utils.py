@@ -182,8 +182,9 @@ def vm_from_template(
     node_selector=None,
     vm_affinity=None,
     gpu_name=None,
+    teardown=True,
 ):
-    with VirtualMachineForTestsFromTemplate(
+    vm = VirtualMachineForTestsFromTemplate(
         name=vm_name,
         namespace=namespace,
         client=client,
@@ -197,5 +198,12 @@ def vm_from_template(
         node_selector=node_selector,
         vm_affinity=vm_affinity,
         gpu_name=gpu_name,
-    ) as vm:
+        teardown=teardown,
+    )
+    if not vm.exists:
+        vm.deploy()
+    try:
         yield vm
+    finally:
+        if teardown:
+            vm.clean_up()
