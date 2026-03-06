@@ -10,6 +10,7 @@ spec:
     metadata:
       creationTimestamp: null
     spec:
+      architecture: {{ arch }}
       domain:
         cpu:
           cores: 1
