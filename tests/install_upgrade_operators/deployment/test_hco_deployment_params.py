@@ -3,8 +3,8 @@ import pytest
 from tests.install_upgrade_operators.deployment.utils import (
     assert_cnv_deployment_container_env_image_not_in_upstream,
     assert_cnv_deployment_container_image_not_in_upstream,
+    validate_deployment_request_fields,
     validate_liveness_probe_fields,
-    validate_request_fields,
 )
 from utilities.constants import (
     ALL_CNV_DEPLOYMENTS,
@@ -41,27 +41,10 @@ def test_liveness_probe(deployment_by_name):
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.parametrize(
-    "deployment_by_name, cpu_min_value",
-    [
-        pytest.param(
-            {"deployment_name": HCO_WEBHOOK},
-            5,
-            marks=(pytest.mark.polarion("CNV-7187")),
-            id="test-hco-webhook-req-param",
-        ),
-        pytest.param(
-            {"deployment_name": HCO_OPERATOR},
-            5,
-            marks=(pytest.mark.polarion("CNV-7188")),
-            id="test-hco-operator-req-param",
-        ),
-    ],
-    indirect=["deployment_by_name"],
-)
-def test_request_param(deployment_by_name, cpu_min_value):
+@pytest.mark.polarion("CNV-14635")
+def test_deployment_request_param(cnv_deployment_by_name):
     """Validates resources.requests fields keys and default cpu values for different deployment objects"""
-    validate_request_fields(deployment=deployment_by_name, cpu_min_value=cpu_min_value)
+    validate_deployment_request_fields(deployment=cnv_deployment_by_name, cpu_min_value=5)
 
 
 @pytest.mark.gating

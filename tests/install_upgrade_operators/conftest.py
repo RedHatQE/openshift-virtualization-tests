@@ -26,7 +26,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
-    get_pod_by_name_prefix,
 )
 from utilities.jira import is_jira_open
 from utilities.operator import (
@@ -77,25 +76,6 @@ def cnv_daemonset_by_name(
         namespace_name=hco_namespace.name,
         daemonset_name=daemonset_name,
     )
-
-
-@pytest.fixture()
-def cnv_pods_by_type(
-    admin_client,
-    hco_namespace,
-    hpp_cr_installed,
-    cnv_pod_matrix__function__,
-):
-    pod_prefix = cnv_pod_matrix__function__
-    if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
-        pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
-    pod_list = get_pod_by_name_prefix(
-        client=admin_client,
-        namespace=hco_namespace.name,
-        pod_prefix=pod_prefix,
-        get_all=True,
-    )
-    return pod_list
 
 
 @pytest.fixture(scope="session")
