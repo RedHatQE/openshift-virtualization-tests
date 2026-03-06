@@ -73,7 +73,9 @@ sriov_namespace = "openshift-sriov-network-operator"
 marketplace_namespace = "openshift-marketplace"
 machine_api_namespace = "openshift-machine-api"
 golden_images_namespace = NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
-hco_subscription = ""  # TODO: remove constants/HCO_SUBSCRIPTION and use this instead.
+# Default matches cnv-qe-automation / OCPV installs (subscription name kubevirt-hyperconverged).
+# Override with --tc=hco_subscription:hco-operatorhub for environments that use that name.
+hco_subscription = "kubevirt-hyperconverged"
 disconnected_cluster = False
 linux_bridge_cni = "cnv-bridge"
 bridge_tuning = "cnv-tuning"
