@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up QEMU for multi-arch builds
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Install podman
         run: |
