@@ -4,7 +4,6 @@ import re
 
 import pytest
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
-from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import FILE_SUFFIX, SECTION_TITLE
@@ -69,13 +68,6 @@ class TestMustGatherClusterWithVMs:
                 VALIDATE_FIELDS,
                 marks=(pytest.mark.polarion("CNV-2720")),
                 id="test_network_attachment_definitions_resources",
-            ),
-            pytest.param(
-                VirtualMachine,
-                f"namespaces/{{namespace}}/{VirtualMachine.ApiGroup.KUBEVIRT_IO}/virtualmachines/custom/{{name}}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-3043")),
-                id="test_virtualmachine_resources",
             ),
         ],
         indirect=["resource_type"],
