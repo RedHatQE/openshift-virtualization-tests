@@ -379,7 +379,8 @@ TWELVE_GI_MEMORY = "12Gi"
 
 # pyetest configuration
 SANITY_TESTS_FAILURE = 99
-HCO_SUBSCRIPTION = "hco-operatorhub"
+# Default subscription name for HCO/CNV; matches cnv-qe-automation and OCPV installs.
+HCO_SUBSCRIPTION = "kubevirt-hyperconverged"
 
 # VM configuration
 LIVE_MIGRATE = "LiveMigrate"
