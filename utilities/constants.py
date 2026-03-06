@@ -1023,6 +1023,7 @@ FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
 BACKUP_STORAGE_LOCATION = "dpa-1"
 
+
 # AAQ
 AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
 VM_CPU_CORES = 2
