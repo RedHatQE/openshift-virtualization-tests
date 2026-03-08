@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime, timezone
 
 import bitmath
@@ -335,7 +336,10 @@ class TestVmiStatusAddresses:
         kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
     ):
-        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        instance_match = re.match(
+            r"\[?(?P<address>[^]]+)\]?:\d+$", kubevirt_vmi_status_addresses_ip_labels_values.get("instance")
+        )
+        instance_value = instance_match.group("address")
         address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
         vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (
