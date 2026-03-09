@@ -147,27 +147,18 @@ def remote_cluster_kubeconfig(remote_admin_client, remote_cluster_auth_token):
         "current-context": context_name,
     }
 
-    # Create temporary directory and file path
-    temp_dir = tempfile.mkdtemp(suffix="-remote-kubeconfig")
-    kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
+    # Use TemporaryDirectory context manager for automatic cleanup
+    with tempfile.TemporaryDirectory(suffix="-remote-kubeconfig") as temp_dir:
+        kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
 
-    # Write kubeconfig file with secure permissions (0o600 = rw-------)
-    # Using os.open with O_CREAT ensures the file is created with restricted permissions from the start
-    file_descriptor = os.open(kubeconfig_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(file_descriptor, "w") as kubeconfig_file:
-        yaml.safe_dump(kubeconfig_dict, kubeconfig_file)
+        # Write kubeconfig file with secure permissions (0o600 = rw-------)
+        # Using os.open with O_CREAT ensures the file is created with restricted permissions from the start
+        file_descriptor = os.open(kubeconfig_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(file_descriptor, "w") as kubeconfig_file:
+            yaml.safe_dump(data=kubeconfig_dict, stream=kubeconfig_file)
 
-    LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
-
-    yield kubeconfig_path
-
-    # Cleanup
-    try:
-        os.remove(kubeconfig_path)
-        os.rmdir(temp_dir)
-        LOGGER.info(f"Cleaned up remote cluster kubeconfig at: {kubeconfig_path}")
-    except Exception as ex:
-        LOGGER.warning(f"Failed to cleanup remote cluster kubeconfig: {ex}")
+        LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
+        yield kubeconfig_path
 
 
 @pytest.fixture(scope="session")
@@ -463,7 +454,7 @@ def vm_for_cclm_from_template_with_data_source(
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
         yield vm
 
 
@@ -483,7 +474,7 @@ def vm_for_cclm_with_instance_type(
             storage_class=py_config["default_storage_class"],
         ),
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
         yield vm
 
 
@@ -533,7 +524,11 @@ def local_vms_after_cclm_migration(admin_client, namespace, vms_for_cclm):
     local_vms = []
     for vm in vms_for_cclm:
         local_vm = VirtualMachineForTests(
-            name=vm.name, namespace=namespace.name, client=admin_client, generate_unique_name=False
+            name=vm.name,
+            namespace=namespace.name,
+            os_flavor=vm.os_flavor,
+            client=admin_client,
+            generate_unique_name=False,
         )
         local_vm.username = vm.username
         local_vm.password = vm.password
