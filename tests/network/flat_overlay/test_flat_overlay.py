@@ -21,7 +21,7 @@ pytestmark = [
 class TestFlatOverlayConnectivity:
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-10158")
-    # Not marked as `conformance`; requires NMState
+    # conformance candidate
     @pytest.mark.dependency(name="test_flat_overlay_basic_ping")
     def test_flat_overlay_basic_ping(self, vma_flat_overlay, vmb_flat_overlay_ip_address):
         assert_ping_successful(
