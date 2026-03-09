@@ -624,11 +624,27 @@ def get_hyperconverged_cdi(admin_client):
         return cdi
 
 
-def write_file(vm, filename, content, stop_vm=True):
-    """Start VM if not running, write a file in the VM and stop the VM"""
+def write_file(
+    vm: virt_util.VirtualMachineForTests,
+    filename: str,
+    content: str,
+    stop_vm: bool = True,
+    kubeconfig: str | None = None,
+) -> None:
+    """
+    Start VM if not running, write a file in the VM and stop the VM.
+
+    Args:
+        vm: VirtualMachine instance
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+        stop_vm: Whether to stop the VM after writing the file
+        kubeconfig: Optional path to kubeconfig file for remote cluster access
+    """
     if not vm.ready:
         vm.start(wait=True)
-    with console.Console(vm=vm) as vm_console:
+    # Pass the kubeconfig to Console for remote cluster support
+    with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
