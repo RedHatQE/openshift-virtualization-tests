@@ -56,7 +56,6 @@ from utilities.pytest_utils import (
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
-    get_cpu_arch_choices,
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
@@ -223,7 +222,6 @@ def pytest_addoption(parser):
 
     arch_group.addoption(
         "--cpu-arch",
-        choices=get_cpu_arch_choices(),
         help="""
              CPU architecture to use when running tests on heterogeneous clusters.
              Single arch (e.g. amd64) or comma-separated combination (e.g. amd64,arm64).

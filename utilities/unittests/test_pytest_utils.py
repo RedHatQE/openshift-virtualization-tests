@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from utilities.constants import SUPPORTED_CPU_ARCHITECTURES
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
@@ -20,7 +19,6 @@ from utilities.pytest_utils import (
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
-    get_cpu_arch_choices,
     get_current_running_data,
     get_matrix_params,
     get_tests_cluster_markers,
@@ -35,31 +33,6 @@ from utilities.pytest_utils import (
     validate_collected_tests_arch_params,
     validate_cpu_arch_params,
 )
-
-
-class TestGetCpuArchChoices:
-    """Test cases for get_cpu_arch_choices function"""
-
-    def test_get_cpu_arch_choices_returns_all_combinations(self):
-        """Test returns comma-separated combinations of supported archs"""
-        result = get_cpu_arch_choices()
-        # SUPPORTED_CPU_ARCHITECTURES = ("amd64", "arm64", "s390x") -> 3 single + 3 pairs + 1 triple
-        assert "amd64" in result
-        assert "arm64" in result
-        assert "s390x" in result
-        assert "amd64,arm64" in result
-        assert "amd64,s390x" in result
-        assert "arm64,s390x" in result
-        assert "amd64,arm64,s390x" in result
-        assert len(result) == 7
-
-    def test_get_cpu_arch_choices_each_entry_valid(self):
-        """Test each choice contains only valid arch names"""
-        result = get_cpu_arch_choices()
-        valid = set(SUPPORTED_CPU_ARCHITECTURES)
-        for choice in result:
-            for arch in choice.split(","):
-                assert arch in valid
 
 
 class TestValidateCpuArchParams:
@@ -106,7 +79,7 @@ class TestValidateCpuArchParams:
         """Test --cpu-arch value not in cluster arch list raises"""
         with pytest.raises(
             UnsupportedCPUArchitectureError,
-            match="not in the cluster's arch list",
+            match=r"unsupported value\(s\)",
         ):
             validate_cpu_arch_params(cpu_arch_option="s390x")
         mock_get_cluster_arch.assert_called_once()
