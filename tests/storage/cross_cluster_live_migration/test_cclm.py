@@ -8,7 +8,7 @@ from tests.storage.cross_cluster_live_migration.utils import (
     assert_vms_are_stopped,
     assert_vms_can_be_deleted,
     verify_compute_live_migration_after_cclm,
-    verify_vms_boot_time_after_migration,
+    verify_vms_boot_time_after_cross_cluster_live_migration,
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants import TIMEOUT_10MIN
@@ -59,7 +59,7 @@ class TestCCLMSeveralVMs:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
     @pytest.mark.polarion("CNV-11910")
     def test_verify_vms_boot_time_after_migration(self, local_vms_after_cclm_migration, vms_boot_time_before_cclm):
-        verify_vms_boot_time_after_migration(
+        verify_vms_boot_time_after_cross_cluster_live_migration(
             local_vms=local_vms_after_cclm_migration, initial_boot_time=vms_boot_time_before_cclm
         )
 

@@ -498,7 +498,7 @@ def booted_vms_for_cclm(vms_for_cclm):
 
 @pytest.fixture(scope="class")
 def vms_boot_time_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
-    yield {
+    return {
         vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
     }
 
@@ -513,7 +513,7 @@ def written_file_to_vms_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconf
             stop_vm=False,
             kubeconfig=remote_cluster_kubeconfig,
         )
-    yield booted_vms_for_cclm
+    return booted_vms_for_cclm
 
 
 @pytest.fixture(scope="class")

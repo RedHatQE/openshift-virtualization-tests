@@ -134,12 +134,12 @@ def get_vm_boot_time_via_console(
         return parse_boot_time_from_console_output(raw_output=raw_output)
 
 
-def verify_vms_boot_time_after_migration(
+def verify_vms_boot_time_after_cross_cluster_live_migration(
     local_vms: list[VirtualMachineForTests],
     initial_boot_time: dict[str, str],
 ) -> None:
     """
-    Verify that VMs have not rebooted after storage migration.
+    Verify that VMs have not rebooted after cross-cluster live migration.
 
     Args:
         local_vms: List of VirtualMachineForTests objects in the local cluster
@@ -169,7 +169,9 @@ def assert_vms_can_be_deleted(vms: list[VirtualMachineForTests]) -> None:
     vms_failed_cleanup = {}
     for vm in vms:
         try:
-            assert vm.clean_up(), f"Failed to clean up source VM {vm.name}"
+            cleanup_result = vm.clean_up()
+            if cleanup_result is not True:
+                vms_failed_cleanup[vm.name] = f"vm.clean_up() returned {cleanup_result}"
         except Exception as cleanup_exception:
-            vms_failed_cleanup[vm.name] = cleanup_exception
+            vms_failed_cleanup[vm.name] = str(cleanup_exception)
     assert not vms_failed_cleanup, f"Failed to clean up source VMs: {vms_failed_cleanup}"
