@@ -16,7 +16,7 @@ from utilities.data_collector import get_data_collector_base_directory
 LOGGER = logging.getLogger(__name__)
 
 
-class Console(object):
+class Console:
     def __init__(
         self,
         vm: VirtualMachine,
@@ -44,10 +44,10 @@ class Console(object):
         self.vm = vm
         # TODO: `BaseVirtualMachine` does not set cloud-init so the VM is using predefined credentials
         self.username = (
-            username or getattr(self.vm, "login_params", {}).get("username") or self.vm.username  # type: ignore[attr-defined]  # noqa: E501
+            username or getattr(self.vm, "login_params", {}).get("username") or self.vm.username  # type: ignore[attr-defined]
         )
         self.password = (
-            password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password  # type: ignore[attr-defined]  # noqa: E501
+            password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password  # type: ignore[attr-defined]
         )
         self.timeout = timeout
         self.child = None

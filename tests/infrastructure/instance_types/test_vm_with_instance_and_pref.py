@@ -93,21 +93,24 @@ class TestNegativeVmWithInstanceTypeAndPref:
     def test_vm_start_fails_with_insufficient_cpu_for_spread_option(
         self, unprivileged_client, namespace, instance_type_for_test_scope_class, vm_preference_for_test
     ):
-        with pytest.raises(
-            UnprocessibleEntityError,
-            match=r".*vCPUs provided by the instance type are not divisible by the "
-            r"Spec.PreferSpreadSocketToCoreRatio or Spec.CPU.PreferSpreadOptions.Ratio*",
+        with (
+            pytest.raises(
+                UnprocessibleEntityError,
+                match=r".*vCPUs provided by the instance type are not divisible by the "
+                r"Spec.PreferSpreadSocketToCoreRatio or Spec.CPU.PreferSpreadOptions.Ratio*",
+            ),
+            instance_type_for_test_scope_class as vm_instance_type,
+            vm_preference_for_test as vm_preference,
         ):
-            with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
-                with VirtualMachineForTests(
-                    client=unprivileged_client,
-                    name="rhel-vm-with-instance-type",
-                    namespace=namespace.name,
-                    image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-                    vm_instance_type=vm_instance_type,
-                    vm_preference=vm_preference,
-                ):
-                    pytest.fail("Expected Failure due to UnprocessibleEntityError")
+            with VirtualMachineForTests(
+                client=unprivileged_client,
+                name="rhel-vm-with-instance-type",
+                namespace=namespace.name,
+                image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+                vm_instance_type=vm_instance_type,
+                vm_preference=vm_preference,
+            ):
+                pytest.fail("Expected Failure due to UnprocessibleEntityError")
 
 
 @pytest.mark.parametrize(

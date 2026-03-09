@@ -114,18 +114,19 @@ def cdi_cloner_rbac(dv_source_for_data_import_cron, data_import_cron_pvc_target_
             resources.
     """
 
-    with ClusterRole(
-        name="datavolume-cloner",
-        client=admin_client,
-        rules=[
-            {
-                "apiGroups": [Resource.ApiGroup.CDI_KUBEVIRT_IO],
-                "resources": ["datavolumes", "datavolumes/source"],
-                "verbs": ["*"],
-            }
-        ],
-    ) as cluster_role:
-        with create_role_binding(
+    with (
+        ClusterRole(
+            name="datavolume-cloner",
+            client=admin_client,
+            rules=[
+                {
+                    "apiGroups": [Resource.ApiGroup.CDI_KUBEVIRT_IO],
+                    "resources": ["datavolumes", "datavolumes/source"],
+                    "verbs": ["*"],
+                }
+            ],
+        ) as cluster_role,
+        create_role_binding(
             client=admin_client,
             name=f"allow-clone-to-{data_import_cron_pvc_target_namespace.name}",
             namespace=dv_source_for_data_import_cron.namespace,
@@ -134,5 +135,6 @@ def cdi_cloner_rbac(dv_source_for_data_import_cron, data_import_cron_pvc_target_
             subjects_namespace=data_import_cron_pvc_target_namespace.name,
             role_ref_kind=cluster_role.kind,
             role_ref_name=cluster_role.name,
-        ):
-            yield
+        ),
+    ):
+        yield

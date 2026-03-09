@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
@@ -87,7 +88,7 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
             hco_namespace=namespace,
             expected_conditions={
                 **DEFAULT_HCO_CONDITIONS,
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         yield
@@ -429,7 +430,7 @@ def verify_guest_boot_time(vm_list, initial_boot_time):
 
 def get_or_create_golden_image_data_source(
     admin_client: DynamicClient, golden_images_namespace: Namespace, os_dict: dict[str, Any]
-) -> Generator[DataSource, None, None]:
+) -> Generator[DataSource]:
     """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
 
     Args:

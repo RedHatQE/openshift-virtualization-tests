@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 HA VM reboot and provisioning scenario tests.
 """

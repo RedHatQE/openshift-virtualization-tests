@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import difflib
 import glob
 import logging
@@ -54,7 +53,7 @@ FILE_NAMES_TO_CHECK = [
 # To be removed after the issue is fixed in openshift
 
 
-class ResourceFieldEqBugWorkaround(object):
+class ResourceFieldEqBugWorkaround:
     def __enter__(self):
         self.prev_eq_func = ResourceField.__eq__
 
@@ -384,7 +383,7 @@ def validate_must_gather_vm_file_collection(
             nftables_ruleset_from_utility_pods=nftables_ruleset_from_utility_pods,
         )
     assert all(entry in str(exeption_found.value) for entry in not_collected_vm_names + ["path_not_found"]), (
-        f"Failed to find {not_collected_vm_names} in exception message: {str(exeption_found.value)}"
+        f"Failed to find {not_collected_vm_names} in exception message: {exeption_found.value!s}"
     )
 
 
