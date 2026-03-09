@@ -21,7 +21,8 @@ class TestConstants:
         assert constants.S390X == "s390x"
         assert constants.X86_64 == "x86_64"
         assert constants.MULTIARCH == "multiarch"
-        assert constants.SUPPORTED_CPU_ARCHITECTURES == ("amd64", "arm64", "s390x")
+        assert constants.SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}
+        assert constants.SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}
 
     def test_timeout_constants(self):
         """Test timeout constants are defined"""

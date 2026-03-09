@@ -8,7 +8,6 @@ import re
 import shutil
 import socket
 import sys
-from itertools import combinations
 from typing import Any
 
 import pytest
@@ -30,6 +29,7 @@ from utilities.constants import (
     S390X,
     SANITY_TESTS_FAILURE,
     SUPPORTED_CPU_ARCHITECTURES,
+    SUPPORTED_MULTIARCH_OPTIONS,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
@@ -408,16 +408,6 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
     return items
 
 
-def get_cpu_arch_choices() -> list[str]:
-    """Generate all CPU architecture combinations for `--cpu-arch` CLI choices.
-
-    Returns:
-        list[str]: All valid architecture combinations as comma-separated strings.
-    """
-    archs = list(SUPPORTED_CPU_ARCHITECTURES)
-    return [",".join(combo) for combo_length in range(1, len(archs) + 1) for combo in combinations(archs, combo_length)]
-
-
 def validate_cpu_arch_params(cpu_arch_option: str) -> None:
     """Validate `--cpu-arch` CLI option against cluster architecture.
 
@@ -435,6 +425,10 @@ def validate_cpu_arch_params(cpu_arch_option: str) -> None:
     if len(cluster_arch) > 1 and not cpu_arch_option:
         raise UnsupportedCPUArchitectureError(
             f"`--cpu-arch` cmdline arg must be provided for heterogeneous cluster: {cluster_arch}!"
+        )
+    if cpu_arch_option and not all(arch in SUPPORTED_MULTIARCH_OPTIONS for arch in cli_param_arch):
+        raise UnsupportedCPUArchitectureError(
+            f"`--cpu-arch` has unsupported value(s): {cli_param_arch}. Allowed values: {SUPPORTED_MULTIARCH_OPTIONS}"
         )
     if len(cluster_arch) > 1 and not all(arch in cluster_arch for arch in cli_param_arch):
         raise UnsupportedCPUArchitectureError(
@@ -596,6 +590,8 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         # TODO: remove this when utilities modules are refactored
         import utilities.constants as constants_module
 
+        # Due to the way the constants module is structured, there's no way to set correctly Images value there
+        # This is due to change when constants (and other utilities modules) are refactored
         constants_module.Images = getattr(constants_module.ArchImages, arch.upper())
 
         if py_config["cluster_type"] == MULTIARCH:
