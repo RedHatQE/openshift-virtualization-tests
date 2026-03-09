@@ -173,29 +173,3 @@ def assert_vms_can_be_deleted(vms: list[VirtualMachineForTests]) -> None:
         except Exception as cleanup_exception:
             vms_failed_cleanup[vm.name] = cleanup_exception
     assert not vms_failed_cleanup, f"Failed to clean up source VMs: {vms_failed_cleanup}"
-
-
-def delete_file_in_vm(
-    vm: VirtualMachineForTests, file_name: str, username: str | None = None, password: str | None = None
-) -> None:
-    """
-    Delete a file in a VM and verify it was deleted.
-
-    Args:
-        vm: VirtualMachine instance
-        file_name: Name of the file to delete
-        username: Optional username for console login (defaults to vm.username)
-        password: Optional password for console login (defaults to vm.password)
-    """
-    if not vm.ready:
-        vm.start(wait=True)
-    with console.Console(vm=vm, username=username, password=password) as vm_console:
-        vm_console.sendline(f"rm -f {file_name}")
-        vm_console.expect([r"#", r"\$"])
-        # Verify file is deleted
-        vm_console.sendline(f"ls {file_name}")
-        vm_console.expect([r"#", r"\$"])
-        output = vm_console.before
-        assert "No such file or directory" in output, (
-            f"File '{file_name}' should have been deleted from VM '{vm.name}', output: '{output}'"
-        )
