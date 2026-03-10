@@ -327,6 +327,7 @@ class TestVmiStatusAddresses:
         "vm_for_test", [pytest.param("vmi-status-addresses", marks=pytest.mark.polarion("CNV-11534"))], indirect=True
     )
     @pytest.mark.s390x
+    @pytest.mark.ipv6
     def test_metric_kubevirt_vmi_status_addresses(
         self,
         prometheus,
@@ -420,6 +421,7 @@ class TestVmVnicInfo:
         ],
         indirect=["vnic_info_from_vm_or_vmi_linux"],
     )
+    @pytest.mark.ipv6
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_vnic_info_linux(
         self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi_linux, query
