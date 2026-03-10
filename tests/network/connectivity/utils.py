@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import random_ipv4_address, random_ipv6_address
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
@@ -33,17 +34,15 @@ def create_running_vm(
 
 
 def secondary_interfaces_cloud_init_data(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     host_id: int,
 ) -> dict[str, dict[str, dict[str, list[str]]]]:
     ethernets = {}
     for i in range(3):
         interface_name = f"eth{i + 1}"
         addresses = []
-        if ipv4_supported_cluster:
+        if ipv4_supported_cluster():
             addresses.append(f"{random_ipv4_address(net_seed=i, host_address=host_id)}/24")
-        if ipv6_supported_cluster:
+        if ipv6_supported_cluster():
             addresses.append(f"{random_ipv6_address(net_seed=i, host_address=host_id)}/64")
 
         ethernets[interface_name] = {"addresses": addresses}

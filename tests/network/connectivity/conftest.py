@@ -261,8 +261,6 @@ def nad_ovs_bridge_vlan_3(
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vma_source(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -279,11 +277,7 @@ def vm_linux_bridge_attached_vma_source(
 
     cloud_init_data = compose_cloud_init_data_dict(
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(
-            ipv4_supported_cluster=ipv4_supported_cluster,
-            ipv6_supported_cluster=ipv6_supported_cluster,
-            host_id=1,
-        ),
+        network_data=secondary_interfaces_cloud_init_data(host_id=1),
     )
 
     yield from create_running_vm(
@@ -298,8 +292,6 @@ def vm_linux_bridge_attached_vma_source(
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vma_source(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -316,11 +308,7 @@ def vm_ovs_bridge_attached_vma_source(
 
     cloud_init_data = compose_cloud_init_data_dict(
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(
-            ipv4_supported_cluster=ipv4_supported_cluster,
-            ipv6_supported_cluster=ipv6_supported_cluster,
-            host_id=1,
-        ),
+        network_data=secondary_interfaces_cloud_init_data(host_id=1),
     )
 
     yield from create_running_vm(
@@ -335,8 +323,6 @@ def vm_ovs_bridge_attached_vma_source(
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vmb_destination(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     worker_node2,
     namespace,
     unprivileged_client,
@@ -353,11 +339,7 @@ def vm_linux_bridge_attached_vmb_destination(
 
     cloud_init_data = compose_cloud_init_data_dict(
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(
-            ipv4_supported_cluster=ipv4_supported_cluster,
-            ipv6_supported_cluster=ipv6_supported_cluster,
-            host_id=2,
-        ),
+        network_data=secondary_interfaces_cloud_init_data(host_id=2),
     )
 
     yield from create_running_vm(
@@ -372,8 +354,6 @@ def vm_linux_bridge_attached_vmb_destination(
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vmb_destination(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     worker_node2,
     namespace,
     unprivileged_client,
@@ -390,11 +370,7 @@ def vm_ovs_bridge_attached_vmb_destination(
 
     cloud_init_data = compose_cloud_init_data_dict(
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(
-            ipv4_supported_cluster=ipv4_supported_cluster,
-            ipv6_supported_cluster=ipv6_supported_cluster,
-            host_id=2,
-        ),
+        network_data=secondary_interfaces_cloud_init_data(host_id=2),
     )
 
     yield from create_running_vm(
