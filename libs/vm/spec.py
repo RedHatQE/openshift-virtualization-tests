@@ -74,6 +74,7 @@ class Interface:
     masquerade: dict[Any, Any] | None = None
     bridge: dict[Any, Any] | None = None
     sriov: dict[Any, Any] | None = None
+    passtBinding: dict[Any, Any] | None = None  # noqa: N815
     binding: NetBinding | None = None
     state: str | None = None
 

@@ -8,11 +8,15 @@ from libs.vm.spec import Interface, NetBinding, Network
 from utilities.infra import create_ns
 
 UDN_BINDING_DEFAULT_PLUGIN_NAME: Final[str] = "l2bridge"
-UDN_BINDING_PASST_PLUGIN_NAME: Final[str] = "passt"
+UDN_PASST_CORE_BINDING_NAME: Final[str] = "passtBinding"
 
 
 def udn_primary_network(name: str, binding: str) -> tuple[Interface, Network]:
-    return Interface(name=name, binding=NetBinding(name=binding)), Network(name=name, pod={})
+    if binding == UDN_PASST_CORE_BINDING_NAME:
+        interface = Interface(name=name, passtBinding={})
+    else:
+        interface = Interface(name=name, binding=NetBinding(name=binding))
+    return interface, Network(name=name, pod={})
 
 
 def create_udn_namespace(
