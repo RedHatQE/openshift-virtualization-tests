@@ -13,7 +13,7 @@ Supported architectures include (names aligned with Kubernetes/KubeVirt):
 
 ## Heterogeneous (multi-arch) clusters
 
-On clusters with nodes of different CPU architectures, you must pass `--cpu-arch` to select which architecture to run tests for (e.g. `--cpu-arch=amd64` or `--cpu-arch=arm64`). Use the config file `tests/global_config_multiarch.py` and the `multiarch` marker for tests that run across multiple architectures. Do not pass `--cpu-arch` on homogeneous clusters.
+See [Multi-Architecture Clusters](MULTIARCH.md).
 
 ## Test markers
 To run tests on a specific architecture, add `-m <architecture>` to the pytest command.

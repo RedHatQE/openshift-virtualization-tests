@@ -94,11 +94,7 @@ Example for SNO cluster:
 
 ### Running tests on multi-arch / heterogeneous clusters
 
-On clusters where nodes have different CPU architectures, you must pass `--cpu-arch` to select the architecture for the run. Use a single value (e.g. `--cpu-arch=amd64`) or, for tests marked with `multiarch`, a comma-separated list (e.g. `--cpu-arch=amd64,arm64`). Do not pass `--cpu-arch` on homogeneous clusters.
-
-```bash
-uv run pytest --tc-file=tests/global_config_multiarch.py --cpu-arch=amd64 ...
-```
+See [Multi-Architecture Clusters](MULTIARCH.md).
 
 #### Running tests with an admin client instead of an unprivileged client
 To run tests with an admin client only, pass `--tc=no_unprivileged_client:True` to pytest.
