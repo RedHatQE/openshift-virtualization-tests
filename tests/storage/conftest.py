@@ -523,3 +523,13 @@ def rhel10_data_source_scope_module(golden_images_namespace):
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture(scope="module")
+def fedora_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
