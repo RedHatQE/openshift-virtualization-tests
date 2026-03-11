@@ -56,9 +56,12 @@ class TestDeschedulerEvictsVMAfterDrainUncordon:
         self,
         deployed_vms_for_descheduler_test,
         all_existing_migrations_completed,
+        admin_client,
     ):
         LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
-        assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_descheduler_test)
+        assert_vms_consistent_virt_launcher_pods(
+            running_vms=deployed_vms_for_descheduler_test, admin_client=admin_client
+        )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
     @pytest.mark.polarion("CNV-8288")
@@ -113,9 +116,12 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         self,
         deployed_vms_for_utilization_imbalance,
         all_existing_migrations_completed,
+        admin_client,
     ):
         LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
-        assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_utilization_imbalance)
+        assert_vms_consistent_virt_launcher_pods(
+            running_vms=deployed_vms_for_utilization_imbalance, admin_client=admin_client
+        )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
     @pytest.mark.polarion("CNV-8919")
@@ -149,8 +155,11 @@ class TestDeschedulerDoesNotEvictVMWithNoAnnotationFromUtilizationImbalance:
         self,
         node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
+        admin_client,
     ):
-        assert_vms_consistent_virt_launcher_pods(running_vms=deployed_vms_for_utilization_imbalance)
+        assert_vms_consistent_virt_launcher_pods(
+            running_vms=deployed_vms_for_utilization_imbalance, admin_client=admin_client
+        )
 
 
 @pytest.mark.parametrize(

@@ -81,11 +81,17 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
     indirect=["resource_quota_for_auto_resource_limits_test", "vm_auto_resource_limits"],
 )
 def test_auto_limits_set_one_resource(
+    admin_client,
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
     expected_limits,
 ):
-    pod_limits = vm_auto_resource_limits.vmi.virt_launcher_pod.instance.spec.containers[0].resources.limits
+    pod_limits = (
+        vm_auto_resource_limits.vmi
+        .get_virt_launcher_pod(privileged_client=admin_client)
+        .instance.spec.containers[0]
+        .resources.limits
+    )
     for resource in expected_limits:
         if expected_limits[resource]:
             assert getattr(pod_limits, resource), f"{resource} limits should be set, \n {pod_limits}"
@@ -114,10 +120,16 @@ def test_auto_limits_set_one_resource(
 )
 # Not marked as `conformance`; may face scheduling issues due to insufficient resources on the nodes
 def test_vm_with_limits_overrides_global_vlaues(
+    admin_client,
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
 ):
-    pod_limits = vm_auto_resource_limits.vmi.virt_launcher_pod.instance.spec.containers[0].resources.limits
+    pod_limits = (
+        vm_auto_resource_limits.vmi
+        .get_virt_launcher_pod(privileged_client=admin_client)
+        .instance.spec.containers[0]
+        .resources.limits
+    )
     assert pod_limits.cpu == vm_auto_resource_limits.cpu_limits, (
         f"Cpu limits on the pod is not correct, expected {vm_auto_resource_limits.cpu_limits}, actual {pod_limits.cpu}"
     )
@@ -146,11 +158,17 @@ def test_vm_with_limits_overrides_global_vlaues(
     indirect=True,
 )
 def test_auto_limits_with_cpu_hotplug(
+    admin_client,
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
     hotplugged_vm_with_cpu_auto_limits,
 ):
-    pod_limits = vm_auto_resource_limits.vmi.virt_launcher_pod.instance.spec.containers[0].resources.limits
+    pod_limits = (
+        vm_auto_resource_limits.vmi
+        .get_virt_launcher_pod(privileged_client=admin_client)
+        .instance.spec.containers[0]
+        .resources.limits
+    )
     assert int(pod_limits.cpu) == CPU_SOCKET_HOTPLUG, (
         f"Cpu limits on the pod is not correct, expected {CPU_SOCKET_HOTPLUG}, actual {pod_limits.cpu}"
     )

@@ -11,7 +11,7 @@ pytestmark = pytest.mark.post_upgrade
 
 
 @pytest.fixture()
-def fedora_vm(unprivileged_client, namespace):
+def fedora_vm(admin_client, unprivileged_client, namespace):
     name = "owner-references-vm"
     with VirtualMachineForTests(
         name=name,
@@ -21,7 +21,7 @@ def fedora_vm(unprivileged_client, namespace):
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()
-        wait_for_virt_launcher_pod(vmi=vm.vmi)
+        wait_for_virt_launcher_pod(vmi=vm.vmi, privileged_client=admin_client)
         yield vm
 
 
@@ -29,7 +29,7 @@ def fedora_vm(unprivileged_client, namespace):
 @pytest.mark.conformance
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-1275")
-def test_owner_references_on_vm(fedora_vm):
+def test_owner_references_on_vm(fedora_vm, admin_client):
     """
     Check the Owner References is fill with right data
     like:
@@ -45,7 +45,8 @@ def test_owner_references_on_vm(fedora_vm):
                       allows to delete it freely.
     """
     vmi = fedora_vm.vmi
-    owner_references_pod = vmi.virt_launcher_pod.instance.metadata.ownerReferences[0]
+    virt_launcher_pod = vmi.get_virt_launcher_pod(privileged_client=admin_client)
+    owner_references_pod = virt_launcher_pod.instance.metadata.ownerReferences[0]
 
     owner_references_vmi = vmi.instance.metadata.ownerReferences[0]
     # check pod owner references block

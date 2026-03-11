@@ -69,11 +69,14 @@ class TestUpgradeVirtAAQ:
     )
     def test_arq_after_upgrade(
         self,
+        admin_client,
         application_aware_resource_quota_upgrade,
         vm_for_arq_upgrade_test,
         vm_for_arq_upgrade_test_in_gated_state,
     ):
-        check_pod_in_gated_state(pod=vm_for_arq_upgrade_test_in_gated_state.vmi.virt_launcher_pod)
+        check_pod_in_gated_state(
+            pod=vm_for_arq_upgrade_test_in_gated_state.vmi.get_virt_launcher_pod(privileged_client=admin_client)
+        )
         check_arq_status_values(
             current_values=application_aware_resource_quota_upgrade.instance.status.used,
             expected_values=UPGRADE_QUOTA_FOR_ONE_VMI,
@@ -90,11 +93,14 @@ class TestUpgradeVirtAAQ:
     )
     def test_acrq_after_upgrade(
         self,
+        admin_client,
         application_aware_cluster_resource_quota_upgrade,
         vm_for_acrq_upgrade_test,
         vm_for_acrq_upgrade_test_in_gated_state,
     ):
-        check_pod_in_gated_state(pod=vm_for_acrq_upgrade_test_in_gated_state.vmi.virt_launcher_pod)
+        check_pod_in_gated_state(
+            pod=vm_for_acrq_upgrade_test_in_gated_state.vmi.get_virt_launcher_pod(privileged_client=admin_client)
+        )
         check_arq_status_values(
             current_values=application_aware_cluster_resource_quota_upgrade.instance.status.total.used,
             expected_values=UPGRADE_QUOTA_FOR_ONE_VMI,

@@ -145,7 +145,7 @@ def validate_vms_pod_updated(admin_client, hco_namespace, hco_target_csv_name, v
     target_related_images = get_related_images_name_and_version(csv=csv)
     return [
         {pod.name: pod.instance.spec.containers[0].image}
-        for pod in [vm.vmi.virt_launcher_pod for vm in vm_list]
+        for pod in [vm.vmi.get_virt_launcher_pod(privileged_client=admin_client) for vm in vm_list]
         if pod.instance.spec.containers[0].image not in target_related_images.values()
     ]
 

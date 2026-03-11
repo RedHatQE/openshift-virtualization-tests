@@ -90,19 +90,19 @@ class TestCommonTemplatesCentos:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-5347")
-    def test_virtctl_guest_agent_os_info(self, matrix_centos_os_vm_from_template):
-        validate_os_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template)
+    def test_virtctl_guest_agent_os_info(self, admin_client, matrix_centos_os_vm_from_template):
+        validate_os_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-5348")
-    def test_virtctl_guest_agent_fs_info(self, matrix_centos_os_vm_from_template):
-        validate_fs_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template)
+    def test_virtctl_guest_agent_fs_info(self, admin_client, matrix_centos_os_vm_from_template):
+        validate_fs_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-5349")
-    def test_virtctl_guest_agent_user_info(self, matrix_centos_os_vm_from_template):
+    def test_virtctl_guest_agent_user_info(self, admin_client, matrix_centos_os_vm_from_template):
         with console.Console(vm=matrix_centos_os_vm_from_template):
-            validate_user_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template)
+            validate_user_info_virtctl_vs_linux_os(vm=matrix_centos_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5350")
@@ -111,8 +111,10 @@ class TestCommonTemplatesCentos:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5594")
-    def test_vm_smbios_default(self, smbios_from_kubevirt_config, matrix_centos_os_vm_from_template):
-        check_vm_xml_smbios(vm=matrix_centos_os_vm_from_template, cm_values=smbios_from_kubevirt_config)
+    def test_vm_smbios_default(self, admin_client, smbios_from_kubevirt_config, matrix_centos_os_vm_from_template):
+        check_vm_xml_smbios(
+            vm=matrix_centos_os_vm_from_template, cm_values=smbios_from_kubevirt_config, admin_client=admin_client
+        )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-5918")
@@ -124,10 +126,10 @@ class TestCommonTemplatesCentos:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
-    def test_migrate_vm(self, matrix_centos_os_vm_from_template):
+    def test_migrate_vm(self, admin_client, matrix_centos_os_vm_from_template):
         """Test SSH connectivity after migration"""
         migrate_vm_and_verify(vm=matrix_centos_os_vm_from_template, check_ssh_connectivity=True)
-        validate_libvirt_persistent_domain(vm=matrix_centos_os_vm_from_template)
+        validate_libvirt_persistent_domain(vm=matrix_centos_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-5904")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])

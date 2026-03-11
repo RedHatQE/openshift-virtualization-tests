@@ -1,17 +1,15 @@
 import json
 import shlex
-from typing import TYPE_CHECKING
 
+from kubernetes.dynamic import DynamicClient
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import HYPERV_FEATURES_LABELS_DOM_XML, TCP_TIMEOUT_30SEC, TIMEOUT_15SEC, TIMEOUT_90SEC
-
-if TYPE_CHECKING:
-    from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests
 
 
-def assert_windows_efi(vm: "VirtualMachineForTests") -> None:
+def assert_windows_efi(vm: VirtualMachineForTests) -> None:
     """
     Verify guest OS is using EFI.
 
@@ -29,12 +27,13 @@ def assert_windows_efi(vm: "VirtualMachineForTests") -> None:
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
 
 
-def check_vm_xml_hyperv(vm: "VirtualMachineForTests") -> None:
+def check_vm_xml_hyperv(vm: VirtualMachineForTests, admin_client: DynamicClient) -> None:
     """
     Verify HyperV values in VMI XML configuration.
 
     Args:
         vm (VirtualMachineForTests): Virtual machine instance to check for HyperV configuration.
+        admin_client: Privileged client for XML dict access.
 
     Raises:
         AssertionError: If any HyperV flags are not set correctly in the VM spec, including:
@@ -42,7 +41,7 @@ def check_vm_xml_hyperv(vm: "VirtualMachineForTests") -> None:
             - Spinlocks retries value not equal to 8191
             - Stimer direct feature not in "on" state
     """
-    hyperv_features = vm.privileged_vmi.xml_dict["domain"]["features"]["hyperv"]
+    hyperv_features = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["features"]["hyperv"]
     failed_hyperv_features = [
         hyperv_features[feature]
         for feature in HYPERV_FEATURES_LABELS_DOM_XML
@@ -62,7 +61,7 @@ def check_vm_xml_hyperv(vm: "VirtualMachineForTests") -> None:
     )
 
 
-def check_windows_vm_hvinfo(vm: "VirtualMachineForTests") -> None:
+def check_windows_vm_hvinfo(vm: VirtualMachineForTests) -> None:
     """
     Verify HyperV values in Windows VM using hvinfo.exe tool.
 

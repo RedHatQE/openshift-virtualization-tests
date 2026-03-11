@@ -121,7 +121,7 @@ def vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
+def vm_for_aaq_test_in_gated_state(admin_client, namespace, unprivileged_client):
     vm_name = "second-vm-for-aaq-test"
     with VirtualMachineForTests(
         name=vm_name,
@@ -133,8 +133,8 @@ def vm_for_aaq_test_in_gated_state(namespace, unprivileged_client):
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
-        wait_for_virt_launcher_pod(vmi=vm.vmi)
-        wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
+        wait_for_virt_launcher_pod(vmi=vm.vmi, privileged_client=admin_client)
+        wait_when_pod_in_gated_state(pod=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client))
         yield vm
 
 

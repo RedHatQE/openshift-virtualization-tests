@@ -173,9 +173,9 @@ def verify_vm_action(vm, vm_action, run_strategy):
 
 
 def pause_unpause_vmi_and_verify_status(vm):
-    vm.privileged_vmi.pause(wait=True)
+    vm.vmi.pause(wait=True)
     assert vm.printable_status == vm.Status.PAUSED, f"VM is not paused, status: {vm.printable_status}"
-    vm.privileged_vmi.unpause(wait=True)
+    vm.vmi.unpause(wait=True)
     verify_vm_ready_status(vm=vm)
 
 
@@ -233,15 +233,16 @@ class TestRunStrategyBaseActions:
 )
 class TestRunStrategyAdvancedActions:
     @pytest.mark.polarion("CNV-5054")
+    @pytest.mark.usefixtures("start_vm_if_not_running")
     def test_run_strategy_shutdown(
         self,
+        admin_client,
         lifecycle_vm,
         xfail_vm_shutdown_run_strategy_halted,
         matrix_updated_vm_run_strategy,
-        start_vm_if_not_running,
     ):
         vmi = lifecycle_vm.vmi
-        launcher_pod = vmi.virt_launcher_pod
+        launcher_pod = vmi.get_virt_launcher_pod(privileged_client=admin_client)
         run_strategy = matrix_updated_vm_run_strategy
         status_dict = RUN_STRATEGY_SHUTDOWN_STATUS[run_strategy]
 
@@ -257,7 +258,9 @@ class TestRunStrategyAdvancedActions:
         else:
             # wait for vmi and launcher pod status by matrix
             vmi.wait_for_status(status=status_dict["vmi"])
-            vmi.virt_launcher_pod.wait_for_status(status=status_dict["launcher_pod"])
+            vmi.get_virt_launcher_pod(privileged_client=admin_client).wait_for_status(
+                status=status_dict["launcher_pod"]
+            )
 
     @pytest.mark.parametrize(
         "request_updated_vm_run_strategy",
@@ -275,9 +278,8 @@ class TestRunStrategyAdvancedActions:
         ],
         indirect=True,
     )
-    def test_run_strategy_pause_unpause_vmi(
-        self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running
-    ):
+    @pytest.mark.usefixtures("start_vm_if_not_running")
+    def test_run_strategy_pause_unpause_vmi(self, lifecycle_vm, request_updated_vm_run_strategy):
         LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {request_updated_vm_run_strategy}")
         pause_unpause_vmi_and_verify_status(vm=lifecycle_vm)
 
@@ -298,5 +300,6 @@ class TestRunStrategyAdvancedActions:
         indirect=True,
     )
     @pytest.mark.rwx_default_storage
-    def test_run_strategy_migrate_vm(self, lifecycle_vm, request_updated_vm_run_strategy, start_vm_if_not_running):
+    @pytest.mark.usefixtures("start_vm_if_not_running")
+    def test_run_strategy_migrate_vm(self, lifecycle_vm, request_updated_vm_run_strategy):
         migrate_validate_run_strategy_vm(vm=lifecycle_vm, run_strategy=request_updated_vm_run_strategy)

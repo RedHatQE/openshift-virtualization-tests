@@ -18,16 +18,17 @@ LOGGER = logging.getLogger(__name__)
 # Use OCS SC for Block disk IO logic
 
 
-def check_disk_io_option_on_domain_xml(vm, expected_disk_io_option):
+def check_disk_io_option_on_domain_xml(vm, expected_disk_io_option, admin_client):
     LOGGER.info(f"Check disk IO option in {vm.name} domain xml")
     guest_os_info = get_guest_os_info(vmi=vm.vmi)
+    xml_dict = vm.vmi.get_xml_dict(privileged_client=admin_client)
     driver_io = None
     if "Windows" not in guest_os_info["name"]:
-        for disk_element in vm.privileged_vmi.xml_dict["domain"]["devices"]["disk"]:
+        for disk_element in xml_dict["domain"]["devices"]["disk"]:
             if disk_element["alias"]["@name"] == f"ua-{ROOTDISK}":
                 driver_io = disk_element["driver"]["@io"]
     else:
-        disk = vm.privileged_vmi.xml_dict["domain"]["devices"]["disk"]
+        disk = xml_dict["domain"]["devices"]["disk"]
         if disk["source"]["@dev"] == f"/dev/{ROOTDISK}":
             driver_io = disk["driver"]["@io"]
     assert driver_io == expected_disk_io_option, f"expected:{expected_disk_io_option},found: {driver_io}"
@@ -82,12 +83,14 @@ class TestRHELIOOptions:
     )
     def test_vm_with_disk_io_option_rhel(
         self,
+        admin_client,
         disk_options_vm,
         expected_disk_io_option,
     ):
         check_disk_io_option_on_domain_xml(
             vm=disk_options_vm,
             expected_disk_io_option=expected_disk_io_option,
+            admin_client=admin_client,
         )
 
 
@@ -117,10 +120,12 @@ class TestWindowsIOOptions:
     )
     def test_vm_with_disk_io_option_windows(
         self,
+        admin_client,
         disk_options_vm,
         expected_disk_io_option,
     ):
         check_disk_io_option_on_domain_xml(
             vm=disk_options_vm,
             expected_disk_io_option=expected_disk_io_option,
+            admin_client=admin_client,
         )

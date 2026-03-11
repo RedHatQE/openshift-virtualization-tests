@@ -50,8 +50,8 @@ class WindowsVMWithGuestTools(VirtualMachineForTests):
         })
 
 
-def verify_cdrom_in_xml(vm):
-    vmi_devices = vm.privileged_vmi.xml_dict["domain"]["devices"]
+def verify_cdrom_in_xml(vm, admin_client):
+    vmi_devices = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]
     for device_dict in vmi_devices["disk"]:
         for entry in device_dict.items():
             if entry == ("@device", "cdrom"):
@@ -121,13 +121,14 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
 class TestWindowsGuestTools:
     @pytest.mark.polarion("CNV-6517")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_with_guest_tools")
-    def test_vm_with_windows_guest_tools(self, vm_with_guest_tools):
+    def test_vm_with_windows_guest_tools(self, admin_client, vm_with_guest_tools):
         LOGGER.info("Test VM with Windows guest tools")
-        verify_cdrom_in_xml(vm=vm_with_guest_tools)
+        verify_cdrom_in_xml(vm=vm_with_guest_tools, admin_client=admin_client)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-6518")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_with_guest_tools"])
-    def test_migrate_vm_with_windows_guest_tools(self, vm_with_guest_tools, migrated_vm_with_guest_tools):
+    @pytest.mark.usefixtures("migrated_vm_with_guest_tools")
+    def test_migrate_vm_with_windows_guest_tools(self, admin_client, vm_with_guest_tools):
         LOGGER.info("Test migration of a VM with Windows guest tools")
-        verify_cdrom_in_xml(vm=vm_with_guest_tools)
+        verify_cdrom_in_xml(vm=vm_with_guest_tools, admin_client=admin_client)

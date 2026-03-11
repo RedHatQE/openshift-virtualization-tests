@@ -273,10 +273,13 @@ class TestMustGatherVmDetails:
         )
 
     @pytest.mark.polarion("CNV-10243")
-    def test_must_gather_and_vm_same_node(self, must_gather_vm, collected_vm_details_must_gather_from_vm_node):
+    def test_must_gather_and_vm_same_node(
+        self, admin_client, must_gather_vm, collected_vm_details_must_gather_from_vm_node
+    ):
         extracted_data_from_must_gather_on_vm_node(
             collected_vm_details_must_gather_from_vm_node=collected_vm_details_must_gather_from_vm_node,
             must_gather_vm=must_gather_vm,
+            admin_client=admin_client,
         )
 
 
@@ -286,12 +289,14 @@ class TestGuestConsoleLog:
     @pytest.mark.polarion("CNV-10630")
     def test_guest_console_logs(
         self,
+        admin_client,
         must_gather_vm_scope_class,
         collected_vm_details_must_gather,
     ):
         validate_guest_console_logs_collected(
             vm=must_gather_vm_scope_class,
             collected_vm_details_must_gather=collected_vm_details_must_gather,
+            admin_client=admin_client,
         )
 
 
@@ -300,6 +305,7 @@ class TestMustGatherVmLongNameDetails:
     @pytest.mark.polarion("CNV-9233")
     def test_data_collected_from_virt_launcher_long(
         self,
+        admin_client,
         must_gather_long_name_vm,
         collected_vm_details_must_gather,
         nftables_ruleset_from_utility_pods,
@@ -308,6 +314,7 @@ class TestMustGatherVmLongNameDetails:
             base_path=collected_vm_details_must_gather,
             vm_list=[must_gather_long_name_vm],
             nftables_ruleset_from_utility_pods=nftables_ruleset_from_utility_pods,
+            admin_client=admin_client,
         )
 
 

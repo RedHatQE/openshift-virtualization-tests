@@ -82,8 +82,8 @@ def vm_for_migration_progress_test(
 
 
 @pytest.fixture()
-def source_pod_log_verbosity_test(vm_for_migration_progress_test):
-    return vm_for_migration_progress_test.vmi.virt_launcher_pod
+def source_pod_log_verbosity_test(admin_client, vm_for_migration_progress_test):
+    return vm_for_migration_progress_test.vmi.get_virt_launcher_pod(privileged_client=admin_client)
 
 
 @pytest.fixture()
@@ -104,10 +104,11 @@ class TestProgressOfMigrationInVirtLauncher:
         self,
         updated_log_verbosity_config,
         vm_for_migration_progress_test,
+        admin_client,
     ):
-        assert f"verbosity to {VIRT_LOG_VERBOSITY_LEVEL_6}" in vm_for_migration_progress_test.vmi.virt_launcher_pod.log(
-            container="compute"
-        ), f"Not found correct log verbosity level: {VIRT_LOG_VERBOSITY_LEVEL_6} in logs"
+        assert f"verbosity to {VIRT_LOG_VERBOSITY_LEVEL_6}" in vm_for_migration_progress_test.vmi.get_virt_launcher_pod(
+            privileged_client=admin_client
+        ).log(container="compute"), f"Not found correct log verbosity level: {VIRT_LOG_VERBOSITY_LEVEL_6} in logs"
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-9058")
