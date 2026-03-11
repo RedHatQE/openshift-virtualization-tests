@@ -1636,7 +1636,7 @@ def wait_for_ssh_connectivity(
 
     for sample in TimeoutSampler(
         wait_timeout=timeout,
-        sleep=5,
+        sleep=TIMEOUT_5SEC,
         func=vm.ssh_exec.run_command,
         command=["exit"],
         tcp_timeout=tcp_timeout,
@@ -1794,7 +1794,7 @@ def wait_for_running_vm(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)  # type: ignore[arg-type]
+        collect_vnc_screenshot_for_vms(vm=vm)
         raise
 
 
@@ -1990,8 +1990,7 @@ def verify_vm_migrated(
         if check_ssh_connectivity:
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} unresponsive after migration; getting VNC screenshot")
-        collect_vnc_screenshot_for_vms(vm_name=vm.name, vm_namespace=vm.namespace)
+        collect_vnc_screenshot_for_vms(vm=vm)
         raise
 
 

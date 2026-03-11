@@ -5,6 +5,7 @@ import shlex
 from functools import cache
 
 from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
 from pytest_testconfig import config as py_config
 
@@ -111,12 +112,21 @@ def collect_alerts_data():
     )
 
 
-def collect_vnc_screenshot_for_vms(vm_name: str, vm_namespace: str) -> None:
-    base_dir = get_data_collector_base_directory()
-    utilities.infra.run_virtctl_command(
-        command=shlex.split(f"vnc screenshot {vm_name} -f {base_dir}/{vm_namespace}-{vm_name}.png"),
-        namespace=vm_namespace,
-    )
+def collect_vnc_screenshot_for_vms(vm: VirtualMachine) -> None:
+    """Collect a VNC screenshot for a VM when its state supports VNC access.
+
+    Args:
+        vm (VirtualMachine): VM object used to read status, name, and namespace.
+    """
+    printable_status = vm.instance.get("status", {}).get("printableStatus")
+    if printable_status in (VirtualMachine.Status.RUNNING, VirtualMachine.Status.MIGRATING):
+        base_dir = get_data_collector_base_directory()
+        utilities.infra.run_virtctl_command(
+            command=shlex.split(f"vnc screenshot {vm.name} -f {base_dir}/{vm.namespace}-{vm.name}.png"),
+            namespace=vm.namespace,
+        )
+    else:
+        LOGGER.warning(f"Skipping VNC screenshot for VM {vm.name}, status is '{printable_status}'.")
 
 
 def collect_ocp_must_gather(since_time):

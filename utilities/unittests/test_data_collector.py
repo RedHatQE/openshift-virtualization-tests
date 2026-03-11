@@ -122,6 +122,8 @@ if "utilities.data_collector" in sys.modules:
 
 # Circular dependencies are already mocked in conftest.py
 
+from ocp_resources.virtual_machine import VirtualMachine
+
 # Now import the real data_collector module functions
 from utilities.data_collector import (
     BASE_DIRECTORY_NAME,
@@ -338,12 +340,15 @@ class TestCollectVncScreenshotForVms:
     @patch("utilities.data_collector.get_data_collector_base_directory")
     @patch("utilities.data_collector.utilities.infra.run_virtctl_command")
     @patch("utilities.data_collector.shlex.split")
-    def test_collect_vnc_screenshot_for_vms(self, mock_shlex, mock_run_virtctl, mock_get_base_dir):
-        """Test collect_vnc_screenshot_for_vms runs virtctl command"""
+    def test_collect_vnc_screenshot_for_vms_running(self, mock_shlex, mock_run_virtctl, mock_get_base_dir):
+        """Test collect_vnc_screenshot_for_vms takes screenshot when VM is Running"""
         mock_get_base_dir.return_value = "/base/dir"
         mock_shlex.return_value = ["vnc", "screenshot", "test-vm", "-f", "/base/dir/test-ns-test-vm.png"]
-
-        collect_vnc_screenshot_for_vms("test-vm", "test-ns")
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = "test-ns"
+        mock_vm.instance.get.return_value = {"printableStatus": VirtualMachine.Status.RUNNING}
+        collect_vnc_screenshot_for_vms(vm=mock_vm)
 
         mock_get_base_dir.assert_called_once()
         expected_command = "vnc screenshot test-vm -f /base/dir/test-ns-test-vm.png"
@@ -351,6 +356,16 @@ class TestCollectVncScreenshotForVms:
         mock_run_virtctl.assert_called_once_with(
             command=["vnc", "screenshot", "test-vm", "-f", "/base/dir/test-ns-test-vm.png"], namespace="test-ns"
         )
+
+    @patch("utilities.data_collector.utilities.infra.run_virtctl_command")
+    def test_collect_vnc_screenshot_for_vms_skips_error_status(self, mock_run_virtctl):
+        """Test collect_vnc_screenshot_for_vms skips screenshot when VM is in error state"""
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.instance.get.return_value = {"printableStatus": VirtualMachine.Status.ERR_IMAGE_PULL}
+        collect_vnc_screenshot_for_vms(vm=mock_vm)
+
+        mock_run_virtctl.assert_not_called()
 
 
 class TestCollectOcpMustGather:
