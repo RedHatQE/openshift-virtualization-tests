@@ -506,7 +506,7 @@ def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus
     assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
 
 
-def get_dv_size_from_datasource(data_source: DataSource):
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
     source_dict = data_source.source.instance.to_dict()
     source_spec_dict = source_dict["spec"]
     dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
