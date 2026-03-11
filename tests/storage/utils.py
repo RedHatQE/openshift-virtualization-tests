@@ -10,6 +10,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.pod import Pod
@@ -143,7 +144,10 @@ def upload_image(token, data, asynchronous=False, client=None):
     try:
         with open(data, "rb") as fd:
             fd_data = fd.read()
-    except OSError | IOError:
+    except OSError as error:
+        LOGGER.error(
+            f"Failed to read upload image (type={type(data).__name__}); treating input as raw data. error={error}"
+        )
         fd_data = data
 
     return requests.post(url=uploadproxy_url, data=fd_data, headers=headers, verify=False).status_code
@@ -476,3 +480,36 @@ def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path:
         windows_vm=windows_vm,
         directory_path=directory_path,
     )
+
+
+def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus: str) -> None:
+    """Assert that a hotplugged volume has the expected disk bus type.
+
+    Args:
+        vm: Virtual machine instance.
+        volume: DataVolume expected to be hotplugged.
+        expected_bus: Expected bus type (e.g., "virtio", "scsi")
+
+    Raises:
+        AssertionError: If disk is not found or bus type does not match.
+    """
+    disk = next(
+        (
+            disk_entry
+            for disk_entry in vm.vmi.instance.spec.domain.devices.disks
+            if disk_entry.get("name") == volume.name
+        ),
+        None,
+    )
+    assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
+    actual_bus = disk.get("disk", {}).get("bus")
+    assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size
