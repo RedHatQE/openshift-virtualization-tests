@@ -7,7 +7,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST
-from utilities.artifactory import get_test_artifact_server_url
+from tests.storage.utils import get_dv_size_from_datasource
 from utilities.constants import PVC, TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv
 
@@ -34,14 +34,20 @@ def dv_created_by_unprivileged_user_with_rolebinding(
     golden_images_edit_rolebinding,
     unprivileged_client,
     storage_class_name_scope_function,
+    fedora_data_source_scope_module,
 ):
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with create_dv(
         client=unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         namespace=golden_images_namespace.name,
-        url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
-        size=RHEL_IMAGE_SIZE,
+        size=size,
         storage_class=storage_class_name_scope_function,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         yield dv
 
@@ -52,8 +58,10 @@ def dv_created_by_unprivileged_user_with_rolebinding(
 def test_regular_user_cant_create_dv_in_ns(
     golden_images_namespace,
     unprivileged_client,
+    fedora_data_source_scope_module,
 ):
     LOGGER.info("Try as a regular user, to create a DV in golden image NS and receive the proper error")
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with pytest.raises(
         ApiException,
         match=ErrorMsg.CANNOT_CREATE_RESOURCE,
@@ -61,10 +69,14 @@ def test_regular_user_cant_create_dv_in_ns(
         with create_dv(
             dv_name="cnv-4755",
             namespace=golden_images_namespace.name,
-            url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
-            size=RHEL_IMAGE_SIZE,
+            size=size,
             storage_class=py_config["default_storage_class"],
             client=unprivileged_client,
+            source_ref={
+                "kind": fedora_data_source_scope_module.kind,
+                "name": fedora_data_source_scope_module.name,
+                "namespace": fedora_data_source_scope_module.namespace,
+            },
         ):
             return
 

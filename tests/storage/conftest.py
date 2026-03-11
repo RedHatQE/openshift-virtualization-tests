@@ -51,6 +51,7 @@ from utilities.constants import (
     CDI_OPERATOR,
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
@@ -578,6 +579,16 @@ def rhel10_data_source_scope_module(golden_images_namespace):
     return DataSource(
         namespace=golden_images_namespace.name,
         name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="module")
+def fedora_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
