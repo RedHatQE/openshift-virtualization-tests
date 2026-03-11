@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+import utilities.constants
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
@@ -1916,11 +1917,13 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="amd64")
 
             assert mock_py_config["cpu_arch"] == "amd64"
+            assert utilities.constants.Images is mock_arch_images.AMD64
             mock_generate_common.assert_called_once_with(os_dict=mock_py_config)
             mock_generate_instance.assert_called_once_with(os_dict=mock_py_config)
 
@@ -1942,12 +1945,14 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="")
 
             mock_get_cluster_arch.assert_called_once()
             assert mock_py_config["cpu_arch"] == "arm64"
+            assert utilities.constants.Images is mock_arch_images.ARM64
             mock_generate_common.assert_called_once_with(os_dict=mock_py_config)
             mock_generate_instance.assert_called_once_with(os_dict=mock_py_config, cpu_arch="arm64")
 
@@ -1974,11 +1979,13 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="amd64")
 
             assert mock_py_config["cpu_arch"] == "amd64"
+            assert utilities.constants.Images is mock_arch_images.AMD64
             mock_generate_common.assert_called_once_with(os_dict=os_matrix_amd64, cpu_arch="amd64")
             mock_generate_instance.assert_called_once_with(os_dict=os_matrix_amd64, cpu_arch="amd64")
 
@@ -2000,6 +2007,7 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_s390x_images = MagicMock()
             mock_arch_images.S390X = mock_s390x_images
@@ -2007,6 +2015,7 @@ class TestUpdateCpuArchRelatedConfig:
             update_cpu_arch_related_config(cpu_arch_option="")
 
             assert mock_py_config["cpu_arch"] == "s390x"
+            assert utilities.constants.Images is mock_s390x_images
             mock_generate_common.assert_called_once_with(os_dict=mock_py_config)
             mock_generate_instance.assert_called_once_with(os_dict=mock_py_config, cpu_arch="s390x")
 
@@ -2028,6 +2037,7 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arm64_images = MagicMock()
             mock_arch_images.ARM64 = mock_arm64_images
@@ -2035,6 +2045,7 @@ class TestUpdateCpuArchRelatedConfig:
             update_cpu_arch_related_config(cpu_arch_option="arm64")
 
             assert mock_py_config["cpu_arch"] == "arm64"
+            assert utilities.constants.Images is mock_arm64_images
 
     @patch("utilities.pytest_utils.generate_instance_type_matrix_dicts")
     @patch("utilities.pytest_utils.generate_common_template_matrix_dicts")
@@ -2054,10 +2065,12 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="")
 
+            assert utilities.constants.Images is mock_arch_images.AMD64
             mock_generate_common.assert_called_once_with(os_dict=mock_py_config)
             mock_generate_instance.assert_called_once_with(os_dict=mock_py_config)
 
@@ -2079,10 +2092,12 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="")
 
+            assert utilities.constants.Images is mock_arch_images.ARM64
             mock_generate_common.assert_called_once_with(os_dict=mock_py_config)
             mock_generate_instance.assert_called_once_with(os_dict=mock_py_config, cpu_arch="arm64")
 
@@ -2132,11 +2147,13 @@ class TestUpdateCpuArchRelatedConfig:
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="arm64")
 
             assert mock_py_config["cpu_arch"] == "arm64"
+            assert utilities.constants.Images is mock_arch_images.ARM64
             mock_generate_common.assert_called_once_with(os_dict=os_matrix_arm64, cpu_arch="arm64")
             mock_generate_instance.assert_called_once_with(os_dict=os_matrix_arm64, cpu_arch="arm64")
 

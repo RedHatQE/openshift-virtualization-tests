@@ -409,13 +409,20 @@ def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
 
 
 def validate_cpu_arch_params(cpu_arch_option: str) -> None:
-    """Validate `--cpu-arch` CLI option against cluster architecture.
+    """Validate the interplay between `--cpu-arch` CLI option and actual cluster architecture.
+
+    Covered cases:
+      - Disallow clusters with nodes of unsupported architectures.
+      - Require `--cpu-arch` to be passed for heterogeneous clusters and
+        ensure the values are a subset of actual cluster architectures.
+      - Validate `--cpu-arch` value(s) are all supported and, in multiarch clusters, match discovered architectures.
+      - For homogeneous clusters, disallow use of the `--cpu-arch` argument.
 
     Args:
         cpu_arch_option: Comma-separated architecture(s) from CLI, or empty string.
 
     Raises:
-        UnsupportedCPUArchitectureError: On architecture mismatch or invalid usage.
+        UnsupportedCPUArchitectureError: If architecture usage or CLI option values are invalid.
     """
     cluster_arch = get_cluster_architecture()
     cli_param_arch = cpu_arch_option.split(",")
