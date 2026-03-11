@@ -293,7 +293,7 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
     LOGGER.error(
         f"Out of MCPs {mcps_to_check}, following MCPs {not_matching_mcps} were not at desired "
         f"condition {condition_type} before timeout.\n"
-        f"Current MCP status={str({mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list})}"
+        f"Current MCP status={ {mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list}!s}"
     )
     collect_ocp_must_gather(since_time=since_time)
 

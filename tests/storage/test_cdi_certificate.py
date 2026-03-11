@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Automatic refresh of CDI certificates test suite
 """
@@ -83,9 +81,9 @@ def valid_cdi_certificates(secrets):
 
                 start = secret.certificate_not_before
                 end = secret.certificate_not_after
-                start_dt = datetime.datetime.strptime(start, RFC3339_FORMAT).replace(tzinfo=datetime.timezone.utc)
-                end_dt = datetime.datetime.strptime(end, RFC3339_FORMAT).replace(tzinfo=datetime.timezone.utc)
-                now_dt = datetime.datetime.now(datetime.timezone.utc)
+                start_dt = datetime.datetime.strptime(start, RFC3339_FORMAT).replace(tzinfo=datetime.UTC)
+                end_dt = datetime.datetime.strptime(end, RFC3339_FORMAT).replace(tzinfo=datetime.UTC)
+                now_dt = datetime.datetime.now(datetime.UTC)
                 assert start_dt <= now_dt <= end_dt, f"Certificate of {cdi_secret} not valid at current time"
 
 

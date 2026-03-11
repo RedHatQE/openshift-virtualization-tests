@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import Set
 
 from ocp_resources.node import Node
 from ocp_resources.resource import Resource
@@ -16,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 
 
-def get_nodes_cpu_model(nodes: list[Node]) -> dict[str, dict[str, Set[str]]]:
+def get_nodes_cpu_model(nodes: list[Node]) -> dict[str, dict[str, set[str]]]:
     """Checks the CPU model labels on each node and returns a dictionary of nodes and supported CPU models.
 
     Args:
@@ -28,7 +27,7 @@ def get_nodes_cpu_model(nodes: list[Node]) -> dict[str, dict[str, Set[str]]]:
         excludes old CPU models.
     """
 
-    nodes_cpu_model: dict[str, dict[str, Set[str]]] = {"common": {}, "modern": {}}
+    nodes_cpu_model: dict[str, dict[str, set[str]]] = {"common": {}, "modern": {}}
     for node in nodes:
         nodes_cpu_model["common"][node.name] = set()
         nodes_cpu_model["modern"][node.name] = set()
@@ -113,7 +112,7 @@ def find_common_cpu_model_for_live_migration(cluster_cpu: str | None, host_cpu_m
     return None
 
 
-def get_common_cpu_from_nodes(cluster_cpus: Set[str]) -> str | None:
+def get_common_cpu_from_nodes(cluster_cpus: set[str]) -> str | None:
     """Receives a set of unique common CPUs between all schedulable nodes and returns one from the set.
 
     Args:

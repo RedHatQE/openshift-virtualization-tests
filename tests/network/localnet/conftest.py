@@ -466,7 +466,7 @@ def ovs_bridge_localnet_running_jumbo_frame_vms(
 def localnet_ovs_bridge_jumbo_frame_client_and_server_vms(
     ovs_bridge_localnet_running_jumbo_frame_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
     cluster_hardware_mtu: int,
-) -> Generator[tuple[TcpClient, TcpServer], None, None]:
+) -> Generator[tuple[TcpClient, TcpServer]]:
     with client_server_active_connection(
         client_vm=ovs_bridge_localnet_running_jumbo_frame_vms[1],
         server_vm=ovs_bridge_localnet_running_jumbo_frame_vms[0],

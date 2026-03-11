@@ -4,9 +4,9 @@ import logging
 import re
 import shlex
 import tarfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
-from typing import Generator, Optional
 
 import bitmath
 import requests
@@ -534,12 +534,12 @@ def create_cirros_vm(
     client: DynamicClient,
     dv_name: str,
     vm_name: str,
-    node: Optional[str] = None,
-    wait_running: Optional[bool] = True,
-    volume_mode: Optional[str] = None,
-    cpu_model: Optional[str] = None,
-    annotations: Optional[str] = None,
-) -> Generator[VirtualMachineForTests, None, None]:
+    node: str | None = None,
+    wait_running: bool | None = True,
+    volume_mode: str | None = None,
+    cpu_model: str | None = None,
+    annotations: str | None = None,
+) -> Generator[VirtualMachineForTests]:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
 

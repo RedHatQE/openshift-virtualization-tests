@@ -76,7 +76,6 @@ def rebooted_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress, wo
 
     LOGGER.info(f"Waiting for node {vm_node.name} to come back online")
     wait_for_node_status(node=vm_node, status=True, wait_timeout=TIMEOUT_10MIN)
-    return
 
 
 @pytest.fixture()
