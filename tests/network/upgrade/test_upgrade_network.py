@@ -5,6 +5,7 @@ from ipaddress import ip_interface
 import pytest
 
 from libs.net.vmspec import lookup_iface_status_ip
+from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from tests.network.upgrade.utils import assert_label_in_namespace
 from tests.upgrade_params import (
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
@@ -12,7 +13,6 @@ from tests.upgrade_params import (
 )
 from utilities.constants import (
     DEPENDENCY_SCOPE_SESSION,
-    KMP_DISABLED_LABEL,
     KMP_VM_ASSIGNMENT_LABEL,
 )
 from utilities.network import (

@@ -2,9 +2,9 @@ import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.network.libs.ip import random_ipv4_address
+from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from utilities.constants import (
     ES_NONE,
-    KMP_DISABLED_LABEL,
     KMP_VM_ASSIGNMENT_LABEL,
     LINUX_BRIDGE,
 )
