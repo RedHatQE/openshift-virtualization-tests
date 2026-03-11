@@ -688,6 +688,23 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
+def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
+    """Run command on RHEL VM via SSH and verify expected result is in output.
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+    Raises:
+        AssertionError: If expected result is not in output.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+    )[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
+
+
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection.
@@ -699,12 +716,6 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd)
-
-
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
