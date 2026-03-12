@@ -50,6 +50,7 @@ OS_FLAVOR_ALPINE = "alpine"
 OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
+OS_FLAVOR_WIN_CONTAINER_DISK = "win-container-disk"
 
 FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
@@ -212,7 +213,6 @@ VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
-MTU_9000 = 9000
 IPV4_STR = "ipv4"
 IPV6_STR = "ipv6"
 CLUSTER_NETWORK_ADDONS_OPERATOR = "cluster-network-addons-operator"
@@ -225,8 +225,6 @@ KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
 KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
 KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
 KUBEMACPOOL_MAC_RANGE_CONFIG = "kubemacpool-mac-range-config"
-NMSTATE_HANDLER = "nmstate-handler"
-ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
 SSH_PORT_22 = 22
 PORT_80 = 80
 ACTIVE_BACKUP = "active-backup"
@@ -342,7 +340,6 @@ CLOUD_INIT_NO_CLOUD = "cloudInitNoCloud"
 # Kubemacpool constants
 KMP_VM_ASSIGNMENT_LABEL = "mutatevirtualmachines.kubemacpool.io"
 KMP_ENABLED_LABEL = "allocate"
-KMP_DISABLED_LABEL = "ignore"
 
 # SSH constants
 CNV_VM_SSH_KEY_PATH = "CNV-SSH-KEY-PATH"
@@ -454,6 +451,7 @@ SSP_STR = "SSP"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 NETWORKPOLICY_STR = "NetworkPolicy"
+SERVICEACCOUNT_STR = "ServiceAccount"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
@@ -477,6 +475,8 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_CONSOLE_PLUGIN_SERVICE: SERVICE_STR},
     {f"{KUBEVIRT_APISERVER_PROXY}-{SERVICE_STR.lower()}": SERVICE_STR},
     {KUBEVIRT_APISERVER_PROXY: DEPLOYMENT_STR},
+    {KUBEVIRT_CONSOLE_PLUGIN: SERVICEACCOUNT_STR},
+    {KUBEVIRT_APISERVER_PROXY: SERVICEACCOUNT_STR},
     {CREATING_VIRTUAL_MACHINE: CONSOLEQUICKSTART_STR},
     {CREATING_VIRTUAL_MACHINE_FROM_VOLUME: CONSOLEQUICKSTART_STR},
     {UPLOAD_BOOT_SOURCE: CONSOLEQUICKSTART_STR},

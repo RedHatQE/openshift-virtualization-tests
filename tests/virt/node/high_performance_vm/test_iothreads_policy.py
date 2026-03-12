@@ -71,6 +71,7 @@ class TestIsolateEmulatorThreadAndIOThreadsPolicy:
     )
     def test_iothreads_policy(
         self,
+        admin_client,
         iothreads_policy_vm,
     ):
         """
@@ -78,4 +79,4 @@ class TestIsolateEmulatorThreadAndIOThreadsPolicy:
         Ensure that KubeVirt will allocate ioThreads to the same physical cpu
         of the QEMU Emulator Thread.
         """
-        validate_iothreads_emulatorthread_on_same_pcpu(vm=iothreads_policy_vm)
+        validate_iothreads_emulatorthread_on_same_pcpu(vm=iothreads_policy_vm, admin_client=admin_client)
