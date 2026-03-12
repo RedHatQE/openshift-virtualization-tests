@@ -16,7 +16,6 @@ from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
     get_host_model_cpu,
-    get_nodes_cpu_architecture,
     get_nodes_cpu_model,
     is_cpu_model_not_in_excluded_list,
 )
@@ -216,8 +215,9 @@ class TestIsCpuModelNotInExcludedList:
 class TestGetHostModelCpu:
     """Test cases for get_host_model_cpu function"""
 
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
     def test_successful_extraction_all_nodes(self):
-        """Test successful extraction of host model CPU from all nodes"""
+        """Test successful extraction of host model CPU from all nodes (filtered by cpu_arch)"""
         mock_node1 = MagicMock()
         mock_node1.name = "node1"
         mock_node1.labels = {
@@ -239,12 +239,14 @@ class TestGetHostModelCpu:
             "node2": "Skylake-Server",
         }
 
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
     def test_assertion_error_when_missing_label(self):
         """Test assertion error when not all nodes have host-model-cpu label"""
         mock_node1 = MagicMock()
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
@@ -256,18 +258,21 @@ class TestGetHostModelCpu:
         with pytest.raises(AssertionError, match="All nodes did not have host-model-cpu label"):
             get_host_model_cpu([mock_node1, mock_node2])
 
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
     def test_multiple_nodes_same_host_cpu(self):
         """Test with multiple nodes with same host CPU"""
         mock_node1 = MagicMock()
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         result = get_host_model_cpu([mock_node1, mock_node2])
@@ -277,24 +282,28 @@ class TestGetHostModelCpu:
             "node2": "Cascadelake-Server",
         }
 
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
     def test_multiple_nodes_different_host_cpus(self):
         """Test with multiple nodes with different host CPUs"""
         mock_node1 = MagicMock()
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node2 = MagicMock()
         mock_node2.name = "node2"
         mock_node2.labels = {
             "host-model-cpu.node.kubevirt.io/Skylake-Server": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         mock_node3 = MagicMock()
         mock_node3.name = "node3"
         mock_node3.labels = {
             "host-model-cpu.node.kubevirt.io/Haswell": "true",
+            "kubernetes.io/arch": "amd64",
         }
 
         result = get_host_model_cpu([mock_node1, mock_node2, mock_node3])
@@ -305,16 +314,40 @@ class TestGetHostModelCpu:
             "node3": "Haswell",
         }
 
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
     def test_label_value_not_true_ignored(self):
         """Test that labels with value != 'true' are ignored"""
         mock_node1 = MagicMock()
         mock_node1.name = "node1"
         mock_node1.labels = {
             "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "false",
+            "kubernetes.io/arch": "amd64",
         }
 
         with pytest.raises(AssertionError, match="All nodes did not have host-model-cpu label"):
             get_host_model_cpu([mock_node1])
+
+    @patch("utilities.cpu.py_config", {"cpu_arch": "amd64"})
+    def test_filters_nodes_by_cpu_arch(self):
+        """Test that nodes not matching cpu_arch are excluded from host model extraction"""
+        mock_node_amd64 = MagicMock()
+        mock_node_amd64.name = "node-amd64"
+        mock_node_amd64.labels = {
+            "host-model-cpu.node.kubevirt.io/Cascadelake-Server": "true",
+            "kubernetes.io/arch": "amd64",
+        }
+
+        mock_node_arm64 = MagicMock()
+        mock_node_arm64.name = "node-arm64"
+        mock_node_arm64.labels = {
+            "host-model-cpu.node.kubevirt.io/Neoverse-N1": "true",
+            "kubernetes.io/arch": "arm64",
+        }
+
+        result = get_host_model_cpu([mock_node_amd64, mock_node_arm64])
+
+        # Only amd64 node should be included
+        assert result == {"node-amd64": "Cascadelake-Server"}
 
 
 class TestFindCommonCpuModelForLiveMigration:
@@ -435,54 +468,3 @@ class TestGetCommonCpuFromNodes:
         result = get_common_cpu_from_nodes(cluster_cpus)
 
         assert result == "Cascadelake-Server"
-
-
-class TestGetNodesCpuArchitecture:
-    """Test cases for get_nodes_cpu_architecture function"""
-
-    def test_returns_architecture_when_all_same(self):
-        """Test returns architecture when all nodes have same architecture"""
-        mock_node1 = MagicMock()
-        mock_node1.labels = {"kubernetes.io/arch": "amd64"}
-
-        mock_node2 = MagicMock()
-        mock_node2.labels = {"kubernetes.io/arch": "amd64"}
-
-        mock_node3 = MagicMock()
-        mock_node3.labels = {"kubernetes.io/arch": "amd64"}
-
-        result = get_nodes_cpu_architecture([mock_node1, mock_node2, mock_node3])
-
-        assert result == "amd64"
-
-    def test_assertion_error_with_mixed_architectures(self):
-        """Test assertion error with mixed architectures"""
-        mock_node1 = MagicMock()
-        mock_node1.labels = {"kubernetes.io/arch": "amd64"}
-
-        mock_node2 = MagicMock()
-        mock_node2.labels = {"kubernetes.io/arch": "arm64"}
-
-        with pytest.raises(AssertionError, match="Mixed CPU architectures in the cluster is not supported"):
-            get_nodes_cpu_architecture([mock_node1, mock_node2])
-
-    def test_with_single_node(self):
-        """Test with single node"""
-        mock_node = MagicMock()
-        mock_node.labels = {"kubernetes.io/arch": "s390x"}
-
-        result = get_nodes_cpu_architecture([mock_node])
-
-        assert result == "s390x"
-
-    def test_with_multiple_nodes_same_architecture(self):
-        """Test with multiple nodes same architecture"""
-        nodes = []
-        for i in range(5):
-            mock_node = MagicMock()
-            mock_node.labels = {"kubernetes.io/arch": "arm64"}
-            nodes.append(mock_node)
-
-        result = get_nodes_cpu_architecture(nodes)
-
-        assert result == "arm64"
