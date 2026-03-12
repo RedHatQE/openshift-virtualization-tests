@@ -3,7 +3,6 @@ import logging
 import pytest
 from kubernetes.client.rest import ApiException
 from kubernetes.dynamic import DynamicClient
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.restricted_namespace_cloning.constants import TARGET_DV
@@ -51,12 +50,3 @@ def create_dv_negative(
             storage_class=storage_class,
         ):
             LOGGER.error("Target dv was created, but shouldn't have been")
-
-
-def get_dv_size_from_datasource(data_source: DataSource):
-    source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
-        "status", {}
-    ).get("restoreSize")
-    return dv_size

@@ -25,10 +25,10 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC_SA,
     VM_FOR_TEST,
 )
-from tests.storage.restricted_namespace_cloning.utils import get_dv_size_from_datasource
 from tests.storage.utils import (
     create_cluster_role,
     create_role_binding,
+    get_dv_size_from_datasource,
     set_permissions,
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
