@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from typing import Final
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -35,7 +36,7 @@ from utilities.constants import (
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
-PRIMARY_INTERFACE_NAME = "eth0"
+GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
 
 
 @pytest.fixture(scope="module")
@@ -158,7 +159,7 @@ def vm_localnet_1(
         ],
         network_data=cloudinit.NetworkData(
             ethernets={
-                PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)]),
+                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)]),
                 "eth1": cloudinit.EthernetDevice(addresses=[vm_localnet_1_secondary_ip]),
             }
         ),
@@ -180,7 +181,7 @@ def vm_localnet_2(
         networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
         interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
@@ -245,7 +246,7 @@ def vm_ovs_bridge_localnet_link_down(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={}, state=LINK_STATE_DOWN)],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
@@ -267,7 +268,7 @@ def vm_ovs_bridge_localnet_1(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
@@ -289,7 +290,7 @@ def vm_ovs_bridge_localnet_2(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
@@ -424,7 +425,7 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
@@ -448,7 +449,7 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
-            ethernets={PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
+            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[next(ipv4_localnet_address_pool)])}
         ),
     ) as vm:
         yield vm
