@@ -1,6 +1,6 @@
 """SR-IOV library constants and utilities."""
 
-from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from utilities.constants import SRIOV
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, sriov_network_dict

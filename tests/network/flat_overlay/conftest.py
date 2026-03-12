@@ -5,6 +5,7 @@ import pytest
 from ocp_resources.multi_network_policy import MultiNetworkPolicy
 from ocp_resources.resource import ResourceEditor
 
+from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.flat_overlay.constants import (
     CONNECTION_REQUESTS,
@@ -21,7 +22,6 @@ from tests.network.flat_overlay.utils import (
     start_nc_response_on_vm,
     wait_for_multi_network_policy_resources,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import FLAT_OVERLAY_STR
 from utilities.infra import create_ns
 from utilities.network import assert_ping_successful, network_nad

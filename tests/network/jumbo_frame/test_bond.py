@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 import pytest
 
+from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import assert_no_ping
 from utilities.infra import get_node_selector_dict
 from utilities.network import (

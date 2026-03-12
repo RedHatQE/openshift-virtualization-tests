@@ -7,9 +7,9 @@ from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import retry
 
+from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.libs.ip import filter_link_local_addresses
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 _IPERF_BIN: Final[str] = "iperf3"

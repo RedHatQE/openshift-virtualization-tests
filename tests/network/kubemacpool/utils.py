@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 from ipaddress import ip_interface
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
     VirtualMachineForTests,

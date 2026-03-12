@@ -5,13 +5,13 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from tests.network.localnet.liblocalnet import (
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,

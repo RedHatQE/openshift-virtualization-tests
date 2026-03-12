@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 

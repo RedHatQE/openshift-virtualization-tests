@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 

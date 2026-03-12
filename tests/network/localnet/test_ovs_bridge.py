@@ -3,9 +3,9 @@ from ipaddress import ip_interface
 
 import pytest
 
+from libs.net.ip import filter_link_local_addresses, have_same_ip_families
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
-from tests.network.libs.ip import filter_link_local_addresses, have_same_ip_families
 from tests.network.localnet.liblocalnet import (
     GUEST_1ST_IFACE_NAME,
     LINK_STATE_UP,
