@@ -3,6 +3,7 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
+from libs.net.ip import random_ipv4_address
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm
 from tests.network.libs.dhcpd import (
     DHCP_IP_RANGE_END,
@@ -13,7 +14,6 @@ from tests.network.libs.dhcpd import (
     UNIQUE_CLIENT_ID,
     verify_dhcpd_activated,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import (

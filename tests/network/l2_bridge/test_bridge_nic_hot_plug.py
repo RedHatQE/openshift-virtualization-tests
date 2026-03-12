@@ -3,6 +3,7 @@ import time
 import pytest
 
 from libs.net import netattachdef
+from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
@@ -19,7 +20,6 @@ from tests.network.l2_bridge.libl2bridge import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import FLAT_OVERLAY_STR, QUARANTINED, SRIOV
 from utilities.network import (
     IfaceNotFound,
