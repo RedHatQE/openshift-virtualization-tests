@@ -4,6 +4,7 @@ import uuid
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
+import yaml
 from dacite import from_dict
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
@@ -102,6 +103,19 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    @property
+    def cloud_init_network_data(self) -> cloudinit.NetworkData:
+        """Return the parsed cloud-init network data configured for this VM.
+
+        Returns:
+            NetworkData: The cloud-init network data as a dataclass.
+        """
+        volumes = {vol.name: vol for vol in self.instance.spec.template.spec.volumes}
+        return from_dict(
+            data_class=cloudinit.NetworkData,
+            data=yaml.safe_load(volumes[CLOUD_INIT_DISK_NAME].cloudInitNoCloud.networkData),
+        )
 
     def add_cloud_init(self, netdata: cloudinit.NetworkData) -> None:
         # Prevents cloud-init from overriding the default OS user credentials

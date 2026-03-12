@@ -7,8 +7,9 @@ from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import retry
 
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.libs.ip import filter_link_local_addresses
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 _IPERF_BIN: Final[str] = "iperf3"
@@ -196,6 +197,41 @@ class PodTcpClient(BaseTcpClient):
 
 def is_tcp_connection(server: TcpServer, client: BaseTcpClient) -> bool:
     return server.is_running() and client.is_running()
+
+
+@contextlib.contextmanager
+def active_tcp_connections(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    iface_name: str,
+) -> Generator[list[tuple[VMTcpClient, TcpServer]], None, None]:
+    """Start iperf3 client-server connections for all IPs on the server's interface.
+       The helper assumed the ip addresses are up.
+
+    Args:
+        client_vm: VM running the iperf3 client.
+        server_vm: VM running the iperf3 server.
+        iface_name: Network interface name on the server VM to resolve IPs from.
+
+    Yields:
+        List of (VMTcpClient, TcpServer) tuples, one per enabled IP family.
+    """
+    iface = lookup_iface_status(vm=server_vm, iface_name=iface_name)
+    server_ips = [ip for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses)]
+    with contextlib.ExitStack() as stack:
+        active_conns = []
+        for server_ip in server_ips:
+            active_conns.append(
+                stack.enter_context(
+                    client_server_active_connection(
+                        client_vm=client_vm,
+                        server_vm=server_vm,
+                        spec_logical_network=iface.name,
+                        ip_family=server_ip.version,
+                    )
+                )
+            )
+        yield active_conns
 
 
 @contextlib.contextmanager

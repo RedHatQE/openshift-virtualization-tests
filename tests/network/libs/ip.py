@@ -98,3 +98,10 @@ def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4A
 def ip_header_size(ip: ipaddress.IPv4Address | ipaddress.IPv6Address | str) -> int:
     addr = ipaddress.ip_address(ip) if isinstance(ip, str) else ip
     return _IPV4_HEADER_SIZE if addr.version == 4 else _IPV6_HEADER_SIZE
+
+
+def have_same_ip_families(
+    actual_ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address],
+    expected_ips: list[ipaddress.IPv4Address | ipaddress.IPv6Address],
+) -> bool:
+    return {ip.version for ip in actual_ips} == {ip.version for ip in expected_ips}
