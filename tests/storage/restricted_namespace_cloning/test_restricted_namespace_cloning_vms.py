@@ -66,6 +66,8 @@ def create_vm_negative(
             client=unprivileged_client,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             data_volume_template=get_dv_template(data_volume_clone_settings=data_volume_clone_settings),
+            username="dummy",
+            password="dummy",
         ):
             return
 
@@ -158,7 +160,6 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     destination_namespace,
     restricted_namespace_service_account,
     unprivileged_client,
-    restricted_role_binding_for_vms_get_only_in_destination_namespace,
     data_volume_clone_settings,
     perm_src_service_account,
     perm_destination_service_account,
