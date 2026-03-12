@@ -8,8 +8,8 @@ _MAX_NUM_OF_RANDOM_HEXTETS_PER_SESSION: Final[int] = 16
 _IPV4_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "172.16"
 _IPV6_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "fd00:1234:5678"
 TCP_HEADER_SIZE: Final[int] = 20
-IPV4_HEADER_SIZE: Final[int] = 20
-IPV6_HEADER_SIZE: Final[int] = 40
+_IPV4_HEADER_SIZE: Final[int] = 20
+_IPV6_HEADER_SIZE: Final[int] = 40
 ICMP_HEADER_SIZE: Final[int] = 8
 
 
@@ -93,3 +93,7 @@ def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4A
         List of IP address objects with link-local addresses removed.
     """
     return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]
+
+
+def ip_header_size(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> int:
+    return _IPV4_HEADER_SIZE if ip.version == 4 else _IPV6_HEADER_SIZE

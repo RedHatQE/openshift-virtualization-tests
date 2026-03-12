@@ -4,6 +4,7 @@ import uuid
 from dataclasses import asdict
 from typing import Any
 
+import yaml
 from dacite import from_dict
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
@@ -101,6 +102,12 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    def cloud_init_iface_addresses(self, iface_name: str) -> list[str]:
+        volumes = {vol.name: vol for vol in self.instance.spec.template.spec.volumes}
+        return yaml.safe_load(volumes[CLOUD_INIT_DISK_NAME].cloudInitNoCloud.networkData)["ethernets"][iface_name][
+            "addresses"
+        ]
 
     def add_cloud_init(self, netdata: cloudinit.NetworkData) -> None:
         # Prevents cloud-init from overriding the default OS user credentials
