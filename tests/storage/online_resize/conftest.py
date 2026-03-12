@@ -6,28 +6,27 @@ Fixtures for online resize tests
 
 import pytest
 
-from tests.storage.online_resize.utils import (
+from tests.storage.online_resize.constants import (
     SMALLEST_POSSIBLE_EXPAND,
     STORED_FILENAME,
+)
+from tests.storage.online_resize.utils import (
     cksum_file,
     create_rhel_dv_from_data_source,
     expand_pvc,
     wait_for_resize,
 )
 from utilities.constants import OS_FLAVOR_RHEL, Images, StorageClassNames
-from utilities.storage import create_dv, is_snapshot_supported_by_sc
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.storage import add_dv_to_vm, create_dv
+from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 
 @pytest.fixture(scope="module")
 def xfail_if_storage_for_online_resize_does_not_support_snapshots(
-    admin_client, storage_class_matrix_online_resize_matrix__module__
+    storage_class_matrix_online_resize_matrix__module__,
 ):
     sc_name = [*storage_class_matrix_online_resize_matrix__module__][0]
-    if not is_snapshot_supported_by_sc(
-        sc_name=sc_name,
-        client=admin_client,
-    ):
+    if not storage_class_matrix_online_resize_matrix__module__[sc_name].get("snapshot"):
         pytest.xfail(f"Storage class for online resize '{sc_name}' doesn't support snapshots")
 
 
@@ -101,3 +100,16 @@ def rhel_vm_after_expand(rhel_dv_for_online_resize, rhel_vm_for_online_resize, r
 @pytest.fixture()
 def running_rhel_vm(rhel_vm_for_online_resize):
     return running_vm(vm=rhel_vm_for_online_resize)
+
+
+@pytest.fixture()
+def running_rhel_vm_with_second_dv(rhel_vm_for_online_resize, second_rhel_dv_for_online_resize):
+    add_dv_to_vm(vm=rhel_vm_for_online_resize, dv_name=second_rhel_dv_for_online_resize.name)
+    running_vm(vm=rhel_vm_for_online_resize)
+    return rhel_vm_for_online_resize
+
+
+@pytest.fixture()
+def rhel_vm_after_expand_and_migrate(rhel_vm_after_expand):
+    migrate_vm_and_verify(vm=rhel_vm_after_expand, check_ssh_connectivity=True)
+    return rhel_vm_after_expand

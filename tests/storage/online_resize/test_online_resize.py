@@ -6,21 +6,23 @@ Online resize (PVC expanded while VM running)
 
 import logging
 
+import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 from timeout_sampler import TimeoutSampler
 
-from tests.storage.online_resize.utils import (
+from tests.storage.online_resize.constants import (
     RHEL_DV_SIZE,
     SMALLEST_POSSIBLE_EXPAND,
+)
+from tests.storage.online_resize.utils import (
     check_file_unchanged,
     expand_pvc,
     vm_restore,
     wait_for_resize,
 )
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
-from utilities.storage import add_dv_to_vm, create_dv, vm_snapshot
-from utilities.virt import migrate_vm_and_verify, running_vm
+from utilities.storage import create_dv, vm_snapshot
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,10 +47,20 @@ def test_sequential_disk_expand(
     rhel_vm_for_online_resize,
     running_rhel_vm,
 ):
-    # Expand PVC and wait for resize 6 times
+    initial_capacity = bitmath.parse_string_unsafe(s=rhel_dv_for_online_resize.pvc.instance.status.capacity.storage)
+    total_expansion = bitmath.parse_string_unsafe(s="0Gi")
+
     for _ in range(6):
         with wait_for_resize(vm=rhel_vm_for_online_resize):
             expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
+        total_expansion += bitmath.parse_string_unsafe(s=SMALLEST_POSSIBLE_EXPAND)
+
+    expected_capacity = initial_capacity + total_expansion
+    final_capacity = bitmath.parse_string_unsafe(s=rhel_dv_for_online_resize.pvc.instance.status.capacity.storage)
+
+    assert final_capacity == expected_capacity, (
+        f"PVC capacity mismatch: expected {expected_capacity.best_prefix()}, got {final_capacity.best_prefix()}"
+    )
 
 
 @pytest.mark.polarion("CNV-6794")
@@ -66,11 +78,9 @@ def test_sequential_disk_expand(
 def test_simultaneous_disk_expand(
     rhel_dv_for_online_resize,
     second_rhel_dv_for_online_resize,
-    rhel_vm_for_online_resize,
+    running_rhel_vm_with_second_dv,
 ):
-    add_dv_to_vm(vm=rhel_vm_for_online_resize, dv_name=second_rhel_dv_for_online_resize.name)
-    running_vm(vm=rhel_vm_for_online_resize)
-    with wait_for_resize(vm=rhel_vm_for_online_resize, count=2):
+    with wait_for_resize(vm=running_rhel_vm_with_second_dv, devices=("/dev/vda", "/dev/vdc")):
         expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
         expand_pvc(dv=second_rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
 
@@ -104,12 +114,13 @@ def test_disk_expand_then_clone_fail(
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
             sleep=TIMEOUT_5SEC,
-            func=lambda: dv.instance.status.conditions,
+            func=lambda: dv.get_condition_message(condition_type=DataVolume.Condition.Type.READY),
         ):
-            if any(
-                "The clone doesn't meet the validation requirements:"
-                " target resources requests storage size is smaller than the source" in condition["message"]
-                for condition in sample
+            if (
+                sample
+                and "The clone doesn't meet the validation requirements:"
+                " target resources requests storage size is smaller than the source"
+                in sample
             ):
                 return
 
@@ -165,12 +176,8 @@ def test_disk_expand_then_clone_success(
     indirect=True,
 )
 @pytest.mark.s390x
-def test_disk_expand_then_migrate(rhel_vm_after_expand, orig_cksum):
-    migrate_vm_and_verify(
-        vm=rhel_vm_after_expand,
-        check_ssh_connectivity=True,
-    )
-    check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand)
+def test_disk_expand_then_migrate(rhel_vm_after_expand_and_migrate, orig_cksum):
+    check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand_and_migrate)
 
 
 @pytest.mark.polarion("CNV-6797")
