@@ -14,10 +14,10 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES,
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
-    DV_PARAMS,
     LIST_GET,
     PERMISSIONS_DST,
     PERMISSIONS_SRC,
+    SOURCE_DV,
     VERBS_DST,
     VERBS_SRC,
 )
@@ -38,7 +38,7 @@ pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {"dv_name": "cnv-8905"},
             marks=pytest.mark.polarion("CNV-8905"),
@@ -62,7 +62,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             {"dv_name": "cnv-2692"},
@@ -72,7 +72,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: CREATE},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: CREATE_DELETE_LIST_GET},
             {"dv_name": "cnv-2971"},
@@ -109,7 +109,7 @@ def test_user_permissions_positive(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2793"),
@@ -117,7 +117,7 @@ def test_user_permissions_positive(
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: LIST_GET},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2691"),
@@ -153,7 +153,7 @@ def test_user_permissions_negative(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             marks=pytest.mark.polarion("CNV-2688"),
         ),
     ],
@@ -183,7 +183,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-8907"),
         ),

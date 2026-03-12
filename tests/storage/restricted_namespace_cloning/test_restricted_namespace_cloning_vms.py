@@ -13,13 +13,13 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES,
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
-    DV_PARAMS,
     LIST_GET,
     METADATA,
     PERMISSIONS_DST,
     PERMISSIONS_DST_SA,
     PERMISSIONS_SRC,
     PERMISSIONS_SRC_SA,
+    SOURCE_DV,
     SPEC,
     VERBS_DST,
     VERBS_DST_SA,
@@ -77,7 +77,7 @@ def create_vm_negative(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_DST_SA: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
@@ -112,7 +112,7 @@ def test_create_vm_with_cloned_data_volume_positive(
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2828"),
@@ -144,7 +144,7 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC_SA: DATAVOLUMES, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES, VERBS_DST_SA: ALL},
             marks=pytest.mark.polarion("CNV-2827"),
@@ -177,7 +177,7 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
             marks=pytest.mark.polarion("CNV-2829"),
         ),
