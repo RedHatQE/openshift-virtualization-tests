@@ -11,6 +11,7 @@ from ocp_resources.machine_health_check import MachineHealthCheck
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
+from tests.infrastructure.utils import node_for_vmi
 from utilities.constants import TIMEOUT_20MIN
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.virt import (
@@ -84,10 +85,10 @@ def stop_kubelet_on_node(utility_pods, node):
     wait_for_node_status(node=node, status=False)
 
 
-def wait_and_verify_vmi_failover(vm):
+def wait_and_verify_vmi_failover(vm, admin_client):
     LOGGER.info(f"Waiting VMI {vm.vmi.name} failover to new node")
     old_uid = vm.vmi.instance.metadata.uid
-    old_node = vm.vmi.node
+    old_node = node_for_vmi(admin_client=admin_client, vmi=vm.vmi)
 
     if vm.instance.spec.runStrategy == "Manual":
         vm.vmi.wait_for_status(status="Failed")
@@ -96,7 +97,7 @@ def wait_and_verify_vmi_failover(vm):
     running_vm(vm=vm)
 
     new_uid = vm.vmi.instance.metadata.uid
-    new_node = vm.vmi.node
+    new_node = node_for_vmi(admin_client=admin_client, vmi=vm.vmi)
 
     assert old_uid != new_uid, "Old VMI still exists"
     assert old_node.name != new_node.name, "VMI still on old node"
@@ -130,14 +131,15 @@ def wait_node_restored(node):
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("machine_health_check_reboot")
 def test_ha_vm_container_disk_reboot(
+    admin_client,
     workers_utility_pods,
-    machine_health_check_reboot,
     ha_vm_container_disk,
 ):
-    orig_node = ha_vm_container_disk.vmi.node
+    orig_node = node_for_vmi(admin_client=admin_client, vmi=ha_vm_container_disk.vmi)
     stop_kubelet_on_node(utility_pods=workers_utility_pods, node=orig_node)
-    wait_and_verify_vmi_failover(vm=ha_vm_container_disk)
+    wait_and_verify_vmi_failover(vm=ha_vm_container_disk, admin_client=admin_client)
     wait_node_restored(node=orig_node)
 
 
@@ -165,15 +167,16 @@ def test_ha_vm_container_disk_reboot(
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("machine_health_check_reboot")
 def test_ha_vm_dv_disk_reboot(
+    admin_client,
     workers_utility_pods,
-    machine_health_check_reboot,
     ha_vm_dv_disk,
 ):
-    orig_node = ha_vm_dv_disk.vmi.node
+    orig_node = node_for_vmi(admin_client=admin_client, vmi=ha_vm_dv_disk.vmi)
     ha_vm_dv_disk.ssh_exec.run_command(command=["echo", "test", ">>", "ha-test"])
     stop_kubelet_on_node(utility_pods=workers_utility_pods, node=orig_node)
-    wait_and_verify_vmi_failover(vm=ha_vm_container_disk)
+    wait_and_verify_vmi_failover(vm=ha_vm_dv_disk, admin_client=admin_client)
     wait_node_restored(node=orig_node)
     assert "test" in ha_vm_dv_disk.ssh_exec.run_command(["cat", "ha-test"])[1], (
         "Content of file lost during VM failover"
