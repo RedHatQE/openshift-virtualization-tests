@@ -5,6 +5,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 def create_running_vm(
+    admin_client,
     name,
     node_selector,
     network_names,
@@ -20,7 +21,7 @@ def create_running_vm(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=node_selector,

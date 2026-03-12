@@ -11,12 +11,12 @@ VM_MEMORY = "2Gi"
 
 
 @pytest.fixture()
-def vm_for_memory_overcommit(request, namespace):
+def vm_for_memory_overcommit(request, admin_client, namespace):
     name = request.param["vm_name"]
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         memory_guest=VM_MEMORY,
         memory_requests=request.param.get("memory_requests"),
     ) as vm:

@@ -16,6 +16,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 @pytest.fixture(scope="module")
 def running_vm_for_exposure(
+    admin_client,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -27,7 +28,7 @@ def running_vm_for_exposure(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         cloud_init_data=cloud_init_data,
         client=unprivileged_client,

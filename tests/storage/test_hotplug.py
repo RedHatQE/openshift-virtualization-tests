@@ -144,7 +144,9 @@ def param_substring_scope_class(storage_class_name_scope_class):
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_substring_scope_class, cpu_for_migration):
+def fedora_vm_for_hotplug_scope_class(
+    unprivileged_client, namespace, param_substring_scope_class, cpu_for_migration, admin_client
+):
     name = f"fedora-hotplug-{param_substring_scope_class}"
     memory_requests = None
     cpu_requests = None
@@ -159,7 +161,7 @@ def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_subs
         memory_requests=memory_requests,
         memory_limits=memory_requests,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         cpu_limits=cpu_requests,
         cpu_requests=cpu_requests,

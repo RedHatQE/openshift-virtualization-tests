@@ -64,6 +64,7 @@ def wait_for_all_progress_keys_in_pod_log(pod):
 
 @pytest.fixture(scope="class")
 def vm_for_migration_progress_test(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -73,7 +74,7 @@ def vm_for_migration_progress_test(
         name=name,
         client=unprivileged_client,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         additional_labels=MIGRATION_POLICY_VM_LABEL,
         cpu_model=cpu_for_migration,
     ) as vm:

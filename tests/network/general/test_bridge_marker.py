@@ -20,7 +20,7 @@ BRIDGEMARKER3 = "bridgemarker3"
 
 
 @contextmanager
-def create_bridge_attached_vm_for_bridge_marker(namespace, bridge_marker_bridge_network):
+def create_bridge_attached_vm_for_bridge_marker(admin_client, namespace, bridge_marker_bridge_network):
     networks = {bridge_marker_bridge_network.name: bridge_marker_bridge_network.name}
     name = _get_name(suffix="bridge-vm")
     with VirtualMachineForTests(
@@ -28,7 +28,7 @@ def create_bridge_attached_vm_for_bridge_marker(namespace, bridge_marker_bridge_
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         yield vm
 
@@ -69,18 +69,18 @@ def bridge_networks(admin_client, namespace):
 
 
 @pytest.fixture()
-def bridge_attached_vmi_for_bridge_marker_no_device(namespace, bridge_marker_bridge_network):
+def bridge_attached_vmi_for_bridge_marker_no_device(admin_client, namespace, bridge_marker_bridge_network):
     with create_bridge_attached_vm_for_bridge_marker(
-        namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
+        admin_client=admin_client, namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
     ) as vm:
         vm.start()
         yield vm.vmi
 
 
 @pytest.fixture()
-def bridge_attached_vmi_for_bridge_marker_device_exists(namespace, bridge_marker_bridge_network):
+def bridge_attached_vmi_for_bridge_marker_device_exists(admin_client, namespace, bridge_marker_bridge_network):
     with create_bridge_attached_vm_for_bridge_marker(
-        namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
+        admin_client=admin_client, namespace=namespace, bridge_marker_bridge_network=bridge_marker_bridge_network
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -88,7 +88,7 @@ def bridge_attached_vmi_for_bridge_marker_device_exists(namespace, bridge_marker
 
 
 @pytest.fixture()
-def multi_bridge_attached_vmi(namespace, bridge_networks, unprivileged_client):
+def multi_bridge_attached_vmi(admin_client, namespace, bridge_networks, unprivileged_client):
     networks = {b.name: b.name for b in bridge_networks}
     name = _get_name(suffix="multi-bridge-vm")
     with VirtualMachineForTests(
@@ -97,7 +97,7 @@ def multi_bridge_attached_vmi(namespace, bridge_networks, unprivileged_client):
         networks=networks,
         interfaces=sorted(networks.keys()),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         vm.start()
         yield vm.vmi

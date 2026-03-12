@@ -67,6 +67,7 @@ def node_filter(pod, schedulable_nodes):
 
 @pytest.fixture()
 def vm_container_disk_fedora(
+    admin_client,
     unprivileged_client,
     cpu_for_migration,
     namespace,
@@ -76,7 +77,7 @@ def vm_container_disk_fedora(
         name=name,
         namespace=namespace.name,
         cpu_model=cpu_for_migration,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)

@@ -11,12 +11,12 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture()
-def rng_vm(unprivileged_client, namespace):
+def rng_vm(admin_client, unprivileged_client, namespace):
     name = "vmi-with-rng"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm

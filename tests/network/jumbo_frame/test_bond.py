@@ -147,6 +147,7 @@ def br1bond_nad(
 
 @pytest.fixture(scope="class")
 def bond_bridge_attached_vma(
+    admin_client,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -164,7 +165,7 @@ def bond_bridge_attached_vma(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -177,6 +178,7 @@ def bond_bridge_attached_vma(
 
 @pytest.fixture(scope="class")
 def bond_bridge_attached_vmb(
+    admin_client,
     worker_node2,
     namespace,
     unprivileged_client,
@@ -194,7 +196,7 @@ def bond_bridge_attached_vmb(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),

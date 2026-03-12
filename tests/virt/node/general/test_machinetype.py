@@ -35,13 +35,13 @@ RHEL_8_10_TEMPLATE_LABELS = {
 
 
 @pytest.fixture(scope="class")
-def vm_for_machine_type_test(request, cpu_for_migration, unprivileged_client, namespace):
+def vm_for_machine_type_test(request, admin_client, cpu_for_migration, unprivileged_client, namespace):
     name = f"vm-{request.param['vm_name']}-machine-type"
 
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         client=unprivileged_client,
         machine_type=request.param.get("machine_type"),
@@ -56,13 +56,13 @@ def explicit_machine_type(is_s390x_cluster):
 
 
 @pytest.fixture()
-def vm_with_explicit_machine_type(unprivileged_client, namespace, explicit_machine_type):
+def vm_with_explicit_machine_type(admin_client, unprivileged_client, namespace, explicit_machine_type):
     name = f"vm-machine-type-{explicit_machine_type}"
 
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         machine_type=explicit_machine_type,
     ) as vm:
@@ -232,14 +232,14 @@ def test_machine_type_kubevirt_config_update(admin_client, vm_for_machine_type_t
 
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-3688")
-def test_unsupported_machine_type(namespace, unprivileged_client):
+def test_unsupported_machine_type(admin_client, namespace, unprivileged_client):
     vm_name = "vm-invalid-machine-type"
 
     with pytest.raises(UnprocessibleEntityError):
         with VirtualMachineForTests(
             name=vm_name,
             namespace=namespace.name,
-            body=fedora_vm_body(name=vm_name),
+            body=fedora_vm_body(name=vm_name, admin_client=admin_client),
             client=unprivileged_client,
             machine_type=MachineTypesNames.pc_i440fx_rhel7_6,
         ):

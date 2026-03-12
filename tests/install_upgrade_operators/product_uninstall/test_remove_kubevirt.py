@@ -21,12 +21,12 @@ def set_uninstall_strategy_remove_workloads(hyperconverged_resource_scope_functi
 
 
 @pytest.fixture()
-def remove_kubevirt_vm(unprivileged_client, namespace):
+def remove_kubevirt_vm(admin_client, unprivileged_client, namespace):
     name = "remove-kubevirt-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         vm.start()

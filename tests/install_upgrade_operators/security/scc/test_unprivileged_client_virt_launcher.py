@@ -11,13 +11,14 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x]
 def developer_vm(
     unprivileged_client,
     namespace,
+    admin_client,
 ):
     name = "unprivileged-client-test-vm"
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="unprivileged-client-test-vm",
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         vm.start()
         vm.vmi.wait_until_running()

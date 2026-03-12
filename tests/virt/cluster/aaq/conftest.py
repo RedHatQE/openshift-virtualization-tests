@@ -105,14 +105,14 @@ def second_pod_for_aaq_test_in_gated_state(admin_client, namespace):
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_test(namespace, unprivileged_client, cpu_for_migration):
+def vm_for_aaq_test(admin_client, namespace, unprivileged_client, cpu_for_migration):
     vm_name = "first-vm-for-aaq-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
     ) as vm:
@@ -128,7 +128,7 @@ def vm_for_aaq_test_in_gated_state(admin_client, namespace, unprivileged_client)
         namespace=namespace.name,
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
@@ -206,14 +206,14 @@ def removed_acrq_label_from_second_namespace(second_namespace_for_acrq_test):
 
 
 @pytest.fixture(scope="class")
-def vm_in_second_namespace_for_acrq_test(second_namespace_for_acrq_test):
+def vm_in_second_namespace_for_acrq_test(admin_client, second_namespace_for_acrq_test):
     vm_name = "vm-another-namespace-for-acrq-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=second_namespace_for_acrq_test.name,
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -284,7 +284,9 @@ def hotplugged_target_pod(namespace, unprivileged_client, hotplug_vm_for_aaq_tes
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_allocation_methods_test(namespace, cpu_for_migration, aaq_allocation_methods_matrix__class__):
+def vm_for_aaq_allocation_methods_test(
+    admin_client, namespace, cpu_for_migration, aaq_allocation_methods_matrix__class__
+):
     vm_name = f"vm-aaq-test-{aaq_allocation_methods_matrix__class__.lower()}-allocation"
     with VirtualMachineForTests(
         name=vm_name,
@@ -292,7 +294,7 @@ def vm_for_aaq_allocation_methods_test(namespace, cpu_for_migration, aaq_allocat
         cpu_limits=1,
         memory_limits="1Gi",
         memory_requests="1Gi",
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)

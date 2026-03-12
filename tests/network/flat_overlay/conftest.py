@@ -138,12 +138,14 @@ def flat_overlay_jumbo_frame_nad(admin_client, namespace, cluster_hardware_mtu):
 
 @pytest.fixture(scope="class")
 def vma_flat_overlay(
+    admin_client,
     unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vma_vmb_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vma-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vma_vmb_nad.namespace,
         nad_name=flat_overlay_vma_vmb_nad.name,
@@ -155,12 +157,14 @@ def vma_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vmb_flat_overlay(
+    admin_client,
     unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vma_vmb_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vmb-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vma_vmb_nad.namespace,
         nad_name=flat_overlay_vma_vmb_nad.name,
@@ -172,12 +176,14 @@ def vmb_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vmc_flat_overlay(
+    admin_client,
     unprivileged_client,
     index_number,
     flat_overlay_vmc_vmd_nad,
 ):
     # This VM doesn't have a node selector since it will be migrated in a later step.
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vmc-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vmc_vmd_nad.namespace,
         nad_name=flat_overlay_vmc_vmd_nad.name,
@@ -188,12 +194,14 @@ def vmc_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vmd_flat_overlay(
+    admin_client,
     unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_vmc_vmd_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vmd-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vmc_vmd_nad.namespace,
         nad_name=flat_overlay_vmc_vmd_nad.name,
@@ -205,12 +213,14 @@ def vmd_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vme_flat_overlay(
+    admin_client,
     unprivileged_client,
     worker_node3,
     index_number,
     flat_overlay_vme_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vme-{FLAT_L2_STR}",
         namespace_name=flat_overlay_vme_nad.namespace,
         nad_name=flat_overlay_vme_nad.name,
@@ -222,12 +232,14 @@ def vme_flat_overlay(
 
 @pytest.fixture(scope="class")
 def vma_jumbo_flat_l2(
+    admin_client,
     unprivileged_client,
     worker_node1,
     index_number,
     flat_overlay_jumbo_frame_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vma-jumbo-{FLAT_L2_STR}",
         namespace_name=flat_overlay_jumbo_frame_nad.namespace,
         nad_name=flat_overlay_jumbo_frame_nad.name,
@@ -239,12 +251,14 @@ def vma_jumbo_flat_l2(
 
 @pytest.fixture(scope="class")
 def vmb_jumbo_flat_l2(
+    admin_client,
     unprivileged_client,
     worker_node2,
     index_number,
     flat_overlay_jumbo_frame_nad,
 ):
     yield from create_flat_overlay_vm(
+        admin_client=admin_client,
         vm_name=f"vmb-jumbo-{FLAT_L2_STR}",
         namespace_name=flat_overlay_jumbo_frame_nad.namespace,
         nad_name=flat_overlay_jumbo_frame_nad.name,

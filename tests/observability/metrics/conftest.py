@@ -116,7 +116,7 @@ def unique_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def vm_list(unique_namespace):
+def vm_list(admin_client, unique_namespace):
     """
     Creates n vms, waits for them all to go to running state and cleans them up at the end
 
@@ -126,7 +126,7 @@ def vm_list(unique_namespace):
     Yields:
         list: list of VirtualMachineForTests created
     """
-    vms_list = create_vms(name_prefix="key-metric-vm", namespace_name=unique_namespace.name)
+    vms_list = create_vms(admin_client=admin_client, name_prefix="key-metric-vm", namespace_name=unique_namespace.name)
     for vm in vms_list:
         running_vm(vm=vm)
         enable_swap_fedora_vm(vm=vm)
@@ -170,8 +170,9 @@ def single_metrics_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def single_metric_vm(single_metrics_namespace):
+def single_metric_vm(admin_client, single_metrics_namespace):
     vm = create_vms(
+        admin_client=admin_client,
         name_prefix="test-single-vm",
         namespace_name=single_metrics_namespace.name,
         vm_count=SINGLE_VM,
@@ -256,7 +257,7 @@ def network_packet_received_linux_vm(vm_for_test, linux_vm_for_test_interface_na
 
 
 @pytest.fixture(scope="class")
-def vm_with_cpu_spec(namespace, unprivileged_client, is_s390x_cluster):
+def vm_with_cpu_spec(admin_client, namespace, unprivileged_client, is_s390x_cluster):
     name = "vm-resource-test"
     with VirtualMachineForTests(
         name=name,
@@ -264,7 +265,7 @@ def vm_with_cpu_spec(namespace, unprivileged_client, is_s390x_cluster):
         cpu_cores=TWO_CPU_CORES,
         cpu_sockets=TWO_CPU_SOCKETS,
         cpu_threads=ONE_CPU_THREAD if is_s390x_cluster else TWO_CPU_THREADS,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
@@ -358,14 +359,14 @@ def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, d
 
 
 @pytest.fixture(scope="class")
-def vm_for_test_with_resource_limits(namespace):
+def vm_for_test_with_resource_limits(admin_client, namespace):
     vm_name = "vm-with-limits"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         cpu_limits=ONE_CPU_CORE,
         memory_limits=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -473,12 +474,12 @@ def windows_vm_for_test(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace, cpu_for_migration):
+def vm_for_migration_metrics_test(admin_client, namespace, cpu_for_migration):
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
     ) as vm:

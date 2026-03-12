@@ -47,14 +47,14 @@ def sriov_net(admin_client, sriov_node_policy, namespace):
 
 
 @pytest.fixture()
-def vm_numa(namespace, unprivileged_client):
+def vm_numa(admin_client, namespace, unprivileged_client):
     name = "vm-numa"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         cpu_cores=8,
         cpu_sockets=2,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         cpu_placement=True,
     ) as vm:
@@ -64,7 +64,7 @@ def vm_numa(namespace, unprivileged_client):
 
 
 @pytest.fixture()
-def vm_numa_sriov(namespace, unprivileged_client, sriov_net):
+def vm_numa_sriov(admin_client, namespace, unprivileged_client, sriov_net):
     name = "vm-numa-sriov"
     networks = sriov_network_dict(namespace=namespace, network=sriov_net)
     with VirtualMachineForTests(
@@ -72,7 +72,7 @@ def vm_numa_sriov(namespace, unprivileged_client, sriov_net):
         namespace=namespace.name,
         cpu_cores=8,
         cpu_sockets=2,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         cpu_placement=True,
         networks=networks,
