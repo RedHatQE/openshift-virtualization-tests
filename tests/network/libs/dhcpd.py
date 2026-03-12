@@ -5,7 +5,7 @@ from typing import Final
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from utilities.constants import TIMEOUT_5SEC, TIMEOUT_30SEC
 from utilities.network import LOGGER
 from utilities.virt import VirtualMachineForTests
