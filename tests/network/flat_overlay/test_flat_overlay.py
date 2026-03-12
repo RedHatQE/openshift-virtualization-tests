@@ -93,6 +93,7 @@ class TestFlatOverlayConnectivity:
 
 
 @pytest.mark.jumbo_frame
+@pytest.mark.special_infra
 class TestFlatOverlayJumboConnectivity:
     @pytest.mark.polarion("CNV-10162")
     @pytest.mark.s390x
