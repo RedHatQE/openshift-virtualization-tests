@@ -27,7 +27,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-from tests.network.libs.ip import ICMP_HEADER_SIZE, IPV4_HEADER_SIZE, IPV6_HEADER_SIZE
+from libs.net.ip import ICMP_HEADER_SIZE, IPV4_HEADER_SIZE, IPV6_HEADER_SIZE
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,

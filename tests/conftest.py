@@ -73,6 +73,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -164,7 +165,7 @@ from utilities.infra import (
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
-    cloud_init,
+    cloud_init_network_data,
     enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
@@ -1662,7 +1663,18 @@ def running_vm_upgrade_a(
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.1"),
+        cloud_init_data=cloud_init_network_data(
+            data={
+                "ethernets": {
+                    "eth1": {
+                        "addresses": [
+                            f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
+                            f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
+                        ]
+                    }
+                }
+            }
+        ),
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
@@ -1684,7 +1696,18 @@ def running_vm_upgrade_b(
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.2"),
+        cloud_init_data=cloud_init_network_data(
+            data={
+                "ethernets": {
+                    "eth1": {
+                        "addresses": [
+                            f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
+                            f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
+                        ]
+                    }
+                }
+            }
+        ),
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
