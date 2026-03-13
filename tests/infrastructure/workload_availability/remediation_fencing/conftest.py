@@ -35,13 +35,13 @@ def checkup_nodehealthcheck_operator_deployment(admin_client):
 
 
 @pytest.fixture()
-def nhc_vm_with_run_strategy_always(namespace, unprivileged_client):
+def nhc_vm_with_run_strategy_always(admin_client, namespace, unprivileged_client):
     name = "nhc-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
         running_vm(vm=vm)

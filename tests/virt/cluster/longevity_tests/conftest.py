@@ -27,9 +27,10 @@ def vm_deploys():
 
 
 @pytest.fixture()
-def container_disk_vms(vm_deploys, namespace, unprivileged_client):
+def container_disk_vms(admin_client, vm_deploys, namespace, unprivileged_client):
     LOGGER.info("Deploying VM with container disk")
     yield from create_containerdisk_vms(
+        admin_client=admin_client,
         vm_deploys=vm_deploys,
         client=unprivileged_client,
         namespace=namespace,

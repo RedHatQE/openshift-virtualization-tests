@@ -1,6 +1,7 @@
 import logging
 import shlex
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.deployment import Deployment
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.service import Service
@@ -56,13 +57,18 @@ class FedoraVirtualMachineForServiceMesh(VirtualMachineForTests):
         name,
         namespace,
         client,
+        admin_client: DynamicClient,
     ):
         """
         Fedora VM Creation. Used for Service Mesh tests
         """
 
         super().__init__(
-            name=name, namespace=namespace, client=client, os_flavor=OS_FLAVOR_FEDORA, body=fedora_vm_body(name=name)
+            name=name,
+            namespace=namespace,
+            client=client,
+            os_flavor=OS_FLAVOR_FEDORA,
+            body=fedora_vm_body(name=name, admin_client=admin_client),
         )
 
     def to_dict(self):

@@ -98,7 +98,7 @@ def br1test_bridge_nad(
 
 
 @pytest.fixture(scope="class")
-def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_bridge_nad):
+def bridge_attached_vma(admin_client, worker_node1, namespace, unprivileged_client, br1test_bridge_nad):
     name = "vma"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
@@ -110,7 +110,7 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -123,7 +123,7 @@ def bridge_attached_vma(worker_node1, namespace, unprivileged_client, br1test_br
 
 
 @pytest.fixture(scope="class")
-def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_bridge_nad):
+def bridge_attached_vmb(admin_client, worker_node2, namespace, unprivileged_client, br1test_bridge_nad):
     name = "vmb"
     networks = OrderedDict()
     networks[br1test_bridge_nad.name] = br1test_bridge_nad.name
@@ -135,7 +135,7 @@ def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_br
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),

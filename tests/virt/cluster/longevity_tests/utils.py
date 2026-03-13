@@ -287,12 +287,12 @@ def deploy_datasources(datasource_dict):
             ds.clean_up()
 
 
-def create_containerdisk_vms(vm_deploys, client, name, namespace):
+def create_containerdisk_vms(admin_client, vm_deploys, client, name, namespace):
     vms = [
         VirtualMachineForTests(
             name=f"{name}-{deployment + 1}",
             namespace=namespace.name,
-            body=fedora_vm_body(name=name),
+            body=fedora_vm_body(name=name, admin_client=admin_client),
             client=client,
         )
         for deployment in range(vm_deploys)

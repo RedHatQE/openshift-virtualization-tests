@@ -26,7 +26,7 @@ def resource_quota_for_auto_resource_limits_test(request, namespace):
 
 
 @pytest.fixture()
-def vm_auto_resource_limits(request, namespace, unprivileged_client, cpu_for_migration):
+def vm_auto_resource_limits(request, admin_client, namespace, unprivileged_client, cpu_for_migration):
     with VirtualMachineForTests(
         name=request.param["name"],
         namespace=namespace.name,
@@ -36,7 +36,7 @@ def vm_auto_resource_limits(request, namespace, unprivileged_client, cpu_for_mig
         cpu_limits=request.param.get("cpu_limits"),
         memory_limits=request.param.get("memory_limits"),
         cpu_model=cpu_for_migration,
-        body=fedora_vm_body(name=request.param["name"]),
+        body=fedora_vm_body(name=request.param["name"], admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)

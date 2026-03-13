@@ -199,6 +199,7 @@ def must_gather_vm(
     must_gather_bridge,
     must_gather_nad,
     unprivileged_client,
+    admin_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-2"
     networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
@@ -209,7 +210,7 @@ def must_gather_vm(
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -221,6 +222,7 @@ def must_gather_vm_scope_class(
     must_gather_bridge,
     must_gather_nad,
     unprivileged_client,
+    admin_client,
 ):
     name = f"{MUST_GATHER_VM_NAME_PREFIX}-enabled-guest-console-log"
     networks = {must_gather_bridge.bridge_name: must_gather_bridge.bridge_name}
@@ -231,7 +233,7 @@ def must_gather_vm_scope_class(
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -427,10 +429,12 @@ def must_gather_vms_alternate_namespace_base_path(collected_vm_details_must_gath
 
 @pytest.fixture(scope="class")
 def must_gather_vms_from_alternate_namespace(
+    admin_client,
     must_gather_alternate_namespace,
     unprivileged_client,
 ):
     vms_list = create_vms(
+        admin_client=admin_client,
         name_prefix=MUST_GATHER_VM_NAME_PREFIX,
         namespace_name=must_gather_alternate_namespace.name,
         vm_count=5,
@@ -460,12 +464,12 @@ def must_gather_stopped_vms(must_gather_vms_from_alternate_namespace):
 
 
 @pytest.fixture(scope="class")
-def must_gather_long_name_vm(node_gather_unprivileged_namespace, unprivileged_client):
+def must_gather_long_name_vm(admin_client, node_gather_unprivileged_namespace, unprivileged_client):
     with VirtualMachineForTests(
         client=unprivileged_client,
         namespace=node_gather_unprivileged_namespace.name,
         name=LONG_VM_NAME,
-        body=fedora_vm_body(name=LONG_VM_NAME),
+        body=fedora_vm_body(name=LONG_VM_NAME, admin_client=admin_client),
         generate_unique_name=False,
     ) as vm:
         running_vm(vm=vm)
@@ -555,12 +559,12 @@ def nftables_ruleset_from_utility_pods(workers_utility_pods):
 
 
 @pytest.fixture(scope="class")
-def multiple_disks_vm(namespace, unprivileged_client, data_volume_scope_class):
+def multiple_disks_vm(admin_client, namespace, unprivileged_client, data_volume_scope_class):
     vm_name = "must-gather-multiple-disks-vm"
     with VirtualMachineForTests(
         client=unprivileged_client,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         namespace=namespace.name,
     ) as vm:
         add_dv_to_vm(vm=vm, dv_name=data_volume_scope_class.name)

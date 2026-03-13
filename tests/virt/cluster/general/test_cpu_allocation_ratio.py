@@ -64,6 +64,7 @@ def hco_cr_with_vmi_cpu_allocation_ratio(
 
 @pytest.fixture()
 def vm_for_test_cpu_allocation_ratio(
+    admin_client,
     namespace,
 ):
     name = "vm-for-cpu-allocation-ratio-test"
@@ -73,7 +74,7 @@ def vm_for_test_cpu_allocation_ratio(
         cpu_cores=CPU_CORES,
         cpu_sockets=CPU_SOCKETS,
         cpu_threads=CPU_THREADS,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm

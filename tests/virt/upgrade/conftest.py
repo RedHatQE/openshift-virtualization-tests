@@ -335,12 +335,12 @@ def post_copy_migration_policy_for_upgrade(admin_client):
 
 
 @pytest.fixture(scope="session")
-def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_for_migration):
+def vm_for_post_copy_upgrade(admin_client, virt_upgrade_namespace, unprivileged_client, cpu_for_migration):
     vm_name = "vm-for-post-copy-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=virt_upgrade_namespace.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
         additional_labels=VM_LABEL,

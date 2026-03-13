@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_flat_overlay_vm(
+    admin_client,
     vm_name,
     namespace_name,
     nad_name,
@@ -44,7 +45,7 @@ def create_flat_overlay_vm(
         networks=networks,
         interfaces=networks.keys(),
         client=unprivileged_client,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         cloud_init_data=cloud_init_data,
         node_selector=get_node_selector_dict(node_selector=worker_node_hostname),
     ) as vm:

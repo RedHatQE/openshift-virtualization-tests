@@ -233,11 +233,13 @@ def httpbin_service_service_mesh(
 
 @pytest.fixture(scope="module")
 def vm_fedora_with_service_mesh_annotation(
+    admin_client,
     unprivileged_client,
     service_mesh_tests_namespace,
 ):
     vm_name = "service-mesh-vm"
     with FedoraVirtualMachineForServiceMesh(
+        admin_client=admin_client,
         client=unprivileged_client,
         name=vm_name,
         namespace=service_mesh_tests_namespace.name,
@@ -262,7 +264,7 @@ def outside_mesh_vm_fedora_with_service_mesh_annotation(
         name=vm_name,
         namespace=ns_outside_of_service_mesh.name,
         os_flavor=OS_FLAVOR_FEDORA,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
     ) as vm:
         vm.custom_service_enable(
             service_name=vm_name,

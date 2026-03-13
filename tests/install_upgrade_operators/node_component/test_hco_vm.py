@@ -23,12 +23,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def hco_vm(unprivileged_client, namespace):
+def hco_vm(admin_client, unprivileged_client, namespace):
     name = "hco-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:

@@ -11,13 +11,13 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 @pytest.fixture()
-def vm_with_cloud_init_type(namespace):
+def vm_with_cloud_init_type(admin_client, namespace):
     """VM with cloudInit disk."""
     name = "vm-cloud-init-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cloud_init_type=CLOUD_INIT_NO_CLOUD,
     ) as vm:
         running_vm(vm=vm)

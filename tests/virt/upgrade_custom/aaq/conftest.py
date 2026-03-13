@@ -48,12 +48,12 @@ def application_aware_resource_quota_upgrade(admin_client, namespace_for_arq_upg
 
 
 @pytest.fixture(scope="session")
-def vm_for_arq_upgrade_test(unprivileged_client, namespace_for_arq_upgrade_test, cpu_for_migration):
+def vm_for_arq_upgrade_test(admin_client, unprivileged_client, namespace_for_arq_upgrade_test, cpu_for_migration):
     vm_name = "vm-for-arq-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_arq_upgrade_test.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         client=unprivileged_client,
     ) as vm:
@@ -67,7 +67,7 @@ def vm_for_arq_upgrade_test_in_gated_state(admin_client, unprivileged_client, na
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_arq_upgrade_test.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         client=unprivileged_client,
     ) as vm:
@@ -99,12 +99,12 @@ def application_aware_cluster_resource_quota_upgrade(admin_client):
 
 
 @pytest.fixture(scope="session")
-def vm_for_acrq_upgrade_test(unprivileged_client, namespace_for_acrq_upgrade_test, cpu_for_migration):
+def vm_for_acrq_upgrade_test(admin_client, unprivileged_client, namespace_for_acrq_upgrade_test, cpu_for_migration):
     vm_name = "vm-for-acrq-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_acrq_upgrade_test.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         client=unprivileged_client,
     ) as vm:
@@ -118,7 +118,7 @@ def vm_for_acrq_upgrade_test_in_gated_state(admin_client, unprivileged_client, n
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_for_acrq_upgrade_test.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         client=unprivileged_client,
     ) as vm:

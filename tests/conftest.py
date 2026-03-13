@@ -1650,6 +1650,7 @@ def upgrade_bridge_marker_nad(admin_client, bridge_on_one_node, kmp_enabled_name
 
 @pytest.fixture(scope="session")
 def running_vm_upgrade_a(
+    admin_client,
     unprivileged_client,
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
@@ -1663,7 +1664,7 @@ def running_vm_upgrade_a(
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.100.1"),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
@@ -1672,6 +1673,7 @@ def running_vm_upgrade_a(
 
 @pytest.fixture(scope="session")
 def running_vm_upgrade_b(
+    admin_client,
     unprivileged_client,
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
@@ -1685,7 +1687,7 @@ def running_vm_upgrade_b(
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
         cloud_init_data=cloud_init(ip_address="10.200.100.2"),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
@@ -2203,12 +2205,12 @@ def kmp_deployment(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="class")
-def running_metric_vm(namespace, unprivileged_client):
+def running_metric_vm(admin_client, namespace, unprivileged_client):
     name = "running-metrics-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         network_model=VIRTIO,
     ) as vm:
@@ -2342,12 +2344,12 @@ def storage_class_with_block_volume_mode(available_storage_classes_names):
 
 
 @pytest.fixture(scope="class")
-def vm_for_test(request, namespace, unprivileged_client):
+def vm_for_test(request, admin_client, namespace, unprivileged_client):
     vm_name = request.param
     with VirtualMachineForTests(
         client=unprivileged_client,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         namespace=namespace.name,
     ) as vm:
         running_vm(vm=vm)
@@ -2528,12 +2530,12 @@ def dvs_for_upgrade(
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migration):
+def vm_for_migration_test(request, admin_client, namespace, unprivileged_client, cpu_for_migration):
     vm_name = request.param
     with VirtualMachineForTests(
         client=unprivileged_client,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         cpu_model=cpu_for_migration,
         namespace=namespace.name,
     ) as vm:

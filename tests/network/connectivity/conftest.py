@@ -261,6 +261,7 @@ def nad_ovs_bridge_vlan_3(
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vma_source(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     worker_node1,
@@ -287,6 +288,7 @@ def vm_linux_bridge_attached_vma_source(
     )
 
     yield from create_running_vm(
+        admin_client=admin_client,
         name=f"vma-{LINUX_BRIDGE}",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
@@ -298,6 +300,7 @@ def vm_linux_bridge_attached_vma_source(
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vma_source(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     worker_node1,
@@ -324,6 +327,7 @@ def vm_ovs_bridge_attached_vma_source(
     )
 
     yield from create_running_vm(
+        admin_client=admin_client,
         name=f"vma-{OVS_BRIDGE}",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         network_names=network_names,
@@ -335,6 +339,7 @@ def vm_ovs_bridge_attached_vma_source(
 
 @pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vmb_destination(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     worker_node2,
@@ -361,6 +366,7 @@ def vm_linux_bridge_attached_vmb_destination(
     )
 
     yield from create_running_vm(
+        admin_client=admin_client,
         name=f"vmb-{LINUX_BRIDGE}",
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
@@ -372,6 +378,7 @@ def vm_linux_bridge_attached_vmb_destination(
 
 @pytest.fixture(scope="class")
 def vm_ovs_bridge_attached_vmb_destination(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     worker_node2,
@@ -398,6 +405,7 @@ def vm_ovs_bridge_attached_vmb_destination(
     )
 
     yield from create_running_vm(
+        admin_client=admin_client,
         name=f"vmb-{OVS_BRIDGE}",
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,

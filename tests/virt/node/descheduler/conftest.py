@@ -106,6 +106,7 @@ def calculated_vm_deployment_for_descheduler_test(
 
 @pytest.fixture(scope="class")
 def deployed_vms_for_descheduler_test(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -113,6 +114,7 @@ def deployed_vms_for_descheduler_test(
     calculated_vm_deployment_for_descheduler_test,
 ):
     yield from deploy_vms(
+        admin_client=admin_client,
         vm_prefix="vm-descheduler-test",
         client=unprivileged_client,
         namespace_name=namespace.name,
@@ -204,6 +206,7 @@ def calculated_vm_deployment_for_node_with_least_available_memory(
 
 @pytest.fixture(scope="class")
 def deployed_vms_for_utilization_imbalance(
+    admin_client,
     request,
     namespace,
     unprivileged_client,
@@ -213,6 +216,7 @@ def deployed_vms_for_utilization_imbalance(
     node_affinity_for_descheduler_label,
 ):
     yield from deploy_vms(
+        admin_client=admin_client,
         vm_prefix=request.param["vm_prefix"],
         client=unprivileged_client,
         namespace_name=namespace.name,
@@ -226,6 +230,7 @@ def deployed_vms_for_utilization_imbalance(
 
 @pytest.fixture(scope="class")
 def deployed_vms_on_labeled_node(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -234,6 +239,7 @@ def deployed_vms_on_labeled_node(
     node_affinity_for_descheduler_label,
 ):
     yield from deploy_vms(
+        admin_client=admin_client,
         vm_prefix="node-labels-test",
         client=unprivileged_client,
         namespace_name=namespace.name,

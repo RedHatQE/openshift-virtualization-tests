@@ -80,6 +80,7 @@ def migration_policy_b(request):
 @pytest.fixture()
 def vm_for_migration_policy_test(
     request,
+    admin_client,
     namespace,
     cpu_for_migration,
 ):
@@ -87,7 +88,7 @@ def vm_for_migration_policy_test(
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         additional_labels=request.param,
         cpu_model=cpu_for_migration,
     ) as vm:

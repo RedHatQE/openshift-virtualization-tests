@@ -1514,7 +1514,20 @@ def vm_console_run_commands(
     return output
 
 
-def fedora_vm_body(name: str) -> dict[str, Any]:
+def fedora_vm_body(name: str, admin_client: DynamicClient) -> dict[str, Any]:
+    """Generate a Fedora VM body dict from the vm-fedora.yaml manifest template.
+
+    Resolves the Fedora container image digest based on the cluster's architecture
+    and renders the YAML template with the given VM name.
+
+    Args:
+        name: Name of the VirtualMachine resource.
+        admin_client: Admin-privileged client, required to query cluster node
+            CPU architecture for selecting the correct container image.
+
+    Returns:
+        dict representing the VM resource body, ready to pass to VirtualMachineForTests.
+    """
     pull_secret = utilities.infra.generate_openshift_pull_secret_file()
 
     # Make sure we can find the file even if utilities was installed via pip.
@@ -1528,7 +1541,7 @@ def fedora_vm_body(name: str) -> dict[str, Any]:
         image=image,
         pull_secret=pull_secret,
         architecture=utilities.cpu.get_nodes_cpu_architecture(
-            nodes=list(Node.get(client=get_client())),
+            nodes=list(Node.get(client=admin_client)),
         ),
     )
     image_digest = image_info["digest"]

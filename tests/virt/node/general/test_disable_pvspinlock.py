@@ -5,6 +5,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 @pytest.fixture(scope="class")
 def vm_for_test_pvspinlock(
+    admin_client,
     namespace,
     unprivileged_client,
 ):
@@ -12,7 +13,7 @@ def vm_for_test_pvspinlock(
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         pvspinlock_enabled=False,
     ) as vm:
         running_vm(vm=vm)

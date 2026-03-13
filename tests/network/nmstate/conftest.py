@@ -31,28 +31,28 @@ def worker_nodes_management_iface_stats(nodes_active_nics, worker_node1, worker_
 
 
 @pytest.fixture(scope="module")
-def nmstate_vma(schedulable_nodes, worker_node1, namespace, unprivileged_client):
+def nmstate_vma(admin_client, schedulable_nodes, worker_node1, namespace, unprivileged_client):
     name = "vma"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         vm.start(wait=True)
         yield vm
 
 
 @pytest.fixture(scope="module")
-def nmstate_vmb(schedulable_nodes, worker_node2, namespace, unprivileged_client):
+def nmstate_vmb(admin_client, schedulable_nodes, worker_node2, namespace, unprivileged_client):
     name = "vmb"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         vm.start(wait=True)
         yield vm

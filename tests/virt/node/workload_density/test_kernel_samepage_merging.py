@@ -144,9 +144,10 @@ def ksm_deactivated_on_node(worker_node1, workers_utility_pods):
 
 
 @pytest.fixture(scope="class")
-def vms_for_ksm_test(namespace, cpu_for_migration):
+def vms_for_ksm_test(admin_client, namespace, cpu_for_migration):
     # We need several VMs for sharing memory
     vms_list = create_vms(
+        admin_client=admin_client,
         name_prefix="ksm-test-vm",
         namespace_name=namespace.name,
         node_selector_labels=KERNEL_SAMEPAGE_MERGING_TEST_LABEL,

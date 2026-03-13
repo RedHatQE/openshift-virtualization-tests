@@ -17,14 +17,14 @@ MAC_ADDRESS = "macAddress"
 
 
 @contextmanager
-def create_dry_run_vm(name, namespace, networks, unprivileged_client, macs=None):
+def create_dry_run_vm(admin_client, name, namespace, networks, unprivileged_client, macs=None):
     vm = VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
         networks=networks,
         interfaces=sorted(networks.keys()),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         macs=macs,
         dry_run="All",
     )
@@ -59,12 +59,13 @@ def linux_bridge_network_nad(admin_client, namespace, bridge_on_all_nodes):
 
 
 @pytest.fixture()
-def dry_run_vma(unprivileged_client, namespace, linux_bridge_network_nad):
+def dry_run_vma(admin_client, unprivileged_client, namespace, linux_bridge_network_nad):
     with create_dry_run_vm(
         name="dry-run-vma",
         namespace=namespace,
         networks={linux_bridge_network_nad.name: linux_bridge_network_nad.name},
         unprivileged_client=unprivileged_client,
+        admin_client=admin_client,
     ) as vm:
         yield vm.create()
 
@@ -79,6 +80,7 @@ def dry_run_vma_mac_address(dry_run_vma):
 
 @pytest.fixture()
 def vm_with_mac_address(
+    admin_client,
     unprivileged_client,
     namespace,
     linux_bridge_network_nad,
@@ -93,7 +95,7 @@ def vm_with_mac_address(
         networks=networks,
         interfaces=sorted(networks.keys()),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         macs={linux_bridge_network_nad.name: dry_run_vma_mac_address},
     ) as vm:
         yield vm
@@ -101,6 +103,7 @@ def vm_with_mac_address(
 
 @pytest.fixture()
 def dry_run_vm_with_mac_address(
+    admin_client,
     unprivileged_client,
     namespace,
     linux_bridge_network_nad,
@@ -114,6 +117,7 @@ def dry_run_vm_with_mac_address(
         namespace=namespace,
         networks={linux_bridge_network_nad.name: linux_bridge_network_nad.name},
         unprivileged_client=unprivileged_client,
+        admin_client=admin_client,
         macs={linux_bridge_network_nad.name: allocated_mac_address},
     )
 

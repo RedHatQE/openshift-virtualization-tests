@@ -23,13 +23,13 @@ from utilities.virt import (
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_cloning(request, unprivileged_client, namespace, cpu_for_migration):
+def fedora_vm_for_cloning(request, admin_client, unprivileged_client, namespace, cpu_for_migration):
     name = request.param["vm_name"]
     with VirtualMachineForCloning(
         name=name,
         client=unprivileged_client,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         vm_labels=request.param.get("labels"),
         vm_annotations=request.param.get("annotations"),
         smbios_serial=request.param.get("smbios_serial"),
