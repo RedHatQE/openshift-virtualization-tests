@@ -14,7 +14,7 @@ from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.fixture()
@@ -31,6 +31,7 @@ def pods_list_with_given_prefix(request, admin_client, hco_namespace):
     return pods_list_by_prefix
 
 
+@pytest.mark.post_upgrade
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-3737")
 def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
@@ -45,6 +46,7 @@ def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
     )
 
 
+@pytest.mark.post_upgrade
 @pytest.mark.s390x
 @pytest.mark.parametrize(
     "pods_list_with_given_prefix",
