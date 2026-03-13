@@ -1,3 +1,5 @@
+"""SR-IOV library constants and utilities."""
+
 from tests.network.libs.ip import random_ipv4_address, random_ipv6_address
 from utilities.constants import SRIOV
 from utilities.infra import get_node_selector_dict
@@ -5,6 +7,7 @@ from utilities.network import compose_cloud_init_data_dict, sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 VM_SRIOV_IFACE_NAME = "sriov1"
+MTU_9000 = 9000
 
 
 def vm_sriov_mac(mac_suffix_index):
