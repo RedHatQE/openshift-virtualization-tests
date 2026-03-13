@@ -71,8 +71,7 @@ def dv_cloned_from_datasource(
     Create a source DV in the test namespace by cloning from the golden image DataSource.
     When cloning from a DataSource, the target DV must be at least as large as the source.
     """
-    params_dict = request.param or {}
-    dv_name = params_dict.get("dv_name")
+    dv_name = request.param["dv_name"]
     dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
     with create_dv(
