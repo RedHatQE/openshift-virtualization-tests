@@ -10,6 +10,7 @@ from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
+    get_dv_size_from_datasource,
 )
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
@@ -105,11 +106,7 @@ def test_successful_vm_restart_with_cloned_dv(
     fedora_data_source_scope_module,
     cluster_csi_drivers_names,
 ):
-    source_dict = fedora_data_source_scope_module.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-    size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
-        "status", {}
-    ).get("restoreSize")
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
     with DataVolume(
         name="dv-target",
