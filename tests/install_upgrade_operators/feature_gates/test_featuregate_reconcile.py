@@ -7,6 +7,7 @@ from tests.install_upgrade_operators.constants import (
     DEVELOPER_CONFIGURATION,
     EXPECTED_CDI_HARDCODED_FEATUREGATES,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    EXPECTED_KUBEVIRT_S390X_FEATUREGATES,
     FEATUREGATES,
     KEY_PATH_SEPARATOR,
     RESOURCE_NAME_STR,
@@ -57,10 +58,13 @@ class TestHardcodedFeatureGates:
         updated_resource,
         expected_value,
         key_name,
+        is_s390x_cluster,
     ):
         actual_value = get_resource_key_value(resource=updated_resource, key_name=key_name)
         if isinstance(actual_value, list):
             actual_value = set(actual_value)
+        if is_s390x_cluster and isinstance(updated_resource, KubeVirt):
+            expected_value = expected_value | EXPECTED_KUBEVIRT_S390X_FEATUREGATES
         assert actual_value == expected_value, (
             f"For {updated_resource.name}, actual featuregates:"
             f" {actual_value} does not match expected "
