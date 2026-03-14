@@ -701,6 +701,29 @@ def pytest_runtest_makereport(item, call):
 def pytest_fixture_setup(fixturedef, request):
     LOGGER.info(f"Executing {fixturedef.scope} fixture: {fixturedef.argname}")
 
+    # Track module start time for data collection when module has the marker
+    if request.config.getoption("--data-collector"):
+        try:
+            # Get the module from the requesting node
+            if hasattr(request, "node") and hasattr(request.node, "get_closest_marker"):
+                scope_marker = request.node.get_closest_marker(name="data_collector_scope")
+                if scope_marker and scope_marker.args and scope_marker.args[0] == "module":
+                    # Record module start time on first fixture execution in this module
+                    module_name = str(request.node.fspath)
+                    current_time = int(datetime.datetime.now().strftime("%s"))
+                    db = Database(base_dir=request.config.getoption("--data-collector-output-dir"))
+
+                    # Check if module start time already exists
+                    existing_time = db.get_module_start_time(module_name=module_name)
+                    if not existing_time:
+                        db.insert_module_start_time(
+                            module_name=module_name,
+                            start_time=current_time,
+                        )
+                        LOGGER.info(f"[DATA_COLLECTOR] Module start time recorded: {current_time}")
+        except Exception as db_exception:
+            LOGGER.warning(f"Failed to track module start time in fixture setup: {db_exception}")
+
 
 def pytest_runtest_setup(item):
     """
@@ -711,11 +734,16 @@ def pytest_runtest_setup(item):
     if item.config.getoption("--data-collector"):
         # before the setup work starts, insert current epoch time into the database
         try:
-            db = Database(base_dir=item.config.getoption("--data-collector-output-dir"))
-            db.insert_test_start_time(
-                test_name=f"{item.fspath}::{item.name}",
-                start_time=int(datetime.datetime.now().strftime("%s")),
-            )
+            # Check if module has data_collector_scope marker set to "module"
+            scope_marker = item.get_closest_marker(name="data_collector_scope")
+            if not (scope_marker and scope_marker.args and scope_marker.args[0] == "module"):
+                # Only record test start time if NOT using module-scoped collection
+                # (module start time is recorded in pytest_fixture_setup)
+                db = Database(base_dir=item.config.getoption("--data-collector-output-dir"))
+                db.insert_test_start_time(
+                    test_name=f"{item.fspath}::{item.name}",
+                    start_time=int(datetime.datetime.now().strftime("%s")),
+                )
         except Exception as db_exception:
             LOGGER.error(f"Database error: {db_exception}. Must-gather collection may not be accurate")
     BASIC_LOGGER.info(f"\n{separator(symbol_='-', val=item.name)}")
@@ -913,7 +941,8 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
 
 def calculate_must_gather_timer(test_start_time):
     if test_start_time > 0:
-        return int(datetime.datetime.now().strftime("%s")) - test_start_time
+        # Add 5-minute (300s) buffer to work around must-gather timing issues
+        return int(datetime.datetime.now().strftime("%s")) - test_start_time + 300
     else:
         LOGGER.warning(f"Could not get start time of test. Collecting must-gather for last {TIMEOUT_5MIN}s")
         return TIMEOUT_5MIN
@@ -931,7 +960,26 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
         else:
             try:
                 db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
-                test_start_time = db.get_test_start_time(test_name=test_name)
+
+                # Check if module has data_collector_scope marker set to "module"
+                scope_marker = node.get_closest_marker(name="data_collector_scope")
+                if scope_marker and scope_marker.args and scope_marker.args[0] == "module":
+                    # Use module start time for data collection
+                    module_name = str(node.fspath)
+                    module_start_time = db.get_module_start_time(module_name=module_name)
+                    if module_start_time:
+                        test_start_time = module_start_time
+                        time_delta = int(datetime.datetime.now().strftime("%s")) - module_start_time
+                        LOGGER.info(f"[DATA_COLLECTOR] MODULE scope: {time_delta}s ({time_delta // 60}m)")
+                    else:
+                        # Fallback if module start time not found
+                        test_start_time = 0
+                        LOGGER.warning(f"Module start time not found for {module_name}")
+                else:
+                    # Default behavior: use individual test start time
+                    test_start_time = db.get_test_start_time(test_name=test_name)
+                    time_delta = int(datetime.datetime.now().strftime("%s")) - test_start_time
+                    LOGGER.info(f"[DATA_COLLECTOR] TEST scope: {time_delta}s ({time_delta // 60}m)")
             except Exception as db_exception:
                 test_start_time = 0
                 LOGGER.warning(f"Error: {db_exception} in accessing database.")
