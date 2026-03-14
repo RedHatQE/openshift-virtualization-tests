@@ -26,7 +26,12 @@ from utilities.virt import (
     validate_virtctl_guest_agent_data_over_time,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.special_infra, pytest.mark.high_resource_vm]
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.special_infra,
+    pytest.mark.high_resource_vm,
+    pytest.mark.data_collector_scope(scope="module"),
+]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"
