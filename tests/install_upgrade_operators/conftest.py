@@ -12,6 +12,8 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -244,3 +246,10 @@ def updated_resource(
 @pytest.fixture(scope="session")
 def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
+
+
+@pytest.fixture()
+def expected_value(request, is_s390x_cluster):
+    if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
+        return request.param | S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
+    return request.param
