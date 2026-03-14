@@ -10,6 +10,7 @@ from tests.install_upgrade_operators.constants import (
     DEVELOPER_CONFIGURATION,
     EXPECTED_CDI_HARDCODED_FEATUREGATES,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    EXPECTED_KUBEVIRT_S390X_FEATUREGATES,
     FEATUREGATES,
     HCO_DEFAULT_FEATUREGATES,
     KEY_NAME_STR,
@@ -82,8 +83,11 @@ def resource_object_value_by_key(request, admin_client):
 def test_default_featuregates_by_resource(
     expected,
     resource_object_value_by_key,
+    is_s390x_cluster,
 ):
     if isinstance(resource_object_value_by_key, list):
         resource_object_value_by_key = set(resource_object_value_by_key)
+    if is_s390x_cluster and expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
+        expected = expected | EXPECTED_KUBEVIRT_S390X_FEATUREGATES
     error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key}"
     assert expected == resource_object_value_by_key, error_message
