@@ -26,6 +26,10 @@ class BaseTcpClient(ABC):
         self.server_port = server_port
         self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
 
+    @property
+    def server_ip(self) -> str:
+        return self._server_ip
+
     @abstractmethod
     def __enter__(self) -> "BaseTcpClient":
         pass
@@ -47,16 +51,19 @@ class TcpServer:
     Args:
         vm (BaseVirtualMachine): The virtual machine where the server runs.
         port (int): The port on which the server listens for client connections.
+        bind_ip (str): The IP address to bind the server to (optional).
     """
 
     def __init__(
         self,
         vm: BaseVirtualMachine,
         port: int,
+        bind_ip: str | None = None,
     ):
         self._vm = vm
         self._port = port
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
+        self._cmd += f" --bind {bind_ip}" if bind_ip else ""
 
     def __enter__(self) -> "TcpServer":
         self._vm.console(
@@ -221,10 +228,11 @@ def client_server_active_connection(
     Note:
         Traffic runs with infinite duration until context exits.
     """
-    with TcpServer(vm=server_vm, port=port) as server:
+    server_ip = str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family))
+    with TcpServer(vm=server_vm, port=port, bind_ip=server_ip) as server:
         with VMTcpClient(
             vm=client_vm,
-            server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family)),
+            server_ip=server_ip,
             server_port=port,
             maximum_segment_size=maximum_segment_size,
         ) as client:
