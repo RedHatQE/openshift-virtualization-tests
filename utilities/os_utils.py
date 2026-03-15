@@ -36,7 +36,7 @@ def get_windows_container_disk_path(os_value: str) -> str:
     """Generate the full container disk path for Windows OS values."""
     if not os_value.startswith("win"):
         raise ValueError(f"os_value must start with 'win', got: {os_value}")
-    return f"{Images.Windows.DOCKER_IMAGE_DIR}/windows{os_value.removeprefix('win')}-container-disk:4.99"
+    return f"{ArchImages.AMD64.Windows.DOCKER_IMAGE_DIR}/windows{os_value.removeprefix('win')}-container-disk:4.99"
 
 
 RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {

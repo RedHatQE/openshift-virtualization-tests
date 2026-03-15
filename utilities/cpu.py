@@ -86,6 +86,7 @@ def get_host_model_cpu(nodes: list[Node]) -> dict[str, str]:
     # filter nodes by architecture
     nodes = [node for node in nodes if node.labels.get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]]
     assert nodes, f"No nodes found for cpu_arch={py_config['cpu_arch']}"
+    LOGGER.info(f"Nodes found for cpu_arch={py_config['cpu_arch']}: {nodes}")
     for node in nodes:
         for label, value in node.labels.items():
             match_object = re.match(rf"{HOST_MODEL_CPU_LABEL}/(.*)", label)

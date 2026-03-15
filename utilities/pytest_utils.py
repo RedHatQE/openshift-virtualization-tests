@@ -433,6 +433,10 @@ def validate_cpu_arch_params(cpu_arch_option: str) -> None:
         raise UnsupportedCPUArchitectureError(
             f"`--cpu-arch` cmdline arg must be provided for heterogeneous cluster: {cluster_arch}!"
         )
+    if len(cluster_arch) == 1 and cpu_arch_option:
+        raise UnsupportedCPUArchitectureError(
+            f"`--cpu-arch` cmdline arg shouldn't be passed for homogeneous cluster: {cluster_arch}!"
+        )
     if cpu_arch_option and not all(arch in SUPPORTED_MULTIARCH_OPTIONS for arch in cli_param_arch):
         raise UnsupportedCPUArchitectureError(
             f"`--cpu-arch` has unsupported value(s): {cli_param_arch}. Allowed values: {SUPPORTED_MULTIARCH_OPTIONS}"
@@ -440,10 +444,6 @@ def validate_cpu_arch_params(cpu_arch_option: str) -> None:
     if len(cluster_arch) > 1 and not all(arch in cluster_arch for arch in cli_param_arch):
         raise UnsupportedCPUArchitectureError(
             f"`--cpu-arch` value/s {cli_param_arch} not in the cluster's arch list: {cluster_arch}!"
-        )
-    if len(cluster_arch) == 1 and cpu_arch_option:
-        raise UnsupportedCPUArchitectureError(
-            f"`--cpu-arch` cmdline arg shouldn't be passed for homogeneous cluster: {cluster_arch}!"
         )
 
 

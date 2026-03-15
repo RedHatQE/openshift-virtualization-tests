@@ -22,51 +22,35 @@ from utilities.os_utils import (
 class TestGetWindowsContainerDiskPath:
     """Test cases for get_windows_container_disk_path function"""
 
-    @patch("utilities.os_utils.Images")
-    def test_get_windows_container_disk_path_win10(self, mock_images):
-        """Test generating container disk path for win10"""
-        mock_images.Windows.DOCKER_IMAGE_DIR = "quay.io/test"
+    EXPECTED_DIR = "docker/kubevirt-common-instancetypes"
 
-        result = get_windows_container_disk_path(os_value="win10")
+    @pytest.mark.parametrize(
+        "os_value, expected_suffix",
+        [
+            pytest.param("win10", "windows10-container-disk:4.99", id="win10"),
+            pytest.param("win11", "windows11-container-disk:4.99", id="win11"),
+            pytest.param("win2k19", "windows2k19-container-disk:4.99", id="win2k19"),
+            pytest.param("win2k22", "windows2k22-container-disk:4.99", id="win2k22"),
+            pytest.param("win2k25", "windows2k25-container-disk:4.99", id="win2k25"),
+        ],
+    )
+    def test_get_windows_container_disk_path(self, os_value: str, expected_suffix: str):
+        """Test generating container disk path for valid Windows OS values"""
+        result = get_windows_container_disk_path(os_value=os_value)
 
-        assert result == "quay.io/test/windows10-container-disk:4.99"
+        assert result == f"{self.EXPECTED_DIR}/{expected_suffix}"
 
-    @patch("utilities.os_utils.Images")
-    def test_get_windows_container_disk_path_win2k19(self, mock_images):
-        """Test generating container disk path for win2k19"""
-        mock_images.Windows.DOCKER_IMAGE_DIR = "quay.io/test"
-
-        result = get_windows_container_disk_path(os_value="win2k19")
-
-        assert result == "quay.io/test/windows2k19-container-disk:4.99"
-
-    @patch("utilities.os_utils.Images")
-    def test_get_windows_container_disk_path_win2k22(self, mock_images):
-        """Test generating container disk path for win2k22"""
-        mock_images.Windows.DOCKER_IMAGE_DIR = "quay.io/test"
-
-        result = get_windows_container_disk_path(os_value="win2k22")
-
-        assert result == "quay.io/test/windows2k22-container-disk:4.99"
-
-    @patch("utilities.os_utils.Images")
-    def test_get_windows_container_disk_path_win11(self, mock_images):
-        """Test generating container disk path for win11"""
-        mock_images.Windows.DOCKER_IMAGE_DIR = "quay.io/test"
-
-        result = get_windows_container_disk_path(os_value="win11")
-
-        assert result == "quay.io/test/windows11-container-disk:4.99"
-
-    def test_get_windows_container_disk_path_invalid_os(self):
+    @pytest.mark.parametrize(
+        "os_value",
+        [
+            pytest.param("linux", id="linux"),
+            pytest.param("rhel9", id="rhel"),
+        ],
+    )
+    def test_get_windows_container_disk_path_invalid_os(self, os_value: str):
         """Test error when os_value doesn't start with 'win'"""
         with pytest.raises(ValueError, match="os_value must start with 'win'"):
-            get_windows_container_disk_path(os_value="linux")
-
-    def test_get_windows_container_disk_path_rhel_raises(self):
-        """Test error when os_value is rhel"""
-        with pytest.raises(ValueError, match="os_value must start with 'win'"):
-            get_windows_container_disk_path(os_value="rhel9")
+            get_windows_container_disk_path(os_value=os_value)
 
 
 class TestGenerateOsMatrixDict:
