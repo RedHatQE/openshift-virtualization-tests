@@ -643,7 +643,6 @@ def write_file(
     """
     if not vm.ready:
         vm.start(wait=True)
-    # Pass the kubeconfig to Console for remote cluster support
     with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:

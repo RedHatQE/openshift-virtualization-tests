@@ -28,13 +28,10 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
-from tests.storage.cross_cluster_live_migration.constants import (
-    TEST_FILE_CONTENT,
-    TEST_FILE_NAME,
-)
+from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.cross_cluster_live_migration.utils import (
     enable_feature_gate_and_configure_hco_live_migration_network,
-    get_vm_boot_time_via_console,
+    get_vm_boot_id_via_console,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
@@ -497,9 +494,9 @@ def booted_vms_for_cclm(vms_for_cclm):
 
 
 @pytest.fixture(scope="class")
-def vms_boot_time_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+def vms_boot_id_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
     return {
-        vm.name: get_vm_boot_time_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
+        vm.name: get_vm_boot_id_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
     }
 
 

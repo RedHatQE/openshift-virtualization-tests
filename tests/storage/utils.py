@@ -527,6 +527,7 @@ def check_file_in_vm(
 ) -> None:
     """
     Check that a file exists in a VM with expected content.
+    VM must be running before calling this function.
 
     Args:
         vm: VirtualMachine instance
@@ -536,13 +537,9 @@ def check_file_in_vm(
         password: Optional password for console login (defaults to vm.password)
     """
     LOGGER.info(f"Verifying file {file_name} exists in VM {vm.name}")
-    if not vm.ready:
-        LOGGER.info(f"Starting VM {vm.name}")
-        vm.start(wait=True)
     with console.Console(vm=vm, username=username, password=password) as vm_console:
         LOGGER.info(f"Checking file contents for {file_name} in VM {vm.name}")
         vm_console.sendline(LS_COMMAND)
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
-        
