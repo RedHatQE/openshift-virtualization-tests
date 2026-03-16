@@ -1,35 +1,49 @@
-import http
 import logging
 
 import pytest
 import requests
+from timeout_sampler import retry
 
-from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC
+from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC, TIMEOUT_30SEC
 
 LOGGER = logging.getLogger(__name__)
+RUNBOOKS_API_URL = "https://api.github.com/repos/openshift/runbooks/contents/alerts/openshift-virtualization-operator"
+
+
+@retry(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_10SEC, exceptions_dict={AssertionError: []})
+def fetch_runbook_urls_from_github() -> set[str]:
+    """Fetch available runbook URLs from the openshift/runbooks GitHub repository.
+
+    Returns:
+        Set of runbook HTML URLs available in the repository.
+    """
+    response = requests.get(url=RUNBOOKS_API_URL, timeout=TIMEOUT_10SEC)
+    assert response.status_code == requests.codes.ok, (
+        f"Failed to fetch runbooks directory listing from '{RUNBOOKS_API_URL}': status {response.status_code}"
+    )
+    return {entry["html_url"] for entry in response.json()}
 
 
 def validate_downstream_runbook_url(
     runbook_urls_from_prometheus_rule: dict[str, str], subtests: pytest.Subtests
 ) -> None:
     """
-    Validate that all runbook URLs are accessible.
+    Validate that all runbook URLs exist in the openshift/runbooks repository.
+
+    Fetches the directory listing once from GitHub API and checks each alert's
+    runbook URL against the available runbook files.
 
     Args:
         runbook_urls_from_prometheus_rule: Iterable of (alert_name, runbook_url) tuples
         subtests: pytest subtests fixture for independent subtest execution
     """
+    available_runbook_urls = fetch_runbook_urls_from_github()
     for alert_name, runbook_url in runbook_urls_from_prometheus_rule:
         with subtests.test(msg=alert_name):
-            assert runbook_url, f"Alert '{alert_name}' is missing runbook URL"
-
-            try:
-                response = requests.get(runbook_url, allow_redirects=False, timeout=TIMEOUT_10SEC)
-                assert response.status_code == http.HTTPStatus.OK, (
-                    f"Alert '{alert_name}' runbook URL '{runbook_url}' returned status {response.status_code}"
-                )
-            except requests.RequestException as e:
-                pytest.fail(f"Alert '{alert_name}' runbook URL '{runbook_url}' failed: {e}")
+            assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
+            assert runbook_url in available_runbook_urls, (
+                f"Alert '{alert_name}' runbook URL '{runbook_url}' not found in runbooks repository"
+            )
 
 
 class TestRunbookUrlsAndPrometheusRules:

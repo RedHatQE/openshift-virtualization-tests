@@ -4,6 +4,9 @@ import pytest
 from ocp_resources.prometheus_rule import PrometheusRule
 from pytest_testconfig import config as py_config
 
+from utilities.constants import QUARANTINED
+from utilities.jira import is_jira_open
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -17,6 +20,8 @@ def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__fu
     rule_name = cnv_prometheus_rules_matrix__function__
     if rule_name == "prometheus-hpp-rules" and not hpp_cr_installed:
         pytest.xfail(f"Rule {rule_name} should not be present if HPP CR is not installed")
+    if rule_name == "kubemacpool-prometheus-rule" and is_jira_open(jira_id="CNV-81829"):
+        pytest.xfail(f"kubemacpool-prometheus-rule missing runbook URLs: CNV-81829")
 
     cnv_prometheus_rule_by_name = PrometheusRule(
         namespace=py_config["hco_namespace"],

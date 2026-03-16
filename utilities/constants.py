@@ -703,6 +703,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
     f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
+    "kubemacpool-prometheus-rule",
 ]
 
 
