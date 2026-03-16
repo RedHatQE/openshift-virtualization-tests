@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import bitmath
 import pytest
@@ -339,7 +340,8 @@ class TestVmiStatusAddresses:
         kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
     ):
-        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        instance_value = urlparse(f"//{kubevirt_vmi_status_addresses_ip_labels_values.get('instance')}").hostname
+
         address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
         vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (
