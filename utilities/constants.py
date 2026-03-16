@@ -273,6 +273,7 @@ VIRT_CONTROLLER = "virt-controller"
 VIRT_HANDLER = "virt-handler"
 VIRT_TEMPLATE_VALIDATOR = "virt-template-validator"
 VIRT_EXPORTPROXY = "virt-exportproxy"
+VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
 SSP_KUBEVIRT_HYPERCONVERGED = "ssp-kubevirt-hyperconverged"
 SSP_OPERATOR = "ssp-operator"
 CDI_OPERATOR = "cdi-operator"
@@ -520,6 +521,7 @@ ALL_CNV_DEPLOYMENTS = [
     VIRT_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,
     VIRT_EXPORTPROXY,
+    VIRT_SYNCHRONIZATION_CONTROLLER,
     KUBEVIRT_APISERVER_PROXY,
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
     HPP_POOL,
