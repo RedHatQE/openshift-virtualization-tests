@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -31,7 +31,7 @@ def wait_for_ready_vm_with_restart(vm: BaseVirtualMachine) -> bool:
 @pytest.fixture(scope="module")
 def passt_enabled_in_hco(
     hyperconverged_resource_scope_module: HyperConverged,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_module: {
@@ -51,7 +51,7 @@ def passt_running_vm_pair(
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
     passt_enabled_in_hco,
-) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine], None, None]:
+) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     with (
         udn_vm(
             namespace_name=udn_namespace.name,

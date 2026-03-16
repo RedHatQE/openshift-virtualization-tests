@@ -1,5 +1,5 @@
 import logging
-from typing import Generator
+from collections.abc import Generator
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
@@ -20,7 +20,7 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     client: DynamicClient,
     hco_namespace: Namespace,
     network_for_live_migration: NetworkAttachmentDefinition | None = None,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """
     Enable decentralized live migration feature gate and optionally configure HCO live migration network.
 
