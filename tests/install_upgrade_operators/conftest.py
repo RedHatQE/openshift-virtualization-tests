@@ -39,7 +39,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_deployment_matrix__function__):
+def cnv_deployment_by_name(
+    admin_client, hco_namespace, hpp_cr_installed, cnv_deployment_matrix__function__
+) -> Deployment:
     deployment_name = cnv_deployment_matrix__function__
     if deployment_name == HPP_POOL:
         if not hpp_cr_installed:

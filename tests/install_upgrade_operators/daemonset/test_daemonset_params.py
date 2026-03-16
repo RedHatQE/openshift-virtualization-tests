@@ -1,10 +1,10 @@
 import pytest
 
 from tests.install_upgrade_operators.constants import VALID_PRIORITY_CLASS
-from tests.install_upgrade_operators.daemonset.utils import (
-    assert_cnv_daemonset_container_env_image_not_in_upstream,
-    assert_cnv_daemonset_container_image_not_in_upstream,
-    validate_daemonset_request_fields,
+from tests.install_upgrade_operators.utils import (
+    assert_cnv_resource_container_env_image_not_in_upstream,
+    assert_cnv_resource_container_image_not_in_upstream,
+    validate_resource_request_fields,
 )
 from utilities.constants import ALL_CNV_DAEMONSETS, HOSTPATH_PROVISIONER_CSI
 from utilities.infra import get_daemonsets
@@ -42,11 +42,12 @@ def test_daemonset_priority_class_name(cnv_daemonset_by_name):
         assert not cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName, (
             "HPP daemonset shouldn't have priority class name."
         )
-    else:
-        assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName, (
+    elif not cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName:
+        pytest.fail(
             f"For daemonset {cnv_daemonset_by_name.name}, spec.template.spec.priorityClassName has not been set."
         )
-        assert cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName in VALID_PRIORITY_CLASS, (
+    elif cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName not in VALID_PRIORITY_CLASS:
+        pytest.fail(
             f"For daemonset {cnv_daemonset_by_name.name}, \
             unexpected priority class found: {cnv_daemonset_by_name.instance.spec.template.spec.priorityClassName}"
         )
@@ -55,10 +56,10 @@ def test_daemonset_priority_class_name(cnv_daemonset_by_name):
 @pytest.mark.polarion("CNV-14636")
 def test_daemonset_request_param(cnv_daemonset_by_name):
     """Validates resources.requests fields keys and default cpu values for different daemonset objects"""
-    validate_daemonset_request_fields(daemonset=cnv_daemonset_by_name, cpu_min_value=5)
+    validate_resource_request_fields(resource=cnv_daemonset_by_name, cpu_min_value=5)
 
 
 @pytest.mark.polarion("CNV-14637")
 def test_daemonset_container_images(cnv_daemonset_by_name):
-    assert_cnv_daemonset_container_image_not_in_upstream(cnv_daemonset=cnv_daemonset_by_name)
-    assert_cnv_daemonset_container_env_image_not_in_upstream(cnv_daemonset=cnv_daemonset_by_name)
+    assert_cnv_resource_container_image_not_in_upstream(resource=cnv_daemonset_by_name)
+    assert_cnv_resource_container_env_image_not_in_upstream(resource=cnv_daemonset_by_name)
