@@ -71,7 +71,7 @@ jobs:
             echo "Checking PR #$PR_NUM"
 
             # Check if PR has has-conflict, hold, wip, or stale labels
-            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -iE "^(has-conflict|hold|wip|stale)$" || true)
+            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -iE "^(has-conflicts|hold|wip|stale)$" || true)
 
             if [ -n "$SKIP_LABELS" ]; then
               echo "PR #$PR_NUM has skip label(s): $SKIP_LABELS, skipping retest"

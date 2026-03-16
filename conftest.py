@@ -21,6 +21,7 @@ from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
+from ocp_resources.network_config_openshift_io import Network
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
@@ -327,6 +328,13 @@ def pytest_addoption(parser):
         "--remote_cluster_password",
         help="Password for the remote cluster for cross-cluster tests",
     )
+    session_group.addoption(
+        "--network-for-live-migration",
+        help=(
+            "Network name for live migration in cross-cluster tests. "
+            "If not provided, HCO's liveMigrationConfig.network will not be set by the tests setup"
+        ),
+    )
 
     # CI group
     ci_group.addoption(
@@ -574,8 +582,8 @@ def pytest_collection_modifyitems(session, config, items):
     This function performs the following actions:
     1. Adds Polarion parameters to user properties.
     2. Adds test ID markers for Polarion and Jira.
-    3. Adds the tier2 marker for tests without an exclusion marker.
-    4. Marks tests by team.
+    3. Marks tests by team.
+    4. Adds the tier2 marker for tests without an exclusion marker.
     5. Filters upgrade tests based on the --upgrade option.
     6. Dynamically mark NMState-dependent tests.
 
@@ -602,10 +610,11 @@ def pytest_collection_modifyitems(session, config, items):
         add_test_id_markers(item=item, marker_name="polarion")
         add_test_id_markers(item=item, marker_name="jira")
 
+        # Must be called before add_tier2_marker; make sure team markers are added before tier2 tests collection
+        mark_tests_by_team(item=item)
+
         # Add tier2 marker for tests without an exclusion marker.
         add_tier2_marker(item=item)
-
-        mark_tests_by_team(item=item)
 
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
@@ -801,6 +810,9 @@ def pytest_sessionstart(session):
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
         admin_client = utilities.cluster.cache_admin_client()
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
+        py_config["cluster_service_network"] = Network(
+            client=admin_client, name="cluster"
+        ).instance.status.serviceNetwork
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
                 cluster_host_url=admin_client.configuration.host, session=session
@@ -853,11 +865,14 @@ def pytest_sessionfinish(session, exitstatus):
     # Enrich JUnit XML with AI analysis after all tests complete.
     # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
     if session.config.option.analyze_with_ai:
-        try:
-            enrich_junit_xml(session=session)
-        # Do not fail on any AI analysis failures
-        except Exception:
-            LOGGER.exception("Failed to enrich JUnit XML, original preserved")
+        if exitstatus == 0:
+            LOGGER.info("No test failures (exit code %d), skipping AI analysis", exitstatus)
+
+        else:
+            try:
+                enrich_junit_xml(session)
+            except Exception:
+                LOGGER.exception("Failed to enrich JUnit XML, original preserved")
 
     session.config.option.log_listener.stop()
 

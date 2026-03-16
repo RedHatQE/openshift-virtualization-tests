@@ -9,7 +9,7 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
-from libs.net.udn import UDN_BINDING_PASST_PLUGIN_NAME
+from libs.net.udn import UDN_PASST_CORE_BINDING_NAME
 from libs.net.vmspec import lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
@@ -58,14 +58,14 @@ def passt_running_vm_pair(
             name="vma-passt",
             client=admin_client,
             template_labels=dict((udn_affinity_label,)),
-            binding=UDN_BINDING_PASST_PLUGIN_NAME,
+            binding=UDN_PASST_CORE_BINDING_NAME,
         ) as vm_a,
         udn_vm(
             namespace_name=udn_namespace.name,
             name="vmb-passt",
             client=admin_client,
             template_labels=dict((udn_affinity_label,)),
-            binding=UDN_BINDING_PASST_PLUGIN_NAME,
+            binding=UDN_PASST_CORE_BINDING_NAME,
         ) as vm_b,
     ):
         vm_a.start(wait=False)

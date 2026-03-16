@@ -26,9 +26,9 @@ LOGGER = logging.getLogger(__name__)
 STRESS_OOM_COMMAND = STRESS_CPU_MEM_IO_COMMAND.format(workers="1", memory="100%", timeout="30m")
 
 
-def verify_vm_not_crashed(vm):
+def verify_vm_not_crashed(vm, admin_client):
     with start_file_transfer(vm=vm):
-        assert wait_vm_oom(vm=vm), "VM crashed"
+        assert wait_vm_oom(vm=vm, admin_client=admin_client), "VM crashed"
 
 
 @pytest.fixture()
@@ -83,9 +83,9 @@ def start_file_transfer(vm):
         stop_event.set()
 
 
-def wait_vm_oom(vm):
+def wait_vm_oom(vm, admin_client):
     LOGGER.info(f"Monitoring VM {vm.name} under stress for 15 min")
-    virt_launcher_pod = vm.vmi.virt_launcher_pod
+    virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     samples = TimeoutSampler(wait_timeout=TIMEOUT_15MIN, sleep=10, func=lambda: virt_launcher_pod.status)
     try:
         for sample in samples:
@@ -96,8 +96,8 @@ def wait_vm_oom(vm):
 
 
 @pytest.mark.polarion("CNV-5321")
-def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
-    verify_vm_not_crashed(vm=fedora_oom_vm)
+def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
+    verify_vm_not_crashed(vm=fedora_oom_vm, admin_client=admin_client)
 
 
 @pytest.mark.ibm_bare_metal
@@ -120,5 +120,5 @@ def test_vm_fedora_oom(fedora_oom_vm, fedora_oom_stress_started):
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
-def test_vm_windows_oom(vm_with_memory_load, windows_oom_stress_started):
-    verify_vm_not_crashed(vm=vm_with_memory_load)
+def test_vm_windows_oom(admin_client, vm_with_memory_load, windows_oom_stress_started):
+    verify_vm_not_crashed(vm=vm_with_memory_load, admin_client=admin_client)

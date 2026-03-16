@@ -10,8 +10,8 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
 
 
-def check_vm_dumpxml(vm, cores=None, sockets=None, threads=None):
-    cpu = vm.privileged_vmi.xml_dict["domain"]["cpu"]["topology"]
+def check_vm_dumpxml(vm, admin_client, cores=None, sockets=None, threads=None):
+    cpu = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["cpu"]["topology"]
     if sockets:
         assert cpu["@sockets"] == str(sockets), f"CPU sockets: Expected {sockets}, Found: {cpu['@sockets']}"
     if cores:
@@ -67,12 +67,13 @@ def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_clien
     indirect=True,
 )
 @pytest.mark.s390x
-def test_vm_with_cpu_support(vm_with_cpu_support):
+def test_vm_with_cpu_support(admin_client, vm_with_cpu_support):
     """
     Test VM with cpu support
     """
     check_vm_dumpxml(
         vm=vm_with_cpu_support,
+        admin_client=admin_client,
         sockets=vm_with_cpu_support.cpu_sockets,
         cores=vm_with_cpu_support.cpu_cores,
         threads=vm_with_cpu_support.cpu_threads,
@@ -100,19 +101,19 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
 @pytest.mark.conformance
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-1485")
-def test_vm_with_no_cpu_settings(no_cpu_settings_vm):
+def test_vm_with_no_cpu_settings(admin_client, no_cpu_settings_vm):
     """
     Test VM without cpu setting, check XML:
     <topology sockets='X' cores='1' threads='1'/>
     socket value will depend on maxSockets autocalculation on cluster
     """
-    check_vm_dumpxml(vm=no_cpu_settings_vm, cores="1", threads="1")
+    check_vm_dumpxml(vm=no_cpu_settings_vm, admin_client=admin_client, cores="1", threads="1")
 
 
 @pytest.mark.gating
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-2818")
-def test_vm_with_cpu_limitation(namespace, unprivileged_client):
+def test_vm_with_cpu_limitation(admin_client, namespace, unprivileged_client):
     """
     Test VM with cpu limitation, CPU requests and limits are equals
     """
@@ -129,7 +130,7 @@ def test_vm_with_cpu_limitation(namespace, unprivileged_client):
     ) as vm:
         vm.start(wait=True)
         vm.vmi.wait_until_running()
-        check_vm_dumpxml(vm=vm, sockets="1", cores="2", threads="1")
+        check_vm_dumpxml(vm=vm, admin_client=admin_client, sockets="1", cores="2", threads="1")
 
 
 @pytest.mark.polarion("CNV-2819")

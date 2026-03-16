@@ -37,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 def drain_using_console(admin_client, source_node, vm):
     with running_sleep_in_linux(vm=vm):
         with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
-            check_migration_process_after_node_drain(client=admin_client, vm=vm)
+            check_migration_process_after_node_drain(client=admin_client, vm=vm, admin_client=admin_client)
 
 
 def drain_using_console_windows(admin_client, source_node, vm):
@@ -47,7 +47,7 @@ def drain_using_console_windows(admin_client, source_node, vm):
         process_name=process_name,
     )
     with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
-        check_migration_process_after_node_drain(client=admin_client, vm=vm)
+        check_migration_process_after_node_drain(client=admin_client, vm=vm, admin_client=admin_client)
         post_migrate_processid = fetch_pid_from_windows_vm(vm=vm, process_name=process_name)
         assert post_migrate_processid == pre_migrate_processid, (
             f"Post migrate processid is: {post_migrate_processid}. Pre migrate processid is: {pre_migrate_processid}"
@@ -116,10 +116,8 @@ def test_node_drain_using_console_fedora(
     admin_client,
     vm_container_disk_fedora,
 ):
-    privileged_virt_launcher_pod = vm_container_disk_fedora.privileged_vmi.virt_launcher_pod
-    drain_using_console(
-        admin_client=admin_client, source_node=privileged_virt_launcher_pod.node, vm=vm_container_disk_fedora
-    )
+    source_node = vm_container_disk_fedora.vmi.get_node(privileged_client=admin_client)
+    drain_using_console(admin_client=admin_client, source_node=source_node, vm=vm_container_disk_fedora)
 
 
 @pytest.mark.parametrize(
@@ -145,7 +143,9 @@ class TestNodeMaintenanceRHEL:
         vm_for_test_from_template_scope_class,
     ):
         vm = vm_for_test_from_template_scope_class
-        drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+        drain_using_console(
+            admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
+        )
 
     @pytest.mark.polarion("CNV-4995")
     def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
@@ -168,12 +168,15 @@ class TestNodeMaintenanceRHEL:
         4. Make sure the VMI is migrated to the other node.
         """
         vm = vm_for_test_from_template_scope_class
+        virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
         cordon_nodes = node_filter(
-            pod=vm.privileged_vmi.virt_launcher_pod,
+            pod=virt_launcher_pod,
             schedulable_nodes=schedulable_nodes,
         )
         with node_mgmt_console(admin_client=admin_client, node=cordon_nodes[0], node_mgmt="cordon"):
-            drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
+            drain_using_console(
+                admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
+            )
 
 
 @pytest.mark.parametrize(
@@ -201,7 +204,7 @@ class TestNodeCordonAndDrain:
     ):
         vm = vm_for_test_from_template_scope_class
         drain_using_console_windows(
-            admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm
+            admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
         )
 
     @pytest.mark.polarion("CNV-4906")
@@ -213,7 +216,7 @@ class TestNodeCordonAndDrain:
         vm = vm_for_test_from_template_scope_class
         with node_mgmt_console(
             admin_client=admin_client,
-            node=vm.privileged_vmi.virt_launcher_pod.node,
+            node=vm.vmi.get_node(privileged_client=admin_client),
             node_mgmt="cordon",
         ):
             with pytest.raises(TimeoutExpiredError):
