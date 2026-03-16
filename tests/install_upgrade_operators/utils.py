@@ -312,7 +312,9 @@ def validate_resource_request_fields(resource: Deployment | DaemonSet, cpu_min_v
     containers = resource.instance.spec.template.spec.containers
     missing_cpu_memory_values = {
         container["name"]: [
-            field_key for field_key in field_keys if not container["resources"]["requests"].get(field_key)
+            field_key
+            for field_key in field_keys
+            if not container.get("resources", {}).get("requests", {}).get(field_key)
         ]
         for container in containers
     }
@@ -325,7 +327,9 @@ def validate_resource_request_fields(resource: Deployment | DaemonSet, cpu_min_v
     cpu_value_pattern = re.compile(r"^\d+")
 
     invalid_cpus = {
-        key: value for key, value in cpu_values.items() if int(cpu_value_pattern.findall(value)[0]) < cpu_min_value
+        key: value
+        for key, value in cpu_values.items()
+        if cpu_value_pattern.findall(value) and int(cpu_value_pattern.findall(value)[0]) < cpu_min_value
     }
     if invalid_cpus:
         raise ResourceMismatch(
