@@ -66,7 +66,9 @@ def test_vmexport_snapshot_manifests(
     result = run_ssh_commands(host=vm_from_vmexport.ssh_exec, commands=shlex.split(f"cat {TEST_FILE_NAME}"))
     file_content = result[0].strip()
 
-    assert file_content == TEST_FILE_CONTENT
+    assert file_content == TEST_FILE_CONTENT, (
+        f"Unexpected content in {TEST_FILE_NAME}: got '{file_content}', expected '{TEST_FILE_CONTENT}'"
+    )
 
 
 @pytest.mark.s390x
