@@ -2,8 +2,10 @@ import logging
 from collections import Counter
 from contextlib import contextmanager
 
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.deployment import Deployment
 from ocp_resources.kube_descheduler import KubeDescheduler
+from ocp_resources.pod import Pod
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -161,20 +163,22 @@ def vm_nodes(vms):
     return {vm.name: vm.vmi.node for vm in vms}
 
 
-def assert_vms_consistent_virt_launcher_pods(running_vms):
+def assert_vms_consistent_virt_launcher_pods(running_vms, admin_client: DynamicClient):
     """Verify VMs virt launcher pods are not replaced (sampled every one minute).
     Using VMs virt launcher pods to verify that VMs are not migrated nor restarted.
 
     Args:
         running_vms (list): list of VMs
+        admin_client (DynamicClient): privileged client for accessing virt launcher pods
     """
 
     def _vms_launcher_pod_names():
-        return {
-            vm.name: vm.vmi.virt_launcher_pod.name
-            for vm in running_vms
-            if vm.vmi.virt_launcher_pod.status == vm.vmi.virt_launcher_pod.Status.RUNNING
-        }
+        result = {}
+        for vm in running_vms:
+            virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
+            if virt_launcher_pod.status == Pod.Status.RUNNING:
+                result[vm.name] = virt_launcher_pod.name
+        return result
 
     orig_virt_launcher_pod_names = _vms_launcher_pod_names()
     samples = TimeoutSampler(

@@ -32,11 +32,11 @@ SWAP_LABEL_VALUE = "test"
 SWAP_TEST_LABEL = {SWAP_LABEL_KEY: SWAP_LABEL_VALUE}
 
 
-def wait_virt_launcher_pod_using_swap(vm):
+def wait_virt_launcher_pod_using_swap(vm, admin_client):
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
-        func=vm.privileged_vmi.virt_launcher_pod.execute,
+        func=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute,
         command=shlex.split(f"bash -c 'cat {MEMORY_SWAP_CURRENT_PATH} | {REMOVE_NEWLINE}'"),
         container="compute",
     )
@@ -162,8 +162,8 @@ def vm_with_different_qos(request, namespace):
     ],
     indirect=True,
 )
-def test_swap_status_on_pod(vm_with_different_qos):
-    swap_max = vm_with_different_qos.privileged_vmi.virt_launcher_pod.execute(
+def test_swap_status_on_pod(admin_client, vm_with_different_qos):
+    swap_max = vm_with_different_qos.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
         command=shlex.split(f"bash -c 'cat {MEMORY_SWAP_MAX_PATH} | {REMOVE_NEWLINE}'")
     )
     assert swap_max not in ["0", "max"] if "burstable" in vm_with_different_qos.name else swap_max == "0", (
@@ -176,12 +176,13 @@ class TestVMCanUseSwap:
     @pytest.mark.polarion("CNV-11258")
     def test_virt_launcher_pod_use_swap(
         self,
+        admin_client,
         hco_memory_overcommit_increased,
         node_with_min_memory_labeled_for_swap_test,
         vm_for_swap_usage_test,
         swap_vm_stress_started,
     ):
-        wait_virt_launcher_pod_using_swap(vm=vm_for_swap_usage_test)
+        wait_virt_launcher_pod_using_swap(vm=vm_for_swap_usage_test, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=["test_virt_launcher_pod_use_swap"])
     @pytest.mark.polarion("CNV-11259")

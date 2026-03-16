@@ -20,7 +20,6 @@ from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    ISTIO_SYSTEM_DEFAULT_NS,
     VIRT_HANDLER,
     NamespacesNames,
 )
@@ -34,6 +33,7 @@ from utilities.network import (
 from utilities.pytest_utils import exit_pytest_execution
 
 LOGGER = logging.getLogger(__name__)
+ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
 
 
 def get_index_number():

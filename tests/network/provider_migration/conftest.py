@@ -1,3 +1,5 @@
+import contextlib
+import uuid
 from collections.abc import Generator
 from typing import Final
 
@@ -19,13 +21,18 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
-from tests.network.provider_migration.libprovider import SourceHypervisorProvider, extract_vm_primary_network_data
+from tests.network.provider_migration.libprovider import (
+    SourceHypervisorProvider,
+    VmNotFoundError,
+    extract_vm_primary_network_data,
+)
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import OS_FLAVOR_FEDORA
 
 CUDN_LABEL: Final[dict] = {"cudn": "mtv"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.100.0/24"
 MTV_RESOURCE_TIMEOUT_SEC: Final[int] = 30
+SOURCE_VM_NAME: Final[str] = f"cnv-vm-for-mtv-import-{uuid.uuid4().hex[:8]}"
 VDDK_IMAGE: Final[str] = "quay.io/libvirt_v2v_cnv/vddk:8.0.1"
 
 
@@ -70,10 +77,11 @@ def source_vm_network_data(source_hypervisor_data: dict) -> Generator[tuple[str,
         password=source_hypervisor_data["password"],
     ) as sp:
         try:
-            vm = sp.power_on_vm(vm_name=source_hypervisor_data["vm_name"])
+            vm = sp.clone_vm(template_name=source_hypervisor_data["vm_name"], clone_name=SOURCE_VM_NAME, power_on=True)
             yield extract_vm_primary_network_data(vm=vm)
         finally:
-            sp.power_off_vm(vm_name=source_hypervisor_data["vm_name"])
+            with contextlib.suppress(VmNotFoundError):
+                sp.delete_vm(vm_name=SOURCE_VM_NAME)
 
 
 @pytest.fixture(scope="module")
@@ -239,7 +247,7 @@ def mtv_migration_plan_to_cudn_ns(
         destination_provider_name=mtv_target_provider.name,
         destination_provider_namespace=mtv_target_provider.namespace,
         target_namespace=cudn_namespace.name,
-        virtual_machines_list=[{"name": source_hypervisor_data["vm_name"]}],
+        virtual_machines_list=[{"name": SOURCE_VM_NAME}],
         type="cold",
         target_power_state="on",
         preserve_static_ips=True,
@@ -271,7 +279,7 @@ def imported_cudn_vm(
     admin_client: DynamicClient, cudn_namespace: Namespace, source_hypervisor_data: dict, mtv_migration_to_cudn_ns: None
 ) -> Generator[BaseVirtualMachine]:
     vm = BaseVirtualMachine.from_existing(
-        name=source_hypervisor_data["vm_name"],
+        name=SOURCE_VM_NAME,
         namespace=cudn_namespace.name,
         client=admin_client,
         os_distribution=OS_FLAVOR_FEDORA,

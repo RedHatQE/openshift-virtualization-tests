@@ -1,4 +1,5 @@
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.limit_range import LimitRange
 
@@ -11,10 +12,11 @@ CPU_SOCKETS = 1
 VMI_CPU_ALLOCATION_RATIO = 20
 
 
-def assert_pod_cpu_request_value(vmi_cpu_allocation_from_kubevirt, vm):
+def assert_pod_cpu_request_value(vmi_cpu_allocation_from_kubevirt, vm, admin_client: DynamicClient):
     cpu = vm.vmi.instance.spec.domain.cpu
     number_of_vcpus = cpu.cores * cpu.sockets * cpu.threads
-    actual_pod_cpu_request = vm.vmi.virt_launcher_pod.instance.spec.containers[0].resources.requests.cpu
+    virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
+    actual_pod_cpu_request = virt_launcher_pod.instance.spec.containers[0].resources.requests.cpu
     expected_pod_cpu_request = int(number_of_vcpus * 1000 / vmi_cpu_allocation_from_kubevirt)
     assert actual_pod_cpu_request == f"{expected_pod_cpu_request}m", (
         f"expected_pod_cpu_request:{expected_pod_cpu_request} != actual_pod_cpu_request:{actual_pod_cpu_request}"
@@ -96,6 +98,7 @@ def limit_range_for_cpu_allocation_test(namespace):
 
 @pytest.mark.polarion("CNV-10521")
 def test_inspect_cpu_allocation_ratio_pod(
+    admin_client,
     hco_cr_with_vmi_cpu_allocation_ratio,
     vm_for_test_cpu_allocation_ratio,
     vmi_cpu_allocation_from_kubevirt,
@@ -111,12 +114,14 @@ def test_inspect_cpu_allocation_ratio_pod(
         assert_pod_cpu_request_value(
             vmi_cpu_allocation_from_kubevirt=vmi_cpu_allocation_from_kubevirt,
             vm=vm_for_test_cpu_allocation_ratio,
+            admin_client=admin_client,
         ),
     )
 
 
 @pytest.mark.polarion("CNV-11294")
 def test_limitrange_default_cpu_not_override_vm_cpu(
+    admin_client,
     limit_range_for_cpu_allocation_test,
     vmi_cpu_allocation_from_kubevirt,
     vm_for_test_cpu_allocation_ratio,
@@ -124,4 +129,5 @@ def test_limitrange_default_cpu_not_override_vm_cpu(
     assert_pod_cpu_request_value(
         vmi_cpu_allocation_from_kubevirt=vmi_cpu_allocation_from_kubevirt,
         vm=vm_for_test_cpu_allocation_ratio,
+        admin_client=admin_client,
     )
