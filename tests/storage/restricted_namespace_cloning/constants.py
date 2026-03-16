@@ -1,9 +1,6 @@
 # Permissions and Verbs for set_permissions
 from ocp_resources.resource import Resource
 
-from tests.storage.constants import CIRROS_QCOW2_IMG
-from utilities.constants import Images
-
 DATAVOLUMES = ["datavolumes"]
 DATAVOLUMES_SRC = ["datavolumes/source"]
 DATAVOLUMES_AND_DVS_SRC = ["datavolumes", "datavolumes/source"]
@@ -20,6 +17,7 @@ PERMISSIONS_DST = "permissions_destination"
 VERBS_SRC = "verbs_src"
 VERBS_DST = "verbs_dst"
 
+SOURCE_DV = "source-dv"
 TARGET_DV = "target-dv"
 
 PERMISSIONS_SRC_SA = "perm_src_service_account"
@@ -31,10 +29,3 @@ METADATA = "metadata"
 SPEC = "spec"
 
 RBAC_AUTHORIZATION_API_GROUP = Resource.ApiGroup.RBAC_AUTHORIZATION_K8S_IO
-
-DV_PARAMS = {
-    "dv_name": "source-dv",
-    "source": "http",
-    "image": CIRROS_QCOW2_IMG,
-    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-}
