@@ -100,7 +100,7 @@ def get_vm_boot_id_via_console(
         vm_console.sendline("cat /proc/sys/kernel/random/boot_id")
         vm_console.expect([r"#", r"\$"])
         raw_output = vm_console.before
-        LOGGER.info(f"raw_output: {raw_output}")
+        LOGGER.info(f"Boot ID from VM console (raw output): '{raw_output}'")
         return raw_output
 
 
