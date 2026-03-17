@@ -1,43 +1,25 @@
 import logging
+from collections.abc import ItemsView
 
 import pytest
-import requests
-from timeout_sampler import retry
 
-from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC, TIMEOUT_30SEC
+from utilities.constants import CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
-RUNBOOKS_API_URL = "https://api.github.com/repos/openshift/runbooks/contents/alerts/openshift-virtualization-operator"
-
-
-@retry(wait_timeout=TIMEOUT_30SEC, sleep=TIMEOUT_10SEC, exceptions_dict={AssertionError: []})
-def fetch_runbook_urls_from_github() -> set[str]:
-    """Fetch available runbook URLs from the openshift/runbooks GitHub repository.
-
-    Returns:
-        Set of runbook HTML URLs available in the repository.
-    """
-    response = requests.get(url=RUNBOOKS_API_URL, timeout=TIMEOUT_10SEC)
-    assert response.status_code == requests.codes.ok, (
-        f"Failed to fetch runbooks directory listing from '{RUNBOOKS_API_URL}': status {response.status_code}"
-    )
-    return {entry["html_url"] for entry in response.json()}
 
 
 def validate_downstream_runbook_url(
-    runbook_urls_from_prometheus_rule: dict[str, str], subtests: pytest.Subtests
+    runbook_urls_from_prometheus_rule: ItemsView[str, str],
+    available_runbook_urls: set[str],
+    subtests: pytest.Subtests,
 ) -> None:
-    """
-    Validate that all runbook URLs exist in the openshift/runbooks repository.
-
-    Fetches the directory listing once from GitHub API and checks each alert's
-    runbook URL against the available runbook files.
+    """Validate that all runbook URLs exist in the openshift/runbooks repository.
 
     Args:
-        runbook_urls_from_prometheus_rule: Iterable of (alert_name, runbook_url) tuples
-        subtests: pytest subtests fixture for independent subtest execution
+        runbook_urls_from_prometheus_rule: Dict items view of (alert_name, runbook_url) pairs.
+        available_runbook_urls: Set of runbook HTML URLs available in the repository.
+        subtests: pytest subtests fixture for independent subtest execution.
     """
-    available_runbook_urls = fetch_runbook_urls_from_github()
     for alert_name, runbook_url in runbook_urls_from_prometheus_rule:
         with subtests.test(msg=alert_name):
             assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
@@ -62,8 +44,11 @@ class TestRunbookUrlsAndPrometheusRules:
         )
 
     @pytest.mark.polarion("CNV-10084")
-    def test_runbook_downstream_urls(self, cnv_alerts_runbook_urls_from_prometheus_rule, subtests):
+    def test_runbook_downstream_urls(
+        self, available_runbook_urls, cnv_alerts_runbook_urls_from_prometheus_rule, subtests
+    ):
         validate_downstream_runbook_url(
             runbook_urls_from_prometheus_rule=cnv_alerts_runbook_urls_from_prometheus_rule.items(),
             subtests=subtests,
+            available_runbook_urls=available_runbook_urls,
         )

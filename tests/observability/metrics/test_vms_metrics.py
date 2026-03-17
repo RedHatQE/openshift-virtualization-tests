@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import bitmath
 import pytest
@@ -257,6 +258,7 @@ class TestVmiFileSystemMetricsLinux:
     @pytest.mark.s390x
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_linux(
         self,
+        admin_client,
         prometheus,
         vm_for_test,
         file_system_metric_mountpoints_existence,
@@ -268,6 +270,7 @@ class TestVmiFileSystemMetricsLinux:
             vm_for_test=vm_for_test,
             mount_point=[*disk_file_system_info_linux][0],
             capacity_or_used=capacity_or_used,
+            admin_client=admin_client,
         )
 
 
@@ -290,6 +293,7 @@ class TestVmiFileSystemMetricsWindows:
     )
     def test_metric_kubevirt_vmi_filesystem_capacity_used_bytes_windows(
         self,
+        admin_client,
         prometheus,
         windows_vm_for_test,
         disk_file_system_info_windows,
@@ -300,6 +304,7 @@ class TestVmiFileSystemMetricsWindows:
             vm_for_test=windows_vm_for_test,
             mount_point=[*disk_file_system_info_windows][0],
             capacity_or_used=capacity_or_used,
+            admin_client=admin_client,
         )
 
 
@@ -335,7 +340,8 @@ class TestVmiStatusAddresses:
         kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
     ):
-        instance_value = kubevirt_vmi_status_addresses_ip_labels_values.get("instance").split(":")[0]
+        instance_value = urlparse(f"//{kubevirt_vmi_status_addresses_ip_labels_values.get('instance')}").hostname
+
         address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
         vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
         assert instance_value == vm_virt_controller_ip_address, (

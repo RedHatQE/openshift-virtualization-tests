@@ -53,11 +53,11 @@ class TestRHELTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_virtio_tablet_device(self, tablet_device_vm):
+    def test_tablet_virtio_tablet_device(self, admin_client, tablet_device_vm):
         LOGGER.info("Test tablet device - virtio bus.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="Virtio")
-        check_vm_xml_tablet_device(vm=tablet_device_vm)
+        check_vm_xml_tablet_device(vm=tablet_device_vm, admin_client=admin_client)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -73,11 +73,11 @@ class TestRHELTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_usb_tablet_device(self, tablet_device_vm):
+    def test_tablet_usb_tablet_device(self, admin_client, tablet_device_vm):
         LOGGER.info("Test tablet device -  USB bus.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="USB")
-        check_vm_xml_tablet_device(vm=tablet_device_vm)
+        check_vm_xml_tablet_device(vm=tablet_device_vm, admin_client=admin_client)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
@@ -93,11 +93,11 @@ class TestRHELTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_default_bus_tablet_device(self, tablet_device_vm):
+    def test_tablet_default_bus_tablet_device(self, admin_client, tablet_device_vm):
         LOGGER.info("Test tablet device - default device bus - USB.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="USB")
-        check_vm_xml_tablet_device(vm=tablet_device_vm)
+        check_vm_xml_tablet_device(vm=tablet_device_vm, admin_client=admin_client)
 
     @pytest.mark.parametrize(
         "tablet_device_vm",
