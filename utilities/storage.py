@@ -32,7 +32,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
-from tests.storage.utils import get_dv_size_from_datasource
 from utilities import console
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
@@ -1181,3 +1180,12 @@ def persist_storage_class_default(default: bool, storage_class: StorageClass) ->
     )
     # Apply the changes to be persistent without backup for restoration
     editor.update(backup_resources=False)
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size

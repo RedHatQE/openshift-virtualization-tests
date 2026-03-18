@@ -10,7 +10,6 @@ from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
-    get_dv_size_from_datasource,
 )
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
@@ -24,6 +23,7 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     data_volume_template_dict,
+    get_dv_size_from_datasource,
     overhead_size_for_dv,
 )
 from utilities.virt import (
