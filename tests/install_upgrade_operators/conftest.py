@@ -13,10 +13,10 @@ from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
+    S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
 )
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
