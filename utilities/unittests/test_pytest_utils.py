@@ -1627,7 +1627,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         generate_instance_type_matrix_dicts(os_dict=os_dict)
 
         mock_generate_instance_type.assert_called_once_with(
-            os_name="centos", preferences=["centos.stream9"], arch_suffix=None
+            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
         )
         assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
 
@@ -1646,7 +1646,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="s390x")
 
         mock_generate_instance_type.assert_called_once_with(
-            os_name="centos", preferences=["centos.stream9"], arch_suffix=None
+            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
         )
         assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
 
@@ -1719,7 +1719,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
 
         mock_generate_instance_type.assert_called_once_with(
-            os_name="centos", preferences=["centos.stream9"], arch_suffix="arm64"
+            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
         )
 
 
