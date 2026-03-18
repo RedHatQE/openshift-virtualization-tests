@@ -1183,6 +1183,16 @@ def persist_storage_class_default(default: bool, storage_class: StorageClass) ->
 
 
 def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    """
+    Returns the DataVolume size from a DataSource's underlying instance.
+
+    Args:
+        data_source: DataSource whose underlying instance size or restore size to read.
+
+    Returns:
+        The storage request value (str or int) from spec.resources.requests.storage if present;
+        otherwise the restore size from status.restoreSize; None if neither exists.
+    """
     source_dict = data_source.source.instance.to_dict()
     source_spec_dict = source_dict["spec"]
     dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
