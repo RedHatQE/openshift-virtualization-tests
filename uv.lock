@@ -2055,7 +2055,7 @@ wheels = [
 
 [[package]]
 name = "python-utility-scripts"
-version = "2.0.5"
+version = "2.0.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ast-comments" },
@@ -2068,7 +2068,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/83/21c955ac8c0907682b62f314a81e16e1036eec4106cf24ed223c842cdca6/python_utility_scripts-2.0.5.tar.gz", hash = "sha256:f21b36546deb0afb78697c81612494df5a95a63595928830085b97bc63927d1d", size = 21478, upload-time = "2026-02-18T16:30:17.719Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/84/eb74b833ffad45287e19964102028d7cd69b9f1bf2c5308d0be6792791ab/python_utility_scripts-2.0.6.tar.gz", hash = "sha256:a43ac3eddea5b5865b0c182b04c43457e073da360ec202ad5b0f715011213c7a", size = 21742, upload-time = "2026-03-16T12:13:10.334Z" }
 
 [[package]]
 name = "pyvmomi"
