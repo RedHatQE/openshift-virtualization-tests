@@ -521,7 +521,7 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="centos",
+            os_name="centos.stream",
             preferences=instance_type_centos_os_list,
             arch_suffix=cpu_arch if cpu_arch != S390X else None,
         )
