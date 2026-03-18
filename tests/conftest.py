@@ -491,11 +491,12 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
 
 
 @pytest.fixture(scope="session")
-def cnv_tests_utilities_service_account(cnv_tests_utilities_namespace, installing_cnv):
+def cnv_tests_utilities_service_account(admin_client, cnv_tests_utilities_namespace, installing_cnv):
     if installing_cnv:
         yield
     else:
         with ServiceAccount(
+            client=admin_client,
             name=CNV_TEST_SERVICE_ACCOUNT,
             namespace=cnv_tests_utilities_namespace.name,
         ) as service_account:
@@ -528,7 +529,7 @@ def utility_daemonset(
             generated_pulled_secret=generated_pulled_secret,
             service_account=cnv_tests_utilities_service_account,
         )
-        with DaemonSet(yaml_file=modified_ds_yaml_file) as ds:
+        with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
             ds.wait_until_deployed()
             yield ds
 
