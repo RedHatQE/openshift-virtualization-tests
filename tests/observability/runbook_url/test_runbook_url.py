@@ -1,5 +1,4 @@
 import logging
-from collections.abc import ItemsView
 
 import pytest
 
@@ -9,7 +8,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def validate_downstream_runbook_url(
-    runbook_urls_from_prometheus_rule: ItemsView[str, str],
+    runbook_urls_from_prometheus_rule: dict[str, str],
     available_runbook_urls: set[str],
     subtests: pytest.Subtests,
 ) -> None:

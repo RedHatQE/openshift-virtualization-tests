@@ -45,24 +45,23 @@ def available_runbook_urls():
     Returns:
         Set of runbook HTML URLs available in the repository.
     """
+    runbooks_api_url = (
+        "https://api.github.com/repos/openshift/runbooks/contents/alerts/openshift-virtualization-operator"
+    )
     sample = None
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_30SEC,
             sleep=TIMEOUT_10SEC,
             func=requests.get,
-            url=RUNBOOKS_API_URL,
+            url=runbooks_api_url,
             timeout=TIMEOUT_10SEC,
         ):
             if sample.status_code == requests.codes.ok:
                 return {entry["html_url"] for entry in sample.json()}
     except TimeoutExpiredError:
-        status = sample.status_code if sample else "no response"
         LOGGER.error(
-            f"Failed to fetch runbooks directory listing from '{RUNBOOKS_API_URL}' "
-            f"after {TIMEOUT_30SEC}s: last status {status}"
+            f"Failed to fetch runbooks directory listing from '{runbooks_api_url}', "
+            f"status: {sample.status_code if sample else 'no response'} "
         )
         raise
-
-
-RUNBOOKS_API_URL = "https://api.github.com/repos/openshift/runbooks/contents/alerts/openshift-virtualization-operator"
