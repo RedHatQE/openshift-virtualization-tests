@@ -63,6 +63,7 @@ from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
+    MULTIARCH,
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
@@ -1518,12 +1519,6 @@ def vm_console_run_commands(
 def fedora_vm_body(name: str) -> dict[str, Any]:
     pull_secret = utilities.infra.generate_openshift_pull_secret_file()
 
-    # Make sure we can find the file even if utilities was installed via pip.
-    yaml_file = os.path.abspath("utilities/manifests/vm-fedora.yaml")
-
-    with open(yaml_file) as fd:
-        data = fd.read()
-
     image = getattr(ArchImages, py_config["cpu_arch"].upper()).Fedora.FEDORA_CONTAINER_IMAGE
     image_info = get_oc_image_info(
         image=image,
@@ -1531,12 +1526,26 @@ def fedora_vm_body(name: str) -> dict[str, Any]:
         architecture=py_config["cpu_arch"],
     )
     image_digest = image_info["digest"]
-    return generate_dict_from_yaml_template(
-        stream=io.StringIO(data),
-        name=name,
-        image=f"{image}@{image_digest}",
-        arch=py_config["cpu_arch"],
-    )
+
+    # TODO: Move to jinja2 template
+    if py_config["cluster_type"] == MULTIARCH:
+        with open(os.path.abspath("utilities/manifests/vm-fedora-multiarch.yaml")) as fd:
+            data = fd.read()
+
+        return generate_dict_from_yaml_template(
+            stream=io.StringIO(data),
+            name=name,
+            image=f"{image}@{image_digest}",
+            arch=py_config["cpu_arch"],
+        )
+    else:
+        with open(os.path.abspath("utilities/manifests/vm-fedora.yaml")) as fd:
+            data = fd.read()
+        return generate_dict_from_yaml_template(
+            stream=io.StringIO(data),
+            name=name,
+            image=f"{image}@{image_digest}",
+        )
 
 
 def kubernetes_taint_exists(node):
