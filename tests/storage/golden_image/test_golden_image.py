@@ -7,9 +7,8 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST
-from tests.storage.utils import get_dv_size_from_datasource
 from utilities.constants import PVC, TIMEOUT_20MIN
-from utilities.storage import ErrorMsg, create_dv
+from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
 
 pytestmark = pytest.mark.post_upgrade
 

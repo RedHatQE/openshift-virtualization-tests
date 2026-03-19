@@ -23,6 +23,7 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     data_volume_template_dict,
+    get_dv_size_from_datasource,
     overhead_size_for_dv,
 )
 from utilities.virt import (
@@ -105,11 +106,7 @@ def test_successful_vm_restart_with_cloned_dv(
     fedora_data_source_scope_module,
     cluster_csi_drivers_names,
 ):
-    source_dict = fedora_data_source_scope_module.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-    size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
-        "status", {}
-    ).get("restoreSize")
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
     with DataVolume(
         name="dv-target",
