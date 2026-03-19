@@ -404,13 +404,6 @@ def ovs_bridge_localnet_active_connections(
 
 
 @pytest.fixture()
-def localnet_vms_have_connectivity(
-    localnet_active_connections: list[tuple[VMTcpClient, TcpServer]],
-) -> None:
-    pass
-
-
-@pytest.fixture()
 def localnet_active_connections(
     localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
 ) -> Generator[list[tuple[VMTcpClient, TcpServer]]]:
@@ -424,9 +417,7 @@ def localnet_active_connections(
 
 
 @pytest.fixture()
-def migrated_localnet_vm(
-    localnet_vms_have_connectivity: None, localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]
-) -> BaseVirtualMachine:
+def migrated_localnet_vm(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> BaseVirtualMachine:
     vm, _ = localnet_running_vms
     migrate_vm_and_verify(vm=vm)
     return vm
