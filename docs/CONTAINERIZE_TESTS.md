@@ -26,6 +26,7 @@ The following args are supported:
 OPENSHIFT_PYTHON_WRAPPER_COMMIT
 OPENSHIFT_PYTHON_UTILITIES_COMMIT
 TIMEOUT_SAMPLER_COMMIT
+PYHELPER_UTILS_COMMIT
 ```
 
 ### Running containerized tests locally
