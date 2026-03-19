@@ -230,14 +230,12 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
             func=_get_first_pvc,
         ):
             if sample:
-                created_dv = DataVolume(
+                DataVolume(
                     name=sample.name,
                     namespace=sample.namespace,
                     client=unprivileged_client,
-                )
-                created_dv.wait_for_dv_success()
+                ).wait_for_dv_success()
                 yield sample
-                created_dv.clean_up()
                 return
     except TimeoutExpiredError:
         LOGGER.error(f"No PVCs were created in {data_import_cron_namespace.name}")
