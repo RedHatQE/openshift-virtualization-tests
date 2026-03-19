@@ -7,6 +7,8 @@ from typing import Any
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ConflictError, ResourceNotFoundError
+from ocp_resources.daemonset import DaemonSet
+from ocp_resources.deployment import Deployment
 from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.machine_config_pool import MachineConfigPool
@@ -26,6 +28,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
 )
+from utilities.exceptions import ResourceMismatch
 from utilities.infra import get_subscription
 from utilities.operator import wait_for_mcp_update_completion
 
@@ -288,6 +291,81 @@ def get_resource_key_value(resource: Resource, key_name: str) -> Any:
         resource.instance.to_dict()["spec"],
         keypath_separator=KEY_PATH_SEPARATOR,
     ).get(key_name)
+
+
+def validate_resource_request_fields(resource: Deployment | DaemonSet, cpu_min_value: int):
+    """
+    Validates that for a given deployment/daemonset object, for each container:
+    resources.requests contains cpu and memory fields. Cpu values can not be less than cpu_min_value
+
+    Args:
+        resource (Deployment/Daemonset object): deployment/daemonset object to be used for field validation
+        cpu_min_value (int): Minimum value of cpu resource request
+
+    Raises:
+        AssertionError: if resources.requests does not contains both cpu and memory, or if cpu request value is less
+        than cpu_min_value
+    """
+
+    resource_type = "deployment" if isinstance(resource, Deployment) else "daemonset"
+    field_keys = ["cpu", "memory"]
+    containers = resource.instance.spec.template.spec.containers
+    missing_cpu_memory_values = {
+        container["name"]: [
+            field_key
+            for field_key in field_keys
+            if not container.get("resources", {}).get("requests", {}).get(field_key)
+        ]
+        for container in containers
+    }
+    assert not any(missing_cpu_memory_values.values()), (
+        f"For {resource_type} {resource.name}, following resources.requests fields are missing:"
+        f"{missing_cpu_memory_values}"
+    )
+
+    cpu_values = {container["name"]: container["resources"]["requests"].get("cpu") for container in containers}
+    cpu_value_pattern = re.compile(r"^\d+")
+
+    invalid_cpus = {
+        key: value
+        for key, value in cpu_values.items()
+        if cpu_value_pattern.findall(value) and int(cpu_value_pattern.findall(value)[0]) < cpu_min_value
+    }
+    if invalid_cpus:
+        raise ResourceMismatch(
+            f"For {resource_type} {resource.name}, mismatch in cpu values found: {invalid_cpus}, "
+            f"expected cpu values < {cpu_min_value}"
+        )
+
+
+def assert_cnv_resource_container_env_image_not_in_upstream(resource: Deployment | DaemonSet):
+    resource_type = "deployments" if isinstance(resource, Deployment) else "daemonsets"
+    cnv_resource_env_with_upstream_image_reference = {}
+    for container in resource.instance.spec.template.spec.containers:
+        resource_env_image_mismatch = get_resource_container_env_image_mismatch(container=container)
+        if resource_env_image_mismatch:
+            cnv_resource_env_with_upstream_image_reference[container["name"]] = resource_env_image_mismatch
+
+    if cnv_resource_env_with_upstream_image_reference:
+        raise ResourceMismatch(
+            f"For following {resource_type} upstream image references "
+            f"found: {cnv_resource_env_with_upstream_image_reference}"
+        )
+
+
+def assert_cnv_resource_container_image_not_in_upstream(resource: Deployment | DaemonSet):
+    resource_type = "deployments" if isinstance(resource, Deployment) else "daemonsets"
+    cnv_resources_with_upstream_image_reference = {
+        container["name"]: container["image"]
+        for container in resource.instance.spec.template.spec.containers
+        if not container["image"].startswith(Resource.ApiGroup.IMAGE_REGISTRY)
+    }
+
+    if cnv_resources_with_upstream_image_reference:
+        raise ResourceMismatch(
+            f"For following {resource_type} upstream image references "
+            f"found:{cnv_resources_with_upstream_image_reference}"
+        )
 
 
 def apply_konflux_idms(
