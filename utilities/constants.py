@@ -395,8 +395,8 @@ DATA_SOURCE_NAME = "DATA_SOURCE_NAME"
 DATA_SOURCE_NAMESPACE = "DATA_SOURCE_NAMESPACE"
 SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME = "dataImportCronTemplates"
 COMMON_TEMPLATES_KEY_NAME = "commonTemplates"
-
 KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE = "kubevirt-hyperconverged-prometheus-rule"
+KUBEMACPOOL_PROMETHEUS_RULE = "kubemacpool-prometheus-rule"
 HYPERCONVERGED_CLUSTER_OPERATOR_METRICS = "hyperconverged-cluster-operator-metrics"
 KUBEVIRT_HYPERCONVERGED_OPERATOR_METRICS = "kubevirt-hyperconverged-operator-metrics"
 KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
@@ -703,6 +703,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
     f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
+    KUBEMACPOOL_PROMETHEUS_RULE,
 ]
 
 
