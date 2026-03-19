@@ -1,0 +1,208 @@
+import logging
+
+import pytest
+from ocp_resources.migration_policy import MigrationPolicy
+
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.utils import (
+    assert_guest_os_memory_amount,
+    clean_up_migration_jobs,
+    wait_for_guest_os_cpu_count,
+)
+from tests.virt.constants import AWD_VM_LABEL, VM_LABEL
+from tests.virt.utils import assert_migration_paused_mode, assert_migration_post_copy_mode
+from utilities.constants import (
+    REGEDIT_PROC_NAME,
+    SIX_CPU_SOCKETS,
+    SIX_GI_MEMORY,
+    TIMEOUT_15MIN,
+    TIMEOUT_30MIN,
+)
+from utilities.virt import (
+    check_migration_process_after_node_drain,
+    fetch_pid_from_linux_vm,
+    fetch_pid_from_windows_vm,
+    migrate_vm_and_verify,
+    node_mgmt_console,
+    start_and_fetch_processid_on_linux_vm,
+    start_and_fetch_processid_on_windows_vm,
+)
+
+pytestmark = [pytest.mark.rwx_default_storage]
+
+
+LOGGER = logging.getLogger(__name__)
+TESTS_CLASS_NAME = "TestPostCopyMigration"
+AWD_TESTS_CLASS_NAME = "TestWorkloadDisruptionMigration"
+
+
+def assert_same_pid_after_migration(orig_pid, vm):
+    if "windows" in vm.name:
+        new_pid = fetch_pid_from_windows_vm(vm=vm, process_name=REGEDIT_PROC_NAME)
+    else:
+        new_pid = fetch_pid_from_linux_vm(vm=vm, process_name="ping")
+    assert new_pid == orig_pid, f"PID mismatch after migration! orig_pid: {orig_pid}; new_pid: {new_pid}"
+
+
+@pytest.fixture(scope="module")
+def created_post_copy_migration_policy():
+    with MigrationPolicy(
+        name="post-copy-migration-mp",
+        allow_auto_converge=True,
+        bandwidth_per_migration="100Mi",
+        completion_timeout_per_gb=1,
+        allow_post_copy=True,
+        vmi_selector=VM_LABEL,
+    ) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="class")
+def vm_background_process_id(vm_with_hotplug_support):
+    if "windows" in vm_with_hotplug_support.name:
+        return start_and_fetch_processid_on_windows_vm(vm=vm_with_hotplug_support, process_name=REGEDIT_PROC_NAME)
+    else:
+        return start_and_fetch_processid_on_linux_vm(vm=vm_with_hotplug_support, process_name="ping", args="localhost")
+
+
+@pytest.fixture()
+def migrated_vm_with_hotplug_support(vm_with_hotplug_support):
+    migrate_vm_and_verify(
+        vm=vm_with_hotplug_support,
+        timeout=TIMEOUT_30MIN if "windows" in vm_with_hotplug_support.name else TIMEOUT_15MIN,
+        check_ssh_connectivity=True,
+    )
+
+
+@pytest.fixture()
+def drained_node_for_hotplug_vm(admin_client, vm_with_hotplug_support):
+    with node_mgmt_console(
+        admin_client=admin_client,
+        node=vm_with_hotplug_support.vmi.get_node(privileged_client=admin_client),
+        node_mgmt="drain",
+    ):
+        check_migration_process_after_node_drain(
+            client=admin_client, vm=vm_with_hotplug_support, admin_client=admin_client
+        )
+    clean_up_migration_jobs(client=admin_client, vm=vm_with_hotplug_support)
+
+
+@pytest.fixture(scope="class")
+def awd_migration_policy():
+    with MigrationPolicy(
+        name="awd-migration-policy",
+        allow_workload_disruption=True,
+        allow_post_copy=False,
+        bandwidth_per_migration="50Mi",
+        completion_timeout_per_gb=1,
+        vmi_selector=AWD_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support",
+    [
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-post-copy-migration-vm",
+                "additional_labels": VM_LABEL,
+            },
+            id="RHEL-VM",
+        ),
+        pytest.param(
+            {"os_dict": WINDOWS_LATEST},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-post-copy-migration-vm",
+                "additional_labels": VM_LABEL,
+            },
+            id="WIN-VM",
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("created_post_copy_migration_policy")
+class TestPostCopyMigration:
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
+    @pytest.mark.polarion("CNV-11421")
+    def test_migrate_vm(self, vm_with_hotplug_support, vm_background_process_id, migrated_vm_with_hotplug_support):
+        assert_migration_post_copy_mode(vm=vm_with_hotplug_support)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::node_drain", depends=[f"{TESTS_CLASS_NAME}::migrate_vm"])
+    @pytest.mark.polarion("CNV-11422")
+    def test_node_drain(self, vm_with_hotplug_support, vm_background_process_id, drained_node_for_hotplug_vm):
+        assert_migration_post_copy_mode(vm=vm_with_hotplug_support)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+    )
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu", depends=[f"{TESTS_CLASS_NAME}::node_drain"])
+    @pytest.mark.polarion("CNV-11423")
+    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support, vm_background_process_id):
+        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=SIX_CPU_SOCKETS)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
+    )
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
+    @pytest.mark.polarion("CNV-11424")
+    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support, vm_background_process_id):
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support",
+    [
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-awd-vm",
+                "additional_labels": AWD_VM_LABEL,
+            },
+            id="RHEL-VM",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("awd_migration_policy")
+class TestWorkloadDisruptionMigration:
+    @pytest.mark.dependency(name=f"{AWD_TESTS_CLASS_NAME}::migrate_vm")
+    @pytest.mark.polarion("CNV-15225")
+    def test_awd_migration_pauses_vm(
+        self, vm_with_hotplug_support, vm_background_process_id, migrated_vm_with_hotplug_support
+    ):
+        """Verify migration completes via Paused mode when allowWorkloadDisruption is enabled."""
+        assert_migration_paused_mode(vm=vm_with_hotplug_support)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+    )
+    @pytest.mark.dependency(
+        name=f"{AWD_TESTS_CLASS_NAME}::hotplug_cpu",
+        depends=[f"{AWD_TESTS_CLASS_NAME}::migrate_vm"],
+    )
+    @pytest.mark.polarion("CNV-15234")
+    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support, vm_background_process_id):
+        assert_migration_paused_mode(vm=vm_with_hotplug_support)
+        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=SIX_CPU_SOCKETS)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
+    )
+    @pytest.mark.dependency(depends=[f"{AWD_TESTS_CLASS_NAME}::hotplug_cpu"])
+    @pytest.mark.polarion("CNV-15235")
+    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support, vm_background_process_id):
+        assert_migration_paused_mode(vm=vm_with_hotplug_support)
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
