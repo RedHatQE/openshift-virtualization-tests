@@ -12,7 +12,7 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import py_config
 
-from tests.virt.constants import VM_LABEL
+from tests.virt.constants import WORKLOAD_DISRUPTION_VM_LABEL
 from tests.virt.upgrade.utils import (
     get_virt_launcher_image_from_csv,
     validate_vms_pod_updated,
@@ -337,7 +337,7 @@ def post_copy_migration_policy_for_upgrade(admin_client):
         bandwidth_per_migration="100Mi",
         completion_timeout_per_gb=1,
         allow_post_copy=True,
-        vmi_selector=VM_LABEL,
+        vmi_selector=WORKLOAD_DISRUPTION_VM_LABEL,
         client=admin_client,
     ) as mp:
         yield mp
@@ -352,7 +352,7 @@ def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_fo
         body=fedora_vm_body(name=vm_name),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
-        additional_labels=VM_LABEL,
+        additional_labels=WORKLOAD_DISRUPTION_VM_LABEL,
     ) as vm:
         running_vm(vm=vm)
         yield vm
