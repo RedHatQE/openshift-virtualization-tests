@@ -18,3 +18,6 @@ HTTP = "http"
 HTTPS = "https"
 
 QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+
+TEST_FILE_NAME = "test-file.txt"
+TEST_FILE_CONTENT = "test-content"

@@ -12,20 +12,10 @@ from tests.storage.storage_migration.constants import (
     MOUNT_HOTPLUGGED_DEVICE_PATH,
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
-from utilities import console
-from utilities.constants import LS_COMMAND, TIMEOUT_10MIN, TIMEOUT_10SEC, TIMEOUT_20SEC
+from tests.storage.utils import check_file_in_vm
+from utilities.constants import TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
-
-
-def check_file_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
-    if not vm.ready:
-        vm.start(wait=True)
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(LS_COMMAND)
-        vm_console.expect(file_name, timeout=TIMEOUT_20SEC)
-        vm_console.sendline(f"cat {file_name}")
-        vm_console.expect(file_content, timeout=TIMEOUT_20SEC)
 
 
 def verify_vms_boot_time_after_storage_migration(

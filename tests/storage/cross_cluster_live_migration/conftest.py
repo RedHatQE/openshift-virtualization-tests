@@ -1,9 +1,12 @@
 import logging
+import os
 import re
+import tempfile
 from copy import deepcopy
 
 import pytest
 import requests
+import yaml
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.forklift_controller import ForkliftController
@@ -25,8 +28,10 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
+from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.cross_cluster_live_migration.utils import (
     enable_feature_gate_and_configure_hco_live_migration_network,
+    get_vm_boot_id_via_console,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
@@ -38,7 +43,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
-from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.storage import data_volume_template_with_source_ref_dict, write_file
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -107,6 +112,50 @@ def remote_cluster_auth_token(remote_admin_client):
     if token_match := re.match(r"Bearer (.*)", remote_admin_client.configuration.api_key.get("authorization", "")):
         return token_match.group(1)
     raise NotFoundError("Unable to extract authentication token from remote admin client")
+
+
+@pytest.fixture(scope="session")
+def remote_cluster_kubeconfig(remote_admin_client, remote_cluster_auth_token):
+    """
+    Generate a kubeconfig file from the remote admin client credentials.
+    Returns the path to the generated kubeconfig file.
+    """
+    # Extract cluster information from the client
+    cluster_host = remote_admin_client.configuration.host
+    cluster_name = "remote-cluster"
+    user_name = "remote-admin"
+    context_name = "remote-context"
+
+    # Create kubeconfig structure
+    kubeconfig_dict = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [
+            {
+                "name": cluster_name,
+                "cluster": {
+                    "server": cluster_host,
+                    "insecure-skip-tls-verify": True,
+                },
+            }
+        ],
+        "users": [{"name": user_name, "user": {"token": remote_cluster_auth_token}}],
+        "contexts": [{"name": context_name, "context": {"cluster": cluster_name, "user": user_name}}],
+        "current-context": context_name,
+    }
+
+    # Use TemporaryDirectory context manager for automatic cleanup
+    with tempfile.TemporaryDirectory(suffix="-remote-kubeconfig") as temp_dir:
+        kubeconfig_path = os.path.join(temp_dir, "kubeconfig")
+
+        # Write kubeconfig file with secure permissions (0o600 = rw-------)
+        # Using os.open with O_CREAT ensures the file is created with restricted permissions from the start
+        file_descriptor = os.open(kubeconfig_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(file_descriptor, "w") as kubeconfig_file:
+            yaml.safe_dump(data=kubeconfig_dict, stream=kubeconfig_file)
+
+        LOGGER.info(f"Created remote cluster kubeconfig at: {kubeconfig_path}")
+        yield kubeconfig_path
 
 
 @pytest.fixture(scope="session")
@@ -402,7 +451,7 @@ def vm_for_cclm_from_template_with_data_source(
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
         yield vm
 
 
@@ -422,7 +471,7 @@ def vm_for_cclm_with_instance_type(
             storage_class=py_config["default_storage_class"],
         ),
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        vm.start()
         yield vm
 
 
@@ -435,6 +484,53 @@ def vms_for_cclm(request):
     """
     vms = [request.getfixturevalue(argname=vm_fixture) for vm_fixture in request.param["vms_fixtures"]]
     yield vms
+
+
+@pytest.fixture(scope="class")
+def booted_vms_for_cclm(vms_for_cclm):
+    for vm in vms_for_cclm:
+        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+    return vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def vms_boot_id_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+    return {
+        vm.name: get_vm_boot_id_via_console(vm=vm, kubeconfig=remote_cluster_kubeconfig) for vm in booted_vms_for_cclm
+    }
+
+
+@pytest.fixture(scope="class")
+def written_file_to_vms_before_cclm(booted_vms_for_cclm, remote_cluster_kubeconfig):
+    for vm in booted_vms_for_cclm:
+        write_file(
+            vm=vm,
+            filename=TEST_FILE_NAME,
+            content=TEST_FILE_CONTENT,
+            stop_vm=False,
+            kubeconfig=remote_cluster_kubeconfig,
+        )
+    return booted_vms_for_cclm
+
+
+@pytest.fixture(scope="class")
+def local_vms_after_cclm_migration(admin_client, namespace, vms_for_cclm):
+    """
+    Returns List of VirtualMachineForTests objects referencing VMs in the local cluster
+    """
+    local_vms = []
+    for vm in vms_for_cclm:
+        local_vm = VirtualMachineForTests(
+            name=vm.name,
+            namespace=namespace.name,
+            os_flavor=vm.os_flavor,
+            client=admin_client,
+            generate_unique_name=False,
+        )
+        local_vm.username = vm.username
+        local_vm.password = vm.password
+        local_vms.append(local_vm)
+    return local_vms
 
 
 @pytest.fixture(scope="class")
