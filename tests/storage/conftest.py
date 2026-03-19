@@ -5,6 +5,7 @@ Pytest conftest file for CNV CDI tests
 """
 
 import base64
+import ipaddress
 import logging
 import os
 import ssl
@@ -87,7 +88,7 @@ INTERNAL_HTTP_TEMPLATE = {
         "containers": [
             {
                 "name": "http",
-                "image": "quay.io/openshift-cnv/qe-cnv-tests-internal-http:v1.1.0",
+                "image": "quay.io/openshift-cnv/qe-cnv-tests-internal-http:v1.2.0",
                 "imagePullPolicy": "Always",
                 "command": ["/usr/sbin/nginx"],
                 "readinessProbe": {
@@ -120,12 +121,14 @@ def hpp_resources(request, admin_client):
 @pytest.fixture(scope="module")
 def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1, admin_client):
     svc_ip = internal_http_service.instance.to_dict()["spec"]["clusterIP"]
+    ip = ipaddress.ip_address(address=svc_ip)
+    connect_addr = f"[{ip}]:443" if ip.version == 6 else f"{ip}:443"
 
     def _fetch_cert():
         try:
             return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
                 command=(
-                    f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null | "
+                    f"openssl s_client -showcerts -connect {connect_addr} </dev/null 2>/dev/null | "
                     "sed -n '/-----BEGIN/,/-----END/p'"
                 )
             )
