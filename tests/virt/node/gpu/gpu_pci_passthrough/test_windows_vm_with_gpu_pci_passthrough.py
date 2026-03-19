@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from tests.os_params import WINDOWS_10, WINDOWS_10_TEMPLATE_LABELS, WINDOWS_2019, WINDOWS_2019_TEMPLATE_LABELS
+from tests.os_params import WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS, WINDOWS_2019, WINDOWS_2019_TEMPLATE_LABELS
 from tests.virt.node.gpu.constants import GPU_DEVICE_NAME_STR
 from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
@@ -31,14 +31,14 @@ TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
     "golden_image_data_source_for_test_scope_class, gpu_vma",
     [
         pytest.param(
-            {"os_dict": WINDOWS_10},
+            {"os_dict": WINDOWS_11},
             {
-                "vm_name": "win10-passthrough-vm",
-                "template_labels": WINDOWS_10_TEMPLATE_LABELS,
+                "vm_name": "win11-passthrough-vm",
+                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
                 "host_device": GPU_DEVICE_NAME_STR,
                 "cloned_dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
-            id="test_win10_pci_passthrough",
+            id="test_win11_pci_passthrough",
         ),
         pytest.param(
             {"os_dict": WINDOWS_2019},
