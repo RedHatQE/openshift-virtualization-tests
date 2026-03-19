@@ -50,7 +50,7 @@ class TestHardcodedFeatureGates:
                 id="delete_featuregates_cdi_cr",
             ),
         ],
-        indirect=["updated_resource"],
+        indirect=["updated_resource", "expected_value"],
     )
     def test_managed_cr_featuregate_reconcile(
         self,

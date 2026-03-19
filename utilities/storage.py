@@ -565,13 +565,11 @@ def data_volume_template_dict(
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
-        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
-        or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        size=get_dv_size_from_datasource(data_source=data_source),
+        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -1182,3 +1180,22 @@ def persist_storage_class_default(default: bool, storage_class: StorageClass) ->
     )
     # Apply the changes to be persistent without backup for restoration
     editor.update(backup_resources=False)
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    """
+    Returns the DataVolume size from a DataSource's underlying instance.
+
+    Args:
+        data_source: DataSource whose underlying instance size or restore size to read.
+
+    Returns:
+        The storage request value (str or int) from spec.resources.requests.storage if present;
+        otherwise the restore size from status.restoreSize; None if neither exists.
+    """
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size

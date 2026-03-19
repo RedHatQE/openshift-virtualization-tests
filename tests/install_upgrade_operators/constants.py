@@ -35,6 +35,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HotplugVolumes",
     "DecentralizedLiveMigration",
 }
+S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
