@@ -92,6 +92,10 @@ Example for SNO cluster:
 
 `--tc-file=tests/global_config_sno.py --storage-class-matrix=lvms-vg1`
 
+### Running tests on multi-arch / heterogeneous clusters
+
+See [Multi-Architecture Clusters](MULTIARCH.md).
+
 #### Running tests with an admin client instead of an unprivileged client
 To run tests with an admin client only, pass `--tc=no_unprivileged_client:True` to pytest.
 
@@ -184,6 +188,7 @@ There are other parameters that can be passed to the test suite if needed.
 ```bash
 --tc-file=tests/global_config.py
 --tc-format=python
+--cpu-arch=amd64
 --junitxml /tmp/xunit_results.xml
 --jira
 ```

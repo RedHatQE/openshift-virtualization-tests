@@ -17,6 +17,7 @@ from utilities.exceptions import (
     ResourceValueError,
     ServicePortNotFoundError,
     StorageSanityError,
+    UnsupportedCPUArchitectureError,
     UnsupportedGPUDeviceError,
     UrlNotFoundError,
     UtilityPodNotFoundError,
@@ -240,3 +241,12 @@ class TestUnsupportedGPUDeviceError:
         """Test UnsupportedGPUDeviceError can be raised"""
         with pytest.raises(UnsupportedGPUDeviceError):
             raise UnsupportedGPUDeviceError("Test error")
+
+
+class TestUnsupportedCPUArchitectureError:
+    """Test cases for UnsupportedCPUArchitectureError exception"""
+
+    def test_unsupported_cpu_architecture_error(self):
+        """Test UnsupportedCPUArchitectureError can be raised"""
+        with pytest.raises(UnsupportedCPUArchitectureError):
+            raise UnsupportedCPUArchitectureError("Test error")
