@@ -590,7 +590,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
-        size=data_source_pvc_dict_spec.get("resources", {}).get("requests", {}).get("storage"),
+        size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class or data_source_pvc_dict_spec.get("storageClassName"),
         api_name="storage",
     )
@@ -1157,3 +1157,22 @@ def validate_file_exists_in_url(url):
     response = requests.head(url, headers=utilities.infra.get_artifactory_header(), verify=False)
     if response.status_code != 200:
         raise UrlNotFoundError(url_request=response)
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    """
+    Returns the DataVolume size from a DataSource's underlying instance.
+
+    Args:
+        data_source: DataSource whose underlying instance size or restore size to read.
+
+    Returns:
+        The storage request value (str or int) from spec.resources.requests.storage if present;
+        otherwise the restore size from status.restoreSize; None if neither exists.
+    """
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size
