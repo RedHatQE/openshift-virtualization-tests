@@ -81,21 +81,19 @@ class TestDatabase:
     @patch("database.create_engine")
     @patch("database.get_data_collector_base")
     @patch("database.Base.metadata.create_all")
-    def test_insert_test_start_time(self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class):
-        """Test inserting test start time"""
+    def test_insert_start_time_new_entry(self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class):
+        """Test inserting start time when entry doesn't exist"""
         mock_get_base.return_value = "/tmp/data/"
         mock_engine = MagicMock()
         mock_create_engine.return_value = mock_engine
 
-        # Mock session
+        # Mock session - no existing entry
         mock_session = MagicMock()
+        mock_session.query.return_value.filter_by.return_value.first.return_value = None
         mock_session_class.return_value.__enter__.return_value = mock_session
 
         db = Database()
-        db.insert_test_start_time("test_example", 1234567890)
-
-        # Check Session was created with the engine
-        mock_session_class.assert_called_once_with(bind=mock_engine)
+        db.insert_start_time(name="test_example", start_time=1234567890)
 
         # Check that add and commit were called
         mock_session.add.assert_called_once()
@@ -111,8 +109,33 @@ class TestDatabase:
     @patch("database.create_engine")
     @patch("database.get_data_collector_base")
     @patch("database.Base.metadata.create_all")
-    def test_get_test_start_time(self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class):
-        """Test getting test start time"""
+    def test_insert_start_time_already_exists(
+        self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class
+    ):
+        """Test inserting start time when entry already exists (should not insert again)"""
+        mock_get_base.return_value = "/tmp/data/"
+        mock_engine = MagicMock()
+        mock_create_engine.return_value = mock_engine
+
+        # Mock session - existing entry
+        existing_entry = MagicMock()
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter_by.return_value.first.return_value = existing_entry
+        mock_session_class.return_value.__enter__.return_value = mock_session
+
+        db = Database()
+        db.insert_start_time(name="test_example", start_time=1234567890)
+
+        # Check that add and commit were NOT called (entry already exists)
+        mock_session.add.assert_not_called()
+        mock_session.commit.assert_not_called()
+
+    @patch("database.Session")
+    @patch("database.create_engine")
+    @patch("database.get_data_collector_base")
+    @patch("database.Base.metadata.create_all")
+    def test_get_start_time_found(self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class):
+        """Test getting start time when it exists"""
         mock_get_base.return_value = "/tmp/data/"
         mock_engine = MagicMock()
         mock_create_engine.return_value = mock_engine
@@ -127,12 +150,12 @@ class TestDatabase:
         mock_session.query.return_value = mock_query
         mock_query.with_entities.return_value = mock_with_entities
         mock_with_entities.filter_by.return_value = mock_filter_by
-        mock_filter_by.one.return_value = [1234567890]
+        mock_filter_by.first.return_value = [1234567890]
 
         mock_session_class.return_value.__enter__.return_value = mock_session
 
         db = Database()
-        result = db.get_test_start_time("test_example")
+        result = db.get_start_time(name="test_example")
 
         assert result == 1234567890
         mock_session.query.assert_called_once_with(CnvTestTable)
@@ -153,3 +176,32 @@ class TestDatabase:
         # The engine should be accessible
         assert db.engine is not None
         assert db.engine == mock_engine
+
+    @patch("database.Session")
+    @patch("database.create_engine")
+    @patch("database.get_data_collector_base")
+    @patch("database.Base.metadata.create_all")
+    def test_get_start_time_not_found(self, mock_create_all, mock_get_base, mock_create_engine, mock_session_class):
+        """Test getting start time when it doesn't exist"""
+        mock_get_base.return_value = "/tmp/data/"
+        mock_engine = MagicMock()
+        mock_create_engine.return_value = mock_engine
+
+        # Mock session and query
+        mock_session = MagicMock()
+        mock_query = MagicMock()
+        mock_with_entities = MagicMock()
+        mock_filter_by = MagicMock()
+
+        # Setup chain of mocks - return None
+        mock_session.query.return_value = mock_query
+        mock_query.with_entities.return_value = mock_with_entities
+        mock_with_entities.filter_by.return_value = mock_filter_by
+        mock_filter_by.first.return_value = None
+
+        mock_session_class.return_value.__enter__.return_value = mock_session
+
+        db = Database()
+        result = db.get_start_time(name="test_example")
+
+        assert result is None
