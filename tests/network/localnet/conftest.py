@@ -5,6 +5,7 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net import netattachdef as libnad
 from libs.net.traffic_generator import TcpServer, client_server_active_connection
 from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status
@@ -12,13 +13,18 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.ip import IPV4_HEADER_SIZE, TCP_HEADER_SIZE, random_ipv4_address
+from tests.network.libs.ip import (
+    IPV4_HEADER_SIZE,
+    TCP_HEADER_SIZE,
+    random_ipv4_address,
+)
 from tests.network.localnet.liblocalnet import (
     LINK_STATE_DOWN,
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_BR_EX_NETWORK_NO_VLAN,
+    LOCALNET_IPAM_INTERFACE,
     LOCALNET_OVS_BRIDGE_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_TEST_LABEL,
@@ -474,3 +480,96 @@ def localnet_ovs_bridge_jumbo_frame_client_and_server_vms(
         maximum_segment_size=cluster_hardware_mtu - IPV4_HEADER_SIZE - TCP_HEADER_SIZE,
     ) as (client, server):
         yield client, server
+
+
+@pytest.fixture()
+def nad_localnet_secondary_node_nic(
+    admin_client: DynamicClient,
+    nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
+    vlan_id: int,
+    namespace_localnet_1: Namespace,
+) -> Generator[libnad.NetworkAttachmentDefinition]:
+    localnet_secondary_nad_name = "localnet-secondary-nic"
+    config = libnad.NetConfig(
+        name=LOCALNET_OVS_BRIDGE_NETWORK,
+        plugins=[
+            libnad.CNIPluginOvnK8sConfig(
+                topology=libnad.CNIPluginOvnK8sConfig.Topology.LOCALNET.value,
+                netAttachDefName=f"{namespace_localnet_1.name}/{localnet_secondary_nad_name}",
+                vlanID=vlan_id,
+                subnets=f"{random_ipv4_address(net_seed=0, host_address=0)}/24",
+            )
+        ],
+    )
+
+    with libnad.NetworkAttachmentDefinition(
+        name=localnet_secondary_nad_name,
+        namespace=namespace_localnet_1.name,
+        config=config,
+        client=admin_client,
+    ) as nad:
+        yield nad
+
+
+@pytest.fixture()
+def vm_localnet_nad_single_network_1(
+    namespace_localnet_1: Namespace,
+    nad_localnet_secondary_node_nic: libnad.NetworkAttachmentDefinition,
+    unprivileged_client: DynamicClient,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="vm-primary-localnet-1",
+        client=unprivileged_client,
+        networks=[
+            Network(
+                name=LOCALNET_IPAM_INTERFACE,
+                multus=Multus(networkName=nad_localnet_secondary_node_nic.name),
+            ),
+        ],
+        interfaces=[
+            Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
+        ],
+        network_data=cloudinit.NetworkData(
+            ethernets={
+                PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(dhcp4=True),
+            }
+        ),
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def vm_localnet_nad_single_network_2(
+    namespace_localnet_1: Namespace,
+    nad_localnet_secondary_node_nic: libnad.NetworkAttachmentDefinition,
+    unprivileged_client: DynamicClient,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="vm-primary-localnet-2",
+        client=unprivileged_client,
+        networks=[
+            Network(
+                name=LOCALNET_IPAM_INTERFACE,
+                multus=Multus(networkName=nad_localnet_secondary_node_nic.name),
+            ),
+        ],
+        interfaces=[
+            Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
+        ],
+        network_data=cloudinit.NetworkData(
+            ethernets={
+                PRIMARY_INTERFACE_NAME: cloudinit.EthernetDevice(dhcp4=True),
+            }
+        ),
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def ipam_localnet_running_vms(
+    vm_localnet_nad_single_network_1: BaseVirtualMachine, vm_localnet_nad_single_network_2: BaseVirtualMachine
+) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
+    vm1, vm2 = run_vms(vms=(vm_localnet_nad_single_network_1, vm_localnet_nad_single_network_2))
+    return vm1, vm2

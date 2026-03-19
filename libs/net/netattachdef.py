@@ -78,6 +78,7 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
     topology: str
     netAttachDefName: str  # noqa: N815
     vlanID: int | None = None  # noqa: N815
+    subnets: str | None = None
 
     class Topology(Enum):
         LOCALNET = "localnet"
