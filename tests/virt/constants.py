@@ -31,7 +31,7 @@ ACRQ_NAMESPACE_LABEL = {ACRQ_TEST: ""}
 
 
 # MigrationPolicy labels
-VM_LABEL = {"post-copy-vm": "true"}
+WORKLOAD_DISRUPTION_VM_LABEL = {"workload-disruption-vm": "true"}
 
 
 # BASH
