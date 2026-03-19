@@ -298,7 +298,7 @@ def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, no
     with VirtualMachineForTests(
         namespace=chaos_namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=admin_client,
         node_selector_labels=node_selector_label,
         additional_labels=MIGRATION_POLICY_VM_LABEL,

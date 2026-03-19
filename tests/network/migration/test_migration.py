@@ -112,6 +112,7 @@ def br1test_nad(admin_client, namespace, bridge_worker_1, bridge_worker_2):
 
 @pytest.fixture(scope="module")
 def vma(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -131,7 +132,7 @@ def vma(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=sorted(networks.keys()),
         client=unprivileged_client,
@@ -144,6 +145,7 @@ def vma(
 
 @pytest.fixture(scope="module")
 def vmb(
+    admin_client,
     namespace,
     unprivileged_client,
     cpu_for_migration,
@@ -163,7 +165,7 @@ def vmb(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=sorted(networks.keys()),
         client=unprivileged_client,

@@ -65,6 +65,7 @@ def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespa
 
 @pytest.fixture(scope="class")
 def sriov_vm1(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     index_number,
@@ -84,6 +85,7 @@ def sriov_vm1(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="sriov-vm1",
         namespace=namespace,
@@ -95,6 +97,7 @@ def sriov_vm1(
 
 @pytest.fixture(scope="class")
 def sriov_vm2(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     index_number,
@@ -114,6 +117,7 @@ def sriov_vm2(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="sriov-vm2",
         namespace=namespace,
@@ -125,6 +129,7 @@ def sriov_vm2(
 
 @pytest.fixture(scope="class")
 def sriov_vm3(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     index_number,
@@ -144,6 +149,7 @@ def sriov_vm3(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="sriov-vm3",
         namespace=namespace,
@@ -155,6 +161,7 @@ def sriov_vm3(
 
 @pytest.fixture(scope="class")
 def sriov_vm4(
+    admin_client,
     ipv4_supported_cluster,
     ipv6_supported_cluster,
     index_number,
@@ -174,6 +181,7 @@ def sriov_vm4(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="sriov-vm4",
         namespace=namespace,
@@ -239,6 +247,7 @@ def sriov_network_mtu_9000(sriov_vm1, sriov_vm2):
 
 @pytest.fixture(scope="class")
 def sriov_vm_migrate(
+    admin_client,
     index_number,
     unprivileged_client,
     namespace,
@@ -257,6 +266,7 @@ def sriov_vm_migrate(
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
+        admin_client=admin_client,
         unprivileged_client=unprivileged_client,
         name="sriov-vm-migrate",
         namespace=namespace,

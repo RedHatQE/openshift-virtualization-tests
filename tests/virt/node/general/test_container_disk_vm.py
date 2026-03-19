@@ -7,6 +7,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 @pytest.mark.smoke
 @pytest.mark.polarion("CNV-5501")
 def test_container_disk_vm(
+    admin_client,
     namespace,
     unprivileged_client,
 ):
@@ -15,6 +16,6 @@ def test_container_disk_vm(
         namespace=namespace.name,
         name=name,
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)

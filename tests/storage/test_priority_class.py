@@ -53,6 +53,7 @@ def vm_with_priority_class(
     dv_dict,
     priority_class,
     unprivileged_client,
+    admin_client,
 ):
     vm_priority_class = priority_class["vm_priority_class"]
     vm_name = "priority-vm"
@@ -65,7 +66,7 @@ def vm_with_priority_class(
         },
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         priority_class_name=vm_priority_class.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         client=unprivileged_client,
     ) as vm:

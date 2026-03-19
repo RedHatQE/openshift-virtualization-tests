@@ -79,12 +79,12 @@ def stopped_vm_metric_1(vm_metric_1):
 
 
 @pytest.fixture()
-def vm_in_error_state(namespace):
+def vm_in_error_state(admin_client, namespace):
     vm_name = "vm-in-error-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector="non-existent-node"),
     ) as vm:
         vm.start()
@@ -106,12 +106,12 @@ def pvc_for_vm_in_starting_state(unprivileged_client, namespace):
 
 
 @pytest.fixture()
-def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
+def vm_in_starting_state(admin_client, namespace, pvc_for_vm_in_starting_state):
     vm_name = "vm-in-starting-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         pvc=pvc_for_vm_in_starting_state,
     ) as vm:
         vm.start()
@@ -120,12 +120,12 @@ def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
 
 
 @pytest.fixture(scope="class")
-def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
+def vm_metric_1(admin_client, namespace, unprivileged_client, cluster_common_node_cpu):
     vm_name = "vm-metrics-1"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         client=unprivileged_client,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
         cpu_model=cluster_common_node_cpu,

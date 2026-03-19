@@ -150,12 +150,12 @@ def enabled_feature_gate_for_declarative_hotplug_volumes_upg(
 
 
 @pytest.fixture(scope="session")
-def fedora_vm_for_hotplug_upg(upgrade_namespace_scope_session, cluster_common_node_cpu):
+def fedora_vm_for_hotplug_upg(admin_client, upgrade_namespace_scope_session, cluster_common_node_cpu):
     name = "fedora-hotplug-upg"
     with VirtualMachineForTests(
         name=name,
         namespace=upgrade_namespace_scope_session.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cpu_model=cluster_common_node_cpu,
         client=upgrade_namespace_scope_session.client,
     ) as vm:

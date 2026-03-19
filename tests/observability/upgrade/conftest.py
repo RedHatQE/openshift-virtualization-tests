@@ -8,12 +8,14 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture(scope="session")
-def vm_with_node_selector_for_upgrade(namespace_for_outdated_vm_upgrade, unprivileged_client, worker_node1):
+def vm_with_node_selector_for_upgrade(
+    namespace_for_outdated_vm_upgrade, unprivileged_client, worker_node1, admin_client
+):
     name = "vm-with-node-selector"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace_for_outdated_vm_upgrade.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,

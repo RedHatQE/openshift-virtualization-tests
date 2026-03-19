@@ -35,12 +35,12 @@ def assert_kubevirt_cpu_model(kubevirt_resource, hco_resource):
     )
 
 
-def create_vm(client, namespace):
+def create_vm(admin_client, client, namespace):
     name = "fedora-vm-for-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
@@ -63,13 +63,13 @@ def updated_vmi_cpu_model(nodes_cpu_architecture, cluster_common_node_cpu):
 
 
 @pytest.fixture(scope="module")
-def fedora_vm_scope_module(unprivileged_client, namespace):
-    yield from create_vm(client=unprivileged_client, namespace=namespace)
+def fedora_vm_scope_module(admin_client, unprivileged_client, namespace):
+    yield from create_vm(admin_client=admin_client, client=unprivileged_client, namespace=namespace)
 
 
 @pytest.fixture()
-def fedora_vm_scope_function(unprivileged_client, namespace):
-    yield from create_vm(client=unprivileged_client, namespace=namespace)
+def fedora_vm_scope_function(admin_client, unprivileged_client, namespace):
+    yield from create_vm(admin_client=admin_client, client=unprivileged_client, namespace=namespace)
 
 
 @pytest.fixture()

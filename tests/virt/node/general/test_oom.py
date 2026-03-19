@@ -32,12 +32,12 @@ def verify_vm_not_crashed(vm, admin_client):
 
 
 @pytest.fixture()
-def fedora_oom_vm(namespace, unprivileged_client):
+def fedora_oom_vm(admin_client, namespace, unprivileged_client):
     name = "oom-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_cores=2,

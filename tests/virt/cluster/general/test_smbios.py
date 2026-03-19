@@ -13,12 +13,12 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.conforma
 
 
 @pytest.fixture()
-def configmap_smbios_vm(namespace):
+def configmap_smbios_vm(admin_client, namespace):
     name = "configmap-smbios-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm

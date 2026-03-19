@@ -43,7 +43,7 @@ def assert_bond_validation(utility_pods, bond):
 
 
 @contextmanager
-def create_vm(namespace, nad, node_selector, unprivileged_client):
+def create_vm(admin_client, namespace, nad, node_selector, unprivileged_client):
     name = "bond-vm"
     networks = OrderedDict()
     networks[nad.name] = nad.name
@@ -51,7 +51,7 @@ def create_vm(namespace, nad, node_selector, unprivileged_client):
     with VirtualMachineForTests(
         namespace=namespace,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         node_selector=node_selector,
@@ -122,6 +122,7 @@ def matrix_bond_modes_bridge(
 
 @pytest.fixture()
 def bond_modes_vm(
+    admin_client,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -133,6 +134,7 @@ def bond_modes_vm(
         nad=bond_modes_nad,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         unprivileged_client=unprivileged_client,
+        admin_client=admin_client,
     ) as vm:
         yield vm
 
@@ -179,6 +181,7 @@ def active_backup_bond_with_fail_over_mac(
 
 @pytest.fixture()
 def vm_with_fail_over_mac_bond(
+    admin_client,
     worker_node1,
     namespace,
     unprivileged_client,
@@ -191,6 +194,7 @@ def vm_with_fail_over_mac_bond(
         nad=bond_modes_nad,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         unprivileged_client=unprivileged_client,
+        admin_client=admin_client,
     ) as vm:
         yield vm
 

@@ -144,12 +144,12 @@ def hco_uninstall_strategy_remove_workloads(
 
 
 @pytest.fixture(scope="class")
-def hco_fedora_vm(unprivileged_client, namespace):
+def hco_fedora_vm(admin_client, unprivileged_client, namespace):
     name = "cascade-delete-fedora-vm"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:

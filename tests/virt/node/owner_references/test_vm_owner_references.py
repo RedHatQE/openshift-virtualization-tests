@@ -16,7 +16,7 @@ def fedora_vm(admin_client, unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         vm.start(wait=True)

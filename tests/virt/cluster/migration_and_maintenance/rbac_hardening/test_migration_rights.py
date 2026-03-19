@@ -30,13 +30,13 @@ def unprivileged_user_migrate_rolebinding(admin_client, namespace, kubevirt_migr
 
 
 @pytest.fixture(scope="module")
-def unprivileged_user_vm(unprivileged_client, namespace):
+def unprivileged_user_vm(admin_client, unprivileged_client, namespace):
     name = "namespace-admin-vm"
     with VirtualMachineForTests(
         name=name,
         client=unprivileged_client,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
     ) as vm:
         running_vm(vm=vm)
         yield vm

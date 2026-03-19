@@ -38,7 +38,9 @@ def vm_nad_networks_data(upgrade_linux_macspoof_nad):
 
 
 @pytest.fixture(scope="session")
-def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
+def vma_upgrade_mac_spoof(
+    admin_client, worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data
+):
     name = "vma-macspoof"
     with VirtualMachineForTests(
         name=name,
@@ -47,7 +49,7 @@ def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
         cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=1)),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         eviction_strategy=ES_NONE,
@@ -56,7 +58,9 @@ def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
 
 
 @pytest.fixture(scope="session")
-def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data):
+def vmb_upgrade_mac_spoof(
+    admin_client, worker_node1, unprivileged_client, upgrade_linux_macspoof_nad, vm_nad_networks_data
+):
     name = "vmb-macspoof"
     with VirtualMachineForTests(
         name=name,
@@ -65,7 +69,7 @@ def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
         cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=2)),
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         eviction_strategy=ES_NONE,
@@ -98,6 +102,7 @@ def namespace_with_disabled_kmp(admin_client):
 
 @pytest.fixture(scope="session")
 def running_vm_with_bridge(
+    admin_client,
     unprivileged_client,
     upgrade_namespace_scope_session,
     upgrade_br1test_nad,
@@ -109,7 +114,7 @@ def running_vm_with_bridge(
         networks={upgrade_br1test_nad.name: upgrade_br1test_nad.name},
         interfaces=[upgrade_br1test_nad.name],
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         eviction_strategy=ES_NONE,
     ) as vm:
         vm.start(wait=True)

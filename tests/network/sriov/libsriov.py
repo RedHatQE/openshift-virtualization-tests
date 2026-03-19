@@ -20,6 +20,7 @@ def sriov_vm(
     namespace,
     sriov_network,
     cloud_init_data,
+    admin_client,
     worker=None,
 ):
     sriov_mac = cloud_init_data["networkData"]["ethernets"]["1"]["match"]["macaddress"]
@@ -28,7 +29,7 @@ def sriov_vm(
     vm_kwargs = {
         "namespace": namespace.name,
         "name": name,
-        "body": fedora_vm_body(name=name),
+        "body": fedora_vm_body(name=name, admin_client=admin_client),
         "networks": networks,
         "interfaces": networks.keys(),
         "cloud_init_data": cloud_init_data,

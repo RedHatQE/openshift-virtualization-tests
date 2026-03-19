@@ -21,7 +21,7 @@ def check_vm_dumpxml(vm, admin_client, cores=None, sockets=None, threads=None):
 
 
 @pytest.fixture()
-def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_client):
+def vm_with_cpu_support(request, admin_client, is_s390x_cluster, namespace, unprivileged_client):
     """
     VM with CPU support (cores,sockets,threads)
     """
@@ -33,7 +33,7 @@ def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_clien
         cpu_sockets=request.param["sockets"],
         cpu_threads=1 if is_s390x_cluster else request.param["threads"],
         cpu_max_sockets=request.param["sockets"] or 1,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
@@ -81,7 +81,7 @@ def test_vm_with_cpu_support(admin_client, vm_with_cpu_support):
 
 
 @pytest.fixture()
-def no_cpu_settings_vm(namespace, unprivileged_client):
+def no_cpu_settings_vm(admin_client, namespace, unprivileged_client):
     """
     Create VM without specific CPU settings
     """
@@ -89,7 +89,7 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         vm.start(wait=True)
@@ -125,7 +125,7 @@ def test_vm_with_cpu_limitation(admin_client, namespace, unprivileged_client):
         cpu_limits=2,
         cpu_requests=2,
         cpu_max_sockets=1,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         client=unprivileged_client,
     ) as vm:
         vm.start(wait=True)
@@ -135,7 +135,7 @@ def test_vm_with_cpu_limitation(admin_client, namespace, unprivileged_client):
 
 @pytest.mark.polarion("CNV-2819")
 @pytest.mark.s390x
-def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
+def test_vm_with_cpu_limitation_negative(admin_client, namespace, unprivileged_client):
     """
     Test VM with cpu limitation
     negative case: CPU requests is larger then limits
@@ -147,7 +147,7 @@ def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
             namespace=namespace.name,
             cpu_limits=2,
             cpu_requests=4,
-            body=fedora_vm_body(name=name),
+            body=fedora_vm_body(name=name, admin_client=admin_client),
             client=unprivileged_client,
         ):
             return

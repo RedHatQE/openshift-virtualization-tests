@@ -77,6 +77,7 @@ def create_vm_with_secondary_interface_on_setup(
     bridge_nad,
     vm_name,
     ipv4_address_suffix,
+    admin_client,
 ):
     networks = {bridge_nad.name: bridge_nad.name}
     cloud_init_data = compose_cloud_init_data_dict(
@@ -101,7 +102,7 @@ def create_vm_with_secondary_interface_on_setup(
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         networks=networks,
         interfaces=networks.keys(),
         cloud_init_data=cloud_init_data,
@@ -245,6 +246,7 @@ def create_vm_for_hot_plug(
     namespace_name,
     vm_name,
     client,
+    admin_client,
 ):
     cloud_init_data = {"userData": {}}
     update_cloud_init_extra_user_data(
@@ -255,7 +257,7 @@ def create_vm_for_hot_plug(
     with VirtualMachineForTests(
         namespace=namespace_name,
         name=vm_name,
-        body=fedora_vm_body(name=vm_name),
+        body=fedora_vm_body(name=vm_name, admin_client=admin_client),
         client=client,
         cloud_init_data=cloud_init_data,
     ) as vm:
@@ -318,11 +320,13 @@ def create_vm_with_hot_plugged_sriov_interface(
     sriov_network_for_hot_plug,
     ipv4_address,
     client,
+    admin_client,
 ):
     with create_vm_for_hot_plug(
         namespace_name=namespace_name,
         vm_name=vm_name,
         client=client,
+        admin_client=admin_client,
     ) as vm:
         hot_plug_interface_and_set_address(
             vm=vm,
@@ -372,6 +376,7 @@ def bridge_attached_vm(
     mpls_dest_tag,
     mpls_route_next_hop,
     mpls_local_ip,
+    admin_client,
     cloud_init_extra_user_data=None,
     client=None,
     node_selector=None,
@@ -396,6 +401,7 @@ def bridge_attached_vm(
         mpls_dest_ip=mpls_dest_ip,
         mpls_dest_tag=mpls_dest_tag,
         mpls_route_next_hop=mpls_route_next_hop,
+        admin_client=admin_client,
         client=client,
         cloud_init_data=cloud_init_data,
         node_selector=node_selector,
@@ -466,10 +472,12 @@ class VirtualMachineAttachedToBridge(VirtualMachineForTests):
         mpls_dest_ip: str,
         mpls_dest_tag: int,
         mpls_route_next_hop: str,
+        admin_client: DynamicClient,
         client: DynamicClient | None = None,
         cloud_init_data: dict[str, dict] | None = None,
         node_selector: dict[str, str] | None = None,
     ):
+        self.admin_client = admin_client
         self.cloud_init_data = cloud_init_data
         self.mpls_local_tag = mpls_local_tag
         self.ip_addresses = ip_addresses
@@ -493,5 +501,5 @@ class VirtualMachineAttachedToBridge(VirtualMachineForTests):
         )
 
     def to_dict(self) -> None:
-        self.body = fedora_vm_body(name=self.name)
+        self.body = fedora_vm_body(name=self.name, admin_client=self.admin_client)
         super().to_dict()  # type: ignore[no-untyped-call]

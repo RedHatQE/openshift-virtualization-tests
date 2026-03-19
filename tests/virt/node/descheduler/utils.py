@@ -204,6 +204,7 @@ def deploy_vms(
     vm_count,
     deployment_size,
     descheduler_eviction,
+    admin_client,
     node_selector_labels=None,
     vm_affinity=None,
 ):
@@ -218,7 +219,7 @@ def deploy_vms(
             memory_guest=deployment_size["memory"].bytes,
             cpu_model=cpu_model,
             descheduler_eviction=descheduler_eviction,
-            body=fedora_vm_body(name=vm_name),
+            body=fedora_vm_body(name=vm_name, admin_client=admin_client),
             node_selector_labels=node_selector_labels,
             vm_affinity=vm_affinity,
         )

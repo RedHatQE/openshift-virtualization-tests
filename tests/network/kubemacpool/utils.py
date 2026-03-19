@@ -2,6 +2,8 @@ import logging
 from collections import namedtuple
 from ipaddress import ip_interface
 
+from kubernetes.dynamic import DynamicClient
+
 from tests.network.libs.ip import random_ipv4_address
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
@@ -49,7 +51,7 @@ def vm_network_config(mac_pool, all_nads, end_ip_octet, mac_uid):
     }
 
 
-def create_vm(name, namespace, iface_config, node_selector, client, mac_pool):
+def create_vm(admin_client, name, namespace, iface_config, node_selector, client, mac_pool):
     network_data_data = {}
     _data = {
         iface: {"addresses": [f"{iface_config[iface].ip_address}/24"]}
@@ -74,6 +76,7 @@ def create_vm(name, namespace, iface_config, node_selector, client, mac_pool):
         node_selector=node_selector,
         client=client,
         cloud_init_data=cloud_init_data,
+        admin_client=admin_client,
     ) as vm:
         mac_pool.append_macs(vm=vm)
         yield vm
@@ -87,9 +90,11 @@ class VirtualMachineWithMultipleAttachments(VirtualMachineForTests):
         namespace,
         iface_config,
         node_selector,
+        admin_client: DynamicClient,
         client=None,
         cloud_init_data=None,
     ):
+        self.admin_client = admin_client
         self.iface_config = iface_config
 
         networks = {}
@@ -132,7 +137,7 @@ class VirtualMachineWithMultipleAttachments(VirtualMachineForTests):
         return self.iface_config["eth4"]
 
     def to_dict(self):
-        self.body = fedora_vm_body(name=self.name)
+        self.body = fedora_vm_body(name=self.name, admin_client=self.admin_client)
         super().to_dict()
         for mac, iface in zip(
             self.iface_config.values(),

@@ -15,12 +15,14 @@ from utilities.network import network_device, network_nad
 
 @pytest.fixture(scope="class")
 def running_vma_jumbo_primary_interface_worker_1(
+    admin_client,
     worker_node1,
     namespace,
     index_number,
     unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
+        admin_client=admin_client,
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -33,12 +35,14 @@ def running_vma_jumbo_primary_interface_worker_1(
 
 @pytest.fixture(scope="class")
 def running_vmb_jumbo_primary_interface_worker_2(
+    admin_client,
     worker_node2,
     namespace,
     index_number,
     unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
+        admin_client=admin_client,
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -51,12 +55,14 @@ def running_vmb_jumbo_primary_interface_worker_2(
 
 @pytest.fixture()
 def running_vmc_jumbo_primary_interface_worker_1(
+    admin_client,
     worker_node1,
     namespace,
     index_number,
     unprivileged_client,
 ):
     with create_vm_for_jumbo_test(
+        admin_client=admin_client,
         index=next(index_number),
         namespace_name=namespace.name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -69,6 +75,7 @@ def running_vmc_jumbo_primary_interface_worker_1(
 
 @pytest.fixture()
 def running_vmd_jumbo_primary_interface_and_secondary_interface(
+    admin_client,
     index_number,
     namespace,
     unprivileged_client,
@@ -77,6 +84,7 @@ def running_vmd_jumbo_primary_interface_and_secondary_interface(
     index = next(index_number)
     cloud_init_data = cloud_init_data_for_secondary_traffic(index=index)
     with create_vm_for_jumbo_test(
+        admin_client=admin_client,
         index=index,
         namespace_name=namespace.name,
         client=unprivileged_client,
@@ -90,6 +98,7 @@ def running_vmd_jumbo_primary_interface_and_secondary_interface(
 
 @pytest.fixture()
 def running_vme_jumbo_primary_interface_and_secondary_interface(
+    admin_client,
     index_number,
     namespace,
     unprivileged_client,
@@ -98,6 +107,7 @@ def running_vme_jumbo_primary_interface_and_secondary_interface(
     index = next(index_number)
     cloud_init_data = cloud_init_data_for_secondary_traffic(index=index)
     with create_vm_for_jumbo_test(
+        admin_client=admin_client,
         index=index,
         namespace_name=namespace.name,
         client=unprivileged_client,

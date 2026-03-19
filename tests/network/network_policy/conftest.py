@@ -54,6 +54,7 @@ def allow_single_http_port(unprivileged_client, namespace_1):
 
 @pytest.fixture(scope="module")
 def network_policy_vma(
+    admin_client,
     unprivileged_client,
     worker_node1,
     namespace_1,
@@ -68,7 +69,7 @@ def network_policy_vma(
     with VirtualMachineForTests(
         namespace=namespace_1.name,
         name=name,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
         cloud_init_data=cloud_init_data,
@@ -79,7 +80,9 @@ def network_policy_vma(
 
 
 @pytest.fixture(scope="module")
-def network_policy_vmb(unprivileged_client, worker_node1, namespace_2, ipv6_primary_interface_cloud_init_data):
+def network_policy_vmb(
+    admin_client, unprivileged_client, worker_node1, namespace_2, ipv6_primary_interface_cloud_init_data
+):
     name = "vmb-network-policy"
     cloud_init_data = compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
     with VirtualMachineForTests(
@@ -87,7 +90,7 @@ def network_policy_vmb(unprivileged_client, worker_node1, namespace_2, ipv6_prim
         name=name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         client=unprivileged_client,
-        body=fedora_vm_body(name=name),
+        body=fedora_vm_body(name=name, admin_client=admin_client),
         cloud_init_data=cloud_init_data,
     ) as vm:
         vm.start(wait=True)

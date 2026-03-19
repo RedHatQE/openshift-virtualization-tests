@@ -73,6 +73,7 @@ LOGGER = logging.getLogger(__name__)
 def create_vms(
     name_prefix,
     namespace_name,
+    admin_client,
     vm_count=NUM_TEST_VMS,
     client=None,
     ssh=True,
@@ -85,6 +86,7 @@ def create_vms(
     Args:
         name_prefix (str): prefix to be used to name virtualmachines
         namespace_name (str): Namespace to be used for vm creation
+        admin_client (DynamicClient): Admin client for cluster-scoped operations
         vm_count (int): Number of vms to be created
         node_selector_labels (str): Labels for node selector.
         client (DynamicClient): DynamicClient object
@@ -100,7 +102,7 @@ def create_vms(
         with VirtualMachineForTests(
             name=vm_name,
             namespace=namespace_name,
-            body=fedora_vm_body(name=vm_name),
+            body=fedora_vm_body(name=vm_name, admin_client=admin_client),
             node_selector_labels=node_selector_labels,
             teardown=False,
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
