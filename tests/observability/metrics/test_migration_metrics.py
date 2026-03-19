@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -55,7 +55,7 @@ class TestKubevirtVmiMigrationMetrics:
         query,
     ):
         minutes_passed_since_migration_start = (
-            int(datetime.now(timezone.utc).timestamp())
+            int(datetime.now(UTC).timestamp())
             - timestamp_to_seconds(
                 timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
             )
@@ -63,7 +63,7 @@ class TestKubevirtVmiMigrationMetrics:
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
-            f"[{minutes_passed_since_migration_start if minutes_passed_since_migration_start > 10 else 10}m])",
+            f"[{max(10, minutes_passed_since_migration_start)}m])",
         )
 
 
