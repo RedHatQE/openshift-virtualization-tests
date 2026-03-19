@@ -46,7 +46,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def virt_upgrade_namespace(admin_client, unprivileged_client):
+def virt_upgrade_namespace(admin_client, unprivileged_client, keep_upgrade_test_resources):
     """
     Namespace for optin test VMs with no node selectors/special resources in spec that may block live migration.
     """
@@ -54,11 +54,12 @@ def virt_upgrade_namespace(admin_client, unprivileged_client):
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
         name="test-virt-upgrade-namespace",
+        teardown=not keep_upgrade_test_resources,
     )
 
 
 @pytest.fixture(scope="session")
-def datasources_for_upgrade(admin_client, dvs_for_upgrade):
+def datasources_for_upgrade(admin_client, dvs_for_upgrade, keep_upgrade_test_resources):
     data_source_list = []
     for dv in dvs_for_upgrade:
         data_source = DataSource(
@@ -67,13 +68,15 @@ def datasources_for_upgrade(admin_client, dvs_for_upgrade):
             client=admin_client,
             source=generate_data_source_dict(dv=dv),
         )
-        data_source.deploy()
+        if not data_source.exists:
+            data_source.deploy()
         data_source_list.append(data_source)
 
     yield data_source_list
 
-    for data_source in data_source_list:
-        data_source.clean_up()
+    if not keep_upgrade_test_resources:
+        for data_source in data_source_list:
+            data_source.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -86,6 +89,7 @@ def vms_for_upgrade(
     sno_cluster,
     vm_with_instancetypes_for_upgrade,
     pytestconfig,
+    keep_upgrade_test_resources,
 ):
     vms_list = [vm_with_instancetypes_for_upgrade]
     try:
@@ -100,9 +104,10 @@ def vms_for_upgrade(
                     cpu_model=cpu_for_migration,
                     sno_cluster=sno_cluster,
                 )
-                vm.deploy()
+                if not vm.exists:
+                    vm.deploy()
+                    vm.start(timeout=TIMEOUT_40MIN, wait=False)
                 vms_list.append(vm)
-                vm.start(timeout=TIMEOUT_40MIN, wait=False)
 
         for vm in vms_list:
             running_vm(vm=vm, wait_for_cloud_init=True)
@@ -110,28 +115,41 @@ def vms_for_upgrade(
         yield vms_list
 
     finally:
-        for vm in vms_list:
-            vm.clean_up()
+        if not keep_upgrade_test_resources:
+            for vm in vms_list:
+                vm.clean_up()
 
 
 @pytest.fixture(scope="session")
-def vm_cluster_preference_for_upgrade(admin_client):
-    with VirtualMachineClusterPreference(
+def vm_cluster_preference_for_upgrade(admin_client, keep_upgrade_test_resources):
+    vm_cluster_preference = VirtualMachineClusterPreference(
         name="basic-cluster-preference-for-upgrade",
         client=admin_client,
-    ) as vm_cluster_preference:
-        yield vm_cluster_preference
+    )
+    if not vm_cluster_preference.exists:
+        vm_cluster_preference.deploy()
+
+    yield vm_cluster_preference
+
+    if not keep_upgrade_test_resources:
+        vm_cluster_preference.clean_up()
 
 
 @pytest.fixture(scope="session")
-def vm_cluster_instancetype_for_upgrade(admin_client, cluster_common_node_cpu):
-    with VirtualMachineClusterInstancetype(
+def vm_cluster_instancetype_for_upgrade(admin_client, cluster_common_node_cpu, keep_upgrade_test_resources):
+    cluster_instance_type = VirtualMachineClusterInstancetype(
         name="basic-cluster-instancetype-for-upgrade",
         cpu={"guest": 1, "model": cluster_common_node_cpu},
         memory={"guest": Images.Rhel.DEFAULT_MEMORY_SIZE},
         client=admin_client,
-    ) as cluster_instance_type:
-        yield cluster_instance_type
+    )
+    if not cluster_instance_type.exists:
+        cluster_instance_type.deploy()
+
+    yield cluster_instance_type
+
+    if not keep_upgrade_test_resources:
+        cluster_instance_type.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -141,8 +159,9 @@ def vm_with_instancetypes_for_upgrade(
     vm_cluster_instancetype_for_upgrade,
     vm_cluster_preference_for_upgrade,
     datasources_for_upgrade,
+    keep_upgrade_test_resources,
 ):
-    with VirtualMachineForTests(
+    vm = VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-instance-type",
         namespace=virt_upgrade_namespace.name,
@@ -150,8 +169,14 @@ def vm_with_instancetypes_for_upgrade(
         vm_instance_type=vm_cluster_instancetype_for_upgrade,
         vm_preference=vm_cluster_preference_for_upgrade,
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=datasources_for_upgrade[0]),
-    ) as vm:
-        yield vm
+    )
+    if not vm.exists:
+        vm.deploy()
+
+    yield vm
+
+    if not keep_upgrade_test_resources:
+        vm.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -190,6 +215,7 @@ def manual_run_strategy_vm(
     run_strategy_golden_image_data_source,
     cpu_for_migration,
     rhel_latest_os_params,
+    keep_upgrade_test_resources,
 ):
     with vm_from_template(
         vm_name="manual-run-strategy-vm",
@@ -200,8 +226,10 @@ def manual_run_strategy_vm(
         run_strategy=VirtualMachine.RunStrategy.MANUAL,
         cpu_model=cpu_for_migration,
         eviction_strategy=ES_LIVE_MIGRATE_IF_POSSIBLE,
+        teardown=not keep_upgrade_test_resources,
     ) as vm:
-        vm.start()
+        if not vm.vmi:
+            vm.start()
         yield vm
 
 
@@ -212,6 +240,7 @@ def always_run_strategy_vm(
     run_strategy_golden_image_data_source,
     cpu_for_migration,
     rhel_latest_os_params,
+    keep_upgrade_test_resources,
 ):
     with vm_from_template(
         vm_name="always-run-strategy-vm",
@@ -222,6 +251,7 @@ def always_run_strategy_vm(
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_for_migration,
         eviction_strategy=ES_LIVE_MIGRATE_IF_POSSIBLE,
+        teardown=not keep_upgrade_test_resources,
     ) as vm:
         # No need to start the VM as the VM will be automatically started (RunStrategy Always)
         yield vm
@@ -243,6 +273,7 @@ def windows_vm(
     unprivileged_client,
     virt_upgrade_namespace,
     modern_cpu_for_migration,
+    keep_upgrade_test_resources,
 ):
     latest_windows_dict = py_config["latest_windows_os_dict"]
     with create_dv(
@@ -254,6 +285,7 @@ def windows_vm(
         access_modes=py_config["default_access_mode"],
         volume_mode=py_config["default_volume_mode"],
         size=latest_windows_dict["dv_size"],
+        teardown=not keep_upgrade_test_resources,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
         with DataSource(
@@ -261,6 +293,7 @@ def windows_vm(
             namespace=dv.namespace,
             client=admin_client,
             source=generate_data_source_dict(dv=dv),
+            teardown=not keep_upgrade_test_resources,
         ) as ds:
             with vm_from_template(
                 vm_name="windows-vm",
@@ -269,6 +302,7 @@ def windows_vm(
                 template_labels=latest_windows_dict["template_labels"],
                 data_source=ds,
                 cpu_model=modern_cpu_for_migration,
+                teardown=not keep_upgrade_test_resources,
             ) as vm:
                 running_vm(vm=vm)
                 yield vm
@@ -280,14 +314,20 @@ def base_templates_after_upgrade(admin_client):
 
 
 @pytest.fixture(scope="session")
-def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_image_dv):
-    with DataSource(
+def run_strategy_golden_image_data_source(admin_client, run_strategy_golden_image_dv, keep_upgrade_test_resources):
+    ds = DataSource(
         name=run_strategy_golden_image_dv.name,
         namespace=run_strategy_golden_image_dv.namespace,
         client=admin_client,
         source=generate_data_source_dict(dv=run_strategy_golden_image_dv),
-    ) as ds:
-        yield ds
+    )
+    if not ds.exists:
+        ds.deploy()
+
+    yield ds
+
+    if not keep_upgrade_test_resources:
+        ds.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -321,8 +361,8 @@ def windows_boot_time_before_upgrade(windows_vm):
 
 
 @pytest.fixture(scope="session")
-def post_copy_migration_policy_for_upgrade(admin_client):
-    with MigrationPolicy(
+def post_copy_migration_policy_for_upgrade(admin_client, keep_upgrade_test_resources):
+    mp = MigrationPolicy(
         name="post-copy-migration-policy",
         allow_auto_converge=True,
         bandwidth_per_migration="100Mi",
@@ -330,23 +370,37 @@ def post_copy_migration_policy_for_upgrade(admin_client):
         allow_post_copy=True,
         vmi_selector=VM_LABEL,
         client=admin_client,
-    ) as mp:
-        yield mp
+    )
+    if not mp.exists:
+        mp.deploy()
+
+    yield mp
+
+    if not keep_upgrade_test_resources:
+        mp.clean_up()
 
 
 @pytest.fixture(scope="session")
-def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_for_migration):
+def vm_for_post_copy_upgrade(
+    virt_upgrade_namespace, unprivileged_client, cpu_for_migration, keep_upgrade_test_resources
+):
     vm_name = "vm-for-post-copy-upgrade-test"
-    with VirtualMachineForTests(
+    vm = VirtualMachineForTests(
         name=vm_name,
         namespace=virt_upgrade_namespace.name,
         body=fedora_vm_body(name=vm_name),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
         additional_labels=VM_LABEL,
-    ) as vm:
+    )
+    if not vm.exists:
+        vm.deploy()
         running_vm(vm=vm)
-        yield vm
+
+    yield vm
+
+    if not keep_upgrade_test_resources:
+        vm.clean_up()
 
 
 @pytest.fixture(scope="session")
