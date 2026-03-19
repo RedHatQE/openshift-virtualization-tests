@@ -9,8 +9,8 @@ from tests.utils import (
     clean_up_migration_jobs,
     wait_for_guest_os_cpu_count,
 )
-from tests.virt.constants import VM_LABEL
-from tests.virt.utils import assert_migration_post_copy_mode
+from tests.virt.constants import AWD_VM_LABEL, VM_LABEL
+from tests.virt.utils import assert_migration_paused_mode, assert_migration_post_copy_mode
 from utilities.constants import (
     REGEDIT_PROC_NAME,
     SIX_CPU_SOCKETS,
@@ -28,7 +28,7 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.usefixtures("created_post_copy_migration_policy")]
+pytestmark = [pytest.mark.rwx_default_storage]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -82,6 +82,19 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
     clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 
+@pytest.fixture(scope="class")
+def awd_migration_policy():
+    with MigrationPolicy(
+        name="awd-migration-policy",
+        allow_workload_disruption=True,
+        allow_post_copy=False,
+        bandwidth_per_migration="100Mi",
+        completion_timeout_per_gb=1,
+        vmi_selector=AWD_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class, hotplugged_vm",
     [
@@ -107,6 +120,7 @@ def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("created_post_copy_migration_policy")
 class TestPostCopyMigration:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-11421")
@@ -137,3 +151,26 @@ class TestPostCopyMigration:
     def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm, vm_background_process_id):
         assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=SIX_GI_MEMORY)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=hotplugged_vm)
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
+    [
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-awd-vm",
+                "additional_labels": AWD_VM_LABEL,
+            },
+            id="RHEL-VM",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("awd_migration_policy")
+class TestWorkloadDisruptionMigration:
+    @pytest.mark.polarion("CNV-15225")
+    def test_migration_completes_via_pause_mode(self, hotplugged_vm, migrated_hotplugged_vm):
+        """Verify migration completes via Paused mode when allowWorkloadDisruption is enabled."""
+        assert_migration_paused_mode(vm=hotplugged_vm)
