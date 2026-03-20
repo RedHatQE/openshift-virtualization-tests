@@ -14,7 +14,7 @@ from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64]
+pytestmark = [pytest.mark.sno, pytest.mark.arm64]
 
 
 @pytest.fixture()
@@ -29,36 +29,6 @@ def pods_list_with_given_prefix(request, admin_client, hco_namespace):
     )
     assert pods_list_by_prefix, f"Did not find pods with prefix: {pods_prefix_name} in namespace: {namespace_name}"
     return pods_list_by_prefix
-
-
-@pytest.mark.s390x
-@pytest.mark.polarion("CNV-3737")
-def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
-    LOGGER.info("Check SSP CR conditions.")
-    resource_conditions = {
-        condition.type: condition.status
-        for condition in ssp_resource_scope_function.instance.status.conditions
-        if condition.type in DEFAULT_RESOURCE_CONDITIONS.keys()
-    }
-    assert resource_conditions == DEFAULT_RESOURCE_CONDITIONS, (
-        f"SSP CR conditions failed. Actual: {resource_conditions}, expected: {DEFAULT_RESOURCE_CONDITIONS}."
-    )
-
-
-@pytest.mark.s390x
-@pytest.mark.parametrize(
-    "pods_list_with_given_prefix",
-    [
-        pytest.param({"pods_prefix_name": SSP_OPERATOR}, marks=pytest.mark.polarion("CNV-7002")),
-        pytest.param(
-            {"pods_prefix_name": VIRT_TEMPLATE_VALIDATOR},
-            marks=pytest.mark.polarion("CNV-7003"),
-        ),
-    ],
-    indirect=True,
-)
-def test_priority_class_value(pods_list_with_given_prefix):
-    verify_pods_priority_class_value(pods=pods_list_with_given_prefix, expected_value="system-cluster-critical")
 
 
 @pytest.fixture()
@@ -94,6 +64,38 @@ def virt_template_validator_without_podantiaffinity(
         if (pod.name not in virt_template_validator_without_affinity)
         and ("podAntiAffinity" not in pod.instance.to_dict()["spec"]["affinity"])
     ]
+
+
+@pytest.mark.post_upgrade
+@pytest.mark.s390x
+@pytest.mark.polarion("CNV-3737")
+def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
+    LOGGER.info("Check SSP CR conditions.")
+    resource_conditions = {
+        condition.type: condition.status
+        for condition in ssp_resource_scope_function.instance.status.conditions
+        if condition.type in DEFAULT_RESOURCE_CONDITIONS
+    }
+    assert resource_conditions == DEFAULT_RESOURCE_CONDITIONS, (
+        f"SSP CR conditions failed. Actual: {resource_conditions}, expected: {DEFAULT_RESOURCE_CONDITIONS}."
+    )
+
+
+@pytest.mark.post_upgrade
+@pytest.mark.s390x
+@pytest.mark.parametrize(
+    "pods_list_with_given_prefix",
+    [
+        pytest.param({"pods_prefix_name": SSP_OPERATOR}, marks=pytest.mark.polarion("CNV-7002")),
+        pytest.param(
+            {"pods_prefix_name": VIRT_TEMPLATE_VALIDATOR},
+            marks=pytest.mark.polarion("CNV-7003"),
+        ),
+    ],
+    indirect=True,
+)
+def test_priority_class_value(pods_list_with_given_prefix):
+    verify_pods_priority_class_value(pods=pods_list_with_given_prefix, expected_value="system-cluster-critical")
 
 
 @pytest.mark.s390x
