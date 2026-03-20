@@ -43,6 +43,11 @@ AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
+MULTIARCH = "multiarch"
+# Supported architectures for multi-arch runs
+SUPPORTED_MULTIARCH_OPTIONS = {AMD_64, ARM_64}
+# Supported architectures for single-arch runs
+SUPPORTED_CPU_ARCHITECTURES = {AMD_64, ARM_64, S390X}
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
@@ -203,8 +208,9 @@ class ArchImages:
         Windows = Windows()
 
 
-# Choose the Image class according to the architecture. Default: amd64
-Images = getattr(ArchImages, get_cluster_architecture().upper())
+# Choose the Image class according to the cluster architecture.
+# TODO: remove this when utilities modules are refactored
+Images = getattr(ArchImages, next(iter(get_cluster_architecture())).upper())
 
 
 # Virtctl constants

@@ -10,7 +10,6 @@ from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.pod import Pod
@@ -26,6 +25,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -34,7 +34,9 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     CDI_UPLOADPROXY,
+    LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
@@ -506,10 +508,28 @@ def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus
     assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
 
 
-def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
-    source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
-    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
-        "status", {}
-    ).get("restoreSize")
-    return dv_size
+def check_file_in_vm(
+    vm: VirtualMachineForTests,
+    file_name: str,
+    file_content: str,
+    username: str | None = None,
+    password: str | None = None,
+) -> None:
+    """
+    Check that a file exists in a VM with expected content.
+    VM must be running before calling this function.
+
+    Args:
+        vm: VirtualMachine instance
+        file_name: Name of the file to check
+        file_content: Expected content in the file
+        username: Optional username for console login (defaults to vm.username)
+        password: Optional password for console login (defaults to vm.password)
+    """
+    LOGGER.info(f"Verifying file {file_name} exists in VM {vm.name}")
+    with console.Console(vm=vm, username=username, password=password) as vm_console:
+        LOGGER.info(f"Checking file contents for {file_name} in VM {vm.name}")
+        vm_console.sendline(LS_COMMAND)
+        vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
+        vm_console.sendline(f"cat {file_name}")
+        vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)

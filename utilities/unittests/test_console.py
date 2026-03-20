@@ -98,6 +98,17 @@ class TestConsole:
 
         assert console.cmd == "virtctl console test-vm"
 
+    def test_console_generate_cmd_with_kubeconfig(self, mock_vm):
+        """Test _generate_cmd method with kubeconfig parameter"""
+        mock_vm.username = "user"
+        mock_vm.password = "pass"
+
+        with patch("console.VIRTCTL", "virtctl"):
+            console = Console(vm=mock_vm, kubeconfig="/path/to/kubeconfig")
+
+        # Should include --kubeconfig flag
+        assert console.cmd == "virtctl console test-vm -n test-namespace --kubeconfig /path/to/kubeconfig"
+
     @patch("console.pexpect.spawn")
     def test_console_enter(self, mock_spawn, mock_vm_no_namespace):
         """Test __enter__ method"""

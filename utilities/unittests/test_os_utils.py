@@ -15,7 +15,42 @@ from utilities.os_utils import (
     generate_latest_os_dict,
     generate_linux_instance_type_os_matrix,
     generate_os_matrix_dict,
+    get_windows_container_disk_path,
 )
+
+
+class TestGetWindowsContainerDiskPath:
+    """Test cases for get_windows_container_disk_path function"""
+
+    EXPECTED_DIR = "docker/kubevirt-common-instancetypes"
+
+    @pytest.mark.parametrize(
+        "os_value, expected_suffix",
+        [
+            pytest.param("win10", "windows10-container-disk:4.99", id="win10"),
+            pytest.param("win11", "windows11-container-disk:4.99", id="win11"),
+            pytest.param("win2k19", "windows2k19-container-disk:4.99", id="win2k19"),
+            pytest.param("win2k22", "windows2k22-container-disk:4.99", id="win2k22"),
+            pytest.param("win2k25", "windows2k25-container-disk:4.99", id="win2k25"),
+        ],
+    )
+    def test_get_windows_container_disk_path(self, os_value: str, expected_suffix: str):
+        """Test generating container disk path for valid Windows OS values"""
+        result = get_windows_container_disk_path(os_value=os_value)
+
+        assert result == f"{self.EXPECTED_DIR}/{expected_suffix}"
+
+    @pytest.mark.parametrize(
+        "os_value",
+        [
+            pytest.param("linux", id="linux"),
+            pytest.param("rhel9", id="rhel"),
+        ],
+    )
+    def test_get_windows_container_disk_path_invalid_os(self, os_value: str):
+        """Test error when os_value doesn't start with 'win'"""
+        with pytest.raises(ValueError, match="os_value must start with 'win'"):
+            get_windows_container_disk_path(os_value=os_value)
 
 
 class TestGenerateOsMatrixDict:
@@ -26,7 +61,7 @@ class TestGenerateOsMatrixDict:
         """Test RHEL OS matrix generation with single version"""
         mock_images.Rhel = mock_os_images["rhel"]
 
-        result = generate_os_matrix_dict("rhel", ["rhel-9-5"])
+        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
         assert len(result) == 1
         assert "rhel-9-5" in result[0]
@@ -65,7 +100,7 @@ class TestGenerateOsMatrixDict:
         """Test Windows OS matrix generation with UEFI support"""
         mock_images.Windows = mock_os_images["windows"]
 
-        result = generate_os_matrix_dict("windows", ["win-10", "win-2019"])
+        result = generate_os_matrix_dict(os_name="windows", supported_operating_systems=["win-10", "win-2019"])
 
         assert len(result) == 2
 
@@ -87,7 +122,7 @@ class TestGenerateOsMatrixDict:
         """Test Windows OS matrix generation without UEFI"""
         mock_images.Windows = mock_os_images["windows"]
 
-        result = generate_os_matrix_dict("windows", ["win-2022"])
+        result = generate_os_matrix_dict(os_name="windows", supported_operating_systems=["win-2022"])
 
         assert len(result) == 1
         win2022 = result[0]["win-2022"]
@@ -98,7 +133,7 @@ class TestGenerateOsMatrixDict:
         """Test Fedora OS matrix generation"""
         mock_images.Fedora = mock_os_images["fedora"]
 
-        result = generate_os_matrix_dict("fedora", ["fedora-43"])
+        result = generate_os_matrix_dict(os_name="fedora", supported_operating_systems=["fedora-43"])
 
         assert len(result) == 1
         fedora_config = result[0]["fedora-43"]
@@ -113,7 +148,7 @@ class TestGenerateOsMatrixDict:
         """Test CentOS OS matrix generation"""
         mock_images.Centos = mock_os_images["centos"]
 
-        result = generate_os_matrix_dict("centos", ["centos-stream-9"])
+        result = generate_os_matrix_dict(os_name="centos", supported_operating_systems=["centos-stream-9"])
 
         assert len(result) == 1
         centos_config = result[0]["centos-stream-9"]
@@ -124,7 +159,7 @@ class TestGenerateOsMatrixDict:
     def test_generate_os_matrix_unsupported_os(self):
         """Test error handling for unsupported OS"""
         with pytest.raises(ValueError, match="Unsupported OS: ubuntu"):
-            generate_os_matrix_dict("ubuntu", ["ubuntu-20-04"])
+            generate_os_matrix_dict(os_name="ubuntu", supported_operating_systems=["ubuntu-20-04"])
 
     def test_generate_os_matrix_empty_supported_versions(self, mock_os_images):
         """Test error handling for unsupported OS versions"""
@@ -132,7 +167,7 @@ class TestGenerateOsMatrixDict:
             mock_images.Rhel = mock_os_images["rhel"]
 
             with pytest.raises(ValueError, match="Unsupported OS versions: \\['rhel-6-1'\\] for rhel"):
-                generate_os_matrix_dict("rhel", ["rhel-6-1"])
+                generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-6-1"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_images_class(self, mock_images):
@@ -142,7 +177,7 @@ class TestGenerateOsMatrixDict:
         mock_images.Rhel = None
 
         with pytest.raises(ValueError, match="Unsupported OS: rhel.*Make sure it is supported"):
-            generate_os_matrix_dict("rhel", ["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_latest_release(self, mock_images, mock_os_images):
@@ -154,7 +189,7 @@ class TestGenerateOsMatrixDict:
         mock_images.Rhel = mock_class
 
         with pytest.raises(ValueError, match="rhel is missing `LATEST_RELEASE_STR` attribute"):
-            generate_os_matrix_dict("rhel", ["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_default_dv_size(self, mock_images, mock_os_images):
@@ -166,7 +201,7 @@ class TestGenerateOsMatrixDict:
         mock_images.Rhel = mock_class
 
         with pytest.raises(ValueError, match="rhel is missing `DEFAULT_DV_SIZE` attribute"):
-            generate_os_matrix_dict("rhel", ["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_image_attribute(self, mock_images, mock_os_images):
@@ -179,7 +214,7 @@ class TestGenerateOsMatrixDict:
         mock_images.Rhel = mock_class
 
         with pytest.raises(ValueError, match="rhel is missing RHEL9_5_IMG attribute"):
-            generate_os_matrix_dict("rhel", ["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_dir_attribute(self, mock_images, mock_os_images):
@@ -193,7 +228,7 @@ class TestGenerateOsMatrixDict:
         mock_images.Rhel = mock_class
 
         with pytest.raises(ValueError, match="rhel is missing `DIR` attribute"):
-            generate_os_matrix_dict("rhel", ["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_uefi_dir_attribute(self, mock_images, mock_os_images):
@@ -207,7 +242,28 @@ class TestGenerateOsMatrixDict:
         mock_images.Windows = mock_class
 
         with pytest.raises(ValueError, match="windows is missing `UEFI_WIN_DIR` attribute"):
-            generate_os_matrix_dict("windows", ["win-10"])
+            generate_os_matrix_dict(os_name="windows", supported_operating_systems=["win-10"])
+
+    @patch("utilities.os_utils.ArchImages")
+    @patch("utilities.os_utils.Images")
+    def test_generate_os_matrix_dict_with_arch_adds_architecture_labels(
+        self, mock_images, mock_arch_images, mock_os_images
+    ):
+        """Test that passing arch adds architecture to template_labels and data source suffix"""
+        mock_images.Rhel = mock_os_images["rhel"]
+        # When arch is set, getattr(ArchImages, "AMD64") is used
+        mock_arch_images.AMD64 = mock_os_images["rhel"]
+
+        result = generate_os_matrix_dict(
+            os_name="rhel",
+            supported_operating_systems=["rhel-9-5"],
+            arch="amd64",
+        )
+
+        assert len(result) == 1
+        rhel_config = result[0]["rhel-9-5"]
+        assert rhel_config["template_labels"]["architecture"] == "amd64"
+        assert rhel_config["data_source"] == "rhel9-amd64"
 
 
 class TestGenerateInstanceTypeRhelOsMatrix:
