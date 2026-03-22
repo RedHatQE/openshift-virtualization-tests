@@ -3,14 +3,13 @@ name: Auto-retest PRs after merge
 on:
   pull_request_target:
     types: [closed]
-    branches: [main]
 
 permissions:
   pull-requests: write
   contents: read
 
 concurrency:
-  group: auto-retest-main
+  group: auto-retest-${{ github.event.pull_request.base.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -28,6 +27,7 @@ jobs:
         id: merged-files
         env:
           GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
 
@@ -53,25 +53,26 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
 
-          # Get all open PRs with main as base branch (excluding drafts)
-          OPEN_PRS=$(gh pr list --base main --state open --limit 100 --json number,isDraft --jq '.[] | select(.isDraft == false) | .number')
+          # Get all open PRs targeting the same base branch (excluding drafts)
+          OPEN_PRS=$(gh pr list --base "$BASE_REF" --state open --limit 100 --json number,isDraft --jq '.[] | select(.isDraft == false) | .number')
 
           if [ -z "$OPEN_PRS" ]; then
-            echo "No open PRs targeting main branch"
+            echo "No open PRs targeting $BASE_REF branch"
             exit 0
           fi
 
-          echo "Open PRs targeting main: $OPEN_PRS"
+          echo "Open PRs targeting $BASE_REF: $OPEN_PRS"
 
           for PR_NUM in $OPEN_PRS; do
             echo "================================================"
             echo "Checking PR #$PR_NUM"
 
             # Check if PR has has-conflict, hold, wip, or stale labels
-            SKIP_LABELS=$(gh pr view $PR_NUM --json labels --jq '.labels[].name' | grep -iE "^(has-conflicts|hold|wip|stale)$" || true)
+            SKIP_LABELS=$(gh pr view "$PR_NUM" --json labels --jq '[.labels // [] | .[].name | select(test("(?i)^(has-conflicts|hold|wip|stale)$"))] | join(",")')
 
             if [ -n "$SKIP_LABELS" ]; then
               echo "PR #$PR_NUM has skip label(s): $SKIP_LABELS, skipping retest"
