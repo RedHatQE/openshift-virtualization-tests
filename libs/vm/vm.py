@@ -12,6 +12,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.vm.spec import (
+    Affinity,
     CloudInitNoCloud,
     ContainerDisk,
     Devices,
@@ -112,6 +113,20 @@ class BaseVirtualMachine(VirtualMachine):
         patches = {
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
+        ResourceEditor(patches=patches).update()
+
+    def set_template_affinity(self, affinity: Affinity | None) -> None:
+        """Replace the VM template affinity.
+
+        Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
+        are preserved as null in the merge patch, ensuring the old affinity type is removed.
+
+        Args:
+            affinity: Affinity object to set, or None to clear.
+        """
+        self._spec.template.spec.affinity = affinity
+        template_affinity = asdict(obj=affinity) if affinity else None
+        patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
 
     @property
