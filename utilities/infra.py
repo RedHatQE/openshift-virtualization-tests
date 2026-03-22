@@ -77,7 +77,7 @@ from utilities.ssp import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
-INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities"
+INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities.svc.cluster.local"
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 LOGGER = logging.getLogger(__name__)
 

@@ -2,6 +2,7 @@ from utilities.constants import Images, StorageClassNames
 from utilities.storage import HppCsiStorageClass
 
 CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
+ALPINE_QCOW2_IMG = f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG_VERSIONED}"
 
 ADMIN_NAMESPACE_PARAM = {"use_unprivileged_client": False}
 

@@ -61,11 +61,14 @@ FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
 CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
+ALPINE_VERSION = "3.20.1"
+
 
 class ArchImages:
     class AMD64:
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -78,6 +81,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -123,6 +128,7 @@ class ArchImages:
     class ARM64:
         BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
         BASE_ALPINE_NAME = "alpine-aarch64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-aarch64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -135,6 +141,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -158,6 +166,7 @@ class ArchImages:
 
     class S390X:
         BASE_ALPINE_NAME = "alpine-s390x-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -175,6 +184,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(

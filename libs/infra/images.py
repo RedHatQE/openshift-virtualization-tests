@@ -23,6 +23,8 @@ class Cirros:
 @dataclass
 class Alpine:
     QCOW2_IMG: str | None = None
+    QCOW2_IMG_VERSIONED: str | None = None
+    RAW_IMG_XZ: str | None = None
     DIR: str = f"{BASE_IMAGES_DIR}/alpine-images"
     DEFAULT_DV_SIZE: str = "1Gi"
     DEFAULT_MEMORY_SIZE: str = "128M"
