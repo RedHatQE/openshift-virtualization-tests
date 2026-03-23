@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up QEMU for multi-arch builds
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Install podman
         run: |
@@ -61,7 +61,7 @@ jobs:
           podman manifest push ${{ steps.image-tag.outputs.IMAGE_TAG }}
 
       - name: Comment on PR with image tag
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           message: |
             Staging image built and pushed to: `${{ steps.image-tag.outputs.IMAGE_TAG }}`
