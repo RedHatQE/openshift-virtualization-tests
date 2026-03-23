@@ -44,7 +44,7 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(self):
     1. Initiate TCP traffic between the target under-test VM and the external L2 endpoint.
 
     Expected:
-    - The VM successfully communicates with the the external L2 endpoint.
+    - The VM successfully communicates with the external L2 endpoint.
     """
 
 
