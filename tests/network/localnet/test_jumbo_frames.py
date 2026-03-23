@@ -32,12 +32,14 @@ def test_connectivity_ovs_bridge_jumbo_frames_no_fragmentation(
             )
 
     for dst_ip in vm2_addresses:
-        with subtests.test(msg=f"TCP over IPv{dst_ip.version}"):
-            with client_server_active_connection(
+        with (
+            subtests.test(msg=f"TCP over IPv{dst_ip.version}"),
+            client_server_active_connection(
                 client_vm=vm2,
                 server_vm=vm1,
                 spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
                 maximum_segment_size=cluster_hardware_mtu - ip_header_size(ip=dst_ip) - TCP_HEADER_SIZE,
                 ip_family=dst_ip.version,
-            ) as (client, server):
-                assert is_tcp_connection(server=server, client=client)
+            ) as (client, server),
+        ):
+            assert is_tcp_connection(server=server, client=client)

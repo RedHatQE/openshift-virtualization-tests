@@ -272,13 +272,14 @@ def utilization_imbalance(
     evict_protected_pod_selector = {"matchLabels": evict_protected_pod_label_dict}
 
     utilization_imbalance_deployment_name = "utilization-imbalance-deployment"
-    with PodDisruptionBudget(
-        name=utilization_imbalance_deployment_name,
-        namespace=namespace.name,
-        min_available=unallocated_pod_count,
-        selector=evict_protected_pod_selector,
-    ):
-        with Deployment(
+    with (
+        PodDisruptionBudget(
+            name=utilization_imbalance_deployment_name,
+            namespace=namespace.name,
+            min_available=unallocated_pod_count,
+            selector=evict_protected_pod_selector,
+        ),
+        Deployment(
             name=utilization_imbalance_deployment_name,
             namespace=namespace.name,
             client=admin_client,
@@ -303,9 +304,10 @@ def utilization_imbalance(
                     ],
                 },
             },
-        ) as deployment:
-            deployment.wait_for_replicas(timeout=unallocated_pod_count * TIMEOUT_5SEC)
-            yield
+        ) as deployment,
+    ):
+        deployment.wait_for_replicas(timeout=unallocated_pod_count * TIMEOUT_5SEC)
+        yield
 
     LOGGER.info(f"Wait while all {utilization_imbalance_deployment_name} pods removed")
     wait_for_pods_deletion(
