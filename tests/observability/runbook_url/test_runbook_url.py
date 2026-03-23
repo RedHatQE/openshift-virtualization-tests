@@ -1,35 +1,30 @@
-import http
 import logging
 
 import pytest
-import requests
 
-from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC
+from utilities.constants import CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
 
 
 def validate_downstream_runbook_url(
-    runbook_urls_from_prometheus_rule: dict[str, str], subtests: pytest.Subtests
+    runbook_urls_from_prometheus_rule: dict[str, str],
+    available_runbook_urls: set[str],
+    subtests: pytest.Subtests,
 ) -> None:
-    """
-    Validate that all runbook URLs are accessible.
+    """Validate that all runbook URLs exist in the openshift/runbooks repository.
 
     Args:
-        runbook_urls_from_prometheus_rule: Iterable of (alert_name, runbook_url) tuples
-        subtests: pytest subtests fixture for independent subtest execution
+        runbook_urls_from_prometheus_rule: Dict items view of (alert_name, runbook_url) pairs.
+        available_runbook_urls: Set of runbook HTML URLs available in the repository.
+        subtests: pytest subtests fixture for independent subtest execution.
     """
     for alert_name, runbook_url in runbook_urls_from_prometheus_rule:
         with subtests.test(msg=alert_name):
-            assert runbook_url, f"Alert '{alert_name}' is missing runbook URL"
-
-            try:
-                response = requests.get(runbook_url, allow_redirects=False, timeout=TIMEOUT_10SEC)
-                assert response.status_code == http.HTTPStatus.OK, (
-                    f"Alert '{alert_name}' runbook URL '{runbook_url}' returned status {response.status_code}"
-                )
-            except requests.RequestException as e:
-                pytest.fail(f"Alert '{alert_name}' runbook URL '{runbook_url}' failed: {e}")
+            assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
+            assert runbook_url in available_runbook_urls, (
+                f"Alert '{alert_name}' runbook URL '{runbook_url}' not found in runbooks repository"
+            )
 
 
 class TestRunbookUrlsAndPrometheusRules:
@@ -48,8 +43,11 @@ class TestRunbookUrlsAndPrometheusRules:
         )
 
     @pytest.mark.polarion("CNV-10084")
-    def test_runbook_downstream_urls(self, cnv_alerts_runbook_urls_from_prometheus_rule, subtests):
+    def test_runbook_downstream_urls(
+        self, available_runbook_urls, cnv_alerts_runbook_urls_from_prometheus_rule, subtests
+    ):
         validate_downstream_runbook_url(
             runbook_urls_from_prometheus_rule=cnv_alerts_runbook_urls_from_prometheus_rule.items(),
             subtests=subtests,
+            available_runbook_urls=available_runbook_urls,
         )
