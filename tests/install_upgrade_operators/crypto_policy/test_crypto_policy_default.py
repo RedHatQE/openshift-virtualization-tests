@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from ocp_resources.aaq import AAQ
 from ocp_resources.api_server import APIServer
 from ocp_resources.cdi import CDI
 from ocp_resources.hyperconverged import HyperConverged
@@ -25,6 +26,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_tls_version_connection,
 )
 from utilities.constants import (
+    AAQ_KUBEVIRT_HYPERCONVERGED,
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEVIRT_HCO_NAME,
@@ -33,7 +35,7 @@ from utilities.constants import (
 )
 
 LOGGER = logging.getLogger(__name__)
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x, pytest.mark.tls_compliance]
 
 
 @pytest.mark.parametrize(
@@ -101,6 +103,16 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
             NetworkAddonsConfig,
             marks=(pytest.mark.polarion("CNV-9468")),
             id="test_default_crypto_policy_cnao",
+        ),
+        pytest.param(
+            {
+                RESOURCE_TYPE_STR: AAQ,
+                RESOURCE_NAME_STR: AAQ_KUBEVIRT_HYPERCONVERGED,
+                KEY_NAME_STR: TLS_SECURITY_PROFILE,
+            },
+            AAQ,
+            marks=(pytest.mark.polarion("CNV-15225")),
+            id="test_default_crypto_policy_aaq",
         ),
     ],
     indirect=["resource_crypto_policy_settings"],

@@ -53,6 +53,7 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
+from ocp_resources.service import Service
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
@@ -2777,3 +2778,18 @@ def hugepages_gib_values(workers):
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]
+
+
+@pytest.fixture(scope="session")
+def services_to_check_connectivity(hco_namespace, admin_client):
+    """Discovers all TLS-capable CNV services in the HCO namespace.
+
+    Excludes headless services (no ClusterIP) which cannot be probed directly.
+    """
+    services_list = [
+        service
+        for service in Service.get(namespace=hco_namespace.name, client=admin_client)
+        if service.instance.spec.clusterIP not in (None, "", "None")
+    ]
+    assert services_list, f"No services found in {hco_namespace.name}"
+    return services_list

@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Any
 
+from ocp_resources.aaq import AAQ
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -95,18 +96,21 @@ CRYPTO_POLICY_EXPECTED_DICT = {
         SSP: TLS_INTERMEDIATE_PROFILE,
         CDI: TLS_INTERMEDIATE_PROFILE,
         NetworkAddonsConfig: TLS_INTERMEDIATE_PROFILE,
+        AAQ: TLS_INTERMEDIATE_PROFILE,
     },
     TLS_CUSTOM_POLICY: {
         KubeVirt: TLS_CUSTOM_PROFILE_KUBEVIRT[TLS_CUSTOM_POLICY],
         SSP: TLS_CUSTOM_PROFILE,
         CDI: TLS_CUSTOM_PROFILE,
         NetworkAddonsConfig: TLS_CUSTOM_PROFILE,
+        AAQ: TLS_CUSTOM_PROFILE,
     },
     TLS_OLD_POLICY: {
         KubeVirt: KUBEVIRT_OLD_PROFILE,
         SSP: TLS_OLD_PROFILE,
         CDI: TLS_OLD_PROFILE,
         NetworkAddonsConfig: TLS_OLD_PROFILE,
+        AAQ: TLS_OLD_PROFILE,
     },
 }
 
@@ -117,3 +121,12 @@ MIN_TLS_VERSIONS = {
     TLS_MODERN_POLICY: "1.3",
     TLS_CUSTOM_POLICY: str(float(TLS_CUSTOM_VERSION[-2:]) / 10),
 }
+
+TLS_MODERN_PROFILE = {TLS_MODERN_POLICY: {}, "type": "Modern"}
+TLS_VERSION_1_2 = "1.2"
+
+PQC_GROUP_SECP256R1_MLKEM768 = "SecP256r1MLKEM768"
+PQC_GROUP_SECP384R1_MLKEM1024 = "SecP384r1MLKEM1024"
+PQC_GROUP_X25519_MLKEM768 = "X25519MLKEM768"
+PQC_HANDSHAKE_FAILURE_INDICATOR = "alert handshake failure"
+OPENSSL_CONNECTION_SUCCESS_INDICATOR = "Certificate chain"

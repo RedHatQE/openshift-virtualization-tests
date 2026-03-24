@@ -3,6 +3,7 @@ from copy import deepcopy
 
 import pytest
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.aaq import AAQ
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -34,7 +35,7 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x, pytest.mark.tls_compliance]
 
 LOGGER = logging.getLogger(__name__)
 TLS_POLICIES_WITHOUT_CUSTOM_POLICY = {
@@ -140,6 +141,16 @@ def updated_cr_with_custom_crypto_policy(
             },
             marks=pytest.mark.polarion("CNV-9676"),
             id="test_set_ssp_crypto_policy_using_hco_jsonpatch_annotation",
+        ),
+        pytest.param(
+            {
+                "component": "aaq",
+                "resource": AAQ,
+                "key": TLS_SECURITY_PROFILE,
+                "value": deepcopy(TLS_CUSTOM_PROFILE),
+            },
+            marks=pytest.mark.polarion("CNV-15226"),
+            id="test_set_aaq_crypto_policy_using_hco_jsonpatch_annotation",
         ),
     ],
     indirect=["updated_cr_with_custom_crypto_policy"],
