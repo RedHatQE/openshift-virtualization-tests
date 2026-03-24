@@ -42,7 +42,7 @@ def allow_all_http_ports(unprivileged_client, namespace_1):
 
 
 @pytest.fixture()
-def allow_single_http_port(unprivileged_client, namespace_1):
+def single_http_port_net_policy(unprivileged_client, namespace_1):
     with ApplyNetworkPolicy(
         name="allow-single-http-port",
         namespace=namespace_1.name,
