@@ -49,6 +49,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
     U1_SMALL,
+    U1_LARGE,
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
@@ -533,7 +534,7 @@ def vm_for_cclm_windows_with_instance_type(
         name="vm-windows-with-instance-type",
         namespace=remote_cluster_source_test_namespace.name,
         client=remote_admin_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large", client=remote_admin_client),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=remote_admin_client),
         vm_preference=VirtualMachineClusterPreference(name="windows.2k22", client=remote_admin_client),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
