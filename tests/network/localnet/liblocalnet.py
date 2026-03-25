@@ -28,6 +28,7 @@ LINK_STATE_DOWN = "down"
 NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
 GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
 GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
+GUEST_3RD_IFACE_NAME: Final[str] = "eth2"
 
 LOGGER = logging.getLogger(__name__)
 
