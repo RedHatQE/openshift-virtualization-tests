@@ -2,10 +2,11 @@ import logging
 
 import pytest
 import requests
+from ocp_resources.data_source import DataSource
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 
-from utilities.constants import TIMEOUT_30SEC
+from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_30SEC
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,3 +43,10 @@ def latest_fedora_release_version():
     latest_fedora_version = str(max(versions))
     LOGGER.info(f"Latest Fedora release: {latest_fedora_version}")
     return latest_fedora_version
+
+
+@pytest.fixture(scope="module")
+def fedora_data_source(unprivileged_client, golden_images_namespace):
+    return DataSource(
+        client=unprivileged_client, name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, ensure_exists=True
+    )

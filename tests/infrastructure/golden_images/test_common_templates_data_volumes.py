@@ -1,10 +1,9 @@
 import pytest
-from ocp_resources.data_source import DataSource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import OS_FLAVOR_FEDORA, U1_SMALL, Images
+from utilities.constants import U1_SMALL, Images
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -69,13 +68,6 @@ def storage_class_from_config_different_from_data_source(fedora_data_source):
     if different_storage_class is None:
         pytest.xfail("storage_class_matrix only has 1 storage class defined")
     return different_storage_class
-
-
-@pytest.fixture(scope="module")
-def fedora_data_source(unprivileged_client, golden_images_namespace):
-    return DataSource(
-        client=unprivileged_client, name=OS_FLAVOR_FEDORA, namespace=golden_images_namespace.name, ensure_exists=True
-    )
 
 
 @pytest.mark.parametrize(
