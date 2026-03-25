@@ -977,14 +977,11 @@ wheels = [
 
 [[package]]
 name = "marshmallow"
-version = "3.26.1"
+version = "4.2.2"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/5e/5e53d26b42ab75491cda89b871dab9e97c840bf12c63ec58a1919710cd06/marshmallow-3.26.1.tar.gz", hash = "sha256:e6d8affb6cb61d39d26402096dc0aee12d5a26d490a121f118d2e81dc0719dc6", size = 221825, upload-time = "2025-02-03T15:32:25.093Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/03/261af5efb3d3ce0e2db3fd1e11dc5a96b74a4fb76e488da1c845a8f12345/marshmallow-4.2.2.tar.gz", hash = "sha256:ba40340683a2d1c15103647994ff2f6bc2c8c80da01904cbe5d96ee4baa78d9f", size = 221404, upload-time = "2026-02-04T15:47:03.401Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl", hash = "sha256:3350409f20a70a7e4e11a27661187b77cdcaeb20abca41c1454fe33636bea09c", size = 50878, upload-time = "2025-02-03T15:32:22.295Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/70/bb89f807a6a6704bdc4d6f850d5d32954f6c1965e3248e31455defdf2f30/marshmallow-4.2.2-py3-none-any.whl", hash = "sha256:084a9466111b7ec7183ca3a65aed758739af919fedc5ebdab60fb39d6b4dc121", size = 48454, upload-time = "2026-02-04T15:47:02.013Z" },
 ]
 
 [[package]]
@@ -1205,7 +1202,7 @@ requires-dist = [
     { name = "jira", specifier = ">=3.8.0" },
     { name = "jsons", specifier = ">=1.6.3" },
     { name = "kubernetes", specifier = ">=34.1.0" },
-    { name = "marshmallow", specifier = "==3.26.1" },
+    { name = "marshmallow", specifier = ">=4.2.2" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
     { name = "openshift-python-wrapper", specifier = "~=4.21.0" },
@@ -1219,7 +1216,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'utilities-test'", specifier = ">=4.1.0" },
     { name = "pytest-dependency", specifier = ">=0.6.0" },
     { name = "pytest-html", specifier = ">=4.1.1" },
-    { name = "pytest-jira", specifier = "~=0.3.21" },
+    { name = "pytest-jira", specifier = ">=0.3.24" },
     { name = "pytest-mock", marker = "extra == 'utilities-test'", specifier = ">=3.14.0" },
     { name = "pytest-order", specifier = ">=1.3.0" },
     { name = "pytest-progress", specifier = ">=1.3.0" },
@@ -1612,16 +1609,17 @@ wheels = [
 
 [[package]]
 name = "pyhelper-utils"
-version = "1.0.19"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ipdb" },
+    { name = "paramiko" },
     { name = "python-rrmngmnt" },
     { name = "python-simple-logger" },
     { name = "requests" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/e1/1323546950a087c22564305bb4b1400a619599c07e7407bd127b40cfbbb5/pyhelper_utils-1.0.19.tar.gz", hash = "sha256:3881aaba7f9310da47b3ff317679f4b301c118ebc50da75943d6e15dd74c2e5e", size = 10770, upload-time = "2025-09-29T15:38:30.114Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/c3/ac6673c23c34970550143350ca825197d0ce4e12d7cf5f5147db723826ec/pyhelper_utils-2.0.1.tar.gz", hash = "sha256:6a1dd0fd63ba1dec8dabfd114a4948a19d049e784b04742cdc04be676e83611d", size = 10988, upload-time = "2026-03-18T09:43:08.89Z" }
 
 [[package]]
 name = "pyjwt"
@@ -1639,15 +1637,15 @@ crypto = [
 
 [[package]]
 name = "pylero"
-version = "0.1.1"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "suds" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/38/0c0ccaafbb8594cf50af8d2376a5afee9e7279b7715a928558e7b52eb6f6/pylero-0.1.1.tar.gz", hash = "sha256:de0ccd37da69e50993fe403eca5d093d70c57319640d6af6403ab9a3496ae16c", size = 309121, upload-time = "2025-05-30T13:38:52.34Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/a3/04efbc25a706d04d9d12cc5346b9ade9326d322496556eb07fa86b8cd3d5/pylero-0.2.0.tar.gz", hash = "sha256:534e86667e318ac353d24d041229d3f821316e0f3b659f2fd050adfcd4f3472f", size = 486274, upload-time = "2025-12-19T15:17:13.281Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/79/4a7ff895325f7226f846cf4e274be9bbeedcd2d9804027c5025e72134ff4/pylero-0.1.1-py3-none-any.whl", hash = "sha256:ada04668e36adaaed950e213699f8442466994142c127a3f07b5e4d19fc9709f", size = 101338, upload-time = "2025-12-19T15:11:28.422Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/24/d26a5582611ba222c2f36cbd06736af106e424776bb54277f93407672926/pylero-0.2.0-py3-none-any.whl", hash = "sha256:3fd52d56fa11b8f77313681523b2b90ab986d34cc504aa6ce846510e732a2894", size = 101341, upload-time = "2025-12-19T15:17:11.685Z" },
 ]
 
 [[package]]
@@ -1765,7 +1763,7 @@ wheels = [
 
 [[package]]
 name = "pytest-jira"
-version = "0.3.22"
+version = "0.3.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "marshmallow" },
@@ -1775,7 +1773,10 @@ dependencies = [
     { name = "retry2" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/88/238f28f46dd237ee32f2c232b08a4bed8c8b430f3b900e34a43e0b344105/pytest-jira-0.3.22.zip", hash = "sha256:f1649cd1823a57c2663f60150beb964ae109d560572dc67e6ebb243e6352260b", size = 34684, upload-time = "2025-04-15T15:08:38.207Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/cc/58100f57c741683a88423537b03873653bb7e16205ab38b44b53c862dbf2/pytest_jira-0.3.24.tar.gz", hash = "sha256:a9779689a31daa8aa668a555c50fd3b6b1cd05f83cee161623718b2f0736fcc8", size = 57047, upload-time = "2026-03-19T09:28:09.04Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/81/6cab10dec2d22ebf4c335351a062d85108d5b031d9070755db0f4c88a762/pytest_jira-0.3.24-py3-none-any.whl", hash = "sha256:d1eb35c7c6dafbb9024534bbf66d741ea3da790367d2bafd5c1f5e8f237ad82e", size = 17950, upload-time = "2026-03-19T09:28:09.933Z" },
+]
 
 [[package]]
 name = "pytest-metadata"
@@ -1979,7 +1980,7 @@ wheels = [
 
 [[package]]
 name = "python-utility-scripts"
-version = "2.0.1"
+version = "2.0.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ast-comments" },
@@ -1992,7 +1993,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/fc/d0af117ae6a2507089047067300060bcb12ddd0da73a728f04db5338d28e/python_utility_scripts-2.0.1.tar.gz", hash = "sha256:e8045d9baec39fad6e065f6e766d026e9d269631dce56af8025ae1c9e2f6248e", size = 21124, upload-time = "2025-11-11T20:46:56.257Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/84/eb74b833ffad45287e19964102028d7cd69b9f1bf2c5308d0be6792791ab/python_utility_scripts-2.0.6.tar.gz", hash = "sha256:a43ac3eddea5b5865b0c182b04c43457e073da360ec202ad5b0f715011213c7a", size = 21742, upload-time = "2026-03-16T12:13:10.334Z" }
 
 [[package]]
 name = "pyvmomi"
