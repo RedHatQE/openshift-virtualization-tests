@@ -3,7 +3,7 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import REGISTRY_STR, Images, OS_FLAVOR_FEDORA
+from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, Images
 from utilities.storage import create_dv, data_volume
 
 
