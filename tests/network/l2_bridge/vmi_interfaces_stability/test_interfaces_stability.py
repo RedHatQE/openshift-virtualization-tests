@@ -6,11 +6,16 @@ from tests.network.l2_bridge.vmi_interfaces_stability.lib_helpers import (
     assert_interfaces_stable,
     monitor_vmi_events,
 )
+from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 STABILITY_PERIOD_IN_SECONDS: Final[int] = 300
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: temporarily quarantined until the bug fix code is built downstream - tracked in CNV-79062",
+    run=False,
+)
 @pytest.mark.incremental
 class TestInterfacesStability:
     @pytest.mark.polarion("CNV-14339")
