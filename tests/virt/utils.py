@@ -380,6 +380,11 @@ def assert_migration_post_copy_mode(vm):
     assert migration_state.mode == "PostCopy", f"Migration mode is not PostCopy! VMI MigrationState {migration_state}"
 
 
+def assert_migration_paused_mode(vm):
+    migration_state = vm.vmi.instance.status.migrationState
+    assert migration_state.mode == "Paused", f"Migration mode is not Paused! VMI MigrationState {migration_state}"
+
+
 def build_node_affinity_dict(values, key=None):
     return {
         "nodeAffinity": {

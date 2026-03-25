@@ -32,6 +32,7 @@ ACRQ_NAMESPACE_LABEL = {ACRQ_TEST: ""}
 
 # MigrationPolicy labels
 VM_LABEL = {"post-copy-vm": "true"}
+AWD_VM_LABEL = {"awd-vm": "true"}
 
 
 # BASH
