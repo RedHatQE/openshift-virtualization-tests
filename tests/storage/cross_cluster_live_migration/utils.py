@@ -7,6 +7,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
 
+from utilities import console
 from utilities.constants import VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
@@ -73,32 +74,74 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
         )
 
 
-def verify_compute_live_migration_after_cclm(
-    client: DynamicClient, namespace: Namespace, vms_list: list[VirtualMachineForTests]
-) -> None:
+def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
     """
     Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
 
-    This function creates local VM references for each VM that was migrated from the remote cluster,
-    preserves their credentials, and attempts to perform compute live migration on each VM.
-
     Args:
-        client: DynamicClient
-        namespace: The namespace where the VMs are located in the target cluster
-        vms_list: List of VirtualMachineForTests objects to be migrated
+        local_vms: List of VirtualMachineForTests objects in the local cluster
 
     Raises:
         AssertionError: If any VM migration fails, with details of all failed migrations
     """
     vms_failed_migration = {}
-    for vm in vms_list:
-        local_vm = VirtualMachineForTests(
-            name=vm.name, namespace=namespace.name, client=client, generate_unique_name=False
-        )
-        local_vm.username = vm.username
-        local_vm.password = vm.password
+    for vm in local_vms:
         try:
-            migrate_vm_and_verify(vm=local_vm, check_ssh_connectivity=True)
+            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
         except Exception as migration_exception:
-            vms_failed_migration[local_vm.name] = migration_exception
+            vms_failed_migration[vm.name] = migration_exception
     assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
+
+
+def get_vm_boot_id_via_console(
+    vm: VirtualMachineForTests, kubeconfig: str | None = None, username: str | None = None, password: str | None = None
+) -> str:
+    with console.Console(vm=vm, kubeconfig=kubeconfig, username=username, password=password) as vm_console:
+        vm_console.sendline("cat /proc/sys/kernel/random/boot_id")
+        vm_console.expect([r"#", r"\$"])
+        raw_output = vm_console.before
+        LOGGER.info(f"Boot ID from VM console (raw output): '{raw_output}'")
+        return raw_output
+
+
+def verify_vms_boot_id_after_cross_cluster_live_migration(
+    local_vms: list[VirtualMachineForTests],
+    initial_boot_id: dict[str, str],
+) -> None:
+    """
+    Verify that VMs have not rebooted after cross-cluster live migration.
+
+    Args:
+        local_vms: List of VirtualMachineForTests objects in the local cluster
+        initial_boot_id: Dictionary mapping VM names to their initial boot IDs
+
+    Raises:
+        AssertionError: If any VM has rebooted (boot ID changed)
+    """
+    rebooted_vms = {}
+    for vm in local_vms:
+        current_boot_id = get_vm_boot_id_via_console(vm=vm, username=vm.username, password=vm.password)
+        if initial_boot_id[vm.name] != current_boot_id:
+            rebooted_vms[vm.name] = {"initial": initial_boot_id[vm.name], "current": current_boot_id}
+    assert not rebooted_vms, f"Boot id changed for VMs:\n {rebooted_vms}"
+
+
+def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+    not_stopped_vms = {}
+    for vm in vms:
+        vm_status = vm.printable_status
+        if vm_status != vm.Status.STOPPED:
+            not_stopped_vms[vm.name] = vm_status
+    assert not not_stopped_vms, f"Source VMs are not stopped: {not_stopped_vms}"
+
+
+def assert_vms_can_be_deleted(vms: list[VirtualMachineForTests]) -> None:
+    vms_failed_cleanup = {}
+    for vm in vms:
+        try:
+            cleanup_result = vm.clean_up()
+            if cleanup_result is not True:
+                vms_failed_cleanup[vm.name] = f"vm.clean_up() returned {cleanup_result}"
+        except Exception as cleanup_exception:
+            vms_failed_cleanup[vm.name] = str(cleanup_exception)
+    assert not vms_failed_cleanup, f"Failed to clean up source VMs: {vms_failed_cleanup}"
