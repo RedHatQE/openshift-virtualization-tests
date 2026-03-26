@@ -11,6 +11,8 @@ from utilities.virt import (
     running_vm,
 )
 
+pytestmark = pytest.mark.data_collector_scope(scope="module")
+
 NAMESPACE_LABEL = {"awesome-namespace-label": ""}
 
 DEFAULT_MIGRATION_POLICY_PARAMETERS = {

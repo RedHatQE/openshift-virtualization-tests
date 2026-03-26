@@ -134,6 +134,7 @@ from utilities.data_collector import (
     get_data_collector_base,
     get_data_collector_base_directory,
     get_data_collector_dir,
+    get_scope_identifier,
     prepare_pytest_item_data_dir,
     set_data_collector_directory,
     set_data_collector_values,
@@ -517,6 +518,61 @@ class TestPrepareDataDir:
         expected_path = "/output/test_dir/test_something/test_function"
         assert result == expected_path
         mock_makedirs.assert_called_once_with(expected_path, exist_ok=True)
+
+
+class TestGetScopeIdentifier:
+    """Test cases for get_scope_identifier function"""
+
+    def test_get_scope_identifier_module_scope(self):
+        """Test get_scope_identifier with module scope"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_module.py"
+
+        result = get_scope_identifier(node=mock_node, scope_value="module")
+
+        assert result == "/path/to/test_module.py"
+
+    def test_get_scope_identifier_class_scope_with_parent(self):
+        """Test get_scope_identifier with class scope and parent exists"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_parent = MagicMock()
+        mock_parent.name = "TestMyClass"
+        mock_node.parent = mock_parent
+
+        result = get_scope_identifier(node=mock_node, scope_value="class")
+
+        assert result == "/path/to/test_file.py::TestMyClass"
+
+    def test_get_scope_identifier_class_scope_without_parent(self):
+        """Test get_scope_identifier with class scope and no parent"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.parent = None
+
+        result = get_scope_identifier(node=mock_node, scope_value="class")
+
+        assert result == "/path/to/test_file.py"
+
+    def test_get_scope_identifier_test_scope(self):
+        """Test get_scope_identifier with test scope (None)"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.name = "test_my_function"
+
+        result = get_scope_identifier(node=mock_node, scope_value=None)
+
+        assert result == "/path/to/test_file.py::test_my_function"
+
+    def test_get_scope_identifier_test_scope_explicit(self):
+        """Test get_scope_identifier with explicit test scope value"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.name = "test_another_function"
+
+        result = get_scope_identifier(node=mock_node, scope_value="test")
+
+        assert result == "/path/to/test_file.py::test_another_function"
 
 
 class TestConstants:

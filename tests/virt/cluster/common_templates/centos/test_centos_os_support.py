@@ -27,6 +27,8 @@ from utilities.virt import (
     wait_for_console,
 )
 
+pytestmark = pytest.mark.data_collector_scope(scope="module")
+
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesCentos"
 
