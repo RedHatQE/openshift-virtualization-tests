@@ -85,6 +85,20 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
 
 
 @dataclass
+class CNIPluginBandwidthConfig(CNIPluginConfig):
+    """
+    CNI Bandwidth Plugin
+    Ref: https://www.cni.dev/plugins/current/meta/bandwidth/
+    """
+
+    type: str = field(default="bandwidth", init=False)
+    ingressRate: int  # noqa: N815
+    ingressBurst: int  # noqa: N815
+    egressRate: int  # noqa: N815
+    egressBurst: int  # noqa: N815
+
+
+@dataclass
 class CNIPluginMacvlanConfig(CNIPluginConfig):
     """
     CNI Macvlan Plugin
