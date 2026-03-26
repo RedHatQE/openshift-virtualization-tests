@@ -30,9 +30,9 @@ from tests.storage.utils import (
     create_role_binding,
     set_permissions,
 )
-from utilities.constants import PVC, UNPRIVILEGED_USER, Images
+from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
-from utilities.storage import create_dv
+from utilities.storage import create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -59,16 +59,46 @@ def cluster_role_for_creating_pods(admin_client):
         yield cluster_role_pod_creator
 
 
+@pytest.fixture(scope="module")
+def dv_cloned_from_datasource(
+    request,
+    namespace,
+    storage_class_name_scope_module,
+    fedora_data_source_scope_module,
+):
+    """
+    Create a source DV in the test namespace by cloning from the golden image DataSource.
+    When cloning from a DataSource, the target DV must be at least as large as the source.
+    """
+    dv_name = request.param["dv_name"]
+    dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+
+    with create_dv(
+        dv_name=f"{dv_name}-{storage_class_name_scope_module}",
+        namespace=namespace.name,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+        size=dv_size,
+        storage_class=storage_class_name_scope_module,
+        client=namespace.client,
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
 @pytest.fixture()
-def data_volume_clone_settings(destination_namespace, data_volume_multi_storage_scope_module):
-    storage_class = data_volume_multi_storage_scope_module.storage_class
+def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource):
+    storage_class = dv_cloned_from_datasource.storage_class
     dv = DataVolume(
         name=f"{TARGET_DV}-{storage_class}",
         namespace=destination_namespace.name,
         source=PVC,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.name,
-        source_namespace=data_volume_multi_storage_scope_module.namespace,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.name,
+        source_namespace=dv_cloned_from_datasource.namespace,
         storage_class=storage_class,
         api_name="storage",
     )
@@ -241,17 +271,17 @@ def permission_destination_service_account_for_creating_pods(
 def dv_cloned_by_unprivileged_user_in_the_same_namespace(
     request,
     storage_class_name_scope_module,
-    data_volume_multi_storage_scope_module,
+    dv_cloned_from_datasource,
     unprivileged_client,
     permissions_datavolume_source,
 ):
-    namespace = data_volume_multi_storage_scope_module.namespace
+    namespace = dv_cloned_from_datasource.namespace
     with create_dv(
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_module}",
         namespace=namespace,
         source=PVC,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.pvc.name,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.pvc.name,
         source_namespace=namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
@@ -263,7 +293,7 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
 def dv_destination_cloned_from_pvc(
     request,
     storage_class_name_scope_module,
-    data_volume_multi_storage_scope_module,
+    dv_cloned_from_datasource,
     destination_namespace,
     unprivileged_client,
     permissions_datavolume_source,
@@ -273,9 +303,9 @@ def dv_destination_cloned_from_pvc(
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_module}",
         namespace=destination_namespace.name,
         source=PVC,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.pvc.name,
-        source_namespace=data_volume_multi_storage_scope_module.namespace,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.pvc.name,
+        source_namespace=dv_cloned_from_datasource.namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
@@ -294,23 +324,19 @@ def vm_for_restricted_namespace_cloning_test(
     with VirtualMachineForTests(
         name=VM_FOR_TEST,
         namespace=destination_namespace.name,
-        os_flavor=Images.Cirros.OS_FLAVOR,
+        os_flavor=OS_FLAVOR_FEDORA,
         service_accounts=[restricted_namespace_service_account.name],
         client=unprivileged_client,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False)
+        running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture()
-def user_has_get_permissions_in_source_namespace(
-    namespace, unprivileged_client, data_volume_multi_storage_scope_module
-):
-    _ = DataVolume(
-        namespace=namespace.name, name=data_volume_multi_storage_scope_module.name, client=unprivileged_client
-    ).instance
+def user_has_get_permissions_in_source_namespace(namespace, unprivileged_client, dv_cloned_from_datasource):
+    _ = DataVolume(namespace=namespace.name, name=dv_cloned_from_datasource.name, client=unprivileged_client).instance
 
 
 @pytest.fixture()
