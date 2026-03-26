@@ -1040,6 +1040,12 @@ ADP_NAMESPACE = "openshift-adp"
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
 BACKUP_STORAGE_LOCATION = "dpa-1"
+OADP_BACKUP_TERMINAL_STATUSES = {
+    "Completed",
+    "Failed",
+    "PartiallyFailed",
+    "FailedValidation",
+}
 
 # AAQ
 AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
