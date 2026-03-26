@@ -16,7 +16,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
 )
 from utilities.constants import TLS_CUSTOM_POLICY, TLS_OLD_POLICY
 
-pytestmark = pytest.mark.tier3
+pytestmark = [pytest.mark.tier3, pytest.mark.tls_compliance]
 
 LOGGER = logging.getLogger(__name__)
 
