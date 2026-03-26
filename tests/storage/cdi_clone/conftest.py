@@ -1,9 +1,8 @@
 import pytest
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, Images
+from utilities.constants import REGISTRY_STR, Images
 from utilities.storage import create_dv, data_volume
 
 
@@ -19,16 +18,6 @@ def data_volume_snapshot_capable_storage_scope_function(
         namespace=namespace,
         storage_class_matrix=storage_class_matrix_snapshot_matrix__function__,
         schedulable_nodes=schedulable_nodes,
-    )
-
-
-@pytest.fixture(scope="module")
-def fedora_data_source_scope_module(golden_images_namespace):
-    return DataSource(
-        namespace=golden_images_namespace.name,
-        name=OS_FLAVOR_FEDORA,
-        client=golden_images_namespace.client,
-        ensure_exists=True,
     )
 
 

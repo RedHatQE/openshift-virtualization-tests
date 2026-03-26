@@ -13,7 +13,6 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES,
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
-    LIST_GET,
     METADATA,
     PERMISSIONS_DST,
     PERMISSIONS_DST_SA,

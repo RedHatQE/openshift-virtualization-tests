@@ -94,7 +94,6 @@ def test_user_permissions_positive(
     if requested_verify_image_permissions:
         with create_vm_from_dv(
             dv=dv_destination_cloned_from_pvc,
-            client=admin_client,
             vm_name="fedora-vm",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
