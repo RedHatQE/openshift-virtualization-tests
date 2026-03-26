@@ -17,7 +17,7 @@ from utilities.virt import (
     wait_for_updated_kv_value,
 )
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.data_collector_scope(scope="module")]
 LOGGER = logging.getLogger(__name__)
 
 

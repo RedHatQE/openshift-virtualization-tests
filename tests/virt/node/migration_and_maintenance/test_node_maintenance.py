@@ -30,7 +30,10 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [
+    pytest.mark.post_upgrade,
+    pytest.mark.data_collector_scope(scope="module"),
+]
 
 
 LOGGER = logging.getLogger(__name__)

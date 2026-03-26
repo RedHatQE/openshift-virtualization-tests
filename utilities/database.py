@@ -1,9 +1,12 @@
+import datetime
 import logging
 
+from _pytest.nodes import Collector
+from pytest import Item
 from sqlalchemy import Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-from utilities.data_collector import get_data_collector_base
+from utilities.data_collector import get_data_collector_base, get_scope_identifier
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,17 +33,68 @@ class Database:
         self.engine = create_engine(url=self.connection_string, echo=self.verbose)
         Base.metadata.create_all(bind=self.engine)
 
-    def insert_test_start_time(self, test_name: str, start_time: int) -> None:
-        with Session(bind=self.engine) as db_session:
-            new_table_entry = CnvTestTable(test_name=test_name, start_time=start_time)
-            db_session.add(new_table_entry)
-            db_session.commit()
+    def insert_start_time(self, name: str, start_time: int) -> None:
+        """
+        Insert start time only if it doesn't exist.
 
-    def get_test_start_time(self, test_name: str) -> int:
+        Args:
+            name (str): Test/class/module identifier.
+            start_time (int): Start time in seconds since epoch.
+        """
         with Session(bind=self.engine) as db_session:
-            return (
-                db_session.query(CnvTestTable)
-                .with_entities(CnvTestTable.start_time)
-                .filter_by(test_name=test_name)
-                .one()[0]
+            existing_entry = db_session.query(CnvTestTable).filter_by(test_name=name).first()
+
+            if not existing_entry:
+                new_entry = CnvTestTable(test_name=name, start_time=start_time)
+                db_session.add(new_entry)
+                db_session.commit()
+
+    def get_start_time(self, name: str) -> int | None:
+        """
+        Get the start time for a test/class/module.
+
+        Args:
+            name (str): Test/class/module identifier.
+
+        Returns:
+            int | None: Start time in seconds since epoch, or None if not found.
+        """
+        with Session(bind=self.engine) as db_session:
+            result = (
+                db_session.query(CnvTestTable).with_entities(CnvTestTable.start_time).filter_by(test_name=name).first()
             )
+            return result[0] if result else None
+
+    def get_start_time_for_collection(self, node: Item | Collector) -> int:
+        """
+        Get test start time based on data_collector_scope marker.
+
+        Determines the appropriate scope (test, class, or module) from the marker,
+        retrieves the start time from the database, and logs the time delta.
+
+        Args:
+            node: Pytest node (Item or Collector).
+
+        Returns:
+            Start time in seconds since epoch, or 0 if not found.
+        """
+        try:
+            # Check data_collector_scope marker
+            scope_marker = node.get_closest_marker(name="data_collector_scope")
+            scope_value = scope_marker.kwargs.get("scope") if scope_marker else None
+
+            name = get_scope_identifier(node=node, scope_value=scope_value)
+            scope_label = scope_value.upper() if scope_value else "TEST"
+
+            test_start_time = self.get_start_time(name=name)
+            if test_start_time:
+                time_delta = int(datetime.datetime.now().strftime("%s")) - test_start_time
+                LOGGER.info(f"[DATA_COLLECTOR] {scope_label} scope: {time_delta}s ({time_delta // 60}m)")
+            else:
+                test_start_time = 0
+                LOGGER.warning(f"[DATA_COLLECTOR] Start time not found for {name}")
+        except Exception as db_exception:
+            test_start_time = 0
+            LOGGER.warning(f"[DATA_COLLECTOR] Error: {db_exception} in accessing database.")
+
+        return test_start_time

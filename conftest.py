@@ -32,6 +32,7 @@ from utilities.constants import QUARANTINED, SETUP_ERROR, TIMEOUT_5MIN, Namespac
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
+    get_scope_identifier,
     set_data_collector_directory,
     set_data_collector_values,
 )
@@ -593,12 +594,13 @@ def pytest_runtest_setup(item):
         # before the setup work starts, insert current epoch time into the database
         try:
             db = Database()
-            db.insert_test_start_time(
-                test_name=f"{item.fspath}::{item.name}",
-                start_time=int(datetime.datetime.now().strftime("%s")),
-            )
+            scope_marker = item.get_closest_marker(name="data_collector_scope")
+            scope_value = scope_marker.kwargs.get("scope") if scope_marker else None
+
+            name = get_scope_identifier(node=item, scope_value=scope_value)
+            db.insert_start_time(name=name, start_time=int(datetime.datetime.now().strftime("%s")))
         except Exception as db_exception:
-            LOGGER.error(f"Database error: {db_exception}. Must-gather collection may not be accurate")
+            LOGGER.error(f"[DATA_COLLECTOR] Database error: {db_exception}. Must-gather collection may not be accurate")
     BASIC_LOGGER.info(f"\n{separator(symbol_='-', val=item.name)}")
     BASIC_LOGGER.info(f"{separator(symbol_='-', val='SETUP')}")
     if "incremental" in item.keywords:
@@ -802,9 +804,10 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
 
 def calculate_must_gather_timer(test_start_time):
     if test_start_time > 0:
-        return int(datetime.datetime.now().strftime("%s")) - test_start_time
+        # Add 5-minute (300s) buffer to work around must-gather timing issues
+        return int(datetime.datetime.now().strftime("%s")) - test_start_time + 300
     else:
-        LOGGER.warning(f"Could not get start time of test. Collecting must-gather for last {TIMEOUT_5MIN}s")
+        LOGGER.warning(f"[DATA_COLLECTOR] Could not get start time. Collecting must-gather for last {TIMEOUT_5MIN}s")
         return TIMEOUT_5MIN
 
 
@@ -812,19 +815,17 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
     BASIC_LOGGER.error(report.longreprtext)
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
         test_name = f"{node.fspath}::{node.name}"
-        LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
+        LOGGER.info(f"[DATA_COLLECTOR] Must-gather collection is enabled for {test_name}.")
         inspect_str = get_inspect_command_namespace_string(test_name=test_name, node=node)
         if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
-            LOGGER.warning(f"Must-gather collection would be skipped for exception: {call.excinfo.type}")
+            LOGGER.warning(
+                f"[DATA_COLLECTOR] Must-gather collection would be skipped for exception: {call.excinfo.type}"
+            )
         else:
-            try:
-                db = Database()
-                test_start_time = db.get_test_start_time(test_name=test_name)
-            except Exception as db_exception:
-                test_start_time = 0
-                LOGGER.warning(f"Error: {db_exception} in accessing database.")
+            db = Database()
+            test_start_time = db.get_start_time_for_collection(node=node)
 
             try:
                 collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")
