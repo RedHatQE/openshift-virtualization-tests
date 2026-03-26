@@ -79,6 +79,31 @@ def _random_hextets(count: int) -> list[int]:
     return random.sample(range(1, 0xFFFE), count)
 
 
+def random_ip_addresses_by_family(
+    ipv4_supported: bool,
+    ipv6_supported: bool,
+    net_seed: int,
+    host_address: int,
+) -> list[str]:
+    """Generate IP addresses for each supported IP family.
+
+    Args:
+        ipv4_supported: Whether IPv4 is supported.
+        ipv6_supported: Whether IPv6 is supported.
+        net_seed: Seed index for selecting the random network portion of the address.
+        host_address: Host portion of the address, used to place VMs on the same subnet.
+
+    Returns:
+        List of IP address strings, one per supported IP family.
+    """
+    ips = []
+    if ipv4_supported:
+        ips.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
+    if ipv6_supported:
+        ips.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
+    return ips
+
+
 def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """
     Filter out link-local IP addresses from a list of IP address strings.
