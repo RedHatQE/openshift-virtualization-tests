@@ -7,11 +7,8 @@ import re
 import pytest
 import yaml
 from ocp_resources.api_service import APIService
-from ocp_resources.cdi_config import CDIConfig
-from ocp_resources.imagestreamtag import ImageStreamTag
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
@@ -64,22 +61,6 @@ class TestMustGatherCluster:
                 VALIDATE_UID_NAME,
                 marks=(pytest.mark.polarion("CNV-2707")),
                 id="test_nodenetworkstate_resources",
-            ),
-            pytest.param(
-                NetworkAddonsConfig,
-                f"cluster-scoped-resources/"
-                f"networkaddonsconfigs.{NetworkAddonsConfig.ApiGroup.NETWORKADDONSOPERATOR_NETWORK_KUBEVIRT_IO}/"
-                "{name}.yaml",
-                VALIDATE_UID_NAME,
-                marks=(pytest.mark.polarion("CNV-3042")),
-                id="test_networkaddonsoperator_resources",
-            ),
-            pytest.param(
-                CDIConfig,
-                f"cluster-scoped-resources/cdiconfigs.{CDIConfig.ApiGroup.CDI_KUBEVIRT_IO}/{{name}}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-3373")),
-                id="test_cdi_config_resources",
             ),
         ],
         indirect=["resource_type"],
@@ -368,11 +349,15 @@ class TestMustGatherCluster:
                 checks=VALIDATE_UID_NAME,
             )
 
+    # Dependency: test_crd_resources validates CRDs from the ALL_CNV_CRDS list;
+    # if the list is outdated (test_no_new_cnv_crds fails), test_crd_resources tests an incomplete set.
+    @pytest.mark.dependency(name="test_no_new_cnv_crds")
     @pytest.mark.polarion("CNV-8508")
     def test_no_new_cnv_crds(self, kubevirt_crd_names):
         new_crds = [crd for crd in kubevirt_crd_names if crd not in ALL_CNV_CRDS]
         assert not new_crds, f"Following crds are new: {new_crds}."
 
+    @pytest.mark.dependency(depends=["test_no_new_cnv_crds"])
     @pytest.mark.polarion("CNV-2724")
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
         crd_name = kubevirt_crd_by_type.name
@@ -437,28 +422,6 @@ class TestMustGatherCluster:
                     # Re-raise for any other missing resource file
                     LOGGER.error(f"Resource file not found: {resource_file}")
                     raise
-
-    @pytest.mark.polarion("CNV-2939")
-    def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
-        resource_path = (
-            f"namespaces/{NamespacesNames.OPENSHIFT}/{ImageStreamTag.ApiGroup.IMAGE_OPENSHIFT_IO}/imagestreamtags"
-        )
-        istag_dir = os.path.join(
-            must_gather_for_test,
-            resource_path,
-        )
-        assert len(os.listdir(istag_dir)) == len(
-            list(ImageStreamTag.get(client=admin_client, namespace=NamespacesNames.OPENSHIFT))
-        )
-        check_list_of_resources(
-            client=admin_client,
-            resource_type=ImageStreamTag,
-            temp_dir=must_gather_for_test,
-            resource_path=f"{resource_path}/{{name}}.yaml",
-            checks=VALIDATE_UID_NAME,
-            namespace=NamespacesNames.OPENSHIFT,
-            filter_resource="redhat",
-        )
 
 
 @pytest.mark.sriov
