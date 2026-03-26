@@ -140,12 +140,23 @@ def wait_for_vm_interfaces(vmi: VirtualMachineInstance, timeout: int = TIMEOUT_1
         timeout=timeout,
     )
     LOGGER.info(f"Wait for {vmi.name} network interfaces")
+    expected_names = {
+        iface.name for iface in vmi.instance.spec.domain.devices.interfaces if iface.get("state") != "absent"
+    }
     sampler = TimeoutSampler(wait_timeout=timeout, sleep=1, func=lambda: vmi.instance)
-    for sample in sampler:
-        interfaces = sample.get("status", {}).get("interfaces", [])
-        active_interfaces = [interface for interface in interfaces if interface.get("interfaceName")]
-        if len(active_interfaces) == len(interfaces):
-            return True
+    reported_names = set()
+    try:
+        for sample in sampler:
+            interfaces = sample.get("status", {}).get("interfaces", [])
+            reported_names = {iface.get("name") for iface in interfaces if iface.get("name")}
+            if reported_names == expected_names and all(iface.get("interfaceName") for iface in interfaces):
+                return True
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"VMI {vmi.name}: expected interfaces: {expected_names}, reported: {reported_names}. "
+            f"Missing (not reported by guest agent): {expected_names - reported_names}."
+        )
+        raise
     return False
 
 
