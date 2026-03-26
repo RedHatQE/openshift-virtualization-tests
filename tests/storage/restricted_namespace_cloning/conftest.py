@@ -33,7 +33,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
-from utilities.storage import create_dv
+from utilities.storage import create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
