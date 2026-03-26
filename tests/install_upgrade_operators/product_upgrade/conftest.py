@@ -12,7 +12,6 @@ from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.product_upgrade.utils import (
-    approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
     get_all_cnv_alerts,
@@ -35,6 +34,7 @@ from tests.install_upgrade_operators.utils import (
     KONFLUX_MIRROR_BASE_URL,
     apply_konflux_idms,
     idms_has_all_mirrors,
+    wait_for_install_plan,
     wait_for_operator_condition,
 )
 from tests.upgrade_params import EUS
@@ -55,6 +55,7 @@ from utilities.infra import (
     get_subscription,
 )
 from utilities.operator import (
+    approve_install_plan,
     get_machine_config_pool_by_name,
     get_machine_config_pools_conditions,
     update_image_in_catalog_source,
@@ -112,16 +113,21 @@ def updated_konflux_idms(
     cnv_source,
     required_konflux_mirrors,
     is_disconnected_cluster,
+    is_production_source,
     active_machine_config_pools,
     machine_config_pools_conditions,
 ):
     """Ensures the Konflux IDMS contains the required mirror entries for the CNV upgrade target version."""
+    if is_production_source:
+        LOGGER.info("IDMS updates skipped for production source.")
+        return
+
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
 
     if cnv_source == HOTFIX_STR:
-        LOGGER.info("IDMS updates skipped as upgrading using production source/upgrade to hotfix")
+        LOGGER.info("IDMS updates skipped for hotfix upgrade.")
         return
 
     idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
@@ -143,7 +149,12 @@ def updated_custom_hco_catalog_source_image(
     admin_client,
     cnv_image_url,
     is_disconnected_cluster,
+    is_production_source,
 ):
+    if is_production_source:
+        LOGGER.info("Custom catalog source update skipped for production source.")
+        return
+
     image_url = cnv_image_url
     if is_disconnected_cluster:
         image_info = get_oc_image_info(image=image_url, pull_secret=generate_openshift_pull_secret_file())
@@ -169,13 +180,22 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 
 
 @pytest.fixture()
-def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
-    approve_cnv_upgrade_install_plan(
+def approved_cnv_upgrade_install_plan(
+    admin_client,
+    hco_namespace,
+    hco_target_csv_name,
+    is_production_source,
+    cnv_subscription_scope_session,
+):
+    install_plan = wait_for_install_plan(
         client=admin_client,
         hco_namespace=hco_namespace.name,
         hco_target_csv_name=hco_target_csv_name,
         is_production_source=is_production_source,
+        cnv_subscription=cnv_subscription_scope_session,
     )
+    LOGGER.info(f"Approve the upgrade install plan {install_plan.name} to trigger the upgrade.")
+    approve_install_plan(install_plan=install_plan)
 
 
 @pytest.fixture()
@@ -532,6 +552,7 @@ def source_eus_to_non_eus_cnv_upgraded(
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
     updated_cnv_subscription_source,
+    cnv_subscription_scope_session,
 ):
     for version, cnv_image in sorted(eus_cnv_upgrade_path["non-eus"].items()):
         LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
@@ -541,6 +562,7 @@ def source_eus_to_non_eus_cnv_upgraded(
             cr_name=hyperconverged_resource_scope_function.name,
             hco_namespace=hco_namespace,
             cnv_target_version=version.lstrip("v"),
+            cnv_subscription=cnv_subscription_scope_session,
         )
     LOGGER.info("Successfully performed cnv upgrades from source EUS to non-EUS version.")
 
@@ -552,6 +574,7 @@ def non_eus_to_target_eus_cnv_upgraded(
     eus_cnv_upgrade_path,
     hyperconverged_resource_scope_function,
     updated_cnv_subscription_source,
+    cnv_subscription_scope_session,
 ):
     version, cnv_image = next(iter(eus_cnv_upgrade_path[EUS].items()))
     LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
@@ -561,6 +584,7 @@ def non_eus_to_target_eus_cnv_upgraded(
         cr_name=hyperconverged_resource_scope_function.name,
         hco_namespace=hco_namespace,
         cnv_target_version=version.lstrip("v"),
+        cnv_subscription=cnv_subscription_scope_session,
     )
 
 

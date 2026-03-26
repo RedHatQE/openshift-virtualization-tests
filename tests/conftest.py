@@ -1789,6 +1789,8 @@ def determine_upgrade_stream(current_version, target_version):
         return UpgradeStreams.Y_STREAM
     elif current_cnv_version.micro < target_cnv_version.micro:
         return UpgradeStreams.Z_STREAM
+    elif target_cnv_version.minor % 2 == 0 and target_cnv_version.minor - 2 == current_cnv_version.minor:
+        return UpgradeStreams.EUS
     elif HOTFIX_STR in current_version:
         # if we reach here, this is an upgrade out of hotfix to next z-stream
         return UpgradeStreams.Z_STREAM
