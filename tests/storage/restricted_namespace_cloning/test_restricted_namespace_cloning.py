@@ -14,14 +14,15 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES,
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
-    DV_PARAMS,
     LIST_GET,
     PERMISSIONS_DST,
     PERMISSIONS_SRC,
+    SOURCE_DV,
     VERBS_DST,
     VERBS_SRC,
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
+from utilities.constants import OS_FLAVOR_FEDORA, Images
 from utilities.storage import create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -31,12 +32,12 @@ pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_source, "
+    "namespace, dv_cloned_from_datasource, permissions_datavolume_source, "
     "dv_cloned_by_unprivileged_user_in_the_same_namespace",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {"dv_name": "cnv-8905"},
             marks=pytest.mark.polarion("CNV-8905"),
@@ -54,13 +55,13 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, "
+    "namespace, dv_cloned_from_datasource, "
     "permissions_datavolume_source, permissions_datavolume_destination, "
     "dv_destination_cloned_from_pvc, requested_verify_image_permissions",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             {"dv_name": "cnv-2692"},
@@ -70,7 +71,7 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: CREATE},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: CREATE_DELETE_LIST_GET},
             {"dv_name": "cnv-2971"},
@@ -91,18 +92,22 @@ def test_user_permissions_positive(
 ):
     verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
     if requested_verify_image_permissions:
-        with create_vm_from_dv(dv=dv_destination_cloned_from_pvc):
+        with create_vm_from_dv(
+            dv=dv_destination_cloned_from_pvc,
+            vm_name="fedora-vm",
+            os_flavor=OS_FLAVOR_FEDORA,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        ):
             pass
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, "
-    "permissions_datavolume_source, permissions_datavolume_destination",
+    "namespace, dv_cloned_from_datasource, permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2793"),
@@ -110,7 +115,7 @@ def test_user_permissions_positive(
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: LIST_GET},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2691"),
@@ -123,7 +128,7 @@ def test_user_permissions_positive(
 def test_user_permissions_negative(
     storage_class_name_scope_module,
     namespace,
-    data_volume_multi_storage_scope_module,
+    dv_cloned_from_datasource,
     destination_namespace,
     unprivileged_client,
     permissions_datavolume_source,
@@ -133,20 +138,20 @@ def test_user_permissions_negative(
     create_dv_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.pvc.name,
-        source_namespace=data_volume_multi_storage_scope_module.namespace,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.pvc.name,
+        source_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module",
+    "namespace, dv_cloned_from_datasource",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             marks=pytest.mark.polarion("CNV-2688"),
         ),
     ],
@@ -156,15 +161,15 @@ def test_user_permissions_negative(
 def test_unprivileged_user_clone_same_namespace_negative(
     storage_class_name_scope_module,
     namespace,
-    data_volume_multi_storage_scope_module,
+    dv_cloned_from_datasource,
     unprivileged_client,
 ):
     create_dv_negative(
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.pvc.name,
-        source_namespace=data_volume_multi_storage_scope_module.namespace,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.pvc.name,
+        source_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )
 
@@ -172,11 +177,11 @@ def test_unprivileged_user_clone_same_namespace_negative(
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, permissions_datavolume_destination",
+    "namespace, dv_cloned_from_datasource, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-8907"),
         ),
@@ -186,7 +191,7 @@ def test_unprivileged_user_clone_same_namespace_negative(
 @pytest.mark.s390x
 def test_user_permissions_only_for_dst_ns_negative(
     storage_class_name_scope_module,
-    data_volume_multi_storage_scope_module,
+    dv_cloned_from_datasource,
     destination_namespace,
     unprivileged_client,
     permissions_datavolume_destination,
@@ -194,8 +199,8 @@ def test_user_permissions_only_for_dst_ns_negative(
     create_dv_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
-        size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.pvc.name,
-        source_namespace=data_volume_multi_storage_scope_module.namespace,
+        size=dv_cloned_from_datasource.size,
+        source_pvc=dv_cloned_from_datasource.pvc.name,
+        source_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )

@@ -13,12 +13,12 @@ from tests.storage.restricted_namespace_cloning.constants import (
     DATAVOLUMES,
     DATAVOLUMES_AND_DVS_SRC,
     DATAVOLUMES_SRC,
-    DV_PARAMS,
     METADATA,
     PERMISSIONS_DST,
     PERMISSIONS_DST_SA,
     PERMISSIONS_SRC,
     PERMISSIONS_SRC_SA,
+    SOURCE_DV,
     SPEC,
     VERBS_DST,
     VERBS_DST_SA,
@@ -27,7 +27,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VM_FOR_TEST,
 )
 from tests.storage.restricted_namespace_cloning.utils import verify_snapshot_used_namespace_transfer
-from utilities.constants import QUARANTINED, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, Images
 from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 
@@ -60,22 +60,24 @@ def create_vm_negative(
         with VirtualMachineForTests(
             name=VM_FOR_TEST,
             namespace=namespace,
-            os_flavor=Images.Cirros.OS_FLAVOR,
+            os_flavor=OS_FLAVOR_FEDORA,
             service_accounts=service_accounts,
             client=unprivileged_client,
-            memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             data_volume_template=get_dv_template(data_volume_clone_settings=data_volume_clone_settings),
+            username="dummy",
+            password="dummy",
         ):
             return
 
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
+    "namespace, dv_cloned_from_datasource, perm_src_service_account, perm_destination_service_account",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_DST_SA: ALL},
             marks=pytest.mark.polarion("CNV-2826"),
@@ -104,12 +106,11 @@ def test_create_vm_with_cloned_data_volume_positive(
     run=False,
 )
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, "
-    "permissions_datavolume_source, permissions_datavolume_destination",
+    "namespace, dv_cloned_from_datasource, permissions_datavolume_source, permissions_datavolume_destination",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: ALL},
             marks=pytest.mark.polarion("CNV-2828"),
@@ -137,11 +138,11 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
 
 
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module, perm_src_service_account, perm_destination_service_account",
+    "namespace, dv_cloned_from_datasource, perm_src_service_account, perm_destination_service_account",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC_SA: DATAVOLUMES, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES, VERBS_DST_SA: ALL},
             marks=pytest.mark.polarion("CNV-2827"),
@@ -169,11 +170,11 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
 
 @pytest.mark.gating
 @pytest.mark.parametrize(
-    "namespace, data_volume_multi_storage_scope_module",
+    "namespace, dv_cloned_from_datasource",
     [
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
-            DV_PARAMS,
+            {"dv_name": SOURCE_DV},
             marks=pytest.mark.polarion("CNV-2829"),
         ),
     ],
