@@ -9,7 +9,6 @@ from ocp_resources.resource import Resource
 from timeout_sampler import retry
 
 from utilities.constants import BASE_EXCEPTIONS_DICT, TIMEOUT_3MIN, TIMEOUT_10SEC
-from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,12 +20,6 @@ pytestmark = [
     pytest.mark.conformance,
     pytest.mark.skip_must_gather_collection,
 ]
-
-UNREADABLE_CRDS_BY_JIRA = {
-    "CNV-76369": [
-        f"virtualmachinebackuptrackers.backup.{Resource.ApiGroup.KUBEVIRT_IO}",
-    ],
-}
 
 
 @retry(
@@ -49,33 +42,11 @@ def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
     ]
 
 
-@pytest.fixture()
-def crds_with_open_jira():
-    """
-    Map CRD names to open Jira IDs.
-
-    Returns:
-        dict[str, str]: Mapping of CRD name to open Jira ID.
-    """
-    return {
-        crd_name: jira_id
-        for jira_id, crd_list in UNREADABLE_CRDS_BY_JIRA.items()
-        if is_jira_open(jira_id=jira_id)
-        for crd_name in crd_list
-    }
-
-
 @pytest.mark.polarion("CNV-8263")
-def test_crds_cluster_readers_role(admin_client, crds_with_open_jira):
+def test_crds_cluster_readers_role(admin_client):
     cluster_readers = "system:cluster-readers"
     unreadable_crds = []
     for crd in get_cnv_crds(admin_client=admin_client):
-        if crd.name in crds_with_open_jira:
-            LOGGER.warning(
-                f"Skipping {crd.name} because it is unreadable due to a product bug.",
-                extra={"crd_name": crd.name, "jira_id": crds_with_open_jira[crd.name]},
-            )
-            continue
         can_read = check_output(shlex.split(f"oc adm policy who-can get {crd.name}"))
         if cluster_readers not in str(can_read):
             unreadable_crds.append(crd.name)
