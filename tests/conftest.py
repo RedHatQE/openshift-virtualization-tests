@@ -73,6 +73,8 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
+from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -130,7 +132,6 @@ from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
     get_host_model_cpu,
-    get_nodes_cpu_architecture,
     get_nodes_cpu_model,
 )
 from utilities.data_utils import base64_encode_str, name_prefix
@@ -164,7 +165,7 @@ from utilities.infra import (
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
-    cloud_init,
+    cloud_init_network_data,
     enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
@@ -1034,8 +1035,8 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 
 
 @pytest.fixture(scope="session")
-def nodes_cpu_architecture(nodes):
-    return get_nodes_cpu_architecture(nodes=nodes)
+def nodes_cpu_architecture():
+    return py_config["cpu_arch"]
 
 
 @pytest.fixture(scope="session")
@@ -1655,19 +1656,43 @@ def running_vm_upgrade_a(
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
 ):
     name = "vm-upgrade-a"
+    cloud_init_data = cloud_init_network_data(
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [
+                        f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
+                        f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
+                    ]
+                }
+            }
+        }
+    )
     with VirtualMachineForTests(
         name=name,
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.1"),
+        cloud_init_data=cloud_init_data,
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
+        ip_families = [
+            family for family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+        ]
+        lookup_iface_status(
+            vm=vm,
+            iface_name=upgrade_bridge_marker_nad.name,
+            predicate=lambda interface: (
+                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+            ),
+        )
         yield vm
 
 
@@ -1677,19 +1702,43 @@ def running_vm_upgrade_b(
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
+    ipv4_supported_cluster,
+    ipv6_supported_cluster,
 ):
     name = "vm-upgrade-b"
+    cloud_init_data = cloud_init_network_data(
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [
+                        f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
+                        f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
+                    ]
+                }
+            }
+        }
+    )
     with VirtualMachineForTests(
         name=name,
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.2"),
+        cloud_init_data=cloud_init_data,
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
+        ip_families = [
+            family for family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+        ]
+        lookup_iface_status(
+            vm=vm,
+            iface_name=upgrade_bridge_marker_nad.name,
+            predicate=lambda interface: (
+                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+            ),
+        )
         yield vm
 
 

@@ -565,13 +565,11 @@ def data_volume_template_dict(
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
-        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
-        or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        size=get_dv_size_from_datasource(data_source=data_source),
+        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -624,11 +622,26 @@ def get_hyperconverged_cdi(admin_client):
         return cdi
 
 
-def write_file(vm, filename, content, stop_vm=True):
-    """Start VM if not running, write a file in the VM and stop the VM"""
+def write_file(
+    vm: virt_util.VirtualMachineForTests,
+    filename: str,
+    content: str,
+    stop_vm: bool = True,
+    kubeconfig: str | None = None,
+) -> None:
+    """
+    Start VM if not running, write a file in the VM and stop the VM.
+
+    Args:
+        vm: VirtualMachine instance
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+        stop_vm: Whether to stop the VM after writing the file
+        kubeconfig: Optional path to kubeconfig file for remote cluster access
+    """
     if not vm.ready:
         vm.start(wait=True)
-    with console.Console(vm=vm) as vm_console:
+    with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
@@ -1182,3 +1195,22 @@ def persist_storage_class_default(default: bool, storage_class: StorageClass) ->
     )
     # Apply the changes to be persistent without backup for restoration
     editor.update(backup_resources=False)
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    """
+    Returns the DataVolume size from a DataSource's underlying instance.
+
+    Args:
+        data_source: DataSource whose underlying instance size or restore size to read.
+
+    Returns:
+        The storage request value (str or int) from spec.resources.requests.storage if present;
+        otherwise the restore size from status.restoreSize; None if neither exists.
+    """
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size

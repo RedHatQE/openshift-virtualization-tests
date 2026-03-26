@@ -7,7 +7,8 @@ from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
 from timeout_sampler import retry
 
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.ip import filter_link_local_addresses
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
@@ -25,6 +26,10 @@ class BaseTcpClient(ABC):
         self._server_ip = server_ip
         self.server_port = server_port
         self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+
+    @property
+    def server_ip(self) -> str:
+        return self._server_ip
 
     @abstractmethod
     def __enter__(self) -> "BaseTcpClient":
@@ -47,16 +52,19 @@ class TcpServer:
     Args:
         vm (BaseVirtualMachine): The virtual machine where the server runs.
         port (int): The port on which the server listens for client connections.
+        bind_ip (str): The IP address to bind the server to (optional).
     """
 
     def __init__(
         self,
         vm: BaseVirtualMachine,
         port: int,
+        bind_ip: str | None = None,
     ):
         self._vm = vm
         self._port = port
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
+        self._cmd += f" --bind {bind_ip}" if bind_ip else ""
 
     def __enter__(self) -> "TcpServer":
         self._vm.console(
@@ -192,6 +200,41 @@ def is_tcp_connection(server: TcpServer, client: BaseTcpClient) -> bool:
 
 
 @contextlib.contextmanager
+def active_tcp_connections(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    iface_name: str,
+) -> Generator[list[tuple[VMTcpClient, TcpServer]], None, None]:
+    """Start iperf3 client-server connections for all IPs on the server's interface.
+       The helper assumed the ip addresses are up.
+
+    Args:
+        client_vm: VM running the iperf3 client.
+        server_vm: VM running the iperf3 server.
+        iface_name: Network interface name on the server VM to resolve IPs from.
+
+    Yields:
+        List of (VMTcpClient, TcpServer) tuples, one per enabled IP family.
+    """
+    iface = lookup_iface_status(vm=server_vm, iface_name=iface_name)
+    server_ips = [ip for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses)]
+    with contextlib.ExitStack() as stack:
+        active_conns = []
+        for server_ip in server_ips:
+            active_conns.append(
+                stack.enter_context(
+                    client_server_active_connection(
+                        client_vm=client_vm,
+                        server_vm=server_vm,
+                        spec_logical_network=iface.name,
+                        ip_family=server_ip.version,
+                    )
+                )
+            )
+        yield active_conns
+
+
+@contextlib.contextmanager
 def client_server_active_connection(
     client_vm: BaseVirtualMachine,
     server_vm: BaseVirtualMachine,
@@ -221,10 +264,11 @@ def client_server_active_connection(
     Note:
         Traffic runs with infinite duration until context exits.
     """
-    with TcpServer(vm=server_vm, port=port) as server:
+    server_ip = str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family))
+    with TcpServer(vm=server_vm, port=port, bind_ip=server_ip) as server:
         with VMTcpClient(
             vm=client_vm,
-            server_ip=str(lookup_iface_status_ip(vm=server_vm, iface_name=spec_logical_network, ip_family=ip_family)),
+            server_ip=server_ip,
             server_port=port,
             maximum_segment_size=maximum_segment_size,
         ) as client:

@@ -78,6 +78,20 @@ The "no defensive programming" rule has these five exceptions:
 
 **Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Once a test has implementation code, `__test__ = False` must be removed.
 
+**STD Docstring Format (MANDATORY):**
+
+When writing or reviewing STD (Software Test Description) test docstrings, follow the format defined in [`docs/SOFTWARE_TEST_DESCRIPTION.md`](docs/SOFTWARE_TEST_DESCRIPTION.md):
+- **Required sections:** `Preconditions:`, `Steps:`, `Expected:`
+- ❌ **NEVER** use alternative section names.
+- Each test verifies ONE thing with ONE `Expected:` assertion (rare exceptions allowed when multiple assertions verify a single behavior — see STD doc)
+- **No implementation details in STD docstrings** — no fixture names, no code references, no variable names; describe behavior in natural language
+- **STP link REQUIRED** — module docstring must contain the STP (Software Test Plan) link directly, not a reference to a README or other file
+- **Markers can be at any level** — module, class, or test docstring; place them at the level they apply to
+- **Parametrized markers** — parameter values may have inline markers using `[Markers: ...]` syntax (e.g., `- ipv4 [Markers: ipv4]`) to differentiate common markers from parameter-specific ones
+- **Name resources by function** — in Preconditions, name objects by their role (e.g., "client VM", "server VM", "under-test VM"), not generic labels (e.g., "VM-A", "VM-B")
+- **Shared vs. test-specific preconditions** — class/module docstring holds shared `Preconditions:`, individual tests add only their own. When a shared resource (e.g., a VM) is directly used by a test, it must appear in both the shared and test-level preconditions.
+- **`[NEGATIVE]` indicator REQUIRED** — tests verifying failure scenarios must include `[NEGATIVE]` in the description
+
 ### Fixture Guidelines (CRITICAL)
 
 1. **Single Action REQUIRED**: Fixtures MUST do ONE action only (single responsibility)

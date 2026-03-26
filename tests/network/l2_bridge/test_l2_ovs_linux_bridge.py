@@ -8,7 +8,7 @@ from timeout_sampler import TimeoutSampler
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import wait_for_no_packet_loss_after_connection
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
-from utilities.constants import TIMEOUT_2MIN
+from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE, TIMEOUT_2MIN
 from utilities.network import assert_ping_successful
 
 pytestmark = [pytest.mark.ipv4, pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")]
@@ -16,6 +16,7 @@ pytestmark = [pytest.mark.ipv4, pytest.mark.usefixtures("hyperconverged_ovs_anno
 CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type
 
 
+@pytest.mark.parametrize("bridge_device_type", [LINUX_BRIDGE, OVS_BRIDGE], indirect=True)
 @pytest.mark.s390x
 class TestL2Bridge:
     """

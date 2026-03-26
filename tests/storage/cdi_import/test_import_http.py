@@ -13,7 +13,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import FEDORA_LATEST, RHEL_LATEST
 from tests.storage.constants import (
-    CIRROS_QCOW2_IMG,
+    ALPINE_QCOW2_IMG,
     HTTP,
     HTTPS,
     HTTPS_CONFIG_MAP_NAME,
@@ -58,7 +58,7 @@ LOGGER = logging.getLogger(__name__)
 
 ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
-DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
+DEFAULT_DV_SIZE = Images.Alpine.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
 
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
@@ -116,7 +116,7 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
             {
                 "dv_name": "import-http-dv",
                 "source": HTTP,
-                "image": CIRROS_QCOW2_IMG,
+                "image": ALPINE_QCOW2_IMG,
                 "dv_size": DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-675"),
@@ -234,7 +234,7 @@ def test_successful_import_secure_archive(
         pytest.param(
             {
                 "dv_name": "cnv-2719",
-                "file_name": Images.Cdi.QCOW2_IMG,
+                "file_name": Images.Alpine.QCOW2_IMG_VERSIONED,
                 "source": HTTPS,
                 "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
             },
@@ -255,7 +255,7 @@ def test_successful_import_secure_image(internal_http_configmap, dv_from_http_im
     [
         pytest.param(
             DataVolume.ContentType.KUBEVIRT,
-            Images.Cirros.RAW_IMG_XZ,
+            Images.Alpine.RAW_IMG_XZ,
             marks=(pytest.mark.polarion("CNV-784"), pytest.mark.smoke()),
         ),
     ],
@@ -291,7 +291,7 @@ def test_successful_import_basic_auth(
         pytest.param(
             {
                 "dv_name": "cnv-2144",
-                "file_name": Images.Cdi.QCOW2_IMG,
+                "file_name": Images.Alpine.QCOW2_IMG_VERSIONED,
                 "content_type": DataVolume.ContentType.ARCHIVE,
             },
             marks=pytest.mark.polarion("CNV-2144"),
@@ -314,54 +314,13 @@ def test_wrong_content_type(
 
 @pytest.mark.sno
 @pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-2220",
-                "file_name": Images.Cirros.RAW_IMG_XZ,
-                "content_type": DataVolume.ContentType.ARCHIVE,
-                "size": SMALL_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-2220"),
-            id="compressed_xz_archive_content_type",
-        ),
-        pytest.param(
-            {
-                "dv_name": "cnv-2710",
-                "file_name": Images.Cirros.RAW_IMG_GZ,
-                "content_type": DataVolume.ContentType.ARCHIVE,
-                "size": SMALL_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-2710"),
-            id="compressed_gz_archive_content_type",
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_unpack_compressed(
-    admin_client,
-    dv_from_http_import,
-):
-    wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(
-            dv=dv_from_http_import,
-            admin_client=admin_client,
-        ),
-        msg=ErrorMsg.EXIT_STATUS_2,
-    )
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
     ("https_config_map", "dv_from_http_import"),
     [
         pytest.param(
             {"data": "-----BEGIN CERTIFICATE-----"},
             {
                 "dv_name": "cnv-2812",
-                "file_name": Images.Cdi.QCOW2_IMG,
+                "file_name": Images.Alpine.QCOW2_IMG_VERSIONED,
                 "source": HTTPS,
                 "configmap_name": HTTPS_CONFIG_MAP_NAME,
             },
@@ -371,7 +330,7 @@ def test_unpack_compressed(
             {"data": None},
             {
                 "dv_name": "cnv-2813",
-                "file_name": Images.Cdi.QCOW2_IMG,
+                "file_name": Images.Alpine.QCOW2_IMG_VERSIONED,
                 "source": HTTPS,
                 "configmap_name": HTTPS_CONFIG_MAP_NAME,
             },
@@ -399,7 +358,7 @@ def test_certconfigmap_incorrect_cert(
             {
                 "dv_name": "cnv-2815",
                 "source": HTTP,
-                "image": CIRROS_QCOW2_IMG,
+                "image": ALPINE_QCOW2_IMG,
                 "dv_size": DEFAULT_DV_SIZE,
                 "cert_configmap": "wrong_name",
                 "wait": False,
