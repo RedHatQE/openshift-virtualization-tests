@@ -19,7 +19,8 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.constants import OS_FLAVOR_RHEL
+from utilities.architecture import get_cluster_architecture
+from utilities.constants import OS_FLAVOR_RHEL, S390X
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
@@ -128,6 +129,12 @@ def preferred_cluster_instance_type(unprivileged_client):
 @pytest.fixture()
 def preferred_preference_for_rhel_version(rhel_version, unprivileged_client):
     preference_name = re.sub(r"(\D+)(\d+)", r"\1.\2", rhel_version)
+    if get_cluster_architecture() == S390X:
+        preference_object = VirtualMachineClusterPreference(
+            name=f"{preference_name}.{S390X}", client=unprivileged_client
+        )
+        if preference_object.exists:
+            return preference_object
     preference_object = VirtualMachineClusterPreference(name=preference_name, client=unprivileged_client)
     if preference_object.exists:
         return preference_object
