@@ -28,7 +28,6 @@ from tests.storage.restricted_namespace_cloning.constants import (
 from tests.storage.utils import (
     create_cluster_role,
     create_role_binding,
-    get_dv_size_from_datasource,
     set_permissions,
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
@@ -71,7 +70,13 @@ def dv_cloned_from_datasource(
     When cloning from a DataSource, the target DV must be at least as large as the source.
     """
     dv_name = request.param["dv_name"]
-    dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+
+    source_dict = fedora_data_source_scope_module.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    # dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
     with create_dv(
         dv_name=f"{dv_name}-{storage_class_name_scope_module}",
