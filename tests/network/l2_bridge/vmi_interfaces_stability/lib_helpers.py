@@ -16,7 +16,22 @@ from tests.network.libs import cloudinit
 
 LOGGER = logging.getLogger(__name__)
 
-LINUX_BRIDGE_IFACE_NAME: Final[str] = "linux-bridge"
+LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
+LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
+
+
+def primary_iface_cloud_init(
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+) -> cloudinit.EthernetDevice | None:
+    if not ipv6_supported_cluster:
+        return None
+    return cloudinit.EthernetDevice(
+        addresses=["fd10:0:2::2/120"],
+        gateway6="fd10:0:2::1",
+        dhcp4=ipv4_supported_cluster,
+        dhcp6=False,
+    )
 
 
 def secondary_network_vm(
@@ -29,12 +44,14 @@ def secondary_network_vm(
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
+        Interface(name=LINUX_BRIDGE_IFACE_NAME_1, bridge={}),
         Interface(name="default", masquerade={}),
-        Interface(name=LINUX_BRIDGE_IFACE_NAME, bridge={}),
+        Interface(name=LINUX_BRIDGE_IFACE_NAME_2, bridge={}),
     ]
     spec.template.spec.networks = [
+        Network(name=LINUX_BRIDGE_IFACE_NAME_1, multus=Multus(networkName=bridge_network_name)),
         Network(name="default", pod={}),
-        Network(name=LINUX_BRIDGE_IFACE_NAME, multus=Multus(networkName=bridge_network_name)),
+        Network(name=LINUX_BRIDGE_IFACE_NAME_2, multus=Multus(networkName=bridge_network_name)),
     ]
 
     ethernets = {}
@@ -60,20 +77,6 @@ def secondary_network_vm(
     spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
-
-
-def primary_iface_cloud_init(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
-) -> cloudinit.EthernetDevice | None:
-    if not ipv6_supported_cluster:
-        return None
-    return cloudinit.EthernetDevice(
-        addresses=["fd10:0:2::2/120"],
-        gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported_cluster,
-        dhcp6=False,
-    )
 
 
 def secondary_iface_cloud_init(
