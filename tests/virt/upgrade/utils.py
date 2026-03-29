@@ -16,12 +16,9 @@ from utilities.constants import (
     TIMEOUT_3MIN,
     TIMEOUT_10SEC,
     TIMEOUT_180MIN,
+    VIRT_LAUNCHER,
 )
 from utilities.exceptions import ResourceMissingFieldError
-from utilities.infra import (
-    get_csv_by_name,
-    get_related_images_name_and_version,
-)
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     wait_for_ssh_connectivity,
@@ -30,6 +27,13 @@ from utilities.virt import (
 LOGGER = logging.getLogger(__name__)
 
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def get_virt_launcher_image_from_csv(csv):
+    for item in csv.instance.spec.relatedImages:
+        if VIRT_LAUNCHER in item["name"]:
+            return item["image"]
+    raise ValueError(f"Image digest for {VIRT_LAUNCHER} not found")
 
 
 def verify_vms_ssh_connectivity(vms_list):
@@ -136,17 +140,11 @@ def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine], admin_client
     return False
 
 
-def validate_vms_pod_updated(admin_client, hco_namespace, hco_target_csv_name, vm_list):
-    csv = get_csv_by_name(
-        admin_client=admin_client,
-        namespace=hco_namespace.name,
-        csv_name=hco_target_csv_name,
-    )
-    target_related_images = get_related_images_name_and_version(csv=csv)
+def validate_vms_pod_updated(admin_client, expected_virt_launcher_image, vm_list):
     return [
         {pod.name: pod.instance.spec.containers[0].image}
         for pod in [vm.vmi.get_virt_launcher_pod(privileged_client=admin_client) for vm in vm_list]
-        if pod.instance.spec.containers[0].image not in target_related_images.values()
+        if pod.instance.spec.containers[0].image != expected_virt_launcher_image
     ]
 
 
