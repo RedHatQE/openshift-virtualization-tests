@@ -372,12 +372,12 @@ def bridge_attached_vm(
     mpls_dest_tag,
     mpls_route_next_hop,
     mpls_local_ip,
+    client,
+    dhcp_interface_config,
     cloud_init_extra_user_data=None,
-    client=None,
     node_selector=None,
 ):
     cloud_init_data = _cloud_init_data(
-        vm_name=name,
         ip_addresses=ip_addresses,
         mpls_local_ip=mpls_local_ip,
         mpls_local_tag=mpls_local_tag,
@@ -385,6 +385,7 @@ def bridge_attached_vm(
         mpls_dest_tag=mpls_dest_tag,
         mpls_route_next_hop=mpls_route_next_hop,
         cloud_init_extra_user_data=cloud_init_extra_user_data,
+        dhcp_interface_config=dhcp_interface_config,
     )
     with VirtualMachineAttachedToBridge(
         namespace=namespace,
@@ -404,7 +405,6 @@ def bridge_attached_vm(
 
 
 def _cloud_init_data(
-    vm_name,
     ip_addresses,
     mpls_local_ip,
     mpls_local_tag,
@@ -412,21 +412,16 @@ def _cloud_init_data(
     mpls_dest_tag,
     mpls_route_next_hop,
     cloud_init_extra_user_data,
+    dhcp_interface_config,
 ):
     network_data_data = {
         "ethernets": {
             "eth1": {"addresses": [f"{ip_addresses[0]}/24"]},
             "eth2": {"addresses": [f"{ip_addresses[1]}/24"]},
             "eth4": {"addresses": [f"{ip_addresses[3]}/24"]},
+            DHCP_INTERFACE_NAME: dhcp_interface_config,
         },
     }
-    # Only DHCP server VM (vm-fedora-1) should have IP on eth3 interface
-    if vm_name == "vm-fedora-1":
-        network_data_data["ethernets"][DHCP_INTERFACE_NAME] = {"addresses": [f"{ip_addresses[2]}/24"]}
-
-    # DHCP client VM (vm-fedora-2) should be with dhcp=false, will be activated in test 'test_dhcp_broadcast'.
-    if vm_name == "vm-fedora-2":
-        network_data_data["ethernets"][DHCP_INTERFACE_NAME] = {"dhcp4": False}
 
     runcmd = [
         "modprobe mpls_router",  # In order to test mpls we need to load driver
@@ -466,7 +461,7 @@ class VirtualMachineAttachedToBridge(VirtualMachineForTests):
         mpls_dest_ip: str,
         mpls_dest_tag: int,
         mpls_route_next_hop: str,
-        client: DynamicClient | None = None,
+        client: DynamicClient,
         cloud_init_data: dict[str, dict] | None = None,
         node_selector: dict[str, str] | None = None,
     ):

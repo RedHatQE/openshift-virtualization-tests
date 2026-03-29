@@ -28,7 +28,7 @@ def test_connectivity_between_udn_vms(self):
     Steps:
     1. Initiate TCP traffic between the two CUDN VMs.
 
-    Checks:
+    Expected:
     - VMs successfully communicate with each other.
     """
 
@@ -43,8 +43,8 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(self):
     Steps:
     1. Initiate TCP traffic between the target under-test VM and the external L2 endpoint.
 
-    Checks:
-    - The VM successfully communicates with the the external L2 endpoint.
+    Expected:
+    - The VM successfully communicates with the external L2 endpoint.
     """
 
 
@@ -59,7 +59,7 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(self):
     Steps:
     1. Live-migrate the target under-test VM and wait for completion.
 
-    Checks:
+    Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
 
@@ -74,7 +74,7 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider(self):
     Steps:
     1. Initiate TCP traffic between the target under-test VM and the external L3 endpoint.
 
-    Checks:
+    Expected:
     - The VM successfully communicates with the external L3 endpoint.
     """
 
@@ -90,7 +90,7 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(self):
     Steps:
     1. Live-migrate UDN VM and wait for completion.
 
-    Checks:
+    Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
 
@@ -107,7 +107,7 @@ def test_connectivity_after_udn_vm_cold_reboot(self):
     1. Restart the target under-test VM.
     3. Initiate TCP traffic between target under-test VM and the external endpoints/connectivity reference VM.
 
-    Checks:
+    Expected:
     - New connections are established after the cold reboot.
     """
 
@@ -128,6 +128,6 @@ def test_source_provider_migration(self):
     2. Deploy a VM on the OCP cluster connected to the primary EVPN CUDN using the exact same IP and MAC.
     3. Initiate TCP traffic between newly deployed VM and the external provider endpoints/connectivity reference VM.
 
-    Checks:
+    Expected:
     - New connections are established after new UDN VM deployment.
     """
