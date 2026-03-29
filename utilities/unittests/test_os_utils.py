@@ -22,7 +22,7 @@ from utilities.os_utils import (
 class TestGetWindowsContainerDiskPath:
     """Test cases for get_windows_container_disk_path function"""
 
-    EXPECTED_DIR = "docker/kubevirt-common-instancetypes"
+    EXPECTED_DIR = "docker-local/kubevirt-common-instancetypes"
 
     @pytest.mark.parametrize(
         "os_value, expected_suffix",
