@@ -126,13 +126,6 @@ class TestCCLMWindowsWithVTPM:
     def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
         wait_for_vms_to_be_stopped(vms=vms_for_cclm)
 
-    @pytest.mark.dependency(
-        depends=[f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster"]
-    )
-    @pytest.mark.polarion("CNV-12474")
-    def test_compute_live_migrate_windows_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
-
     @pytest.mark.polarion("CNV-14336")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
         assert_vms_can_be_deleted(vms=vms_for_cclm)

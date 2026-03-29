@@ -48,8 +48,8 @@ from utilities.constants import (
     RHEL10_STR,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
-    U1_SMALL,
     U1_LARGE,
+    U1_SMALL,
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
