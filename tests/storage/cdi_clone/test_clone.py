@@ -78,7 +78,6 @@ def create_vm_from_clone_dv_template(
     ],
     indirect=True,
 )
-@pytest.mark.s390x
 def test_successful_clone_of_large_image(
     namespace,
     data_volume_multi_storage_scope_function,
