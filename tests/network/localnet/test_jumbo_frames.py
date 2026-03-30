@@ -1,8 +1,8 @@
 import pytest
 
+from libs.net.ip import ICMPV4_HEADER_SIZE, IPV4_HEADER_SIZE
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip
-from tests.network.libs.ip import ICMPV4_HEADER_SIZE, IPV4_HEADER_SIZE
 from tests.network.localnet.liblocalnet import LOCALNET_OVS_BRIDGE_INTERFACE
 from utilities.virt import vm_console_run_commands
 

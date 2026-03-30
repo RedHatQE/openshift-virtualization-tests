@@ -5,10 +5,10 @@ from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import NamespacedResource, Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.ip import random_ipv4_address
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.exceptions import ResourceValueError
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict

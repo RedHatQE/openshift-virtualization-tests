@@ -12,6 +12,7 @@ from ocp_resources.network_attachment_definition import OVNOverlayNetworkAttachm
 from ocp_resources.node import Node
 
 from libs.net import netattachdef as libnad
+from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import PodTcpClient as TcpClient
 from libs.net.traffic_generator import TcpServer
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
@@ -30,7 +31,6 @@ from tests.network.libs.bgp import (
     generate_frr_conf,
     wait_for_bgp_connection_established,
 )
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
 from utilities.infra import get_node_selector_dict
