@@ -4,11 +4,11 @@ import pytest
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
+from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import TcpServer, is_tcp_connection
 from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm import affinity
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
 from utilities.infra import create_ns

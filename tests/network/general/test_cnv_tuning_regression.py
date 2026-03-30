@@ -1,6 +1,6 @@
 import pytest
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, network_device, network_nad

@@ -12,7 +12,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from tests.network.utils import (
     assert_ssh_alive,
     run_ssh_in_background,
