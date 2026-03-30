@@ -6,9 +6,10 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities import console
-from utilities.constants import VIRT_HANDLER
+from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC, VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_for_virt_handler_pods_network_updated
@@ -126,13 +127,39 @@ def verify_vms_boot_id_after_cross_cluster_live_migration(
     assert not rebooted_vms, f"Boot id changed for VMs:\n {rebooted_vms}"
 
 
-def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+def get_not_stopped_vms(vms: list[VirtualMachineForTests]) -> dict[str, str]:
     not_stopped_vms = {}
     for vm in vms:
         vm_status = vm.printable_status
         if vm_status != vm.Status.STOPPED:
             not_stopped_vms[vm.name] = vm_status
-    assert not not_stopped_vms, f"Source VMs are not stopped: {not_stopped_vms}"
+    if not_stopped_vms:
+        LOGGER.info(f"VMs are not stopped: {not_stopped_vms}")
+    return not_stopped_vms
+
+
+def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+    not_stopped_vms = get_not_stopped_vms(vms=vms)
+    assert not not_stopped_vms, f"VMs are not stopped: {not_stopped_vms}"
+
+
+def wait_for_vms_to_be_stopped(vms: list[VirtualMachineForTests]) -> None:
+    LOGGER.info("Waiting for VMs to stop")
+    not_stopped_vms = {}
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_3MIN,
+            sleep=TIMEOUT_5SEC,
+            func=get_not_stopped_vms,
+            vms=vms,
+        ):
+            not_stopped_vms = sample
+            if not not_stopped_vms:
+                LOGGER.info("All VMs are stopped")
+                return
+            LOGGER.info(f"Waiting for VMs to stop: {not_stopped_vms}")
+    except TimeoutExpiredError:
+        raise AssertionError(f"VMs did not stop within timeout: {not_stopped_vms}")
 
 
 def assert_vms_can_be_deleted(vms: list[VirtualMachineForTests]) -> None:

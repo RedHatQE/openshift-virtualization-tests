@@ -9,6 +9,7 @@ import requests
 import yaml
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.forklift_controller import ForkliftController
 from ocp_resources.migration import Migration
 from ocp_resources.namespace import Namespace
@@ -28,22 +29,34 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
+from tests.os_params import WINDOWS_2022
 from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.cross_cluster_live_migration.utils import (
     enable_feature_gate_and_configure_hco_live_migration_network,
     get_vm_boot_id_via_console,
 )
+from utilities.artifactory import (
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     RHEL10_PREFERENCE,
     RHEL10_STR,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
+    U1_LARGE,
     U1_SMALL,
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
-from utilities.storage import data_volume_template_with_source_ref_dict, write_file
+from utilities.storage import (
+    data_volume_template_with_source_ref_dict,
+    write_file,
+)
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -476,6 +489,61 @@ def vm_for_cclm_with_instance_type(
 
 
 @pytest.fixture(scope="class")
+def remote_cluster_artifactory_secret_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_secret = get_artifactory_secret(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_secret
+    if artifactory_secret:
+        artifactory_secret.clean_up()
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_config_map = get_artifactory_config_map(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_config_map
+    if artifactory_config_map:
+        artifactory_config_map.clean_up()
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_windows_with_instance_type(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_artifactory_secret_scope_class,
+    remote_cluster_artifactory_config_map_scope_class,
+):
+    dv = DataVolume(
+        client=remote_admin_client,
+        name="dv-windows",
+        namespace=remote_cluster_source_test_namespace.name,
+        api_name="storage",
+        source="registry",
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
+        secret=remote_cluster_artifactory_secret_scope_class,
+        cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,
+    )
+    dv.to_dict()
+    dv.res["metadata"].pop("namespace", None)
+
+    with VirtualMachineForTests(
+        name="vm-windows-with-instance-type",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=remote_admin_client),
+        vm_preference=VirtualMachineClusterPreference(name="windows.2k22", client=remote_admin_client),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def vms_for_cclm(request):
     """
     Only fixtures from the "vms_fixtures" test param will be called
@@ -487,9 +555,11 @@ def vms_for_cclm(request):
 
 
 @pytest.fixture(scope="class")
-def booted_vms_for_cclm(vms_for_cclm):
+def booted_vms_for_cclm(vms_for_cclm, dv_wait_timeout):
     for vm in vms_for_cclm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        running_vm(
+            vm=vm, dv_wait_timeout=dv_wait_timeout, check_ssh_connectivity=False
+        )  # False because we can't ssh to a VM in the remote cluster
     return vms_for_cclm
 
 
