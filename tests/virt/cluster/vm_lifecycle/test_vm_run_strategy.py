@@ -102,6 +102,9 @@ def updated_vm_run_strategy(run_strategy, vm_for_test):
             vm_for_test.stop(wait=True)
 
         ResourceEditor(patches={vm_for_test: {"spec": {"runStrategy": run_strategy}}}).update()
+
+        if run_strategy == ALWAYS:
+            vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING)
     return run_strategy
 
 
