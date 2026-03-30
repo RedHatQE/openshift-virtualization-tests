@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 HonorWaitForFirstConsumer test suite
 """
@@ -230,7 +228,7 @@ def test_wffc_import_registry_dv(
     "data_volume_multi_wffc_storage_scope_module",
     [
         pytest.param(
-            {**DV_PARAMS, **{"consume_wffc": True}},
+            {**DV_PARAMS, "consume_wffc": True},
             marks=pytest.mark.polarion("CNV-4379"),
         ),
     ],
