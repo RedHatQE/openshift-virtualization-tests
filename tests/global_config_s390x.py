@@ -23,6 +23,8 @@ instance_type_rhel_os_list = [RHEL9_PREFERENCE]
 instance_type_fedora_os_list = [OS_FLAVOR_FEDORA]
 instance_type_centos_os_list = [CENTOS_STREAM9_PREFERENCE]
 
+nic_models_matrix = ["virtio"]
+
 
 for _dir in dir():
     if not config:  # noqa: F821

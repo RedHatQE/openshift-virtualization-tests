@@ -37,6 +37,7 @@ from utilities.constants import (
     OVS_BRIDGE,
     SRIOV,
     TIMEOUT_3MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
     WORKERS_TYPE,
@@ -744,14 +745,15 @@ def assert_ping_successful(
     )
 
 
-def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None):
+def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None, wait_timeout=0):
     """
     Attempt to find an IP in one of 2 possible sources - VirtualMachine or virt-handler Pod.
 
-     Args:
-        vm (object): the VM which IP address is requested
-        virt_handler_pod (pod): a virt-handler pod which IP address is requested
-        family (str): IP version requested - "ipv4" or "ipv6"
+    Args:
+        family (str): IP version requested - "ipv4" or "ipv6".
+        vm (object): the VM which IP address is requested.
+        virt_handler_pod (pod): a virt-handler pod which IP address is requested.
+        wait_timeout (int): seconds to retry waiting for IP to appear. 0 means no retry.
 
     Returns:
         str or None: First found valid IP version address, or None.
@@ -759,13 +761,33 @@ def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None):
     if not (vm or virt_handler_pod):
         raise ValueError("must send VM or virt-handler pod")
 
-    if vm:
-        addr_list = vm.vmi.interfaces[0]["ipAddresses"]
-    else:
-        addr_list = [ip_addr["ip"] for ip_addr in virt_handler_pod.instance.status.podIPs]
+    def _resolve_ip():
+        if vm:
+            addr_list = vm.vmi.interfaces[0].get("ipAddresses") or []
+        else:
+            addr_list = [ip_addr["ip"] for ip_addr in virt_handler_pod.instance.status.podIPs]
+        ip_list = [ip for ip in addr_list if get_valid_ip_address(dst_ip=ip, family=family)]
+        return ip_list[0] if ip_list else None
 
-    ip_list = [ip for ip in addr_list if get_valid_ip_address(dst_ip=ip, family=family)]
-    return ip_list[0] if ip_list else None
+    if not wait_timeout:
+        return _resolve_ip()
+
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=wait_timeout,
+            sleep=TIMEOUT_5SEC,
+            func=_resolve_ip,
+            # Retry on transient errors: interfaces/podIPs may be empty or None during VM/pod startup
+            exceptions_dict={IndexError: [], TypeError: [], AttributeError: []},
+        ):
+            if sample:
+                return sample
+    except TimeoutExpiredError:
+        LOGGER.error(
+            f"Timed out after {wait_timeout}s waiting for {family} IP address"
+            f" from {'VM ' + vm.name if vm else 'virt-handler pod'}"
+        )
+    return None
 
 
 def get_valid_ip_address(dst_ip, family):
