@@ -6,6 +6,7 @@ from ipaddress import ip_interface
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
+from libs.net.ip import random_ipv4_address
 from tests.network.libs.dhcpd import (
     DHCP_IP_RANGE_END,
     DHCP_IP_RANGE_START,
@@ -15,7 +16,6 @@ from tests.network.libs.dhcpd import (
     UNIQUE_CLIENT_ID,
     verify_dhcpd_activated,
 )
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (

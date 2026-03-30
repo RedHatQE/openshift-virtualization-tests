@@ -10,8 +10,8 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.ip import random_ipv4_address
 from tests.network.constants import BRCNV, SERVICE_MESH_PORT
-from tests.network.libs.ip import random_ipv4_address
 from utilities import console
 from utilities.constants import (
     IPV4_STR,

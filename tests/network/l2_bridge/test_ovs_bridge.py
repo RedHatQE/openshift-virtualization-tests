@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 import pytest
 
+from libs.net.ip import random_ipv4_address
 from tests.network.constants import BRCNV
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.utils import vm_for_brcnv_tests
 from utilities.constants import OVS_BRIDGE
 from utilities.infra import get_node_selector_dict

@@ -7,8 +7,8 @@ from collections import OrderedDict
 import pytest
 
 import utilities.network
+from libs.net.ip import random_ipv4_address
 from tests.network.libs import cloudinit as netcloud
-from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,

@@ -5,6 +5,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.role_binding import RoleBinding
 
 from libs.net import netattachdef
+from libs.net.ip import random_ipv4_address
 from tests.network.l2_bridge.utils import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
@@ -20,7 +21,6 @@ from tests.network.l2_bridge.utils import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import FLAT_OVERLAY_STR, SRIOV, UNPRIVILEGED_USER
 from utilities.network import (
     IfaceNotFound,

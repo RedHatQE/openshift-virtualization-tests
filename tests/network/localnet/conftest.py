@@ -6,10 +6,10 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_OVS_BRIDGE_NETWORK,
