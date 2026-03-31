@@ -13,14 +13,15 @@ from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutSampler
 
+from tests.install_upgrade_operators.constants import (
+    KONFLUX_IDMS_NAME,
+    KONFLUX_MIRROR_BASE_URL,
+)
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
 )
 from tests.install_upgrade_operators.utils import (
-    KONFLUX_IDMS_NAME,
-    KONFLUX_MIRROR_BASE_URL,
     apply_konflux_idms,
-    idms_has_all_mirrors,
 )
 from utilities.constants import (
     CRITICAL_STR,
@@ -80,10 +81,6 @@ def installed_konflux_idms(
     required_mirrors = [f"{KONFLUX_MIRROR_BASE_URL}/v{version.major}-{version.minor}"]
 
     idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
-    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_mirrors):
-        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains required mirrors.")
-        return
-
     apply_konflux_idms(
         idms=idms,
         required_mirrors=required_mirrors,
