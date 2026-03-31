@@ -16,7 +16,10 @@ from ocp_resources.operator_condition import OperatorCondition
 from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from tests.install_upgrade_operators.constants import (
+    KEY_PATH_SEPARATOR,
+    RH_IDMS_SOURCE,
+)
 from utilities.constants import (
     HCO_SUBSCRIPTION,
     PRODUCTION_CATALOG_SOURCE,
@@ -30,9 +33,6 @@ from utilities.infra import get_subscription
 from utilities.operator import wait_for_mcp_update_completion
 
 LOGGER = logging.getLogger(__name__)
-KONFLUX_IDMS_NAME = "zz-cnv-icsp-fallback"
-KONFLUX_MIRROR_BASE_URL = "quay.io/openshift-virtualization/konflux-builds"
-KONFLUX_IDMS_SOURCE = "registry.redhat.io/container-native-virtualization"
 
 
 def wait_for_operator_condition(client, hco_namespace, name, upgradable):
@@ -290,6 +290,29 @@ def get_resource_key_value(resource: Resource, key_name: str) -> Any:
     ).get(key_name)
 
 
+def _get_entries_with_missing_mirrors(
+    idms: ImageDigestMirrorSet,
+    required_mirrors: list[str],
+) -> list[dict[str, Any]]:
+    """Returns updated IDMS entries with missing Konflux mirrors added, or empty list if all present.
+
+    Each required mirror is a base URL (e.g. quay.io/.../konflux-builds/v4-22).
+    For each CNV entry, checks if a mirror starting with that base URL exists,
+    and appends the per-image mirror (e.g. quay.io/.../v4-22/aaq-controller-rhel9) if missing.
+    """
+    mirror_entries = idms.instance.to_dict()["spec"]["imageDigestMirrors"]
+    has_changes = False
+    for entry in mirror_entries:
+        if entry["source"].startswith(RH_IDMS_SOURCE):
+            image_name = entry["source"].removeprefix(f"{RH_IDMS_SOURCE}/")
+            mirrors = entry.get("mirrors", [])
+            missing = [f"{url}/{image_name}" for url in required_mirrors if not any(m.startswith(url) for m in mirrors)]
+            if missing:
+                entry["mirrors"] = mirrors + missing
+                has_changes = True
+    return mirror_entries if has_changes else []
+
+
 def apply_konflux_idms(
     idms: ImageDigestMirrorSet,
     required_mirrors: list[str],
@@ -299,23 +322,32 @@ def apply_konflux_idms(
 ) -> None:
     """Creates or patches the Konflux IDMS with the required mirror entries.
 
+    For an existing IDMS with per-image entries, adds missing version mirrors
+    to each entry while preserving the existing structure.
+    For a new IDMS, creates it with the provided mirrors.
+
     Args:
         idms: The Konflux IDMS resource to create or patch.
-        required_mirrors: Konflux mirror URLs to set on the IDMS.
+        required_mirrors: Konflux mirror base URLs (e.g. quay.io/.../v4-22).
         machine_config_pools: Active machine config pools to pause/wait.
         mcp_conditions: Initial MCP conditions for tracking update progress.
         nodes: Cluster nodes to verify readiness after MCP update.
     """
-    image_digest_mirrors = [{"source": KONFLUX_IDMS_SOURCE, "mirrors": required_mirrors}]
-    LOGGER.info("Pausing MCP updates while modifying IDMS.")
+    if idms.exists:
+        updated_entries = _get_entries_with_missing_mirrors(idms=idms, required_mirrors=required_mirrors)
+        if not updated_entries:
+            LOGGER.warning(f"IDMS {idms.name} already contains all required mirrors.")
+            return
+
     with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
         if idms.exists:
-            LOGGER.info(f"Patching IDMS {KONFLUX_IDMS_NAME} with mirrors: {required_mirrors}")
-            ResourceEditor(patches={idms: {"spec": {"imageDigestMirrors": image_digest_mirrors}}}).update()
+            LOGGER.info(f"Patching IDMS {idms.name} with missing mirrors for: {required_mirrors}")
+            ResourceEditor(patches={idms: {"spec": {"imageDigestMirrors": updated_entries}}}).update()
         else:
-            LOGGER.info(f"Creating IDMS {KONFLUX_IDMS_NAME} with mirrors: {required_mirrors}")
+            image_digest_mirrors = [{"source": RH_IDMS_SOURCE, "mirrors": required_mirrors}]
+            LOGGER.info(f"Creating IDMS {idms.name} with mirrors: {required_mirrors}")
             ImageDigestMirrorSet(
-                name=KONFLUX_IDMS_NAME,
+                name=idms.name,
                 client=idms.client,
                 image_digest_mirrors=image_digest_mirrors,
                 teardown=False,
@@ -326,20 +358,3 @@ def apply_konflux_idms(
         initial_mcp_conditions=mcp_conditions,
         nodes=nodes,
     )
-
-
-def idms_has_all_mirrors(idms: ImageDigestMirrorSet, required_mirrors: list[str]) -> bool:
-    """Returns True if the IDMS already contains all required Konflux mirror entries."""
-    existing_mirrors = idms.instance.spec.imageDigestMirrors
-    source_entry = next(
-        (entry for entry in existing_mirrors if entry["source"] == KONFLUX_IDMS_SOURCE),
-        None,
-    )
-    if not source_entry:
-        LOGGER.info(
-            f"IDMS {idms.name} has no entry for source {KONFLUX_IDMS_SOURCE}, mirrors need to be added."
-            f" Current IDMS mirrors: {existing_mirrors}"
-        )
-        return False
-    existing_urls = {str(mirror) for mirror in source_entry["mirrors"]}
-    return all(mirror in existing_urls for mirror in required_mirrors)
