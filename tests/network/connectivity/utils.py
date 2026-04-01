@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from utilities.constants import IPV6_STR
 from utilities.network import (
     compose_cloud_init_data_dict,

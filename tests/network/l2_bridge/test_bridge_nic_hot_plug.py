@@ -4,6 +4,7 @@ import pytest
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
 from libs.net import netattachdef
+from libs.net.ip import random_ipv4_address
 from tests.network.l2_bridge.utils import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
@@ -19,7 +20,6 @@ from tests.network.l2_bridge.utils import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import FLAT_OVERLAY_STR, SRIOV
 from utilities.network import (
     IfaceNotFound,

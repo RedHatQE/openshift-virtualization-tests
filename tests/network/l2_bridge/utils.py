@@ -7,7 +7,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.network.libs.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
 from utilities.constants import (

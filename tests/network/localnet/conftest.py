@@ -6,9 +6,9 @@ from ocp_resources.node import Node
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef
+from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import Client, Server
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.localnet.liblocalnet import (
     create_traffic_client,
     create_traffic_server,
