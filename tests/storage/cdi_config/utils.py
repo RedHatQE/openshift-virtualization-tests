@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Utility functions and constants for CDI Config tests
 """
@@ -11,8 +9,10 @@ from utilities.constants import Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     check_disk_count_in_vm,
+    create_dv,
     create_vm_from_dv,
     get_downloaded_artifact,
+    get_dv_size_from_datasource,
     wait_for_default_sc_in_cdiconfig,
 )
 
@@ -32,14 +32,23 @@ def cdiconfig_update(
     storage_ns_name,
     dv_name,
     client,
-    https_server_certificate,
+    https_server_certificate=None,
     images_https_server_name="",
     run_vm=False,
     tmpdir=None,
+    data_source=None,
+    os_flavor=Images.Cirros.OS_FLAVOR,
+    memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
 ):
     def _create_vm_check_disk_count(dv):
         dv.wait_for_dv_success()
-        with create_vm_from_dv(dv=dv, client=client) as vm_dv:
+        with create_vm_from_dv(
+            vm_name=dv_name,
+            dv=dv,
+            client=client,
+            os_flavor=os_flavor,
+            memory_guest=memory_guest,
+        ) as vm_dv:
             check_disk_count_in_vm(vm=vm_dv)
 
     with ResourceEditorValidateHCOReconcile(
@@ -69,4 +78,15 @@ def cdiconfig_update(
                     client=client,
                 ) as dv:
                     upload_token_request(storage_ns_name, pvc_name=dv.pvc.name, data=local_name, client=client)
+                    _create_vm_check_disk_count(dv=dv)
+            elif source == "datasource":
+                size = get_dv_size_from_datasource(data_source=data_source)
+                with create_dv(
+                    dv_name=dv_name,
+                    namespace=storage_ns_name,
+                    storage_class=storage_class_type,
+                    size=size,
+                    source_ref={"kind": data_source.kind, "name": data_source.name, "namespace": data_source.namespace},
+                    client=client,
+                ) as dv:
                     _create_vm_check_disk_count(dv=dv)

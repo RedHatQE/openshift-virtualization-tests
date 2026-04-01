@@ -15,7 +15,7 @@ from tests.storage.cdi_config.utils import (
 )
 from tests.storage.utils import LOGGER
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import CDI_UPLOADPROXY, StorageClassNames
+from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_FEDORA, Images, StorageClassNames
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     create_dv,
@@ -89,17 +89,19 @@ def test_cdiconfig_status_scratchspace_update_with_spec(
     cdi_config,
     namespace,
     unprivileged_client,
-    https_server_certificate,
+    fedora_data_source_scope_module,
 ):
     cdiconfig_update(
-        source="http",
+        source="datasource",
+        data_source=fedora_data_source_scope_module,
         hco_cr=hyperconverged_resource_scope_module,
         cdiconfig=cdi_config,
         dv_name="cnv-2214",
         storage_class_type=available_hpp_storage_class.name,
         storage_ns_name=namespace.name,
         client=unprivileged_client,
-        https_server_certificate=https_server_certificate,
+        os_flavor=OS_FLAVOR_FEDORA,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     )
 
 
@@ -112,19 +114,20 @@ def test_cdiconfig_scratch_space_not_default(
     cdi_config,
     namespace,
     unprivileged_client,
-    https_server_certificate,
+    fedora_data_source_scope_module,
 ):
     cdiconfig_update(
-        source="http",
+        source="datasource",
+        data_source=fedora_data_source_scope_module,
         hco_cr=hyperconverged_resource_scope_module,
         cdiconfig=cdi_config,
         dv_name="cnv-2440",
         storage_class_type=available_hpp_storage_class.name,
-        images_https_server_name=get_test_artifact_server_url(schema="https"),
         storage_ns_name=namespace.name,
         run_vm=True,
         client=unprivileged_client,
-        https_server_certificate=https_server_certificate,
+        os_flavor=OS_FLAVOR_FEDORA,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     )
 
 
