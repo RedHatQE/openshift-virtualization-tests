@@ -4,7 +4,6 @@
 
 import pytest
 from ocp_resources.cdi import CDI
-from ocp_resources.config_map import ConfigMap
 from ocp_resources.route import Route
 from timeout_sampler import TimeoutSampler
 
@@ -14,13 +13,14 @@ from tests.storage.cdi_config.utils import (
     STORAGE_WORKLOADS_DICT,
     cdiconfig_update,
 )
-from tests.storage.utils import LOGGER, get_file_url_https_server
+from tests.storage.utils import LOGGER
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import CDI_UPLOADPROXY, Images, StorageClassNames
+from utilities.constants import CDI_UPLOADPROXY, StorageClassNames
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     create_dv,
     create_vm_from_dv,
+    get_dv_size_from_datasource,
     update_default_sc,
     wait_for_default_sc_in_cdiconfig,
 )
@@ -176,31 +176,27 @@ def test_cdiconfig_changing_storage_class_default(
     namespace,
     default_sc_as_fallback_for_scratch,
     cdi_config,
-    https_server_certificate,
+    fedora_data_source_scope_module,
 ):
-    with update_default_sc(default=False, storage_class=default_sc_as_fallback_for_scratch):
-        with update_default_sc(default=True, storage_class=available_hpp_storage_class):
-            url = get_file_url_https_server(
-                images_https_server=get_test_artifact_server_url(schema="https"),
-                file_name=Images.Cirros.QCOW2_IMG,
-            )
-            with ConfigMap(
-                client=unprivileged_client,
-                name="https-cert-configmap",
-                namespace=namespace.name,
-                data={"tlsregistry.crt": https_server_certificate},
-            ) as configmap:
-                with create_dv(
-                    client=unprivileged_client,
-                    source="http",
-                    dv_name="import-cdiconfig-scratch-space-not-default",
-                    namespace=configmap.namespace,
-                    url=url,
-                    storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
-                    cert_configmap=configmap.name,
-                ) as dv:
-                    dv.wait_for_dv_success()
-                    create_vm_from_dv(client=unprivileged_client, dv=dv)
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+    with (
+        update_default_sc(default=False, storage_class=default_sc_as_fallback_for_scratch),
+        update_default_sc(default=True, storage_class=available_hpp_storage_class),
+        create_dv(
+            client=unprivileged_client,
+            dv_name="import-cdiconfig-scratch-space-not-default",
+            namespace=namespace.name,
+            storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
+            size=size,
+            source_ref={
+                "kind": fedora_data_source_scope_module.kind,
+                "name": fedora_data_source_scope_module.name,
+                "namespace": fedora_data_source_scope_module.namespace,
+            },
+        ) as dv,
+    ):
+        dv.wait_for_dv_success()
+        create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
 @pytest.mark.sno
