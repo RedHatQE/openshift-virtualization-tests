@@ -199,7 +199,14 @@ def test_cdiconfig_changing_storage_class_default(
         ) as dv,
     ):
         dv.wait_for_dv_success()
-        create_vm_from_dv(client=unprivileged_client, dv=dv)
+        with create_vm_from_dv(
+            client=unprivileged_client,
+            dv=dv,
+            vm_name=dv.name,
+            os_flavor=OS_FLAVOR_FEDORA,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        ):
+            pass
 
 
 @pytest.mark.sno
