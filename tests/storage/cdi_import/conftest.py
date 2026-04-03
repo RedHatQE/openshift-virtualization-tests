@@ -8,7 +8,10 @@ import logging
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from pytest_testconfig import py_config
 
+from tests.os_params import FEDORA_LATEST
+from tests.storage.cdi_import.test_import_http import wait_dv_and_get_importer
 from tests.storage.constants import (
     HPP_STORAGE_CLASSES,
     HTTP,
@@ -18,6 +21,7 @@ from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
 )
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     LINUX_BRIDGE,
     OS_FLAVOR_FEDORA,
@@ -223,3 +227,16 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
             vm.clean_up()
         for dv in dvs:
             dv.clean_up()
+
+
+@pytest.fixture()
+def dv_with_annotation(admin_client, namespace, linux_nad):
+    with create_dv(
+        dv_name="dv-annotation",
+        namespace=namespace.name,
+        url=f"{get_test_artifact_server_url()}{FEDORA_LATEST['image_path']}",
+        storage_class=py_config["default_storage_class"],
+        multus_annotation=linux_nad.name,
+        client=namespace.client,
+    ) as dv:
+        return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
