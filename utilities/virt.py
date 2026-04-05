@@ -2645,6 +2645,7 @@ def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple
 
 
 def validate_virtctl_guest_agent_after_guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
+    vm.wait_for_agent_connected()
     guest_reboot(vm=vm, os_type=os_type)
     wait_for_running_vm(vm=vm, ssh_timeout=TIMEOUT_30MIN if os_type == OS_FLAVOR_WINDOWS else TIMEOUT_5MIN)
     assert validate_virtctl_guest_agent_data_over_time(vm=vm), "Guest agent stopped responding after guest reboot"
