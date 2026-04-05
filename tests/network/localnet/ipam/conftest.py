@@ -2,11 +2,11 @@ from collections.abc import Generator
 
 import pytest
 from kubernetes.dynamic import DynamicClient
-from libs.net.ip import random_ipv4_address
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef as libnad
+from libs.net.ip import random_ipv4_address
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.localnet.liblocalnet import (
