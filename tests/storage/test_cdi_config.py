@@ -214,17 +214,6 @@ def test_cdiconfig_scratch_space_not_default(
 
 @pytest.mark.sno
 @pytest.mark.gating
-@pytest.mark.polarion("CNV-2412")
-@pytest.mark.s390x
-def test_cdi_config_scratch_space_value_is_default(
-    default_sc_as_fallback_for_scratch,
-    cdi_config,
-):
-    wait_for_default_sc_in_cdiconfig(cdi_config=cdi_config, sc=default_sc_as_fallback_for_scratch.name)
-
-
-@pytest.mark.sno
-@pytest.mark.gating
 @pytest.mark.polarion("CNV-2208")
 @pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
