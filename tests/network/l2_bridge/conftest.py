@@ -6,8 +6,6 @@ from kubernetes.dynamic import DynamicClient
 from pyhelper_utils.shell import run_ssh_commands
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
-
 from libs.net.ip import random_ipv4_address
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm
 from tests.network.libs.dhcpd import (
@@ -19,6 +17,7 @@ from tests.network.libs.dhcpd import (
     UNIQUE_CLIENT_ID,
     verify_dhcpd_activated,
 )
+from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
@@ -288,7 +287,7 @@ def started_vmb_dhcp_client(l2_bridge_running_vm_b, eth3_nmcli_connection_uuid):
     )
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="package")
 def bridge_nncp(
     nmstate_dependent_placeholder: None,
     admin_client: DynamicClient,
@@ -305,6 +304,7 @@ def bridge_nncp(
                     state=libnncp.Resource.Interface.State.UP,
                     bridge=libnncp.Bridge(
                         port=[libnncp.Port(name=hosts_common_available_ports[-1])],
+                        options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
                     ),
                 )
             ]
