@@ -1,7 +1,12 @@
 import shlex
+from collections.abc import Generator
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from pyhelper_utils.shell import run_ssh_commands
+
+import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 
 from libs.net.ip import random_ipv4_address
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm
@@ -281,3 +286,30 @@ def started_vmb_dhcp_client(l2_bridge_running_vm_b, eth3_nmcli_connection_uuid):
             shlex.split("sudo systemctl restart qemu-guest-agent.service"),
         ],
     )
+
+
+@pytest.fixture(scope="class")
+def bridge_nncp(
+    nmstate_dependent_placeholder: None,
+    admin_client: DynamicClient,
+    hosts_common_available_ports: list[str],
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    with libnncp.NodeNetworkConfigurationPolicy(
+        client=admin_client,
+        name="l2-bridge-test-nncp",
+        desired_state=libnncp.DesiredState(
+            interfaces=[
+                libnncp.Interface(
+                    name="br1-test",
+                    type=LINUX_BRIDGE,
+                    state=libnncp.Resource.Interface.State.UP,
+                    bridge=libnncp.Bridge(
+                        port=[libnncp.Port(name=hosts_common_available_ports[-1])],
+                    ),
+                )
+            ]
+        ),
+        node_selector={WORKER_NODE_LABEL_KEY: ""},
+    ) as nncp_br:
+        nncp_br.wait_for_status_success()
+        yield nncp_br
