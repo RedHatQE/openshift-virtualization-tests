@@ -1,9 +1,10 @@
 import logging
 import shlex
 
+import pytest
 from ocp_resources.resource import ResourceEditor
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.gpu.constants import (
     SANDBOX_VALIDATOR_DEPLOY_LABEL,
@@ -13,10 +14,12 @@ from tests.virt.node.gpu.constants import (
 from tests.virt.utils import fetch_gpu_device_name_from_vm_instance, verify_gpu_device_exists_in_vm
 from utilities.constants import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
 )
+from utilities.infra import ExecCommandOnPod
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -111,3 +114,37 @@ def toggle_vgpu_deploy_labels(gpu_nodes, nodes_with_supported_gpus, sandbox_vali
         apply_node_labels(nodes=nodes_with_supported_gpus, labels={VGPU_DEVICE_MANAGER_DEPLOY_LABEL: "true"})
     wait_for_ds_ready(ds=sandbox_validator_ds, expected=len(gpu_nodes))
     wait_for_ds_ready(ds=vgpu_device_manager_ds, expected=len(nodes_with_supported_gpus))
+
+
+def assert_mdev_bus_exists_on_nodes(workers_utility_pods, nodes):
+    """Assert that mdev_bus is present on every node in nodes.
+
+    Args:
+        workers_utility_pods: Utility pods used to run commands on nodes.
+        nodes: GPU nodes to check.
+
+    Raises:
+        pytest.fail: If mdev_bus is absent on any node after TIMEOUT_1MIN.
+    """
+    desired_bus = "mdev_bus"
+    missing_nodes = []
+    for node in nodes:
+        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_1MIN,
+                sleep=TIMEOUT_5SEC,
+                func=pod_exec.exec,
+                command=f"ls /sys/class | grep {desired_bus} || true",
+            ):
+                if sample:
+                    break
+        except TimeoutExpiredError:
+            missing_nodes.append(node.name)
+    if missing_nodes:
+        pytest.fail(
+            reason=(
+                f"On these nodes: {missing_nodes} {desired_bus} is not available."
+                "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
+            )
+        )
