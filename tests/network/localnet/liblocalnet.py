@@ -22,6 +22,7 @@ LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
 LOCALNET_BR_EX_INTERFACE = "localnet-iface-vlan"
 LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
 LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
+LOCALNET_IPAM_INTERFACE = "localnet-ipam-iface"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
@@ -66,7 +67,7 @@ def localnet_vm(
     client: DynamicClient,
     networks: list[Network],
     interfaces: list[Interface],
-    network_data: cloudinit.NetworkData,
+    network_data: cloudinit.NetworkData | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
@@ -83,8 +84,8 @@ def localnet_vm(
             Each Network should have a name and configuration.
         interfaces (list[Interface]): List of Interface objects defining the interface configurations.
             Each Interface should have a name matching a Network, and additional configuration and state.
-        network_data (cloudinit.NetworkData): Cloud-init NetworkData object containing the network
-            configuration for the VM interfaces.
+        network_data (cloudinit.NetworkData | None): Cloud-init NetworkData object containing the network
+            configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -115,15 +116,16 @@ def localnet_vm(
     vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
     vmi_spec.domain.devices.interfaces = interfaces
 
-    # Prevents cloud-init from overriding the default OS user credentials
-    userdata = cloudinit.UserData(users=[])
-    disk, volume = cloudinitdisk_storage(
-        data=CloudInitNoCloud(
-            networkData=cloudinit.asyaml(no_cloud=network_data),
-            userData=cloudinit.format_cloud_config(userdata=userdata),
+    if network_data is not None:
+        # Prevents cloud-init from overriding the default OS user credentials
+        userdata = cloudinit.UserData(users=[])
+        disk, volume = cloudinitdisk_storage(
+            data=CloudInitNoCloud(
+                networkData=cloudinit.asyaml(no_cloud=network_data),
+                userData=cloudinit.format_cloud_config(userdata=userdata),
+            )
         )
-    )
-    vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
+        vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
 
     vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
     vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
