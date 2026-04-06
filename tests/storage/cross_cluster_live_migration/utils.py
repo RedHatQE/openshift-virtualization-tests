@@ -38,6 +38,8 @@ def configure_hco_live_migration_network(
     """
     # Only configure network if provided
     if not network_for_live_migration:
+        LOGGER.info("No live migration network provided; skipping HCO network configuration")
+        yield
         return
 
     LOGGER.info("Adding live migration network configuration to HCO spec patch")
