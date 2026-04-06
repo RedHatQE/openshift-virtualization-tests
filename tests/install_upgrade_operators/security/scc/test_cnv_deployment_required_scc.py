@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Test to verify all HCO deployments have 'openshift.io/required-scc' annotation.
 """

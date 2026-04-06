@@ -30,15 +30,17 @@ def test_set_hco_crypto_failed_without_required_cipher(
         "ECDHE-RSA-AES256-GCM-SHA384",
     ]
     tls_spec = {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}
-    with pytest.raises(ForbiddenError, match=r"missing an HTTP/2-required"):
-        with ResourceEditorValidateHCOReconcile(
+    with (
+        pytest.raises(ForbiddenError, match=r"missing an HTTP/2-required"),
+        ResourceEditorValidateHCOReconcile(
             patches={hyperconverged_resource_scope_function: tls_spec},
             list_resource_reconcile=MANAGED_CRS_LIST,
             wait_for_reconcile_post_update=True,
-        ):
-            LOGGER.error(
-                f"Setting HCO TLS profile without required http/2 ciphers using the spec - {tls_spec} was successful"
-            )
+        ),
+    ):
+        LOGGER.error(
+            f"Setting HCO TLS profile without required http/2 ciphers using the spec - {tls_spec} was successful"
+        )
 
 
 @pytest.mark.polarion("CNV-10551")
@@ -46,11 +48,13 @@ def test_set_ciphers_for_tlsv13(hyperconverged_resource_scope_function):
     error_string = r"custom ciphers cannot be selected when minTLSVersion is VersionTLS13"
     tls_custom_profile = copy.deepcopy(TLS_CUSTOM_PROFILE)
     tls_custom_profile[TLS_CUSTOM_POLICY]["minTLSVersion"] = "VersionTLS13"
-    with pytest.raises(ForbiddenError, match=error_string):
-        with ResourceEditorValidateHCOReconcile(
+    with (
+        pytest.raises(ForbiddenError, match=error_string),
+        ResourceEditorValidateHCOReconcile(
             patches={hyperconverged_resource_scope_function: {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}}
-        ):
-            LOGGER.error(
-                "Setting HCO with custom tlsSecurityProfile with TLS Version 1.3 "
-                "and custom ciphers was successful against expected failure"
-            )
+        ),
+    ):
+        LOGGER.error(
+            "Setting HCO with custom tlsSecurityProfile with TLS Version 1.3 "
+            "and custom ciphers was successful against expected failure"
+        )

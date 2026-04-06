@@ -91,7 +91,7 @@ class TestMultipleJsonPatch:
             admin_client=admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         validate_cdi_json_patch(
@@ -121,6 +121,6 @@ class TestMultipleJsonPatch:
 
     @pytest.mark.polarion("CNV-8813")
     def test_multiple_json_patch_alert(self, prometheus):
-        for component in COMPONENT_DICT.keys():
+        for component in COMPONENT_DICT:
             LOGGER.info(f"Waiting for alert: {ALERT_NAME} for component: {component}")
             wait_for_alert(prometheus=prometheus, alert_name=ALERT_NAME, component_name=component)
