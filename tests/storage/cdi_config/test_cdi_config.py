@@ -22,7 +22,6 @@ from utilities.storage import (
     create_vm_from_dv,
     get_dv_size_from_datasource,
     update_default_sc,
-    wait_for_default_sc_in_cdiconfig,
 )
 
 pytestmark = pytest.mark.post_upgrade
