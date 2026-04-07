@@ -77,6 +77,7 @@ class TestStorageMigrationRetentionPolicy:
             - VM is running on new storage
         """
 
+
 class TestStorageMigrationCombinedRetentionPolicy:
     """
     Test combination of retentionPolicy for MultiNamespaceVirtualMachineStorageMigrationPlan.
@@ -90,6 +91,7 @@ class TestStorageMigrationCombinedRetentionPolicy:
       4. Verify the two VMs are using new PVCs
 
     """
+
     @pytest.mark.polarion("CNV-XXXXX")
     def test_combined_namespace_and_spec_level_retention_policy(self):
         """
