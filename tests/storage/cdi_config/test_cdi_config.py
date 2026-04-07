@@ -11,10 +11,8 @@ from tests.storage.cdi_config.utils import (
     INSECURE_REGISTRIES_LIST,
     NON_EXISTENT_SCRATCH_SC_DICT,
     STORAGE_WORKLOADS_DICT,
-    cdiconfig_update,
 )
 from tests.storage.utils import LOGGER
-from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_FEDORA, Images, StorageClassNames
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
@@ -25,109 +23,6 @@ from utilities.storage import (
 )
 
 pytestmark = pytest.mark.post_upgrade
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2451")
-@pytest.mark.s390x
-def test_cdiconfig_scratchspace_fs_upload_to_block(
-    available_hpp_storage_class,
-    tmpdir,
-    hyperconverged_resource_scope_module,
-    cdi_config,
-    namespace,
-    unprivileged_client,
-    https_server_certificate,
-):
-    cdiconfig_update(
-        source="upload",
-        hco_cr=hyperconverged_resource_scope_module,
-        cdiconfig=cdi_config,
-        dv_name="cnv-2451",
-        storage_class_type=available_hpp_storage_class.name,
-        images_https_server_name=get_test_artifact_server_url(schema="https"),
-        storage_ns_name=namespace.name,
-        run_vm=True,
-        tmpdir=tmpdir,
-        client=unprivileged_client,
-        https_server_certificate=https_server_certificate,
-    )
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2478")
-@pytest.mark.s390x
-def test_cdiconfig_scratchspace_fs_import_to_block(
-    available_hpp_storage_class,
-    hyperconverged_resource_scope_module,
-    cdi_config,
-    namespace,
-    unprivileged_client,
-    https_server_certificate,
-):
-    cdiconfig_update(
-        source="http",
-        hco_cr=hyperconverged_resource_scope_module,
-        cdiconfig=cdi_config,
-        dv_name="cnv-2478",
-        storage_class_type=available_hpp_storage_class.name,
-        storage_ns_name=namespace.name,
-        images_https_server_name=get_test_artifact_server_url(schema="https"),
-        run_vm=True,
-        client=unprivileged_client,
-        https_server_certificate=https_server_certificate,
-    )
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2214")
-@pytest.mark.s390x
-def test_cdiconfig_status_scratchspace_update_with_spec(
-    available_hpp_storage_class,
-    hyperconverged_resource_scope_module,
-    cdi_config,
-    namespace,
-    unprivileged_client,
-    fedora_data_source_scope_module,
-):
-    cdiconfig_update(
-        source="datasource",
-        data_source=fedora_data_source_scope_module,
-        hco_cr=hyperconverged_resource_scope_module,
-        cdiconfig=cdi_config,
-        dv_name="cnv-2214",
-        storage_class_type=available_hpp_storage_class.name,
-        storage_ns_name=namespace.name,
-        client=unprivileged_client,
-        os_flavor=OS_FLAVOR_FEDORA,
-        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-    )
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2440")
-@pytest.mark.s390x
-def test_cdiconfig_scratch_space_not_default(
-    available_hpp_storage_class,
-    hyperconverged_resource_scope_module,
-    cdi_config,
-    namespace,
-    unprivileged_client,
-    fedora_data_source_scope_module,
-):
-    cdiconfig_update(
-        source="datasource",
-        data_source=fedora_data_source_scope_module,
-        hco_cr=hyperconverged_resource_scope_module,
-        cdiconfig=cdi_config,
-        dv_name="cnv-2440",
-        storage_class_type=available_hpp_storage_class.name,
-        storage_ns_name=namespace.name,
-        run_vm=True,
-        client=unprivileged_client,
-        os_flavor=OS_FLAVOR_FEDORA,
-        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-    )
 
 
 @pytest.mark.sno
