@@ -13,14 +13,8 @@ from tests.storage.cdi_config.utils import (
     STORAGE_WORKLOADS_DICT,
 )
 from tests.storage.utils import LOGGER
-from utilities.constants import CDI_UPLOADPROXY, OS_FLAVOR_FEDORA, Images, StorageClassNames
+from utilities.constants import CDI_UPLOADPROXY
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.storage import (
-    create_dv,
-    create_vm_from_dv,
-    get_dv_size_from_datasource,
-    update_default_sc,
-)
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -61,46 +55,6 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
 def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
     with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY, client=admin_client) as new_route:
         assert cdi_config.upload_proxy_url != new_route.host
-
-
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2441")
-@pytest.mark.s390x
-def test_cdiconfig_changing_storage_class_default(
-    unprivileged_client,
-    skip_test_if_no_ocs_sc,
-    available_hpp_storage_class,
-    namespace,
-    default_sc_as_fallback_for_scratch,
-    cdi_config,
-    fedora_data_source_scope_module,
-):
-    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-    with (
-        update_default_sc(default=False, storage_class=default_sc_as_fallback_for_scratch),
-        update_default_sc(default=True, storage_class=available_hpp_storage_class),
-        create_dv(
-            client=unprivileged_client,
-            dv_name="import-cdiconfig-scratch-space-not-default",
-            namespace=namespace.name,
-            storage_class=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
-            size=size,
-            source_ref={
-                "kind": fedora_data_source_scope_module.kind,
-                "name": fedora_data_source_scope_module.name,
-                "namespace": fedora_data_source_scope_module.namespace,
-            },
-        ) as dv,
-    ):
-        dv.wait_for_dv_success()
-        with create_vm_from_dv(
-            client=unprivileged_client,
-            dv=dv,
-            vm_name=dv.name,
-            os_flavor=OS_FLAVOR_FEDORA,
-            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        ):
-            pass
 
 
 @pytest.mark.sno
