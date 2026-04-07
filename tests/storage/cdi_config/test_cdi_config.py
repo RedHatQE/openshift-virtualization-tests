@@ -24,7 +24,10 @@ pytestmark = pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-2208")
 @pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
-    assert cdi_config.upload_proxy_url == upload_proxy_route.host
+    assert cdi_config.upload_proxy_url == upload_proxy_route.host, (
+        f"Expected upload_proxy_url to match upload-proxy route host {upload_proxy_route.host},"
+        f"got {cdi_config.upload_proxy_url}"
+    )
 
 
 @pytest.mark.destructive
@@ -45,8 +48,12 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
     with Route(
         namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api", client=admin_client
     ) as cdi_api_route:
-        assert cdi_config.upload_proxy_url != cdi_api_route.host
-        assert cdi_config.upload_proxy_url == upload_proxy_route.host
+        assert cdi_config.upload_proxy_url != cdi_api_route.host, (
+            f"upload_proxy_url unexpectedly changed to cdi-api route host {cdi_api_route.host}"
+        )
+        assert cdi_config.upload_proxy_url == upload_proxy_route.host, (
+            f"Expected upload_proxy_url to remain {upload_proxy_route.host}, got {cdi_config.upload_proxy_url}"
+        )
 
 
 @pytest.mark.sno
@@ -54,7 +61,9 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
 @pytest.mark.s390x
 def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
     with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY, client=admin_client) as new_route:
-        assert cdi_config.upload_proxy_url != new_route.host
+        assert cdi_config.upload_proxy_url != new_route.host, (
+            f"upload_proxy_url should remain overridden and not switch to route host {new_route.host}"
+        )
 
 
 @pytest.mark.sno
