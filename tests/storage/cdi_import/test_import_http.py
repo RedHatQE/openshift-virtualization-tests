@@ -11,7 +11,12 @@ from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST, RHEL_LATEST
+from tests.os_params import RHEL_LATEST
+from tests.storage.cdi_import.utils import (
+    get_importer_pod_node,
+    wait_dv_and_get_importer,
+    wait_for_pvc_recreate,
+)
 from tests.storage.constants import (
     ALPINE_QCOW2_IMG,
     HTTP,
@@ -27,16 +32,13 @@ from tests.storage.utils import (
     wait_for_importer_container_message,
 )
 from utilities import console
-from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_RHEL,
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
     TIMEOUT_12MIN,
-    TIMEOUT_20SEC,
     Images,
 )
 from utilities.infra import get_node_selector_dict
@@ -46,6 +48,7 @@ from utilities.storage import (
     create_dummy_first_consumer_pod,
     create_dv,
     create_vm_from_dv,
+    get_dv_size_from_datasource,
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import running_vm
@@ -60,81 +63,33 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Alpine.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
-def get_importer_pod_node(importer_pod):
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: importer_pod.instance.get("spec", {}).get(
-            "nodeName",
-        ),
-    ):
-        if sample:
-            return sample
-
-
-def wait_for_pvc_recreate(pvc, pvc_original_timestamp):
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_20SEC,
-        sleep=1,
-        func=lambda: pvc.instance.metadata.creationTimestamp != pvc_original_timestamp,
-    ):
-        if sample:
-            break
-
-
-def wait_dv_and_get_importer(dv, admin_client):
-    dv.wait_for_status(
-        status=DataVolume.Status.IMPORT_IN_PROGRESS,
-        timeout=TIMEOUT_1MIN,
-        stop_status=DataVolume.Status.SUCCEEDED,
-    )
-    return get_importer_pod(client=admin_client, namespace=dv.namespace)
-
-
-@pytest.fixture()
-def dv_with_annotation(admin_client, namespace, linux_nad):
-    with create_dv(
-        dv_name="dv-annotation",
-        namespace=namespace.name,
-        url=f"{get_test_artifact_server_url()}{FEDORA_LATEST['image_path']}",
-        storage_class=py_config["default_storage_class"],
-        multus_annotation=linux_nad.name,
-        client=namespace.client,
-    ) as dv:
-        return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
-
-
 @pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "import-http-dv",
-                "source": HTTP,
-                "image": ALPINE_QCOW2_IMG,
-                "dv_size": DEFAULT_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-675"),
-        ),
-    ],
-    indirect=True,
-)
-def test_delete_pvc_after_successful_import(
-    data_volume_multi_storage_scope_function,
-):
-    pvc = data_volume_multi_storage_scope_function.pvc
-    pvc_original_timestamp = pvc.instance.metadata.creationTimestamp
-    pvc.delete()
-    wait_for_pvc_recreate(pvc=pvc, pvc_original_timestamp=pvc_original_timestamp)
-    storage_class = data_volume_multi_storage_scope_function.storage_class
-    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=data_volume_multi_storage_scope_function.client):
-        create_dummy_first_consumer_pod(pvc=pvc)
-    data_volume_multi_storage_scope_function.wait_for_dv_success()
+@pytest.mark.polarion("CNV-675")
+def test_pvc_recreates_after_deletion(namespace, storage_class_name_scope_function, fedora_data_source_scope_module):
+    with create_dv(
+        dv_name=f"cnv-675-{storage_class_name_scope_function}",
+        namespace=namespace.name,
+        storage_class=storage_class_name_scope_function,
+        size=get_dv_size_from_datasource(fedora_data_source_scope_module),
+        client=namespace.client,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+    ) as dv:
+        dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
+        pvc = dv.pvc
+        pvc_original_timestamp = pvc.instance.metadata.creationTimestamp
+        pvc.delete()
+        wait_for_pvc_recreate(pvc=pvc, pvc_original_timestamp=pvc_original_timestamp)
+        storage_class = storage_class_name_scope_function
+        if sc_volume_binding_mode_is_wffc(sc=storage_class, client=namespace.client):
+            create_dummy_first_consumer_pod(pvc=pvc)
+        dv.wait_for_dv_success()
 
 
 @pytest.mark.xfail(
