@@ -60,13 +60,13 @@ def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_co
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-6312")
 @pytest.mark.s390x
-def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, updated_cdi_extra_non_existent_feature_gate):
+def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_non_existent_feature_gate):
     """
     Test that added feature gate on the CDI CR does not persist
     (HCO Should reconcile back changes on the CDI CR)
     """
     assert (
-        updated_cdi_extra_non_existent_feature_gate.instance.to_dict()["spec"]["config"] == initial_cdi_config_from_cr
+        cdi_with_extra_non_existent_feature_gate.instance.to_dict()["spec"]["config"] == initial_cdi_config_from_cr
     ), "HCO should have reconciled back changes"
 
 

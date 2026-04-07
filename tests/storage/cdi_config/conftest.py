@@ -12,7 +12,7 @@ from utilities.storage import cdi_feature_gate_list_with_added_feature
 
 
 @pytest.fixture()
-def updated_cdi_extra_non_existent_feature_gate(cdi):
+def cdi_with_extra_non_existent_feature_gate(cdi):
     with ResourceEditorValidateHCOReconcile(
         patches={
             cdi: {
