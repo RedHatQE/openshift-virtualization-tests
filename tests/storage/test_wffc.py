@@ -1,7 +1,3 @@
-from pyVmomi.sms import storage
-
-from utilities.constants import UNPRIVILEGED_USER
-
 # -*- coding: utf-8 -*-
 
 """
