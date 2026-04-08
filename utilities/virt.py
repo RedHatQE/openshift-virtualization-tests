@@ -2615,29 +2615,6 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], a
     assert all(results.values())
 
 
-def assert_vm_xml_efi(
-    vm: VirtualMachineForTests, admin_client: DynamicClient, *, secure_boot_enabled: bool = True
-) -> None:
-    LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
-    ovmf_path = "/usr/share/OVMF"
-    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
-    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
-    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
-    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
-    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
-    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
-    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
-    os_secure = "yes" if secure_boot_enabled else "no"
-    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
-    assert vmi_xml_os_secure == os_secure, (
-        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
-    )
-    assert vmi_xml_efi_vars_path == efi_vars_path, (
-        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
-    )
-
-
 def update_vm_efi_spec_and_restart(
     vm: VirtualMachineForTests, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
 ) -> None:

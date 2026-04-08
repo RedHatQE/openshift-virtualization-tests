@@ -33,7 +33,12 @@ from utilities.infra import (
 )
 from utilities.jira import is_jira_open
 from utilities.ssp import get_windows_os_info
-from utilities.virt import VirtualMachineForTestsFromTemplate, delete_guestosinfo_keys, get_virtctl_os_info
+from utilities.virt import (
+    VirtualMachineForTests,
+    VirtualMachineForTestsFromTemplate,
+    delete_guestosinfo_keys,
+    get_virtctl_os_info,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -524,3 +529,8 @@ def matrix_os_vm_from_template(
 @cache
 def is_jira_76697_bug_open():
     return is_jira_open(jira_id="CNV-76697")
+
+
+def assert_secureboot_disabled(vm: VirtualMachineForTests) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].lower()
+    assert "disabled" in output, f"Secure Boot is not disabled. Found: {output}"
