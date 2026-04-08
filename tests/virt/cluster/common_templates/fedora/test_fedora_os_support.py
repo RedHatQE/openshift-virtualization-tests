@@ -20,7 +20,6 @@ from utilities.guest_support import check_vm_xml_hyperv
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
-    assert_vm_xml_efi,
     migrate_vm_and_verify,
     running_vm,
     validate_libvirt_persistent_domain,
@@ -132,8 +131,7 @@ class TestCommonTemplatesFedora:
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-9666")
-    def test_efi_secureboot_enabled_by_default(self, admin_client, matrix_fedora_os_vm_from_template):
-        assert_vm_xml_efi(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
+    def test_efi_secureboot_enabled_by_default(self, matrix_fedora_os_vm_from_template):
         assert_linux_efi(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno

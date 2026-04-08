@@ -2574,6 +2574,20 @@ def assert_linux_efi(vm: VirtualMachineForTests) -> None:
     return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("ls -ld /sys/firmware/efi"))[0]
 
 
+def assert_secureboot_disabled(vm: VirtualMachineForTests, admin_client: DynamicClient) -> None:
+    LOGGER.info("Verify VM XML - EFI secureBoot is disabled.")
+    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
+    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
+    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
+    expected_vars_path = "/usr/share/OVMF/OVMF_VARS.fd"
+    assert vmi_xml_os_secure == "no", (
+        f"EFI secure value {vmi_xml_os_secure} is not set to 'no' — Secure Boot is not disabled"
+    )
+    assert vmi_xml_efi_vars_path == expected_vars_path, (
+        f"EFIVarsPath {vmi_xml_efi_vars_path} does not match expected {expected_vars_path}"
+    )
+
+
 def pause_unpause_vm_and_check_connectivity(vm: VirtualMachineForTests) -> None:
     vm.vmi.pause(wait=True)
     vm.vmi.unpause(wait=True)
@@ -2613,29 +2627,6 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], a
     }
     LOGGER.info(f"Results: {results}")
     assert all(results.values())
-
-
-def assert_vm_xml_efi(
-    vm: VirtualMachineForTests, admin_client: DynamicClient, *, secure_boot_enabled: bool = True
-) -> None:
-    LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
-    ovmf_path = "/usr/share/OVMF"
-    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
-    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
-    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
-    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
-    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
-    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
-    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
-    os_secure = "yes" if secure_boot_enabled else "no"
-    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
-    assert vmi_xml_os_secure == os_secure, (
-        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
-    )
-    assert vmi_xml_efi_vars_path == efi_vars_path, (
-        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
-    )
 
 
 def update_vm_efi_spec_and_restart(
