@@ -29,7 +29,9 @@ CUSTOM_CRON_TEMPLATE = {
     },
     "spec": {
         "garbageCollect": OUTDATED,
+        "importsToKeep": 1,
         "managedDataSource": CUSTOM_DATASOURCE_NAME,
+        "retentionPolicy": "None",
         "schedule": WILDCARD_CRON_EXPRESSION,
         "template": {
             "metadata": {},
