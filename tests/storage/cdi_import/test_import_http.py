@@ -447,7 +447,10 @@ def test_vm_from_dv_on_different_node(
         node_selector=get_node_selector_dict(node_selector=nodes[0].name),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm_dv:
-        assert vm_dv.vmi.node.name != importer_node_name
+        assert vm_dv.vmi.node.name != importer_node_name, (
+            f"VM is running on the same node as importer pod. Expected different nodes."
+            f" Importer node: {importer_node_name}, VM node: {vm_dv.vmi.node.name}"
+        )
 
 
 @pytest.mark.tier3
