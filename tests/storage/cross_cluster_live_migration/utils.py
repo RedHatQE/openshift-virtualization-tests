@@ -17,14 +17,14 @@ from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_f
 LOGGER = logging.getLogger(__name__)
 
 
-def enable_feature_gate_and_configure_hco_live_migration_network(
+def configure_hco_live_migration_network(
     hyperconverged_resource: HyperConverged,
     client: DynamicClient,
     hco_namespace: Namespace,
     network_for_live_migration: NetworkAttachmentDefinition | None = None,
 ) -> Generator[None, None, None]:
     """
-    Enable decentralized live migration feature gate and optionally configure HCO live migration network.
+    Configure HCO live migration network.
 
     Args:
         hyperconverged_resource: The HyperConverged resource to patch
@@ -36,19 +36,20 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     Yields:
         None
     """
-    spec_patch = {"featureGates": {"decentralizedLiveMigration": True}}
-
     # Only configure network if provided
-    virt_handler_daemonset = None
-    if network_for_live_migration:
-        LOGGER.info("Adding live migration network configuration to HCO spec patch")
-        spec_patch["liveMigrationConfig"] = {"network": network_for_live_migration.name}
+    if not network_for_live_migration:
+        LOGGER.info("No live migration network provided; skipping HCO network configuration")
+        yield
+        return
 
-        virt_handler_daemonset = get_daemonset_by_name(
-            admin_client=client,
-            daemonset_name=VIRT_HANDLER,
-            namespace_name=hco_namespace.name,
-        )
+    LOGGER.info("Adding live migration network configuration to HCO spec patch")
+    spec_patch = {"liveMigrationConfig": {"network": network_for_live_migration.name}}
+
+    virt_handler_daemonset = get_daemonset_by_name(
+        admin_client=client,
+        daemonset_name=VIRT_HANDLER,
+        namespace_name=hco_namespace.name,
+    )
 
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource: {"spec": spec_patch}},
@@ -56,23 +57,21 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
         wait_for_reconcile_post_update=True,
         admin_client=client,
     ):
-        if network_for_live_migration and virt_handler_daemonset:
-            wait_for_virt_handler_pods_network_updated(
-                client=client,
-                namespace=hco_namespace,
-                network_name=network_for_live_migration.name,
-                virt_handler_daemonset=virt_handler_daemonset,
-            )
-        yield
-
-    if network_for_live_migration and virt_handler_daemonset:
         wait_for_virt_handler_pods_network_updated(
             client=client,
             namespace=hco_namespace,
             network_name=network_for_live_migration.name,
             virt_handler_daemonset=virt_handler_daemonset,
-            migration_network=False,
         )
+        yield
+
+    wait_for_virt_handler_pods_network_updated(
+        client=client,
+        namespace=hco_namespace,
+        network_name=network_for_live_migration.name,
+        virt_handler_daemonset=virt_handler_daemonset,
+        migration_network=False,
+    )
 
 
 def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
