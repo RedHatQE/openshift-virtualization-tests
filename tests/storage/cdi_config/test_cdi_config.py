@@ -24,6 +24,9 @@ pytestmark = pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-2208")
 @pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
+    """
+    Test that CDIConfig exists and has the expected upload_proxy_url
+    """
     assert cdi_config.upload_proxy_url == upload_proxy_route.host, (
         f"Expected upload_proxy_url to match upload-proxy route host {upload_proxy_route.host},"
         f"got {cdi_config.upload_proxy_url}"
@@ -33,6 +36,10 @@ def test_cdi_config_exists(cdi_config, upload_proxy_route):
 @pytest.mark.destructive
 @pytest.mark.polarion("CNV-2209")
 def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy_route_deleted):
+    """
+    Test that CDIConfig's upload_proxy_url changes when the upload-proxy route is deleted
+    and recreated with a different host
+    """
     with Route(
         namespace=hco_namespace.name,
         name="new-route-uploadproxy",
@@ -45,6 +52,9 @@ def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy
 @pytest.mark.polarion("CNV-2215")
 @pytest.mark.s390x
 def test_route_for_different_service(admin_client, cdi_config, upload_proxy_route):
+    """
+    Test that CDIConfig's upload_proxy_url does not change when a route for a different service is created
+    """
     with Route(
         namespace=upload_proxy_route.namespace, name="cdi-api", service="cdi-api", client=admin_client
     ) as cdi_api_route:
@@ -60,6 +70,10 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
 @pytest.mark.polarion("CNV-2216")
 @pytest.mark.s390x
 def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
+    """
+    Test that CDIConfig's upload_proxy_url does not change when overridden
+    and a new route is created for upload-proxy service
+    """
     with Route(namespace=namespace.name, name="my-route", service=CDI_UPLOADPROXY, client=admin_client) as new_route:
         assert cdi_config.upload_proxy_url != new_route.host, (
             f"upload_proxy_url should remain overridden and not switch to route host {new_route.host}"
@@ -123,21 +137,21 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
             **expected_in_cdi_config_from_cr,
         } == current_cdi_config_from_cr
 
-    samples = TimeoutSampler(
-        wait_timeout=20,
-        sleep=1,
-        func=_verify_propagation,
-    )
-
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_module: {"spec": hco_updated_spec_stanza}},
         list_resource_reconcile=[CDI],
     ):
-        for sample in samples:
+        propagated = False
+        for sample in TimeoutSampler(wait_timeout=20, sleep=1, func=_verify_propagation):
             if sample:
+                propagated = True
                 break
+        assert propagated, "CDI config was not updated from HCO tunables within timeout"
 
     LOGGER.info("Check values revert back to original")
-    for sample in samples:
+    reverted = False
+    for sample in TimeoutSampler(wait_timeout=20, sleep=1, func=_verify_propagation):
         if not sample:
+            reverted = True
             break
+    assert reverted, "CDI config did not revert to the original values after restore"
