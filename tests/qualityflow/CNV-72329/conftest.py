@@ -8,9 +8,9 @@ Jira: CNV-72329
 import logging
 
 import pytest
+from ocp_resources.resource import ResourceEditor
 
 from libs.net.vmspec import lookup_iface_status_ip
-from ocp_resources.resource import ResourceEditor
 from utilities.constants import LINUX_BRIDGE
 from utilities.network import network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
