@@ -5,7 +5,6 @@ Restricted namespace cloning
 import logging
 
 import pytest
-from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -23,7 +22,6 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC,
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
-from tests.storage.utils import verify_vm_disk_image_permission
 from utilities.constants import OS_FLAVOR_FEDORA, Images
 from utilities.storage import create_vm_from_dv
 
