@@ -1,7 +1,7 @@
 import contextlib
 import logging
 import uuid
-from typing import Generator
+from typing import Generator, Final
 
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
@@ -30,6 +30,11 @@ LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
 NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
+GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
+GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
+GUEST_3RD_IFACE_NAME: Final[str] = "eth2"
+
+
 LOGGER = logging.getLogger(__name__)
 
 
