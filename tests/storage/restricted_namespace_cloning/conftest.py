@@ -32,7 +32,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
-from utilities.storage import create_dv
+from utilities.storage import create_dv, create_dv_with_source_ref
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -78,14 +78,10 @@ def dv_cloned_from_datasource(
     ).get("restoreSize")
     # dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
-    with create_dv(
+    with create_dv_with_source_ref(
         dv_name=f"{dv_name}-{storage_class_name_scope_module}",
         namespace=namespace.name,
-        source_ref={
-            "kind": fedora_data_source_scope_module.kind,
-            "name": fedora_data_source_scope_module.name,
-            "namespace": fedora_data_source_scope_module.namespace,
-        },
+        data_source=fedora_data_source_scope_module,
         size=dv_size,
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
