@@ -170,6 +170,85 @@ def create_dv(
     )
 
 
+@contextmanager
+def create_dv_with_source_ref(
+    dv_name,
+    namespace,
+    storage_class,
+    size,
+    data_source,
+    volume_mode=None,
+    access_modes=None,
+    client=None,
+    multus_annotation=None,
+    teardown=True,
+    consume_wffc=True,
+    bind_immediate=None,
+    preallocation=None,
+    api_name="storage",
+):
+    """Create a DataVolume with sourceRef pointing to a DataSource.
+
+    This function creates a DataVolume using sourceRef instead of traditional
+    source methods (http, pvc, etc). It's designed for backporting to versions
+    where openshift-python-wrapper doesn't support source_ref parameter.
+
+    Args:
+        dv_name: Name of the DataVolume
+        namespace: Namespace for the DataVolume
+        storage_class: Storage class name
+        size: DataVolume size (e.g., "5Gi")
+        data_source: DataSource object to reference
+        volume_mode: Volume mode (Block/Filesystem)
+        access_modes: Access modes
+        client: Kubernetes client
+        multus_annotation: Multus network annotation
+        teardown: Whether to delete DV on cleanup
+        consume_wffc: Create dummy pod for WaitForFirstConsumer
+        bind_immediate: Bind immediately annotation
+        preallocation: Preallocate disk space
+        api_name: API name (storage/pvc)
+
+    Yields:
+        DataVolume: DataVolume resource with sourceRef
+    """
+    # Create DataVolume with blank source as placeholder
+    dv = DataVolume(
+        source="blank",
+        name=dv_name,
+        namespace=namespace,
+        size=size,
+        storage_class=storage_class,
+        volume_mode=volume_mode,
+        access_modes=access_modes,
+        client=client,
+        bind_immediate_annotation=bind_immediate,
+        multus_annotation=multus_annotation,
+        teardown=teardown,
+        preallocation=preallocation,
+        api_name=api_name,
+    )
+
+    # Modify to use sourceRef by converting to dict first
+    dv.to_dict()
+    # Remove source and contentType that were added by DataVolume init
+    if "source" in dv.res["spec"]:
+        del dv.res["spec"]["source"]
+    if "contentType" in dv.res["spec"]:
+        del dv.res["spec"]["contentType"]
+    # Add sourceRef
+    dv.res["spec"]["sourceRef"] = {
+        "kind": data_source.kind,
+        "name": data_source.name,
+        "namespace": data_source.namespace,
+    }
+
+    with dv:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
+            create_dummy_first_consumer_pod(dv=dv)
+        yield dv
+
+
 def data_volume(
     namespace,
     storage_class_matrix=None,
