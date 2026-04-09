@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 HonorWaitForFirstConsumer test suite
 """
@@ -26,6 +24,7 @@ from utilities.storage import (
     create_dv,
     create_vm_from_dv,
     data_volume,
+    data_volume_template_with_source_ref_dict,
     virtctl_upload_dv,
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
@@ -71,61 +70,6 @@ def data_volume_multi_wffc_storage_scope_function(
         storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
         client=namespace.client,
     )
-
-
-def get_dv_template_dict_from_data_source(dv_name, storage_class, data_source, size):
-    return {
-        "metadata": {
-            "name": f"{dv_name}",
-        },
-        "spec": {
-            "storage": {
-                "resources": {"requests": {"storage": size}},
-                "storageClassName": storage_class,
-            },
-            "sourceRef": {
-                "kind": data_source.kind,
-                "name": data_source.name,
-                "namespace": data_source.namespace,
-            },
-        },
-    }
-
-
-@pytest.fixture(scope="module")
-def create_rhel_dv_from_data_source(unprivileged_client, namespace, name, storage_class, rhel10_data_source):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        client=unprivileged_client,
-        size=Images.RHEL.DEFAULT_DV_SIZE,
-        storage_class=storage_class,
-        source_ref={
-            "kind": rhel10_data_source.kind,
-            "name": rhel10_data_source.name,
-            "namespace": rhel10_data_source.namespace,
-        },
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
-@pytest.fixture(scope="module")
-def rhel_dv_for_wffc_tests(
-    request,
-    namespace,
-    unprivileged_client,
-    data_volume_multi_wffc_storage_scope_function,
-    rhel10_data_source_scope_module,
-):
-    with create_rhel_dv_from_data_source(
-        unprivileged_client=unprivileged_client,
-        namespace=namespace.name,
-        name=request.param["dv_name"],
-        storage_class=data_volume_multi_wffc_storage_scope_function.storage_class,
-        rhel_data_source=rhel10_data_source_scope_module,
-    ) as dv:
-        yield dv
 
 
 def validate_vm_and_disk_count(vm):
@@ -262,7 +206,7 @@ def test_wffc_import_registry_dv(
     "data_volume_multi_wffc_storage_scope_module",
     [
         pytest.param(
-            {**DV_PARAMS, **{"consume_wffc": True}},
+            {**DV_PARAMS, "consume_wffc": True},
             marks=pytest.mark.polarion("CNV-4379"),
         ),
     ],
@@ -285,24 +229,10 @@ def test_wffc_clone_dv(unprivileged_client, data_volume_multi_wffc_storage_scope
 
 
 @pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_wffc_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-wffc-4742",
-                "consume_wffc": False,
-            },
-            marks=pytest.mark.polarion("CNV-4742"),
-        ),
-    ],
-    indirect=True,
-)
 @pytest.mark.s390x
 @pytest.mark.parametrize(
-    "rhel_dv_for_wffc_tests",
-    [pytest.param({"dv_name": "template"})],
-    indirect=True,
+    "dv_params",
+    [pytest.param({"dv_name": "template-dv"})],
 )
 def test_wffc_add_dv_to_vm_with_data_volume_template(
     request,
@@ -311,36 +241,36 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
     data_volume_multi_wffc_storage_scope_function,
     rhel10_data_source_scope_module,
 ):
+    dv_template = data_volume_template_with_source_ref_dict(
+        data_source=rhel10_data_source_scope_module,
+        storage_class=data_volume_multi_wffc_storage_scope_function.storage_class,
+    )
+    dv_template["metadata"]["name"] = request.param["dv_name"]
+
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="cnv-4742-vm",
         namespace=namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
-        data_volume_template=get_dv_template_dict_from_data_source(
-            dv_name=request.param["dv_name"],
-            storage_class=data_volume_multi_wffc_storage_scope_function.storage_class,
-            data_source=rhel10_data_source_scope_module,
-            size=Images.RHEL.DEFAULT_DV_SIZE,
-        ),
+        data_volume_template=dv_template,
         memory_guest=Images.RHEL.DEFAULT_MEMORY_SIZE,
     ) as vm:
         validate_vm_and_disk_count(vm=vm)
         # Add DV
         vm.stop(wait=True)
-        add_dv_to_vm(vm=vm, dv_name=data_volume_multi_wffc_storage_scope_function.name)
+        add_dv_to_vm(vm=vm, dv_name=request.param["dv_name"])
         # Check DV was added
         validate_vm_and_disk_count(vm=vm)
 
 
 @pytest.mark.sno
 @pytest.mark.s390x
+@pytest.mark.polarion("CNV-4743")
 @pytest.mark.parametrize(
-    "rhel_dv_for_wffc_tests",
+    "dv_params",
     [
-        pytest.param({"first_dv_name": "template-1", "second_dv_name": "template-2"}),
-        pytest.mark.polarion("CNV-4743"),
+        pytest.param([{"dv_name": "template-dv-1"}, {"dv_name": "template-dv-2"}]),
     ],
-    indirect=True,
 )
 def test_wffc_vm_with_two_data_volume_templates(
     request,
@@ -350,26 +280,27 @@ def test_wffc_vm_with_two_data_volume_templates(
     rhel10_data_source_scope_module,
 ):
     storage_class = [*storage_class_matrix_wffc_matrix__module__][0]
+    dv_1_template = data_volume_template_with_source_ref_dict(
+        data_source=rhel10_data_source_scope_module,
+        storage_class=storage_class,
+    )
+    dv_2_template = data_volume_template_with_source_ref_dict(
+        data_source=rhel10_data_source_scope_module,
+        storage_class=storage_class,
+    )
+    dv_1_template["metadata"]["name"] = request.param[0]["dv_name"]
+    dv_2_template["metadata"]["name"] = request.param[1]["dv_name"]
+
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="cnv-4743-vm",
         namespace=namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
-        data_volume_template=get_dv_template_dict_from_data_source(
-            dv_name=request.param["first_dv_name"],
-            storage_class=storage_class,
-            data_source=rhel10_data_source_scope_module,
-            size=Images.RHEL.DEFAULT_DV_SIZE,
-        ),
+        data_volume_template=dv_1_template,
         memory_guest=Images.RHEL.DEFAULT_MEMORY_SIZE,
     ) as vm:
         add_dv_to_vm(
             vm=vm,
-            template_dv=get_dv_template_dict_from_data_source(
-                dv_name=request.param["second_dv_name"],
-                storage_class=storage_class,
-                data_source=rhel10_data_source_scope_module,
-                size=Images.RHEL.DEFAULT_DV_SIZE,
-            ),
+            template_dv=dv_2_template,
         )
         validate_vm_and_disk_count(vm=vm)
