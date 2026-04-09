@@ -9,7 +9,7 @@ from pytest_testconfig import config as py_config
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.storage.utils import get_dv_size_from_datasource
 from utilities.constants import PVC, TIMEOUT_20MIN
-from utilities.storage import ErrorMsg, create_dv
+from utilities.storage import ErrorMsg, create_dv, create_dv_with_source_ref
 from utilities.virt import wait_for_ssh_connectivity
 
 pytestmark = pytest.mark.post_upgrade
@@ -38,17 +38,13 @@ def dv_created_by_unprivileged_user_with_rolebinding(
     fedora_data_source_scope_module,
 ):
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-    with create_dv(
+    with create_dv_with_source_ref(
         client=unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         namespace=golden_images_namespace.name,
         size=size,
         storage_class=storage_class_name_scope_function,
-        source_ref={
-            "kind": fedora_data_source_scope_module.kind,
-            "name": fedora_data_source_scope_module.name,
-            "namespace": fedora_data_source_scope_module.namespace,
-        },
+        data_source=fedora_data_source_scope_module,
     ) as dv:
         yield dv
 
@@ -66,17 +62,13 @@ def test_regular_user_cant_create_dv_in_ns(
         ApiException,
         match=ErrorMsg.CANNOT_CREATE_RESOURCE,
     ):
-        with create_dv(
+        with create_dv_with_source_ref(
             dv_name="cnv-4755",
             namespace=golden_images_namespace.name,
             size=size,
             storage_class=py_config["default_storage_class"],
             client=unprivileged_client,
-            source_ref={
-                "kind": fedora_data_source_scope_module.kind,
-                "name": fedora_data_source_scope_module.name,
-                "namespace": fedora_data_source_scope_module.namespace,
-            },
+            data_source=fedora_data_source_scope_module,
         ):
             return
 
