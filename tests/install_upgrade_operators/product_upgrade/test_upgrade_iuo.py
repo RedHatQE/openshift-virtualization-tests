@@ -37,9 +37,8 @@ class TestUpgradeIUO:
         self,
         fired_alerts_during_upgrade,
     ):
-        LOGGER.info("Verify if any alerts were fired during upgrade")
         assert not fired_alerts_during_upgrade, (
-            f"Following alerts were fired during upgrade: {fired_alerts_during_upgrade}"
+            f"Following alerts were fired during upgrade: {list(fired_alerts_during_upgrade.keys())}"
         )
 
     @pytest.mark.eus_upgrade
