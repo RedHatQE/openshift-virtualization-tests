@@ -32,11 +32,7 @@ def running_linux_bridge_vm(
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
-        wait_for_stable_ifaces(
-            vm=vm,
-            ipv4_supported_cluster=ipv4_supported_cluster,
-            ipv6_supported_cluster=ipv6_supported_cluster,
-        )
+        wait_for_stable_ifaces(vm=vm)
         yield vm
 
 
