@@ -493,11 +493,10 @@ def query_alerts_fired_in_range(
     start_time: datetime,
     end_time: datetime,
     step: str = "30s",
-) -> set[str]:
-    """Returns deduplicated alert names that were firing during the given time range.
+) -> list[dict[str, Any]]:
+    """Returns raw CNV firing-alert results from a PromQL range query.
 
-    Uses PromQL query_range to find all alerts that reached firing state at any point,
-    including alerts that have since resolved.
+    Includes alerts that have since resolved because range queries cover historical data.
 
     Args:
         prometheus: Prometheus client instance.
@@ -506,21 +505,14 @@ def query_alerts_fired_in_range(
         step: Query resolution step.
 
     Returns:
-        Set of unique alert names that were firing during the range.
+        List of result dicts, each containing 'metric' labels and 'values' timestamps.
     """
     query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}'
-    start_time = start_time.isoformat()
-    end_time = end_time.isoformat()
     response = prometheus._get_response(
-        query=f"{prometheus.api_v1}/query_range?query={query}&start={start_time}&end={end_time}&step={step}"
+        query=f"{prometheus.api_v1}/query_range?query={query}"
+        f"&start={start_time.isoformat()}&end={end_time.isoformat()}&step={step}"
     )
-    alert_names = {
-        alert_name
-        for result in response.get("data", {}).get("result", [])
-        if (alert_name := result["metric"].get("alertname"))
-    }
-    LOGGER.info(f"Alerts fired in range [{start_time}, {end_time}]: {alert_names}")
-    return alert_names
+    return response.get("data", {}).get("result", [])
 
 
 def get_alerts_fired_during_upgrade(
@@ -528,8 +520,8 @@ def get_alerts_fired_during_upgrade(
     before_upgrade_alert_names: set[str],
     upgrade_start_time: datetime,
     base_directory: str,
-) -> set[str]:
-    """Returns alert names that newly fired during the upgrade.
+) -> dict[str, list[dict[str, Any]]]:
+    """Returns new alerts that fired during the upgrade, grouped by alertname.
 
     Uses a PromQL range query over the upgrade window to catch all alerts that reached
     firing state, including those that resolved before this function runs. Filters out
@@ -542,24 +534,27 @@ def get_alerts_fired_during_upgrade(
         base_directory: Directory path for writing alert data files.
 
     Returns:
-        Set of alert names that newly fired during the upgrade.
+        Dict mapping alertname to the list of full result objects (metric + values) for that alert.
     """
-    new_alerts = (
-        query_alerts_fired_in_range(
-            prometheus=prometheus,
-            start_time=upgrade_start_time,
-            end_time=datetime.now(tz=timezone.utc),
-        )
-        - before_upgrade_alert_names
+    fired_alerts = query_alerts_fired_in_range(
+        prometheus=prometheus,
+        start_time=upgrade_start_time,
+        end_time=datetime.now(tz=timezone.utc),
     )
 
-    LOGGER.error(f"New alerts fired during upgrade: {new_alerts}")
-    write_to_file(
-        base_directory=base_directory,
-        file_name="alerts_fired_during_upgrade.json",
-        content=json.dumps(sorted(new_alerts)),
-    )
-    return new_alerts
+    alerts_by_name: dict[str, list[dict[str, Any]]] = {}
+    for alert in fired_alerts:
+        alert_name = alert["metric"]["alertname"]
+        if alert_name not in before_upgrade_alert_names:
+            alerts_by_name.setdefault(alert_name, []).append(alert)
+
+    if alerts_by_name:
+        write_to_file(
+            base_directory=base_directory,
+            file_name="alerts_fired_during_upgrade.json",
+            content=json.dumps(alerts_by_name, indent=2),
+        )
+    return alerts_by_name
 
 
 def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list[str]]]]:
