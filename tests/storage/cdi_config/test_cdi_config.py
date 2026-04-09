@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """CDIConfig tests"""
 
 import pytest
@@ -7,16 +5,18 @@ from ocp_resources.cdi import CDI
 from ocp_resources.route import Route
 from timeout_sampler import TimeoutSampler
 
-from tests.storage.cdi_config.utils import (
-    INSECURE_REGISTRIES_LIST,
-    NON_EXISTENT_SCRATCH_SC_DICT,
-    STORAGE_WORKLOADS_DICT,
-)
 from tests.storage.utils import LOGGER
 from utilities.constants import CDI_UPLOADPROXY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = pytest.mark.post_upgrade
+
+STORAGE_WORKLOADS_DICT = {
+    "limits": {"cpu": "505m", "memory": "2Gi"},
+    "requests": {"cpu": "252m", "memory": "1Gi"},
+}
+NON_EXISTENT_SCRATCH_SC_DICT = {"scratchSpaceStorageClass": "NonExistentSC"}
+INSECURE_REGISTRIES_LIST = ["added-private-registry:5000"]
 
 
 @pytest.mark.sno
@@ -137,6 +137,10 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
             **expected_in_cdi_config_from_cr,
         } == current_cdi_config_from_cr
 
+    def _verify_revert() -> bool:
+        current_cdi_config_from_cr = cdi.instance.to_dict()["spec"]["config"]
+        return current_cdi_config_from_cr == initial_cdi_config_from_cr
+
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_module: {"spec": hco_updated_spec_stanza}},
         list_resource_reconcile=[CDI],
@@ -150,8 +154,8 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
 
     LOGGER.info("Check values revert back to original")
     reverted = False
-    for sample in TimeoutSampler(wait_timeout=20, sleep=1, func=_verify_propagation):
-        if not sample:
+    for sample in TimeoutSampler(wait_timeout=20, sleep=1, func=_verify_revert):
+        if sample:
             reverted = True
             break
     assert reverted, "CDI config did not revert to the original values after restore"
