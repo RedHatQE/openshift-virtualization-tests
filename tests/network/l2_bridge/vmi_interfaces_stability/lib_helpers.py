@@ -13,10 +13,12 @@ from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, cloudinitdisk_storage
 from tests.network.libs import cloudinit
+from tests.network.localnet.liblocalnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
 
 LOGGER = logging.getLogger(__name__)
 
-LINUX_BRIDGE_IFACE_NAME: Final[str] = "linux-bridge"
+LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
+LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
 
 
 def secondary_network_vm(
@@ -29,12 +31,14 @@ def secondary_network_vm(
 ) -> BaseVirtualMachine:
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
+        Interface(name=LINUX_BRIDGE_IFACE_NAME_1, bridge={}),
         Interface(name="default", masquerade={}),
-        Interface(name=LINUX_BRIDGE_IFACE_NAME, bridge={}),
+        Interface(name=LINUX_BRIDGE_IFACE_NAME_2, bridge={}),
     ]
     spec.template.spec.networks = [
+        Network(name=LINUX_BRIDGE_IFACE_NAME_1, multus=Multus(networkName=bridge_network_name)),
         Network(name="default", pod={}),
-        Network(name=LINUX_BRIDGE_IFACE_NAME, multus=Multus(networkName=bridge_network_name)),
+        Network(name=LINUX_BRIDGE_IFACE_NAME_2, multus=Multus(networkName=bridge_network_name)),
     ]
 
     ethernets = {}
@@ -43,11 +47,18 @@ def secondary_network_vm(
         ipv6_supported_cluster=ipv6_supported_cluster,
     )
     if primary:
-        ethernets["eth0"] = primary
+        ethernets["eth1"] = primary
 
-    ethernets["eth1"] = secondary_iface_cloud_init(
+    ethernets["eth0"] = secondary_iface_cloud_init(
         ipv4_supported_cluster=ipv4_supported_cluster,
         ipv6_supported_cluster=ipv6_supported_cluster,
+        host_address=1,
+    )
+
+    ethernets["eth2"] = secondary_iface_cloud_init(
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        host_address=2,
     )
 
     userdata = cloudinit.UserData(users=[])
@@ -79,33 +90,46 @@ def primary_iface_cloud_init(
 def secondary_iface_cloud_init(
     ipv4_supported_cluster: bool,
     ipv6_supported_cluster: bool,
+    host_address: int,
 ) -> cloudinit.EthernetDevice:
     ips = secondary_iface_ips(
-        ipv4_supported_cluster=ipv4_supported_cluster, ipv6_supported_cluster=ipv6_supported_cluster
+        ipv4_supported_cluster=ipv4_supported_cluster,
+        ipv6_supported_cluster=ipv6_supported_cluster,
+        host_address=host_address,
     )
     addresses = [f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24" for ip in ips]
     return cloudinit.EthernetDevice(addresses=addresses)
 
 
-def secondary_iface_ips(ipv4_supported_cluster: bool, ipv6_supported_cluster: bool) -> list[str]:
+def secondary_iface_ips(
+    ipv4_supported_cluster: bool,
+    ipv6_supported_cluster: bool,
+    host_address: int,
+) -> list[str]:
     ips = []
     if ipv4_supported_cluster:
-        ips.append(random_ipv4_address(net_seed=0, host_address=1))
+        ips.append(random_ipv4_address(net_seed=0, host_address=host_address))
     if ipv6_supported_cluster:
-        ips.append(random_ipv6_address(net_seed=0, host_address=1))
+        ips.append(random_ipv6_address(net_seed=0, host_address=host_address))
     return ips
 
 
 def wait_for_stable_ifaces(
     vm: BaseVirtualMachine,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> None:
     primary_network = lookup_primary_network(vm=vm)
-    secondary_ips = secondary_iface_ips(
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
-    )
+
+    secondary_iface_to_ips = {
+        LINUX_BRIDGE_IFACE_NAME_1: [
+            str(ipaddress.ip_interface(addr).ip)
+            for addr in vm.cloud_init_network_data.ethernets[GUEST_1ST_IFACE_NAME].addresses  # type: ignore[union-attr]
+        ],
+        LINUX_BRIDGE_IFACE_NAME_2: [
+            str(ipaddress.ip_interface(addr).ip)
+            for addr in vm.cloud_init_network_data.ethernets[GUEST_3RD_IFACE_NAME].addresses  # type: ignore[union-attr]
+        ],
+    }
+
     spec_interfaces = vm.instance.spec.template.spec.domain.devices.interfaces
     for iface in spec_interfaces:
         if iface.name == primary_network.name:
@@ -116,7 +140,7 @@ def wait_for_stable_ifaces(
                 iface_name=iface.name,
                 predicate=lambda iface_status: (
                     "guest-agent" in iface_status["infoSource"]
-                    and all(ip in iface_status.get("ipAddresses", []) for ip in secondary_ips)
+                    and all(ip in iface_status.get("ipAddresses", []) for ip in secondary_iface_to_ips[iface.name])
                 ),
             )
 
