@@ -11,7 +11,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import py_config
 
 from tests.os_params import FEDORA_LATEST
-from tests.storage.cdi_import.test_import_http import wait_dv_and_get_importer
+from tests.storage.cdi_import.utils import wait_dv_and_get_importer
 from tests.storage.constants import (
     HPP_STORAGE_CLASSES,
     HTTP,

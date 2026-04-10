@@ -33,7 +33,7 @@ from tests.storage.utils import (
 )
 from utilities import console
 from utilities.constants import (
-    OS_FLAVOR_ALPINE,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     QUARANTINED,
     TIMEOUT_1MIN,
@@ -372,35 +372,35 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
 
 
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-3065",
-                "source": HTTP,
-                "image": f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG}",
-                "dv_size": Images.Alpine.DEFAULT_DV_SIZE,
-                "wait": True,
-            },
-            marks=pytest.mark.polarion("CNV-3065"),
-        ),
-    ],
-    indirect=True,
-)
+@pytest.mark.polarion("CNV-3065")
 @pytest.mark.sno
-def test_disk_falloc(data_volume_multi_storage_scope_function, unprivileged_client):
-    data_volume_multi_storage_scope_function.wait_for_dv_success()
-    with create_vm_from_dv(
+def test_disk_falloc(
+    storage_class_name_scope_function, unprivileged_client, fedora_data_source_scope_module, namespace
+):
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+    with create_dv(
         client=unprivileged_client,
-        dv=data_volume_multi_storage_scope_function,
-        os_flavor=OS_FLAVOR_ALPINE,
-        memory_guest=Images.Alpine.DEFAULT_MEMORY_SIZE,
-    ) as vm_dv:
-        with console.Console(vm=vm_dv) as vm_console:
-            LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/urandom of=file bs=1M")
-            vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
+        dv_name=f"cnv-3065-{storage_class_name_scope_function}",
+        namespace=namespace.name,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+        size=size,
+        storage_class=storage_class_name_scope_function,
+    ) as dv:
+        dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
+        with create_vm_from_dv(
+            client=unprivileged_client,
+            dv=dv,
+            os_flavor=OS_FLAVOR_FEDORA,
+            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        ) as vm_dv:
+            with console.Console(vm=vm_dv) as vm_console:
+                LOGGER.info(f"Fill disk space with size {size}")
+                vm_console.sendline(f"fallocate -l {size} test-file")
+                vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.destructive
@@ -411,7 +411,7 @@ def test_disk_falloc(data_volume_multi_storage_scope_function, unprivileged_clie
             {
                 "dv_name": "cnv-3362",
                 "source": HTTP,
-                "image": RHEL_LATEST["image_path"],
+                "image": RHEL_LATEST.get("image_path"),
                 "dv_size": "25Gi",
                 "access_modes": DataVolume.AccessMode.RWX,
                 "wait": False,
