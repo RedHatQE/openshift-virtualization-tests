@@ -392,6 +392,7 @@ def test_disk_falloc(
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
         with create_vm_from_dv(
+            vm_name="cnv-3065-vm",
             client=unprivileged_client,
             dv=dv,
             os_flavor=OS_FLAVOR_FEDORA,
