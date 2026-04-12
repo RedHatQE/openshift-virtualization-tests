@@ -8,14 +8,13 @@ Jira: CNV-72329
 import logging
 
 import pytest
-
-from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
+
+from conftest import patch_vm_nad_reference
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import hot_plug_interface
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5MIN
 from utilities.network import assert_ping_successful, is_destination_pingable_from_vm
-
-from conftest import patch_vm_nad_reference
 
 LOGGER = logging.getLogger(__name__)
 
@@ -177,9 +176,7 @@ class TestNADLiveUpdateE2E:
             iface_name=hotplug_nad_scope_class.name,
             ip_family=4,
         )
-        assert hotplug_ip, (
-            f"Hotplugged interface {HOT_PLUG_IFACE_NAME} should report a valid IP"
-        )
+        assert hotplug_ip, f"Hotplugged interface {HOT_PLUG_IFACE_NAME} should report a valid IP"
 
         LOGGER.info("Patching VM spec to change NAD reference from nad1 to nad2")
         patch_vm_nad_reference(
@@ -201,6 +198,4 @@ class TestNADLiveUpdateE2E:
             iface_name=nad2_scope_class.name,
             ip_family=4,
         )
-        assert nad2_ip, (
-            "Original secondary interface should have IP on nad2 after NAD change"
-        )
+        assert nad2_ip, "Original secondary interface should have IP on nad2 after NAD change"
