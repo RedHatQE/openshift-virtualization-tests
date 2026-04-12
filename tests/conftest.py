@@ -15,7 +15,6 @@ from bisect import bisect_left
 from collections import defaultdict
 from datetime import datetime, timezone
 from signal import SIGINT, SIGTERM, getsignal, signal
-from subprocess import check_output
 
 import bcrypt
 import bitmath
@@ -77,7 +76,7 @@ from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.cluster import cache_admin_client
+from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
     ARM_64,
@@ -414,7 +413,7 @@ def unprivileged_client(
         yield admin_client
 
     else:
-        current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
+        current_user = get_oc_whoami_username()
         if login_with_user_password(
             api_address=admin_client.configuration.host,
             user=UNPRIVILEGED_USER,
