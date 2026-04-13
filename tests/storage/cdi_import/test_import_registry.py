@@ -171,8 +171,9 @@ def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace
 @pytest.mark.polarion("CNV-2150")
 @pytest.mark.s390x
 def test_public_registry_data_volume_archive(unprivileged_client, namespace, storage_class_name_scope_function):
-    with pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"):
-        with create_dv(
+    with (
+        pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"),
+        create_dv(
             client=unprivileged_client,
             source=REGISTRY_STR,
             dv_name="import-public-registry-archive",
@@ -180,5 +181,6 @@ def test_public_registry_data_volume_archive(unprivileged_client, namespace, sto
             url=QUAY_FEDORA_CONTAINER_IMAGE,
             content_type=DataVolume.ContentType.ARCHIVE,
             storage_class=[*storage_class_name_scope_function][0],
-        ):
-            return
+        ),
+    ):
+        return

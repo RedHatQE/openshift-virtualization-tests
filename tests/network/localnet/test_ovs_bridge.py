@@ -55,12 +55,14 @@ def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
     )
 
     for dst_ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
-        with subtests.test(msg=f"IPv{dst_ip.version}"):
-            with client_server_active_connection(
+        with (
+            subtests.test(msg=f"IPv{dst_ip.version}"),
+            client_server_active_connection(
                 client_vm=vm2,
                 server_vm=vm1_with_initial_link_down,
                 spec_logical_network=LOCALNET_OVS_BRIDGE_INTERFACE,
                 port=8888,
                 ip_family=dst_ip.version,
-            ) as (client, server):
-                assert is_tcp_connection(server=server, client=client)
+            ) as (client, server),
+        ):
+            assert is_tcp_connection(server=server, client=client)
