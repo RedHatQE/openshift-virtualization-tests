@@ -5,8 +5,8 @@ Pytest utils file for CNV VMExport tests
 import io
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import yaml
 from kubernetes.dynamic import DynamicClient

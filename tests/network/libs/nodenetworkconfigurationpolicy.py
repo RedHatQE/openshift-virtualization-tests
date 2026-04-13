@@ -167,13 +167,12 @@ class NodeNetworkConfigurationPolicy(Nncp):
         )
 
         for condition in conditions:
-            if condition["type"] == Resource.Condition.AVAILABLE:
-                if (
-                    not initial_transition_datetime
-                    or datetime.strptime(condition["lastTransitionTime"], date_format) > initial_transition_datetime
-                ):
-                    self.logger.info(f"{self.kind}/{self.name} configured successfully")
-                    return condition
+            if condition["type"] == Resource.Condition.AVAILABLE and (
+                not initial_transition_datetime
+                or datetime.strptime(condition["lastTransitionTime"], date_format) > initial_transition_datetime
+            ):
+                self.logger.info(f"{self.kind}/{self.name} configured successfully")
+                return condition
             if condition["type"] == Resource.Condition.DEGRADED:
                 raise NNCPConfigurationFailed(f"{self.name} failed on condition:\n{condition}")
         return {}

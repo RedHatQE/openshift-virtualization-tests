@@ -218,14 +218,16 @@ class TestNodeCordonAndDrain:
         vm_for_test_from_template_scope_class,
     ):
         vm = vm_for_test_from_template_scope_class
-        with node_mgmt_console(
-            admin_client=admin_client,
-            node=vm.vmi.get_node(privileged_client=admin_client),
-            node_mgmt="cordon",
+        with (
+            node_mgmt_console(
+                admin_client=admin_client,
+                node=vm.vmi.get_node(privileged_client=admin_client),
+                node_mgmt="cordon",
+            ),
+            pytest.raises(TimeoutExpiredError),
         ):
-            with pytest.raises(TimeoutExpiredError):
-                migration_job_sampler(
-                    client=admin_client,
-                    namespace=vm.namespace,
-                )
-                pytest.fail("Cordon of a Node should not trigger VMI migration.")
+            migration_job_sampler(
+                client=admin_client,
+                namespace=vm.namespace,
+            )
+            pytest.fail("Cordon of a Node should not trigger VMI migration.")
