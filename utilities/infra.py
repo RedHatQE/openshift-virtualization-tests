@@ -52,6 +52,7 @@ from utilities.constants import (
     CLUSTER,
     HCO_CATALOG_SOURCE,
     KUBECONFIG,
+    KUBEVIRT_CONSOLE_PLUGIN,
     NET_UTIL_CONTAINER_IMAGE,
     OC_ADM_LOGS_COMMAND,
     PROMETHEUS_K8S,
@@ -73,6 +74,7 @@ from utilities.exceptions import (
     UrlNotFoundError,
     UtilityPodNotFoundError,
 )
+from utilities.jira import is_jira_open
 from utilities.ssp import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
@@ -192,10 +194,18 @@ def get_pod_container_error_status(pod: Pod) -> str | None:
         raise
 
 
+@cache
+def is_console_plugin_bug_open() -> bool:
+    return is_jira_open(jira_id="CNV-82451")
+
+
 def get_not_running_pods(pods: list[Pod], filter_pods_by_name: str = "") -> list[dict[str | None, str]]:
     pods_not_running = []
+    if is_console_plugin_bug_open():
+        LOGGER.warning(f"Ignoring {KUBEVIRT_CONSOLE_PLUGIN} pods for pod state validations due to CNV-82451")
+        pods = [pod for pod in pods if KUBEVIRT_CONSOLE_PLUGIN not in pod.name]
     for pod in pods:
-        if filter_pods_by_name and filter_pods_by_name in pod.name:  # type: ignore[operator]
+        if filter_pods_by_name and filter_pods_by_name in pod.name:
             LOGGER.warning(f"Ignoring pod: {pod.name} for pod state validations.")
             continue
         try:
