@@ -19,10 +19,8 @@ from ocp_resources.csi_driver import CSIDriver
 from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
-from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
-from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -317,48 +315,6 @@ def default_fs_overhead(cdi_config):
 
 
 @pytest.fixture()
-def unset_predefined_scratch_sc(hyperconverged_resource_scope_module, cdi_config):
-    if cdi_config.instance.spec.scratchSpaceStorageClass:
-        empty_scratch_space_spec = {"spec": {"scratchSpaceStorageClass": ""}}
-        with ResourceEditorValidateHCOReconcile(
-            patches={hyperconverged_resource_scope_module: empty_scratch_space_spec},
-            list_resource_reconcile=[CDI],
-        ):
-            LOGGER.info(f"wait for {empty_scratch_space_spec} in CDIConfig")
-            for sample in TimeoutSampler(
-                wait_timeout=20,
-                sleep=1,
-                func=lambda: not cdi_config.instance.spec.scratchSpaceStorageClass,
-            ):
-                if sample:
-                    break
-            yield
-    else:
-        yield
-
-
-@pytest.fixture()
-def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client, cdi_config, default_sc):
-    # Based on py_config["default_storage_class"], update default SC, if needed
-    if default_sc:
-        yield default_sc
-    else:
-        for sc in StorageClass.get(client=admin_client, name=py_config["default_storage_class"]):
-            assert sc, f"The cluster does not include {py_config['default_storage_class']} storage class"
-            with ResourceEditor(
-                patches={
-                    sc: {
-                        "metadata": {
-                            "annotations": {StorageClass.Annotations.IS_DEFAULT_CLASS: "true"},
-                            "name": sc.name,
-                        }
-                    }
-                }
-            ):
-                yield sc
-
-
-@pytest.fixture()
 def router_cert_secret(admin_client):
     router_secret = "router-certs-default"
     for secret in Secret.get(
@@ -427,16 +383,6 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module, admin_
 @pytest.fixture()
 def rhel_vm_name(request):
     return request.param["vm_name"]
-
-
-@pytest.fixture(scope="session")
-def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes):
-    """
-    Get an HPP storage class if there is any in the cluster
-    """
-    for storage_class in cluster_storage_classes:
-        if storage_class.name in HPP_STORAGE_CLASSES:
-            return storage_class
 
 
 @pytest.fixture(scope="module")
