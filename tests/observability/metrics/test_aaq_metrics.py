@@ -24,7 +24,7 @@ class TestAAQMetrics:
         validate_metrics_value(
             prometheus=prometheus,
             expected_value=str(timestamp_to_seconds(timestamp=application_aware_resource_quota_creation_timestamp)),
-            metric_name="kube_application_aware_resourcequota_creation_timestamp",
+            metric_name="kube_application_aware_resourcequota_creation_timestamp_seconds",
         )
 
     @pytest.mark.polarion("CNV-12184")
