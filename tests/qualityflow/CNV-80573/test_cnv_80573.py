@@ -16,7 +16,7 @@ I'll generate working Python/pytest test code for CNV-80573 based on the STD YAM
 
 ## Step 3: Invoke Pattern Detector
 
-**Skill:** pattern-detector  
+**Skill:** pattern-detector
 **Parameters:**
 - scenarios: [TS-CNV-80573-001]
 - tier: "tier2"
@@ -95,7 +95,7 @@ class TestNADChangesRuntime:
                 "subnet": "192.168.100.0/24"
             }
         }
-        
+
         with network_nad(
             nad_type="bridge",
             nad_name="original-nad",
@@ -117,7 +117,7 @@ class TestNADChangesRuntime:
                 "subnet": "192.168.200.0/24"
             }
         }
-        
+
         with network_nad(
             nad_type="bridge",
             nad_name="updated-nad",
@@ -130,7 +130,7 @@ class TestNADChangesRuntime:
     def vm_with_initial_nad_scope_class(self, unprivileged_client, namespace, original_nad_scope_class):
         """VM with initial NAD attachment for modification testing."""
         vm_body = fedora_vm_body(name="test-nad-vm")
-        
+
         # Configure VM with original NAD
         vm_body["spec"]["template"]["spec"]["networks"] = [
             {"name": "default", "pod": {}},
@@ -139,12 +139,12 @@ class TestNADChangesRuntime:
                 "multus": {"networkName": original_nad_scope_class.name}
             }
         ]
-        
+
         vm_body["spec"]["template"]["spec"]["domain"]["devices"]["interfaces"] = [
             {"name": "default", "masquerade": {}},
             {"name": "test-network", "bridge": {}}
         ]
-        
+
         with VirtualMachineForTests(
             namespace=namespace.name,
             body=vm_body,
@@ -183,18 +183,18 @@ class TestNADChangesRuntime:
             - No data loss or connection drops occur during NAD changes
         """
         vm = vm_with_initial_nad_scope_class
-        
+
         # Step 1: Verify VM is running with original NAD configuration
         LOGGER.info("Step 1: Verifying VM is running with original NAD configuration")
         assert vm.vmi, "VMI should be available for running VM"
-        
+
         # Verify original network configuration
         vm_networks = vm.instance.spec.template.spec.networks
         test_network = next((n for n in vm_networks if n.name == "test-network"), None)
         assert test_network, "Test network should be configured on VM"
         assert test_network.multus.networkName == original_nad_scope_class.name, \
             f"VM should initially use original NAD {original_nad_scope_class.name}"
-        
+
         # Verify initial connectivity (if applicable)
         try:
             initial_ip = get_vmi_ip_v4_by_name(
@@ -204,27 +204,27 @@ class TestNADChangesRuntime:
             LOGGER.info(f"VM initial IP on test network: {initial_ip}")
         except Exception as e:
             LOGGER.warning(f"Could not get initial IP: {e}")
-        
+
         # Step 2: Modify VM network configuration to use updated NAD
         LOGGER.info("Step 2: Modifying VM network configuration to use updated NAD")
-        
+
         # Update VM spec to reference updated NAD
         vm_spec = vm.instance.spec.template.spec
         for network in vm_spec.networks:
             if network.name == "test-network":
                 network.multus.networkName = updated_nad_scope_class.name
                 LOGGER.info(f"Updated network {network.name} to use NAD {updated_nad_scope_class.name}")
-        
+
         # Apply the update
         vm.update()
         LOGGER.info("VM network configuration update applied")
-        
+
         # Step 3: Verify NAD change is applied to running VM
         LOGGER.info("Step 3: Verifying NAD change is applied to running VM")
-        
+
         # Wait for VM to stabilize after update
         vm.wait_for_status(status=VirtualMachine.Status.RUNNING, timeout=TIMEOUT_5MIN)
-        
+
         # Verify VM spec reflects updated NAD
         updated_vm = VirtualMachine(
             name=vm.name,
@@ -233,17 +233,17 @@ class TestNADChangesRuntime:
         )
         updated_networks = updated_vm.instance.spec.template.spec.networks
         updated_test_network = next((n for n in updated_networks if n.name == "test-network"), None)
-        
+
         assert updated_test_network, "Test network should still be configured after update"
         assert updated_test_network.multus.networkName == updated_nad_scope_class.name, \
             f"VM should now use updated NAD {updated_nad_scope_class.name}"
-        
+
         # Step 4: Validate network connectivity with updated configuration
         LOGGER.info("Step 4: Validating network connectivity with updated configuration")
-        
+
         # Verify VM remains running
         assert vm.instance.status.ready is True, "VM should remain running after NAD change"
-        
+
         # Verify updated network interface configuration (if applicable)
         try:
             updated_ip = get_vmi_ip_v4_by_name(
@@ -251,18 +251,18 @@ class TestNADChangesRuntime:
                 interface_name="test-network"
             )
             LOGGER.info(f"VM updated IP on test network: {updated_ip}")
-            
+
             # Verify IP is from updated subnet (192.168.200.0/24)
             assert updated_ip.startswith("192.168.200."), \
                 f"Updated IP {updated_ip} should be from updated subnet 192.168.200.0/24"
-                
+
         except Exception as e:
             LOGGER.warning(f"Could not verify updated IP: {e}")
-        
+
         # Final assertions
         LOGGER.info("Final validation: NAD change completed successfully")
         assert vm.vmi.status.phase == "Running", "VM should remain in Running phase"
-        
+
         # Verify no disruption to default network
         default_network = next((n for n in updated_networks if n.name == "default"), None)
         assert default_network, "Default network should remain unchanged"
