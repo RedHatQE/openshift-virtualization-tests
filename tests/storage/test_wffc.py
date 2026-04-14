@@ -235,17 +235,17 @@ def test_wffc_clone_dv(unprivileged_client, data_volume_multi_wffc_storage_scope
     [pytest.param({"dv_name": "template-dv"})],
 )
 def test_wffc_add_dv_to_vm_with_data_volume_template(
-    request,
+    dv_params,
     unprivileged_client,
     namespace,
-    data_volume_multi_wffc_storage_scope_function,
+    storage_class_matrix_wffc_matrix__module__,
     rhel10_data_source_scope_module,
 ):
     dv_template = data_volume_template_with_source_ref_dict(
         data_source=rhel10_data_source_scope_module,
-        storage_class=data_volume_multi_wffc_storage_scope_function.storage_class,
+        storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
     )
-    dv_template["metadata"]["name"] = request.param["dv_name"]
+    dv_template["metadata"]["name"] = dv_params["dv_name"]
 
     with VirtualMachineForTests(
         client=unprivileged_client,
@@ -253,12 +253,12 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
         namespace=namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=dv_template,
-        memory_guest=Images.RHEL.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         validate_vm_and_disk_count(vm=vm)
         # Add DV
         vm.stop(wait=True)
-        add_dv_to_vm(vm=vm, dv_name=request.param["dv_name"])
+        add_dv_to_vm(vm=vm, dv_name=dv_params["dv_name"])
         # Check DV was added
         validate_vm_and_disk_count(vm=vm)
 
@@ -273,7 +273,7 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
     ],
 )
 def test_wffc_vm_with_two_data_volume_templates(
-    request,
+    dv_params,
     unprivileged_client,
     namespace,
     storage_class_matrix_wffc_matrix__module__,
@@ -288,8 +288,8 @@ def test_wffc_vm_with_two_data_volume_templates(
         data_source=rhel10_data_source_scope_module,
         storage_class=storage_class,
     )
-    dv_1_template["metadata"]["name"] = request.param[0]["dv_name"]
-    dv_2_template["metadata"]["name"] = request.param[1]["dv_name"]
+    dv_1_template["metadata"]["name"] = dv_params[0]["dv_name"]
+    dv_2_template["metadata"]["name"] = dv_params[1]["dv_name"]
 
     with VirtualMachineForTests(
         client=unprivileged_client,
