@@ -180,6 +180,7 @@ To use jira plugin, you need to set the following environment variables:
 ```bash
 export PYTEST_JIRA_URL=<url>
 export PYTEST_JIRA_TOKEN=<your_token>
+export PYTEST_JIRA_USERNAME=<email>    # email associated with the Jira account
 ```
 
 ## Additional options
