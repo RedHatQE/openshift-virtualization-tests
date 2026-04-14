@@ -58,20 +58,13 @@ def bandwidth_nad(
 
 @pytest.fixture(scope="module")
 def server_vm(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     unprivileged_client: DynamicClient,
     namespace: Namespace,
     bandwidth_nad: NetworkAttachmentDefinition,
 ) -> Generator[BaseVirtualMachine]:
     addresses = [
         f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(
-            ipv4_supported=ipv4_supported_cluster,
-            ipv6_supported=ipv6_supported_cluster,
-            net_seed=0,
-            host_address=1,
-        )
+        for ip in random_ip_addresses_by_family(net_seed=0, host_address=1)
     ]
     with secondary_network_vm(
         namespace=namespace.name,
@@ -80,8 +73,6 @@ def server_vm(
         nad_name=bandwidth_nad.name,
         secondary_iface_name=BANDWIDTH_SECONDARY_IFACE_NAME,
         secondary_iface_addresses=addresses,
-        ipv4_supported=ipv4_supported_cluster,
-        ipv6_supported=ipv6_supported_cluster,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -99,20 +90,13 @@ def server_vm(
 
 @pytest.fixture(scope="module")
 def client_vm(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     unprivileged_client: DynamicClient,
     namespace: Namespace,
     bandwidth_nad: NetworkAttachmentDefinition,
 ) -> Generator[BaseVirtualMachine]:
     addresses = [
         f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(
-            ipv4_supported=ipv4_supported_cluster,
-            ipv6_supported=ipv6_supported_cluster,
-            net_seed=0,
-            host_address=2,
-        )
+        for ip in random_ip_addresses_by_family(net_seed=0, host_address=2)
     ]
     with secondary_network_vm(
         namespace=namespace.name,
@@ -121,8 +105,6 @@ def client_vm(
         nad_name=bandwidth_nad.name,
         secondary_iface_name=BANDWIDTH_SECONDARY_IFACE_NAME,
         secondary_iface_addresses=addresses,
-        ipv4_supported=ipv4_supported_cluster,
-        ipv6_supported=ipv6_supported_cluster,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()

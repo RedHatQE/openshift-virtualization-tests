@@ -3,7 +3,6 @@ Pytest conftest file for CNV tests
 """
 
 import copy
-import ipaddress
 import logging
 import os
 import os.path
@@ -44,7 +43,6 @@ from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
@@ -73,6 +71,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
@@ -1470,8 +1469,6 @@ def cluster_info(
     hco_image,
     ocs_current_version,
     kubevirt_resource_scope_session,
-    ipv6_supported_cluster,
-    ipv4_supported_cluster,
     workers_type,
     nodes_cpu_architecture,
 ):
@@ -1491,8 +1488,8 @@ def cluster_info(
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
         f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
-        f"\tIPv4 cluster: {ipv4_supported_cluster}\n"
-        f"\tIPv6 cluster: {ipv6_supported_cluster}\n"
+        f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
+        f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
     )
 
@@ -1656,8 +1653,6 @@ def running_vm_upgrade_a(
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
 ):
     name = "vm-upgrade-a"
     cloud_init_data = cloud_init_network_data(
@@ -1684,7 +1679,7 @@ def running_vm_upgrade_a(
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
         ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
         ]
         lookup_iface_status(
             vm=vm,
@@ -1702,8 +1697,6 @@ def running_vm_upgrade_b(
     upgrade_bridge_marker_nad,
     kmp_enabled_namespace,
     upgrade_br1test_nad,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
 ):
     name = "vm-upgrade-b"
     cloud_init_data = cloud_init_network_data(
@@ -1730,7 +1723,7 @@ def running_vm_upgrade_b(
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
         ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
         ]
         lookup_iface_status(
             vm=vm,
@@ -1873,23 +1866,6 @@ def eus_target_cnv_version(pytestconfig, cnv_current_version):
 @pytest.fixture()
 def ssp_resource_scope_function(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def cluster_service_network(admin_client):
-    return Network(client=admin_client, name="cluster").instance.status.serviceNetwork
-
-
-@pytest.fixture(scope="session")
-def ipv4_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 4 for ip in cluster_service_network])
-
-
-@pytest.fixture(scope="session")
-def ipv6_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 6 for ip in cluster_service_network])
 
 
 @pytest.fixture()
@@ -2713,11 +2689,6 @@ def nmstate_dependent_placeholder():
     and mark tests that depend on NMState functionality.
     """
     return
-
-
-@pytest.fixture()
-def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
-    return ipv6_supported_cluster and not ipv4_supported_cluster
 
 
 @pytest.fixture(scope="class")

@@ -15,8 +15,6 @@ from tests.network.l2_bridge.vmi_interfaces_stability.lib_helpers import (
 
 @pytest.fixture(scope="class")
 def running_linux_bridge_vm(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     unprivileged_client: DynamicClient,
     namespace: Namespace,
     bridge_nad: NetworkAttachmentDefinition,
@@ -26,8 +24,6 @@ def running_linux_bridge_vm(
         name="vm-iface-stability",
         client=unprivileged_client,
         bridge_network_name=bridge_nad.name,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()

@@ -5,6 +5,7 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
@@ -131,8 +132,6 @@ def ipv6_localnet_address_pool() -> Generator[str]:
 @pytest.fixture(scope="module")
 def vm_localnet_1(
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     ipv4_localnet_address_pool: Generator[str],
     ipv6_localnet_address_pool: Generator[str],
     namespace_localnet_1: Namespace,
@@ -162,16 +161,12 @@ def vm_localnet_1(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     ),
                 ),
                 GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     ),
                 ),
             }
@@ -187,8 +182,6 @@ def vm_localnet_2(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_2.name,
@@ -202,8 +195,6 @@ def vm_localnet_2(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     ),
                 )
             }
@@ -214,14 +205,12 @@ def vm_localnet_2(
 
 @pytest.fixture(scope="module")
 def localnet_running_vms(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     vm_localnet_1: BaseVirtualMachine,
     vm_localnet_2: BaseVirtualMachine,
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
     vm1, vm2 = run_vms(vms=(vm_localnet_1, vm_localnet_2))
     ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
     ]
     for vm in (vm1, vm2):
         lookup_iface_status(
@@ -258,8 +247,6 @@ def vm_ovs_bridge_localnet_link_down(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -275,8 +262,6 @@ def vm_ovs_bridge_localnet_link_down(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     )
                 )
             }
@@ -292,8 +277,6 @@ def vm_ovs_bridge_localnet_1(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -309,8 +292,6 @@ def vm_ovs_bridge_localnet_1(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     )
                 )
             }
@@ -326,8 +307,6 @@ def vm_ovs_bridge_localnet_2(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -343,8 +322,6 @@ def vm_ovs_bridge_localnet_2(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     )
                 )
             }
@@ -370,14 +347,12 @@ def ovs_bridge_localnet_running_vms_one_with_interface_down(
 
 @pytest.fixture(scope="module")
 def ovs_bridge_localnet_running_vms(
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
     vm_ovs_bridge_localnet_1: BaseVirtualMachine,
     vm_ovs_bridge_localnet_2: BaseVirtualMachine,
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_1, vm_ovs_bridge_localnet_2))
     ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster), (6, ipv6_supported_cluster)) if enabled
+        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
     ]
     for vm in (vm1, vm2):
         lookup_iface_status(
@@ -477,8 +452,6 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -496,8 +469,6 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     )
                 )
             }
@@ -513,8 +484,6 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
     ipv6_localnet_address_pool: Generator[str],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
-    ipv4_supported_cluster: bool,
-    ipv6_supported_cluster: bool,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -532,8 +501,6 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
-                        ipv4_included=ipv4_supported_cluster,
-                        ipv6_included=ipv6_supported_cluster,
                     )
                 )
             }

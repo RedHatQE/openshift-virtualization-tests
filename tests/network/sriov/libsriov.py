@@ -1,5 +1,6 @@
 """SR-IOV library constants and utilities."""
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import random_ipv4_address, random_ipv6_address
 from utilities.constants import SRIOV
 from utilities.infra import get_node_selector_dict
@@ -49,14 +50,12 @@ def sriov_cloud_init_data(
     sriov_mac,
     net_seed,
     host_address,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     ipv6_primary_interface_cloud_init_data=None,
 ):
     sriov_addresses = []
-    if ipv4_supported_cluster:
+    if ipv4_supported_cluster():
         sriov_addresses.append(f"{random_ipv4_address(net_seed=net_seed, host_address=host_address)}/24")
-    if ipv6_supported_cluster:
+    if ipv6_supported_cluster():
         sriov_addresses.append(f"{random_ipv6_address(net_seed=net_seed, host_address=host_address)}/64")
 
     sriov_interface_data = {

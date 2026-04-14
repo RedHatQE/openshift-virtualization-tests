@@ -3,6 +3,7 @@ from typing import Final
 
 from kubernetes.dynamic import DynamicClient
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
@@ -92,8 +93,6 @@ def secondary_network_vm(
     nad_name: str,
     secondary_iface_name: str,
     secondary_iface_addresses: list[str],
-    ipv4_supported: bool,
-    ipv6_supported: bool,
 ) -> BaseVirtualMachine:
     """Create a Fedora VM with a masquerade primary interface and a secondary Linux bridge interface.
 
@@ -104,8 +103,6 @@ def secondary_network_vm(
         nad_name: NetworkAttachmentDefinition name for the secondary interface.
         secondary_iface_name: Name of the secondary network interface in the VM spec.
         secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
-        ipv4_supported: Whether IPv4 is supported on the cluster.
-        ipv6_supported: Whether IPv6 is supported on the cluster.
     """
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
@@ -118,7 +115,7 @@ def secondary_network_vm(
     ]
 
     ethernets = {}
-    primary = _masquerade_iface_cloud_init(ipv4_supported=ipv4_supported, ipv6_supported=ipv6_supported)
+    primary = _masquerade_iface_cloud_init()
     if primary:
         ethernets["eth0"] = primary
     ethernets["eth1"] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
@@ -134,24 +131,17 @@ def secondary_network_vm(
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
 
-def _masquerade_iface_cloud_init(
-    ipv4_supported: bool,
-    ipv6_supported: bool,
-) -> cloudinit.EthernetDevice | None:
+def _masquerade_iface_cloud_init() -> cloudinit.EthernetDevice | None:
     """Return cloud-init ethernet config for a masquerade (primary) interface.
-
-    Args:
-        ipv4_supported: Whether IPv4 is supported on the cluster.
-        ipv6_supported: Whether IPv6 is supported on the cluster.
 
     Returns:
         EthernetDevice with static IPv6 and optional DHCP4, or None if IPv6 is not supported.
     """
-    if not ipv6_supported:
+    if not ipv6_supported_cluster():
         return None
     return cloudinit.EthernetDevice(
         addresses=["fd10:0:2::2/120"],
         gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported,
+        dhcp4=ipv4_supported_cluster(),
         dhcp6=False,
     )
