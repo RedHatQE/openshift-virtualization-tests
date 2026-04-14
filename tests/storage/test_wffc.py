@@ -9,11 +9,9 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
-from tests.storage.constants import CIRROS_QCOW2_IMG
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_2MIN,
-    TIMEOUT_4MIN,
     TIMEOUT_30SEC,
     Images,
 )
@@ -37,11 +35,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 WFFC_DV_NAME = "wffc-dv-name"
-DV_PARAMS = {
-    "dv_name": "dv-wffc-tests",
-    "image": CIRROS_QCOW2_IMG,
-    "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-}
 
 
 @pytest.fixture(scope="module")
@@ -72,8 +65,35 @@ def data_volume_multi_wffc_storage_scope_function(
     )
 
 
+@pytest.fixture()
+def blank_dv_wffc_scope_function(request, unprivileged_client, namespace, storage_class_matrix_wffc_matrix__module__):
+    with create_dv(
+        source="blank",
+        dv_name=f"dv-{request.param['dv_name']}",
+        namespace=namespace.name,
+        size="1Gi",
+        storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
+        consume_wffc=False,
+        client=unprivileged_client,
+    ) as dv:
+        yield dv
+
+
+@pytest.fixture()
+def blank_dv_template_wffc_scope_function(request, namespace, storage_class_matrix_wffc_matrix__module__):
+    blank_dv_template = DataVolume(
+        name=f"dv-{request.param['dv_name']}",
+        namespace=namespace.name,
+        source="blank",
+        size="1Gi",
+        storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
+    )
+    blank_dv_template.to_dict()
+    return blank_dv_template.res
+
+
 def validate_vm_and_disk_count(vm):
-    running_vm(vm=vm, wait_for_interfaces=False)
+    running_vm(vm=vm)
     check_disk_count_in_vm(vm=vm)
 
 
@@ -202,50 +222,29 @@ def test_wffc_import_registry_dv(
 
 
 @pytest.mark.sno
+@pytest.mark.s390x
+@pytest.mark.polarion("CNV-4742")
 @pytest.mark.parametrize(
-    "data_volume_multi_wffc_storage_scope_module",
-    [
-        pytest.param(
-            {**DV_PARAMS, "consume_wffc": True},
-            marks=pytest.mark.polarion("CNV-4379"),
-        ),
-    ],
+    "rhel10_data_source_scope_module",
+    [pytest.param({"dv_name": "wffc-4742"})],
     indirect=True,
 )
-@pytest.mark.s390x
-def test_wffc_clone_dv(unprivileged_client, data_volume_multi_wffc_storage_scope_module):
-    with create_dv(
-        client=unprivileged_client,
-        source="pvc",
-        dv_name="dv-target",
-        namespace=data_volume_multi_wffc_storage_scope_module.namespace,
-        size=data_volume_multi_wffc_storage_scope_module.size,
-        source_pvc=data_volume_multi_wffc_storage_scope_module.name,
-        storage_class=data_volume_multi_wffc_storage_scope_module.storage_class,
-        consume_wffc=True,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
-        create_vm_from_dv(client=unprivileged_client, dv=cdv, vm_name=cdv.name)
-
-
-@pytest.mark.sno
-@pytest.mark.s390x
 @pytest.mark.parametrize(
-    "dv_params",
-    [pytest.param({"dv_name": "template-dv"})],
+    "blank_dv_wffc_scope_function",
+    [pytest.param({"dv_name": "blank-wffc-4742"})],
+    indirect=True,
 )
 def test_wffc_add_dv_to_vm_with_data_volume_template(
-    dv_params,
     unprivileged_client,
     namespace,
     storage_class_matrix_wffc_matrix__module__,
     rhel10_data_source_scope_module,
+    blank_dv_wffc_scope_function,
 ):
     dv_template = data_volume_template_with_source_ref_dict(
         data_source=rhel10_data_source_scope_module,
         storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
     )
-    dv_template["metadata"]["name"] = dv_params["dv_name"]
 
     with VirtualMachineForTests(
         client=unprivileged_client,
@@ -258,7 +257,7 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
         validate_vm_and_disk_count(vm=vm)
         # Add DV
         vm.stop(wait=True)
-        add_dv_to_vm(vm=vm, dv_name=dv_params["dv_name"])
+        add_dv_to_vm(vm=vm, dv_name=blank_dv_wffc_scope_function.name)
         # Check DV was added
         validate_vm_and_disk_count(vm=vm)
 
@@ -267,40 +266,28 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-4743")
 @pytest.mark.parametrize(
-    "dv_params",
-    [
-        pytest.param([{"dv_name": "template-dv-1"}, {"dv_name": "template-dv-2"}]),
-    ],
+    "blank_dv_template_wffc_scope_function", [pytest.param({"dv_name": "blank-wffc-4743"})], indirect=True
 )
 def test_wffc_vm_with_two_data_volume_templates(
-    dv_params,
     unprivileged_client,
     namespace,
     storage_class_matrix_wffc_matrix__module__,
     rhel10_data_source_scope_module,
+    blank_dv_template_wffc_scope_function,
 ):
-    storage_class = [*storage_class_matrix_wffc_matrix__module__][0]
-    dv_1_template = data_volume_template_with_source_ref_dict(
-        data_source=rhel10_data_source_scope_module,
-        storage_class=storage_class,
-    )
-    dv_2_template = data_volume_template_with_source_ref_dict(
-        data_source=rhel10_data_source_scope_module,
-        storage_class=storage_class,
-    )
-    dv_1_template["metadata"]["name"] = dv_params[0]["dv_name"]
-    dv_2_template["metadata"]["name"] = dv_params[1]["dv_name"]
-
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="cnv-4743-vm",
         namespace=namespace.name,
         os_flavor=OS_FLAVOR_RHEL,
-        data_volume_template=dv_1_template,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_module,
+            storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
+        ),
         memory_guest=Images.RHEL.DEFAULT_MEMORY_SIZE,
     ) as vm:
         add_dv_to_vm(
             vm=vm,
-            template_dv=dv_2_template,
+            template_dv=blank_dv_template_wffc_scope_function,
         )
         validate_vm_and_disk_count(vm=vm)
