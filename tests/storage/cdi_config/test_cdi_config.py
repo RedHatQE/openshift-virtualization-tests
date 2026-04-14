@@ -22,7 +22,6 @@ INSECURE_REGISTRIES_LIST = ["added-private-registry:5000"]
 @pytest.mark.sno
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-2208")
-@pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
     """
     Test that CDIConfig exists and has the expected upload_proxy_url
@@ -50,7 +49,6 @@ def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2215")
-@pytest.mark.s390x
 def test_route_for_different_service(admin_client, cdi_config, upload_proxy_route):
     """
     Test that CDIConfig's upload_proxy_url does not change when a route for a different service is created
@@ -68,7 +66,6 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2216")
-@pytest.mark.s390x
 def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
     """
     Test that CDIConfig's upload_proxy_url does not change when overridden
@@ -82,7 +79,6 @@ def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_co
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-6312")
-@pytest.mark.s390x
 def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_non_existent_feature_gate):
     """
     Test that added feature gate on the CDI CR does not persist
@@ -117,7 +113,6 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
         ),
     ],
 )
-@pytest.mark.s390x
 def test_cdi_tunables_in_hco_propagated_to_cr(
     hyperconverged_resource_scope_module,
     cdi,
