@@ -3,6 +3,7 @@ from collections import namedtuple
 from ipaddress import ip_interface
 
 from libs.net.ip import random_ipv4_address
+from libs.vm.guest import guest_iface_name
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
     VirtualMachineForTests,
@@ -26,22 +27,22 @@ def vm_network_config(mac_pool, all_nads, end_ip_octet, mac_uid):
               value - IP address, MAC address, network name.
     """
     return {
-        "eth1": IfaceTuple(
+        guest_iface_name(ordinal=2): IfaceTuple(
             ip_address=random_ipv4_address(net_seed=0, host_address=end_ip_octet),
             mac_address=mac_pool.get_mac_from_pool(),
             name=all_nads[0],
         ),
-        "eth2": IfaceTuple(
+        guest_iface_name(ordinal=3): IfaceTuple(
             ip_address=random_ipv4_address(net_seed=1, host_address=end_ip_octet),
             mac_address="auto",
             name=all_nads[1],
         ),
-        "eth3": IfaceTuple(
+        guest_iface_name(ordinal=4): IfaceTuple(
             ip_address=random_ipv4_address(net_seed=2, host_address=end_ip_octet),
             mac_address=f"02:0{mac_uid}:00:00:00:00",
             name=all_nads[2],
         ),
-        "eth4": IfaceTuple(
+        guest_iface_name(ordinal=5): IfaceTuple(
             ip_address=random_ipv4_address(net_seed=3, host_address=end_ip_octet),
             mac_address="auto",
             name=all_nads[3],
@@ -117,19 +118,19 @@ class VirtualMachineWithMultipleAttachments(VirtualMachineForTests):
 
     @property
     def manual_mac_iface_config(self):
-        return self.iface_config["eth1"]
+        return self.iface_config[guest_iface_name(ordinal=2)]
 
     @property
     def auto_mac_iface_config(self):
-        return self.iface_config["eth2"]
+        return self.iface_config[guest_iface_name(ordinal=3)]
 
     @property
     def manual_mac_out_pool_iface_config(self):  # Manually assigned mac out of pool
-        return self.iface_config["eth3"]
+        return self.iface_config[guest_iface_name(ordinal=4)]
 
     @property
     def auto_mac_tuning_iface_config(self):
-        return self.iface_config["eth4"]
+        return self.iface_config[guest_iface_name(ordinal=5)]
 
     def to_dict(self):
         self.body = fedora_vm_body(name=self.name)

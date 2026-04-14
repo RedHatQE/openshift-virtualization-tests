@@ -6,6 +6,7 @@ from ocp_resources.resource import NamespacedResource, Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
+from libs.vm.guest import guest_iface_name
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
@@ -34,7 +35,9 @@ def create_flat_overlay_vm(
     networks = {nad_name: nad_name}
     network_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=host_ip_suffix)}/24"]},
+            guest_iface_name(ordinal=2): {
+                "addresses": [f"{random_ipv4_address(net_seed=0, host_address=host_ip_suffix)}/24"]
+            },
         }
     }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)

@@ -75,6 +75,7 @@ from timeout_sampler import TimeoutSampler
 import utilities.hco
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.guest import guest_iface_name
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -1663,7 +1664,7 @@ def running_vm_upgrade_a(
     cloud_init_data = cloud_init_network_data(
         data={
             "ethernets": {
-                "eth1": {
+                guest_iface_name(ordinal=2): {
                     "addresses": [
                         f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
                         f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
@@ -1709,7 +1710,7 @@ def running_vm_upgrade_b(
     cloud_init_data = cloud_init_network_data(
         data={
             "ethernets": {
-                "eth1": {
+                guest_iface_name(ordinal=2): {
                     "addresses": [
                         f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
                         f"{random_ipv6_address(net_seed=0, host_address=2)}/64",

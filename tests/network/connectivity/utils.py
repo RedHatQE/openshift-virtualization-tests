@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from libs.net.ip import random_ipv4_address, random_ipv6_address
+from libs.vm.guest import guest_iface_name
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
@@ -39,13 +40,12 @@ def secondary_interfaces_cloud_init_data(
 ) -> dict[str, dict[str, dict[str, list[str]]]]:
     ethernets = {}
     for i in range(3):
-        interface_name = f"eth{i + 1}"
         addresses = []
         if ipv4_supported_cluster:
             addresses.append(f"{random_ipv4_address(net_seed=i, host_address=host_id)}/24")
         if ipv6_supported_cluster:
             addresses.append(f"{random_ipv6_address(net_seed=i, host_address=host_id)}/64")
 
-        ethernets[interface_name] = {"addresses": addresses}
+        ethernets[guest_iface_name(ordinal=i + 2)] = {"addresses": addresses}
 
     return {"ethernets": ethernets}

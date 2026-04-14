@@ -5,8 +5,13 @@ from kubernetes.dynamic import DynamicClient
 
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer
 from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.guest import guest_iface_name
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
-from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from libs.vm.vm import (
+    BaseVirtualMachine,
+    add_volume_disk,
+    cloudinitdisk_storage,
+)
 from tests.network.libs import cloudinit
 
 BANDWIDTH_SECONDARY_IFACE_NAME: Final[str] = "secondary"
@@ -14,7 +19,6 @@ BANDWIDTH_RATE_BPS: Final[int] = 10_000_000  # 10 Mbps
 
 _IPERF_DURATION_SEC: Final[int] = 10
 _IPERF_TIMEOUT_BUFFER_SEC: Final[int] = 30  # extra buffer for iperf3 startup and output collection
-GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
 
 
 def active_tcp_connection_output(
@@ -120,8 +124,8 @@ def secondary_network_vm(
     ethernets = {}
     primary = _masquerade_iface_cloud_init(ipv4_supported=ipv4_supported, ipv6_supported=ipv6_supported)
     if primary:
-        ethernets["eth0"] = primary
-    ethernets["eth1"] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
+        ethernets[guest_iface_name(ordinal=1)] = primary
+    ethernets[guest_iface_name(ordinal=2)] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
 
     userdata = cloudinit.UserData(users=[])
     disk, volume = cloudinitdisk_storage(

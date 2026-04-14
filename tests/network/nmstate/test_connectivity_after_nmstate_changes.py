@@ -7,6 +7,7 @@ from timeout_sampler import TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
+from libs.vm.guest import guest_iface_name
 from tests.network.nmstate.libnmstate import NMSTATE_HANDLER
 from tests.network.utils import (
     assert_nncp_successfully_configured,
@@ -104,7 +105,7 @@ def nmstate_linux_bridge_attached_vma(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]},
+            guest_iface_name(ordinal=2): {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]},
         }
     }
 
@@ -138,7 +139,7 @@ def nmstate_linux_bridge_attached_vmb(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]},
+            guest_iface_name(ordinal=2): {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]},
         }
     }
 

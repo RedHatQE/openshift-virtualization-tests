@@ -28,6 +28,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 from libs.net.ip import ICMP_HEADER_SIZE, ip_header_size
+from libs.vm.guest import guest_iface_name
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -970,7 +971,7 @@ def enable_hyperconverged_ovs_annotations(
 
 
 def cloud_init(ip_address):
-    network_data_data = {"ethernets": {"eth1": {"addresses": [f"{ip_address}/24"]}}}
+    network_data_data = {"ethernets": {guest_iface_name(ordinal=2): {"addresses": [f"{ip_address}/24"]}}}
     return cloud_init_network_data(data=network_data_data)
 
 

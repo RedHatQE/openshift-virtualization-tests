@@ -10,6 +10,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
+from libs.vm.guest import guest_iface_name
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
 from utilities.constants import (
@@ -38,7 +39,7 @@ NETWORK_MANAGER_UNMANAGE_RUNCMD = [
     "sudo systemctl restart NetworkManager",
 ]
 IPV4_ADDRESS_SUBNET_PREFIX_LENGTH = 24
-DHCP_INTERFACE_NAME = "eth3"
+DHCP_INTERFACE_NAME = guest_iface_name(ordinal=4)
 
 
 def _lookup_vmi_interface(vmi, interface_name):
@@ -82,7 +83,7 @@ def create_vm_with_secondary_interface_on_setup(
     cloud_init_data = compose_cloud_init_data_dict(
         network_data={
             "ethernets": {
-                "eth1": {
+                guest_iface_name(ordinal=2): {
                     "addresses": [
                         f"{random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix)}/{
                             IPV4_ADDRESS_SUBNET_PREFIX_LENGTH
@@ -416,9 +417,9 @@ def _cloud_init_data(
 ):
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{ip_addresses[0]}/24"]},
-            "eth2": {"addresses": [f"{ip_addresses[1]}/24"]},
-            "eth4": {"addresses": [f"{ip_addresses[3]}/24"]},
+            guest_iface_name(ordinal=2): {"addresses": [f"{ip_addresses[0]}/24"]},
+            guest_iface_name(ordinal=3): {"addresses": [f"{ip_addresses[1]}/24"]},
+            guest_iface_name(ordinal=5): {"addresses": [f"{ip_addresses[3]}/24"]},
             DHCP_INTERFACE_NAME: dhcp_interface_config,
         },
     }
@@ -426,15 +427,16 @@ def _cloud_init_data(
     runcmd = [
         "modprobe mpls_router",  # In order to test mpls we need to load driver
         "sysctl -w net.mpls.platform_labels=1000",  # Activate mpls labeling feature
-        "sysctl -w net.mpls.conf.eth4.input=1",  # Allow incoming mpls traffic
+        f"sysctl -w net.mpls.conf.{guest_iface_name(ordinal=5)}.input=1",  # Allow incoming mpls traffic
         "sysctl -w net.ipv4.conf.all.arp_ignore=1",  # 2 kernel flags are used to disable wrong arp behavior
         "sysctl -w net.ipv4.conf.all.arp_announce=2",  # Send arp reply only if ip belongs to the interface
         f"ip addr add {mpls_local_ip} dev lo",
         f"ip -f mpls route add {mpls_local_tag} dev lo",
-        "nmcli connection up eth4",  # In order to add mpls route we need to make sure that connection is UP
+        # In order to add mpls route we need to make sure that connection is UP
+        f"nmcli connection up {guest_iface_name(ordinal=5)}",
         f"ip route add {mpls_dest_ip} encap mpls {mpls_dest_tag} via inet {mpls_route_next_hop}",
-        "nmcli connection up eth2",
-        "ip route add 224.0.0.0/4 dev eth2",
+        f"nmcli connection up {guest_iface_name(ordinal=3)}",
+        f"ip route add 224.0.0.0/4 dev {guest_iface_name(ordinal=3)}",
     ]
 
     cloud_init_data = prepare_cloud_init_user_data(section="runcmd", data=runcmd)

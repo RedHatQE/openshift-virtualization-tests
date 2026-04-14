@@ -16,11 +16,11 @@ from libs.net.netattachdef import (
     NetworkAttachmentDefinition,
 )
 from libs.net.vmspec import wait_for_ifaces_status
+from libs.vm.guest import guest_iface_name
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.bandwidth.lib_helpers import (
     BANDWIDTH_RATE_BPS,
     BANDWIDTH_SECONDARY_IFACE_NAME,
-    GUEST_2ND_IFACE_NAME,
     secondary_network_vm,
 )
 
@@ -90,7 +90,7 @@ def server_vm(
             ip_addresses_by_spec_net_name={
                 BANDWIDTH_SECONDARY_IFACE_NAME: [
                     str(ip_interface(addr).ip)
-                    for addr in vm.cloud_init_network_data.ethernets[GUEST_2ND_IFACE_NAME].addresses
+                    for addr in vm.cloud_init_network_data.ethernets[guest_iface_name(ordinal=2)].addresses
                 ]
             },
         )
@@ -131,7 +131,7 @@ def client_vm(
             ip_addresses_by_spec_net_name={
                 BANDWIDTH_SECONDARY_IFACE_NAME: [
                     str(ip_interface(addr).ip)
-                    for addr in vm.cloud_init_network_data.ethernets[GUEST_2ND_IFACE_NAME].addresses
+                    for addr in vm.cloud_init_network_data.ethernets[guest_iface_name(ordinal=2)].addresses
                 ]
             },
         )

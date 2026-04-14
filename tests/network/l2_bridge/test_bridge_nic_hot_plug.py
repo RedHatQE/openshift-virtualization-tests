@@ -5,6 +5,7 @@ import pytest
 from libs.net import netattachdef
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
+from libs.vm.guest import guest_iface_name
 from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
@@ -31,7 +32,6 @@ pytestmark = pytest.mark.usefixtures("label_schedulable_nodes")
 
 HOT_PLUG_STR = "hot-plug"
 TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY = "test_basic_connectivity_of_hot_plugged_interface"
-SECONDARY_SETUP_INTERFACE_NAME = "eth1"
 
 
 @pytest.fixture(scope="class")
@@ -604,11 +604,11 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         "guest_interface_name",
         [
             pytest.param(
-                "eth2",
+                guest_iface_name(ordinal=3),
                 marks=(pytest.mark.polarion("CNV-10136")),
             ),
             pytest.param(
-                SECONDARY_SETUP_INTERFACE_NAME,
+                guest_iface_name(ordinal=2),
                 marks=(pytest.mark.polarion("CNV-10150")),
             ),
         ],
@@ -669,7 +669,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
                 iface_name=network_attachment_definition_for_hot_plug.name,
                 ip_family=4,
             ),
-            interface=SECONDARY_SETUP_INTERFACE_NAME,
+            interface=guest_iface_name(ordinal=2),
         )
 
     @pytest.mark.polarion("CNV-10149")

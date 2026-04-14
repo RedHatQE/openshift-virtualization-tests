@@ -10,6 +10,7 @@ from timeout_sampler import TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
+from libs.vm.guest import guest_iface_name
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
@@ -21,7 +22,6 @@ from utilities.network import (
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-ETH1_INTERFACE_NAME = "eth1"
 BRIDGE_NAME = "br1macspoof"
 MAC_ADDRESS_SPOOF = "02:00:b5:b5:b5:c9"
 
@@ -33,7 +33,7 @@ def _networks_data(nad, ip):
     networks[nad.name] = f"{nad.name}"
     network_data_data = {
         "ethernets": {
-            ETH1_INTERFACE_NAME: {"addresses": [ip]},
+            guest_iface_name(ordinal=2): {"addresses": [ip]},
         }
     }
     return networks, network_data_data
@@ -42,16 +42,16 @@ def _networks_data(nad, ip):
 def get_vm_bridge_network_mac(vm):
     return run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[shlex.split(f"cat /sys/class/net/{ETH1_INTERFACE_NAME}/address")],
+        commands=[shlex.split(f"cat /sys/class/net/{guest_iface_name(ordinal=2)}/address")],
     )[0].strip()
 
 
 def set_vm_interface_network_mac(vm, mac):
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[shlex.split(f"sudo ip link set dev {ETH1_INTERFACE_NAME} address {mac}")],
+        commands=[shlex.split(f"sudo ip link set dev {guest_iface_name(ordinal=2)} address {mac}")],
     )
-    LOGGER.info(f"wait for {vm.name} {ETH1_INTERFACE_NAME}  mac to be {mac}")
+    LOGGER.info(f"wait for {vm.name} {guest_iface_name(ordinal=2)}  mac to be {mac}")
     for sample in TimeoutSampler(wait_timeout=TIMEOUT_30SEC, sleep=1, func=get_vm_bridge_network_mac, vm=vm):
         if sample == mac:
             return

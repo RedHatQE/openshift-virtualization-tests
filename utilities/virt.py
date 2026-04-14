@@ -50,6 +50,7 @@ import utilities.cpu
 import utilities.data_utils
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
+from libs.vm.guest import guest_iface_name
 from utilities.console import Console
 from utilities.constants import (
     CLOUD_INIT_DISK_NAME,
@@ -799,7 +800,7 @@ class VirtualMachineForTests(VirtualMachine):
 
         # Configure both interface names to ensure network configuration is applied as naming is not predictable
         ipv6_interfaces = {
-            "eth0": {"match": {"name": "eth0"}, **primary_interface_data},
+            guest_iface_name(ordinal=1): {"match": {"name": guest_iface_name(ordinal=1)}, **primary_interface_data},
             "enp1s0": {"match": {"name": "enp1s0"}, **primary_interface_data},
         }
 

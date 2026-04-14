@@ -16,6 +16,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
+from libs.vm.guest import guest_iface_name
 from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
@@ -71,7 +72,7 @@ def ipv6_primary_interface_cloud_init_data(
     if ipv6_supported_cluster:
         return {
             "ethernets": {
-                "eth0": {
+                guest_iface_name(ordinal=1): {
                     "addresses": ["fd10:0:2::2/120"],
                     "gateway6": "fd10:0:2::1",
                     "dhcp4": ipv4_supported_cluster,

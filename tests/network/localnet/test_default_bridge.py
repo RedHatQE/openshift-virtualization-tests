@@ -6,8 +6,8 @@ import pytest
 from libs.net.ip import filter_link_local_addresses, have_same_ip_families
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.guest import guest_iface_name
 from tests.network.localnet.liblocalnet import (
-    GUEST_2ND_IFACE_NAME,
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
 )
@@ -75,7 +75,7 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
     vm, _ = localnet_running_vms
 
     expected_ips = [
-        ip_interface(addr).ip for addr in vm.cloud_init_network_data.ethernets[GUEST_2ND_IFACE_NAME].addresses
+        ip_interface(addr).ip for addr in vm.cloud_init_network_data.ethernets[guest_iface_name(ordinal=2)].addresses
     ]
     iface_status = lookup_iface_status(
         vm=vm,

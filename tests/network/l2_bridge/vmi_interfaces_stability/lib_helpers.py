@@ -10,10 +10,14 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.guest import guest_iface_name
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
-from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from libs.vm.vm import (
+    BaseVirtualMachine,
+    add_volume_disk,
+    cloudinitdisk_storage,
+)
 from tests.network.libs import cloudinit
-from tests.network.localnet.liblocalnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,15 +51,15 @@ def secondary_network_vm(
         ipv6_supported_cluster=ipv6_supported_cluster,
     )
     if primary:
-        ethernets["eth1"] = primary
+        ethernets[guest_iface_name(ordinal=2)] = primary
 
-    ethernets["eth0"] = secondary_iface_cloud_init(
+    ethernets[guest_iface_name(ordinal=1)] = secondary_iface_cloud_init(
         ipv4_supported_cluster=ipv4_supported_cluster,
         ipv6_supported_cluster=ipv6_supported_cluster,
         host_address=1,
     )
 
-    ethernets["eth2"] = secondary_iface_cloud_init(
+    ethernets[guest_iface_name(ordinal=3)] = secondary_iface_cloud_init(
         ipv4_supported_cluster=ipv4_supported_cluster,
         ipv6_supported_cluster=ipv6_supported_cluster,
         host_address=2,
@@ -119,14 +123,15 @@ def wait_for_stable_ifaces(
 ) -> None:
     primary_network = lookup_primary_network(vm=vm)
 
+    ethernets = vm.cloud_init_network_data.ethernets
     secondary_iface_to_ips = {
         LINUX_BRIDGE_IFACE_NAME_1: [
             str(ipaddress.ip_interface(addr).ip)
-            for addr in vm.cloud_init_network_data.ethernets[GUEST_1ST_IFACE_NAME].addresses  # type: ignore[union-attr]
+            for addr in ethernets[guest_iface_name(ordinal=1)].addresses  # type: ignore[union-attr]
         ],
         LINUX_BRIDGE_IFACE_NAME_2: [
             str(ipaddress.ip_interface(addr).ip)
-            for addr in vm.cloud_init_network_data.ethernets[GUEST_3RD_IFACE_NAME].addresses  # type: ignore[union-attr]
+            for addr in ethernets[guest_iface_name(ordinal=3)].addresses  # type: ignore[union-attr]
         ],
     }
 

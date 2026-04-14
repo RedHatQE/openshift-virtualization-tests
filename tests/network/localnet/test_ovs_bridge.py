@@ -6,8 +6,8 @@ import pytest
 from libs.net.ip import filter_link_local_addresses, have_same_ip_families
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.guest import guest_iface_name
 from tests.network.localnet.liblocalnet import (
-    GUEST_1ST_IFACE_NAME,
     LINK_STATE_UP,
     LOCALNET_OVS_BRIDGE_INTERFACE,
 )
@@ -39,7 +39,7 @@ def test_connectivity_after_interface_state_change_in_ovs_bridge_localnet_vms(
 
     expected_ips = [
         ip_interface(addr).ip
-        for addr in vm1_with_initial_link_down.cloud_init_network_data.ethernets[GUEST_1ST_IFACE_NAME].addresses
+        for addr in vm1_with_initial_link_down.cloud_init_network_data.ethernets[guest_iface_name(ordinal=1)].addresses
     ]
     iface = lookup_iface_status(
         vm=vm1_with_initial_link_down,

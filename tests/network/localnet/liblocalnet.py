@@ -1,7 +1,7 @@
 import contextlib
 import logging
 import uuid
-from typing import Final, Generator
+from typing import Generator
 
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
@@ -9,7 +9,11 @@ from kubernetes.dynamic import DynamicClient
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
-from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from libs.vm.vm import (
+    BaseVirtualMachine,
+    add_volume_disk,
+    cloudinitdisk_storage,
+)
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
@@ -27,9 +31,6 @@ LOCALNET_TEST_LABEL = {"test": "localnet"}
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
 NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
-GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
-GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
-GUEST_3RD_IFACE_NAME: Final[str] = "eth2"
 
 LOGGER = logging.getLogger(__name__)
 

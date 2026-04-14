@@ -11,6 +11,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 )
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.vm.guest import guest_iface_name
 from tests.observability.metrics.constants import (
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
@@ -343,7 +344,7 @@ class TestVmiStatusAddresses:
         instance_value = urlparse(f"//{kubevirt_vmi_status_addresses_ip_labels_values.get('instance')}").hostname
 
         address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
-        vm_ip_address = vm_for_test.vmi.interface_ip(interface="eth0")
+        vm_ip_address = vm_for_test.vmi.interface_ip(interface=guest_iface_name(ordinal=1))
         assert instance_value == vm_virt_controller_ip_address, (
             f"Expected value: {vm_virt_controller_ip_address}, Actual: {instance_value}"
         )

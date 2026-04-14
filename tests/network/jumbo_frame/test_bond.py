@@ -8,6 +8,7 @@ import pytest
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
+from libs.vm.guest import guest_iface_name
 from tests.network.utils import assert_no_ping
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
@@ -157,7 +158,9 @@ def bond_bridge_attached_vma(
     networks = OrderedDict()
     networks[br1bond_nad.name] = br1bond_nad.name
     network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
+        "ethernets": {
+            guest_iface_name(ordinal=2): {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}
+        }
     }
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
@@ -187,7 +190,9 @@ def bond_bridge_attached_vmb(
     networks = OrderedDict()
     networks[br1bond_nad.name] = br1bond_nad.name
     network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
+        "ethernets": {
+            guest_iface_name(ordinal=2): {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}
+        }
     }
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 

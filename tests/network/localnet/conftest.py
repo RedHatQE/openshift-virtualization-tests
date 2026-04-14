@@ -8,13 +8,12 @@ import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.guest import guest_iface_name
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.localnet.liblocalnet import (
-    GUEST_1ST_IFACE_NAME,
-    GUEST_2ND_IFACE_NAME,
     LINK_STATE_DOWN,
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
@@ -158,7 +157,7 @@ def vm_localnet_1(
         ],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -166,7 +165,7 @@ def vm_localnet_1(
                         ipv6_included=ipv6_supported_cluster,
                     ),
                 ),
-                GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=2): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -198,7 +197,7 @@ def vm_localnet_2(
         interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -271,7 +270,7 @@ def vm_ovs_bridge_localnet_link_down(
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={}, state=LINK_STATE_DOWN)],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -305,7 +304,7 @@ def vm_ovs_bridge_localnet_1(
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -339,7 +338,7 @@ def vm_ovs_bridge_localnet_2(
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -492,7 +491,7 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
@@ -528,7 +527,7 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
         network_data=cloudinit.NetworkData(
             ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                guest_iface_name(ordinal=1): cloudinit.EthernetDevice(
                     addresses=ip_addresses_from_pool(
                         ipv4_pool=ipv4_localnet_address_pool,
                         ipv6_pool=ipv6_localnet_address_pool,
