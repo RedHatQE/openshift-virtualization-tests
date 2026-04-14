@@ -305,6 +305,7 @@ def default_fs_overhead(cdi_config):
     return float(cdi_config.instance.status.filesystemOverhead["global"])
 
 
+@pytest.fixture()
 def router_cert_secret(admin_client):
     router_secret = "router-certs-default"
     for secret in Secret.get(
