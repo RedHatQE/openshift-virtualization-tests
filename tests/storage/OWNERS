@@ -2,11 +2,11 @@ root-approvers: False
 approvers:
   - jpeimer
 reviewers:
-  - duyanyan
   - jpeimer
   - josemacassan
   - kgoldbla
   - dalia-frank
-  - stesrn
   - Ahmad-Hafe
   - kshvaika
+  - ema-aka-young
+  - acinko-rh
