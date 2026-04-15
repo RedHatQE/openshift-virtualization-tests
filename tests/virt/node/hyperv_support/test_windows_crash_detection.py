@@ -1,15 +1,18 @@
 """
 Windows crash detection with hyperv panic device
+
+Reference:
+https://redhat.atlassian.net/browse/VIRTSTRAT-557
 """
 
 import logging
 
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
+from utilities.constants import TIMEOUT_10SEC
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.virt import running_vm, vm_instance_from_template
 
@@ -42,19 +45,12 @@ def windows_crashed(windows_vm_with_panic_device):
 
 def wait_for_guest_panicked_event(vm):
     LOGGER.info(f"Waiting for GuestPanicked event for VM {vm.name}")
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_3MIN,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: list(vm.vmi.events(timeout=TIMEOUT_5SEC, field_selector="reason==GuestPanicked")),
-        ):
-            if sample:
-                LOGGER.info("GuestPanicked event found")
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"GuestPanicked event not found for VM {vm.name}")
-        collect_vnc_screenshot_for_vms(vm=vm)
-        raise
+    for event in vm.vmi.events(field_selector="reason==GuestPanicked"):
+        LOGGER.info(f"GuestPanicked event found: {event}")
+        return
+    LOGGER.error(f"GuestPanicked event not found for VM {vm.name}")
+    collect_vnc_screenshot_for_vms(vm=vm)
+    raise TimeoutExpiredError("GuestPanicked event not received")
 
 
 @pytest.fixture()
