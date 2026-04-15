@@ -1,13 +1,20 @@
 """Helper utilities for CDI import tests."""
 
+from typing import TYPE_CHECKING
+
 from ocp_resources.datavolume import DataVolume
 from timeout_sampler import TimeoutSampler
 
 from tests.storage.utils import get_importer_pod
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
 
+if TYPE_CHECKING:
+    from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+    from ocp_resources.pod import Pod
+    from ocp_resources.resource import DynamicClient
 
-def get_importer_pod_node(importer_pod):
+
+def get_importer_pod_node(importer_pod: Pod) -> str:
     """Get the node name where the importer pod is scheduled.
 
     Args:
@@ -15,6 +22,9 @@ def get_importer_pod_node(importer_pod):
 
     Returns:
         str: The node name where the pod is scheduled.
+
+    Raises:
+        TimeoutError: If the importer pod is not scheduled within the timeout period.
     """
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
@@ -25,14 +35,18 @@ def get_importer_pod_node(importer_pod):
     ):
         if sample:
             return sample
+    raise TimeoutError("Importer pod was not scheduled within the timeout period.")
 
 
-def wait_for_pvc_recreate(pvc, pvc_original_timestamp):
+def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_original_timestamp: str) -> None:
     """Wait for PVC to be recreated with a new timestamp.
 
     Args:
         pvc: The PVC resource to monitor.
         pvc_original_timestamp: The original creation timestamp to compare against.
+
+    Raises:
+        TimeoutError: If the PVC is not recreated within the timeout period.
     """
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_20SEC,
@@ -40,10 +54,11 @@ def wait_for_pvc_recreate(pvc, pvc_original_timestamp):
         func=lambda: pvc.instance.metadata.creationTimestamp != pvc_original_timestamp,
     ):
         if sample:
-            break
+            return
+    raise TimeoutError("PVC was not recreated within the timeout period.")
 
 
-def wait_dv_and_get_importer(dv, admin_client):
+def wait_dv_and_get_importer(dv: DataVolume, admin_client: DynamicClient) -> Pod:
     """Wait for DataVolume import to start and get the importer pod.
 
     Args:

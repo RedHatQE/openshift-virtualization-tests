@@ -74,14 +74,18 @@ def test_disk_falloc(
         storage_class=storage_class_name_scope_function,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-        with create_vm_from_dv(
-            vm_name="cnv-3065-vm",
-            client=unprivileged_client,
-            dv=dv,
-            os_flavor=OS_FLAVOR_FEDORA,
-            memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        ) as vm_dv:
-            with console.Console(vm=vm_dv) as vm_console:
-                LOGGER.info(f"Fill disk space with size {size}")
-                vm_console.sendline(f"fallocate -l {size} test-file")
-                vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
+        with (
+            (
+                create_vm_from_dv(
+                    vm_name="cnv-3065-vm",
+                    client=unprivileged_client,
+                    dv=dv,
+                    os_flavor=OS_FLAVOR_FEDORA,
+                    memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+                )
+            ) as vm_dv,
+            console.Console(vm=vm_dv) as vm_console,
+        ):
+            LOGGER.info(f"Fill disk space with size {size}")
+            vm_console.sendline(f"fallocate -l {size} test-file")
+            vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
