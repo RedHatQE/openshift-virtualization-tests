@@ -40,12 +40,14 @@ DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 
 @pytest.fixture()
 def skip_non_shared_storage(storage_class_name_scope_function):
+    """Skip tests if the storage class is non-shared."""
     if storage_class_name_scope_function in HPP_STORAGE_CLASSES:
         pytest.skip("Skipping when storage is non-shared")
 
 
 @pytest.fixture()
 def bridge_on_node(admin_client):
+    """Create a Linux Bridge network device and yield it."""
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=BRIDGE_NAME,
@@ -57,6 +59,7 @@ def bridge_on_node(admin_client):
 
 @pytest.fixture()
 def linux_nad(admin_client, namespace, bridge_on_node):
+    """Create a Linux Bridge Network Attachment Definition (NAD) and yield it."""
     with network_nad(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
@@ -71,6 +74,7 @@ def linux_nad(admin_client, namespace, bridge_on_node):
 def cirros_pvc(
     data_volume_template_metadata,
 ):
+    """Create a PVC from the data volume template metadata."""
     return PersistentVolumeClaim(
         name=data_volume_template_metadata["name"],
         namespace=data_volume_template_metadata["namespace"],
@@ -81,11 +85,13 @@ def cirros_pvc(
 def pvc_original_timestamp(
     cirros_pvc,
 ):
+    """Get the original creation timestamp of the Cirros PVC."""
     return cirros_pvc.instance.metadata.creationTimestamp
 
 
 @pytest.fixture()
 def dv_non_exist_url(namespace, storage_class_name_scope_module):
+    """Create a DV with a non-existent URL to test import failure."""
     with create_dv(
         dv_name=f"cnv-876-{storage_class_name_scope_module}",
         namespace=namespace.name,
@@ -104,6 +110,7 @@ def dv_from_http_import(
     storage_class_name_scope_module,
     images_internal_http_server,
 ):
+    """Create a DV from HTTP import with parameters from the test function."""
     with create_dv(
         dv_name=f"{request.param.get('dv_name', 'http-dv')}-{storage_class_name_scope_module}",
         namespace=namespace.name,
@@ -127,6 +134,7 @@ def running_pod_with_dv_pvc(
     storage_class_name_scope_module,
     dv_from_http_import,
 ):
+    """Create a running pod with DV's PVC."""
     dv_from_http_import.wait_for_dv_success()
     with create_pod_for_pvc(
         pvc=dv_from_http_import.pvc,
@@ -137,6 +145,7 @@ def running_pod_with_dv_pvc(
 
 @pytest.fixture()
 def created_blank_dv_list(unprivileged_client, namespace, storage_class_name_scope_module, number_of_dvs):
+    """Create a list of blank DVs."""
     dvs_list = []
     try:
         for dv_index in range(number_of_dvs):
@@ -189,6 +198,7 @@ def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_na
 
 @pytest.fixture()
 def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_class_name_scope_function):
+    """Create DVs from public registry and VMs from those DVs."""
     dvs = []
     vms = []
     try:
@@ -230,6 +240,7 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
 
 @pytest.fixture()
 def dv_with_annotation(admin_client, namespace, linux_nad):
+    """Create a DV with multus annotation and yield the importer pod annotations."""
     with create_dv(
         dv_name="dv-annotation",
         namespace=namespace.name,

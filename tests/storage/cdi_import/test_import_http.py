@@ -429,7 +429,7 @@ def test_successful_vm_from_imported_dv_windows(
 @pytest.mark.polarion("CNV-5509")
 @pytest.mark.s390x
 def test_importer_pod_annotation(dv_with_annotation, linux_nad):
-    """Verify "k8s.v1.cni.cncf.io/networks" can pass to the importer pod"""
+    """Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod"""
     networks_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks"
     network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
 

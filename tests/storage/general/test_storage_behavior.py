@@ -32,6 +32,26 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-675")
 def test_pvc_recreates_after_deletion(namespace, storage_class_name_scope_function, fedora_data_source_scope_module):
+    """
+    Test that a PVC is automatically recreated by CDI after manual deletion.
+
+    Preconditions:
+        - Fedora DataSource available
+        - Storage class available
+        - DataVolume created from Fedora DataSource
+        - PVC bound and DataVolume import completed
+
+    Steps:
+        1. Record the PVC original creation timestamp
+        2. Delete the PVC
+        3. Wait for PVC to be recreated with a new timestamp
+        4. Create a dummy first consumer pod if storage class uses WaitForFirstConsumer binding mode
+        5. Wait for DataVolume to reach Succeeded status
+
+    Expected:
+        - PVC is recreated automatically
+        - DataVolume status is "Succeeded"
+    """
     with create_dv(
         dv_name=f"cnv-675-{storage_class_name_scope_function}",
         namespace=namespace.name,
@@ -60,6 +80,22 @@ def test_pvc_recreates_after_deletion(namespace, storage_class_name_scope_functi
 def test_disk_falloc(
     storage_class_name_scope_function, unprivileged_client, fedora_data_source_scope_module, namespace
 ):
+    """
+    Test that attempting to allocate more space than available on a disk fails with the expected error.
+
+    Preconditions:
+        - Fedora DataSource available
+        - DataVolume created from Fedora DataSource
+        - VM created and started from the DataVolume with console access
+
+    Steps:
+        1. Connect to VM console
+        2. Execute fallocate command to allocate a file equal to the disk size
+        3. Verify the error message
+
+    Expected:
+        - fallocate command fails with "No space left on device" error
+    """
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with create_dv(
         client=unprivileged_client,
