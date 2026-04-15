@@ -81,12 +81,14 @@ def blank_dv_wffc_scope_function(request, unprivileged_client, namespace, storag
 
 @pytest.fixture()
 def blank_dv_template_wffc_scope_function(request, namespace, storage_class_matrix_wffc_matrix__module__):
+    storage_class_name = next(iter(storage_class_matrix_wffc_matrix__module__))
     blank_dv_template = DataVolume(
         name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
         source="blank",
         size="1Gi",
-        storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
+        storage_class=storage_class_name,
+        access_modes=storage_class_matrix_wffc_matrix__module__[storage_class_name]["access_mode"],
     )
     blank_dv_template.to_dict()
     return blank_dv_template.res
@@ -284,7 +286,7 @@ def test_wffc_vm_with_two_data_volume_templates(
             data_source=rhel10_data_source_scope_module,
             storage_class=next(iter(storage_class_matrix_wffc_matrix__module__)),
         ),
-        memory_guest=Images.RHEL.DEFAULT_MEMORY_SIZE,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
         add_dv_to_vm(
             vm=vm,
