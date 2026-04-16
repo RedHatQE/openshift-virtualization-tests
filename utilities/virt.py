@@ -2551,8 +2551,9 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
 
 
 def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
-    ssh_exec.sudo = True
-    return ssh_exec.package_manager.exist(package="qemu-guest-agent")
+    """Check if qemu-guest-agent is installed via rpm, bypassing rrmngmnt's `which`-based package manager detection."""
+    rc, _, _ = ssh_exec.run_command(command=shlex.split("rpm -q qemu-guest-agent"))
+    return rc == 0
 
 
 def validate_libvirt_persistent_domain(vm, admin_client):
