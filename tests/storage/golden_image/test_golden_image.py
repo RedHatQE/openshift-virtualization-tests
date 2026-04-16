@@ -8,7 +8,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from utilities.constants import PVC, TIMEOUT_20MIN
-from utilities.storage import ErrorMsg, create_dv, get_test_artifact_server_url
+from utilities.storage import ErrorMsg, create_dv, create_dv_with_source_ref, get_dv_size_from_datasource
 from utilities.virt import wait_for_ssh_connectivity
 
 pytestmark = pytest.mark.post_upgrade
@@ -34,14 +34,16 @@ def dv_created_by_unprivileged_user_with_rolebinding(
     golden_images_edit_rolebinding,
     unprivileged_client,
     storage_class_name_scope_function,
+    fedora_data_source_scope_module,
 ):
-    with create_dv(
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+    with create_dv_with_source_ref(
         client=unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         namespace=golden_images_namespace.name,
-        url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
-        size=RHEL_IMAGE_SIZE,
+        size=size,
         storage_class=storage_class_name_scope_function,
+        data_source=fedora_data_source_scope_module,
     ) as dv:
         yield dv
 
@@ -51,19 +53,21 @@ def dv_created_by_unprivileged_user_with_rolebinding(
 def test_regular_user_cant_create_dv_in_ns(
     golden_images_namespace,
     unprivileged_client,
+    fedora_data_source_scope_module,
 ):
     LOGGER.info("Try as a regular user, to create a DV in golden image NS and receive the proper error")
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with pytest.raises(
         ApiException,
         match=ErrorMsg.CANNOT_CREATE_RESOURCE,
     ):
-        with create_dv(
+        with create_dv_with_source_ref(
             dv_name="cnv-4755",
             namespace=golden_images_namespace.name,
-            url=f"{get_test_artifact_server_url()}{LATEST_RHEL_IMAGE}",
-            size=RHEL_IMAGE_SIZE,
+            size=size,
             storage_class=py_config["default_storage_class"],
             client=unprivileged_client,
+            data_source=fedora_data_source_scope_module,
         ):
             return
 
