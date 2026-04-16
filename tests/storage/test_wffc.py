@@ -21,7 +21,6 @@ from utilities.storage import (
     check_upload_virtctl_result,
     create_dv,
     create_vm_from_dv,
-    data_volume,
     data_volume_template_with_source_ref_dict,
     virtctl_upload_dv,
 )
@@ -35,34 +34,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 WFFC_DV_NAME = "wffc-dv-name"
-
-
-@pytest.fixture(scope="module")
-def data_volume_multi_wffc_storage_scope_module(
-    request,
-    namespace,
-    storage_class_matrix_wffc_matrix__module__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
-        client=namespace.client,
-    )
-
-
-@pytest.fixture()
-def data_volume_multi_wffc_storage_scope_function(
-    request,
-    namespace,
-    storage_class_matrix_wffc_matrix__module__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class=[*storage_class_matrix_wffc_matrix__module__][0],
-        client=namespace.client,
-    )
 
 
 @pytest.fixture()
@@ -135,7 +106,8 @@ def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_d
         pvc = uploaded_wffc_dv.pvc
         vm_dv.start(wait=False)
         if pvc.use_populator:
-            vm_status = VirtualMachineInstance.Status.SCHEDULING
+            # No scheduling status in VirtualMachineInstance.Status, using string literal instead
+            vm_status = "Scheduling"
             bounded_pvc = pvc.prime_pvc
         else:
             vm_status = VirtualMachineInstance.Status.PENDING
