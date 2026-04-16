@@ -1123,7 +1123,9 @@ class VirtualMachineForTests(VirtualMachine):
             else self.pvc.instance.spec.accessModes
             if self.pvc
             else self.data_volume_template["spec"][api_name].get("accessModes")
-            or StorageProfile(name=_sc_name_for_storage_api()).instance.status["claimPropertySets"][0]["accessModes"]
+            or StorageProfile(client=self.client, name=_sc_name_for_storage_api()).instance.status["claimPropertySets"][
+                0
+            ]["accessModes"]
         )
 
     @property

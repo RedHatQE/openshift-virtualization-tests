@@ -6,6 +6,7 @@ from typing import Final, Generator
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
@@ -37,13 +38,20 @@ LOGGER = logging.getLogger(__name__)
 def ip_addresses_from_pool(
     ipv4_pool: Generator[str],
     ipv6_pool: Generator[str],
-    ipv4_included: bool,
-    ipv6_included: bool,
 ) -> list[str]:
+    """Draw IP addresses from pools according to the cluster network IP stack.
+
+    Args:
+        ipv4_pool: Generator yielding IPv4 address.
+        ipv6_pool: Generator yielding IPv6 address.
+
+    Returns:
+        List of IP addresses, one per IP family supported by the cluster.
+    """
     addresses = []
-    if ipv4_included:
+    if ipv4_supported_cluster():
         addresses.append(next(ipv4_pool))
-    if ipv6_included:
+    if ipv6_supported_cluster():
         addresses.append(next(ipv6_pool))
     return addresses
 
