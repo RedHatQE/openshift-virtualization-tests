@@ -643,8 +643,7 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         content: Content to write to the file
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
-
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
 
 
 def run_command_on_vm_and_check_output(vm, command, expected_result):
@@ -661,6 +660,8 @@ def run_command_on_vm_and_check_output(vm, command, expected_result):
     cmd_output = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )[0].strip()
     expected_result = expected_result.strip()
     assert expected_result in cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
@@ -673,9 +674,10 @@ def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
-    assert HOTPLUG_DISK_SERIAL in run_ssh_commands(host=vm.ssh_exec, commands=command)[0], (
-        f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
-    )
+    assert (
+        HOTPLUG_DISK_SERIAL
+        in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
+    ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
 
 
 def assert_hotplugvolume_nonexist(vm):
@@ -811,6 +813,8 @@ def check_disk_count_in_vm(vm):
     out = run_ssh_commands(
         host=vm.ssh_exec,
         commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )[0].strip()
     assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
         "Failed to verify actual disk count against VMI"
