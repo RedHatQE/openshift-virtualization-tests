@@ -638,20 +638,6 @@ def cdi_feature_gate_list_with_added_feature(feature):
     ]
 
 
-def wait_for_default_sc_in_cdiconfig(cdi_config, sc):
-    """
-    Wait for the default storage class to propagate to CDIConfig as the storage class for scratch space
-    """
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_20SEC,
-        sleep=TIMEOUT_1SEC,
-        func=lambda: cdi_config.scratch_space_storage_class_from_status == sc,
-    )
-    for sample in samples:
-        if sample:
-            return
-
-
 def get_hyperconverged_cdi(admin_client):
     for cdi in CDI.get(
         dyn_client=admin_client,
