@@ -649,7 +649,7 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
 def run_command_on_vm_and_check_output(
     vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
 ) -> None:
-    """Run command on VM via SSH and verify expected result is in output.
+    """Run command on VM via SSH and verify output matches expected result.
 
     Args:
         vm (VirtualMachineForTests): VM to run command on.
@@ -657,7 +657,7 @@ def run_command_on_vm_and_check_output(
         expected_result (str): Expected result to check.
 
     Raises:
-        AssertionError: If expected result is not in output.
+        AssertionError: If command output differs from expected result.
     """
     cmd_output = run_ssh_commands(
         host=vm.ssh_exec,
