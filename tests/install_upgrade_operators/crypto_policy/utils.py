@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import deepdiff
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.resource import ResourceField
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.resource import Resource, ResourceEditor
 from packaging.version import Version
@@ -266,4 +267,86 @@ def update_apiserver_crypto_policy(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
         list_dependent_crs_to_check=MANAGED_CRS_LIST,
+    )
+
+
+def check_service_accepts_tls_version(utility_pods: list, node: Resource, service: Resource, tls_version: str) -> bool:
+    """Checks whether a service accepts a connection with the given TLS version.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to run the command from.
+        service: Service resource to connect to.
+        tls_version: TLS version string (e.g. "1.2", "1.3").
+
+    Returns:
+        bool: True if the service accepted the TLS connection.
+    """
+    command = compose_openssl_command(
+        service_spec=service.instance.spec,
+        version=tls_version,
+        extra_arguments="| grep 'Protocol version:'",
+    )
+    output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(command=command, ignore_rc=True)
+    return tls_version in output
+
+
+def get_services_accepting_tls_version(
+    utility_pods: list, node: Resource, services: list[Resource], tls_version: str
+) -> dict[str, bool]:
+    """Probes each service for TLS version acceptance.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to run the command from.
+        services: List of Service resources to check.
+        tls_version: TLS version string (e.g. "1.2", "1.3").
+
+    Returns:
+        dict[str, bool]: Mapping of service name to whether it accepts the given TLS version.
+    """
+    results = {}
+    for service in services:
+        service_name = service.instance.metadata.name
+        accepts = check_service_accepts_tls_version(
+            utility_pods=utility_pods,
+            node=node,
+            service=service,
+            tls_version=tls_version,
+        )
+        LOGGER.info(f"Service {service_name} accepts TLS {tls_version}: {accepts}")
+        results[service_name] = accepts
+    return results
+
+
+def get_node_available_tls_groups(utility_pods: list, node: Resource) -> list[str]:
+    """Returns the list of TLS groups supported by OpenSSL on the given node.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to query.
+
+    Returns:
+        list[str]: TLS group names available on the node.
+    """
+    output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
+        command="openssl list -tls-groups",
+    )
+    return [group.strip() for group in output.strip().split(":") if group.strip()]
+
+
+def compose_openssl_pqc_command(service_spec: ResourceField, groups: str, connect_timeout: int = 10) -> str:
+    """Builds an openssl s_client command with PQC group negotiation.
+
+    Args:
+        service_spec: Service spec object with clusterIP and ports.
+        groups: Colon-separated TLS group names to offer (e.g. "SecP256r1MLKEM768:secp256r1").
+        connect_timeout: Timeout in seconds for the TLS connection attempt.
+
+    Returns:
+        str: The openssl command string.
+    """
+    return (
+        f"echo | timeout {connect_timeout}"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port} -groups {groups} 2>&1"
     )
