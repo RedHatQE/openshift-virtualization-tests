@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from datetime import datetime, timezone
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
@@ -310,19 +311,31 @@ def prometheus_scope_function():
 
 
 @pytest.fixture(scope="session")
-def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir):
-    return get_all_cnv_alerts(
+def upgrade_start_timestamp():
+    return datetime.now(tz=timezone.utc)
+
+
+@pytest.fixture(scope="session")
+def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir, upgrade_start_timestamp):
+    cnv_alerts = get_all_cnv_alerts(
         prometheus=prometheus,
         file_name=f"before_{pytestconfig.option.upgrade}_upgrade_alerts.json",
         base_directory=alert_dir,
     )
+    return {alert["labels"]["alertname"] for alert in cnv_alerts}
 
 
 @pytest.fixture()
-def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, prometheus_scope_function):
+def fired_alerts_during_upgrade(
+    fired_alerts_before_upgrade,
+    upgrade_start_timestamp,
+    alert_dir,
+    prometheus_scope_function,
+):
     return get_alerts_fired_during_upgrade(
         prometheus=prometheus_scope_function,
-        before_upgrade_alerts=fired_alerts_before_upgrade,
+        before_upgrade_alert_names=fired_alerts_before_upgrade,
+        upgrade_start_time=upgrade_start_timestamp,
         base_directory=alert_dir,
     )
 
