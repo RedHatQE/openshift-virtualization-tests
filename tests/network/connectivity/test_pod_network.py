@@ -4,7 +4,7 @@ VM to VM connectivity
 
 import pytest
 
-from utilities.constants import IPV4_STR, IPV6_STR
+from utilities.constants import IPV4_STR, IPV6_STR, TIMEOUT_90SEC
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     compose_cloud_init_data_dict,
@@ -111,7 +111,7 @@ def test_connectivity_over_pod_network(
     """
     Check connectivity
     """
-    dst_ip = get_ip_from_vm_or_virt_handler_pod(family=ip_family, vm=pod_net_running_vmb)
+    dst_ip = get_ip_from_vm_or_virt_handler_pod(family=ip_family, vm=pod_net_running_vmb, wait_timeout=TIMEOUT_90SEC)
     assert dst_ip, f"Cannot get valid IP address from {pod_net_running_vmb.vmi.name}."
 
     ping_cmd = f"ping -c 3 {dst_ip}"
