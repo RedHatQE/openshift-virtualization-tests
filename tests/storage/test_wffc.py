@@ -87,6 +87,7 @@ def uploaded_wffc_dv(namespace, unprivileged_client):
 def uploaded_dv_via_virtctl_wffc(
     namespace,
     downloaded_cirros_image_full_path,
+    downloaded_cirros_image_scope_class,
     wffc_storage_class_name_scope_module,
 ):
     with virtctl_upload_dv(
@@ -103,7 +104,7 @@ def uploaded_dv_via_virtctl_wffc(
 
 
 @pytest.fixture()
-def vm_from_uploaded_dv(uploaded_wffc_dv, unprivileged_client):
+def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_dv, unprivileged_client):
     with create_vm_from_dv(
         dv=uploaded_wffc_dv,
         vm_name=WFFC_DV_NAME,
@@ -131,6 +132,7 @@ class TestWFFCUploadVirtctl:
     @pytest.mark.s390x
     def test_wffc_fail_to_upload_dv_via_virtctl(
         self,
+        namespace,
         uploaded_dv_via_virtctl_wffc,
         uploaded_wffc_dv,
     ):
@@ -183,9 +185,9 @@ class TestWFFCUploadVirtctl:
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-4742")
 @pytest.mark.parametrize(
-    "rhel10_data_source_scope_module,blank_dv_wffc_scope_function",
+    "blank_dv_wffc_scope_function",
     [
-        ({"dv_name": "wffc-4742"}, {"dv_name": "blank-wffc-4742"}),
+        pytest.param({"dv_name": "blank-wffc-4742"}),
     ],
     indirect=True,
 )
