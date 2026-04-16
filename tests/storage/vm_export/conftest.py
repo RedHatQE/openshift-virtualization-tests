@@ -216,7 +216,7 @@ def rhel_vm_for_snapshot_with_content(
         ),
     ) as vm:
         running_vm(vm=vm)
-        write_file_via_ssh(vm=vm, filename=TEST_FILE_CONTENT, content=TEST_FILE_NAME)
+        write_file_via_ssh(vm=vm, filename=TEST_FILE_NAME, content=TEST_FILE_CONTENT)
         yield vm
 
 
