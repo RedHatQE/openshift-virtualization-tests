@@ -41,6 +41,7 @@ from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
@@ -468,7 +469,7 @@ def timestamp_to_seconds(timestamp: str) -> int:
 def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
+        sleep=TIMEOUT_5SEC,
         func=get_metrics_value,
         prometheus=prometheus,
         metrics_name=metric_name,
