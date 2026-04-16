@@ -170,6 +170,55 @@ def create_dv(
     )
 
 
+@contextmanager
+def create_dv_with_source_ref(
+    dv_name,
+    namespace,
+    storage_class,
+    size,
+    data_source,
+    volume_mode=None,
+    access_modes=None,
+    client=None,
+    multus_annotation=None,
+    teardown=True,
+    consume_wffc=True,
+    bind_immediate=None,
+    preallocation=None,
+    api_name="storage",
+):
+    # openshift-python-wrapper doesn't support source_ref parameter.
+    dv = DataVolume(
+        source="blank",
+        name=dv_name,
+        namespace=namespace,
+        size=size,
+        storage_class=storage_class,
+        volume_mode=volume_mode,
+        access_modes=access_modes,
+        client=client,
+        bind_immediate_annotation=bind_immediate,
+        multus_annotation=multus_annotation,
+        teardown=teardown,
+        preallocation=preallocation,
+        api_name=api_name,
+    )
+    dv.to_dict()
+    if "source" in dv.res["spec"]:
+        del dv.res["spec"]["source"]
+    if "contentType" in dv.res["spec"]:
+        del dv.res["spec"]["contentType"]
+    dv.res["spec"]["sourceRef"] = {
+        "kind": data_source.kind,
+        "name": data_source.name,
+        "namespace": data_source.namespace,
+    }
+    with dv:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
+            create_dummy_first_consumer_pod(dv=dv)
+        yield dv
+
+
 def data_volume(
     namespace,
     storage_class_matrix=None,
