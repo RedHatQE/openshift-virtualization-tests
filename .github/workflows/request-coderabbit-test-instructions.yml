@@ -14,7 +14,8 @@ jobs:
   comment-on-commit:
     if: |
       github.event.label.name == 'verified' &&
-      !contains(github.event.pull_request.user.login, 'renovate')
+      !contains(github.event.pull_request.user.login, 'renovate') &&
+      !startsWith(github.event.pull_request.user.login, 'cnv-tests-github-webhook')
     runs-on: ubuntu-latest
 
     steps:
