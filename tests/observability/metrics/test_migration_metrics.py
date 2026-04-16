@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 
 import pytest
 
@@ -42,7 +41,6 @@ class TestKubevirtVmiMigrationMetrics:
             ),
         ],
     )
-    @pytest.mark.jira("CNV-76682", run=False)
     @pytest.mark.s390x
     def test_kubevirt_vmi_migration_metrics(
         self,
@@ -54,16 +52,8 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_class,
         query,
     ):
-        minutes_passed_since_migration_start = (
-            int(datetime.now(timezone.utc).timestamp())
-            - timestamp_to_seconds(
-                timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
-            )
-        ) // 60
         wait_for_non_empty_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
-            f"[{minutes_passed_since_migration_start if minutes_passed_since_migration_start > 10 else 10}m])",
+            prometheus=prometheus, metric_name=query.format(vm_name=vm_for_migration_metrics_test.name)
         )
 
 
