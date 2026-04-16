@@ -649,7 +649,7 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
 def run_command_on_vm_and_check_output(
     vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
 ) -> None:
-    """Run command on RHEL VM via SSH and verify expected result is in output.
+    """Run command on VM via SSH and verify expected result is in output.
 
     Args:
         vm (VirtualMachineForTests): VM to run command on.
@@ -666,7 +666,9 @@ def run_command_on_vm_and_check_output(
         sleep=TIMEOUT_5SEC,
     )[0].strip()
     expected_result = expected_result.strip()
-    assert expected_result == cmd_output, f"Expected '{expected_result}' in output '{cmd_output}'"
+    assert expected_result == cmd_output, (
+        f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
+    )
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
