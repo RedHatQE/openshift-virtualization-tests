@@ -29,6 +29,7 @@ def test_positive_egress_multi_network_policy(
 
 @pytest.mark.polarion("CNV-10645")
 @pytest.mark.s390x
+@pytest.mark.jira("CNV-83350", run=False)
 def test_negative_ingress_multi_network_policy(
     vma_flat_overlay,
     vmb_flat_overlay_ip_address,
