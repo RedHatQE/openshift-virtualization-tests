@@ -20,9 +20,9 @@ from tests.install_upgrade_operators.constants import (
 )
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
-    get_resource_by_name,
     get_resource_from_module_name,
 )
+from tests.utils import get_resource_by_name
 from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
