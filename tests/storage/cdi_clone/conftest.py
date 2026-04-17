@@ -1,21 +1,9 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
-from pytest_testconfig import config as py_config
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, Images
+from utilities.constants import REGISTRY_STR, Images
 from utilities.storage import create_dv, data_volume
-
-
-# This is needed for the backport to 4.18 where tests changed from Cirros to Fedora.
-@pytest.fixture(scope="module", autouse=True)
-def setup_fedora_credentials(pytestconfig):
-    if pytestconfig.getoption("--disabled-bitwarden"):
-        if OS_FLAVOR_FEDORA not in py_config.get("os_login_param", {}):
-            py_config.setdefault("os_login_param", {})[OS_FLAVOR_FEDORA] = {
-                "username": "fedora",
-                "password": "fedora",
-            }
 
 
 @pytest.fixture()

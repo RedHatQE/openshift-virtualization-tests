@@ -63,7 +63,7 @@ def create_vm_from_clone_dv_template(
             storage_class=storage_class,
         ),
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False)
+        running_vm(vm=vm)
         check_disk_count_in_vm(vm=vm)
 
 
