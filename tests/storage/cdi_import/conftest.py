@@ -71,7 +71,7 @@ def linux_nad(admin_client, namespace, bridge_on_node):
 
 
 @pytest.fixture()
-def cirros_pvc(
+def data_volume_pvc(
     data_volume_template_metadata,
 ):
     """Create a PVC from the data volume template metadata."""
@@ -82,16 +82,16 @@ def cirros_pvc(
 
 
 @pytest.fixture()
-def pvc_original_timestamp(
-    cirros_pvc,
+def data_volume_pvc_creation_timestamp(
+    data_volume_pvc,
 ):
-    """Get the original creation timestamp of the Cirros PVC."""
-    return cirros_pvc.instance.metadata.creationTimestamp
+    """Get the creation timestamp of the data volume PVC."""
+    return data_volume_pvc.instance.metadata.creationTimestamp
 
 
 @pytest.fixture()
 def dv_non_exist_url(namespace, storage_class_name_scope_module):
-    """Create a DV with a non-existent URL to test import failure."""
+    """Create a DV with a non-existent URL"""
     with create_dv(
         dv_name=f"cnv-876-{storage_class_name_scope_module}",
         namespace=namespace.name,

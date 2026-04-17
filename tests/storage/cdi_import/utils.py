@@ -38,12 +38,12 @@ def get_importer_pod_node(importer_pod: Pod) -> str:
     raise TimeoutError("Importer pod was not scheduled within the timeout period.")
 
 
-def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_original_timestamp: str) -> None:
+def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_creation_timestamp: str) -> None:
     """Wait for PVC to be recreated with a new timestamp.
 
     Args:
         pvc: The PVC resource to monitor.
-        pvc_original_timestamp: The original creation timestamp to compare against.
+        pvc_creation_timestamp: The original creation timestamp to compare against.
 
     Raises:
         TimeoutError: If the PVC is not recreated within the timeout period.
@@ -51,7 +51,7 @@ def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_original_timestamp: st
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_20SEC,
         sleep=1,
-        func=lambda: pvc.instance.metadata.creationTimestamp != pvc_original_timestamp,
+        func=lambda: pvc.instance.metadata.creationTimestamp != pvc_creation_timestamp,
     ):
         if sample:
             return
