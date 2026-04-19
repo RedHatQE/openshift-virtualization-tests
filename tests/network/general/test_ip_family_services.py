@@ -6,6 +6,7 @@ import shlex
 
 import pytest
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.network.utils import basic_expose_command, get_service
 from utilities.constants import SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
@@ -75,10 +76,11 @@ def virtctl_expose_service(
     request,
     admin_client,
     running_vm_for_exposure,
-    dual_stack_cluster,
 ):
     ip_family_policy = request.param
-    if ip_family_policy == SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK and not dual_stack_cluster:
+    if ip_family_policy == SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK and not (
+        ipv4_supported_cluster() and ipv6_supported_cluster()
+    ):
         pytest.skip(
             f"{SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK} service cannot be created in a non-dual-stack cluster."
         )
@@ -97,9 +99,11 @@ def virtctl_expose_service(
 
 
 @pytest.fixture()
-def expected_num_families_in_service(request, dual_stack_cluster):
+def expected_num_families_in_service(request):
     ip_family_policy = request.param
-    if ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK and dual_stack_cluster:
+    if ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK and (
+        ipv4_supported_cluster() and ipv6_supported_cluster()
+    ):
         return 2
     return 1
 
@@ -164,7 +168,6 @@ class TestServiceConfigurationViaVirtctl:
         expected_num_families_in_service,
         running_vm_for_exposure,
         virtctl_expose_service,
-        dual_stack_cluster,
         ip_family_policy,
     ):
         assert_svc_ip_params(

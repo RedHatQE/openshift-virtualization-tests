@@ -1,5 +1,6 @@
 import pytest
 
+from libs.net.cluster import ipv6_supported_cluster
 from tests.network.connectivity.utils import create_running_vm
 from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE
 from utilities.infra import get_node_selector_dict, name_prefix
@@ -27,8 +28,8 @@ def vlan_id_3(vlan_index_number):
 
 
 @pytest.fixture()
-def fail_if_not_ipv6_supported_cluster(ipv6_supported_cluster):
-    if not ipv6_supported_cluster:
+def fail_if_not_ipv6_supported_cluster():
+    if not ipv6_supported_cluster():
         pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
