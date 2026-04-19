@@ -635,7 +635,7 @@ def write_file(
 
 def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
     """
-    Write content to a file in VM using SSH connection.
+    Write content to a file in VM using SSH connection with retry.
 
     Args:
         vm: VirtualMachine instance with SSH connectivity
@@ -649,7 +649,9 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
 def run_command_on_vm_and_check_output(
     vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
 ) -> None:
-    """Run command on VM via SSH and verify output matches expected result.
+    """Run command on VM via SSH with retry and verify output matches expected result.
+
+    Command execution is retried with 2-minute timeout and 5-second intervals.
 
     Args:
         vm (VirtualMachineForTests): VM to run command on.
