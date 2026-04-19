@@ -28,7 +28,7 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30SEC,
     USED,
-    VIRT_HANDLER,
+    VIRT_HANDLER, TIMEOUT_3MIN, TIMEOUT_5SEC,
 )
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests
@@ -356,8 +356,8 @@ def timestamp_to_seconds(timestamp: str) -> int:
 
 def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_3MIN,
+        sleep=TIMEOUT_5SEC,
         func=get_metrics_value,
         prometheus=prometheus,
         metrics_name=metric_name,
