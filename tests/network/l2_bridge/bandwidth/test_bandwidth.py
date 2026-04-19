@@ -5,11 +5,29 @@ RFE Reference:
 https://redhat.atlassian.net/browse/RFE-7066
 """
 
+from typing import Final
+
 import pytest
+
+from libs.net.ip import filter_link_local_addresses
+from libs.net.vmspec import lookup_iface_status
+from tests.network.l2_bridge.bandwidth.lib_helpers import (
+    BANDWIDTH_RATE_BPS,
+    BANDWIDTH_SECONDARY_IFACE_NAME,
+    active_tcp_connection_output,
+    assert_bidir_throughput_within_limit,
+)
+
+_BANDWIDTH_TOLERANCE: Final[float] = 1.1
 
 
 @pytest.mark.polarion("CNV-15244")
-def test_bandwidth_limit_enforced_on_secondary_interface():
+def test_bandwidth_limit_enforced_on_secondary_interface(
+    subtests,
+    server_vm,
+    client_vm,
+    bandwidth_nad,
+):
     """
     Test that bandwidth throttling is enforced on a secondary network interface.
 
@@ -29,6 +47,17 @@ def test_bandwidth_limit_enforced_on_secondary_interface():
           with a 10% tolerance
 
     """
-
-
-test_bandwidth_limit_enforced_on_secondary_interface.__test__ = False
+    iface = lookup_iface_status(vm=server_vm, iface_name=BANDWIDTH_SECONDARY_IFACE_NAME)
+    for server_ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
+        with subtests.test(msg=f"Bandwidth limit for {server_ip}"):
+            json_output = active_tcp_connection_output(
+                server_vm=server_vm,
+                client_vm=client_vm,
+                server_ip=str(server_ip),
+            )
+            assert_bidir_throughput_within_limit(
+                iperf3_json_report=json_output,
+                rate_bps=BANDWIDTH_RATE_BPS,
+                tolerance=_BANDWIDTH_TOLERANCE,
+                server_ip=str(server_ip),
+            )

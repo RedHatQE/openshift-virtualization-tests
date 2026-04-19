@@ -11,7 +11,17 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Devices, Disk, Metadata, SpecDisk, VMISpec, VMSpec, Volume
+from libs.vm.spec import (
+    CloudInitNoCloud,
+    ContainerDisk,
+    Devices,
+    Disk,
+    Metadata,
+    SpecDisk,
+    VMISpec,
+    VMSpec,
+    Volume,
+)
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
@@ -103,6 +113,10 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    @property
+    def template_spec(self) -> VMISpec:
+        return self._spec.template.spec
 
     @property
     def cloud_init_network_data(self) -> cloudinit.NetworkData:

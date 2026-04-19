@@ -163,3 +163,30 @@ def _lookup_first_ip_address(
     ip_family: int,
 ) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
     return next((ip for ip_addr in ip_addresses if (ip := ipaddress.ip_address(ip_addr)).version == ip_family), None)
+
+
+def wait_for_ifaces_status(
+    vm: BaseVirtualMachine,
+    ip_addresses_by_spec_net_name: dict[str, list[str]],
+) -> None:
+    """Wait for all VM interfaces to be ready.
+
+    Args:
+        vm: The virtual machine to wait for.
+        ip_addresses_by_spec_net_name: Mapping of spec network name to its expected IP addresses.
+            Primary (masquerade) interfaces are detected automatically from the VM spec.
+    """
+    for iface in vm.template_spec.domain.devices.interfaces:  # type: ignore
+        if iface.masquerade is not None:
+            lookup_iface_status(vm=vm, iface_name=iface.name)
+        else:
+            lookup_iface_status(
+                vm=vm,
+                iface_name=iface.name,
+                predicate=lambda iface_status: (
+                    "guest-agent" in iface_status["infoSource"]
+                    and all(
+                        ip in iface_status.get("ipAddresses", []) for ip in ip_addresses_by_spec_net_name[iface.name]
+                    )
+                ),
+            )

@@ -794,6 +794,37 @@ class ImportVisitor(ast.NodeVisitor):
                 # "from pkg import submod" may refer to pkg/submod.py
                 self.imports.add(f"{node.module}.{alias.name}")
 
+    def visit_If(self, node: ast.If) -> None:
+        """Skip imports inside ``if TYPE_CHECKING:`` blocks.
+
+        These imports exist only for static type checkers and are never
+        executed at runtime, so they should not create test dependencies.
+        The ``else`` branch is still visited because it contains runtime
+        imports (e.g. compatibility fallbacks).
+        """
+        if self._is_type_checking_guard(node=node):
+            for child in node.orelse:
+                self.visit(node=child)
+            return
+        self.generic_visit(node=node)
+
+    @staticmethod
+    def _is_type_checking_guard(node: ast.If) -> bool:
+        """Check whether an ``If`` node guards a ``TYPE_CHECKING`` block."""
+        test = node.test
+        # ``if TYPE_CHECKING:``
+        if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+            return True
+        # ``if typing.TYPE_CHECKING:``
+        if (
+            isinstance(test, ast.Attribute)
+            and isinstance(test.value, ast.Name)
+            and test.value.id == "typing"
+            and test.attr == "TYPE_CHECKING"
+        ):
+            return True
+        return False
+
 
 class FixtureVisitor(ast.NodeVisitor):
     """AST visitor to extract fixture usage from test functions."""
@@ -2002,6 +2033,40 @@ def _analyze_single_test_dependencies(
     return dependencies, fixtures, symbol_imports
 
 
+def _expand_used_fixtures(
+    direct_fixtures: set[str],
+    fixtures_dict: dict[str, Fixture],
+) -> set[str]:
+    """Expand direct fixture names to include transitive fixture dependencies.
+
+    Follows ``Fixture.fixture_deps`` to build the full closure of fixtures
+    that will execute when the test runs, ensuring fixture narrowing
+    considers indirect fixture chains.
+
+    Args:
+        direct_fixtures: Fixture names directly used by the test.
+        fixtures_dict: Dictionary of all known fixtures.
+
+    Returns:
+        Set of all fixture names reachable from direct_fixtures.
+    """
+    used_fixtures = set(direct_fixtures)
+    pending = list(direct_fixtures)
+
+    while pending:
+        fixture_name = pending.pop()
+        fixture = fixtures_dict.get(fixture_name)
+        if fixture is None:
+            continue
+
+        for dependency_name in fixture.fixture_deps:
+            if dependency_name not in used_fixtures:
+                used_fixtures.add(dependency_name)
+                pending.append(dependency_name)
+
+    return used_fixtures
+
+
 def _check_conftest_pathway(
     changed_file: Path,
     marked_test: MarkedTest,
@@ -2037,6 +2102,7 @@ def _check_conftest_pathway(
     """
     matching_deps: list[str] = []
     conftest_resolved = False
+    used_fixtures = _expand_used_fixtures(direct_fixtures=marked_test.fixtures, fixtures_dict=fixtures_dict)
 
     for conftest_path in marked_test.dependencies:
         if conftest_path.name != "conftest.py":
@@ -2054,49 +2120,78 @@ def _check_conftest_pathway(
         # Check if conftest imports specific symbols from the changed file
         conftest_syms = conftest_symbol_imports.get(conftest_path, {})
         if changed_file not in conftest_syms:
+            # Check transitive path: conftest -> intermediate -> changed_file
+            for intermediate_path, conftest_imported_from_intermediate in conftest_syms.items():
+                intermediate_syms = _extract_symbol_imports_from_file(file_path=intermediate_path, repo_root=repo_root)
+                if changed_file not in intermediate_syms:
+                    continue
+
+                # Transitive path found — apply symbol narrowing if diff available
+                classification = modified_symbols_cache.get(changed_file)
+                if classification is not None:
+                    intermediate_imported = intermediate_syms[changed_file]
+                    overlapping = intermediate_imported & classification.modified_symbols
+                    if not overlapping:
+                        conftest_resolved = True
+                        continue
+
+                # Diff unavailable or modified symbols overlap — apply fixture narrowing
+                fixture_match = False
+                for fixture_name, fixture in fixtures_dict.items():
+                    if (
+                        fixture.file_path == conftest_path
+                        and fixture_name in used_fixtures
+                        and fixture.function_calls & conftest_imported_from_intermediate
+                    ):
+                        symbols_str = ", ".join(sorted(fixture.function_calls & conftest_imported_from_intermediate))
+                        matching_deps.append(
+                            f"{changed_file.relative_to(repo_root)} (via "
+                            f"{intermediate_path.relative_to(repo_root)} -> fixture {fixture_name}: {symbols_str})"
+                        )
+                        fixture_match = True
+                        break
+
+                conftest_resolved = True
+                if fixture_match:
+                    return True, matching_deps
+
             continue
 
         # Conftest imports specific symbols from the changed file
         conftest_imported = conftest_syms[changed_file]
         classification = modified_symbols_cache.get(changed_file)
-        if classification is None:
-            # Can't determine what changed — conservative: flag test
-            matching_deps.append(
-                f"{changed_file.relative_to(repo_root)} (via {conftest_path.relative_to(repo_root)}, diff unavailable)"
-            )
-            return True, matching_deps
 
-        overlapping = conftest_imported & classification.modified_symbols
-        if not overlapping:
-            # Conftest imports from this file but none of the modified symbols
-            # — this conftest pathway is resolved as safe
-            conftest_resolved = True
-            continue
+        if classification is not None:
+            overlapping = conftest_imported & classification.modified_symbols
+            if not overlapping:
+                # Conftest imports from this file but none of the modified symbols
+                # — this conftest pathway is resolved as safe
+                conftest_resolved = True
+                continue
 
-        # Overlap found — check if any fixture from this conftest calls the overlapping symbols
+        # Diff unavailable or modified symbols overlap — apply fixture narrowing
+        # Check if any fixture from this conftest calls the imported symbols
         # AND the test uses that fixture
+        symbols_to_check = (
+            conftest_imported if classification is None else conftest_imported & classification.modified_symbols
+        )
         fixture_match = False
         for fixture_name, fixture in fixtures_dict.items():
             if (
                 fixture.file_path == conftest_path
-                and fixture_name in marked_test.fixtures
-                and fixture.function_calls & overlapping
+                and fixture_name in used_fixtures
+                and fixture.function_calls & symbols_to_check
             ):
-                symbols_str = ", ".join(sorted(fixture.function_calls & overlapping))
+                symbols_str = ", ".join(sorted(fixture.function_calls & symbols_to_check))
                 matching_deps.append(
                     f"{changed_file.relative_to(repo_root)} (via fixture {fixture_name}: {symbols_str})"
                 )
                 fixture_match = True
                 break
 
-        if not fixture_match:
-            # Safe for this specific conftest path, but other conftest.py
-            # files higher in the hierarchy may still create a dependency.
-            conftest_resolved = True
-            continue
-
         conftest_resolved = True
-        return True, matching_deps
+        if fixture_match:
+            return True, matching_deps
 
     if not conftest_resolved:
         # No conftest pathway found — file-level fallback (conservative)
@@ -3269,6 +3364,9 @@ class MarkerTestAnalyzer:
         tests_dir = self.repo_root / "tests"
         if tests_dir.exists():
             self.conftest_files = list(tests_dir.rglob("conftest.py"))
+        root_conftest = self.repo_root / "conftest.py"
+        if root_conftest.exists():
+            self.conftest_files.append(root_conftest)
         logger.info(msg="Found conftest.py files", extra={"file_count": len(self.conftest_files)})
 
     def get_changed_files(self, base_branch: str = "main", files: list[str] | None = None) -> list[Path]:
@@ -3781,8 +3879,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--checkout",
-        action="store_true",
-        help="Clone and checkout the repository (for CI without pre-checkout)",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Clone and checkout the repository (default: enabled, use --no-checkout to disable)",
     )
     parser.add_argument(
         "--workdir",
