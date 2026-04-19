@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytest
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.template import Template
+from pytest_testconfig import config as py_config
 
 from tests.os_params import (
     RHEL_LATEST,
@@ -95,6 +96,7 @@ def increased_high_performance_vm_core_count_by_one(high_performance_vm):
                     "os": RHEL_LATEST_OS,
                     "workload": Template.Workload.HIGHPERFORMANCE,
                     "flavor": Template.Flavor.SMALL,
+                    "architecture": py_config["cpu_arch"],
                 },
             },
         ],
@@ -149,6 +151,7 @@ class TestHighPerformanceTemplatesRHEL:
                     "os": "win2k19",
                     "workload": Template.Workload.HIGHPERFORMANCE,
                     "flavor": Template.Flavor.MEDIUM,
+                    "architecture": py_config["cpu_arch"],
                 },
             },
         ],
