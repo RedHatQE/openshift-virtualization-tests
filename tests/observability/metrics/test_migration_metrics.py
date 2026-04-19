@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 
 import pytest
 
@@ -15,6 +14,7 @@ from tests.observability.metrics.utils import (
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
+from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ class TestKubevirtVmiMigrationMetrics:
             ),
         ],
     )
-    @pytest.mark.jira("CNV-57777", run=False)
     @pytest.mark.s390x
     def test_kubevirt_vmi_migration_metrics(
         self,
@@ -51,19 +50,14 @@ class TestKubevirtVmiMigrationMetrics:
         admin_client,
         migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
-        vm_migration_metrics_vmim_scope_class,
+        vm_migration_metrics_vmim_scope_function,
         query,
     ):
-        minutes_passed_since_migration_start = (
-            int(datetime.now(timezone.utc).timestamp())
-            - timestamp_to_seconds(
-                timestamp=vm_for_migration_metrics_test.vmi.instance.status.migrationState.startTimestamp
-            )
-        ) // 60
+        if query == KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES and is_jira_open(jira_id="CNV-84890"):
+            pytest.xfail(f"Bug is still open for metric {query}")
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}"
-            f"[{minutes_passed_since_migration_start if minutes_passed_since_migration_start > 10 else 10}m])",
+            metric_name=query.format(vm_name=vm_for_migration_metrics_test.name),
         )
 
 
