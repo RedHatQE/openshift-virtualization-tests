@@ -120,7 +120,7 @@ def test_default_crypto_policy_check_connectivity(
     workers, workers_utility_pods, services_to_check_connectivity, fips_enabled_cluster, subtests
 ):
     for service in services_to_check_connectivity:
-        service_name = service.instance.metadata.name
+        service_name = service.name
         with subtests.test(msg=service_name):
             if service_name == KUBEMACPOOL_SERVICE and is_jira_open(jira_id="CNV-84884"):
                 pytest.xfail(reason="CNV-84884: kubemacpool-service rejects TLS 1.2 under intermediate profile")
