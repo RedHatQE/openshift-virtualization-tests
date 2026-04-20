@@ -709,6 +709,15 @@ class SymbolClassification:
     modified_members: dict[str, set[str]] = field(default_factory=dict)
     """class_name -> set of modified member names (after transitive expansion).
     Absent class = no member-level info, fall back to class-level."""
+    has_unattributed_changes: bool = False
+    """True when some changed lines could not be mapped to any named symbol.
+
+    This covers import reorderings, comments between functions, and other
+    module-level code that is not a function, class, or variable assignment.
+    When set, callers that already have symbol-level import data can still
+    use the ``modified_symbols`` set for narrowing instead of falling back
+    to file-level dependency tracking.
+    """
 
 
 @dataclass
@@ -784,6 +793,37 @@ class ImportVisitor(ast.NodeVisitor):
                 # Track potential submodule imports:
                 # "from pkg import submod" may refer to pkg/submod.py
                 self.imports.add(f"{node.module}.{alias.name}")
+
+    def visit_If(self, node: ast.If) -> None:
+        """Skip imports inside ``if TYPE_CHECKING:`` blocks.
+
+        These imports exist only for static type checkers and are never
+        executed at runtime, so they should not create test dependencies.
+        The ``else`` branch is still visited because it contains runtime
+        imports (e.g. compatibility fallbacks).
+        """
+        if self._is_type_checking_guard(node=node):
+            for child in node.orelse:
+                self.visit(node=child)
+            return
+        self.generic_visit(node=node)
+
+    @staticmethod
+    def _is_type_checking_guard(node: ast.If) -> bool:
+        """Check whether an ``If`` node guards a ``TYPE_CHECKING`` block."""
+        test = node.test
+        # ``if TYPE_CHECKING:``
+        if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+            return True
+        # ``if typing.TYPE_CHECKING:``
+        if (
+            isinstance(test, ast.Attribute)
+            and isinstance(test.value, ast.Name)
+            and test.value.id == "typing"
+            and test.attr == "TYPE_CHECKING"
+        ):
+            return True
+        return False
 
 
 class FixtureVisitor(ast.NodeVisitor):
@@ -1623,6 +1663,7 @@ def _extract_modified_symbols(
     pr_diffs_cache: dict[str, str] | None = None,
     file_status: str | None = None,
     pr_head_ref: str | None = None,
+    is_checkout: bool = False,
 ) -> SymbolClassification | None:
     """Determine which top-level symbols were modified or added in a file.
 
@@ -1644,13 +1685,23 @@ def _extract_modified_symbols(
         pr_head_ref: Optional PR HEAD commit SHA. When provided in remote
             mode, the symbol map is built from the PR's version of the
             file so that line numbers align with the diff.
+        is_checkout: Whether the analyzer is running in checkout mode
+            (the local working tree is the PR HEAD).  When ``True``,
+            falling back to the local file after a fetch failure is safe.
+            When ``False`` (remote analysis), the local file may be on a
+            different branch and must not be used as fallback.
 
     Returns:
         ``SymbolClassification`` with modified and new symbol sets, or
         ``None`` when symbol-level analysis is not possible (diff failure,
-        module-level changes outside any symbol, or parse errors).
-        A ``None`` return signals the caller to fall back to file-level
-        dependency tracking.
+        pure deletion, or parse errors).  A ``None`` return signals the
+        caller to fall back to file-level dependency tracking.
+
+        When some changed lines fall outside any named symbol (e.g. import
+        reorderings or comments between functions), the returned
+        ``SymbolClassification`` will have ``has_unattributed_changes=True``
+        but still contain any symbols that *were* identified from other
+        changed lines.
     """
     diff_content = _get_diff_content(
         file_path=file_path,
@@ -1659,7 +1710,11 @@ def _extract_modified_symbols(
         github_pr_info=github_pr_info,
         pr_diffs_cache=pr_diffs_cache,
     )
+
     if diff_content is None:
+        if file_status == "renamed":
+            # Renamed with no diff — content unchanged, no symbols modified
+            return SymbolClassification(modified_symbols=set(), new_symbols=set())
         return None
 
     has_deletions = _diff_has_deletions(diff_content=diff_content)
@@ -1667,6 +1722,8 @@ def _extract_modified_symbols(
     changed_lines = _parse_diff_for_changed_lines(diff_content=diff_content)
     if not changed_lines:
         if has_deletions:
+            if file_status == "renamed":
+                return SymbolClassification(modified_symbols=set(), new_symbols=set())
             return None  # Pure deletion — cannot safely narrow impact
         return SymbolClassification(modified_symbols=set(), new_symbols=set())
 
@@ -1683,12 +1740,21 @@ def _extract_modified_symbols(
                 token=github_pr_info.get("token"),
             )
             if source is None:
-                logger.info(
-                    msg="Failed to fetch PR file version, falling back to file-level analysis",
-                    extra={"file": str(file_path)},
-                )
-                return None
+                if is_checkout:
+                    logger.info(
+                        msg="Failed to fetch PR file version, falling back to local file (checkout mode)",
+                        extra={"file": str(file_path)},
+                    )
+                else:
+                    # Remote mode: local file may not match PR HEAD.
+                    # Fall back conservatively to file-level analysis.
+                    logger.info(
+                        msg="Failed to fetch PR file version, falling back to file-level analysis",
+                        extra={"file": str(file_path)},
+                    )
+                    return None
         if source is None:
+            # pr_head_ref was None — pure local mode, local file is authoritative
             source = file_path.read_text(encoding="utf-8")
         symbol_map = _build_line_to_symbol_map(source=source)
     except (SyntaxError, UnicodeDecodeError, OSError) as exc:  # fmt: skip
@@ -1698,6 +1764,8 @@ def _extract_modified_symbols(
         )
         return None
 
+    has_unattributed = False
+    source_lines = source.splitlines()
     modified_symbols: set[str] = set()
     for line_number in changed_lines:
         found = False
@@ -1707,9 +1775,23 @@ def _extract_modified_symbols(
                 found = True
                 break
         if not found:
-            # Changed line is outside any top-level symbol (module-level code).
-            # Conservative fallback: cannot safely narrow impact.
-            return None
+            # Changed line is outside any top-level symbol.  Check whether
+            # the line is "safe" (import, comment, blank, or string literal)
+            # or potentially impactful executable code.
+            if line_number <= len(source_lines):
+                line_content = source_lines[line_number - 1].strip()
+                if (
+                    not line_content
+                    or line_content.startswith("#")
+                    or line_content.startswith(("import ", "from "))
+                    or line_content.startswith(('"""', "'''", '"', "'"))
+                ):
+                    has_unattributed = True
+                else:
+                    # Executable module-level code — conservative fallback
+                    return None
+            else:
+                return None
 
     # --- Member-level analysis for modified classes ---
     modified_members: dict[str, set[str]] = {}
@@ -1760,6 +1842,7 @@ def _extract_modified_symbols(
             modified_symbols=set(),
             new_symbols=modified_symbols,
             modified_members=modified_members,
+            has_unattributed_changes=has_unattributed,
         )
 
     # Identify candidate new symbols: symbols whose ENTIRE line range
@@ -1778,6 +1861,7 @@ def _extract_modified_symbols(
             modified_symbols=modified_symbols,
             new_symbols=set(),
             modified_members=modified_members,
+            has_unattributed_changes=has_unattributed,
         )
 
     # Optimization: if the diff has no deletions, existing code was not
@@ -1789,6 +1873,7 @@ def _extract_modified_symbols(
             modified_symbols=truly_modified,
             new_symbols=truly_new,
             modified_members=modified_members,
+            has_unattributed_changes=has_unattributed,
         )
 
     # Deletions exist — need to check old file to distinguish rewrites
@@ -1805,6 +1890,7 @@ def _extract_modified_symbols(
             modified_symbols=modified_symbols,
             new_symbols=set(),
             modified_members=modified_members,
+            has_unattributed_changes=has_unattributed,
         )
 
     old_symbols, old_class_members = old_result
@@ -1832,6 +1918,7 @@ def _extract_modified_symbols(
         modified_symbols=truly_modified,
         new_symbols=truly_new,
         modified_members=modified_members,
+        has_unattributed_changes=has_unattributed,
     )
 
 
@@ -1946,6 +2033,40 @@ def _analyze_single_test_dependencies(
     return dependencies, fixtures, symbol_imports
 
 
+def _expand_used_fixtures(
+    direct_fixtures: set[str],
+    fixtures_dict: dict[str, Fixture],
+) -> set[str]:
+    """Expand direct fixture names to include transitive fixture dependencies.
+
+    Follows ``Fixture.fixture_deps`` to build the full closure of fixtures
+    that will execute when the test runs, ensuring fixture narrowing
+    considers indirect fixture chains.
+
+    Args:
+        direct_fixtures: Fixture names directly used by the test.
+        fixtures_dict: Dictionary of all known fixtures.
+
+    Returns:
+        Set of all fixture names reachable from direct_fixtures.
+    """
+    used_fixtures = set(direct_fixtures)
+    pending = list(direct_fixtures)
+
+    while pending:
+        fixture_name = pending.pop()
+        fixture = fixtures_dict.get(fixture_name)
+        if fixture is None:
+            continue
+
+        for dependency_name in fixture.fixture_deps:
+            if dependency_name not in used_fixtures:
+                used_fixtures.add(dependency_name)
+                pending.append(dependency_name)
+
+    return used_fixtures
+
+
 def _check_conftest_pathway(
     changed_file: Path,
     marked_test: MarkedTest,
@@ -1981,6 +2102,7 @@ def _check_conftest_pathway(
     """
     matching_deps: list[str] = []
     conftest_resolved = False
+    used_fixtures = _expand_used_fixtures(direct_fixtures=marked_test.fixtures, fixtures_dict=fixtures_dict)
 
     for conftest_path in marked_test.dependencies:
         if conftest_path.name != "conftest.py":
@@ -1998,51 +2120,78 @@ def _check_conftest_pathway(
         # Check if conftest imports specific symbols from the changed file
         conftest_syms = conftest_symbol_imports.get(conftest_path, {})
         if changed_file not in conftest_syms:
+            # Check transitive path: conftest -> intermediate -> changed_file
+            for intermediate_path, conftest_imported_from_intermediate in conftest_syms.items():
+                intermediate_syms = _extract_symbol_imports_from_file(file_path=intermediate_path, repo_root=repo_root)
+                if changed_file not in intermediate_syms:
+                    continue
+
+                # Transitive path found — apply symbol narrowing if diff available
+                classification = modified_symbols_cache.get(changed_file)
+                if classification is not None:
+                    intermediate_imported = intermediate_syms[changed_file]
+                    overlapping = intermediate_imported & classification.modified_symbols
+                    if not overlapping:
+                        conftest_resolved = True
+                        continue
+
+                # Diff unavailable or modified symbols overlap — apply fixture narrowing
+                fixture_match = False
+                for fixture_name, fixture in fixtures_dict.items():
+                    if (
+                        fixture.file_path == conftest_path
+                        and fixture_name in used_fixtures
+                        and fixture.function_calls & conftest_imported_from_intermediate
+                    ):
+                        symbols_str = ", ".join(sorted(fixture.function_calls & conftest_imported_from_intermediate))
+                        matching_deps.append(
+                            f"{changed_file.relative_to(repo_root)} (via "
+                            f"{intermediate_path.relative_to(repo_root)} -> fixture {fixture_name}: {symbols_str})"
+                        )
+                        fixture_match = True
+                        break
+
+                conftest_resolved = True
+                if fixture_match:
+                    return True, matching_deps
+
             continue
 
         # Conftest imports specific symbols from the changed file
         conftest_imported = conftest_syms[changed_file]
         classification = modified_symbols_cache.get(changed_file)
-        if classification is None:
-            # Can't determine what changed — conservative: flag test
-            matching_deps.append(
-                f"{changed_file.relative_to(repo_root)} (via {conftest_path.relative_to(repo_root)}, diff unavailable)"
-            )
-            return True, matching_deps
 
-        overlapping = conftest_imported & classification.modified_symbols
-        if not overlapping:
-            # Conftest imports from this file but none of the modified symbols
-            # — this conftest pathway is resolved as safe
-            conftest_resolved = True
-            continue
+        if classification is not None:
+            overlapping = conftest_imported & classification.modified_symbols
+            if not overlapping:
+                # Conftest imports from this file but none of the modified symbols
+                # — this conftest pathway is resolved as safe
+                conftest_resolved = True
+                continue
 
-        # Overlap found — check if any fixture from this conftest calls the overlapping symbols
+        # Diff unavailable or modified symbols overlap — apply fixture narrowing
+        # Check if any fixture from this conftest calls the imported symbols
         # AND the test uses that fixture
+        symbols_to_check = (
+            conftest_imported if classification is None else conftest_imported & classification.modified_symbols
+        )
         fixture_match = False
         for fixture_name, fixture in fixtures_dict.items():
             if (
                 fixture.file_path == conftest_path
-                and fixture_name in marked_test.fixtures
-                and fixture.function_calls & overlapping
+                and fixture_name in used_fixtures
+                and fixture.function_calls & symbols_to_check
             ):
-                symbols_str = ", ".join(sorted(fixture.function_calls & overlapping))
+                symbols_str = ", ".join(sorted(fixture.function_calls & symbols_to_check))
                 matching_deps.append(
                     f"{changed_file.relative_to(repo_root)} (via fixture {fixture_name}: {symbols_str})"
                 )
                 fixture_match = True
                 break
 
-        if not fixture_match:
-            # Overlap exists but no fixture calls them — could be module-level usage
-            # Conservative: flag test
-            symbols_str = ", ".join(sorted(overlapping))
-            matching_deps.append(
-                f"{changed_file.relative_to(repo_root)} (via {conftest_path.relative_to(repo_root)}, symbols: {symbols_str})"
-            )
-
         conftest_resolved = True
-        break
+        if fixture_match:
+            return True, matching_deps
 
     if not conftest_resolved:
         # No conftest pathway found — file-level fallback (conservative)
@@ -2065,6 +2214,7 @@ def _check_test_impact(
     conftest_opaque_deps: dict[Path, set[Path]] | None = None,
     pr_diffs_cache: dict[str, str] | None = None,
     pr_file_statuses: dict[str, str] | None = None,
+    is_checkout: bool = False,
 ) -> dict[str, Any] | None:
     """Check if a single test is affected by changed files (for parallel execution).
 
@@ -2179,6 +2329,7 @@ def _check_test_impact(
                 github_pr_info=github_pr_info,
                 pr_diffs_cache=pr_diffs_cache,
                 file_status=file_status_conftest,
+                is_checkout=is_checkout,
             )
 
             # Get all transitively affected fixtures
@@ -2334,6 +2485,7 @@ def _extract_modified_items_from_conftest(
     github_pr_info: dict[str, Any] | None,
     pr_diffs_cache: dict[str, str] | None = None,
     file_status: str | None = None,
+    is_checkout: bool = False,
 ) -> tuple[set[str], set[str]]:
     """Extract modified fixtures and functions from conftest.py.
 
@@ -2355,8 +2507,8 @@ def _extract_modified_items_from_conftest(
         Tuple of (modified_fixtures, modified_functions) containing only
         symbols that existed in the base version and were modified.
     """
-    if file_status == "added":
-        return set(), set()  # New conftest cannot break existing tests
+    if file_status in ("added", "renamed"):
+        return set(), set()  # New/renamed conftest cannot break existing tests
 
     modified_fixtures: set[str] = set()
     modified_functions: set[str] = set()
@@ -2384,16 +2536,17 @@ def _extract_modified_items_from_conftest(
             repo_root=repo_root,
             github_pr_info=github_pr_info,
             pr_diffs_cache=pr_diffs_cache,
+            is_checkout=is_checkout,
         )
 
-        # Preserve the raw set before additive filtering for fallback logic:
-        # if diff parsing found functions but additive filtering emptied the
-        # set, the conftest only contains new additions and should NOT trigger
-        # the conservative all-fixtures fallback.
-        raw_modified_function_names = set(modified_function_names)
+        # None means diff retrieval failed — fall back conservatively
+        if modified_function_names is None:
+            if changed_file.exists():
+                return all_fixtures, set()
+            return set(), set()
 
         # Filter out purely new functions/fixtures (additive-change detection)
-        if modified_function_names and file_status != "added":
+        if modified_function_names and file_status not in ("added", "renamed"):
             old_result = _get_old_file_symbols(
                 file_path=changed_file,
                 base_branch=base_branch,
@@ -2410,11 +2563,6 @@ def _extract_modified_items_from_conftest(
                 modified_fixtures.add(func_name)
             else:
                 modified_functions.add(func_name)
-
-        # Fallback: only trigger when diff parsing itself failed (raw set empty),
-        # NOT when additive filtering legitimately emptied the set.
-        if not raw_modified_function_names and changed_file.exists():
-            return all_fixtures, set()
 
     except (SyntaxError, UnicodeDecodeError, OSError, subprocess.SubprocessError) as exc:  # fmt: skip
         logger.info(
@@ -2441,10 +2589,16 @@ def _get_modified_function_names(
     repo_root: Path,
     github_pr_info: dict[str, Any] | None,
     pr_diffs_cache: dict[str, str] | None = None,
-) -> set[str]:
-    """Get names of functions modified in a file based on diff analysis."""
-    modified: set[str] = set()
+    is_checkout: bool = False,
+) -> set[str] | None:
+    """Get names of functions modified in a file based on diff analysis.
 
+    Returns:
+        Set of modified function names, or None if diff retrieval failed.
+        An empty set means the diff was successfully obtained but no
+        functions were in the changed lines (e.g., only module-level
+        import changes).
+    """
     # Try pre-fetched cache first
     if pr_diffs_cache is not None:
         try:
@@ -2468,8 +2622,10 @@ def _get_modified_function_names(
 
         diff_content = get_pr_file_diff(repo=repo, pr_number=pr_number, file_path=str(relative_path), token=token)
         if diff_content:
-            modified = _parse_diff_for_functions(diff_content=diff_content)
-        return modified
+            return _parse_diff_for_functions(diff_content=diff_content)
+        if not is_checkout:
+            return None  # Remote mode: no local fallback
+        # Checkout mode: fall through to local git diff
 
     # Use local git
     try:
@@ -2481,11 +2637,11 @@ def _get_modified_function_names(
             timeout=10,
         )
         if result.returncode == 0:
-            modified = _parse_diff_for_functions(diff_content=result.stdout)
+            return _parse_diff_for_functions(diff_content=result.stdout)
+        return None  # git diff failed
     except (subprocess.SubprocessError, OSError) as e:  # fmt: skip
         logger.info(msg="Error getting modified function names", extra={"file": str(file_path), "error": str(e)})
-
-    return modified
+        return None  # Diff retrieval failed
 
 
 def _parse_diff_for_functions(diff_content: str) -> set[str]:
@@ -2721,12 +2877,14 @@ class MarkerTestAnalyzer:
         repo_root: Path | None = None,
         base_branch: str = "main",
         github_pr_info: dict[str, Any] | None = None,
+        is_checkout: bool = False,
     ) -> None:
         self.marker_expression = marker_expression
         self.marker_names = extract_marker_names(marker_expression=marker_expression)
         self.repo_root = repo_root or Path.cwd()
         self.base_branch = base_branch
         self.github_pr_info = github_pr_info  # Contains repo, pr_number, token for GitHub API calls
+        self.is_checkout = is_checkout
         self.marked_tests: dict[str, MarkedTest] = {}
         self.conftest_files: list[Path] = []
         self.fixtures: dict[str, Fixture] = {}  # name -> Fixture
@@ -3206,6 +3364,9 @@ class MarkerTestAnalyzer:
         tests_dir = self.repo_root / "tests"
         if tests_dir.exists():
             self.conftest_files = list(tests_dir.rglob("conftest.py"))
+        root_conftest = self.repo_root / "conftest.py"
+        if root_conftest.exists():
+            self.conftest_files.append(root_conftest)
         logger.info(msg="Found conftest.py files", extra={"file_count": len(self.conftest_files)})
 
     def get_changed_files(self, base_branch: str = "main", files: list[str] | None = None) -> list[Path]:
@@ -3309,6 +3470,7 @@ class MarkerTestAnalyzer:
                     pr_diffs_cache=pr_diffs_cache,
                     file_status=file_status,
                     pr_head_ref=pr_head_ref,
+                    is_checkout=self.is_checkout,
                 )
 
         # Check each marked test for dependency matches in parallel using ThreadPoolExecutor
@@ -3330,6 +3492,7 @@ class MarkerTestAnalyzer:
                     conftest_opaque_deps=self.conftest_opaque_deps,
                     pr_diffs_cache=pr_diffs_cache,
                     pr_file_statuses=pr_file_statuses,
+                    is_checkout=self.is_checkout,
                 ): node_id
                 for node_id, marked_test in self.marked_tests.items()
             }
@@ -3597,8 +3760,14 @@ def run_github_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, in
                 )
                 # Continue anyway - the branch might already be available
 
-            # When we checkout, we can use local git diff, so no need to pass github_pr_info
-            github_pr_info = None
+            # Pass github_pr_info even in checkout mode so the GitHub API
+            # diffs cache is available when local git diff fails (e.g.,
+            # base branch fetch failure or shallow clone limitations).
+            github_pr_info = {
+                "repo": args.repo,
+                "pr_number": args.pr,
+                "token": token,
+            }
         else:
             # Remote mode: use current directory and GitHub API for diffs
             repo_root = Path.cwd()
@@ -3615,7 +3784,8 @@ def run_github_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, in
             repo_root=repo_root,
             base_branch=base_branch,
             github_pr_info=github_pr_info,
-        )  # Constructor already uses keyword arguments
+            is_checkout=args.checkout,
+        )
         analyzer.discover_marked_tests()
 
         if not analyzer.marked_tests:
@@ -3709,8 +3879,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--checkout",
-        action="store_true",
-        help="Clone and checkout the repository (for CI without pre-checkout)",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Clone and checkout the repository (default: enabled, use --no-checkout to disable)",
     )
     parser.add_argument(
         "--workdir",

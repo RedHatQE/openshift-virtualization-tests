@@ -6,9 +6,10 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities import console
-from utilities.constants import VIRT_HANDLER
+from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC, VIRT_HANDLER
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_for_virt_handler_pods_network_updated
@@ -16,14 +17,14 @@ from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_f
 LOGGER = logging.getLogger(__name__)
 
 
-def enable_feature_gate_and_configure_hco_live_migration_network(
+def configure_hco_live_migration_network(
     hyperconverged_resource: HyperConverged,
     client: DynamicClient,
     hco_namespace: Namespace,
     network_for_live_migration: NetworkAttachmentDefinition | None = None,
 ) -> Generator[None, None, None]:
     """
-    Enable decentralized live migration feature gate and optionally configure HCO live migration network.
+    Configure HCO live migration network.
 
     Args:
         hyperconverged_resource: The HyperConverged resource to patch
@@ -35,19 +36,20 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
     Yields:
         None
     """
-    spec_patch = {"featureGates": {"decentralizedLiveMigration": True}}
-
     # Only configure network if provided
-    virt_handler_daemonset = None
-    if network_for_live_migration:
-        LOGGER.info("Adding live migration network configuration to HCO spec patch")
-        spec_patch["liveMigrationConfig"] = {"network": network_for_live_migration.name}
+    if not network_for_live_migration:
+        LOGGER.info("No live migration network provided; skipping HCO network configuration")
+        yield
+        return
 
-        virt_handler_daemonset = get_daemonset_by_name(
-            admin_client=client,
-            daemonset_name=VIRT_HANDLER,
-            namespace_name=hco_namespace.name,
-        )
+    LOGGER.info("Adding live migration network configuration to HCO spec patch")
+    spec_patch = {"liveMigrationConfig": {"network": network_for_live_migration.name}}
+
+    virt_handler_daemonset = get_daemonset_by_name(
+        admin_client=client,
+        daemonset_name=VIRT_HANDLER,
+        namespace_name=hco_namespace.name,
+    )
 
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource: {"spec": spec_patch}},
@@ -55,23 +57,21 @@ def enable_feature_gate_and_configure_hco_live_migration_network(
         wait_for_reconcile_post_update=True,
         admin_client=client,
     ):
-        if network_for_live_migration and virt_handler_daemonset:
-            wait_for_virt_handler_pods_network_updated(
-                client=client,
-                namespace=hco_namespace,
-                network_name=network_for_live_migration.name,
-                virt_handler_daemonset=virt_handler_daemonset,
-            )
-        yield
-
-    if network_for_live_migration and virt_handler_daemonset:
         wait_for_virt_handler_pods_network_updated(
             client=client,
             namespace=hco_namespace,
             network_name=network_for_live_migration.name,
             virt_handler_daemonset=virt_handler_daemonset,
-            migration_network=False,
         )
+        yield
+
+    wait_for_virt_handler_pods_network_updated(
+        client=client,
+        namespace=hco_namespace,
+        network_name=network_for_live_migration.name,
+        virt_handler_daemonset=virt_handler_daemonset,
+        migration_network=False,
+    )
 
 
 def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
@@ -126,13 +126,39 @@ def verify_vms_boot_id_after_cross_cluster_live_migration(
     assert not rebooted_vms, f"Boot id changed for VMs:\n {rebooted_vms}"
 
 
-def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+def get_not_stopped_vms(vms: list[VirtualMachineForTests]) -> dict[str, str]:
     not_stopped_vms = {}
     for vm in vms:
         vm_status = vm.printable_status
         if vm_status != vm.Status.STOPPED:
             not_stopped_vms[vm.name] = vm_status
-    assert not not_stopped_vms, f"Source VMs are not stopped: {not_stopped_vms}"
+    if not_stopped_vms:
+        LOGGER.info(f"VMs are not stopped: {not_stopped_vms}")
+    return not_stopped_vms
+
+
+def assert_vms_are_stopped(vms: list[VirtualMachineForTests]) -> None:
+    not_stopped_vms = get_not_stopped_vms(vms=vms)
+    assert not not_stopped_vms, f"VMs are not stopped: {not_stopped_vms}"
+
+
+def wait_for_vms_to_be_stopped(vms: list[VirtualMachineForTests]) -> None:
+    LOGGER.info("Waiting for VMs to stop")
+    not_stopped_vms = {}
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_3MIN,
+            sleep=TIMEOUT_5SEC,
+            func=get_not_stopped_vms,
+            vms=vms,
+        ):
+            not_stopped_vms = sample
+            if not not_stopped_vms:
+                LOGGER.info("All VMs are stopped")
+                return
+            LOGGER.info(f"Waiting for VMs to stop: {not_stopped_vms}")
+    except TimeoutExpiredError:
+        raise AssertionError(f"VMs did not stop within timeout: {not_stopped_vms}")
 
 
 def assert_vms_can_be_deleted(vms: list[VirtualMachineForTests]) -> None:

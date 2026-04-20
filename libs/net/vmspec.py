@@ -4,7 +4,7 @@ from typing import Any, Final
 
 from kubernetes.dynamic.client import ResourceField
 from ocp_resources.virtual_machine import VirtualMachine
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
+from timeout_sampler import retry
 
 from libs.vm.spec import Network
 from libs.vm.vm import BaseVirtualMachine
@@ -59,38 +59,36 @@ def lookup_iface_status(
     Raises:
         VMInterfaceStatusNotFoundError: If the requested interface was not found in the vmi status.
     """
-    sampler = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=RETRY_INTERVAL_SEC,
-        func=_lookup_iface_status,
-        vm=vm,
-        iface_name=iface_name,
-        predicate=predicate,
-    )
-    try:
-        for iface in sampler:
-            if iface:
+    if iface := _lookup_iface_status(interfaces=vm.vmi.interfaces, iface_name=iface_name, predicate=predicate):
+        return iface
+
+    for event in vm.vmi.watcher(timeout=timeout):
+        if event["type"] != "MODIFIED":
+            continue
+        if interfaces := event["object"].status.interfaces:
+            if iface := _lookup_iface_status(interfaces=interfaces, iface_name=iface_name, predicate=predicate):
                 return iface
-    except TimeoutExpiredError:
-        raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
+
+    raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
 
 
-def _lookup_iface_status(vm: VirtualMachine, iface_name: str, predicate: Callable[[Any], bool]) -> ResourceField | None:
+def _lookup_iface_status(
+    interfaces: list[ResourceField], iface_name: str, predicate: Callable[[Any], bool]
+) -> ResourceField | None:
     """
-    Returns the interface requested if found and the predicate function (to which the interface is
-    sent) Else, returns None.
+    Returns the interface requested if found and the predicate function returns True, else None.
 
     Args:
-        vm: VM in which to search for the network interface.
+        interfaces: List of VMI interface status objects to search through.
         iface_name: The name of the requested interface.
         predicate: A function that takes a network interface as an argument
-            and returns a boolean value. this function should define the condition that
+            and returns a boolean value. This function should define the condition that
             the interface needs to meet.
 
     Returns:
         iface (ResourceField) | None: The requested interface or None
     """
-    for iface in vm.vmi.interfaces:
+    for iface in interfaces:
         if iface.name == iface_name and predicate(iface):
             return iface
     return None
@@ -115,7 +113,7 @@ def wait_for_missing_iface_status(vm: BaseVirtualMachine, iface_name: str) -> bo
     Raises:
         VMInterfaceStatusStillExistsError: If the interface still exists after the timeout period.
     """
-    if _lookup_iface_status(vm=vm, iface_name=iface_name, predicate=lambda _: True) is not None:
+    if _lookup_iface_status(interfaces=vm.vmi.interfaces, iface_name=iface_name, predicate=lambda _: True) is not None:
         raise VMInterfaceStatusStillExistsError(f"Interface {iface_name} still exists in {vm.name}")
 
     return True
@@ -165,3 +163,30 @@ def _lookup_first_ip_address(
     ip_family: int,
 ) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
     return next((ip for ip_addr in ip_addresses if (ip := ipaddress.ip_address(ip_addr)).version == ip_family), None)
+
+
+def wait_for_ifaces_status(
+    vm: BaseVirtualMachine,
+    ip_addresses_by_spec_net_name: dict[str, list[str]],
+) -> None:
+    """Wait for all VM interfaces to be ready.
+
+    Args:
+        vm: The virtual machine to wait for.
+        ip_addresses_by_spec_net_name: Mapping of spec network name to its expected IP addresses.
+            Primary (masquerade) interfaces are detected automatically from the VM spec.
+    """
+    for iface in vm.template_spec.domain.devices.interfaces:  # type: ignore
+        if iface.masquerade is not None:
+            lookup_iface_status(vm=vm, iface_name=iface.name)
+        else:
+            lookup_iface_status(
+                vm=vm,
+                iface_name=iface.name,
+                predicate=lambda iface_status: (
+                    "guest-agent" in iface_status["infoSource"]
+                    and all(
+                        ip in iface_status.get("ipAddresses", []) for ip in ip_addresses_by_spec_net_name[iface.name]
+                    )
+                ),
+            )

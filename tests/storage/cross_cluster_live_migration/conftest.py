@@ -2,21 +2,20 @@ import logging
 import os
 import re
 import tempfile
-from copy import deepcopy
 
 import pytest
 import requests
 import yaml
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
-from ocp_resources.forklift_controller import ForkliftController
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.migration import Migration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
 from ocp_resources.network_map import NetworkMap
 from ocp_resources.plan import Plan
 from ocp_resources.provider import Provider
-from ocp_resources.resource import ResourceEditor, get_client
+from ocp_resources.resource import get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.storage_map import StorageMap
@@ -28,22 +27,34 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
+from tests.os_params import WINDOWS_2022
 from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.cross_cluster_live_migration.utils import (
-    enable_feature_gate_and_configure_hco_live_migration_network,
+    configure_hco_live_migration_network,
     get_vm_boot_id_via_console,
 )
+from utilities.artifactory import (
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     RHEL10_PREFERENCE,
     RHEL10_STR,
     TIMEOUT_1MIN,
     TIMEOUT_30SEC,
+    U1_LARGE,
     U1_SMALL,
     Images,
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
-from utilities.storage import data_volume_template_with_source_ref_dict, write_file
+from utilities.storage import (
+    data_volume_template_with_source_ref_dict,
+    write_file,
+)
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -169,16 +180,13 @@ def remote_cluster_hyperconverged_resource_scope_package(remote_admin_client, re
 
 
 @pytest.fixture(scope="package")
-def local_cluster_enabled_feature_gate_and_configured_hco_live_migration_network(
+def local_cluster_configured_hco_live_migration_network(
     hyperconverged_resource_scope_package,
     admin_client,
     local_cluster_network_for_live_migration,
     hco_namespace,
 ):
-    """
-    Configure HCO with both decentralized live migration feature gate and live migration network.
-    """
-    yield from enable_feature_gate_and_configure_hco_live_migration_network(
+    yield from configure_hco_live_migration_network(
         hyperconverged_resource=hyperconverged_resource_scope_package,
         client=admin_client,
         network_for_live_migration=local_cluster_network_for_live_migration,
@@ -213,16 +221,13 @@ def remote_cluster_network_for_live_migration(
 
 
 @pytest.fixture(scope="package")
-def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_network(
+def remote_cluster_configured_hco_live_migration_network(
     remote_cluster_hyperconverged_resource_scope_package,
     remote_admin_client,
     remote_cluster_network_for_live_migration,
     remote_cluster_hco_namespace,
 ):
-    """
-    Configure the live migration network for HyperConverged resource on the remote cluster.
-    """
-    yield from enable_feature_gate_and_configure_hco_live_migration_network(
+    yield from configure_hco_live_migration_network(
         hyperconverged_resource=remote_cluster_hyperconverged_resource_scope_package,
         client=remote_admin_client,
         network_for_live_migration=remote_cluster_network_for_live_migration,
@@ -233,21 +238,6 @@ def remote_cluster_enabled_feature_gate_and_configured_hco_live_migration_networ
 @pytest.fixture(scope="package")
 def mtv_namespace(admin_client):
     return Namespace(name="openshift-mtv", client=admin_client, ensure_exists=True)
-
-
-@pytest.fixture(scope="package")
-def forklift_controller_resource_scope_package(admin_client, mtv_namespace):
-    return ForkliftController(
-        name="forklift-controller", namespace=mtv_namespace.name, client=admin_client, ensure_exists=True
-    )
-
-
-@pytest.fixture(scope="package")
-def local_cluster_enabled_mtv_feature_gate_ocp_live_migration(forklift_controller_resource_scope_package):
-    forklift_spec_dict = deepcopy(forklift_controller_resource_scope_package.instance.to_dict()["spec"])
-    forklift_spec_dict["feature_ocp_live_migration"] = "true"
-    with ResourceEditor(patches={forklift_controller_resource_scope_package: {"spec": forklift_spec_dict}}):
-        yield
 
 
 @pytest.fixture(scope="module")
@@ -476,6 +466,61 @@ def vm_for_cclm_with_instance_type(
 
 
 @pytest.fixture(scope="class")
+def remote_cluster_artifactory_secret_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_secret = get_artifactory_secret(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_secret
+    if artifactory_secret:
+        artifactory_secret.clean_up()
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    artifactory_config_map = get_artifactory_config_map(
+        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
+    )
+    yield artifactory_config_map
+    if artifactory_config_map:
+        artifactory_config_map.clean_up()
+
+
+@pytest.fixture(scope="class")
+def vm_for_cclm_windows_with_instance_type(
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_artifactory_secret_scope_class,
+    remote_cluster_artifactory_config_map_scope_class,
+):
+    dv = DataVolume(
+        client=remote_admin_client,
+        name="dv-windows",
+        namespace=remote_cluster_source_test_namespace.name,
+        api_name="storage",
+        source="registry",
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
+        secret=remote_cluster_artifactory_secret_scope_class,
+        cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,
+    )
+    dv.to_dict()
+    dv.res["metadata"].pop("namespace", None)
+
+    with VirtualMachineForTests(
+        name="vm-windows-with-instance-type",
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=remote_admin_client),
+        vm_preference=VirtualMachineClusterPreference(name="windows.2k22", client=remote_admin_client),
+        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
 def vms_for_cclm(request):
     """
     Only fixtures from the "vms_fixtures" test param will be called
@@ -487,9 +532,11 @@ def vms_for_cclm(request):
 
 
 @pytest.fixture(scope="class")
-def booted_vms_for_cclm(vms_for_cclm):
+def booted_vms_for_cclm(vms_for_cclm, dv_wait_timeout):
     for vm in vms_for_cclm:
-        running_vm(vm=vm, check_ssh_connectivity=False)  # False because we can't ssh to a VM in the remote cluster
+        running_vm(
+            vm=vm, dv_wait_timeout=dv_wait_timeout, check_ssh_connectivity=False
+        )  # False because we can't ssh to a VM in the remote cluster
     return vms_for_cclm
 
 

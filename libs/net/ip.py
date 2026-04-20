@@ -3,6 +3,8 @@ import random
 from functools import cache
 from typing import Final
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+
 _MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION: Final[int] = 16
 _MAX_NUM_OF_RANDOM_HEXTETS_PER_SESSION: Final[int] = 16
 _IPV4_ADDRESS_SUBNET_PREFIX_VMI: Final[str] = "172.16"
@@ -77,6 +79,27 @@ def _random_hextets(count: int) -> list[int]:
         list[int]: A list of unique random integers representing hextet values.
     """
     return random.sample(range(1, 0xFFFE), count)
+
+
+def random_ip_addresses_by_family(
+    net_seed: int,
+    host_address: int,
+) -> list[str]:
+    """Generate IP addresses for each IP family supported by the cluster network stack.
+
+    Args:
+        net_seed: Seed index for selecting the random network portion of the address.
+        host_address: Host portion of the address, used to place VMs on the same subnet.
+
+    Returns:
+        List of IP address strings, one per IP family supported by the cluster.
+    """
+    ips = []
+    if ipv4_supported_cluster():
+        ips.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
+    if ipv6_supported_cluster():
+        ips.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
+    return ips
 
 
 def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:

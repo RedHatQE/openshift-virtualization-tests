@@ -8,6 +8,14 @@ NVIDIA_VFIO_MANAGER_DS = "nvidia-vfio-manager"
 
 # vGPU constants
 NVIDIA_VGPU_MANAGER_DS = "nvidia-vgpu-manager-daemonset"
+NVIDIA_VGPU_DEVICE_MANAGER_DS = "nvidia-vgpu-device-manager"
+NVIDIA_SANDBOX_VALIDATOR_DS = "nvidia-sandbox-validator"
+NVIDIA_SANDBOX_DEVICE_PLUGIN_DS = "nvidia-sandbox-device-plugin-daemonset"
+SANDBOX_DEVICE_PLUGIN_DEPLOY_LABEL = "nvidia.com/gpu.deploy.sandbox-device-plugin"
+SANDBOX_VALIDATOR_DEPLOY_LABEL = "nvidia.com/gpu.deploy.sandbox-validator"
+VGPU_DEVICE_MANAGER_DEPLOY_LABEL = "nvidia.com/gpu.deploy.vgpu-device-manager"
+VGPU_CONFIG_LABEL = "nvidia.com/vgpu.config"
+GPU_WORKLOAD_CONFIG_LABEL = "nvidia.com/gpu.workload.config"
 NVIDIA_GRID_DRIVER_NAME = "NVIDIA GRID"
 
 
@@ -43,13 +51,13 @@ GPU_CARDS_MAP = {
     "10de:25b6": {
         DEVICE_ID_STR: "10de:25b6",
         GPU_DEVICE_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/GA107GL_Ampere_A2",
-        VGPU_DEVICE_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/GRID_A2_2Q",
+        VGPU_DEVICE_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/NVIDIA_A2-2Q",
         GPU_PRETTY_NAME_STR: "NVIDIA A2",
         VGPU_PRETTY_NAME_STR: "NVIDIA A2",
         MDEV_NAME_STR: "NVIDIA A2-2Q",
         MDEV_AVAILABLE_INSTANCES_STR: "8",
         MDEV_TYPE_STR: "nvidia-745",
-        VGPU_GRID_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/GRID_A2_4Q",
+        VGPU_GRID_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/NVIDIA_A2-4Q",
         MDEV_GRID_NAME_STR: "NVIDIA A2-4Q",
         MDEV_GRID_AVAILABLE_INSTANCES_STR: "4",
         MDEV_GRID_TYPE_STR: "nvidia-746",
