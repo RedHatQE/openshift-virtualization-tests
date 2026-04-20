@@ -16,7 +16,7 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
-    get_all_cnv_alerts,
+    get_all_firing_cnv_alerts,
     get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
@@ -170,7 +170,9 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 
 
 @pytest.fixture()
-def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
+def approved_cnv_upgrade_install_plan(
+    admin_client, hco_namespace, hco_target_csv_name, is_production_source, upgrade_start_timestamp
+):
     approve_cnv_upgrade_install_plan(
         client=admin_client,
         hco_namespace=hco_namespace.name,
@@ -285,7 +287,7 @@ def updated_ocp_upgrade_channel(extracted_ocp_version_from_image_url, cluster_ve
 
 
 @pytest.fixture()
-def triggered_ocp_upgrade(ocp_image_url, is_disconnected_cluster):
+def triggered_ocp_upgrade(ocp_image_url, is_disconnected_cluster, upgrade_start_timestamp):
     image_url = ocp_image_url
     if is_disconnected_cluster:
         image_info = get_oc_image_info(image=ocp_image_url, pull_secret=generate_openshift_pull_secret_file())
@@ -316,10 +318,10 @@ def upgrade_start_timestamp():
 
 
 @pytest.fixture(scope="session")
-def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir, upgrade_start_timestamp):
-    cnv_alerts = get_all_cnv_alerts(
+def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir):
+    cnv_alerts = get_all_firing_cnv_alerts(
         prometheus=prometheus,
-        file_name=f"before_{pytestconfig.option.upgrade}_upgrade_alerts.json",
+        file_name=f"before_{pytestconfig.option.upgrade}_upgrade_firing_cnv_alerts.json",
         base_directory=alert_dir,
     )
     return {alert["labels"]["alertname"] for alert in cnv_alerts}
@@ -495,7 +497,7 @@ def ocp_version_non_eus_to_eus_from_image_url(eus_ocp_image_urls):
 
 
 @pytest.fixture()
-def triggered_source_eus_to_non_eus_ocp_upgrade(eus_ocp_image_urls):
+def triggered_source_eus_to_non_eus_ocp_upgrade(eus_ocp_image_urls, upgrade_start_timestamp):
     run_ocp_upgrade_command(ocp_image_url=eus_ocp_image_urls[0])
 
 

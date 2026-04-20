@@ -463,7 +463,7 @@ def verify_upgrade_ocp(
     )
 
 
-def get_all_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: str) -> list[dict[str, Any]]:
+def get_all_firing_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: str) -> list[dict[str, Any]]:
     """Returns all currently firing CNV alerts.
 
     Args:
@@ -472,14 +472,14 @@ def get_all_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: s
         base_directory: Directory path for writing alert data files.
 
     Returns:
-        List of alert dicts for alerts with kubernetes_operator_part_of=kubevirt.
+        List of alert dicts for firing alerts with kubernetes_operator_part_of=kubevirt.
     """
     cnv_alerts = [
         alert
         for alert in prometheus.alerts()["data"].get("alerts", [])
-        if alert["labels"].get("kubernetes_operator_part_of") == "kubevirt"
+        if alert["labels"].get("kubernetes_operator_part_of") == "kubevirt" and alert["state"] == FIRING_STATE
     ]
-    LOGGER.info(f"CNV alerts: {[alert['labels']['alertname'] for alert in cnv_alerts]}")
+    LOGGER.info(f"Firing CNV alerts: {[alert['labels']['alertname'] for alert in cnv_alerts]}")
     write_to_file(
         base_directory=base_directory,
         file_name=file_name,
@@ -491,27 +491,22 @@ def get_all_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: s
 def query_alerts_fired_in_range(
     prometheus: Prometheus,
     start_time: datetime,
-    end_time: datetime,
-    step: str = "30s",
 ) -> list[dict[str, Any]]:
-    """Returns raw CNV firing-alert results from a PromQL range query.
+    """Returns raw CNV firing-alert results since start_time using a range vector selector.
 
-    Includes alerts that have since resolved because range queries cover historical data.
+    Uses an instant query with a PromQL range vector selector to retrieve all alert
+    samples since start_time, including alerts that have since resolved.
 
     Args:
         prometheus: Prometheus client instance.
-        start_time: Start of the time range.
-        end_time: End of the time range.
-        step: Query resolution step.
+        start_time: Start of the lookback window.
 
     Returns:
         List of result dicts, each containing 'metric' labels and 'values' timestamps.
     """
-    query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}'
-    response = prometheus._get_response(
-        query=f"{prometheus.api_v1}/query_range?query={query}"
-        f"&start={start_time.isoformat()}&end={end_time.isoformat()}&step={step}"
-    )
+    duration_seconds = int((datetime.now(tz=timezone.utc) - start_time).total_seconds())
+    query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}[{duration_seconds}s]'
+    response = prometheus.query(query=query)
     return response.get("data", {}).get("result", [])
 
 
@@ -523,9 +518,9 @@ def get_alerts_fired_during_upgrade(
 ) -> dict[str, list[dict[str, Any]]]:
     """Returns new alerts that fired during the upgrade, grouped by alertname.
 
-    Uses a PromQL range query over the upgrade window to catch all alerts that reached
-    firing state, including those that resolved before this function runs. Filters out
-    alerts that were already firing before the upgrade started.
+    Uses an instant query with a PromQL range vector selector over the upgrade window to
+    catch all alerts that reached firing state, including those that resolved before this
+    function runs. Filters out alerts that were already firing before the upgrade started.
 
     Args:
         prometheus: Prometheus client instance.
@@ -539,7 +534,6 @@ def get_alerts_fired_during_upgrade(
     fired_alerts = query_alerts_fired_in_range(
         prometheus=prometheus,
         start_time=upgrade_start_time,
-        end_time=datetime.now(tz=timezone.utc),
     )
 
     alerts_by_name: dict[str, list[dict[str, Any]]] = {}
@@ -552,7 +546,7 @@ def get_alerts_fired_during_upgrade(
         write_to_file(
             base_directory=base_directory,
             file_name="alerts_fired_during_upgrade.json",
-            content=json.dumps(alerts_by_name, indent=2),
+            content=json.dumps(fired_alerts, indent=2),
         )
     return alerts_by_name
 
