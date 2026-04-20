@@ -11,6 +11,7 @@ from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
+    KUBEMACPOOL_SERVICE,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -31,6 +32,7 @@ from utilities.constants import (
     SSP_KUBEVIRT_HYPERCONVERGED,
     TLS_SECURITY_PROFILE,
 )
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
@@ -115,12 +117,18 @@ def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
 
 @pytest.mark.polarion("CNV-9266")
 def test_default_crypto_policy_check_connectivity(
-    workers, workers_utility_pods, services_to_check_connectivity, fips_enabled_cluster
+    workers, workers_utility_pods, services_to_check_connectivity, fips_enabled_cluster, subtests
 ):
-    assert_tls_version_connection(
-        utility_pods=workers_utility_pods,
-        node=workers[0],
-        services=services_to_check_connectivity,
-        minimal_version=MIN_TLS_VERSIONS[TLS_INTERMEDIATE_POLICY],
-        fips_enabled=fips_enabled_cluster,
-    )
+    for service in services_to_check_connectivity:
+        service_name = service.name
+        with subtests.test(msg=service_name):
+            if service_name == KUBEMACPOOL_SERVICE and is_jira_open(jira_id="CNV-84884"):
+                pytest.xfail(reason="CNV-84884: kubemacpool-service rejects TLS 1.2 under intermediate profile")
+
+            assert_tls_version_connection(
+                utility_pods=workers_utility_pods,
+                node=workers[0],
+                services=[service],
+                minimal_version=MIN_TLS_VERSIONS[TLS_INTERMEDIATE_POLICY],
+                fips_enabled=fips_enabled_cluster,
+            )

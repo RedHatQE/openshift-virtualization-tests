@@ -56,3 +56,4 @@ HCO_DEFAULT_FEATUREGATES = {
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
+KUBEMACPOOL_SERVICE = "kubemacpool-service"

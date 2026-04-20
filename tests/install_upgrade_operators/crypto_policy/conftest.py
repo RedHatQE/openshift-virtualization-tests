@@ -12,6 +12,7 @@ from ocp_resources.ssp import SSP
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
     KEY_PATH_SEPARATOR,
+    KUBEMACPOOL_SERVICE,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -106,7 +107,7 @@ def services_to_check_connectivity(hco_namespace, admin_client):
         "ssp-operator-service",
         "ssp-operator-metrics",
         "virt-template-validator",
-        "kubemacpool-service",
+        KUBEMACPOOL_SERVICE,
         "cdi-api",
         "hostpath-provisioner-operator-service",
     ]
