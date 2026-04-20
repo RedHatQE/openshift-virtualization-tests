@@ -100,15 +100,14 @@ def wait_for_install_plan(
                 # disabled at this point.
                 if ip.exists:
                     ip_instance = ip.instance
-                    if not is_production_source:
-                        if (
-                            not ip_instance.spec.approved
-                            and ip_instance.status
-                            and ip_instance.status.bundleLookups[0].get("catalogSourceRef").get("name")
-                            == PRODUCTION_CATALOG_SOURCE
-                        ):
-                            ip.clean_up()
-                            continue
+                    if not is_production_source and (
+                        not ip_instance.spec.approved
+                        and ip_instance.status
+                        and ip_instance.status.bundleLookups[0].get("catalogSourceRef").get("name")
+                        == PRODUCTION_CATALOG_SOURCE
+                    ):
+                        ip.clean_up()
+                        continue
                     if (
                         hco_target_csv_name == ip_instance.spec.clusterServiceVersionNames[0]
                         and ip.name == install_plan_name_in_subscription
