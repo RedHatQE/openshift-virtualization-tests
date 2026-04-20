@@ -7,22 +7,25 @@ Utility functions and context managers for online resize tests
 import logging
 import shlex
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import bitmath
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachine
+
+from tests.storage.online_resize.constants import (
+    RHEL_DV_SIZE,
+    STORED_FILENAME,
+)
 from utilities.constants import TIMEOUT_4MIN
 from utilities.storage import create_dv
 from utilities.virt import running_vm
 
 LOGGER = logging.getLogger(__name__)
-SMALLEST_POSSIBLE_EXPAND = "1Gi"
-STORED_FILENAME = "random_data_file"
-
-# Increase DV size to 40Gi because source storage size should be larger than the target storage size
-RHEL_DV_SIZE = "40Gi"
 
 
 @contextmanager
@@ -102,11 +105,20 @@ def expand_pvc(dv, size_change):
     })
 
 
-def get_resize_count(vm):
-    commands = shlex.split("sudo dmesg | grep -c 'new size' || true")
-    result = run_ssh_commands(host=vm.ssh_exec, commands=commands)[0]
+def get_block_device_size_bytes(vm: "VirtualMachine", device: str = "/dev/vda") -> int:
+    """
+    Get block device size in bytes using lsblk.
 
-    return int(result)
+    Args:
+        vm: VM to run command on
+        device: Block device to check (e.g., /dev/vda)
+
+    Returns:
+        int: Block device size in bytes
+    """
+    commands = shlex.split(f"lsblk -b -d -n -o SIZE {device}")
+    result = run_ssh_commands(host=vm.ssh_exec, commands=commands)[0]
+    return int(result.strip())
 
 
 def check_file_unchanged(orig_cksum, vm):
@@ -117,28 +129,40 @@ def check_file_unchanged(orig_cksum, vm):
 
 
 @contextmanager
-def wait_for_resize(vm, count=1):
-    starting_count = get_resize_count(vm=vm)
-    desired_count = starting_count + count
+def wait_for_resize(vm, devices=("/dev/vda",)):
+    """
+    Captures block device sizes before block executes, waits for all to increase after block exits.
+
+    Uses lsblk to verify block device sizes increased, which directly reflects PVC expansion.
+
+    Args:
+        vm: VM to monitor for block device size changes
+        devices: Tuple of block devices to monitor (e.g., ("/dev/vda", "/dev/vdc" (Second DV device)))
+
+    Raises:
+        TimeoutExpiredError: If any block device size doesn't increase
+    """
+    starting_sizes = {device: get_block_device_size_bytes(vm=vm, device=device) for device in devices}
     yield
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_4MIN,
-        sleep=5,
-        func=get_resize_count,
-        vm=vm,
-    )
-    try:
-        for sample in samples:
-            current_resize_count = sample
-            LOGGER.info(
-                f"Current resize count is {current_resize_count}. Waiting until resize count is {desired_count}"
-            )
-            if current_resize_count in (desired_count, desired_count + 1):
-                break
-    except TimeoutExpiredError:
-        dmesg = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("dmesg"))[0]
-        LOGGER.error(f"Failed to reach resize count {desired_count}.\ndmesg:\n{dmesg}")
-        raise
+    for device, starting_size in starting_sizes.items():
+        samples = TimeoutSampler(
+            wait_timeout=TIMEOUT_4MIN,
+            sleep=5,
+            func=get_block_device_size_bytes,
+            vm=vm,
+            device=device,
+        )
+        try:
+            for sample in samples:
+                current_size = sample
+                LOGGER.info(f"[{device}] Current size: {current_size} bytes. Waiting to exceed {starting_size} bytes")
+                if current_size > starting_size:
+                    LOGGER.info(f"[{device}] Expanded from {starting_size} to {current_size} bytes")
+                    break
+        except TimeoutExpiredError:
+            lsblk_output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("lsblk -b"))[0]
+            LOGGER.error(f"[{device}] Size did not increase.\nlsblk -b:\n{lsblk_output}")
+            raise
 
 
 @contextmanager
