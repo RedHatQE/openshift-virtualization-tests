@@ -4,7 +4,10 @@
 
 from unittest.mock import MagicMock, patch
 
-from utilities.cluster import cache_admin_client
+import pytest
+from timeout_sampler import TimeoutExpiredError
+
+from utilities.cluster import cache_admin_client, get_oc_whoami_username
 
 
 class TestCacheAdminClient:
@@ -99,3 +102,88 @@ class TestCacheAdminClient:
         info = cache_admin_client.cache_info()
         assert info.hits == 2
         assert info.misses == 1
+
+
+class TestGetOcWhoamiUsername:
+    """Test cases for get_oc_whoami_username function"""
+
+    @patch("utilities.cluster.TimeoutSampler")
+    def test_returns_username_on_first_attempt(self, mock_sampler):
+        """Test that username is returned immediately when oc whoami succeeds"""
+        mock_sampler.return_value = ["system:admin"]
+
+        result = get_oc_whoami_username()
+
+        assert result == "system:admin"
+
+    @patch("utilities.cluster.TimeoutSampler")
+    def test_returns_username_after_retry(self, mock_sampler):
+        """Test that username is returned after an initial empty result"""
+        mock_sampler.return_value = ["", "system:admin"]
+
+        result = get_oc_whoami_username()
+
+        assert result == "system:admin"
+
+    @patch("utilities.cluster.TimeoutSampler")
+    def test_raises_on_timeout(self, mock_sampler):
+        """Test that TimeoutExpiredError propagates when oc whoami never succeeds"""
+        mock_sampler.side_effect = TimeoutExpiredError("Timeout")
+
+        with pytest.raises(TimeoutExpiredError):
+            get_oc_whoami_username()
+
+    @patch("utilities.cluster.TimeoutSampler")
+    def test_sampler_called_with_correct_args(self, mock_sampler):
+        """Test that TimeoutSampler is constructed with the expected parameters"""
+        mock_sampler.return_value = ["kubeadmin"]
+
+        get_oc_whoami_username(wait_timeout=60, sleep=5)
+
+        call_kwargs = mock_sampler.call_args[1]
+        assert call_kwargs["wait_timeout"] == 60
+        assert call_kwargs["sleep"] == 5
+
+    @patch("utilities.cluster.TimeoutSampler")
+    @patch("utilities.cluster.run_command")
+    def test_whoami_inner_function_success(self, mock_run_command, mock_sampler):
+        """Test that _whoami calls run_command and returns stripped stdout on success"""
+        mock_run_command.return_value = (True, "system:admin\n", "")
+
+        def call_func_once(*args, **kwargs):
+            return [kwargs["func"]()]
+
+        mock_sampler.side_effect = call_func_once
+
+        result = get_oc_whoami_username()
+
+        assert result == "system:admin"
+        mock_run_command.assert_called_once_with(
+            command=["oc", "whoami"],
+            capture_output=True,
+            check=False,
+            timeout=3,
+        )
+
+    @patch("utilities.cluster.TimeoutSampler")
+    @patch("utilities.cluster.run_command")
+    def test_whoami_inner_function_failure_returns_empty(self, mock_run_command, mock_sampler):
+        """Test that _whoami returns empty string when run_command fails, then retries"""
+        mock_run_command.side_effect = [(False, "", "error"), (True, "kubeadmin\n", "")]
+
+        call_count = 0
+
+        def call_func_twice(*args, **kwargs):
+            nonlocal call_count
+            results = []
+            for _ in range(2):
+                results.append(kwargs["func"]())
+            call_count = len(results)
+            return results
+
+        mock_sampler.side_effect = call_func_twice
+
+        result = get_oc_whoami_username()
+
+        assert result == "kubeadmin"
+        assert mock_run_command.call_count == 2
