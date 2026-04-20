@@ -1,10 +1,13 @@
 import pytest
 
+from tests.install_upgrade_operators.constants import VALID_PRIORITY_CLASS
 from tests.install_upgrade_operators.deployment.utils import (
-    assert_cnv_deployment_container_env_image_not_in_upstream,
-    assert_cnv_deployment_container_image_not_in_upstream,
     validate_liveness_probe_fields,
-    validate_request_fields,
+)
+from tests.install_upgrade_operators.utils import (
+    assert_cnv_resource_container_env_image_not_in_upstream,
+    assert_cnv_resource_container_image_not_in_upstream,
+    validate_resource_request_fields,
 )
 from utilities.constants import (
     ALL_CNV_DEPLOYMENTS,
@@ -41,27 +44,10 @@ def test_liveness_probe(deployment_by_name):
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.parametrize(
-    "deployment_by_name, cpu_min_value",
-    [
-        pytest.param(
-            {"deployment_name": HCO_WEBHOOK},
-            5,
-            marks=(pytest.mark.polarion("CNV-7187")),
-            id="test-hco-webhook-req-param",
-        ),
-        pytest.param(
-            {"deployment_name": HCO_OPERATOR},
-            5,
-            marks=(pytest.mark.polarion("CNV-7188")),
-            id="test-hco-operator-req-param",
-        ),
-    ],
-    indirect=["deployment_by_name"],
-)
-def test_request_param(deployment_by_name, cpu_min_value):
+@pytest.mark.polarion("CNV-14635")
+def test_deployment_request_param(cnv_deployment_by_name):
     """Validates resources.requests fields keys and default cpu values for different deployment objects"""
-    validate_request_fields(deployment=deployment_by_name, cpu_min_value=cpu_min_value)
+    validate_resource_request_fields(resource=cnv_deployment_by_name, cpu_min_value=5)
 
 
 @pytest.mark.gating
@@ -76,6 +62,11 @@ def test_cnv_deployment_priority_class_name(
     elif not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
         pytest.fail(
             f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
+        )
+    elif cnv_deployment_by_name.instance.spec.template.spec.priorityClassName not in VALID_PRIORITY_CLASS:
+        pytest.fail(
+            f"For cnv deployment {cnv_deployment_by_name.name}, \
+            unexpected priority class found: {cnv_deployment_by_name.instance.spec.template.spec.priorityClassName}"
         )
 
 
@@ -98,5 +89,5 @@ def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-8264")
 def test_cnv_deployment_container_image(cnv_deployment_by_name):
-    assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
-    assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
+    assert_cnv_resource_container_image_not_in_upstream(resource=cnv_deployment_by_name)
+    assert_cnv_resource_container_env_image_not_in_upstream(resource=cnv_deployment_by_name)
