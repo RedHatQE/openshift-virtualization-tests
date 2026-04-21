@@ -70,8 +70,9 @@ def fedora_vm_with_instance_type(
 
 
 @pytest.fixture()
-def fedora_dv_with_importer_node(
+def fedora_dv_rwx_with_importer_node(
     admin_client,
+    unprivileged_client,
     namespace,
     storage_class_matrix_rwx_matrix__function__,
 ):
@@ -90,7 +91,7 @@ def fedora_dv_with_importer_node(
         url=QUAY_FEDORA_CONTAINER_IMAGE,
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=storage_class_name,
-        client=admin_client,
+        client=unprivileged_client,
     ) as dv:
         LOGGER.info(f"Getting importer pod for DataVolume {dv.name}")
         importer_pod = wait_dv_and_get_importer(dv=dv, admin_client=admin_client)

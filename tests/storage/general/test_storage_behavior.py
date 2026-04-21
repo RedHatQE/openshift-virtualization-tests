@@ -18,8 +18,6 @@ pytestmark = [
 
 LOGGER = logging.getLogger(__name__)
 
-ALLOCATION_SIZE_BYTES = 42949672960  # 40GiB in bytes
-
 
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-675")
@@ -70,9 +68,10 @@ def test_disk_falloc(fedora_vm_with_instance_type):
     Expected:
         - fallocate command fails with "No space left on device" error
     """
+    allocation_size_bytes = 42949672960  # 40GiB in bytes, assuming DV is about 30Gi
     with console.Console(vm=fedora_vm_with_instance_type) as vm_console:
-        LOGGER.info(f"Attempting to allocate {ALLOCATION_SIZE_BYTES} bytes to trigger disk full error")
-        vm_console.sendline(f"fallocate -l {ALLOCATION_SIZE_BYTES} test-file")
+        LOGGER.info(f"Attempting to allocate {allocation_size_bytes} bytes to trigger disk full error")
+        vm_console.sendline(f"fallocate -l {allocation_size_bytes} test-file")
         vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
@@ -80,7 +79,7 @@ def test_disk_falloc(fedora_vm_with_instance_type):
 def test_vm_from_dv_on_different_node(
     unprivileged_client,
     schedulable_nodes,
-    fedora_dv_with_importer_node,
+    fedora_dv_rwx_with_importer_node,
 ):
     """
     Test that a VM created from a DataVolume runs on a different node than the import operation.
@@ -98,7 +97,7 @@ def test_vm_from_dv_on_different_node(
     Expected:
         - VM runs successfully on a node different from the import operation node
     """
-    dv, importer_pod_node = fedora_dv_with_importer_node
+    dv, importer_pod_node = fedora_dv_rwx_with_importer_node
 
     nodes = [node for node in schedulable_nodes if node.name != importer_pod_node]
     assert nodes, f"No available nodes different from importer pod node {importer_pod_node}"
