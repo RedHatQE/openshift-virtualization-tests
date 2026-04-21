@@ -46,6 +46,7 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
     CNV_TESTS_CONTAINER,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
@@ -507,6 +508,16 @@ def storage_class_name_immediate_binding_scope_module(storage_class_matrix_immed
 @pytest.fixture(scope="session")
 def cluster_csi_drivers_names():
     yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+
+
+@pytest.fixture(scope="module")
+def fedora_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
 
 
 @pytest.fixture(scope="session")
