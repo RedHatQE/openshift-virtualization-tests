@@ -8,6 +8,7 @@ from utilities.pytest_matrix_utils import (  # noqa: E402
     hpp_matrix,
     immediate_matrix,
     online_resize_matrix,
+    rwx_matrix,
     snapshot_matrix,
     wffc_matrix,
     without_snapshot_capability_matrix,
@@ -241,6 +242,55 @@ class TestImmediateMatrix:
         assert result == []
 
 
+class TestRwxMatrix:
+    """Test cases for rwx_matrix function"""
+
+    def test_rwx_matrix_with_rwx_enabled(self):
+        """Test rwx_matrix filters storage classes with ReadWriteMany access mode"""
+        matrix = [
+            {"sc-with-rwx": {"access_mode": "ReadWriteMany", "other": "value"}},
+            {"sc-with-rwo": {"access_mode": "ReadWriteOnce", "other": "value"}},
+            {"sc-with-rwx-2": {"access_mode": "ReadWriteMany", "other": "value"}},
+        ]
+
+        result = rwx_matrix(matrix)
+
+        assert len(result) == 2
+        assert {"sc-with-rwx": {"access_mode": "ReadWriteMany", "other": "value"}} in result
+        assert {"sc-with-rwx-2": {"access_mode": "ReadWriteMany", "other": "value"}} in result
+        assert {"sc-with-rwo": {"access_mode": "ReadWriteOnce", "other": "value"}} not in result
+
+    def test_rwx_matrix_empty_matrix(self):
+        """Test rwx_matrix with empty matrix"""
+        matrix = []
+
+        result = rwx_matrix(matrix)
+
+        assert result == []
+
+    def test_rwx_matrix_no_rwx_enabled(self):
+        """Test rwx_matrix with no RWX storage classes"""
+        matrix = [
+            {"sc-rwo-1": {"access_mode": "ReadWriteOnce", "other": "value"}},
+            {"sc-rwo-2": {"access_mode": "ReadWriteOnce", "other": "value"}},
+        ]
+
+        result = rwx_matrix(matrix)
+
+        assert result == []
+
+    def test_rwx_matrix_missing_access_mode_key(self):
+        """Test rwx_matrix fails fast when access_mode key is missing"""
+        import pytest
+
+        matrix = [
+            {"sc-no-key": {"other": "value"}},
+        ]
+
+        with pytest.raises(KeyError, match="access_mode"):
+            rwx_matrix(matrix)
+
+
 class TestMatrixFunctionSignatures:
     """Test that all matrix functions accept only matrix argument"""
 
@@ -281,5 +331,13 @@ class TestMatrixFunctionSignatures:
         import inspect
 
         sig = inspect.signature(wffc_matrix)
+        params = list(sig.parameters.keys())
+        assert params == ["matrix"]
+
+    def test_rwx_matrix_signature(self):
+        """Test rwx_matrix function signature"""
+        import inspect
+
+        sig = inspect.signature(rwx_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
