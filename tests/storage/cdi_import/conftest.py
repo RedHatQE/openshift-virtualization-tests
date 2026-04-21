@@ -11,7 +11,6 @@ from pytest_testconfig import py_config
 
 from tests.storage.cdi_import.utils import wait_dv_and_get_importer, wait_for_multus_network_status
 from tests.storage.constants import (
-    HPP_STORAGE_CLASSES,
     HTTP,
     QUAY_FEDORA_CONTAINER_IMAGE,
 )
@@ -34,13 +33,6 @@ from utilities.virt import VirtualMachineForTests
 LOGGER = logging.getLogger(__name__)
 BRIDGE_NAME = "br1-dv"
 DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
-
-
-@pytest.fixture()
-def skip_non_shared_storage(storage_class_name_scope_function):
-    """Skip tests if the storage class is non-shared."""
-    if storage_class_name_scope_function in HPP_STORAGE_CLASSES:
-        pytest.skip("Skipping when storage is non-shared")
 
 
 @pytest.fixture()
