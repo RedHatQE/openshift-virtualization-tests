@@ -54,7 +54,7 @@ def fedora_vm_with_instance_type(
     using a DataVolume template from the provided data source.
     """
     with VirtualMachineForTests(
-        name=f"vm-{storage_class_name_scope_function}",
+        name="fedora-vm",
         namespace=namespace.name,
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
