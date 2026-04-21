@@ -17,7 +17,9 @@ from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import (
+    BREW_MIRROR_BASE_URL,
     KEY_PATH_SEPARATOR,
+    KONFLUX_IDMS_NAME,
     RH_IDMS_SOURCE,
 )
 from utilities.constants import (
@@ -321,7 +323,7 @@ def _get_entries_with_missing_mirrors(
 
 
 def apply_konflux_idms(
-    idms: ImageDigestMirrorSet,
+    admin_client: DynamicClient,
     required_mirrors: list[str],
     machine_config_pools: list[MachineConfigPool],
     mcp_conditions: dict[str, list[dict[str, str]]],
@@ -331,34 +333,35 @@ def apply_konflux_idms(
 
     For an existing IDMS with per-image entries, adds missing version mirrors
     to each entry while preserving the existing structure.
-    For a new IDMS, creates it with the provided mirrors.
+    For a new IDMS, creates it with the provided mirrors plus the brew fallback.
 
     Args:
-        idms: The Konflux IDMS resource to create or patch.
+        admin_client: Kubernetes client for IDMS operations.
         required_mirrors: Konflux mirror base URLs (e.g. quay.io/.../v4-22).
         machine_config_pools: Active machine config pools to pause/wait.
         mcp_conditions: Initial MCP conditions for tracking update progress.
         nodes: Cluster nodes to verify readiness after MCP update.
     """
-    if idms.exists:
+    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
+    if not idms.exists:
+        all_mirrors = required_mirrors + [BREW_MIRROR_BASE_URL]
+        image_digest_mirrors = [{"source": RH_IDMS_SOURCE, "mirrors": all_mirrors}]
+        LOGGER.info(f"Creating IDMS {idms.name} with mirrors: {all_mirrors}")
+        with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
+            ImageDigestMirrorSet(
+                name=KONFLUX_IDMS_NAME,
+                client=admin_client,
+                image_digest_mirrors=image_digest_mirrors,
+                teardown=False,
+            ).deploy(wait=True)
+    else:
         updated_entries = _get_entries_with_missing_mirrors(idms=idms, required_mirrors=required_mirrors)
         if not updated_entries:
             LOGGER.warning(f"IDMS {idms.name} already contains all required mirrors.")
             return
-
-    with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
-        if idms.exists:
-            LOGGER.info(f"Patching IDMS {idms.name} with missing mirrors for: {required_mirrors}")
+        LOGGER.info(f"Patching IDMS {idms.name} with missing mirrors for: {required_mirrors}")
+        with ResourceEditor(patches={mcp: {"spec": {"paused": True}} for mcp in machine_config_pools}):
             ResourceEditor(patches={idms: {"spec": {"imageDigestMirrors": updated_entries}}}).update()
-        else:
-            image_digest_mirrors = [{"source": RH_IDMS_SOURCE, "mirrors": required_mirrors}]
-            LOGGER.info(f"Creating IDMS {idms.name} with mirrors: {required_mirrors}")
-            ImageDigestMirrorSet(
-                name=idms.name,
-                client=idms.client,
-                image_digest_mirrors=image_digest_mirrors,
-                teardown=False,
-            ).deploy(wait=True)
     LOGGER.info("Wait for MCP update after IDMS modification.")
     wait_for_mcp_update_completion(
         machine_config_pools_list=machine_config_pools,

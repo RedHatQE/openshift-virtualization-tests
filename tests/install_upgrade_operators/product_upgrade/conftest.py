@@ -3,15 +3,12 @@ import os
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
-from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.resource import ResourceEditor
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
-    BREW_MIRROR_BASE_URL,
-    KONFLUX_IDMS_NAME,
     KONFLUX_MIRROR_BASE_URL,
     KONFLUX_PIPELINE,
     WORKLOAD_UPDATE_STRATEGY_KEY_NAME,
@@ -97,28 +94,25 @@ def required_konflux_mirrors(cnv_target_version, cnv_current_version):
 
 @pytest.fixture()
 def updated_konflux_idms(
-    request,
     admin_client,
     nodes,
     required_konflux_mirrors,
     is_disconnected_cluster,
     active_machine_config_pools,
     machine_config_pools_conditions,
+    iib_build_info,
 ):
     """Ensures Konflux IDMS mirrors are set up if the IIB was built by Konflux pipeline."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
-
-    iib_build_info = request.getfixturevalue("iib_build_info")
     if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
         LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
         return
 
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
     apply_konflux_idms(
-        idms=idms,
-        required_mirrors=required_konflux_mirrors if idms.exists else required_konflux_mirrors + [BREW_MIRROR_BASE_URL],
+        admin_client=admin_client,
+        required_mirrors=required_konflux_mirrors,
         machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
@@ -396,20 +390,18 @@ def eus_unpaused_workload_update(
 
 @pytest.fixture(scope="module")
 def eus_updated_konflux_idms(
-    request,
     admin_client,
     eus_cnv_upgrade_path,
     nodes,
     is_disconnected_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
+    iib_build_info,
 ):
     """Ensures Konflux IDMS mirrors are set up for all EUS upgrade path versions."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
-
-    iib_build_info = request.getfixturevalue("iib_build_info")
     if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
         LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
         return
@@ -422,10 +414,9 @@ def eus_updated_konflux_idms(
             if mirror not in required_mirrors:
                 required_mirrors.append(mirror)
 
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
     apply_konflux_idms(
-        idms=idms,
-        required_mirrors=required_mirrors if idms.exists else required_mirrors + [BREW_MIRROR_BASE_URL],
+        admin_client=admin_client,
+        required_mirrors=required_mirrors,
         machine_config_pools=machine_config_pools,
         mcp_conditions=machine_config_pools_conditions_scope_module,
         nodes=nodes,
