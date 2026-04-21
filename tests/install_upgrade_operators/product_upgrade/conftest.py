@@ -3,17 +3,12 @@ import os
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
-from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.resource import ResourceEditor
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
-    BREW_MIRROR_BASE_URL,
-    KONFLUX_IDMS_NAME,
-    KONFLUX_MIRROR_BASE_URL,
-    KONFLUX_PIPELINE,
     WORKLOAD_UPDATE_STRATEGY_KEY_NAME,
     WORKLOADUPDATEMETHODS,
 )
@@ -38,6 +33,8 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
 )
 from tests.install_upgrade_operators.utils import (
     apply_konflux_idms,
+    is_konflux_pipeline,
+    konflux_mirror_url,
     wait_for_operator_condition,
 )
 from tests.upgrade_params import EUS
@@ -91,34 +88,31 @@ def required_konflux_mirrors(cnv_target_version, cnv_current_version):
     target = Version(version=cnv_target_version)
     current = Version(version=cnv_current_version)
     return [
-        f"{KONFLUX_MIRROR_BASE_URL}/v{target.major}-{minor}" for minor in range(target.minor, current.minor - 1, -1)
+        konflux_mirror_url(version=Version(version=f"{target.major}.{minor}"))
+        for minor in range(target.minor, current.minor - 1, -1)
     ]
 
 
 @pytest.fixture()
 def updated_konflux_idms(
-    request,
     admin_client,
     nodes,
     required_konflux_mirrors,
     is_disconnected_cluster,
     active_machine_config_pools,
     machine_config_pools_conditions,
+    iib_build_info,
 ):
     """Ensures Konflux IDMS mirrors are set up if the IIB was built by Konflux pipeline."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
-
-    iib_build_info = request.getfixturevalue("iib_build_info")
-    if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
-        LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
+    if not is_konflux_pipeline(build_info=iib_build_info):
         return
 
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
     apply_konflux_idms(
-        idms=idms,
-        required_mirrors=required_konflux_mirrors if idms.exists else required_konflux_mirrors + [BREW_MIRROR_BASE_URL],
+        admin_client=admin_client,
+        required_mirrors=required_konflux_mirrors,
         machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
         nodes=nodes,
@@ -396,36 +390,31 @@ def eus_unpaused_workload_update(
 
 @pytest.fixture(scope="module")
 def eus_updated_konflux_idms(
-    request,
     admin_client,
     eus_cnv_upgrade_path,
     nodes,
     is_disconnected_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
+    iib_build_info,
 ):
     """Ensures Konflux IDMS mirrors are set up for all EUS upgrade path versions."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
-
-    iib_build_info = request.getfixturevalue("iib_build_info")
-    if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
-        LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
+    if not is_konflux_pipeline(build_info=iib_build_info):
         return
 
     required_mirrors = []
     for phase in eus_cnv_upgrade_path:
         for version in eus_cnv_upgrade_path[phase]:
-            ver = Version(version=version)
-            mirror = f"{KONFLUX_MIRROR_BASE_URL}/v{ver.major}-{ver.minor}"
+            mirror = konflux_mirror_url(version=Version(version=version))
             if mirror not in required_mirrors:
                 required_mirrors.append(mirror)
 
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
     apply_konflux_idms(
-        idms=idms,
-        required_mirrors=required_mirrors if idms.exists else required_mirrors + [BREW_MIRROR_BASE_URL],
+        admin_client=admin_client,
+        required_mirrors=required_mirrors,
         machine_config_pools=machine_config_pools,
         mcp_conditions=machine_config_pools_conditions_scope_module,
         nodes=nodes,
