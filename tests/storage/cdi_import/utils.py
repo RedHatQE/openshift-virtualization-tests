@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import get_importer_pod
@@ -72,3 +73,28 @@ def wait_dv_and_get_importer(dv: DataVolume, admin_client: DynamicClient) -> Pod
         stop_status=DataVolume.Status.SUCCEEDED,
     )
     return get_importer_pod(client=admin_client, namespace=dv.namespace)
+
+
+def wait_for_multus_network_status(importer_pod: Pod) -> None:
+    """Wait for Multus network-status annotation to be populated on the importer pod.
+
+    Multus CNI populates the network-status annotation asynchronously after the pod starts.
+    This function waits for the annotation to appear before proceeding.
+
+    Args:
+        importer_pod: The importer pod resource.
+
+    Raises:
+        TimeoutExpiredError: If the network-status annotation is not populated within the timeout period.
+    """
+    network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: importer_pod.instance.metadata.annotations.get(network_status_annotation),
+    ):
+        if sample:
+            return
+    raise TimeoutExpiredError(
+        f"Multus {network_status_annotation} annotation was not populated within the timeout period."
+    )

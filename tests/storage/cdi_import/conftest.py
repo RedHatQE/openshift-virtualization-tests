@@ -9,7 +9,7 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from pytest_testconfig import py_config
 
-from tests.storage.cdi_import.utils import wait_dv_and_get_importer
+from tests.storage.cdi_import.utils import wait_dv_and_get_importer, wait_for_multus_network_status
 from tests.storage.constants import (
     HPP_STORAGE_CLASSES,
     HTTP,
@@ -231,4 +231,5 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
         client=namespace.client,
     ) as dv:
         importer_pod = wait_dv_and_get_importer(dv=dv, admin_client=admin_client)
+        wait_for_multus_network_status(importer_pod=importer_pod)
         yield importer_pod.instance.metadata.annotations
