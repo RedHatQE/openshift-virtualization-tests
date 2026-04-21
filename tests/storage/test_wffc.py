@@ -155,6 +155,7 @@ class TestWFFCUploadVirtctl:
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-7413")
+    @pytest.mark.s390x
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
         downloaded_cirros_image_full_path,
