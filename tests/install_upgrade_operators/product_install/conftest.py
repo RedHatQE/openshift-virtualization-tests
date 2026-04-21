@@ -283,12 +283,11 @@ def installed_hpp(cluster_backend_storage, hpp_volume_size):
 @pytest.fixture(scope="session")
 def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_image_url):
     if is_production_source:
-        latest_z_stream = get_latest_stable_released_z_stream_info(
-            minor_version=f"v{ocp_current_version.major}.{ocp_current_version.minor}"
-        )
+        minor_version = f"{ocp_current_version.major}.{ocp_current_version.minor}"
+        latest_z_stream = get_latest_stable_released_z_stream_info(minor_version=f"v{minor_version}")
         LOGGER.info(
-            f"Using production catalog source for: {ocp_current_version},"
-            f" CNV latest stable released version info: {latest_z_stream}"
+            f"Using production catalog source for: {minor_version}. "
+            f"CNV latest stable released version info: {latest_z_stream}"
         )
     else:
         latest_z_stream = get_cnv_info_by_iib(iib=cnv_image_url.split(":")[-1])
