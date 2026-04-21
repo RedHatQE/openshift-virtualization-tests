@@ -7,7 +7,6 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -423,22 +422,4 @@ def test_successful_vm_from_imported_dv_windows(
 ):
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
-    )
-
-
-@pytest.mark.polarion("CNV-5509")
-@pytest.mark.s390x
-def test_importer_pod_annotation(dv_with_annotation, linux_nad):
-    """Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod"""
-    networks_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks"
-    network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
-
-    networks_value = dv_with_annotation.get(networks_annotation)
-    assert networks_value == linux_nad.name, (
-        f"DV annotation is not passed to the importer pod. Expected: {linux_nad.name}, Found: {networks_value}"
-    )
-
-    network_status_value = dv_with_annotation.get(network_status_annotation)
-    assert '"interface": "net1"' in network_status_value, (
-        f"DV annotation is not passed to the importer pod. Expected interface: net1, Found: {network_status_value}"
     )

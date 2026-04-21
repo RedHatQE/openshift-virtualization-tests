@@ -20,7 +20,6 @@ from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
 )
-from utilities.artifactory import get_http_image_url
 from utilities.constants import (
     LINUX_BRIDGE,
     OS_FLAVOR_FEDORA,
@@ -244,7 +243,8 @@ def dv_with_annotation(admin_client, namespace, linux_nad):
     with create_dv(
         dv_name="dv-annotation",
         namespace=namespace.name,
-        url=get_http_image_url(image_directory=Images.Fedora.DIR, image_name=Images.Fedora.LATEST_RELEASE_STR),
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         multus_annotation=linux_nad.name,
