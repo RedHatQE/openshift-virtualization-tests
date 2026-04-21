@@ -425,7 +425,7 @@ def eus_updated_konflux_idms(
     idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
     apply_konflux_idms(
         idms=idms,
-        required_mirrors=required_mirrors,
+        required_mirrors=required_mirrors if idms.exists else required_mirrors + [BREW_MIRROR_BASE_URL],
         machine_config_pools=machine_config_pools,
         mcp_conditions=machine_config_pools_conditions_scope_module,
         nodes=nodes,
