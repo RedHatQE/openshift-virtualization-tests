@@ -1,3 +1,4 @@
+import json
 import logging
 
 import pytest
@@ -198,6 +199,5 @@ def test_importer_pod_annotation(importer_pod_annotations, linux_nad):
     )
 
     network_status_value = importer_pod_annotations.get(network_status_annotation)
-    assert '"interface": "net1"' in network_status_value, (
-        f"DV annotation is not passed to the importer pod. Expected interface: net1, Found: {network_status_value}"
-    )
+    interfaces = [entry["interface"] for entry in json.loads(network_status_value) if "interface" in entry]
+    assert "net1" in interfaces, f"Expected interface: net1, Found: {interfaces}"

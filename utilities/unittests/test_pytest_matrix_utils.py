@@ -2,7 +2,7 @@
 
 """Unit tests for pytest_matrix_utils module"""
 
-import inspect
+from inspect import signature
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -298,41 +298,41 @@ class TestMatrixFunctionSignatures:
     def test_snapshot_matrix_signature(self):
         """Test snapshot_matrix function signature"""
 
-        sig = inspect.signature(snapshot_matrix)
+        sig = signature(snapshot_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
 
     def test_without_snapshot_capability_matrix_signature(self):
         """Test without_snapshot_capability_matrix function signature"""
 
-        sig = inspect.signature(without_snapshot_capability_matrix)
+        sig = signature(without_snapshot_capability_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
 
     def test_online_resize_matrix_signature(self):
         """Test online_resize_matrix function signature"""
 
-        sig = inspect.signature(online_resize_matrix)
+        sig = signature(online_resize_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
 
     def test_hpp_matrix_signature(self):
         """Test hpp_matrix function signature"""
 
-        sig = inspect.signature(hpp_matrix)
+        sig = signature(hpp_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
 
     def test_wffc_matrix_signature(self):
         """Test wffc_matrix function signature"""
 
-        sig = inspect.signature(wffc_matrix)
+        sig = signature(wffc_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]
 
     def test_rwx_matrix_signature(self):
         """Test rwx_matrix function signature"""
 
-        sig = inspect.signature(rwx_matrix)
+        sig = signature(rwx_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]

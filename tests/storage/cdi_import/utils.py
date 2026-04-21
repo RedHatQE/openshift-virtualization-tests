@@ -1,5 +1,7 @@
 """Helper utilities for CDI import tests."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from ocp_resources.datavolume import DataVolume
