@@ -6,7 +6,6 @@ HonorWaitForFirstConsumer test suite
 import logging
 
 import pytest
-from ocp_resources.cdi import CDI
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
@@ -17,15 +16,8 @@ from utilities.constants import (
     TIMEOUT_30SEC,
     Images,
 )
-from utilities.hco import (
-    ResourceEditorValidateHCOReconcile,
-    hco_cr_jsonpatch_annotations_dict,
-)
-from utilities.infra import get_artifactory_config_map, get_artifactory_secret
 from utilities.storage import (
     add_dv_to_vm,
-    cdi_feature_gate_list_with_added_feature,
-    check_cdi_feature_gate_enabled,
     check_disk_count_in_vm,
     check_upload_virtctl_result,
     create_dv,
