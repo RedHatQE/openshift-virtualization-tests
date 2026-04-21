@@ -27,11 +27,6 @@ from utilities.storage import (
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
-pytestmark = [
-    pytest.mark.usefixtures("enable_wffc_feature_gate"),
-    pytest.mark.post_upgrade,
-]
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -155,7 +150,6 @@ class TestWFFCUploadVirtctl:
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-7413")
-    @pytest.mark.s390x
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
         downloaded_cirros_image_full_path,
@@ -179,7 +173,6 @@ class TestWFFCUploadVirtctl:
 
 
 @pytest.mark.sno
-@pytest.mark.s390x
 @pytest.mark.polarion("CNV-4742")
 @pytest.mark.parametrize(
     "blank_dv_wffc_scope_function",
@@ -213,7 +206,6 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 
 
 @pytest.mark.sno
-@pytest.mark.s390x
 @pytest.mark.polarion("CNV-4743")
 @pytest.mark.parametrize(
     "blank_dv_template_wffc_scope_function", [pytest.param({"dv_name": "blank-wffc-4743"})], indirect=True

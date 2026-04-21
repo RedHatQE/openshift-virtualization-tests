@@ -517,3 +517,13 @@ def rhel10_data_source_scope_session(golden_images_namespace):
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
+
+
+@pytest.fixture(scope="module")
+def rhel10_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="rhel10",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
