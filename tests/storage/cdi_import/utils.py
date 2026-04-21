@@ -30,7 +30,7 @@ def get_importer_pod_node(importer_pod: Pod) -> str:
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: importer_pod.instance["spec"].get("nodeName"),
+        func=lambda: importer_pod.instance.spec.nodeName,
     ):
         if sample:
             return sample

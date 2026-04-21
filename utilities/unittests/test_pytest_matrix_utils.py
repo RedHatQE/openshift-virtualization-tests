@@ -2,7 +2,10 @@
 
 """Unit tests for pytest_matrix_utils module"""
 
+import inspect
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from utilities.pytest_matrix_utils import (  # noqa: E402
     hpp_matrix,
@@ -281,8 +284,6 @@ class TestRwxMatrix:
 
     def test_rwx_matrix_missing_access_mode_key(self):
         """Test rwx_matrix fails fast when access_mode key is missing"""
-        import pytest
-
         matrix = [
             {"sc-no-key": {"other": "value"}},
         ]
@@ -296,7 +297,6 @@ class TestMatrixFunctionSignatures:
 
     def test_snapshot_matrix_signature(self):
         """Test snapshot_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(snapshot_matrix)
         params = list(sig.parameters.keys())
@@ -304,7 +304,6 @@ class TestMatrixFunctionSignatures:
 
     def test_without_snapshot_capability_matrix_signature(self):
         """Test without_snapshot_capability_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(without_snapshot_capability_matrix)
         params = list(sig.parameters.keys())
@@ -312,7 +311,6 @@ class TestMatrixFunctionSignatures:
 
     def test_online_resize_matrix_signature(self):
         """Test online_resize_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(online_resize_matrix)
         params = list(sig.parameters.keys())
@@ -320,7 +318,6 @@ class TestMatrixFunctionSignatures:
 
     def test_hpp_matrix_signature(self):
         """Test hpp_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(hpp_matrix)
         params = list(sig.parameters.keys())
@@ -328,7 +325,6 @@ class TestMatrixFunctionSignatures:
 
     def test_wffc_matrix_signature(self):
         """Test wffc_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(wffc_matrix)
         params = list(sig.parameters.keys())
@@ -336,7 +332,6 @@ class TestMatrixFunctionSignatures:
 
     def test_rwx_matrix_signature(self):
         """Test rwx_matrix function signature"""
-        import inspect
 
         sig = inspect.signature(rwx_matrix)
         params = list(sig.parameters.keys())

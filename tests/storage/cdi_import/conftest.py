@@ -210,7 +210,7 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
 
 
 @pytest.fixture()
-def dv_with_annotation(admin_client, namespace, linux_nad):
+def importer_pod_annotations(admin_client, namespace, linux_nad):
     """Create a DV with multus annotation and yield the importer pod annotations."""
     with create_dv(
         dv_name="dv-annotation",
