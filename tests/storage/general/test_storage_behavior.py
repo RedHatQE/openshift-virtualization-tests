@@ -82,7 +82,6 @@ def test_disk_falloc(fedora_vm_with_instance_type):
         vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
-@pytest.mark.destructive
 @pytest.mark.polarion("CNV-3632")
 def test_vm_from_dv_on_different_node(
     admin_client,
