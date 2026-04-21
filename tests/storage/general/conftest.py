@@ -2,13 +2,19 @@
 Storage general tests fixtures
 """
 
+import logging
+
 import pytest
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 
-from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_5MIN, U1_SMALL
+from tests.storage.cdi_import.utils import get_importer_pod_node, wait_dv_and_get_importer
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, TIMEOUT_12MIN, U1_SMALL, Images
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
@@ -61,3 +67,36 @@ def fedora_vm_with_instance_type(
     ) as vm:
         running_vm(vm=vm)
         yield vm
+
+
+@pytest.fixture()
+def fedora_dv_with_importer_node(
+    admin_client,
+    namespace,
+    storage_class_matrix_rwx_matrix__function__,
+):
+    """
+    Provides a DataVolume imported from Quay registry with importer pod node information.
+
+    Returns:
+        Tuple of (DataVolume, importer_pod_node_name) where the DataVolume is ready
+        and importer_pod_node_name is the node where the import operation ran.
+    """
+    storage_class_name = next(iter(storage_class_matrix_rwx_matrix__function__))
+    with create_dv(
+        dv_name=f"fedora-dv-different-node-{storage_class_name}",
+        namespace=namespace.name,
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=storage_class_name,
+        client=admin_client,
+    ) as dv:
+        LOGGER.info(f"Getting importer pod for DataVolume {dv.name}")
+        importer_pod = wait_dv_and_get_importer(dv=dv, admin_client=admin_client)
+        importer_pod_node = get_importer_pod_node(importer_pod=importer_pod)
+        LOGGER.info(f"Importer pod {importer_pod.name} is running on node {importer_pod_node}")
+
+        dv.wait_for_dv_success(timeout=TIMEOUT_12MIN)
+
+        yield dv, importer_pod_node
