@@ -7,7 +7,6 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import py_config
 
 from tests.storage.cdi_import.utils import wait_dv_and_get_importer
@@ -67,25 +66,6 @@ def linux_nad(admin_client, namespace, bridge_on_node):
         client=admin_client,
     ) as nad:
         yield nad
-
-
-@pytest.fixture()
-def data_volume_pvc(
-    data_volume_template_metadata,
-):
-    """Create a PVC from the data volume template metadata."""
-    return PersistentVolumeClaim(
-        name=data_volume_template_metadata["name"],
-        namespace=data_volume_template_metadata["namespace"],
-    )
-
-
-@pytest.fixture()
-def data_volume_pvc_creation_timestamp(
-    data_volume_pvc,
-):
-    """Get the creation timestamp of the data volume PVC."""
-    return data_volume_pvc.instance.metadata.creationTimestamp
 
 
 @pytest.fixture()

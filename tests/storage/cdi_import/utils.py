@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING
 
 from ocp_resources.datavolume import DataVolume
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import get_importer_pod
 from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
@@ -24,18 +24,16 @@ def get_importer_pod_node(importer_pod: Pod) -> str:
         str: The node name where the pod is scheduled.
 
     Raises:
-        TimeoutError: If the importer pod is not scheduled within the timeout period.
+        TimeoutExpiredError: If the importer pod is not scheduled within the timeout period.
     """
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: importer_pod.instance.get("spec", {}).get(
-            "nodeName",
-        ),
+        func=lambda: importer_pod.instance["spec"].get("nodeName"),
     ):
         if sample:
             return sample
-    raise TimeoutError("Importer pod was not scheduled within the timeout period.")
+    raise TimeoutExpiredError("Importer pod was not scheduled within the timeout period.")
 
 
 def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_creation_timestamp: str) -> None:
@@ -46,7 +44,7 @@ def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_creation_timestamp: st
         pvc_creation_timestamp: The original creation timestamp to compare against.
 
     Raises:
-        TimeoutError: If the PVC is not recreated within the timeout period.
+        TimeoutExpiredError: If the PVC is not recreated within the timeout period.
     """
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_20SEC,
@@ -55,7 +53,7 @@ def wait_for_pvc_recreate(pvc: PersistentVolumeClaim, pvc_creation_timestamp: st
     ):
         if sample:
             return
-    raise TimeoutError("PVC was not recreated within the timeout period.")
+    raise TimeoutExpiredError("PVC was not recreated within the timeout period.")
 
 
 def wait_dv_and_get_importer(dv: DataVolume, admin_client: DynamicClient) -> Pod:

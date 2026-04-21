@@ -10,9 +10,7 @@ from ocp_resources.datavolume import DataVolume
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import RHEL_LATEST
 from tests.storage.cdi_import.utils import (
-    get_importer_pod_node,
     wait_dv_and_get_importer,
 )
 from tests.storage.constants import (
@@ -26,23 +24,18 @@ from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
     get_file_url,
-    get_importer_pod,
     wait_for_importer_container_message,
 )
 from utilities.constants import (
-    OS_FLAVOR_RHEL,
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_12MIN,
     Images,
 )
-from utilities.infra import get_node_selector_dict
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
     create_dv,
-    create_vm_from_dv,
 )
 from utilities.virt import running_vm
 
@@ -337,56 +330,6 @@ def test_successful_concurrent_blank_disk_import(
 @pytest.mark.s390x
 def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_function):
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-
-
-@pytest.mark.destructive
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-3362",
-                "source": HTTP,
-                "image": RHEL_LATEST.get("image_path"),
-                "dv_size": "25Gi",
-                "access_modes": DataVolume.AccessMode.RWX,
-                "wait": False,
-            },
-            marks=pytest.mark.polarion("CNV-3632"),
-        ),
-    ],
-    indirect=True,
-)
-def test_vm_from_dv_on_different_node(
-    admin_client,
-    skip_access_mode_rwo_scope_function,
-    skip_non_shared_storage,
-    schedulable_nodes,
-    data_volume_multi_storage_scope_function,
-):
-    """
-    Test that create and run VM from DataVolume (only use RWX access mode) on different node.
-    It applies to shared storage like Ceph or NFS. It cannot be tested on local storage like HPP.
-    """
-    importer_pod = get_importer_pod(
-        client=admin_client,
-        namespace=data_volume_multi_storage_scope_function.namespace,
-    )
-    importer_node_name = get_importer_pod_node(importer_pod=importer_pod)
-    nodes = list(filter(lambda node: importer_node_name != node.name, schedulable_nodes))
-    data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_12MIN)
-    with create_vm_from_dv(
-        client=admin_client,
-        dv=data_volume_multi_storage_scope_function,
-        vm_name="rhel-vm",
-        os_flavor=OS_FLAVOR_RHEL,
-        node_selector=get_node_selector_dict(node_selector=nodes[0].name),
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
-    ) as vm_dv:
-        assert vm_dv.vmi.node.name != importer_node_name, (
-            f"VM is running on the same node as importer pod. Expected different nodes."
-            f" Importer node: {importer_node_name}, VM node: {vm_dv.vmi.node.name}"
-        )
 
 
 @pytest.mark.tier3

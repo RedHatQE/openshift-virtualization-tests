@@ -3,7 +3,7 @@ import logging
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.datavolume import DataVolume
-from referencing import Resource
+from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import (
