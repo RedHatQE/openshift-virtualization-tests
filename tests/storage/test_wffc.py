@@ -27,11 +27,6 @@ from utilities.storage import (
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
-pytestmark = [
-    pytest.mark.usefixtures("enable_wffc_feature_gate"),
-    pytest.mark.post_upgrade,
-]
-
 LOGGER = logging.getLogger(__name__)
 
 
