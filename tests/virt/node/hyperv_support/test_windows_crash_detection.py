@@ -16,6 +16,11 @@ from utilities.constants import TIMEOUT_10SEC
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.virt import running_vm, vm_instance_from_template
 
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.high_resource_vm,
+]
+
 LOGGER = logging.getLogger(__name__)
 
 BSOD_COMMAND = (
