@@ -73,3 +73,11 @@ def immediate_matrix(matrix):
         if storage_class[storage_class_name]["wffc"] is False:
             matrix_to_return.append(storage_class)
     return matrix_to_return
+
+
+def rwx_matrix(matrix):
+    return [
+        storage_class
+        for storage_class in matrix
+        if storage_class[next(iter(storage_class))].get("access_mode") == "ReadWriteMany"
+    ]
