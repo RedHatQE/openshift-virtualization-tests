@@ -19,6 +19,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
+from utilities.infra import is_jira_open
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
@@ -119,6 +120,17 @@ def vm_migration_metrics_vmim(vm_for_migration_metrics_test):
         yield vmim
 
 
+@pytest.fixture()
+def vm_migration_metrics_vmim_scope_function(vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
 @pytest.fixture(scope="class")
 def vm_migration_metrics_vmim_scope_class(vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
@@ -180,7 +192,6 @@ class TestKubevirtVmiMigrationMetrics:
             ),
         ],
     )
-    @pytest.mark.jira("CNV-63029", run=False)
     def test_kubevirt_vmi_migration_metrics(
         self,
         prometheus,
@@ -188,12 +199,14 @@ class TestKubevirtVmiMigrationMetrics:
         admin_client,
         migration_policy_with_bandwidth_scope_class,
         vm_for_migration_metrics_test,
-        vm_migration_metrics_vmim_scope_class,
+        vm_migration_metrics_vmim_scope_function,
         query,
     ):
+        if query == KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES and is_jira_open(jira_id="CNV-84901"):
+            pytest.xfail(f"CNV-84901: metric {query} not triggered")
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
-            metric_name=f"last_over_time({query.format(vm_name=vm_for_migration_metrics_test.name)}[8m])",
+            metric_name=query.format(vm_name=vm_for_migration_metrics_test.name),
         )
 
 
