@@ -178,7 +178,6 @@ class TestWFFCUploadVirtctl:
 
 
 @pytest.mark.sno
-@pytest.mark.s390x
 @pytest.mark.polarion("CNV-4742")
 @pytest.mark.parametrize(
     "blank_dv_wffc_scope_function",
@@ -212,7 +211,6 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 
 
 @pytest.mark.sno
-@pytest.mark.s390x
 @pytest.mark.polarion("CNV-4743")
 @pytest.mark.parametrize(
     "blank_dv_template_wffc_scope_function", [pytest.param({"dv_name": "blank-wffc-4743"})], indirect=True
