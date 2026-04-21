@@ -36,6 +36,7 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
@@ -468,15 +469,17 @@ def assert_windows_directory_existence(
     expected_result: bool, windows_vm: VirtualMachineForTests, directory_path: str
 ) -> None:
     cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
+        0
+    ].strip()
     assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
 
 
 def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path: str) -> None:
     cmd = shlex.split(
-        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory"',
+        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory -Force"',
     )
-    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     assert_windows_directory_existence(
         expected_result=True,
         windows_vm=windows_vm,

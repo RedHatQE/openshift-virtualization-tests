@@ -2209,13 +2209,21 @@ def get_hyperconverged_ovs_annotations(hyperconverged):
     return (hyperconverged.instance.to_dict()["metadata"].get("annotations", {})).get("deployOVS")
 
 
-def get_base_templates_list(client):
-    """Return SSP base templates"""
+def get_base_templates_list(client: DynamicClient) -> list[Template]:
+    """
+    Return base templates list.
+
+    Args:
+        client (DynamicClient): Client to use for getting base templates list.
+
+    Returns:
+        list[Template]: List of base templates.
+    """
     common_templates_list = list(
         Template.get(
             client=client,
             singular_name=Template.singular_name,
-            label_selector=Template.Labels.BASE,
+            label_selector=f"{Template.Labels.BASE},{Template.Labels.ARCHITECTURE}={py_config['cpu_arch']}",
         )
     )
     return [

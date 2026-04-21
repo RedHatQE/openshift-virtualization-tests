@@ -87,11 +87,11 @@ chat:
 knowledge_base:
   opt_out: false
 
-  # Enable code guidelines enforcement from CLAUDE.md and docs
+  # Enable code guidelines enforcement from AGENTS.md (single source of truth)
   code_guidelines:
     enabled: true
     filePatterns:
-      - "CLAUDE.md"
+      - "AGENTS.md"
 
   # Enable learning from repository patterns
   learnings:
