@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
@@ -56,7 +55,6 @@ from utilities.infra import (
     get_prometheus_k8s_token,
     get_related_images_name_and_version,
     get_subscription,
-    wait_for_version_explorer_response,
 )
 from utilities.operator import (
     get_machine_config_pool_by_name,
@@ -71,30 +69,6 @@ from utilities.virt import get_oc_image_info
 LOGGER = logging.getLogger(__name__)
 POD_STR_NOT_MANAGED_BY_HCO = "hostpath-"
 EUS_ERROR_CODE = 98
-
-
-@pytest.fixture(scope="session")
-def iib_build_info(cnv_source, cnv_image_url, admin_client):
-    """Queries Version Explorer for IIB build info.
-
-    Returns:
-        Build info dict for osbs/fbc sources, empty dict for other sources.
-    """
-    if cnv_source in ("osbs", "fbc"):
-        iib_format_match = re.search(r"/iib:(\d+)$", cnv_image_url)
-        assert iib_format_match, f"Cannot extract IIB number from: {cnv_image_url} (expected format: .../iib:<number>)"
-        iib_number = iib_format_match.group(1)
-
-        if build_info := wait_for_version_explorer_response(
-            api_end_point="GetBuildByIIB",
-            query_string=f"iib_number={iib_number}",
-        ):
-            return build_info
-        exit_pytest_execution(
-            admin_client=admin_client,
-            log_message=f"Version Explorer returned empty response for IIB {iib_number}.",
-        )
-    return {}
 
 
 @pytest.fixture(scope="session")
@@ -123,8 +97,8 @@ def required_konflux_mirrors(cnv_target_version, cnv_current_version):
 
 @pytest.fixture()
 def updated_konflux_idms(
+    request,
     admin_client,
-    iib_build_info,
     nodes,
     required_konflux_mirrors,
     is_disconnected_cluster,
@@ -136,6 +110,7 @@ def updated_konflux_idms(
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
 
+    iib_build_info = request.getfixturevalue("iib_build_info")
     if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
         LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
         return
@@ -421,12 +396,24 @@ def eus_unpaused_workload_update(
 
 @pytest.fixture(scope="module")
 def eus_updated_konflux_idms(
+    request,
     admin_client,
     eus_cnv_upgrade_path,
     nodes,
+    is_disconnected_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
 ):
+    """Ensures Konflux IDMS mirrors are set up for all EUS upgrade path versions."""
+    if is_disconnected_cluster:
+        LOGGER.warning("Skip applying IDMS in a disconnected setup.")
+        return
+
+    iib_build_info = request.getfixturevalue("iib_build_info")
+    if iib_build_info.get("pipeline") != KONFLUX_PIPELINE:
+        LOGGER.warning(f"Pipeline is '{iib_build_info.get('pipeline')}', not Konflux. Skipping IDMS.")
+        return
+
     required_mirrors = []
     for phase in eus_cnv_upgrade_path:
         for version in eus_cnv_upgrade_path[phase]:

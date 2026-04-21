@@ -303,10 +303,12 @@ def _get_entries_with_missing_mirrors(
     mirror_entries = idms.instance.to_dict()["spec"]["imageDigestMirrors"]
     has_changes = False
     for entry in mirror_entries:
-        if entry["source"].startswith(RH_IDMS_SOURCE):
+        if entry["source"].startswith(f"{RH_IDMS_SOURCE}/"):
             image_name = entry["source"].removeprefix(f"{RH_IDMS_SOURCE}/")
             mirrors = entry.get("mirrors", [])
-            missing = [f"{url}/{image_name}" for url in required_mirrors if not any(m.startswith(url) for m in mirrors)]
+            missing = [
+                expected_mirror for url in required_mirrors if (expected_mirror := f"{url}/{image_name}") not in mirrors
+            ]
             if missing:
                 entry["mirrors"] = mirrors + missing
                 has_changes = True
