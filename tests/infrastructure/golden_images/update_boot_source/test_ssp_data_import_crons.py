@@ -73,6 +73,7 @@ class TestDataImportCronOptOutOptIn:
     """Tests for DICs opt-out/opt-in."""
 
     @pytest.mark.polarion("CNV-7532")
+    @pytest.mark.jira("CNV-85066", run=False)
     def test_data_import_cron_deletion_on_opt_out(
         self,
         admin_client,
