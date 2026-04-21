@@ -1,34 +1,9 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.storage.utils import create_cirros_dv
-from utilities.storage import data_volume
-
-
-@pytest.fixture(scope="module")
-def cirros_dv_with_filesystem_volume_mode(
-    namespace,
-    storage_class_with_filesystem_volume_mode,
-):
-    yield from create_cirros_dv(
-        namespace=namespace.name,
-        name="cirros-fs",
-        storage_class=storage_class_with_filesystem_volume_mode,
-        volume_mode=DataVolume.VolumeMode.FILE,
-    )
-
-
-@pytest.fixture(scope="module")
-def cirros_dv_with_block_volume_mode(
-    namespace,
-    storage_class_with_block_volume_mode,
-):
-    yield from create_cirros_dv(
-        namespace=namespace.name,
-        name="cirros-block",
-        storage_class=storage_class_with_block_volume_mode,
-        volume_mode=DataVolume.VolumeMode.BLOCK,
-    )
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from utilities.constants import REGISTRY_STR, Images
+from utilities.storage import create_dv, data_volume
 
 
 @pytest.fixture()
@@ -44,3 +19,43 @@ def data_volume_snapshot_capable_storage_scope_function(
         storage_class_matrix=storage_class_matrix_snapshot_matrix__function__,
         schedulable_nodes=schedulable_nodes,
     )
+
+
+@pytest.fixture(scope="module")
+def fedora_dv_with_filesystem_volume_mode(
+    unprivileged_client,
+    namespace,
+    storage_class_with_filesystem_volume_mode,
+):
+    with create_dv(
+        dv_name="dv-fedora-fs",
+        namespace=namespace.name,
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=storage_class_with_filesystem_volume_mode,
+        volume_mode=DataVolume.VolumeMode.FILE,
+        client=unprivileged_client,
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
+
+
+@pytest.fixture(scope="module")
+def fedora_dv_with_block_volume_mode(
+    unprivileged_client,
+    namespace,
+    storage_class_with_block_volume_mode,
+):
+    with create_dv(
+        dv_name="dv-fedora-block",
+        namespace=namespace.name,
+        source=REGISTRY_STR,
+        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=storage_class_with_block_volume_mode,
+        volume_mode=DataVolume.VolumeMode.BLOCK,
+        client=unprivileged_client,
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
