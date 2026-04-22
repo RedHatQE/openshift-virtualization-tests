@@ -4,8 +4,11 @@ import os
 import shlex
 from functools import cache
 
+from _pytest.nodes import Collector
 from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
+from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.hco
@@ -111,12 +114,21 @@ def collect_alerts_data():
     )
 
 
-def collect_vnc_screenshot_for_vms(vm_name: str, vm_namespace: str) -> None:
-    base_dir = get_data_collector_base_directory()
-    utilities.infra.run_virtctl_command(
-        command=shlex.split(f"vnc screenshot {vm_name} -f {base_dir}/{vm_namespace}-{vm_name}.png"),
-        namespace=vm_namespace,
-    )
+def collect_vnc_screenshot_for_vms(vm: VirtualMachine) -> None:
+    """Collect a VNC screenshot for a VM when its state supports VNC access.
+
+    Args:
+        vm (VirtualMachine): VM object used to read status, name, and namespace.
+    """
+    printable_status = vm.instance.get("status", {}).get("printableStatus")
+    if printable_status in (VirtualMachine.Status.RUNNING, VirtualMachine.Status.MIGRATING):
+        base_dir = get_data_collector_base_directory()
+        utilities.infra.run_virtctl_command(
+            command=shlex.split(f"vnc screenshot {vm.name} -f {base_dir}/{vm.namespace}-{vm.name}.png"),
+            namespace=vm.namespace,
+        )
+    else:
+        LOGGER.warning(f"Skipping VNC screenshot for VM {vm.name}, status is '{printable_status}'.")
 
 
 def collect_ocp_must_gather(since_time):
@@ -178,3 +190,22 @@ def prepare_pytest_item_data_dir(item, output_dir):
     )
     os.makedirs(item_dir_log, exist_ok=True)
     return item_dir_log
+
+
+def get_scope_identifier(node: Item | Collector, scope_value: str | None) -> str:
+    """
+    Get the identifier name based on data collection scope.
+
+    Args:
+        node: Pytest node (Item or Collector).
+        scope_value: Scope value from marker ("module", "class", or None for test).
+
+    Returns:
+        Database key for this scope.
+    """
+    if scope_value == "module":
+        return str(node.fspath)
+    elif scope_value == "class":
+        return f"{node.fspath}::{node.parent.name}" if node.parent else str(node.fspath)
+    else:
+        return f"{node.fspath}::{node.name}"

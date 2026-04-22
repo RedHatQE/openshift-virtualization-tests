@@ -39,6 +39,7 @@ pytestmark = [
         "updated_namespace_with_aaq_label",
     ),
     pytest.mark.gating,
+    pytest.mark.data_collector_scope(scope="module"),
 ]
 
 
@@ -150,9 +151,9 @@ class TestARQCanManageVMs:
     )
     @pytest.mark.polarion("CNV-11236")
     def test_arq_vm_active_and_migratable_when_lower_quota_applied(
-        self, vm_for_aaq_test, updated_arq_quota, migrated_arq_vm
+        self, admin_client, vm_for_aaq_test, updated_arq_quota, migrated_arq_vm
     ):
-        restart_vm_wait_for_gated_state(vm=vm_for_aaq_test)
+        restart_vm_wait_for_gated_state(vm=vm_for_aaq_test, admin_client=admin_client)
 
 
 @pytest.mark.usefixtures(

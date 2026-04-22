@@ -7,7 +7,7 @@ from tests.install_upgrade_operators.constants import (
     FEATUREGATES,
     FG_ENABLED,
 )
-from utilities.constants import VALUE_STR
+from utilities.constants import QUARANTINED, VALUE_STR
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 FEATUREGATE_NAME_KEY_STR = "featuregate_name"
@@ -28,6 +28,10 @@ def updated_fg_hco(
         yield
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: HCO feature gate being replaced with different spec; Tracked in CNV-79304",
+    run=False,
+)
 @pytest.mark.parametrize(
     ("updated_fg_hco", "kubevirt_featuregate_name", "hco_featuregate"),
     [

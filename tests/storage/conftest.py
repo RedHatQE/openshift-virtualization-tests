@@ -5,6 +5,7 @@ Pytest conftest file for CNV CDI tests
 """
 
 import base64
+import ipaddress
 import logging
 import os
 import ssl
@@ -18,10 +19,8 @@ from ocp_resources.csi_driver import CSIDriver
 from ocp_resources.data_source import DataSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
-from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
-from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -51,11 +50,13 @@ from utilities.constants import (
     CDI_OPERATOR,
     CDI_UPLOADPROXY,
     CNV_TEST_SERVICE_ACCOUNT,
+    OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     RHEL10_PREFERENCE,
     SECURITY_CONTEXT,
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -86,7 +87,7 @@ INTERNAL_HTTP_TEMPLATE = {
         "containers": [
             {
                 "name": "http",
-                "image": "quay.io/openshift-cnv/qe-cnv-tests-internal-http:v1.1.0",
+                "image": "quay.io/openshift-cnv/qe-cnv-tests-internal-http:v1.2.0",
                 "imagePullPolicy": "Always",
                 "command": ["/usr/sbin/nginx"],
                 "readinessProbe": {
@@ -119,12 +120,14 @@ def hpp_resources(request, admin_client):
 @pytest.fixture(scope="module")
 def internal_http_configmap(namespace, internal_http_service, workers_utility_pods, worker_node1, admin_client):
     svc_ip = internal_http_service.instance.to_dict()["spec"]["clusterIP"]
+    ip = ipaddress.ip_address(address=svc_ip)
+    connect_addr = f"[{ip}]:443" if ip.version == 6 else f"{ip}:443"
 
     def _fetch_cert():
         try:
             return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1).exec(
                 command=(
-                    f"openssl s_client -showcerts -connect {svc_ip}:443 </dev/null 2>/dev/null | "
+                    f"openssl s_client -showcerts -connect {connect_addr} </dev/null 2>/dev/null | "
                     "sed -n '/-----BEGIN/,/-----END/p'"
                 )
             )
@@ -312,48 +315,6 @@ def default_fs_overhead(cdi_config):
 
 
 @pytest.fixture()
-def unset_predefined_scratch_sc(hyperconverged_resource_scope_module, cdi_config):
-    if cdi_config.instance.spec.scratchSpaceStorageClass:
-        empty_scratch_space_spec = {"spec": {"scratchSpaceStorageClass": ""}}
-        with ResourceEditorValidateHCOReconcile(
-            patches={hyperconverged_resource_scope_module: empty_scratch_space_spec},
-            list_resource_reconcile=[CDI],
-        ):
-            LOGGER.info(f"wait for {empty_scratch_space_spec} in CDIConfig")
-            for sample in TimeoutSampler(
-                wait_timeout=20,
-                sleep=1,
-                func=lambda: not cdi_config.instance.spec.scratchSpaceStorageClass,
-            ):
-                if sample:
-                    break
-            yield
-    else:
-        yield
-
-
-@pytest.fixture()
-def default_sc_as_fallback_for_scratch(unset_predefined_scratch_sc, admin_client, cdi_config, default_sc):
-    # Based on py_config["default_storage_class"], update default SC, if needed
-    if default_sc:
-        yield default_sc
-    else:
-        for sc in StorageClass.get(client=admin_client, name=py_config["default_storage_class"]):
-            assert sc, f"The cluster does not include {py_config['default_storage_class']} storage class"
-            with ResourceEditor(
-                patches={
-                    sc: {
-                        "metadata": {
-                            "annotations": {StorageClass.Annotations.IS_DEFAULT_CLASS: "true"},
-                            "name": sc.name,
-                        }
-                    }
-                }
-            ):
-                yield sc
-
-
-@pytest.fixture()
 def router_cert_secret(admin_client):
     router_secret = "router-certs-default"
     for secret in Secret.get(
@@ -422,16 +383,6 @@ def hpp_daemonset_scope_module(hco_namespace, hpp_cr_suffix_scope_module, admin_
 @pytest.fixture()
 def rhel_vm_name(request):
     return request.param["vm_name"]
-
-
-@pytest.fixture(scope="session")
-def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes):
-    """
-    Get an HPP storage class if there is any in the cluster
-    """
-    for storage_class in cluster_storage_classes:
-        if storage_class.name in HPP_STORAGE_CLASSES:
-            return storage_class
 
 
 @pytest.fixture(scope="module")
@@ -583,6 +534,21 @@ def rhel10_data_source_scope_module(golden_images_namespace):
     )
 
 
+@pytest.fixture(scope="module")
+def fedora_data_source_scope_module(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=OS_FLAVOR_FEDORA,
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
 @pytest.fixture(scope="class")
 def unique_suffix():
     return shortuuid.ShortUUID().random(length=4).lower()
+
+
+@pytest.fixture(scope="class")
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN

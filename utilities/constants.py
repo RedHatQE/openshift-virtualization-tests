@@ -43,6 +43,11 @@ AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
+MULTIARCH = "multiarch"
+# Supported architectures for multi-arch runs
+SUPPORTED_MULTIARCH_OPTIONS = {AMD_64, ARM_64}
+# Supported architectures for single-arch runs
+SUPPORTED_CPU_ARCHITECTURES = {AMD_64, ARM_64, S390X}
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
@@ -50,16 +55,20 @@ OS_FLAVOR_ALPINE = "alpine"
 OS_FLAVOR_WINDOWS = "win"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
+OS_FLAVOR_WIN_CONTAINER_DISK = "win-container-disk"
 
 FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
 CIRROS_QCOW2_IMG = "cirros-qcow2.img"
+
+ALPINE_VERSION = "3.20.1"
 
 
 class ArchImages:
     class AMD64:
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -72,6 +81,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -117,6 +128,7 @@ class ArchImages:
     class ARM64:
         BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
         BASE_ALPINE_NAME = "alpine-aarch64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-aarch64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -129,6 +141,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -152,6 +166,7 @@ class ArchImages:
 
     class S390X:
         BASE_ALPINE_NAME = "alpine-s390x-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -169,6 +184,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -202,8 +219,9 @@ class ArchImages:
         Windows = Windows()
 
 
-# Choose the Image class according to the architecture. Default: amd64
-Images = getattr(ArchImages, get_cluster_architecture().upper())
+# Choose the Image class according to the cluster architecture.
+# TODO: remove this when utilities modules are refactored
+Images = getattr(ArchImages, next(iter(get_cluster_architecture())).upper())
 
 
 # Virtctl constants
@@ -212,7 +230,6 @@ VIRTCTL_CLI_DOWNLOADS = f"{VIRTCTL}-clidownloads-kubevirt-hyperconverged"
 #  Network constants
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
-MTU_9000 = 9000
 IPV4_STR = "ipv4"
 IPV6_STR = "ipv6"
 CLUSTER_NETWORK_ADDONS_OPERATOR = "cluster-network-addons-operator"
@@ -225,8 +242,6 @@ KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
 KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
 KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
 KUBEMACPOOL_MAC_RANGE_CONFIG = "kubemacpool-mac-range-config"
-NMSTATE_HANDLER = "nmstate-handler"
-ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
 SSH_PORT_22 = 22
 PORT_80 = 80
 ACTIVE_BACKUP = "active-backup"
@@ -342,7 +357,6 @@ CLOUD_INIT_NO_CLOUD = "cloudInitNoCloud"
 # Kubemacpool constants
 KMP_VM_ASSIGNMENT_LABEL = "mutatevirtualmachines.kubemacpool.io"
 KMP_ENABLED_LABEL = "allocate"
-KMP_DISABLED_LABEL = "ignore"
 
 # SSH constants
 CNV_VM_SSH_KEY_PATH = "CNV-SSH-KEY-PATH"
@@ -398,8 +412,8 @@ DATA_SOURCE_NAME = "DATA_SOURCE_NAME"
 DATA_SOURCE_NAMESPACE = "DATA_SOURCE_NAMESPACE"
 SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME = "dataImportCronTemplates"
 COMMON_TEMPLATES_KEY_NAME = "commonTemplates"
-
 KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE = "kubevirt-hyperconverged-prometheus-rule"
+KUBEMACPOOL_PROMETHEUS_RULE = "kubemacpool-prometheus-rule"
 HYPERCONVERGED_CLUSTER_OPERATOR_METRICS = "hyperconverged-cluster-operator-metrics"
 KUBEVIRT_HYPERCONVERGED_OPERATOR_METRICS = "kubevirt-hyperconverged-operator-metrics"
 KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
@@ -454,6 +468,7 @@ SSP_STR = "SSP"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 NETWORKPOLICY_STR = "NetworkPolicy"
+SERVICEACCOUNT_STR = "ServiceAccount"
 AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
@@ -477,6 +492,8 @@ ALL_HCO_RELATED_OBJECTS = [
     {KUBEVIRT_CONSOLE_PLUGIN_SERVICE: SERVICE_STR},
     {f"{KUBEVIRT_APISERVER_PROXY}-{SERVICE_STR.lower()}": SERVICE_STR},
     {KUBEVIRT_APISERVER_PROXY: DEPLOYMENT_STR},
+    {KUBEVIRT_CONSOLE_PLUGIN: SERVICEACCOUNT_STR},
+    {KUBEVIRT_APISERVER_PROXY: SERVICEACCOUNT_STR},
     {CREATING_VIRTUAL_MACHINE: CONSOLEQUICKSTART_STR},
     {CREATING_VIRTUAL_MACHINE_FROM_VOLUME: CONSOLEQUICKSTART_STR},
     {UPLOAD_BOOT_SOURCE: CONSOLEQUICKSTART_STR},
@@ -703,6 +720,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
     f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
+    KUBEMACPOOL_PROMETHEUS_RULE,
 ]
 
 
@@ -795,6 +813,7 @@ RHEL8_PREFERENCE = "rhel.8"
 RHEL9_PREFERENCE = "rhel.9"
 RHEL10_PREFERENCE = "rhel.10"
 U1_SMALL = "u1.small"
+U1_LARGE = "u1.large"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"
 U1_MEDIUM_STR = "u1.medium"

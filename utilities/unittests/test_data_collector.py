@@ -122,6 +122,8 @@ if "utilities.data_collector" in sys.modules:
 
 # Circular dependencies are already mocked in conftest.py
 
+from ocp_resources.virtual_machine import VirtualMachine
+
 # Now import the real data_collector module functions
 from utilities.data_collector import (
     BASE_DIRECTORY_NAME,
@@ -132,6 +134,7 @@ from utilities.data_collector import (
     get_data_collector_base,
     get_data_collector_base_directory,
     get_data_collector_dir,
+    get_scope_identifier,
     prepare_pytest_item_data_dir,
     set_data_collector_directory,
     set_data_collector_values,
@@ -338,12 +341,15 @@ class TestCollectVncScreenshotForVms:
     @patch("utilities.data_collector.get_data_collector_base_directory")
     @patch("utilities.data_collector.utilities.infra.run_virtctl_command")
     @patch("utilities.data_collector.shlex.split")
-    def test_collect_vnc_screenshot_for_vms(self, mock_shlex, mock_run_virtctl, mock_get_base_dir):
-        """Test collect_vnc_screenshot_for_vms runs virtctl command"""
+    def test_collect_vnc_screenshot_for_vms_running(self, mock_shlex, mock_run_virtctl, mock_get_base_dir):
+        """Test collect_vnc_screenshot_for_vms takes screenshot when VM is Running"""
         mock_get_base_dir.return_value = "/base/dir"
         mock_shlex.return_value = ["vnc", "screenshot", "test-vm", "-f", "/base/dir/test-ns-test-vm.png"]
-
-        collect_vnc_screenshot_for_vms("test-vm", "test-ns")
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = "test-ns"
+        mock_vm.instance.get.return_value = {"printableStatus": VirtualMachine.Status.RUNNING}
+        collect_vnc_screenshot_for_vms(vm=mock_vm)
 
         mock_get_base_dir.assert_called_once()
         expected_command = "vnc screenshot test-vm -f /base/dir/test-ns-test-vm.png"
@@ -351,6 +357,16 @@ class TestCollectVncScreenshotForVms:
         mock_run_virtctl.assert_called_once_with(
             command=["vnc", "screenshot", "test-vm", "-f", "/base/dir/test-ns-test-vm.png"], namespace="test-ns"
         )
+
+    @patch("utilities.data_collector.utilities.infra.run_virtctl_command")
+    def test_collect_vnc_screenshot_for_vms_skips_error_status(self, mock_run_virtctl):
+        """Test collect_vnc_screenshot_for_vms skips screenshot when VM is in error state"""
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.instance.get.return_value = {"printableStatus": VirtualMachine.Status.ERR_IMAGE_PULL}
+        collect_vnc_screenshot_for_vms(vm=mock_vm)
+
+        mock_run_virtctl.assert_not_called()
 
 
 class TestCollectOcpMustGather:
@@ -502,6 +518,61 @@ class TestPrepareDataDir:
         expected_path = "/output/test_dir/test_something/test_function"
         assert result == expected_path
         mock_makedirs.assert_called_once_with(expected_path, exist_ok=True)
+
+
+class TestGetScopeIdentifier:
+    """Test cases for get_scope_identifier function"""
+
+    def test_get_scope_identifier_module_scope(self):
+        """Test get_scope_identifier with module scope"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_module.py"
+
+        result = get_scope_identifier(node=mock_node, scope_value="module")
+
+        assert result == "/path/to/test_module.py"
+
+    def test_get_scope_identifier_class_scope_with_parent(self):
+        """Test get_scope_identifier with class scope and parent exists"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_parent = MagicMock()
+        mock_parent.name = "TestMyClass"
+        mock_node.parent = mock_parent
+
+        result = get_scope_identifier(node=mock_node, scope_value="class")
+
+        assert result == "/path/to/test_file.py::TestMyClass"
+
+    def test_get_scope_identifier_class_scope_without_parent(self):
+        """Test get_scope_identifier with class scope and no parent"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.parent = None
+
+        result = get_scope_identifier(node=mock_node, scope_value="class")
+
+        assert result == "/path/to/test_file.py"
+
+    def test_get_scope_identifier_test_scope(self):
+        """Test get_scope_identifier with test scope (None)"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.name = "test_my_function"
+
+        result = get_scope_identifier(node=mock_node, scope_value=None)
+
+        assert result == "/path/to/test_file.py::test_my_function"
+
+    def test_get_scope_identifier_test_scope_explicit(self):
+        """Test get_scope_identifier with explicit test scope value"""
+        mock_node = MagicMock()
+        mock_node.fspath = "/path/to/test_file.py"
+        mock_node.name = "test_another_function"
+
+        result = get_scope_identifier(node=mock_node, scope_value="test")
+
+        assert result == "/path/to/test_file.py::test_another_function"
 
 
 class TestConstants:

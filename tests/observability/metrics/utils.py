@@ -137,16 +137,17 @@ def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
     return metric_results
 
 
-def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
+def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests, admin_client: DynamicClient):
     """
     Get vm metric information from virt-handler pod
 
     Args:
         query (str): Prometheus query string
         vm (VirtualMachineForTests): A VirtualMachineForTests
+        admin_client (DynamicClient): Admin client for privileged operations
 
     """
-    pod = vm.privileged_vmi.virt_handler_pod
+    pod = vm.vmi.get_virt_handler_pod(privileged_client=admin_client)
     output = parse_vm_metric_results(raw_output=pod.execute(command=["bash", "-c", f"{CURL_QUERY}"]))
     assert output, f'No query output found from {VIRT_HANDLER} pod "{pod.name}" for query: "{CURL_QUERY}"'
     metrics_list = []
@@ -160,22 +161,26 @@ def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests):
         f'{VIRT_HANDLER} pod query:"{CURL_QUERY}" did not return any vm metric information for vm: {vm.name} '
         f"from {VIRT_HANDLER} pod: {pod.name}. "
     )
-    assert_validate_vm_metric(vm=vm, metrics_list=metrics_list)
+    assert_validate_vm_metric(vm=vm, metrics_list=metrics_list, admin_client=admin_client)
 
 
-def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dict[str, str]]) -> None:
+def assert_validate_vm_metric(
+    vm: VirtualMachineForTests, metrics_list: list[dict[str, str]], admin_client: DynamicClient
+) -> None:
     """
     Validate vm metric information fetched from virt-handler pod
 
     Args:
         vm (VirtualMachineForTests): A VirtualMachineForTests
         metrics_list (list): List of metrics entries collected from associated Virt-handler pod
+        admin_client (DynamicClient): Admin client for privileged operations
 
     """
+    vmi_node = vm.vmi.get_node(privileged_client=admin_client)
     expected_values = {
-        "kubernetes_vmi_label_kubevirt_io_nodeName": vm.vmi.node.name,
+        "kubernetes_vmi_label_kubevirt_io_nodeName": vmi_node.name,
         "namespace": vm.namespace,
-        "node": vm.vmi.node.name,
+        "node": vmi_node.name,
     }
     LOGGER.info(f"{VIRT_HANDLER} pod metrics associated with vm: {vm.name} are: {metrics_list}")
     metric_data_mismatch = [
@@ -184,9 +189,9 @@ def assert_validate_vm_metric(vm: VirtualMachineForTests, metrics_list: list[dic
         for entity in metrics_list
         if not entity.get(key, None) or expected_values[key] not in entity[key]
     ]
-
+    virt_handler_pod = vm.vmi.get_virt_handler_pod(privileged_client=admin_client)
     assert not metric_data_mismatch, (
-        f"Vm metric validation via {VIRT_HANDLER} pod {vm.vmi.virt_handler_pod} failed: {metric_data_mismatch}"
+        f"Vm metric validation via {VIRT_HANDLER} pod {virt_handler_pod} failed: {metric_data_mismatch}"
     )
 
 
@@ -243,14 +248,17 @@ def get_vm_cpu_info_from_prometheus(prometheus: Prometheus, vm_name: str) -> Opt
     return None
 
 
-def validate_vmi_node_cpu_affinity_with_prometheus(prometheus: Prometheus, vm: VirtualMachineForTests) -> None:
+def validate_vmi_node_cpu_affinity_with_prometheus(
+    prometheus: Prometheus, vm: VirtualMachineForTests, admin_client: DynamicClient
+) -> None:
     vm_cpu = vm.vmi.instance.spec.domain.cpu
     cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
     LOGGER.info(f"Cpu count from vm {vm.name}: {cpu_count_from_vm}")
     cpu_info_from_prometheus = get_vm_cpu_info_from_prometheus(prometheus=prometheus, vm_name=vm.name)
     LOGGER.info(f"CPU information from prometheus: {cpu_info_from_prometheus}")
-    cpu_count_from_vm_node = int(vm.privileged_vmi.node.instance.status.capacity.cpu)
-    LOGGER.info(f"Cpu count from node {vm.privileged_vmi.node.name}: {cpu_count_from_vm_node}")
+    vmi_node = vm.vmi.get_node(privileged_client=admin_client)
+    cpu_count_from_vm_node = int(vmi_node.instance.status.capacity.cpu)
+    LOGGER.info(f"Cpu count from node {vmi_node.name}: {cpu_count_from_vm_node}")
 
     if cpu_count_from_vm > 1:
         cpu_count_from_vm_node = cpu_count_from_vm_node * cpu_count_from_vm
@@ -475,10 +483,10 @@ def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -
         raise
 
 
-def disk_file_system_info(vm: VirtualMachineForTests) -> dict[str, dict[str, str]]:
+def disk_file_system_info(vm: VirtualMachineForTests, admin_client: DynamicClient) -> dict[str, dict[str, str]]:
     lines = re.findall(
         r"fs\.(\d+)\.(mountpoint|total-bytes|used-bytes)\s*:\s*(.*)\s*",
-        vm.privileged_vmi.execute_virsh_command(command="guestinfo --filesystem"),
+        vm.vmi.execute_virsh_command(command="guestinfo --filesystem", privileged_client=admin_client),
         re.MULTILINE,
     )
     mount_points_and_values_dict: dict[str, dict[str, str]] = {}
@@ -498,12 +506,14 @@ def compare_metric_file_system_values_with_vm_file_system_values(
     vm_for_test: VirtualMachineForTests,
     mount_point: str,
     capacity_or_used: str,
+    admin_client: DynamicClient,
 ) -> None:
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_15SEC,
         func=disk_file_system_info,
         vm=vm_for_test,
+        admin_client=admin_client,
     )
     sample = None
     metric_value = None
@@ -678,7 +688,7 @@ def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
 
 
 def get_vmi_guest_os_kernel_release_info_metric_from_vm(
-    vm: VirtualMachineForTests, windows: bool = False
+    vm: VirtualMachineForTests, admin_client: DynamicClient, windows: bool = False
 ) -> dict[str, str]:
     guest_os_kernel_release = run_ssh_commands(
         host=vm.ssh_exec, commands=shlex.split("ver" if windows else "uname -r")
@@ -687,11 +697,12 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
         guest_os_kernel_release = re.search(r"\[Version\s(\d+\.\d+\.(\d+))", guest_os_kernel_release)
         assert guest_os_kernel_release, "OS kernel release version not found."
         guest_os_kernel_release = guest_os_kernel_release.group(2)
+    virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     return {
         "guest_os_kernel_release": guest_os_kernel_release,
         "namespace": vm.namespace,
-        NODE_STR: vm.vmi.virt_launcher_pod.node.name,
-        "vmi_pod": vm.vmi.virt_launcher_pod.name,
+        NODE_STR: virt_launcher_pod.node.name,
+        "vmi_pod": virt_launcher_pod.name,
     }
 
 

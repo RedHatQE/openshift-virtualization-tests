@@ -565,13 +565,11 @@ def data_volume_template_dict(
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     source_dict = data_source.source.instance.to_dict()
-    source_spec_dict = source_dict["spec"]
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
-        size=source_spec_dict.get("resources", {}).get("requests", {}).get("storage")
-        or source_dict.get("status", {}).get("restoreSize"),
-        storage_class=storage_class or source_spec_dict.get("storageClassName"),
+        size=get_dv_size_from_datasource(data_source=data_source),
+        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -602,20 +600,6 @@ def cdi_feature_gate_list_with_added_feature(feature):
     ]
 
 
-def wait_for_default_sc_in_cdiconfig(cdi_config, sc):
-    """
-    Wait for the default storage class to propagate to CDIConfig as the storage class for scratch space
-    """
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_20SEC,
-        sleep=TIMEOUT_1SEC,
-        func=lambda: cdi_config.scratch_space_storage_class_from_status == sc,
-    )
-    for sample in samples:
-        if sample:
-            return
-
-
 def get_hyperconverged_cdi(admin_client):
     for cdi in CDI.get(
         client=admin_client,
@@ -624,11 +608,26 @@ def get_hyperconverged_cdi(admin_client):
         return cdi
 
 
-def write_file(vm, filename, content, stop_vm=True):
-    """Start VM if not running, write a file in the VM and stop the VM"""
+def write_file(
+    vm: virt_util.VirtualMachineForTests,
+    filename: str,
+    content: str,
+    stop_vm: bool = True,
+    kubeconfig: str | None = None,
+) -> None:
+    """
+    Start VM if not running, write a file in the VM and stop the VM.
+
+    Args:
+        vm: VirtualMachine instance
+        filename: Path to the file to write in the VM
+        content: Content to write to the file
+        stop_vm: Whether to stop the VM after writing the file
+        kubeconfig: Optional path to kubeconfig file for remote cluster access
+    """
     if not vm.ready:
         vm.start(wait=True)
-    with console.Console(vm=vm) as vm_console:
+    with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
         vm_console.sendline(f"echo '{content}' >> {filename}")
     if stop_vm:
         vm.stop(wait=True)
@@ -636,7 +635,7 @@ def write_file(vm, filename, content, stop_vm=True):
 
 def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
     """
-    Write content to a file in VM using SSH connection.
+    Write content to a file in VM using SSH connection with retry.
 
     Args:
         vm: VirtualMachine instance with SSH connectivity
@@ -644,7 +643,34 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         content: Content to write to the file
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
+
+
+def run_command_on_vm_and_check_output(
+    vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
+) -> None:
+    """Run command on VM via SSH with retry and verify output matches expected result.
+
+    Command execution is retried with 2-minute timeout and 5-second intervals.
+
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+
+    Raises:
+        AssertionError: If command output differs from expected result.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result == cmd_output, (
+        f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
+    )
 
 
 def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
@@ -654,9 +680,10 @@ def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
-    assert HOTPLUG_DISK_SERIAL in run_ssh_commands(host=vm.ssh_exec, commands=command)[0], (
-        f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
-    )
+    assert (
+        HOTPLUG_DISK_SERIAL
+        in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
+    ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
 
 
 def assert_hotplugvolume_nonexist(vm):
@@ -792,6 +819,8 @@ def check_disk_count_in_vm(vm):
     out = run_ssh_commands(
         host=vm.ssh_exec,
         commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )[0].strip()
     assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
         "Failed to verify actual disk count against VMI"
@@ -1031,7 +1060,7 @@ def wait_for_volume_snapshot_ready_to_use(namespace, name):
     ready_to_use_status = "readyToUse"
     LOGGER.info(f"Wait for VolumeSnapshot '{name}' in '{namespace}' to be '{ready_to_use_status}'")
     volume_snapshot = VolumeSnapshot(namespace=namespace, name=name)
-    volume_snapshot.wait()
+    volume_snapshot.wait(timeout=TIMEOUT_10MIN)
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
@@ -1182,3 +1211,22 @@ def persist_storage_class_default(default: bool, storage_class: StorageClass) ->
     )
     # Apply the changes to be persistent without backup for restoration
     editor.update(backup_resources=False)
+
+
+def get_dv_size_from_datasource(data_source: DataSource) -> str | int | None:
+    """
+    Returns the DataVolume size from a DataSource's underlying instance.
+
+    Args:
+        data_source: DataSource whose underlying instance size or restore size to read.
+
+    Returns:
+        The storage request value (str or int) from spec.resources.requests.storage if present;
+        otherwise the restore size from status.restoreSize; None if neither exists.
+    """
+    source_dict = data_source.source.instance.to_dict()
+    source_spec_dict = source_dict["spec"]
+    dv_size = source_spec_dict.get("resources", {}).get("requests", {}).get("storage") or source_dict.get(
+        "status", {}
+    ).get("restoreSize")
+    return dv_size

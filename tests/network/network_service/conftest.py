@@ -3,13 +3,14 @@ import shlex
 import pytest
 from ocp_resources.service import Service
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.network.network_service.libservice import (
-    SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,
     SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
     basic_expose_command,
 )
 from utilities.constants import SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
+from utilities.jira import is_jira_open
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
@@ -60,14 +61,8 @@ def virtctl_expose_service(
     request,
     unprivileged_client,
     running_vm_for_exposure,
-    dual_stack_cluster,
 ):
     ip_family_policy = request.param
-    if ip_family_policy == SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK and not dual_stack_cluster:
-        pytest.skip(
-            f"{SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK} service cannot be created in a non-dual-stack cluster."
-        )
-
     svc_name = f"ssh-{ip_family_policy.lower()}-svc"
     expose_command = basic_expose_command(resource_name=running_vm_for_exposure.name, svc_name=svc_name)
     expose_command += f" --ip-family-policy={ip_family_policy}"
@@ -80,11 +75,17 @@ def virtctl_expose_service(
         ensure_exists=True,
     )
     yield svc
+    if is_jira_open(jira_id="CNV-79964"):  # Service not deleted with VM due to bug
+        svc.clean_up()
 
 
 @pytest.fixture()
-def expected_num_families_in_service(request, dual_stack_cluster):
+def expected_num_families_in_service(request):
     ip_family_policy = request.param
-    if ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK and dual_stack_cluster:
+    if (
+        ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK
+        and ipv4_supported_cluster()
+        and ipv6_supported_cluster()
+    ):
         return 2
     return 1

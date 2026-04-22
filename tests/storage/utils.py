@@ -25,6 +25,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -33,7 +34,10 @@ from utilities.artifactory import (
 )
 from utilities.constants import (
     CDI_UPLOADPROXY,
+    LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
@@ -465,15 +469,17 @@ def assert_windows_directory_existence(
     expected_result: bool, windows_vm: VirtualMachineForTests, directory_path: str
 ) -> None:
     cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
+        0
+    ].strip()
     assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
 
 
 def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path: str) -> None:
     cmd = shlex.split(
-        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory"',
+        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory -Force"',
     )
-    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     assert_windows_directory_existence(
         expected_result=True,
         windows_vm=windows_vm,
@@ -503,3 +509,30 @@ def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus
     assert disk is not None, f"Disk {volume.name} not found in VM {vm.name}"
     actual_bus = disk.get("disk", {}).get("bus")
     assert actual_bus == expected_bus, f"Disk {volume.name} has bus '{actual_bus}' but expected '{expected_bus}'"
+
+
+def check_file_in_vm(
+    vm: VirtualMachineForTests,
+    file_name: str,
+    file_content: str,
+    username: str | None = None,
+    password: str | None = None,
+) -> None:
+    """
+    Check that a file exists in a VM with expected content.
+    VM must be running before calling this function.
+
+    Args:
+        vm: VirtualMachine instance
+        file_name: Name of the file to check
+        file_content: Expected content in the file
+        username: Optional username for console login (defaults to vm.username)
+        password: Optional password for console login (defaults to vm.password)
+    """
+    LOGGER.info(f"Verifying file {file_name} exists in VM {vm.name}")
+    with console.Console(vm=vm, username=username, password=password) as vm_console:
+        LOGGER.info(f"Checking file contents for {file_name} in VM {vm.name}")
+        vm_console.sendline(LS_COMMAND)
+        vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
+        vm_console.sendline(f"cat {file_name}")
+        vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)

@@ -44,15 +44,15 @@ def update_cpu_spec(vm, network_multiqueue=True, cores=1, sockets=1, threads=1):
     }).update()
 
 
-def validate_vm_cpu_spec(vm, cores=1, sockets=1, threads=1):
+def validate_vm_cpu_spec(vm, admin_client, cores=1, sockets=1, threads=1):
     cpu_spec = vm.instance.spec.template.spec.domain.cpu
-    cpu_topology_xml = vm.privileged_vmi.xml_dict["domain"]["cpu"]["topology"]
+    cpu_topology_xml = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["cpu"]["topology"]
     assert int(cpu_topology_xml["@cores"]) == cpu_spec.cores == cores
     assert int(cpu_topology_xml["@sockets"]) == cpu_spec.sockets == sockets
     assert int(cpu_topology_xml["@threads"]) == cpu_spec.threads == threads
 
 
-def update_validate_cpu_in_vm(vm, network_multiqueue=True, cores=1, sockets=1, threads=1):
+def update_validate_cpu_in_vm(vm, admin_client, network_multiqueue=True, cores=1, sockets=1, threads=1):
     update_cpu_spec(
         vm=vm,
         network_multiqueue=network_multiqueue,
@@ -61,7 +61,7 @@ def update_validate_cpu_in_vm(vm, network_multiqueue=True, cores=1, sockets=1, t
         threads=threads,
     )
     restart_vm_wait_for_running_vm(vm=vm)
-    validate_vm_cpu_spec(vm=vm, cores=cores, sockets=sockets, threads=threads)
+    validate_vm_cpu_spec(vm=vm, admin_client=admin_client, cores=cores, sockets=sockets, threads=threads)
 
 
 @pytest.fixture(scope="class")
@@ -109,30 +109,34 @@ class TestLatestRHEL:
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8892")
     @pytest.mark.s390x
-    def test_feature_disabled(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, network_multiqueue=False)
+    def test_feature_disabled(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(
+            vm=network_interface_multiqueue_vm, admin_client=admin_client, network_multiqueue=False
+        )
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8893")
     @pytest.mark.s390x
-    def test_four_cores(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, cores=4)
+    def test_four_cores(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8894")
     @pytest.mark.s390x
-    def test_four_sockets(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, sockets=4)
+    def test_four_sockets(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, sockets=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8895")
-    def test_four_threads(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, threads=4)
+    def test_four_threads(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, threads=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
     @pytest.mark.polarion("CNV-8896")
-    def test_two_cores_two_sockets_two_threads(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, cores=4, sockets=2, threads=2)
+    def test_two_cores_two_sockets_two_threads(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(
+            vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4, sockets=2, threads=2
+        )
 
 
 @pytest.mark.parametrize(
@@ -164,5 +168,7 @@ class TestLatestWindows:
 
     @pytest.mark.dependency(depends=[f"{WINDOWS_TESTS_CLASS_NAME}::windows_default_cpu_values"])
     @pytest.mark.polarion("CNV-8898")
-    def test_four_cores_two_sockets_two_threads(self, network_interface_multiqueue_vm):
-        update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, cores=4, sockets=2, threads=2)
+    def test_four_cores_two_sockets_two_threads(self, admin_client, network_interface_multiqueue_vm):
+        update_validate_cpu_in_vm(
+            vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4, sockets=2, threads=2
+        )

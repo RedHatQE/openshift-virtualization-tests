@@ -8,10 +8,9 @@ from ocp_resources.template import Template
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
-from tests.network.sriov.libsriov import VM_SRIOV_IFACE_NAME, sriov_cloud_init_data, sriov_vm, vm_sriov_mac
+from tests.network.sriov.libsriov import MTU_9000, VM_SRIOV_IFACE_NAME, sriov_cloud_init_data, sriov_vm, vm_sriov_mac
 from utilities.constants import (
     CNV_SUPPLEMENTAL_TEMPLATES_URL,
-    MTU_9000,
     NODE_HUGE_PAGES_1GI_KEY,
     SRIOV,
     TIMEOUT_10MIN,
@@ -66,8 +65,6 @@ def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespa
 
 @pytest.fixture(scope="class")
 def sriov_vm1(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     index_number,
     unprivileged_client,
     namespace,
@@ -80,8 +77,6 @@ def sriov_vm1(
         sriov_mac=vm_sriov_mac(mac_suffix_index=mac_suffix_index),
         net_seed=0,
         host_address=1,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
@@ -96,8 +91,6 @@ def sriov_vm1(
 
 @pytest.fixture(scope="class")
 def sriov_vm2(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     index_number,
     unprivileged_client,
     namespace,
@@ -110,8 +103,6 @@ def sriov_vm2(
         sriov_mac=vm_sriov_mac(mac_suffix_index=mac_suffix_index),
         net_seed=0,
         host_address=2,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
@@ -126,8 +117,6 @@ def sriov_vm2(
 
 @pytest.fixture(scope="class")
 def sriov_vm3(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     index_number,
     unprivileged_client,
     namespace,
@@ -140,8 +129,6 @@ def sriov_vm3(
         sriov_mac=vm_sriov_mac(mac_suffix_index=mac_suffix_index),
         net_seed=1,
         host_address=1,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
@@ -156,8 +143,6 @@ def sriov_vm3(
 
 @pytest.fixture(scope="class")
 def sriov_vm4(
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     index_number,
     unprivileged_client,
     namespace,
@@ -170,8 +155,6 @@ def sriov_vm4(
         sriov_mac=vm_sriov_mac(mac_suffix_index=mac_suffix_index),
         net_seed=1,
         host_address=2,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(
@@ -244,8 +227,6 @@ def sriov_vm_migrate(
     unprivileged_client,
     namespace,
     sriov_network,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     ipv6_primary_interface_cloud_init_data,
 ):
     mac_suffix_index = next(index_number)
@@ -253,8 +234,6 @@ def sriov_vm_migrate(
         sriov_mac=vm_sriov_mac(mac_suffix_index=mac_suffix_index),
         net_seed=0,
         host_address=3,
-        ipv4_supported_cluster=ipv4_supported_cluster,
-        ipv6_supported_cluster=ipv6_supported_cluster,
         ipv6_primary_interface_cloud_init_data=ipv6_primary_interface_cloud_init_data,
     )
     yield from sriov_vm(

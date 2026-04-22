@@ -72,7 +72,6 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
-from utilities.jira import is_jira_open
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
@@ -151,7 +150,7 @@ def virt_pod_info_from_prometheus(request, prometheus):
 
 
 @pytest.fixture()
-def virt_pod_names_by_label(request, admin_client, hco_namespace):
+def virt_pod_names_by_label(admin_client, request, hco_namespace):
     """Get pod names by a given label (request.param) in the list."""
     return [
         pod.name
@@ -218,7 +217,7 @@ def connected_vnc_console(prometheus, vm_for_test):
 def generated_network_traffic(vm_for_test):
     assert_ping_successful(
         src_vm=vm_for_test,
-        dst_ip=vm_for_test.privileged_vmi.interfaces[0]["ipAddress"],
+        dst_ip=vm_for_test.vmi.interfaces[0]["ipAddress"],
         count=20,
     )
 
@@ -321,13 +320,13 @@ def vm_for_test_snapshot(vm_for_test):
 
 
 @pytest.fixture()
-def disk_file_system_info_linux(vm_for_test):
-    return disk_file_system_info(vm=vm_for_test)
+def disk_file_system_info_linux(admin_client, vm_for_test):
+    return disk_file_system_info(vm=vm_for_test, admin_client=admin_client)
 
 
 @pytest.fixture()
-def disk_file_system_info_windows(windows_vm_for_test):
-    return disk_file_system_info(vm=windows_vm_for_test)
+def disk_file_system_info_windows(admin_client, windows_vm_for_test):
+    return disk_file_system_info(vm=windows_vm_for_test, admin_client=admin_client)
 
 
 @pytest.fixture()
@@ -412,9 +411,7 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(
-    namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace
-):
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="disk-allocation-size-vm",
@@ -423,7 +420,7 @@ def vm_for_vm_disk_allocation_size_test(
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=client_based_on_bug_73864,
+                client=unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -444,8 +441,10 @@ def vnic_info_from_vmi_windows(windows_vm_for_test):
 
 
 @pytest.fixture()
-def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test):
-    return get_vmi_guest_os_kernel_release_info_metric_from_vm(vm=windows_vm_for_test, windows=True)
+def vmi_guest_os_kernel_release_info_windows(windows_vm_for_test, admin_client):
+    return get_vmi_guest_os_kernel_release_info_metric_from_vm(
+        vm=windows_vm_for_test, admin_client=admin_client, windows=True
+    )
 
 
 @pytest.fixture()
@@ -549,13 +548,8 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     return formatted_hard_limit, formatted_used_value
 
 
-@pytest.fixture(scope="session")
-def client_based_on_bug_73864(admin_client, unprivileged_client):
-    return admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client
-
-
 @pytest.fixture(scope="class")
-def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace):
+def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
@@ -566,7 +560,7 @@ def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=client_based_on_bug_73864,
+                client=unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -631,13 +625,15 @@ def initial_vmi_deletion_metrics_values(prometheus):
 
 
 @pytest.fixture(scope="class")
-def expected_cpu_affinity_metric_value(vm_with_cpu_spec):
+def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
     """Calculate expected kubevirt_vmi_node_cpu_affinity metric value."""
     # Calculate VM CPU count
     vm_cpu = vm_with_cpu_spec.vmi.instance.spec.domain.cpu
     cpu_count_from_vm = (vm_cpu.threads or 1) * (vm_cpu.cores or 1) * (vm_cpu.sockets or 1)
     # Get node CPU capacity
-    cpu_count_from_vm_node = int(vm_with_cpu_spec.privileged_vmi.node.instance.status.capacity.cpu)
+    cpu_count_from_vm_node = int(
+        vm_with_cpu_spec.vmi.get_node(privileged_client=admin_client).instance.status.capacity.cpu
+    )
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)

@@ -21,6 +21,7 @@ from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
+from ocp_resources.network_config_openshift_io import Network
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
@@ -41,6 +42,7 @@ from utilities.constants import (
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,
+    get_scope_identifier,
     set_data_collector_directory,
     set_data_collector_values,
 )
@@ -52,7 +54,6 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
-    generate_os_matrix_dicts,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -64,7 +65,9 @@ from utilities.pytest_utils import (
     separator,
     skip_if_pytest_flags_exists,
     stop_if_run_in_progress,
+    update_cpu_arch_related_config,
     update_latest_os_config,
+    validate_collected_tests_arch_params,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -85,6 +88,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "numa",
     "cclm",
     "mtv",
+    "multiarch",
 ]
 
 TEAM_MARKERS = {
@@ -113,6 +117,7 @@ INSPECT_BASE_COMMAND = "oc adm inspect"
 def pytest_addoption(parser):
     matrix_group = parser.getgroup(name="Matrix")
     os_group = parser.getgroup(name="OS")
+    arch_group = parser.getgroup(name="Architecture")
     install_upgrade_group = parser.getgroup(name="Upgrade")
     storage_group = parser.getgroup(name="Storage")
     cluster_sanity_group = parser.getgroup(name="ClusterSanity")
@@ -214,6 +219,15 @@ def pytest_addoption(parser):
         "--latest-centos",
         action="store_true",
         help="Run matrix tests with latest CentOS",
+    )
+
+    arch_group.addoption(
+        "--cpu-arch",
+        help="""
+             CPU architecture to use when running tests on heterogeneous clusters.
+             Single arch (e.g. amd64) or comma-separated combination (e.g. amd64,arm64).
+             Defines what OS matrix params to use and what CPU architecture to use for VMs.
+             """,
     )
 
     # Storage addoption
@@ -326,6 +340,13 @@ def pytest_addoption(parser):
     session_group.addoption(
         "--remote_cluster_password",
         help="Password for the remote cluster for cross-cluster tests",
+    )
+    session_group.addoption(
+        "--network-for-live-migration",
+        help=(
+            "Network name for live migration in cross-cluster tests. "
+            "If not provided, HCO's liveMigrationConfig.network will not be set by the tests setup"
+        ),
     )
 
     # CI group
@@ -574,8 +595,8 @@ def pytest_collection_modifyitems(session, config, items):
     This function performs the following actions:
     1. Adds Polarion parameters to user properties.
     2. Adds test ID markers for Polarion and Jira.
-    3. Adds the tier2 marker for tests without an exclusion marker.
-    4. Marks tests by team.
+    3. Marks tests by team.
+    4. Adds the tier2 marker for tests without an exclusion marker.
     5. Filters upgrade tests based on the --upgrade option.
     6. Dynamically mark NMState-dependent tests.
 
@@ -602,10 +623,11 @@ def pytest_collection_modifyitems(session, config, items):
         add_test_id_markers(item=item, marker_name="polarion")
         add_test_id_markers(item=item, marker_name="jira")
 
+        # Must be called before add_tier2_marker; make sure team markers are added before tier2 tests collection
+        mark_tests_by_team(item=item)
+
         # Add tier2 marker for tests without an exclusion marker.
         add_tier2_marker(item=item)
-
-        mark_tests_by_team(item=item)
 
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
@@ -703,12 +725,13 @@ def pytest_runtest_setup(item):
         # before the setup work starts, insert current epoch time into the database
         try:
             db = Database(base_dir=item.config.getoption("--data-collector-output-dir"))
-            db.insert_test_start_time(
-                test_name=f"{item.fspath}::{item.name}",
-                start_time=int(datetime.datetime.now().strftime("%s")),
-            )
+            scope_marker = item.get_closest_marker(name="data_collector_scope")
+            scope_value = scope_marker.kwargs.get("scope") if scope_marker else None
+
+            name = get_scope_identifier(node=item, scope_value=scope_value)
+            db.insert_start_time(name=name, start_time=int(datetime.datetime.now().strftime("%s")))
         except Exception as db_exception:
-            LOGGER.error(f"Database error: {db_exception}. Must-gather collection may not be accurate")
+            LOGGER.error(f"[DATA_COLLECTOR] Database error: {db_exception}. Must-gather collection may not be accurate")
     BASIC_LOGGER.info(f"\n{separator(symbol_='-', val=item.name)}")
     BASIC_LOGGER.info(f"{separator(symbol_='-', val='SETUP')}")
     if "incremental" in item.keywords:
@@ -774,7 +797,7 @@ def pytest_sessionstart(session):
     # with runtime storage_class_matrix value(s)
     py_config["system_storage_class_matrix"] = py_config.get("storage_class_matrix", [])
 
-    generate_os_matrix_dicts(os_dict=py_config)
+    update_cpu_arch_related_config(cpu_arch_option=session.config.getoption("--cpu-arch") or "")
     update_latest_os_config(session_config=session.config)
 
     matrix_addoptions = [matrix for matrix in session.config.invocation_params.args if "-matrix=" in matrix]
@@ -801,6 +824,9 @@ def pytest_sessionstart(session):
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
         admin_client = utilities.cluster.cache_admin_client()
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
+        py_config["cluster_service_network"] = Network(
+            client=admin_client, name="cluster"
+        ).instance.status.serviceNetwork
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
                 cluster_host_url=admin_client.configuration.host, session=session
@@ -822,6 +848,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_finish(session):
+    validate_collected_tests_arch_params(session=session)
     if session.config.getoption("--collect-tests-markers"):
         get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))
         pytest.exit(reason="Run with --collect-tests-markers. no tests are executed", returncode=0)
@@ -901,9 +928,10 @@ def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
 
 def calculate_must_gather_timer(test_start_time):
     if test_start_time > 0:
-        return int(datetime.datetime.now().strftime("%s")) - test_start_time
+        # Add 5-minute (300s) buffer to work around must-gather timing issues
+        return int(datetime.datetime.now().strftime("%s")) - test_start_time + 300
     else:
-        LOGGER.warning(f"Could not get start time of test. Collecting must-gather for last {TIMEOUT_5MIN}s")
+        LOGGER.warning(f"[DATA_COLLECTOR] Could not get start time. Collecting must-gather for last {TIMEOUT_5MIN}s")
         return TIMEOUT_5MIN
 
 
@@ -911,18 +939,16 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
     BASIC_LOGGER.error(report.longreprtext)
     if node.config.getoption("--data-collector") and not is_skip_must_gather(node=node):
         test_name = f"{node.fspath}::{node.name}"
-        LOGGER.info(f"Must-gather collection is enabled for {test_name}.")
+        LOGGER.info(f"[DATA_COLLECTOR] Must-gather collection is enabled for {test_name}.")
         if call.excinfo and any([
             isinstance(call.excinfo.value, exception_type) for exception_type in MUST_GATHER_IGNORE_EXCEPTION_LIST
         ]):
-            LOGGER.warning(f"Must-gather collection would be skipped for exception: {call.excinfo.type}")
+            LOGGER.warning(
+                f"[DATA_COLLECTOR] Must-gather collection would be skipped for exception: {call.excinfo.type}"
+            )
         else:
-            try:
-                db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
-                test_start_time = db.get_test_start_time(test_name=test_name)
-            except Exception as db_exception:
-                test_start_time = 0
-                LOGGER.warning(f"Error: {db_exception} in accessing database.")
+            db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
+            test_start_time = db.get_start_time_for_collection(node=node)
 
             try:
                 collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")

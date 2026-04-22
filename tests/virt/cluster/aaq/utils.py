@@ -1,6 +1,7 @@
 import logging
 
 import bitmath
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.application_aware_applied_cluster_resource_quota import ApplicationAwareAppliedClusterResourceQuota
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -17,13 +18,13 @@ from utilities.constants import (
 LOGGER = logging.getLogger(__name__)
 
 
-def restart_vm_wait_for_gated_state(vm):
-    vmi_old_pod = vm.vmi.virt_launcher_pod
+def restart_vm_wait_for_gated_state(vm, admin_client: DynamicClient):
+    vmi_old_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     vm.restart()
     vmi_old_pod.wait_deleted()
     vm.wait_for_specific_status(status=VirtualMachine.Status.STARTING)
-    wait_for_virt_launcher_pod(vmi=vm.vmi)
-    wait_when_pod_in_gated_state(pod=vm.vmi.virt_launcher_pod)
+    wait_for_virt_launcher_pod(vmi=vm.vmi, privileged_client=admin_client)
+    wait_when_pod_in_gated_state(pod=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client))
 
 
 def wait_for_aacrq_object_created(namespace, acrq_name):
@@ -70,13 +71,15 @@ def get_pod_total_cpu_memory(pod_instance):
     return total_resources
 
 
-def check_arq_status_values_different_allocations(arq, vm, allocation_method):
+def check_arq_status_values_different_allocations(arq, vm, allocation_method, admin_client: DynamicClient):
     if allocation_method == AAQ_VIRTUAL_RESOURCES:
         # with VirtualResources allocation method ARQ shows what VM has in the spec
         resources = vm.vmi.instance.spec.domain.resources.to_dict()
     elif allocation_method == AAQ_VMI_POD_USAGE:
         # with VmiPodUsage allocation method ARQ shows the total POD usage (all containers)
-        resources = get_pod_total_cpu_memory(pod_instance=vm.vmi.virt_launcher_pod.instance)
+        resources = get_pod_total_cpu_memory(
+            pod_instance=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance
+        )
 
     assert resources, f"Not supported allocation method: {allocation_method}"
 

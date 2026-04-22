@@ -31,7 +31,6 @@ def smbios_defaults(cnv_current_version):
         "product": "OpenShift Virtualization",
         "manufacturer": "Red Hat",
         "version": cnv_current_version,
-        "sku": cnv_current_version,
     }
     return smbios_defaults
 
@@ -43,8 +42,9 @@ def test_cm_smbios_defaults(smbios_from_kubevirt_config, smbios_defaults):
 
 
 @pytest.mark.polarion("CNV-4325")
-def test_vm_smbios_default_values(smbios_from_kubevirt_config, configmap_smbios_vm):
+def test_vm_smbios_default_values(admin_client, smbios_from_kubevirt_config, configmap_smbios_vm):
     check_vm_xml_smbios(
         vm=configmap_smbios_vm,
         cm_values=smbios_from_kubevirt_config,
+        admin_client=admin_client,
     )

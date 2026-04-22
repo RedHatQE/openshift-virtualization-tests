@@ -35,6 +35,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HotplugVolumes",
     "DecentralizedLiveMigration",
 }
+S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
@@ -55,3 +56,4 @@ HCO_DEFAULT_FEATUREGATES = {
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
+KUBEMACPOOL_SERVICE = "kubemacpool-service"

@@ -28,7 +28,11 @@ from utilities.virt import (
     start_and_fetch_processid_on_windows_vm,
 )
 
-pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.usefixtures("created_post_copy_migration_policy")]
+pytestmark = [
+    pytest.mark.rwx_default_storage,
+    pytest.mark.usefixtures("created_post_copy_migration_policy"),
+    pytest.mark.data_collector_scope(scope="module"),
+]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -75,8 +79,10 @@ def migrated_hotplugged_vm(hotplugged_vm):
 
 @pytest.fixture()
 def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
-    with node_mgmt_console(admin_client=admin_client, node=hotplugged_vm.privileged_vmi.node, node_mgmt="drain"):
-        check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm)
+    with node_mgmt_console(
+        admin_client=admin_client, node=hotplugged_vm.vmi.get_node(privileged_client=admin_client), node_mgmt="drain"
+    ):
+        check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm, admin_client=admin_client)
     clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
 
 

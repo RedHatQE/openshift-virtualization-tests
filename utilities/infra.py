@@ -77,7 +77,7 @@ from utilities.ssp import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
-INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities"
+INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities.svc.cluster.local"
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 LOGGER = logging.getLogger(__name__)
 
@@ -614,7 +614,7 @@ def get_hyperconverged_resource(client, hco_ns_name):
         namespace=hco_ns_name,
         name=hco_name,
     )
-    hco.api_version = hco.ApiVersion.V1BETA1
+    hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{hco.ApiVersion.V1BETA1}"
     if hco.exists:
         return hco
     raise ResourceNotFoundError(f"Hyperconverged: {hco_name} not found in {hco_ns_name}")
@@ -1070,18 +1070,15 @@ def stable_channel_released_to_prod(channels: list[dict[str, str | bool]]) -> bo
 
 def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, str] | None:
     builds = wait_for_version_explorer_response(
-        api_end_point="GetBuildsWithErrata",
-        query_string=f"minor_version={minor_version}",
+        api_end_point="GetReleasedBuilds",
+        query_string=f"minor_version={minor_version}&stage=false",
     )["builds"]
 
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
+        if stable_channel_released_to_prod(channels=build["channels"]):
             build_version = Version(version=build["csv_version"])
-            if latest_z_stream:
-                if build_version > latest_z_stream:
-                    latest_z_stream = build_version
-            else:
+            if not latest_z_stream or build_version > latest_z_stream:
                 latest_z_stream = build_version
     return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 

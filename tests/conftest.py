@@ -3,7 +3,6 @@ Pytest conftest file for CNV tests
 """
 
 import copy
-import ipaddress
 import logging
 import os
 import os.path
@@ -16,7 +15,6 @@ from bisect import bisect_left
 from collections import defaultdict
 from datetime import datetime, timezone
 from signal import SIGINT, SIGTERM, getsignal, signal
-from subprocess import check_output
 
 import bcrypt
 import bitmath
@@ -44,7 +42,6 @@ from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
@@ -73,10 +70,13 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.cluster import cache_admin_client
+from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import (
     AAQ_NAMESPACE_LABEL,
     ARM_64,
@@ -130,7 +130,6 @@ from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
     get_host_model_cpu,
-    get_nodes_cpu_architecture,
     get_nodes_cpu_model,
 )
 from utilities.data_utils import base64_encode_str, name_prefix
@@ -164,7 +163,7 @@ from utilities.infra import (
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
-    cloud_init,
+    cloud_init_network_data,
     enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
@@ -414,7 +413,7 @@ def unprivileged_client(
         yield admin_client
 
     else:
-        current_user = check_output("oc whoami", shell=True).decode().strip()  # Get the current admin account
+        current_user = get_oc_whoami_username()
         if login_with_user_password(
             api_address=admin_client.configuration.host,
             user=UNPRIVILEGED_USER,
@@ -491,11 +490,12 @@ def cnv_tests_utilities_namespace(admin_client, installing_cnv):
 
 
 @pytest.fixture(scope="session")
-def cnv_tests_utilities_service_account(cnv_tests_utilities_namespace, installing_cnv):
+def cnv_tests_utilities_service_account(admin_client, cnv_tests_utilities_namespace, installing_cnv):
     if installing_cnv:
         yield
     else:
         with ServiceAccount(
+            client=admin_client,
             name=CNV_TEST_SERVICE_ACCOUNT,
             namespace=cnv_tests_utilities_namespace.name,
         ) as service_account:
@@ -528,7 +528,7 @@ def utility_daemonset(
             generated_pulled_secret=generated_pulled_secret,
             service_account=cnv_tests_utilities_service_account,
         )
-        with DaemonSet(yaml_file=modified_ds_yaml_file) as ds:
+        with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
             ds.wait_until_deployed()
             yield ds
 
@@ -956,7 +956,10 @@ def cnv_current_version(installing_cnv, csv_scope_session):
     if installing_cnv:
         return CNV_NOT_INSTALLED
     if csv_scope_session:
-        return csv_scope_session.instance.spec.version
+        version = csv_scope_session.instance.spec.version
+        if not version:
+            raise ValueError("CSV spec.version is missing (field is optional in schema).")
+        return version
 
 
 @pytest.fixture(scope="session")
@@ -1030,8 +1033,8 @@ def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
 
 
 @pytest.fixture(scope="session")
-def nodes_cpu_architecture(nodes):
-    return get_nodes_cpu_architecture(nodes=nodes)
+def nodes_cpu_architecture():
+    return py_config["cpu_arch"]
 
 
 @pytest.fixture(scope="session")
@@ -1465,8 +1468,6 @@ def cluster_info(
     hco_image,
     ocs_current_version,
     kubevirt_resource_scope_session,
-    ipv6_supported_cluster,
-    ipv4_supported_cluster,
     workers_type,
     nodes_cpu_architecture,
 ):
@@ -1486,8 +1487,8 @@ def cluster_info(
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
         f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
-        f"\tIPv4 cluster: {ipv4_supported_cluster}\n"
-        f"\tIPv6 cluster: {ipv6_supported_cluster}\n"
+        f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
+        f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
     )
 
@@ -1653,17 +1654,39 @@ def running_vm_upgrade_a(
     upgrade_br1test_nad,
 ):
     name = "vm-upgrade-a"
+    cloud_init_data = cloud_init_network_data(
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [
+                        f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
+                        f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
+                    ]
+                }
+            }
+        }
+    )
     with VirtualMachineForTests(
         name=name,
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.1"),
+        cloud_init_data=cloud_init_data,
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
+        ip_families = [
+            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
+        ]
+        lookup_iface_status(
+            vm=vm,
+            iface_name=upgrade_bridge_marker_nad.name,
+            predicate=lambda interface: (
+                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+            ),
+        )
         yield vm
 
 
@@ -1675,17 +1698,39 @@ def running_vm_upgrade_b(
     upgrade_br1test_nad,
 ):
     name = "vm-upgrade-b"
+    cloud_init_data = cloud_init_network_data(
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [
+                        f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
+                        f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
+                    ]
+                }
+            }
+        }
+    )
     with VirtualMachineForTests(
         name=name,
         namespace=kmp_enabled_namespace.name,
         networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
         interfaces=[upgrade_bridge_marker_nad.name],
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address="10.200.100.2"),
+        cloud_init_data=cloud_init_data,
         body=fedora_vm_body(name=name),
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
+        ip_families = [
+            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
+        ]
+        lookup_iface_status(
+            vm=vm,
+            iface_name=upgrade_bridge_marker_nad.name,
+            predicate=lambda interface: (
+                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+            ),
+        )
         yield vm
 
 
@@ -1820,23 +1865,6 @@ def eus_target_cnv_version(pytestconfig, cnv_current_version):
 @pytest.fixture()
 def ssp_resource_scope_function(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def cluster_service_network(admin_client):
-    return Network(client=admin_client, name="cluster").instance.status.serviceNetwork
-
-
-@pytest.fixture(scope="session")
-def ipv4_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 4 for ip in cluster_service_network])
-
-
-@pytest.fixture(scope="session")
-def ipv6_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 6 for ip in cluster_service_network])
 
 
 @pytest.fixture()
@@ -2660,11 +2688,6 @@ def nmstate_dependent_placeholder():
     and mark tests that depend on NMState functionality.
     """
     return
-
-
-@pytest.fixture()
-def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
-    return ipv6_supported_cluster and not ipv4_supported_cluster
 
 
 @pytest.fixture(scope="class")

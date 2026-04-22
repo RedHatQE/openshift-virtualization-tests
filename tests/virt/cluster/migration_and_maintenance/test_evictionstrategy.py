@@ -22,7 +22,11 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.arm64, pytest.mark.rwx_default_storage]
+pytestmark = [
+    pytest.mark.arm64,
+    pytest.mark.rwx_default_storage,
+    pytest.mark.data_collector_scope(scope="module"),
+]
 
 
 def wait_for_vm_uid_mismatch(vmi, vmi_old_uid):
@@ -43,7 +47,7 @@ def assert_vm_restarts_after_node_drain(source_node, vmi, vmi_old_uid):
 
 @pytest.fixture()
 def drained_node(admin_client, vm_for_test_from_template_scope_class):
-    source_node = vm_for_test_from_template_scope_class.privileged_vmi.node
+    source_node = vm_for_test_from_template_scope_class.vmi.get_node(privileged_client=admin_client)
     with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
         yield source_node
 
@@ -122,11 +126,12 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
 class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
-        self, unprivileged_client, vm_for_test_from_template_scope_class, drained_node
+        self, admin_client, unprivileged_client, vm_for_test_from_template_scope_class, drained_node
     ):
         check_migration_process_after_node_drain(
             client=unprivileged_client,
             vm=vm_for_test_from_template_scope_class,
+            admin_client=admin_client,
         )
 
     @pytest.mark.polarion("CNV-10088")
@@ -163,6 +168,7 @@ class TestEvictionStrategy:
     @pytest.mark.polarion("CNV-10357")
     def test_hco_evictionstrategy_none_vm_evictionstrategy_livemigrate(
         self,
+        admin_client,
         unprivileged_client,
         vm_for_test_from_template_scope_class,
         hco_cr_with_evictionstrategy_none,
@@ -172,4 +178,5 @@ class TestEvictionStrategy:
         check_migration_process_after_node_drain(
             client=unprivileged_client,
             vm=vm_for_test_from_template_scope_class,
+            admin_client=admin_client,
         )

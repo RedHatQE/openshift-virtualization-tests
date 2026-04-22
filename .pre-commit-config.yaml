@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/PyCQA/autoflake
-    rev: "v2.3.1"
+    rev: "v2.3.3"
     hooks:
       - id: autoflake
         args:
@@ -46,6 +46,7 @@ repos:
       - id: flake8
         language_version: python3.14
         args: [--config=.flake8]
+        exclude: "(utilities/unittests/|utilities/junit_ai_utils\\.py|scripts/std_placeholder_stats/tests/)"
         additional_dependencies:
           [
             "git+https://github.com/RedHatQE/flake8-plugins.git@v1.0.0",
@@ -66,7 +67,7 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+    rev: v1.20.0
     hooks:
       - id: mypy
         exclude: "test_(.*).py$"
