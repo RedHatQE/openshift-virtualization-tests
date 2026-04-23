@@ -4,4 +4,4 @@ Project guidance for AI coding assistants.
 
 > **Using a different AI tool?** See `AGENTS.md` for the tool-agnostic project rules.
 
-@AGENTS.md
+See [AGENTS.md](AGENTS.md) for project documentation.
