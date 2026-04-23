@@ -13,7 +13,7 @@ from tests.storage.storage_migration.constants import (
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
 from tests.storage.utils import check_file_in_vm
-from utilities.constants import TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 
@@ -89,14 +89,19 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
 
 def verify_file_in_hotplugged_disk(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
     output = run_ssh_commands(
-        host=vm.ssh_exec, commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}")
+        host=vm.ssh_exec,
+        commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )[0]
     assert output.strip() == file_content, f"'{output}' does not equal '{file_content}'"
 
 
 def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with_path: str, file_content: str) -> None:
     cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
+        0
+    ].strip()
     assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
 
 
