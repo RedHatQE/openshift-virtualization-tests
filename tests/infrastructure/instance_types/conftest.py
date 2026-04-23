@@ -19,7 +19,13 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import CONTAINER_DISK_IMAGE_PATH_STR, DATA_SOURCE_STR, OS_FLAVOR_WIN_CONTAINER_DISK, Images
+from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
+    DATA_SOURCE_STR,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
+    TIMEOUT_20MIN,
+    Images,
+)
 from utilities.storage import (
     create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
@@ -128,6 +134,7 @@ def latest_windows_data_volume(
     ) as win_dv:
         if sc_volume_binding_mode_is_wffc(sc=default_sc.name, client=win_dv.client):
             create_dummy_first_consumer_pod(pvc=win_dv.pvc)
+        win_dv.wait_for_dv_success(timeout=TIMEOUT_20MIN)
         yield win_dv
     cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
 
