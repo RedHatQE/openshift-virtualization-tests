@@ -177,14 +177,8 @@ def create_dv_with_source_ref(
     storage_class,
     size,
     data_source,
-    volume_mode=None,
-    access_modes=None,
     client=None,
-    multus_annotation=None,
-    teardown=True,
     consume_wffc=True,
-    bind_immediate=None,
-    preallocation=None,
     api_name="storage",
 ):
     # openshift-python-wrapper doesn't support source_ref parameter.
@@ -194,13 +188,7 @@ def create_dv_with_source_ref(
         namespace=namespace,
         size=size,
         storage_class=storage_class,
-        volume_mode=volume_mode,
-        access_modes=access_modes,
         client=client,
-        bind_immediate_annotation=bind_immediate,
-        multus_annotation=multus_annotation,
-        teardown=teardown,
-        preallocation=preallocation,
         api_name=api_name,
     )
     dv.to_dict()
