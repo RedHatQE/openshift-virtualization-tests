@@ -45,7 +45,7 @@ IPERF3_SERVER_PORT: Final[int] = 2354
 LOCALNET_NETWORK_NAME: Final[str] = "localnet-network-bgp"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def nncp_localnet_node1(
     nmstate_dependent_placeholder,
     admin_client: DynamicClient,
@@ -70,7 +70,7 @@ def nncp_localnet_node1(
         yield nncp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def nad_localnet(
     admin_client: DynamicClient,
     nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
@@ -86,7 +86,7 @@ def nad_localnet(
         yield nad
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def frr_configmap(
     workers: list[Node],
     cnv_tests_utilities_namespace: Namespace,
@@ -111,7 +111,7 @@ def frr_configmap(
         yield cm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def cluster_network_resource_ra_enabled(
     network_operator: openshift_nc.Network,
     admin_client: DynamicClient,
@@ -171,7 +171,7 @@ def frr_configuration_created(admin_client: DynamicClient, frr_external_pod: Ext
         yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def frr_external_pod(
     nad_localnet: libnad.NetworkAttachmentDefinition,
     worker_node1: Node,
