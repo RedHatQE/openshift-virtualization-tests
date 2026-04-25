@@ -536,3 +536,48 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
+
+
+def verify_vtpm_in_windows_vm(vm, admin_client):  # TODO: Remove - debug only
+    """
+    Verify vTPM is properly configured and detected in a Windows VM.
+
+    **DEBUG ONLY - MARKED FOR DELETION**
+
+    Performs two-layer validation:
+    1. KubeVirt configuration validation via VM XML
+    2. Windows OS TPM detection via WMI
+
+    Args:
+        vm (VirtualMachineForTests): Running Windows VM instance
+        admin_client (DynamicClient): Admin client for privileged VM XML access
+
+    Raises:
+        AssertionError: If vTPM is not properly configured or detected
+    """
+    LOGGER.info(f"Validating vTPM configuration and detection for VM: {vm.name}")
+
+    # Layer 1: Validate TPM in KubeVirt VM XML
+    LOGGER.info("Validating vTPM configuration in KubeVirt VM spec")
+    xml_dict_tpm = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["tpm"]
+
+    tpm_model = xml_dict_tpm.get("@model")
+    assert tpm_model == "tpm-crb", f"Expected TPM model 'tpm-crb', got '{tpm_model}'"
+
+    persistent_state = xml_dict_tpm.get("backend", {}).get("@persistent_state")
+    assert persistent_state == "yes", f"Expected TPM persistent state 'yes', got '{persistent_state}'"
+    LOGGER.info("vTPM configuration validated in VM spec")
+
+    # Layer 2: Validate TPM detection in Windows OS
+    LOGGER.info("Validating vTPM detection in Windows OS")
+    vtpm_enabled = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(
+            r"wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get IsEnabled_InitialValue",
+            posix=False,
+        ),
+    )[0]
+    assert "TRUE" in vtpm_enabled, f"TPM not enabled in Windows. Output: {vtpm_enabled}"
+    LOGGER.info("vTPM detection validated in Windows OS")
+
+    LOGGER.info(f"vTPM validation completed for VM: {vm.name}")
