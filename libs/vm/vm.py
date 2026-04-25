@@ -114,6 +114,17 @@ class BaseVirtualMachine(VirtualMachine):
         }
         ResourceEditor(patches=patches).update()
 
+    def update_template_node_selector(self, node_selector: dict[str, str] | None) -> None:
+        """Update the VM template node selector.
+
+        Args:
+            node_selector: Node selector dictionary to apply to the VM template spec.
+                Set to None to clear the node selector.
+        """
+        self._spec.template.spec.nodeSelector = node_selector
+        patches = {self: {"spec": {"template": {"spec": {"nodeSelector": node_selector}}}}}
+        ResourceEditor(patches=patches).update()
+
     @property
     def template_spec(self) -> VMISpec:
         return self._spec.template.spec

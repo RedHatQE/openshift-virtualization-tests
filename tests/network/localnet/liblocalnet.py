@@ -1,7 +1,8 @@
 import contextlib
 import logging
 import uuid
-from typing import Final, Generator
+from collections.abc import Generator
+from typing import Final
 
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
@@ -77,6 +78,9 @@ def localnet_vm(
     networks: list[Network],
     interfaces: list[Interface],
     network_data: cloudinit.NetworkData | None = None,
+    *,
+    pod_anti_affinity: bool = True,
+    node_selector: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
@@ -95,6 +99,9 @@ def localnet_vm(
             Each Interface should have a name matching a Network, and additional configuration and state.
         network_data (cloudinit.NetworkData | None): Cloud-init NetworkData object containing the network
             configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
+        pod_anti_affinity (bool): When True (default), prevent this VM from being scheduled on the same node
+            as other VMs with the localnet test label.
+        node_selector (dict[str, str] | None): Optional VMI nodeSelector (e.g. pin to a worker hostname).
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -136,8 +143,12 @@ def localnet_vm(
         )
         vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
 
-    vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
-    vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
+    if pod_anti_affinity:
+        vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
+        vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
+
+    if node_selector is not None:
+        vmi_spec.nodeSelector = node_selector
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
