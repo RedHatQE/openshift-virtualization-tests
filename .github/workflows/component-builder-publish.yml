@@ -13,8 +13,8 @@ jobs:
   guest-fedora-amd64:
     runs-on: ubuntu-latest
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
-      FEDORA_VERSION: 41
+      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2
+      FEDORA_VERSION: 43
       CPU_ARCH: amd64
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
@@ -34,7 +34,7 @@ jobs:
         run: sudo chmod 0644 /boot/vmlinuz*
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
