@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
@@ -5,8 +7,11 @@ from ocp_resources.virtual_machine_cluster_preference import (
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
-from utilities.constants import VIRT_OPERATOR, Images
+from utilities.architecture import get_cluster_architecture
+from utilities.constants import S390X, VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
+
+LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -52,10 +57,20 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
+def _preference_requires_efi(client, preference_name):
+    """Check if a VirtualMachineClusterPreference requires EFI firmware."""
+    preference = VirtualMachineClusterPreference(client=client, name=preference_name)
+    return bool(preference.instance.spec.get("firmware", {}).get("preferredEfi"))
+
+
 def run_general_vm_preferences(client, namespace, preferences):
+    is_s390x = get_cluster_architecture() == S390X
     for preference_name in preferences:
         # TODO remove arm64 skip when openshift-virtualization-tests support arm64
         if all(suffix not in preference_name for suffix in ["virtio", "arm64"]):
+            if is_s390x and _preference_requires_efi(client=client, preference_name=preference_name):
+                LOGGER.info(f"Skipping preference {preference_name}: EFI/OVMF not available on s390x")
+                continue
             start_vm_with_cluster_preference(
                 client=client,
                 preference_name=preference_name,
