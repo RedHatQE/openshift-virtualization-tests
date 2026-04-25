@@ -14,6 +14,7 @@ pytestmark = [
         "enable_multi_network_policy_usage",
     ),
     pytest.mark.ipv4,
+    pytest.mark.multiarch,
 ]
 
 

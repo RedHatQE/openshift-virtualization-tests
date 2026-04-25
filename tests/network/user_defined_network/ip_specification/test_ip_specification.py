@@ -30,6 +30,7 @@ FIRST_GUEST_IFACE_NAME: Final[str] = "eth0"
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.incremental
+@pytest.mark.ma_sanity
 class TestVMWithExplicitIPAddressSpecification:
     """
     Tests for VM with an IP address explicitly defined for the primary UDN.
