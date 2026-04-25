@@ -8,12 +8,11 @@ from tests.infrastructure.instance_types.supported_os.constants import (
 from tests.infrastructure.instance_types.utils import (
     assert_kernel_lockdown_mode,
     assert_secure_boot_dmesg,
-    assert_secure_boot_mokutil_status,
 )
 from utilities.constants import PREFERENCE_STR, U1_MEDIUM_STR
+from utilities.infra import assert_secure_boot_mokutil_status
 from utilities.virt import (
     assert_linux_efi,
-    assert_vm_xml_efi,
     check_qemu_guest_agent_installed,
     check_vm_xml_smbios,
     migrate_vm_and_verify,
@@ -101,16 +100,14 @@ class TestVMFeatures:
     @pytest.mark.polarion("CNV-11834")
     def test_efi_secureboot_disabled_and_enabled(
         self,
-        admin_client,
         golden_image_rhel_vm_with_instance_type,
     ):
         vm = golden_image_rhel_vm_with_instance_type
 
         def _update_and_verify_secure_boot(vm, secure_boot_value):
             update_vm_efi_spec_and_restart(vm=vm, spec={"secureBoot": secure_boot_value})
-            # assert vm config at hypervisor level
-            assert_vm_xml_efi(vm=vm, admin_client=admin_client, secure_boot_enabled=secure_boot_value)
             assert_linux_efi(vm=vm)
+            assert_secure_boot_mokutil_status(vm=vm, expected_enabled=secure_boot_value)
 
         # Disable secureboot
         _update_and_verify_secure_boot(vm=vm, secure_boot_value=False)

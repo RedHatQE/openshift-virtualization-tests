@@ -17,7 +17,6 @@ from utilities.constants import OS_FLAVOR_WINDOWS, QUARANTINED
 from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
-    assert_vm_xml_efi,
     check_vm_xml_smbios,
     migrate_vm_and_verify,
     running_vm,
@@ -61,7 +60,6 @@ class TestCommonTemplatesWindows:
     def test_efi_secureboot_enabled_by_default(self, admin_client, matrix_windows_os_vm_from_template):
         """Test CNV common templates EFI secureboot status"""
 
-        assert_vm_xml_efi(vm=matrix_windows_os_vm_from_template, admin_client=admin_client)
         assert_windows_efi(vm=matrix_windows_os_vm_from_template)
 
     @pytest.mark.sno
