@@ -176,8 +176,8 @@ def hco_version_scope_class(admin_client, hco_namespace):
 
 
 @pytest.fixture()
-def disabled_default_sources_in_operatorhub(admin_client, installing_cnv):
-    if installing_cnv:
+def disabled_default_sources_in_operatorhub(admin_client, installing_cnv, is_production_source):
+    if installing_cnv or is_production_source:
         yield
     else:
         with disable_default_sources_in_operatorhub(admin_client=admin_client):
