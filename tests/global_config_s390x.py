@@ -16,7 +16,7 @@ EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{S390X}"
 
 
 rhel_os_list = ["rhel-8-10", "rhel-9-6"]
-fedora_os_list = ["fedora-42"]
+fedora_os_list = ["fedora-43"]
 centos_os_list = ["centos-stream-9"]
 
 instance_type_rhel_os_list = [RHEL9_PREFERENCE]
