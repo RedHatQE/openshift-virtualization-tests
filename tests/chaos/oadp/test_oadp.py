@@ -1,9 +1,13 @@
 import logging
 
 import pytest
+from ocp_resources.daemonset import DaemonSet
+from ocp_resources.deployment import Deployment
 
+from tests.chaos.utils import wait_for_restored_vm
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST, TIMEOUT_5MIN, TIMEOUT_10MIN
+from utilities.oadp import check_file_in_running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -128,8 +132,7 @@ def test_delete_pods_during_backup(
     1. Create a healthy VM and persist data inside the guest.
     2. Trigger an OADP Backup.
     3. Start a background process that continuously deletes critical OADP-related
-       pods (e.g. controller-manager, node-agent, velero, minio) while the Backup
-       is in progress.
+       pods (e.g. controller-manager, node-agent, velero) while the Backup is in progress.
     4. Wait for the OADP Backup to reach a terminal state.
     5. Stop the pod deletion process once the Backup finishes.
     6. Verify the final Backup status matches the expected result.
@@ -138,3 +141,90 @@ def test_delete_pods_during_backup(
     assert backup_with_pod_deletion_orchestration == expected_status, (
         f"Expected backup status {expected_status}, got {backup_with_pod_deletion_orchestration}"
     )
+
+
+@pytest.mark.destructive
+@pytest.mark.tier3
+@pytest.mark.chaos
+@pytest.mark.parametrize(
+    ("pod_deleting_thread_during_oadp_operations", "expected_status"),
+    [
+        pytest.param(
+            {
+                "pod_prefix": "velero",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 30,
+                "max_duration": 300,
+                "resources": [Deployment],
+            },
+            "Completed",
+            marks=pytest.mark.polarion("CNV-12027"),
+            id="velero",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "openshift-adp-controller-manager",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 10,
+                "max_duration": 120,
+                "resources": [Deployment],
+            },
+            "Completed",
+            marks=pytest.mark.polarion("CNV-12025"),
+            id="openshift-adp-controller-manager",
+        ),
+        pytest.param(
+            {
+                "pod_prefix": "node-agent",
+                "namespace_name": "openshift-adp",
+                "ratio": 1.0,
+                "interval": 10,
+                "max_duration": 300,
+                "resources": [DaemonSet],
+            },
+            "Completed",
+            marks=pytest.mark.polarion("CNV-12023"),
+            id="node-agent",
+        ),
+    ],
+    indirect=["pod_deleting_thread_during_oadp_operations"],
+)
+def test_delete_pods_during_restore(
+    admin_client,
+    chaos_namespace,
+    rhel_vm_with_dv_running,
+    restore_with_pod_deletion_orchestration,
+    expected_status,
+):
+    """
+    This test verifies OADP restore resilience under control-plane disruptions.
+
+    Preconditions:
+        - A healthy VM exists and guest data was written before backup.
+
+    Steps:
+        1. Take a successful OADP backup.
+        2. Delete the original VM and namespace.
+        3. Delete OADP pods while the restore is in progress.
+        4. Wait for the restore to reach a terminal status.
+
+    Expected:
+        - The restore reaches the expected final status.
+        - The VM is recreated and reaches Running.
+        - The guest data is preserved after restore.
+    """
+
+    assert restore_with_pod_deletion_orchestration == expected_status, (
+        f"Expected restore status {expected_status}, got {restore_with_pod_deletion_orchestration}"
+    )
+
+    restored_vm = wait_for_restored_vm(
+        admin_client=admin_client,
+        namespace=chaos_namespace,
+        vm_name=rhel_vm_with_dv_running.name,
+        timeout=TIMEOUT_5MIN,
+    )
+
+    check_file_in_running_vm(vm=restored_vm, file_name=FILE_NAME_FOR_BACKUP, file_content=TEXT_TO_TEST)

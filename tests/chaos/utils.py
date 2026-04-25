@@ -14,6 +14,7 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
 from ocp_resources.service import Service
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -80,7 +81,7 @@ def create_pod_deleting_process(
                 wait_timeout=max_duration,
                 sleep=interval,
                 func=delete_pods,
-                _client=client,
+                client=client,
                 pod_prefix=pod_prefix,
                 namespace_name=namespace_name,
                 ratio=ratio,
@@ -393,12 +394,10 @@ def pod_deleting_process_recover(resources, namespace, pod_prefix):
         found_any = True
 
         for resource_obj in resource_objs:
-            if resource_obj.kind == Deployment.kind:
-                LOGGER.info(f"Waiting for Deployment {resource_obj.name} to recover replicas")
+            LOGGER.info(f"Waiting for {resource.kind} {resource_obj.name} to recover")
+            if resource is Deployment:
                 resource_obj.wait_for_replicas()
-
-            elif resource_obj.kind == DaemonSet.kind:
-                LOGGER.info(f"Waiting for DaemonSet {resource_obj.name} to recover")
+            else:
                 resource_obj.wait_until_deployed()
 
     if found_any:
@@ -428,11 +427,18 @@ def delete_pods(client, pod_prefix, namespace_name, ratio):
         client: OpenShift/Kubernetes client used to query and delete pods.
         pod_prefix (str): Prefix of pod names to match.
         namespace_name (str): Namespace where pods are located.
-        ratio (float): Fraction of pods to delete (0 < ratio <= 1).
+        ratio (float): Fraction of pods to delete (0 <= ratio <= 1). If ratio is 0, no pods are deleted.
 
     Raises:
         ResourceNotFoundError: If no matching pods are found.
     """
+    if ratio == 0:
+        LOGGER.info(f"No-op: ratio=0, skipping pod deletion for prefix {pod_prefix}")
+        return
+
+    if not (0 < ratio <= 1):
+        raise ValueError(f"ratio must be between 0 and 1, got {ratio}")
+
     pods = get_pod_by_name_prefix(
         client=client,
         pod_prefix=pod_prefix,
@@ -456,7 +462,7 @@ def delete_pods(client, pod_prefix, namespace_name, ratio):
         try:
             pod.wait_deleted(timeout=TIMEOUT_30SEC)
         except TimeoutExpiredError:
-            LOGGER.warning(f"Pod {pod.name} was not deleted")
+            LOGGER.info(f"Pod {pod.name} was not deleted")
 
 
 def delete_pods_continuously(
@@ -501,7 +507,8 @@ def delete_pods_continuously(
             )
         except ResourceNotFoundError:
             LOGGER.info(f"No pods found with prefix {pod_prefix} in this iteration")
-
+        # Using stop_event.wait() intentionally to support cooperative thread cancellation via threading.Event.
+        # Because TimeoutSampler doesn't support threading.Event based shutdown.
         stop_event.wait(timeout=interval)
 
 
@@ -514,10 +521,6 @@ def create_pod_deleting_thread(
     max_duration=TIMEOUT_1MIN,
 ):
     """Create a background thread for continuous pod deletion.
-
-    The returned thread is configured but NOT started. Call ``thread.start()``
-    to begin deleting pods. Pod deletion can be stopped by calling
-    ``stop_event.set()``.
 
     Args:
         client: OpenShift/Kubernetes client.
@@ -550,3 +553,133 @@ def create_pod_deleting_thread(
     )
 
     return thread, stop_event
+
+
+def wait_until_vm_running(vm: VirtualMachine, timeout=TIMEOUT_5MIN, sleep=5) -> None:
+    LOGGER.info(f"Waiting for VM {vm.name} to reach Running state")
+
+    def is_running():
+        return vm.printable_status == "Running"
+
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=timeout,
+            sleep=sleep,
+            func=is_running,
+        ):
+            if sample:
+                LOGGER.info(f"VM {vm.name} is Running")
+                return
+
+    except TimeoutExpiredError as error:
+        LOGGER.error(f"VM {vm.name} did not reach Running state in {timeout}s")
+        raise TimeoutError(f"VM {vm.name} did not reach Running state in {timeout}s") from error
+
+
+def wait_for_restored_vm(
+    admin_client,
+    namespace,
+    vm_name,
+    timeout=TIMEOUT_5MIN,
+    sleep=5,
+) -> VirtualMachine:
+    """
+    Wait for a restored VirtualMachine to appear and reach Running state.
+    """
+
+    LOGGER.info(f"Waiting for restored VM {vm_name}")
+
+    namespace_name = namespace.name if hasattr(namespace, "name") else namespace
+
+    vm = None
+
+    def try_get_and_wait_running():
+        nonlocal vm
+
+        try:
+            vm_iter = VirtualMachine.get(client=admin_client, namespace=namespace_name, name=vm_name)
+            vm_obj = next(vm_iter, None)
+            if vm_obj:
+                test_vm = VirtualMachineForTests(
+                    client=admin_client,
+                    name=vm_name,
+                    namespace=namespace_name,
+                )
+                test_vm.name = vm_name
+                vm = test_vm
+                return vm
+        except ResourceNotFoundError:
+            return None
+
+    try:
+        for sample in TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=try_get_and_wait_running):
+            if sample:
+                break
+
+    except TimeoutExpiredError as error:
+        LOGGER.error(f"VM {vm_name} was not found in namespace {namespace_name} within {timeout}s")
+        raise TimeoutError(
+            f"VM {vm_name} not found or not running in namespace {namespace} within {timeout}s"
+        ) from error
+
+    if vm is None:
+        raise AssertionError("Unreachable: vm should be set after TimeoutSampler loop")
+
+    LOGGER.info(f"VM {vm.name} found, waiting for Running")
+    wait_until_vm_running(vm=vm, timeout=timeout, sleep=sleep)
+
+    LOGGER.info(f"Restored VM {vm_name} is Running")
+    return vm
+
+
+def wait_for_oadp_phase(resource, terminal_statuses, timeout, sleep=5, expected_phase=None) -> str:
+    """
+    Wait for an OADP resource to reach one of the final phases, and optionally validate the final phase.
+
+    Args:
+        resource: Resource object with `.instance.status.phase` attribute.
+        terminal_statuses (set[str]): Set of final phases.
+        timeout (int): Total timeout in seconds.
+        sleep (int, optional): Poll interval. Default 5s.
+        expected_phase (str, optional): Expected final phase. If provided, the function asserts that
+            the reached phase matches this value.
+
+    Returns:
+        str: Final phase reached.
+
+    Raises:
+        AssertionError: If `expected_phase` is provided and does not match the final phase.
+        TimeoutError: If no final phase is reached within timeout.
+    """
+    final_phase = None
+
+    def get_phase():
+        nonlocal final_phase
+        phase = getattr(resource.instance.status, "phase", None)
+        if phase:
+            LOGGER.info(f"{resource.name} phase: {phase}")
+            final_phase = phase
+
+            if phase in terminal_statuses:
+                return phase
+
+        return None
+
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=timeout,
+            sleep=sleep,
+            func=get_phase,
+        ):
+            if sample:
+                LOGGER.info(f"{resource.name} phase: {sample}")
+                if expected_phase:
+                    if sample != expected_phase:
+                        raise AssertionError(f"{resource.name} ended with phase {sample}, expected {expected_phase}")
+                return sample
+
+    except TimeoutExpiredError as error:
+        LOGGER.error(f"{resource.name} did not reach a terminal phase within {timeout}s; last phase={final_phase}")
+        raise TimeoutError(f"{resource.name} did not reach final phase {final_phase} in {timeout}s") from error
+
+    raise AssertionError("Unreachable: TimeoutSampler always raises or returns")
