@@ -70,7 +70,7 @@ def vmx_disabled_flag(nodes_cpu_architecture):
 
 
 @pytest.fixture(scope="class")
-def hotplugged_vm(
+def vm_with_hotplug_support(
     request,
     namespace,
     unprivileged_client,
@@ -101,19 +101,21 @@ def hotplugged_vm(
 
 
 @pytest.fixture()
-def hotplugged_sockets_memory_guest(request, admin_client, hotplugged_vm, unprivileged_client):
+def hotplugged_sockets_memory_guest(request, admin_client, vm_with_hotplug_support, unprivileged_client):
     param = request.param
     if param.get("skip_migration"):
-        hotplug_spec_vm(vm=hotplugged_vm, sockets=param.get("sockets"), memory_guest=param.get("memory_guest"))
+        hotplug_spec_vm(
+            vm=vm_with_hotplug_support, sockets=param.get("sockets"), memory_guest=param.get("memory_guest")
+        )
     else:
         hotplug_spec_vm_and_verify_hotplug(
-            vm=hotplugged_vm,
+            vm=vm_with_hotplug_support,
             client=unprivileged_client,
             sockets=param.get("sockets"),
             memory_guest=param.get("memory_guest"),
         )
     yield
-    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=vm_with_hotplug_support)
 
 
 @pytest.fixture()
