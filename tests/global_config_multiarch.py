@@ -25,13 +25,23 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": True,
+            # "default": True,
+        }
+    },
+    {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
             "default": True,
         }
     },
 ]
 
-storage_class_a = StorageClassNames.IO2_CSI
-storage_class_b = StorageClassNames.IO2_CSI
+storage_class_a = StorageClassNames.CEPH_RBD_VIRTUALIZATION
+storage_class_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 
 os_matrix = {
     AMD_64: {
