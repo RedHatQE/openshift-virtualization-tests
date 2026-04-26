@@ -16,3 +16,6 @@ If a related issue doesn't exist, you can open a new issue using a relevant [iss
 
 ## Pull requests
 Follow the guidelines in [Developer guide](DEVELOPER_GUIDE.md)
+
+## AI Tools
+See the [AI Contribution Policy](AI_CONTRIBUTION_POLICY.md) for disclosure requirements and recommended uses.
