@@ -11,13 +11,12 @@ from tests.storage.storage_migration.constants import (
 )
 from tests.storage.storage_migration.utils import (
     verify_file_in_hotplugged_disk,
-    verify_file_in_windows_vm,
     verify_storage_migration_succeeded,
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
 from utilities.constants import TIMEOUT_60MIN
-from utilities.virt import migrate_vm_and_verify
+from utilities.virt import migrate_vm_and_verify, verify_file_in_windows_vm
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"

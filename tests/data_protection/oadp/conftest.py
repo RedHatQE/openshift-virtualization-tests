@@ -1,14 +1,30 @@
 import pytest
+from ocp_resources.data_protection_application import DataProtectionApplication
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.resource import ResourceEditor
+from pytest_testconfig import config as py_config
 
+from tests.data_protection.oadp.utils import (
+    OADP_DPA_NAME,
+    OADP_VELERO_IMAGE_FQIN_OVERRIDE,
+    create_windows_vm_from_dv_template,
+    write_file_windows_vm_for_oadp,
+)
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
+    ADP_NAMESPACE,
     BACKUP_STORAGE_LOCATION,
+    DV_SIZE_STR,
     FILE_NAME_FOR_BACKUP,
+    IMAGE_PATH_STR,
     OS_FLAVOR_RHEL,
+    OS_VERSION_STR,
+    TEMPLATE_LABELS_STR,
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
+    TIMEOUT_60MIN,
     Images,
 )
 from utilities.infra import create_ns
@@ -26,7 +42,20 @@ from utilities.storage import (
     virtctl_upload_dv,
     write_file,
 )
-from utilities.virt import running_vm
+from utilities.virt import running_vm, wait_for_windows_vm
+
+
+@pytest.fixture()
+def dpa_velero_image_override(admin_client):
+    """Temporarily override DPA Velero image, restored on teardown."""
+    dpa = DataProtectionApplication(
+        name=OADP_DPA_NAME,
+        namespace=ADP_NAMESPACE,
+        client=admin_client,
+    )
+    patch = {"spec": {"unsupportedOverrides": {"veleroImageFqin": OADP_VELERO_IMAGE_FQIN_OVERRIDE}}}
+    with ResourceEditor(patches={dpa: patch}):
+        yield dpa
 
 
 @pytest.fixture()
@@ -135,6 +164,69 @@ def rhel_vm_with_data_volume_template(
             stop_vm=False,
         )
         yield vm
+
+
+@pytest.fixture()
+def windows_vm_with_data_volume_template(
+    admin_client,
+    dpa_velero_image_override,
+    namespace_for_backup,
+    snapshot_storage_class_name_scope_module,
+    modern_cpu_for_migration,
+):
+    """Windows VM in the backup namespace for OADP backup testing."""
+    latest_windows = py_config["latest_windows_os_dict"]
+    with create_windows_vm_from_dv_template(
+        storage_class=snapshot_storage_class_name_scope_module,
+        namespace=namespace_for_backup.name,
+        dv_name="oadp-windows-dv",
+        vm_name="oadp-windows-vm",
+        image_url=f"{get_test_artifact_server_url()}{latest_windows.get(IMAGE_PATH_STR)}",
+        dv_size=latest_windows.get(DV_SIZE_STR),
+        template_labels=latest_windows.get(TEMPLATE_LABELS_STR, {}),
+        client=admin_client,
+        cpu_model=modern_cpu_for_migration,
+        dv_wait_timeout=TIMEOUT_60MIN,
+    ) as vm:
+        wait_for_windows_vm(
+            vm=vm,
+            version=latest_windows.get(OS_VERSION_STR),
+            timeout=TIMEOUT_60MIN,
+        )
+        write_file_windows_vm_for_oadp(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def velero_backup_first_namespace_without_datamover(
+    admin_client,
+    namespace_for_backup,
+    windows_vm_with_data_volume_template,
+):
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[
+            namespace_for_backup.name,
+        ],
+        name="backup-windows-dvt-ns",
+    ) as backup:
+        yield backup
+
+
+@pytest.fixture()
+def velero_restore_first_namespace_without_datamover(
+    admin_client,
+    velero_backup_first_namespace_without_datamover,
+):
+    Namespace(name=velero_backup_first_namespace_without_datamover.included_namespaces[0]).delete(wait=True)
+    with VeleroRestore(
+        client=admin_client,
+        included_namespaces=velero_backup_first_namespace_without_datamover.included_namespaces,
+        name="restore-windows-dvt-ns",
+        backup_name=velero_backup_first_namespace_without_datamover.name,
+        timeout=TIMEOUT_8MIN,
+    ) as restore:
+        yield restore
 
 
 @pytest.fixture()
