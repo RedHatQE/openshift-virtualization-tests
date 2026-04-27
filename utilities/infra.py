@@ -1146,7 +1146,6 @@ def get_node_selector_dict(node_selector):
     return {f"{Resource.ApiGroup.KUBERNETES_IO}/hostname": node_selector}
 
 
-
 def get_linux_guest_agent_version(ssh_exec):
     ssh_exec.sudo = True
     return guest_agent_version_parser(version_string=ssh_exec.package_manager.info("qemu-guest-agent"))
