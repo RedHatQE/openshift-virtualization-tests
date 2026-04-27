@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 import shlex
 from contextlib import contextmanager
@@ -586,16 +585,6 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     # dataVolumeTemplate is not required to have the namespace explicitly set
     dv.res["metadata"].pop("namespace", None)
     return dv.res
-
-
-def overhead_size_for_dv(image_size, overhead_value):
-    """
-    Calculate the size of the dv to include overhead and rounds up
-
-    DV creation can be with a fraction only if the corresponding  mebibyte is an integer
-    """
-    dv_size = image_size / (1 - overhead_value) * 1024
-    return f"{math.ceil(dv_size)}Mi"
 
 
 def cdi_feature_gate_list_with_added_feature(feature):
