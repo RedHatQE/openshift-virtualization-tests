@@ -561,6 +561,9 @@ def data_volume_template_dict(
     )
     dv.to_dict()
     if not size:
+        # Omitted size parameter signals CDI to auto-detect target capacity
+        # instead of locking to a pre-computed value (required when
+        # minimumSupportedPvcSize causes actual PVC capacity > DV spec size).
         dv.res["spec"][source_dv.api_name]["resources"] = {}
     return dv.res
 
