@@ -4,6 +4,7 @@ import pytest
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine import VirtualMachine
 
+from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.observability.metrics.constants import KUBEVIRT_VMI_NODE_CPU_AFFINITY
 from tests.observability.metrics.utils import (
     validate_vmi_node_cpu_affinity_with_prometheus,
@@ -92,9 +93,9 @@ class TestVirtHCOSingleStackIpv6:
     @pytest.mark.ipv6
     @pytest.mark.polarion("CNV-11740")
     @pytest.mark.s390x
-    def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus, ipv6_single_stack_cluster):
+    def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus):
         validate_metrics_value(
             prometheus=prometheus,
             metric_name="kubevirt_hco_single_stack_ipv6",
-            expected_value="1" if ipv6_single_stack_cluster else "0",
+            expected_value="1" if is_ipv6_single_stack_cluster() else "0",
         )

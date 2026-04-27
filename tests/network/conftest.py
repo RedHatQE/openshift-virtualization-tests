@@ -16,6 +16,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
@@ -62,32 +63,25 @@ def virt_handler_pod(admin_client):
     raise ResourceNotFoundError(f"No {VIRT_HANDLER} Pod found.")
 
 
-@pytest.fixture(scope="session")
-def dual_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
-    return ipv4_supported_cluster and ipv6_supported_cluster
-
-
 @pytest.fixture()
 def fail_if_not_ipv4_supported_cluster_from_mtx(
     request,
-    ipv4_supported_cluster,
 ):
-    if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster:
+    if ip_version_data_from_matrix(request=request) == IPV4_STR and not ipv4_supported_cluster():
         pytest.fail(reason="IPv4 is not supported in this cluster")
 
 
 @pytest.fixture()
 def fail_if_not_ipv6_supported_cluster_from_mtx(
     request,
-    ipv6_supported_cluster,
 ):
-    if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster:
+    if ip_version_data_from_matrix(request=request) == IPV6_STR and not ipv6_supported_cluster():
         pytest.fail(reason="IPv6 is not supported in this cluster")
 
 
 @pytest.fixture(scope="module")
-def dual_stack_network_data(ipv6_supported_cluster):
-    if ipv6_supported_cluster:
+def dual_stack_network_data():
+    if ipv6_supported_cluster():
         return {
             "ethernets": {
                 "eth0": {
@@ -188,8 +182,6 @@ def network_sanity(
     cluster_network_mtu,
     network_overhead,
     sriov_workers,
-    ipv4_supported_cluster,
-    ipv6_supported_cluster,
     conformance_tests,
     nmstate_namespace,
     mtv_namespace_scope_session,
@@ -320,8 +312,8 @@ def network_sanity(
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()
-    _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster)
-    _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster)
+    _verify_ip_family(family="ipv4", is_supported_in_cluster=ipv4_supported_cluster())
+    _verify_ip_family(family="ipv6", is_supported_in_cluster=ipv6_supported_cluster())
     _verify_nmstate_running_pods(_admin_client=admin_client, namespace=nmstate_namespace)
     _verify_mtv_installed()
 
