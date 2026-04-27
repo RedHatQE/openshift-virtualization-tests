@@ -43,12 +43,10 @@ def read_guest_interface_ipv4(
         IPv4 address with prefix length (e.g., 192.168.1.5/24).
 
     Raises:
-        RuntimeError: If command execution fails.
         IpNotFound: If no IPv4 address is found on the specified interface.
     """
     cmd: Final[str] = f"ip -j -4 addr show {interface_name}"
-    if not (out := vm.console(commands=[cmd], timeout=10)):
-        raise RuntimeError(f"Failed to retrieve IP address from {interface_name}")
+    out = vm.console(commands=[cmd], timeout=10)
 
     LOGGER.info(f"Command {cmd} output: {out}")
 
