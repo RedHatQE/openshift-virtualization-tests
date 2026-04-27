@@ -685,9 +685,7 @@ def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str
     run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
 
 
-def run_command_on_vm_and_check_output(
-    vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
-) -> None:
+def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: str, expected_result: str) -> None:
     """Run command on VM via SSH with retry and verify output matches expected result.
 
     Command execution is retried with 2-minute timeout and 5-second intervals.
