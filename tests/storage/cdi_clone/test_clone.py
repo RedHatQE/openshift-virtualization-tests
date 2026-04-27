@@ -24,7 +24,6 @@ from utilities.storage import (
     create_vm_from_dv,
     data_volume_template_dict,
     get_dv_size_from_datasource,
-    overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import (
@@ -277,7 +276,6 @@ def test_clone_from_block_to_fs_using_dv_template(
     namespace,
     fedora_dv_with_block_volume_mode,
     storage_class_with_filesystem_volume_mode,
-    default_fs_overhead,
 ):
     create_vm_from_clone_dv_template(
         vm_name="vm-5608",
@@ -286,10 +284,5 @@ def test_clone_from_block_to_fs_using_dv_template(
         source_dv=fedora_dv_with_block_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
-        # add fs overhead and round up the result
-        size=overhead_size_for_dv(
-            image_size=int(fedora_dv_with_block_volume_mode.size[:-2]),
-            overhead_value=default_fs_overhead,
-        ),
         storage_class=storage_class_with_filesystem_volume_mode,
     )

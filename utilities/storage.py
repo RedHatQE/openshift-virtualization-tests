@@ -560,6 +560,8 @@ def data_volume_template_dict(
         api_name=source_dv.api_name,
     )
     dv.to_dict()
+    if not size:
+        dv.res["spec"][source_dv.api_name]["resources"] = {}
     return dv.res
 
 
