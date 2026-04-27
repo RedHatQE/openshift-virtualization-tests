@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests to check, the default Security Context Constraint
 """

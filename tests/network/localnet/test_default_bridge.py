@@ -46,15 +46,17 @@ def test_connectivity_post_migration_between_localnet_vms(
 
     iface = lookup_iface_status(vm=migrated_localnet_vm, iface_name=LOCALNET_BR_EX_INTERFACE)
     for dst_ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
-        with subtests.test(msg=f"IPv{dst_ip.version}"):
-            with client_server_active_connection(
+        with (
+            subtests.test(msg=f"IPv{dst_ip.version}"),
+            client_server_active_connection(
                 client_vm=base_localnet_vm,
                 server_vm=migrated_localnet_vm,
                 spec_logical_network=LOCALNET_BR_EX_INTERFACE,
                 port=8888,
                 ip_family=dst_ip.version,
-            ) as (client, server):
-                assert is_tcp_connection(server=server, client=client)
+            ) as (client, server),
+        ):
+            assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.single_nic
