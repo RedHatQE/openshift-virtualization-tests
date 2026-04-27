@@ -6,7 +6,6 @@ import pytest
 import requests
 import xmltodict
 from bs4 import BeautifulSoup
-from ocp_resources.data_source import DataSource
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
@@ -14,7 +13,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.artifactory import get_artifactory_header
-from utilities.constants import DATA_SOURCE_NAME, S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
+from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
@@ -67,16 +66,6 @@ def rpm_file_name(is_s390x_cluster):
     assert rpm_file_names, f"No RPM files found at the URL - {RPMS_REPO_URL}"
 
     return next(file_name for file_name in rpm_file_names if (S390X in file_name) == is_s390x_cluster)
-
-
-@pytest.fixture(scope="module")
-def latest_rhel_data_source(golden_images_namespace):
-    return DataSource(
-        client=golden_images_namespace.client,
-        name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
-        namespace=golden_images_namespace.name,
-        ensure_exists=True,
-    )
 
 
 @pytest.fixture()
