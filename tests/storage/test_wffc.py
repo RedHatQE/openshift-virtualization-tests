@@ -27,6 +27,10 @@ from utilities.storage import (
 )
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_ssh_connectivity
 
+pytestmark = [
+    pytest.mark.post_upgrade,
+]
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -108,8 +112,7 @@ def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_d
         pvc = uploaded_wffc_dv.pvc
         vm_dv.start(wait=False)
         if pvc.use_populator:
-            # No scheduling status in VirtualMachineInstance.Status, using string literal instead
-            vm_status = "Scheduling"
+            vm_status = VirtualMachineInstance.Status.SCHEDULING
             bounded_pvc = pvc.prime_pvc
         else:
             vm_status = VirtualMachineInstance.Status.PENDING
