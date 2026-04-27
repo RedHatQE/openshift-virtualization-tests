@@ -14,7 +14,6 @@ from tests.storage.utils import (
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
-    TIMEOUT_1MIN,
     TIMEOUT_40MIN,
     Images,
 )
@@ -107,13 +106,11 @@ def test_successful_vm_restart_with_cloned_dv(
     cluster_csi_drivers_names,
 ):
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-
-    with DataVolume(
-        name="dv-target",
+    with create_dv(
+        dv_name="dv-target",
         namespace=namespace.name,
         client=unprivileged_client,
         size=size,
-        api_name="storage",
         storage_class=storage_class_name_scope_module,
         source_ref={
             "kind": fedora_data_source_scope_module.kind,
@@ -121,9 +118,7 @@ def test_successful_vm_restart_with_cloned_dv(
             "namespace": fedora_data_source_scope_module.namespace,
         },
     ) as cdv:
-        cdv.wait(timeout=TIMEOUT_1MIN, wait_for_exists_only=True)
-        cdv.pvc.wait()
-
+        cdv.wait_for_dv_success()
         with create_vm_from_dv(
             client=unprivileged_client,
             dv=cdv,
