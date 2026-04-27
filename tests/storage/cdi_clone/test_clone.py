@@ -245,7 +245,7 @@ def test_successful_vm_from_cloned_dv_windows(
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
-            marks=pytest.mark.polarion("CNV-XXXXX"),
+            marks=pytest.mark.polarion("CNV-3638"),
         ),
     ],
     indirect=True,
