@@ -1519,18 +1519,15 @@ def stable_channel_released_to_prod(channels: list[dict[str, str | bool]]) -> bo
 
 def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, str] | None:
     builds = wait_for_version_explorer_response(
-        api_end_point="GetBuildsWithErrata",
-        query_string=f"minor_version={minor_version}",
+        api_end_point="GetReleasedBuilds",
+        query_string=f"minor_version={minor_version}&stage=false",
     )["builds"]
 
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
+        if stable_channel_released_to_prod(channels=build["channels"]):
             build_version = Version(version=build["csv_version"])
-            if latest_z_stream:
-                if build_version > latest_z_stream:
-                    latest_z_stream = build_version
-            else:
+            if not latest_z_stream or build_version > latest_z_stream:
                 latest_z_stream = build_version
     return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 
