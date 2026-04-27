@@ -27,11 +27,10 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_30MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_5SEC,
     U1_SMALL,
     Images,
 )

@@ -11,10 +11,7 @@ from tests.storage.storage_migration.constants import (
     NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
 from utilities import console
-from utilities.constants import LS_COMMAND, TIMEOUT_20SEC
-from tests.storage.utils import check_file_in_vm
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
-from utilities.exceptions import StorageMigrationError
+from utilities.constants import LS_COMMAND, TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 
 

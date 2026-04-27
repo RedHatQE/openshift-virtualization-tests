@@ -63,7 +63,7 @@ def test_vmexport_snapshot_manifests(
 ):
     running_vm(vm=vm_from_vmexport)
     run_command_on_vm_and_check_output(
-        vm=vm_from_vmexport, command=f"cat {TEST_FILE_NAME}", expected_result=TEST_FILE_CONTENT
+        vm=vm_from_vmexport, command=f"cat {VM_EXPORT_TEST_FILE_NAME}", expected_result=VM_EXPORT_TEST_FILE_CONTENT
     )
 
 
