@@ -52,3 +52,9 @@ HCO_DEFAULT_FEATUREGATES = {
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
+
+KONFLUX_IDMS_NAME = "zz-cnv-icsp-fallback"
+KONFLUX_MIRROR_BASE_URL = "quay.io/openshift-virtualization/konflux-builds"
+RH_IDMS_SOURCE = "registry.redhat.io/container-native-virtualization"
+KONFLUX_PIPELINE = "Konflux"
+BREW_MIRROR_BASE_URL = "brew.registry.redhat.io/container-native-virtualization"
