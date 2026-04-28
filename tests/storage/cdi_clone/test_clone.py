@@ -14,6 +14,7 @@ from tests.storage.utils import (
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
+    TIMEOUT_1MIN,
     TIMEOUT_40MIN,
     Images,
 )
@@ -24,6 +25,7 @@ from utilities.storage import (
     data_volume_template_dict,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
+    sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -112,13 +114,17 @@ def test_successful_vm_restart_with_cloned_dv(
         client=unprivileged_client,
         size=size,
         storage_class=storage_class_name_scope_module,
+        consume_wffc=False,
         source_ref={
             "kind": fedora_data_source_scope_module.kind,
             "name": fedora_data_source_scope_module.name,
             "namespace": fedora_data_source_scope_module.namespace,
         },
     ) as cdv:
-        cdv.wait_for_dv_success()
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
+            cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
+        else:
+            cdv.wait_for_dv_success()
         with create_vm_from_dv(
             client=unprivileged_client,
             dv=cdv,
