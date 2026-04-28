@@ -12,16 +12,24 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 
 from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
+from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
+    validate_os_info_vmi_vs_windows_os,
+    verify_vtpm_in_windows_vm,
+    wait_for_windows_vm,
 )
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
     TIMEOUT_40MIN,
+    U1_LARGE,
+    WIN_2K22,
+    WINDOWS_2K22_PREFERENCE,
     Images,
 )
 from utilities.storage import (
@@ -37,8 +45,6 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
-
-WINDOWS_CLONE_TIMEOUT = TIMEOUT_40MIN
 
 
 def create_vm_from_clone_dv_template(
@@ -67,47 +73,6 @@ def create_vm_from_clone_dv_template(
         ),
     ) as vm:
         running_vm(vm=vm)
-
-
-def create_windows_vm_with_vtpm_validate_guest_agent_info(
-    dv,
-    namespace,
-    unprivileged_client,
-    windows_version,
-    admin_client=None,
-):
-    """
-    Create Windows VM with vTPM using instance types and preferences.
-
-    Args:
-        dv: DataVolume to use for the VM
-        namespace: Namespace object
-        unprivileged_client: Client to use
-        windows_version: Windows version string ("11", "2k22", etc.)
-        admin_client: Optional admin client for vTPM validation
-    """
-    from tests.storage.utils import validate_os_info_vmi_vs_windows_os, wait_for_windows_vm
-
-    # Map Windows version to preference name
-    preference_name = f"windows.{windows_version}"  # e.g., "windows.11", "windows.2k22"
-
-    with VirtualMachineForTests(
-        name=f"vm-win-{windows_version}-vtpm",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WINDOWS,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large", client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=preference_name, client=unprivileged_client),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-    ) as vm:
-        wait_for_windows_vm(vm=vm, version=windows_version, timeout=TIMEOUT_40MIN)
-        validate_os_info_vmi_vs_windows_os(vm=vm)
-
-        # Validate vTPM if admin_client provided
-        if admin_client:
-            from tests.storage.utils import verify_vtpm_in_windows_vm
-
-            verify_vtpm_in_windows_vm(vm=vm, admin_client=admin_client)
 
 
 @pytest.mark.tier3
@@ -235,45 +200,31 @@ def test_successful_vm_from_cloned_dv_windows(
 
 
 @pytest.mark.tier3
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source-win11-vtpm",
-                "source": "http",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-3638"),
-        ),
-    ],
-    indirect=True,
-)
+@pytest.mark.polarion("CNV-3638")
 def test_successful_vm_from_cloned_dv_windows_with_vtpm(
+    admin_client,  # only needed for `verify_vtpm_in_windows_vm`, to be deleted once verified
     unprivileged_client,
-    admin_client,
-    data_volume_multi_storage_scope_function,
     namespace,
+    cloned_windows_dv_from_registry,
 ):
-    """Test cloning Windows 11 DV and creating VM with vTPM using instance types."""
-    with create_dv(
+    """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
+
+    with VirtualMachineForTests(
+        name=f"vm-{WIN_2K22}-vtpm",
+        namespace=namespace.name,
         client=unprivileged_client,
-        source="pvc",
-        dv_name="dv-target-win11-vtpm",
-        namespace=data_volume_multi_storage_scope_function.namespace,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        create_windows_vm_with_vtpm_validate_guest_agent_info(
-            dv=cdv,
-            namespace=namespace,
-            unprivileged_client=unprivileged_client,
-            windows_version="11",
-            admin_client=admin_client,
-        )
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
+        data_volume_template={
+            "metadata": cloned_windows_dv_from_registry.res["metadata"],
+            "spec": cloned_windows_dv_from_registry.res["spec"],
+        },
+    ) as vm:
+        vm.start()
+        wait_for_windows_vm(vm=vm, version="2k22", timeout=TIMEOUT_40MIN)
+        validate_os_info_vmi_vs_windows_os(vm=vm)
+        verify_vtpm_in_windows_vm(vm=vm, admin_client=admin_client)
 
 
 @pytest.mark.parametrize(
