@@ -30,6 +30,7 @@ pytestmark = pytest.mark.usefixtures("xfail_if_gcp_storage_class")
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-6793")
+@pytest.mark.jira("CNV-85325", run=False)
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -117,6 +118,7 @@ def test_disk_expand_then_clone_fail(
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-6578")
+@pytest.mark.jira("CNV-85325", run=False)
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
