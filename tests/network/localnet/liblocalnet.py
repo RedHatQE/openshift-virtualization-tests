@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import logging
 import uuid
 from typing import Final, Generator
@@ -9,7 +10,7 @@ from kubernetes.dynamic import DynamicClient
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import CloudInitNoCloud, Devices, Interface, Metadata, Network
+from libs.vm.spec import Affinity, CloudInitNoCloud, Devices, Interface, Metadata, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -25,6 +26,7 @@ LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
 LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
 LOCALNET_IPAM_INTERFACE = "localnet-ipam-iface"
 LOCALNET_TEST_LABEL = {"test": "localnet"}
+LOCALNET_VM_ANTI_AFFINITY = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
 LINK_STATE_UP = "up"
 LINK_STATE_DOWN = "down"
 NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
@@ -77,12 +79,13 @@ def localnet_vm(
     networks: list[Network],
     interfaces: list[Interface],
     network_data: cloudinit.NetworkData | None = None,
+    affinity: Affinity | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
 
     The VM will:
-    - Apply a specific label for anti-affinity scheduling.
+    - Apply a specific label for VM scheduling.
     - Based on a standard Fedora VM template.
 
     Args:
@@ -95,6 +98,8 @@ def localnet_vm(
             Each Interface should have a name matching a Network, and additional configuration and state.
         network_data (cloudinit.NetworkData | None): Cloud-init NetworkData object containing the network
             configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
+        affinity (Affinity | None): Optional Affinity object for VM scheduling. Controls the VM scheduling
+            location. If None, no affinity constraints are applied.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -136,8 +141,8 @@ def localnet_vm(
         )
         vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
 
-    vmi_spec.affinity = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
-    vmi_spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].namespaceSelector = {}
+    if affinity is not None:
+        vmi_spec.affinity = copy.deepcopy(affinity)
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
