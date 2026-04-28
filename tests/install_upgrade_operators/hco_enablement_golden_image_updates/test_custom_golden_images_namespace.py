@@ -9,23 +9,20 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.resource import Resource
 from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
     COMMON_TEMPLATE,
     get_templates_by_type_from_hco_status,
 )
 from utilities.constants import (
-    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
-    TIMEOUT_30SEC,
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     wait_for_hco_conditions,
 )
-from utilities.infra import create_ns, delete_resources_from_namespace_by_type
+from utilities.infra import create_ns
 from utilities.storage import get_data_sources_managed_by_data_import_cron
 
 LOGGER = logging.getLogger(__name__)
@@ -55,7 +52,7 @@ def verify_resource_in_ns(expected_resource_names, namespace, client, resource_t
     """
     Verify that resources exist in expected_namespace and in ready status.
     """
-    resources = resource_type.get(client=client, namespace=namespace)
+    resources = list(resource_type.get(client=client, namespace=namespace))
     resources_names = {resource.name for resource in resources}
     missing_resources_names = expected_resource_names - resources_names
     assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
@@ -68,27 +65,6 @@ def verify_resource_in_ns(expected_resource_names, namespace, client, resource_t
                 status=resource.Condition.Status.TRUE,
                 timeout=TIMEOUT_10MIN,
             )
-
-
-def wait_for_any_resource_exists_in_namespace(client, namespace, resource_types):
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_30SEC,
-        func=lambda: any(
-            list(resource_type.get(client=client, namespace=namespace)) for resource_type in resource_types
-        ),
-    ):
-        if sample:
-            return
-
-
-def verify_resources_not_reconciled(resources_to_verify, namespace, client):
-    delete_resources_from_namespace_by_type(resources_types=resources_to_verify, namespace=namespace, wait=True)
-    with pytest.raises(TimeoutExpiredError):
-        wait_for_any_resource_exists_in_namespace(
-            client=client, namespace=namespace, resource_types=resources_to_verify
-        )
-        LOGGER.error(f"resources shouldn't reconcile in {namespace} namespace")
 
 
 def verify_common_template_namespace_updated(common_templates, namespace_name):
@@ -197,7 +173,6 @@ class TestDefaultCommonTemplates:
         self,
         admin_client,
         custom_golden_images_namespace,
-        golden_images_namespace,
         default_common_templates_related_resources,
         resource_type,
         ready_condition,
@@ -209,20 +184,16 @@ class TestDefaultCommonTemplates:
             resource_type=resource_type,
             ready_condition=ready_condition,
         )
-        if resource_type != DataSource:
-            verify_resource_not_in_ns(
-                resource_type=resource_type,
-                namespace=golden_images_namespace.name,
-                client=admin_client,
-            )
 
     @pytest.mark.polarion("CNV-11477")
-    def test_boot_sources_not_reconciled_in_default_namespace(self, admin_client, golden_images_namespace):
-        verify_resources_not_reconciled(
-            resources_to_verify=[DataVolume, VolumeSnapshot],
-            namespace=golden_images_namespace.name,
-            client=admin_client,
-        )
+    def test_resources_deleted_from_default_namespace(self, admin_client, golden_images_namespace, subtests):
+        for resource_type in [DataImportCron, ImageStream, DataVolume, VolumeSnapshot]:
+            with subtests.test(msg=resource_type.kind):
+                verify_resource_not_in_ns(
+                    resource_type=resource_type,
+                    namespace=golden_images_namespace.name,
+                    client=admin_client,
+                )
 
 
 @pytest.mark.polarion("CNV-11631")
