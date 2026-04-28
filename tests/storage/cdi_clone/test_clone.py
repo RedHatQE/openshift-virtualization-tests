@@ -18,7 +18,6 @@ from tests.storage.utils import (
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
     validate_os_info_vmi_vs_windows_os,
-    verify_vtpm_in_windows_vm,
     wait_for_windows_vm,
 )
 from utilities.constants import (
@@ -202,7 +201,6 @@ def test_successful_vm_from_cloned_dv_windows(
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3638")
 def test_successful_vm_from_cloned_dv_windows_with_vtpm(
-    admin_client,  # only needed for `verify_vtpm_in_windows_vm`, to be deleted once verified
     unprivileged_client,
     namespace,
     cloned_windows_dv_from_registry,
@@ -224,7 +222,6 @@ def test_successful_vm_from_cloned_dv_windows_with_vtpm(
         vm.start()
         wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
         validate_os_info_vmi_vs_windows_os(vm=vm)
-        verify_vtpm_in_windows_vm(vm=vm, admin_client=admin_client)
 
 
 @pytest.mark.parametrize(
