@@ -65,8 +65,8 @@ def fedora_dv_with_block_volume_mode(
         yield dv
 
 
-@pytest.fixture(scope="function")
-def source_dv_windows_registry(
+@pytest.fixture()
+def source_dv_windows_registry_scope_function(
     unprivileged_client,
     namespace,
     storage_class_name_scope_function,
@@ -90,8 +90,8 @@ def source_dv_windows_registry(
         yield dv
 
 
-@pytest.fixture(scope="function")
-def cloned_windows_dv_from_registry(
+@pytest.fixture()
+def cloned_windows_dv_from_registry_scope_function(
     unprivileged_client,
     source_dv_windows_registry,
 ):

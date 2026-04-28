@@ -155,7 +155,7 @@ def test_successful_vm_restart_with_cloned_dv(
 def test_successful_vm_from_cloned_dv_windows_with_vtpm(
     unprivileged_client,
     namespace,
-    cloned_windows_dv_from_registry,
+    cloned_windows_dv_from_registry_scope_function,
 ):
     """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
 
@@ -167,8 +167,8 @@ def test_successful_vm_from_cloned_dv_windows_with_vtpm(
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
         data_volume_template={
-            "metadata": cloned_windows_dv_from_registry.res["metadata"],
-            "spec": cloned_windows_dv_from_registry.res["spec"],
+            "metadata": cloned_windows_dv_from_registry_scope_function.res["metadata"],
+            "spec": cloned_windows_dv_from_registry_scope_function.res["spec"],
         },
     ) as vm:
         vm.start()
