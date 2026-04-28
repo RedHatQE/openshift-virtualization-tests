@@ -222,7 +222,7 @@ def test_successful_vm_from_cloned_dv_windows_with_vtpm(
         },
     ) as vm:
         vm.start()
-        wait_for_windows_vm(vm=vm, version="2k22", timeout=TIMEOUT_40MIN)
+        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
         validate_os_info_vmi_vs_windows_os(vm=vm)
         verify_vtpm_in_windows_vm(vm=vm, admin_client=admin_client)
 
