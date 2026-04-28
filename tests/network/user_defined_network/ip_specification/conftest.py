@@ -20,7 +20,7 @@ def vm_under_test(
     namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
-) -> Generator[BaseVirtualMachine, None, None]:
+) -> Generator[BaseVirtualMachine]:
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="ip-spec-vm-under-test",
@@ -37,7 +37,7 @@ def vm_for_connectivity_ref(
     namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
-) -> Generator[BaseVirtualMachine, None, None]:
+) -> Generator[BaseVirtualMachine]:
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="vm-for-connectivity-ref",
@@ -77,7 +77,7 @@ def ip_to_request(
 @pytest.fixture(scope="module")
 def client_server_tcp_connectivity_between_vms(
     vm_for_connectivity_ref: BaseVirtualMachine, vm_under_test: BaseVirtualMachine
-) -> Generator[tuple[TcpClient, TcpServer], None, None]:
+) -> Generator[tuple[TcpClient, TcpServer]]:
     with client_server_active_connection(
         client_vm=vm_for_connectivity_ref,
         server_vm=vm_under_test,

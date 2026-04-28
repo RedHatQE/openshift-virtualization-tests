@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 CDI disk preallocation test suite
 """

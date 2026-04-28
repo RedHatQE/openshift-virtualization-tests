@@ -157,15 +157,14 @@ def wait_for_certificates_renewal(
     sample = None
     try:
         for sample in samples:
-            if sample:
-                if not [
-                    certificate
-                    for certificate, certificate_data in initial_certificates_dates.items()
-                    if sample[certificate]["not_before"] == certificate_data["not_before"]
-                    and sample[certificate]["not_after"] == certificate_data["not_after"]
-                ]:
-                    LOGGER.info("Certificate renewed, as expected")
-                    break
+            if sample and not [
+                certificate
+                for certificate, certificate_data in initial_certificates_dates.items()
+                if sample[certificate]["not_before"] == certificate_data["not_before"]
+                and sample[certificate]["not_after"] == certificate_data["not_after"]
+            ]:
+                LOGGER.info("Certificate renewed, as expected")
+                break
     except TimeoutExpiredError:
         LOGGER.error(
             "Timeout waiting for all certificates to be renewed (to be different from the initial data): "

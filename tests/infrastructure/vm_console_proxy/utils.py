@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Type
+from typing import Any
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -60,7 +60,7 @@ def create_vnc_console_token(
         raise
 
 
-def get_vm_console_proxy_resource(resource_kind: Type, client: DynamicClient, namespace: str | None = None) -> Type:
+def get_vm_console_proxy_resource(resource_kind: type, client: DynamicClient, namespace: str | None = None) -> type:
     if namespace:
         vm_console_proxy_resource_object = resource_kind(
             name=VM_CONSOLE_PROXY,
