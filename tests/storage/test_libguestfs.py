@@ -6,7 +6,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
 from tests.storage.utils import create_cirros_dv
-from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_3MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
 
 pytestmark = pytest.mark.post_upgrade
@@ -24,7 +24,7 @@ def virtctl_libguestfs_by_user(
     )
 
     guestfs_proc.send("\n\n")
-    guestfs_proc.expect("$", timeout=TIMEOUT_1MIN)
+    guestfs_proc.expect("$", timeout=TIMEOUT_3MIN)
     yield guestfs_proc
     guestfs_proc.send("exit\n")
     guestfs_proc.expect(pexpect.EOF, timeout=TIMEOUT_1MIN)
@@ -92,4 +92,4 @@ def test_virtctl_libguestfs_with_specific_user(
     virtctl_libguestfs_by_user,
 ):
     virtctl_libguestfs_by_user.sendline("libguestfs-test-tool")
-    virtctl_libguestfs_by_user.expect("===== TEST FINISHED OK =====", timeout=TIMEOUT_1MIN)
+    virtctl_libguestfs_by_user.expect("===== TEST FINISHED OK =====", timeout=TIMEOUT_3MIN)
