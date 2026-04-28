@@ -41,7 +41,7 @@ Before writing ANY new code:
 - **No defensive programming** - fail-fast, don't hide bugs with fake defaults (see exceptions below)
 - **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, or `pytest` directly. Use `uv run python`, `uv run pytest`, `uv add` for package installation.
 - **ALWAYS use absolute imports** - NEVER use relative imports
-- **ALWAYS import specific functions** - use `from module import func`, NEVER `import module`
+- **Prefer specific imports** - use `from module import func` for functions and constants. Use `from package import module` (then `module.Name`) when retaining the module name at the call site meaningfully improves readability (e.g. `libstuntime.ContinuousPing` vs a bare `ContinuousPing` that loses its origin). Never use bare `import module` without a `from` clause.
 - **ALWAYS use named arguments** - for function calls with more than one argument
 - **NEVER use single-letter variable names** - ALWAYS use descriptive, meaningful names
 - **No dead code** - every function, variable, fixture MUST be used or removed. Code marked with `# skip-unused-code` is excluded from dead code analysis (enforced via custom ruff plugin).
