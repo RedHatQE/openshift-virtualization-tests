@@ -1,8 +1,10 @@
+import json
 import logging
 
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import (
@@ -176,3 +178,20 @@ def test_public_registry_data_volume_archive(namespace, storage_class_name_scope
             storage_class=[*storage_class_name_scope_function][0],
         ):
             return
+
+
+@pytest.mark.polarion("CNV-5509")
+@pytest.mark.s390x
+def test_importer_pod_annotation(importer_pod_annotations, linux_nad):
+    """Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod"""
+    networks_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks"
+    network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
+
+    networks_value = importer_pod_annotations.get(networks_annotation)
+    assert networks_value == linux_nad.name, (
+        f"DV annotation is not passed to the importer pod. Expected: {linux_nad.name}, Found: {networks_value}"
+    )
+
+    network_status_value = importer_pod_annotations.get(network_status_annotation)
+    interfaces = [entry["interface"] for entry in json.loads(network_status_value) if "interface" in entry]
+    assert "net1" in interfaces, f"Expected interface: net1, Found: {interfaces}"
