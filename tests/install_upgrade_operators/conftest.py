@@ -1,6 +1,7 @@
 import importlib
 import logging
 import pkgutil
+import re
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -27,15 +28,41 @@ from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
     get_pod_by_name_prefix,
+    wait_for_version_explorer_response,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
     get_machine_config_pools_conditions,
 )
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def iib_build_info(cnv_source, cnv_image_url, admin_client):
+    """Queries Version Explorer for IIB build info.
+
+    Returns:
+        Build info dict for osbs/fbc sources, empty dict for other sources.
+    """
+    if cnv_source in ("osbs", "fbc"):
+        iib_format_match = re.search(r"/iib:(\d+)$", cnv_image_url)
+        assert iib_format_match, f"Cannot extract IIB number from: {cnv_image_url} (expected format: .../iib:<number>)"
+        iib_number = iib_format_match.group(1)
+
+        if build_info := wait_for_version_explorer_response(
+            api_end_point="GetBuildByIIB",
+            query_string=f"iib_number={iib_number}",
+        ):
+            return build_info
+        exit_pytest_execution(
+            admin_client=admin_client,
+            log_message=f"Version Explorer returned empty response for IIB {iib_number}.",
+        )
+    return {}
 
 
 @pytest.fixture()
