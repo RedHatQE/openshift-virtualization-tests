@@ -373,6 +373,6 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         },
         cpu_model=cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
         wait_for_windows_vm(vm=vm, version="2022")
         validate_os_info_vmi_vs_windows_os(vm=vm)
