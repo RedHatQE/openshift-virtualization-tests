@@ -495,6 +495,18 @@ def vm_migration_metrics_vmim_scope_class(admin_client, vm_for_migration_metrics
         yield vmim
 
 
+@pytest.fixture()
+def vm_migration_metrics_vmim_scope_function(admin_client, vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
 @pytest.fixture(scope="class")
 def migration_succeeded_scope_class(vm_migration_metrics_vmim_scope_class):
     vm_migration_metrics_vmim_scope_class.wait_for_status(
