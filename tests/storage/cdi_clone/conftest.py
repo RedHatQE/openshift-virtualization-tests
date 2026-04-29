@@ -7,8 +7,6 @@ from utilities.constants import REGISTRY_STR, TIMEOUT_40MIN, WIN_2K22, Images
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import create_dv, data_volume
 
-WINDOWS_CLONE_TIMEOUT = TIMEOUT_40MIN
-
 
 @pytest.fixture()
 def data_volume_snapshot_capable_storage_scope_function(
@@ -86,7 +84,7 @@ def source_dv_windows_registry_scope_function(
         secret=secret,
         cert_configmap=cert.name,
     ) as dv:
-        dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        dv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
         yield dv
 
 
@@ -105,5 +103,5 @@ def cloned_windows_dv_from_registry_scope_function(
         source_pvc=source_dv_windows_registry_scope_function.name,
         storage_class=source_dv_windows_registry_scope_function.storage_class,
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        cdv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
         yield cdv
