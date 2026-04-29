@@ -46,7 +46,7 @@ def test_pvc_recreates_after_deletion(fedora_data_volume, namespace, storage_cla
     pvc_original_timestamp = pvc.instance.metadata.creationTimestamp
     pvc.delete()
     wait_for_pvc_recreate(pvc=pvc, pvc_creation_timestamp=pvc_original_timestamp)
-    if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_function, client=namespace.client):
+    if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_function):
         create_dummy_first_consumer_pod(pvc=pvc)
     fedora_data_volume.wait_for_dv_success()
 
@@ -103,14 +103,13 @@ def test_vm_from_dv_on_different_node(
     assert nodes, f"No available nodes different from importer pod node {importer_pod_node}"
 
     with create_vm_from_dv(
-        client=unprivileged_client,
         dv=dv,
         vm_name="fedora-vm-different-node",
         os_flavor=OS_FLAVOR_FEDORA,
         node_selector=get_node_selector_dict(node_selector=nodes[0].name),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        vmi_node_name = vm.vmi.get_node().name
+        vmi_node_name = vm.vmi.node.name
         assert vmi_node_name != importer_pod_node, (
             f"VM is running on the same node as importer pod. Expected different nodes. "
             f"Importer pod node: {importer_pod_node}, VM node: {vmi_node_name}"
