@@ -110,7 +110,7 @@ def test_vm_from_dv_on_different_node(
         node_selector=get_node_selector_dict(node_selector=nodes[0].name),
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
     ) as vm:
-        vmi_node_name = vm.vmi.get_node().name
+        vmi_node_name = vm.vmi.node.name
         assert vmi_node_name != importer_pod_node, (
             f"VM is running on the same node as importer pod. Expected different nodes. "
             f"Importer pod node: {importer_pod_node}, VM node: {vmi_node_name}"
