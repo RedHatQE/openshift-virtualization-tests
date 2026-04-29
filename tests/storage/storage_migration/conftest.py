@@ -21,10 +21,9 @@ from tests.storage.storage_migration.constants import (
 )
 from tests.storage.storage_migration.utils import (
     build_namespaces_spec_for_storage_migration,
-    get_storage_class_for_storage_migration,
     wait_for_storage_migration_completed,
 )
-from tests.storage.utils import create_windows_directory
+from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
 from utilities.artifactory import get_http_image_url
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
