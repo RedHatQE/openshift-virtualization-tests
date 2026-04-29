@@ -6,6 +6,7 @@ import tempfile
 import pytest
 import requests
 import yaml
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -346,13 +347,16 @@ def local_cluster_mtv_provider_for_local_cluster(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
-def remote_cluster_storage_classes_names(remote_admin_client):
+def remote_cluster_storage_classes_names(remote_admin_client: DynamicClient) -> list[str]:
+    """Get list of all storage class names available in the remote cluster."""
     return [sc.name for sc in list(StorageClass.get(client=remote_admin_client))]
 
 
 @pytest.fixture(scope="class")
-def remote_cluster_source_storage_class(request, remote_cluster_storage_classes_names):
-    # Storage class for the original VMs creation in the remote cluster
+def remote_cluster_source_storage_class(
+    request: pytest.FixtureRequest, remote_cluster_storage_classes_names: list[str]
+) -> str:
+    """Storage class for creating VMs in the remote cluster before migration."""
     return get_storage_class_for_storage_migration(
         storage_class=request.param["source_storage_class"],
         cluster_storage_classes_names=remote_cluster_storage_classes_names,
@@ -360,10 +364,11 @@ def remote_cluster_source_storage_class(request, remote_cluster_storage_classes_
 
 
 @pytest.fixture(scope="class")
-def local_cluster_target_storage_class(request, cluster_storage_classes_names):
-    # Storage class for the target VMs in the local cluster
+def local_cluster_target_storage_class(request: pytest.FixtureRequest, cluster_storage_classes_names: list[str]) -> str:
+    """Storage class for migrated VMs in the local cluster."""
     return get_storage_class_for_storage_migration(
-        storage_class=request.param["target_storage_class"], cluster_storage_classes_names=cluster_storage_classes_names
+        storage_class=request.param["target_storage_class"],
+        cluster_storage_classes_names=cluster_storage_classes_names,
     )
 
 

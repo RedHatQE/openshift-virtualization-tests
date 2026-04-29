@@ -541,6 +541,18 @@ def check_file_in_vm(
 
 
 def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    """Validate that the requested storage class exists in the cluster.
+
+    Args:
+        storage_class: Name of the storage class to validate.
+        cluster_storage_classes_names: List of available storage class names in the cluster.
+
+    Returns:
+        The validated storage class name if it exists.
+
+    Raises:
+        pytest.Failed: If the storage class is not found in the cluster.
+    """
     if storage_class in cluster_storage_classes_names:
         return storage_class
 
