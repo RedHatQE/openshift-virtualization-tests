@@ -15,7 +15,6 @@ from utilities.constants import TIMEOUT_10MIN, TIMEOUT_50MIN
 TESTS_CLASS_NAME_SEVERAL_VMS = "TestCCLMSeveralVMs"
 TESTS_CLASS_NAME_WINDOWS_VM = "TestCCLMWindowsWithVTPM"
 TESTS_CLASS_NAME_STORAGE_A_TO_B = "TestCCLMFromStorageAtoB"
-TESTS_CLASS_NAME_STORAGE_B_TO_A = "TestCCLMFromStorageBtoA"
 
 pytestmark = [
     pytest.mark.cclm,
