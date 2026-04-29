@@ -7,7 +7,6 @@ import re
 import shlex
 
 import netaddr
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_attachment_definition import (
     LinuxBridgeNetworkAttachmentDefinition,
     OVNOverlayNetworkAttachmentDefinition,
@@ -20,7 +19,6 @@ from ocp_resources.node_network_configuration_policy import (
     NodeNetworkConfigurationPolicy,
 )
 from ocp_resources.node_network_state import NodeNetworkState
-from ocp_resources.pod import Pod
 from ocp_resources.sriov_network import SriovNetwork
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from pytest_testconfig import config as py_config
@@ -41,13 +39,10 @@ from utilities.constants import (
     TIMEOUT_90SEC,
     WORKERS_TYPE,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)
 IFACE_UP_STATE = NodeNetworkConfigurationPolicy.Interface.State.UP
 IFACE_ABSENT_STATE = NodeNetworkConfigurationPolicy.Interface.State.ABSENT
-OVS_DS_NAME = "ovs-cni-amd64"
-DEPLOY_OVS = "deployOVS"
 BOND = "bond"
 INPROGRESS = "InProgress"
 
@@ -796,116 +791,6 @@ def compose_cloud_init_data_dict(network_data=None, ipv6_network_data=None):
     return init_data
 
 
-def ovs_pods(admin_client, hco_namespace):
-    pods = utilities.infra.get_pod_by_name_prefix(
-        client=admin_client,
-        pod_prefix=OVS_DS_NAME,
-        namespace=hco_namespace,
-        get_all=True,
-    )
-    return [pod for pod in pods or [] if pod.instance.status.phase == Pod.Status.RUNNING]
-
-
-def wait_for_ovs_pods(admin_client, hco_namespace, count=0):
-    LOGGER.info(f"Wait for number of OVS pods to be: {count}")
-    samples = TimeoutSampler(
-        wait_timeout=150,
-        sleep=1,
-        func=ovs_pods,
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-    )
-    num_of_pods = None
-    try:
-        for sample in samples:
-            num_of_pods = len(sample)
-            if num_of_pods == count:
-                return True
-
-    except TimeoutExpiredError:
-        LOGGER.error(f"Found {num_of_pods} OVS PODs, expected: {count}")
-        raise
-
-
-def wait_for_ovs_status(network_addons_config, status=True):
-    opt_log = "opt-in" if status else "opt-out"
-    resource_log = f"{network_addons_config.kind} {network_addons_config.name}"
-    LOGGER.info(f"Wait for {resource_log} OVS to be {opt_log}")
-    samples = TimeoutSampler(
-        wait_timeout=60,
-        sleep=1,
-        func=lambda: network_addons_config.instance.spec.ovs,
-    )
-
-    try:
-        for sample in samples:
-            # sample is {} when opt-out
-            if bool(sample) == status:
-                return True
-
-    except TimeoutExpiredError:
-        LOGGER.error(f"{resource_log} OVS should be {opt_log}")
-        raise
-
-
-def verify_ovs_installed_with_annotations(
-    admin_client,
-    ovs_daemonset,
-    hyperconverged_ovs_annotations_fetched,
-    network_addons_config,
-):
-    # Verify OVS
-    wait_for_ovs_status(network_addons_config=network_addons_config)
-    assert ovs_daemonset.exists, f"{OVS_DS_NAME} not found."
-    ovs_daemonset.wait_until_deployed()
-    # Verify annotations
-    assert hyperconverged_ovs_annotations_fetched, "No ovs annotations found."
-    # Verify pods
-    wait_for_ovs_pods(
-        admin_client=admin_client,
-        hco_namespace=ovs_daemonset.namespace,
-        count=ovs_daemonset.instance.status.desiredNumberScheduled,
-    )
-
-
-def get_ovs_daemonset(admin_client, hco_namespace):
-    return utilities.infra.get_daemonset_by_name(
-        admin_client=admin_client,
-        daemonset_name=OVS_DS_NAME,
-        namespace_name=hco_namespace.name,
-    )
-
-
-def wait_for_ovs_daemonset_deleted(ovs_daemonset):
-    samples = TimeoutSampler(wait_timeout=90, sleep=1, func=lambda: ovs_daemonset.exists)
-    try:
-        for sample in samples:
-            if not sample:
-                return True
-
-    except TimeoutExpiredError:
-        LOGGER.error("OVS daemonset exists after opt-out")
-        raise
-
-
-def wait_for_ovs_daemonset_resource(admin_client, hco_namespace):
-    samples = TimeoutSampler(
-        wait_timeout=30,
-        sleep=1,
-        func=get_ovs_daemonset,
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-    )
-    try:
-        for sample in samples:
-            if sample:
-                return sample
-
-    except TimeoutExpiredError:
-        LOGGER.error("OVS daemonset doesn't exists after opt-in")
-        raise
-
-
 @contextlib.contextmanager
 def network_device(
     interface_type,
@@ -949,24 +834,6 @@ def network_device(
 
     with NETWORK_DEVICE_TYPE[interface_type](**kwargs) as iface:
         yield iface
-
-
-def enable_hyperconverged_ovs_annotations(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource,
-    network_addons_config,
-):
-    with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource: {"metadata": {"annotations": {DEPLOY_OVS: "true"}}}},
-        list_resource_reconcile=[NetworkAddonsConfig],
-        wait_for_reconcile_post_update=True,
-        admin_client=admin_client,
-    ):
-        wait_for_ovs_status(network_addons_config=network_addons_config, status=True)
-        ovs_daemonset = wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
-        ovs_daemonset.wait_until_deployed()
-        yield ovs_daemonset
 
 
 def cloud_init(ip_address):

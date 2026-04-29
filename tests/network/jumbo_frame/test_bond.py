@@ -9,6 +9,7 @@ import pytest
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.utils import assert_no_ping
+from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
@@ -25,7 +26,6 @@ BRIDGE_NAME = "brbond1"
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "hyperconverged_ovs_annotations_enabled_scope_session",
         "workers_type",
     ),
     pytest.mark.special_infra,
@@ -84,14 +84,13 @@ def jumbo_frame_bridge_on_bond_worker_1(
     nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     jumbo_frame_bond1_worker_1,
 ):
     """
     Create bridge and attach the BOND to it
     """
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="jumbo-frame-bridge-on-bond-1",
         interface_name=BRIDGE_NAME,
         node_selector=jumbo_frame_bond1_worker_1.node_selector,
@@ -107,14 +106,13 @@ def jumbo_frame_bridge_on_bond_worker_2(
     nmstate_dependent_placeholder,
     admin_client,
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     jumbo_frame_bond1_worker_2,
 ):
     """
     Create bridge and attach the BOND to it
     """
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="jumbo-frame-bridge-on-bond-2",
         interface_name=BRIDGE_NAME,
         node_selector=jumbo_frame_bond1_worker_2.node_selector,
@@ -129,14 +127,13 @@ def jumbo_frame_bridge_on_bond_worker_2(
 def br1bond_nad(
     admin_client,
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     namespace,
     jumbo_frame_bridge_on_bond_worker_1,
     jumbo_frame_bridge_on_bond_worker_2,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{BRIDGE_NAME}-bond-nad",
         interface_name=jumbo_frame_bridge_on_bond_worker_1.bridge_name,
         mtu=cluster_hardware_mtu,

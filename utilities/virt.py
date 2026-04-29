@@ -2205,10 +2205,6 @@ def get_kubevirt_hyperconverged_spec(admin_client, hco_namespace):
     ]
 
 
-def get_hyperconverged_ovs_annotations(hyperconverged):
-    return (hyperconverged.instance.to_dict()["metadata"].get("annotations", {})).get("deployOVS")
-
-
 def get_base_templates_list(client: DynamicClient) -> list[Template]:
     """
     Return base templates list.

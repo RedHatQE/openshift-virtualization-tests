@@ -22,11 +22,9 @@ from utilities.constants import (
     CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
-    LINUX_BRIDGE,
     MONITORING_METRICS,
     MULTIARCH,
     OS_FLAVOR_FEDORA,
-    OVS_BRIDGE,
     PRODUCTION_CATALOG_SOURCE,
     RHEL8_PREFERENCE,
     RHEL9_PREFERENCE,
@@ -126,8 +124,6 @@ cnv_vm_resource_requests_units_matrix = [
 
 
 cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
-
-bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
 storage_class_matrix = [
     {

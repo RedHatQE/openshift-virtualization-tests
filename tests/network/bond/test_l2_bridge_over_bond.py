@@ -10,6 +10,7 @@ import utilities.network
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs import cloudinit as netcloud
+from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
@@ -20,16 +21,15 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = pytest.mark.usefixtures(
-    "hyperconverged_ovs_annotations_enabled_scope_session",
     "workers_type",
 )
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace):
+def ovs_linux_br1bond_nad(admin_client, namespace):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name="br1bond-nad",
         interface_name="br1bond",
         client=admin_client,
@@ -88,7 +88,6 @@ def ovs_linux_bond1_worker_2(
 def ovs_linux_bridge_on_bond_worker_1(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     worker_node1,
     ovs_linux_br1bond_nad,
     ovs_linux_bond1_worker_1,
@@ -97,7 +96,7 @@ def ovs_linux_bridge_on_bond_worker_1(
     Create bridge and attach the BOND to it
     """
     with utilities.network.network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="bridge-on-bond-worker-1",
         interface_name=ovs_linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -111,7 +110,6 @@ def ovs_linux_bridge_on_bond_worker_1(
 def ovs_linux_bridge_on_bond_worker_2(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     worker_node2,
     ovs_linux_br1bond_nad,
     ovs_linux_bond1_worker_2,
@@ -120,7 +118,7 @@ def ovs_linux_bridge_on_bond_worker_2(
     Create bridge and attach the BOND to it
     """
     with utilities.network.network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="bridge-on-bond-worker-2",
         interface_name=ovs_linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),

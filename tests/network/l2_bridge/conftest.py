@@ -41,11 +41,6 @@ VMB_MPLS_ROUTE_TAG = 200
 
 
 @pytest.fixture(scope="class")
-def bridge_device_type(request):
-    return request.param
-
-
-@pytest.fixture(scope="class")
 def l2_bridge_device_name(index_number):
     yield f"br{next(index_number)}test"
 
@@ -56,11 +51,10 @@ def l2_bridge_device_worker_1(
     admin_client,
     hosts_common_available_ports,
     worker_node1,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_type,
+        interface_type=LINUX_BRIDGE,
         nncp_name=f"l2-bridge-{name_prefix(worker_node1.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -76,11 +70,10 @@ def l2_bridge_device_worker_2(
     admin_client,
     hosts_common_available_ports,
     worker_node2,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_type,
+        interface_type=LINUX_BRIDGE,
         nncp_name=f"l2-bridge-{name_prefix(worker_node2.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -97,13 +90,12 @@ def dhcp_nad(
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
     vlan_index_number,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     vlan_tag = next(vlan_index_number)
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_type,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad-vlan-{vlan_tag}",
         interface_name=l2_bridge_device_name,
         vlan=vlan_tag,
@@ -118,12 +110,11 @@ def custom_eth_type_llpd_nad(
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_type,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-custom-eth-type-icmp-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
@@ -137,12 +128,11 @@ def mpls_nad(
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_type,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-mpls-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
@@ -156,12 +146,11 @@ def dot1q_nad(
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
-    bridge_device_type,
     l2_bridge_device_name,
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_type,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-dot1q-nad",
         interface_name=l2_bridge_device_name,
         client=admin_client,
