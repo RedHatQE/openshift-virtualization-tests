@@ -177,7 +177,7 @@ def custom_windows_vm(
         pytest.param(
             {
                 "os_dict": {
-                    "data_source": WINDOWS_2019_OS,
+                    "data_source": WINDOWS_2019.get("data_source"),
                     "image_path": f"{Images.Windows.HA_DIR}/{Images.Windows.WIN2k19_HA_IMG}",
                     "dv_size": "100Gi",
                 }
