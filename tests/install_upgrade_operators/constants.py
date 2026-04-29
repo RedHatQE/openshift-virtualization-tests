@@ -34,6 +34,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "VideoConfig",
     "HotplugVolumes",
 }
+S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
