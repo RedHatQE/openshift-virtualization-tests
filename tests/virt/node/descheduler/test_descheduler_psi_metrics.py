@@ -15,6 +15,7 @@ pytestmark = [
     pytest.mark.tier3,
     pytest.mark.descheduler,
     pytest.mark.post_upgrade,
+    pytest.mark.data_collector_scope(scope="module"),
     pytest.mark.usefixtures(
         "descheduler_kubevirt_relieve_and_migrate_profile",
     ),
