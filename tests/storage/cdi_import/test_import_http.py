@@ -9,6 +9,7 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import (
@@ -31,7 +32,6 @@ from utilities.constants import (
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_60MIN,
     U1_LARGE,
     WINDOWS_2K22_PREFERENCE,
 >>>>>>> 21c67484 (increase timeout and remove unused code)
@@ -367,9 +367,12 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         os_flavor=OS_FLAVOR_WINDOWS,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=data_volume_multi_storage_scope_function,
+        data_volume_template={
+            "metadata": data_volume_multi_storage_scope_function.res["metadata"],
+            "spec": data_volume_multi_storage_scope_function.res["spec"],
+        },
         cpu_model=cpu_for_migration,
     ) as vm:
-        vm.start()
-        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_VM_TIMEOUT)
+        running_vm(vm=vm, check_ssh_connectivity=False)
+        wait_for_windows_vm(vm=vm, version="2022")
         validate_os_info_vmi_vs_windows_os(vm=vm)
