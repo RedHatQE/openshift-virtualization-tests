@@ -4,6 +4,7 @@ import shlex
 from contextlib import contextmanager
 from typing import Generator
 
+import pytest
 import requests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cdi import CDI
@@ -25,6 +26,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
 from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -536,3 +538,14 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
+
+
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    if storage_class in cluster_storage_classes_names:
+        return storage_class
+
+    pytest.fail(
+        NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+            storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
+        )
+    )
