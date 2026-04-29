@@ -93,17 +93,17 @@ def source_dv_windows_registry_scope_function(
 @pytest.fixture()
 def cloned_windows_dv_from_registry_scope_function(
     unprivileged_client,
-    source_dv_windows_registry,
+    source_dv_windows_registry_scope_function,
 ):
     """Fixture that creates a cloned DataVolume from registry source."""
     with create_dv(
         client=unprivileged_client,
         source="pvc",
         dv_name=f"dv-target-{WIN_2K22}-vtpm",
-        namespace=source_dv_windows_registry.namespace,
-        size=source_dv_windows_registry.size,
-        source_pvc=source_dv_windows_registry.name,
-        storage_class=source_dv_windows_registry.storage_class,
+        namespace=source_dv_windows_registry_scope_function.namespace,
+        size=source_dv_windows_registry_scope_function.size,
+        source_pvc=source_dv_windows_registry_scope_function.name,
+        storage_class=source_dv_windows_registry_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield cdv
