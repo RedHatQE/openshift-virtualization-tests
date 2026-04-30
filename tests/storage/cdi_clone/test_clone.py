@@ -25,6 +25,7 @@ from utilities.storage import (
     data_volume_template_dict,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
+    sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -107,23 +108,24 @@ def test_successful_vm_restart_with_cloned_dv(
     cluster_csi_drivers_names,
 ):
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-
-    with DataVolume(
-        name="dv-target",
+    with create_dv(
+        dv_name="dv-target",
         namespace=namespace.name,
         client=unprivileged_client,
         size=size,
-        api_name="storage",
         storage_class=storage_class_name_scope_module,
+        consume_wffc=False,
         source_ref={
             "kind": fedora_data_source_scope_module.kind,
             "name": fedora_data_source_scope_module.name,
             "namespace": fedora_data_source_scope_module.namespace,
         },
     ) as cdv:
-        cdv.wait(timeout=TIMEOUT_1MIN, wait_for_exists_only=True)
-        cdv.pvc.wait()
-
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
+            cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
+            cdv.pvc.wait()
+        else:
+            cdv.wait_for_dv_success()
         with create_vm_from_dv(
             client=unprivileged_client,
             dv=cdv,
