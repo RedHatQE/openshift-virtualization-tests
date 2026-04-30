@@ -1,6 +1,9 @@
 default_language_version:
   python: python3.14
 
+ci:
+  skip: [check-jsonschema]
+
 repos:
   - repo: https://github.com/PyCQA/autoflake
     rev: "v2.3.3"
@@ -60,6 +63,15 @@ repos:
     hooks:
       - id: gitlint
         stages: [commit-msg]
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: "0.37.1"
+    hooks:
+      - id: check-jsonschema
+        name: Validate .coderabbit.yaml against schema
+        files: ^\.coderabbit\.yaml$
+        args: ["--schemafile", "https://coderabbit.ai/integrations/schema.v2.json"]
+        stages: [pre-commit]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: "v8.30.0"
