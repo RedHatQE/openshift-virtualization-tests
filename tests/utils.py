@@ -16,7 +16,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.node import Node
-from ocp_resources.resource import ResourceEditor
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
@@ -689,3 +689,16 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
             f"Default storage class '{storage_class}' doesn't support RWX mode "
             f"(required: RWX, found: {found_mode or 'none'})"
         )
+
+
+def get_resource_by_name(
+    resource_kind: Resource, name: str, admin_client: DynamicClient, namespace: str | None = None
+) -> Resource:
+    kwargs = {"name": name}
+    if namespace:
+        kwargs["namespace"] = namespace
+    kwargs["client"] = admin_client
+    resource = resource_kind(**kwargs)
+    if resource.exists:
+        return resource
+    raise ResourceNotFoundError(f"{resource_kind} {name} not found.")
