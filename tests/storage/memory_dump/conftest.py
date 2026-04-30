@@ -5,27 +5,44 @@ import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
-from utilities.constants import TIMEOUT_2MIN, Images
-from utilities.storage import PodWithPVC, get_containers_for_pods_with_pvc, virtctl_memory_dump
-from utilities.virt import running_vm, vm_instance_from_template
+from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_2MIN, U1_LARGE, WINDOWS_2K22_PREFERENCE, Images
+from utilities.storage import (
+    PodWithPVC,
+    data_volume_template_with_source_ref_dict,
+    get_containers_for_pods_with_pvc,
+    virtctl_memory_dump,
+)
+from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
 
 
 @pytest.fixture()
-def windows_vm_for_memory_dump(
-    request,
+def windows_vm_with_vtpm_for_memory_dump(
     unprivileged_client,
     namespace,
     golden_image_data_source_scope_function,
+    cpu_for_migration,
 ):
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
+    from pytest_testconfig import config as py_config
+
+    with VirtualMachineForTests(
+        name="windows-vm-mem",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_WINDOWS,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=golden_image_data_source_scope_function,
+            storage_class=py_config["default_storage_class"],
+        ),
+        cpu_model=cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        wait_for_windows_vm(vm=vm, version="2022")
         yield vm
 
 
