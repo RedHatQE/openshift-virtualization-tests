@@ -20,6 +20,15 @@ from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
+from tests.storage.utils import assert_use_populator
+from tests.utils import create_windows2022_vm_with_vtpm_from_registry
+from utilities.constants import (
+    CDI_UPLOADPROXY,
+    QUARANTINED,
+    TIMEOUT_1MIN,
+    Images,
+)
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -456,14 +465,14 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
 
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3410")
-def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
+def test_successful_vm_from_dv_windows(
     unprivileged_client,
     namespace,
-    uploaded_windows_dv,
+    windows_dv_from_registry,
     modern_cpu_for_migration,
 ):
-    with create_windows2022_vm_with_vtpm(
-        dv=uploaded_windows_dv,
+    with create_windows2022_vm_with_vtpm_from_registry(
+        dv_dict=windows_dv_from_registry,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="win2022-vm",
