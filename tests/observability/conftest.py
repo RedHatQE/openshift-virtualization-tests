@@ -1,9 +1,12 @@
 import logging
+import re
 
 import pytest
 from ocp_resources.ssp import SSP
+from packaging.version import Version
 
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,3 +21,32 @@ def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
         list_resource_reconcile=[SSP],
     ):
         yield
+
+
+@pytest.fixture(scope="session")
+def workers_rhcos_version(schedulable_nodes):
+    """Returns a dict mapping each schedulable node name to its RHCOS version.
+
+    Returns:
+        dict[str, str]: Node name to RHCOS version (e.g. {"node-1": "10.2.20260408", ...}).
+    """
+    rhcos_version_re = re.compile(r"CoreOS\s+([\d.]+)")
+    versions = {}
+    for node in schedulable_nodes:
+        os_image = node.instance.status.nodeInfo.osImage
+        match = rhcos_version_re.search(string=os_image)
+        assert match, f"Failed to parse RHCOS version from osImage '{os_image}' on node '{node.name}'"
+        versions[node.name] = match.group(1)
+    return versions
+
+
+@pytest.fixture(scope="session")
+def is_postcopy_migration_bug_open(workers_rhcos_version) -> bool:  # skip-unused-code
+    """Check if CNV-84023 is open and cluster has RHCOS 10+ nodes.
+
+    Returns:
+        bool: True if post-copy migration is broken on this cluster.
+    """
+    return any(Version(ver) >= Version("10") for ver in workers_rhcos_version.values()) and is_jira_open(
+        jira_id="CNV-84023"
+    )
