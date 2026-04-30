@@ -1,6 +1,7 @@
 import pytest
+from pytest_testconfig import config as py_config
 
-from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
+from tests.storage.constants import STORAGE_CLASS_A, STORAGE_CLASS_B, TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.cross_cluster_live_migration.utils import (
     assert_vms_are_stopped,
     assert_vms_can_be_deleted,
@@ -13,6 +14,7 @@ from utilities.constants import TIMEOUT_10MIN, TIMEOUT_50MIN
 
 TESTS_CLASS_NAME_SEVERAL_VMS = "TestCCLMSeveralVMs"
 TESTS_CLASS_NAME_WINDOWS_VM = "TestCCLMWindowsWithVTPM"
+TESTS_CLASS_NAME_STORAGE_A_TO_B = "TestCCLMFromStorageAtoB"
 
 pytestmark = [
     pytest.mark.cclm,
@@ -25,9 +27,11 @@ pytestmark = [
 
 
 @pytest.mark.parametrize(
-    "vms_for_cclm",
+    "remote_cluster_source_storage_class, local_cluster_target_storage_class, vms_for_cclm",
     [
         pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_B]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
             {
                 "vms_fixtures": [
                     "vm_for_cclm_from_template_with_data_source",
@@ -38,6 +42,7 @@ pytestmark = [
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class")
 class TestCCLMSeveralVMs:
     @pytest.mark.polarion("CNV-11995")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster")
@@ -93,16 +98,18 @@ class TestCCLMSeveralVMs:
 
 
 @pytest.mark.parametrize(
-    "dv_wait_timeout, vms_for_cclm",
+    "remote_cluster_source_storage_class, local_cluster_target_storage_class, dv_wait_timeout, vms_for_cclm",
     [
         pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_B]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
             {"dv_wait_timeout": TIMEOUT_50MIN},
             {"vms_fixtures": ["vm_for_cclm_windows_with_instance_type"]},
         )
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("dv_wait_timeout")
+@pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class", "dv_wait_timeout")
 class TestCCLMWindowsWithVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster")
     @pytest.mark.polarion("CNV-11999")
@@ -137,5 +144,83 @@ class TestCCLMWindowsWithVTPM:
         assert_vms_can_be_deleted(vms=vms_for_cclm)
 
     @pytest.mark.polarion("CNV-15236")
+    def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
+        assert_vms_can_be_deleted(vms=local_vms_after_cclm_migration)
+
+
+@pytest.mark.parametrize(
+    "remote_cluster_source_storage_class, local_cluster_target_storage_class, vms_for_cclm",
+    [
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            {
+                "vms_fixtures": [
+                    "vm_for_cclm_with_instance_type",
+                ]
+            },
+        )
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class")
+class TestCCLMFromStorageAtoB:
+    @pytest.mark.polarion("CNV-15955")
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster")
+    def test_migrate_vm_from_remote_to_local_cluster(
+        self,
+        written_file_to_vms_before_cclm,
+        vms_boot_id_before_cclm,
+        mtv_migration,
+    ):
+        mtv_migration.wait_for_condition(
+            condition=mtv_migration.Condition.Type.SUCCEEDED,
+            status=mtv_migration.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
+            stop_condition=mtv_migration.Status.FAILED,
+        )
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
+    )
+    @pytest.mark.polarion("CNV-15956")
+    def test_verify_vms_not_rebooted_after_migration(self, local_vms_after_cclm_migration, vms_boot_id_before_cclm):
+        verify_vms_boot_id_after_cross_cluster_live_migration(
+            local_vms=local_vms_after_cclm_migration, initial_boot_id=vms_boot_id_before_cclm
+        )
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
+    )
+    @pytest.mark.polarion("CNV-15957")
+    def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
+        for vm in local_vms_after_cclm_migration:
+            check_file_in_vm(
+                vm=vm,
+                file_name=TEST_FILE_NAME,
+                file_content=TEST_FILE_CONTENT,
+                username=vm.username,
+                password=vm.password,
+            )
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
+    )
+    @pytest.mark.polarion("CNV-15958")
+    def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
+        assert_vms_are_stopped(vms=vms_for_cclm)
+
+    @pytest.mark.dependency(
+        depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
+    )
+    @pytest.mark.polarion("CNV-15954")
+    def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
+        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+
+    @pytest.mark.polarion("CNV-15959")
+    def test_source_vms_can_be_deleted(self, vms_for_cclm):
+        assert_vms_can_be_deleted(vms=vms_for_cclm)
+
+    @pytest.mark.polarion("CNV-15960")
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         assert_vms_can_be_deleted(vms=local_vms_after_cclm_migration)
