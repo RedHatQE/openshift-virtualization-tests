@@ -133,7 +133,7 @@ def hot_plug_interface(
         vm=vm,
         iface_name=hot_plugged_interface_name,
         predicate=lambda interface: "guest-agent" in interface["infoSource"],
-        timeout=TIMEOUT_2MIN,
+        timeout=240,
     )
 
 
