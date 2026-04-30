@@ -10,6 +10,8 @@ from utilities.virt import migrate_vm_and_verify
 
 STABILITY_PERIOD_IN_SECONDS: Final[int] = 300
 
+pytestmark = pytest.mark.tier3
+
 
 @pytest.mark.incremental
 class TestInterfacesStability:
