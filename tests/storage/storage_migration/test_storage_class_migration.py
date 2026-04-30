@@ -16,7 +16,8 @@ from tests.storage.storage_migration.utils import (
     verify_vms_boot_time_after_storage_migration,
 )
 from utilities.constants import TIMEOUT_60MIN
-from utilities.virt import migrate_vm_and_verify, verify_file_in_windows_vm
+from utilities.storage import verify_file_in_windows_vm
+from utilities.virt import migrate_vm_and_verify
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"

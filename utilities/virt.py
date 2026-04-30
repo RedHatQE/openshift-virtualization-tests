@@ -1725,28 +1725,6 @@ def get_guest_os_info(vmi):
         raise
 
 
-def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with_path: str, file_content: str) -> None:
-    """
-    Verify that a file on a Windows VM contains the expected content.
-
-    Args:
-        windows_vm: The Windows VM to check.
-        file_name_with_path: Full path to the file on the Windows guest (e.g., "C:/test.txt").
-        file_content: Expected file content.
-
-    Raises:
-        AssertionError: If file content does not match expected content.
-    """
-    cmd = [
-        "powershell",
-        "-NoProfile",
-        "-Command",
-        f"Get-Content -LiteralPath '{file_name_with_path}'",
-    ]
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
-    assert out == file_content, f"'{out}' does not equal '{file_content}'"
-
-
 def get_windows_os_dict(windows_version: str) -> dict[str, Any]:
     """
     Returns a dictionary of Windows os information from the system_windows_os_matrix in py_config.
