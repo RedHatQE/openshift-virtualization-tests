@@ -31,6 +31,7 @@ class VMISpec:
     volumes: list[Volume] | None = None
     terminationGracePeriodSeconds: int | None = None  # noqa: N815
     affinity: Affinity | None = None
+    nodeSelector: dict[str, str] | None = None  # noqa: N815
 
 
 @dataclass

@@ -1142,7 +1142,7 @@ def get_node_selector_name(node_selector):
     return node_selector[f"{Resource.ApiGroup.KUBERNETES_IO}/hostname"]
 
 
-def get_node_selector_dict(node_selector):
+def get_node_selector_dict(node_selector: str) -> dict[str, str]:
     return {f"{Resource.ApiGroup.KUBERNETES_IO}/hostname": node_selector}
 
 
