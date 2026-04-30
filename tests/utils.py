@@ -221,9 +221,9 @@ def get_os_memory_value(vm):
         wmic_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[1]
         return f"{round(float(bitmath.Bit(int(wmic_total_mem)).to_Gib()))}Gi"
     else:
-        cmd = shlex.split("awk \"'{print$2/1024/1024;exit}'\" /proc/meminfo")
-        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip()
-        return f"{round(float(meminfo))}Gi"
+        cmd = shlex.split("lsmem | grep 'Total online'")
+        lsmem_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[-1]
+        return f"{lsmem_total_mem}i"
 
 
 def _collect_cpu_diagnostic_info(vm):
