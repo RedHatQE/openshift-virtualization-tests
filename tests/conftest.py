@@ -2168,7 +2168,7 @@ def vm_preference_for_test(namespace, common_vm_preference_param_dict):
 
 
 @pytest.fixture(scope="class")
-def common_vm_preference_param_dict(request):
+def common_vm_preference_param_dict(request, is_s390x_cluster):
     common_preference_dict = {
         "name": request.param["name"],
         "client": request.param.get("client"),
@@ -2183,7 +2183,12 @@ def common_vm_preference_param_dict(request):
             }
         }
     if request.param.get("clock_preferred_timer"):
-        common_preference_dict.setdefault("clock", {})["preferredTimer"] = request.param["clock_preferred_timer"]
+        if is_s390x_cluster:
+            LOGGER.info(
+                "Skipping preferredTimer in VirtualMachinePreference: x86-specific timers not available on s390x"
+            )
+        else:
+            common_preference_dict.setdefault("clock", {})["preferredTimer"] = request.param["clock_preferred_timer"]
 
     if request.param.get("cpu_topology"):
         common_preference_dict["cpu"] = {"preferredCPUTopology": request.param["cpu_topology"]}

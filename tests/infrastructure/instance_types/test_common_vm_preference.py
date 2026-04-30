@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
 import pytest
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
@@ -7,6 +12,11 @@ from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_lab
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
 from utilities.constants import VIRT_OPERATOR, Images
 from utilities.virt import VirtualMachineForTests, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -52,10 +62,19 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
 
 
-def run_general_vm_preferences(client, namespace, preferences):
+def _preference_requires_efi(client: DynamicClient, preference_name: str) -> bool:
+    """Check if a VirtualMachineClusterPreference requires EFI firmware."""
+    preference = VirtualMachineClusterPreference(client=client, name=preference_name)
+    return bool(preference.instance.spec.get("firmware", {}).get("preferredEfi"))
+
+
+def run_general_vm_preferences(client, namespace, preferences, is_s390x):
     for preference_name in preferences:
         # TODO remove arm64 skip when openshift-virtualization-tests support arm64
         if all(suffix not in preference_name for suffix in ["virtio", "arm64"]):
+            if is_s390x and _preference_requires_efi(client=client, preference_name=preference_name):
+                LOGGER.info(f"Skipping preference {preference_name}: EFI/OVMF not available on s390x")
+                continue
             start_vm_with_cluster_preference(
                 client=client,
                 preference_name=preference_name,
@@ -87,12 +106,13 @@ def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
 @pytest.mark.tier3
 class TestCommonVmPreference:
     @pytest.mark.polarion("CNV-9894")
-    def test_common_vm_preference_windows(self, unprivileged_client, namespace):
+    def test_common_vm_preference_windows(self, unprivileged_client, namespace, is_s390x_cluster):
         run_general_vm_preferences(
             client=unprivileged_client,
             namespace=namespace,
             # drop legacy preferences with pcihole
             preferences=[pref for pref in VM_PREFERENCES_LIST["windows"] if pref not in {"windows.2k3", "windows.xp"}],
+            is_s390x=is_s390x_cluster,
         )
 
     @pytest.mark.parametrize(
@@ -113,16 +133,22 @@ class TestCommonVmPreference:
         ],
     )
     @pytest.mark.s390x
-    def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
+    def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace, is_s390x_cluster):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]
+            client=unprivileged_client,
+            namespace=namespace,
+            preferences=VM_PREFERENCES_LIST[cluster_preferences],
+            is_s390x=is_s390x_cluster,
         )
 
     @pytest.mark.special_infra
     @pytest.mark.polarion("CNV-10806")
-    def test_common_vm_preference_dpdk(self, unprivileged_client, namespace):
+    def test_common_vm_preference_dpdk(self, unprivileged_client, namespace, is_s390x_cluster):
         run_general_vm_preferences(
-            client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["network"]
+            client=unprivileged_client,
+            namespace=namespace,
+            preferences=VM_PREFERENCES_LIST["network"],
+            is_s390x=is_s390x_cluster,
         )
 
 
