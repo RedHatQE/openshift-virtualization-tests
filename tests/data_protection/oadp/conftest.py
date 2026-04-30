@@ -28,7 +28,6 @@ from utilities.constants import (
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
-    TIMEOUT_60MIN,
     Images,
 )
 from utilities.infra import create_ns
@@ -211,7 +210,7 @@ def windows_vm_with_data_volume_template(
             os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
             disk_type=None,
         ) as vm:
-            running_vm(vm=vm, wait_for_interfaces=True, dv_wait_timeout=TIMEOUT_60MIN)
+            running_vm(vm=vm, wait_for_interfaces=True)
             write_file_windows_vm_for_oadp(vm=vm)
             yield vm
     finally:
