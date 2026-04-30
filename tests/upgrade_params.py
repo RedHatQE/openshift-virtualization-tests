@@ -19,6 +19,7 @@ IUO_CNV_ALERT_ORDERING_NODE_ID = (
     "tests/install_upgrade_operators/product_upgrade/test_upgrade_iuo.py::TestUpgradeIUO::"
     "test_alerts_fired_during_upgrade"
 )
+NETWORK_NODE_ID_PREFIX = "tests/network/upgrade/test_upgrade_network.py::TestUpgradeNetwork"
 VIRT_NODE_ID_PREFIX = "tests/virt/upgrade/test_upgrade_virt.py::TestUpgradeVirt"
 IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID = f"{VIRT_NODE_ID_PREFIX}::test_vmi_pod_image_updates_after_upgrade_optin"
 STORAGE_NODE_ID_PREFIX = "tests/storage/upgrade/test_upgrade_storage.py::TestUpgradeStorage"
