@@ -399,8 +399,9 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     )
 
 
+@pytest.mark.tier3
 @pytest.mark.parametrize(
-    "windows_vm_for_snapshot",
+    "windows_vm_with_vtpm_for_snapshot",
     [
         pytest.param(
             {"dv_name": "dv-8307", "vm_name": "vm-8307"},
@@ -410,26 +411,27 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     indirect=True,
 )
 def test_online_windows_vm_successful_restore(
-    windows_vm_for_snapshot,
+    windows_vm_with_vtpm_for_snapshot,
     windows_snapshot,
     snapshot_dirctory_removed,
 ):
     with VirtualMachineRestore(
         name="restore-vm",
-        namespace=windows_vm_for_snapshot.namespace,
-        vm_name=windows_vm_for_snapshot.name,
+        namespace=windows_vm_with_vtpm_for_snapshot.namespace,
+        vm_name=windows_vm_with_vtpm_for_snapshot.name,
         snapshot_name=windows_snapshot.name,
     ) as restore:
-        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot)
+        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
         assert_windows_directory_existence(
             expected_result=True,
-            windows_vm=windows_vm_for_snapshot,
+            windows_vm=windows_vm_with_vtpm_for_snapshot,
             directory_path=WINDOWS_DIRECTORY_PATH,
         )
 
 
+@pytest.mark.tier3
 @pytest.mark.parametrize(
-    "windows_vm_for_snapshot",
+    "windows_vm_with_vtpm_for_snapshot",
     [
         pytest.param(
             {"dv_name": "dv-8536", "vm_name": "vm-8536"},
@@ -439,14 +441,14 @@ def test_online_windows_vm_successful_restore(
     indirect=True,
 )
 def test_write_to_file_while_snapshot(
-    windows_vm_for_snapshot,
+    windows_vm_with_vtpm_for_snapshot,
     windows_snapshot,
     file_created_during_snapshot,
 ):
     with VirtualMachineRestore(
         name="restore-vm",
-        namespace=windows_vm_for_snapshot.namespace,
-        vm_name=windows_vm_for_snapshot.name,
+        namespace=windows_vm_with_vtpm_for_snapshot.namespace,
+        vm_name=windows_vm_with_vtpm_for_snapshot.name,
         snapshot_name=windows_snapshot.name,
     ) as restore:
-        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot)
+        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
