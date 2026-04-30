@@ -90,7 +90,11 @@ class TestVMWithExplicitIPAddressSpecification:
         assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
 
         assert assigned_ip == ip_to_request.ip
-        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
+        guest_ip = read_guest_interface_ipv4(
+            vm=vm_under_test,
+            interface_name=vm_under_test.vmi.interfaces[0].interfaceName,
+        )
+        assert guest_ip == ip_to_request
 
         with client_server_active_connection(
             client_vm=vm_for_connectivity_ref,
@@ -170,4 +174,8 @@ class TestVMWithExplicitIPAddressSpecification:
         assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
 
         assert assigned_ip == ip_to_request.ip
-        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
+        guest_ip = read_guest_interface_ipv4(
+            vm=vm_under_test,
+            interface_name=vm_under_test.vmi.interfaces[0].interfaceName,
+        )
+        assert guest_ip == ip_to_request
