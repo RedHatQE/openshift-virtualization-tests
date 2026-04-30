@@ -10,7 +10,8 @@ from utilities.constants import (
     Images,
 )
 from utilities.oadp import check_file_in_running_vm
-from utilities.virt import verify_file_in_windows_vm, wait_for_running_vm
+from utilities.storage import verify_file_in_windows_vm
+from utilities.virt import wait_for_running_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 

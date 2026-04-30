@@ -3,24 +3,28 @@ from ocp_resources.data_protection_application import DataProtectionApplication
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.data_protection.oadp.utils import (
     OADP_DPA_NAME,
     OADP_VELERO_IMAGE_FQIN_OVERRIDE,
-    create_windows_vm_from_dv_template,
     write_file_windows_vm_for_oadp,
 )
-from utilities.artifactory import get_test_artifact_server_url
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import (
     ADP_NAMESPACE,
     BACKUP_STORAGE_LOCATION,
-    DV_SIZE_STR,
+    CONTAINER_DISK_IMAGE_PATH_STR,
     FILE_NAME_FOR_BACKUP,
-    IMAGE_PATH_STR,
     OS_FLAVOR_RHEL,
-    OS_VERSION_STR,
-    TEMPLATE_LABELS_STR,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
@@ -42,7 +46,7 @@ from utilities.storage import (
     virtctl_upload_dv,
     write_file,
 )
-from utilities.virt import running_vm, wait_for_windows_vm
+from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture()
@@ -172,29 +176,48 @@ def windows_vm_with_data_volume_template(
     dpa_velero_image_override,
     namespace_for_backup,
     snapshot_storage_class_name_scope_module,
-    modern_cpu_for_migration,
 ):
-    """Windows VM in the backup namespace for OADP backup testing."""
-    latest_windows = py_config["latest_windows_os_dict"]
-    with create_windows_vm_from_dv_template(
-        storage_class=snapshot_storage_class_name_scope_module,
-        namespace=namespace_for_backup.name,
-        dv_name="oadp-windows-dv",
-        vm_name="oadp-windows-vm",
-        image_url=f"{get_test_artifact_server_url()}{latest_windows.get(IMAGE_PATH_STR)}",
-        dv_size=latest_windows.get(DV_SIZE_STR),
-        template_labels=latest_windows.get(TEMPLATE_LABELS_STR, {}),
-        client=admin_client,
-        cpu_model=modern_cpu_for_migration,
-        dv_wait_timeout=TIMEOUT_60MIN,
-    ) as vm:
-        wait_for_windows_vm(
-            vm=vm,
-            version=latest_windows.get(OS_VERSION_STR),
-            timeout=TIMEOUT_60MIN,
+    """Windows 2022 VM with InstanceType and Preference in the backup namespace for OADP backup testing."""
+    artifactory_secret = None
+    artifactory_config_map = None
+
+    try:
+        artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name)
+        artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name)
+
+        registry_url = get_test_artifact_server_url(schema="registry")
+        container_image = py_config["latest_windows_os_dict"][CONTAINER_DISK_IMAGE_PATH_STR]
+        dv = DataVolume(
+            name="oadp-windows-dv",
+            namespace=namespace_for_backup.name,
+            storage_class=snapshot_storage_class_name_scope_module,
+            source="registry",
+            url=f"{registry_url}/{container_image}",
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            client=admin_client,
+            api_name="storage",
+            secret=artifactory_secret,
+            cert_configmap=artifactory_config_map.name,
         )
-        write_file_windows_vm_for_oadp(vm=vm)
-        yield vm
+        dv.to_dict()
+
+        with VirtualMachineForTests(
+            name="oadp-windows-vm",
+            namespace=namespace_for_backup.name,
+            client=admin_client,
+            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.large"),
+            vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.2k22"),
+            data_volume_template=dv.res,
+            os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+            disk_type=None,
+        ) as vm:
+            running_vm(vm=vm, wait_for_interfaces=True, dv_wait_timeout=TIMEOUT_60MIN)
+            write_file_windows_vm_for_oadp(vm=vm)
+            yield vm
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        )
 
 
 @pytest.fixture()
