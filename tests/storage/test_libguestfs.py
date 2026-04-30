@@ -3,11 +3,10 @@ from subprocess import check_output
 import pexpect
 import pytest
 from ocp_resources.pod import Pod
-from pytest_testconfig import config as py_config
 
-from tests.storage.utils import create_cirros_dv
-from utilities.constants import QUARANTINED, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
+from utilities.storage import create_dv, get_dv_size_from_datasource
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -40,13 +39,23 @@ def dv_created_by_specific_user(
     request,
     namespace,
     client_for_test,
+    fedora_data_source_scope_module,
+    storage_class_name_scope_function,
 ):
-    yield from create_cirros_dv(
-        name=request.param["data_volume_name"],
-        namespace=namespace.name,
-        storage_class=py_config["default_storage_class"],
+    with create_dv(
+        dv_name=request.param["data_volume_name"],
+        storage_class=storage_class_name_scope_function,
         client=client_for_test,
-    )
+        namespace=namespace.name,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+        size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
+    ) as dv:
+        dv.wait_for_dv_success(timeout=TIMEOUT_2MIN)
+        yield dv
 
 
 @pytest.fixture()
@@ -86,13 +95,8 @@ def client_for_test(request, admin_client, unprivileged_client):
     ],
     indirect=True,
 )
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Timeout exceeded. Tracked in CNV-62312",
-    run=False,
-)
 @pytest.mark.s390x
 def test_virtctl_libguestfs_with_specific_user(
-    client_for_test,
     virtctl_libguestfs_by_user,
 ):
     virtctl_libguestfs_by_user.sendline("libguestfs-test-tool")
