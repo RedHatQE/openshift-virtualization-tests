@@ -1,10 +1,9 @@
-__test__ = False
-
-import pytest
-
 """
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
 Markers:
-    - IPv4
+    - bgp
+    - ipv4
 
 Preconditions:
     - OVN-K in Local Gateway Mode.
@@ -17,9 +16,23 @@ Preconditions:
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
 
+import ipaddress
+
+import pytest
+
+from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
+from libs.net.vmspec import lookup_primary_network
+
+pytestmark = [
+    pytest.mark.bgp,
+    pytest.mark.ipv4,
+    pytest.mark.usefixtures("evpn_setup_ready"),
+    pytest.mark.jira("CORENET-6861", run=False),
+]
+
 
 @pytest.mark.polarion("CNV-15227")
-def test_connectivity_between_udn_vms(self):
+def test_connectivity_between_udn_vms(vm_evpn_target, vm_evpn_reference, subtests):
     """
     Preconditions:
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -31,10 +44,18 @@ def test_connectivity_between_udn_vms(self):
     Expected:
     - VMs successfully communicate with each other.
     """
+    with active_tcp_connections(
+        client_vm=vm_evpn_reference,
+        server_vm=vm_evpn_target,
+        iface_name=lookup_primary_network(vm=vm_evpn_target).name,
+    ) as connections:
+        for client, server in connections:
+            with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
+                assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15228")
-def test_stretched_l2_connectivity_udn_vm_and_external_provider(self):
+def test_stretched_l2_connectivity_udn_vm_and_external_provider():
     """
     Preconditions:
     - External Source Provider L2 endpoint.
@@ -48,8 +69,11 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(self):
     """
 
 
+test_stretched_l2_connectivity_udn_vm_and_external_provider.__test__ = False
+
+
 @pytest.mark.polarion("CNV-15229")
-def test_stretched_l2_connectivity_is_preserved_over_live_migration(self):
+def test_stretched_l2_connectivity_is_preserved_over_live_migration():
     """
     Preconditions:
     - External Source Provider L2 endpoint.
@@ -64,8 +88,11 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(self):
     """
 
 
+test_stretched_l2_connectivity_is_preserved_over_live_migration.__test__ = False
+
+
 @pytest.mark.polarion("CNV-15230")
-def test_routed_l3_connectivity_udn_vm_and_external_provider(self):
+def test_routed_l3_connectivity_udn_vm_and_external_provider():
     """
     Preconditions:
     - External Source Provider L3 endpoint.
@@ -79,8 +106,11 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider(self):
     """
 
 
+test_routed_l3_connectivity_udn_vm_and_external_provider.__test__ = False
+
+
 @pytest.mark.polarion("CNV-15231")
-def test_routed_l3_connectivity_is_preserved_over_live_migration(self):
+def test_routed_l3_connectivity_is_preserved_over_live_migration():
     """
     Preconditions:
     - External Source Provider L3 endpoint.
@@ -95,8 +125,11 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(self):
     """
 
 
+test_routed_l3_connectivity_is_preserved_over_live_migration.__test__ = False
+
+
 @pytest.mark.polarion("CNV-15232")
-def test_connectivity_after_udn_vm_cold_reboot(self):
+def test_connectivity_after_udn_vm_cold_reboot():
     """
     Preconditions:
     - External Source Provider L2 and L3 endpoints.
@@ -112,8 +145,11 @@ def test_connectivity_after_udn_vm_cold_reboot(self):
     """
 
 
+test_connectivity_after_udn_vm_cold_reboot.__test__ = False
+
+
 @pytest.mark.polarion("CNV-15233")
-def test_source_provider_migration(self):
+def test_source_provider_migration():
     """
     Scenario emulates a migration of an external workload (Source Provider) into the OCP cluster as a CUDN VM,
     while preserving its IP and MAC addresses, and maintaining connectivity.
@@ -131,3 +167,6 @@ def test_source_provider_migration(self):
     Expected:
     - New connections are established after new UDN VM deployment.
     """
+
+
+test_source_provider_migration.__test__ = False
