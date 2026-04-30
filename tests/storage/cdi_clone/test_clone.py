@@ -123,6 +123,7 @@ def test_successful_vm_restart_with_cloned_dv(
     ) as cdv:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
             cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
+            cdv.pvc.wait()
         else:
             cdv.wait_for_dv_success()
         with create_vm_from_dv(
