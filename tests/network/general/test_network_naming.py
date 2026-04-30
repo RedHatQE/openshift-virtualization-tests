@@ -3,6 +3,8 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
+pytestmark = pytest.mark.multiarch
+
 
 @pytest.fixture()
 def invalid_network_names():

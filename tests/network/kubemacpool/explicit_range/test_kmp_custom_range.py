@@ -2,6 +2,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.ipv4,
+    pytest.mark.multiarch,
 ]
 
 

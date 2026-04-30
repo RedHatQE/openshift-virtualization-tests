@@ -6,6 +6,7 @@ from utilities.virt import migrate_vm_and_verify
 pytestmark = [
     pytest.mark.bgp,
     pytest.mark.ipv4,
+    pytest.mark.multiarch,
     pytest.mark.usefixtures("bgp_setup_ready"),
 ]
 

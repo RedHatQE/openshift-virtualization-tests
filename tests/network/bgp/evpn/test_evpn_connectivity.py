@@ -2,6 +2,8 @@ __test__ = False
 
 import pytest
 
+pytestmark = pytest.mark.multiarch
+
 """
 Markers:
     - IPv4

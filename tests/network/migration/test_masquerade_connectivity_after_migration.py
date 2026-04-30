@@ -15,6 +15,8 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.multiarch
+
 
 @pytest.fixture(scope="module")
 def running_vm_static(
