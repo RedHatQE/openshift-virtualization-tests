@@ -5,24 +5,20 @@ Automation for Memory Dump
 import pytest
 from pytest_testconfig import config as py_config
 
-from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
+from utilities.constants import Images
 
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, windows_vm_for_memory_dump",
+    "golden_image_data_source_scope_function",
     [
         pytest.param(
             {
-                "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_name": "dv-windows-2022",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-            },
-            {
-                "vm_name": "windows-vm-mem",
-                "template_labels": WINDOWS_LATEST_LABELS,
+                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-8518"),
         ),
