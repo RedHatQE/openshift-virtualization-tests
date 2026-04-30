@@ -9,6 +9,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
@@ -171,6 +172,7 @@ def vm_localnet_1(
                 ),
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -199,6 +201,7 @@ def vm_localnet_2(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -266,6 +269,7 @@ def vm_ovs_bridge_localnet_link_down(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -296,6 +300,7 @@ def vm_ovs_bridge_localnet_1(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -326,6 +331,7 @@ def vm_ovs_bridge_localnet_2(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -473,6 +479,7 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
@@ -505,6 +512,7 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
                 )
             }
         ),
+        affinity=new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items()))),
     ) as vm:
         yield vm
 
