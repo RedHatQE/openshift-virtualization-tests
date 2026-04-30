@@ -23,7 +23,7 @@ def vm_with_node_selector_for_upgrade(namespace_for_outdated_vm_upgrade, unprivi
         yield vm
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def outdated_vmis_count(admin_client):
     vmis_with_outdated_label = len(
         list(
@@ -37,7 +37,7 @@ def outdated_vmis_count(admin_client):
     return vmis_with_outdated_label
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="class")
 def kubevirt_resource_outdated_vmi_workloads_count(kubevirt_resource_scope_session):
     return kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads
 

@@ -2,7 +2,7 @@ import pytest
 
 from tests.observability.constants import KUBEVIRT_VMI_NUMBER_OF_OUTDATED
 from tests.observability.utils import validate_metrics_value
-from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
+from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, NETWORK_NODE_ID_PREFIX
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 
 
@@ -14,7 +14,16 @@ class TestUpgradeObservability:
     TEST_OUTDATED_VMIS_COUNT_MATCHES = "test_outdated_vmis_count_matches_kubevirt_status_after_upgrade"
     """Pre-upgrade tests"""
 
-    @pytest.mark.order(before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
+    @pytest.mark.order(
+        before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+        after=[
+            f"{NETWORK_NODE_ID_PREFIX}::test_vm_have_2_interfaces_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_linux_bridge_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_kubemacpool_disabled_ns_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_kubemacpool_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_vm_connectivity_with_macspoofing_before_upgrade",
+        ],
+    )
     @pytest.mark.dependency(name=TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE)
     @pytest.mark.polarion("CNV-11749")
     def test_metric_kubevirt_vmi_number_of_outdated_before_upgrade(self, prometheus, vm_with_node_selector_for_upgrade):
@@ -56,12 +65,10 @@ class TestUpgradeObservability:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(
-        self, prometheus, kubevirt_resource_outdated_vmi_workloads_count, vm_with_node_selector_for_upgrade
-    ):
+    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(self, prometheus, kubevirt_resource_outdated_vmi_workloads_count):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}"
-            f"{{namespace='{vm_with_node_selector_for_upgrade.namespace}'}}",
-            expected_value="1",
+            metric_name=KUBEVIRT_VMI_NUMBER_OF_OUTDATED,
+            expected_value=kubevirt_resource_outdated_vmi_workloads_count,
         )
+
