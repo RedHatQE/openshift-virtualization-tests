@@ -4,18 +4,29 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.virtual_machine_cluster_instancetype import (
+    VirtualMachineClusterInstancetype,
+)
+from ocp_resources.virtual_machine_cluster_preference import (
+    VirtualMachineClusterPreference,
+)
 
-from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
+from tests.os_params import FEDORA_LATEST
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_windows_vm_validate_guest_agent_info,
+    validate_os_info_vmi_vs_windows_os,
+    wait_for_windows_vm,
 )
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
     TIMEOUT_40MIN,
+    U1_LARGE,
+    WIN_2K22,
+    WINDOWS_2K22_PREFERENCE,
     Images,
 )
 from utilities.storage import (
@@ -31,8 +42,6 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
-
-WINDOWS_CLONE_TIMEOUT = TIMEOUT_40MIN
 
 
 def create_vm_from_clone_dv_template(
@@ -92,7 +101,7 @@ def test_successful_clone_of_large_image(
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        cdv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
 
 
 @pytest.mark.sno
@@ -142,49 +151,29 @@ def test_successful_vm_restart_with_cloned_dv(
 
 
 @pytest.mark.tier3
-@pytest.mark.parametrize(
-    ("data_volume_multi_storage_scope_function", "vm_params"),
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "source": "http",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "vm_name": f"vm-win-{WINDOWS_11.get('os_version')}",
-                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
-                "os_version": WINDOWS_11.get("os_version"),
-                "ssh": True,
-            },
-            marks=pytest.mark.polarion("CNV-3638"),
-        ),
-    ],
-    indirect=["data_volume_multi_storage_scope_function"],
-)
-def test_successful_vm_from_cloned_dv_windows(
+@pytest.mark.polarion("CNV-3638")
+def test_successful_vm_from_cloned_dv_windows_with_vtpm(
     unprivileged_client,
-    data_volume_multi_storage_scope_function,
-    vm_params,
     namespace,
+    cloned_windows_dv_from_registry_scope_function,
 ):
-    with create_dv(
+    """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
+
+    with VirtualMachineForTests(
+        name=f"vm-{WIN_2K22}-vtpm",
+        namespace=namespace.name,
         client=unprivileged_client,
-        source="pvc",
-        dv_name="dv-target",
-        namespace=data_volume_multi_storage_scope_function.namespace,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        create_windows_vm_validate_guest_agent_info(
-            dv=cdv,
-            namespace=namespace,
-            unprivileged_client=unprivileged_client,
-            vm_params=vm_params,
-        )
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
+        data_volume_template={
+            "metadata": cloned_windows_dv_from_registry_scope_function.res["metadata"],
+            "spec": cloned_windows_dv_from_registry_scope_function.res["spec"],
+        },
+    ) as vm:
+        vm.start()
+        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
+        validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
 @pytest.mark.parametrize(
