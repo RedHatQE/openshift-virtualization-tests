@@ -84,6 +84,7 @@ def cloud_init_ipv6_network_data(ipv6_primary_interface_cloud_init_data):
             marks=[
                 pytest.mark.polarion("CNV-2332"),
                 pytest.mark.ipv4,
+                pytest.mark.multiarch,
             ],
         ),
         pytest.param(

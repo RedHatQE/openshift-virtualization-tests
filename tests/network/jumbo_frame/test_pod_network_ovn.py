@@ -14,6 +14,8 @@ pytestmark = [
 ]
 
 
+@pytest.mark.multiarch
+@pytest.mark.single_nic
 class TestJumboPodNetworkOnly:
     @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-9660")

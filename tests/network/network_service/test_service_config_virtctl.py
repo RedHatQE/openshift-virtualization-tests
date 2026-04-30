@@ -16,13 +16,13 @@ class TestServiceConfigurationViaVirtctl:
                 SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
                 SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
                 SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
-                marks=(pytest.mark.polarion("CNV-6454")),
+                marks=(pytest.mark.polarion("CNV-6454"), pytest.mark.multiarch),
             ),
             pytest.param(
                 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK,
                 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK,
                 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK,
-                marks=(pytest.mark.polarion("CNV-6481")),
+                marks=(pytest.mark.polarion("CNV-6481"), pytest.mark.multiarch),
             ),
             pytest.param(
                 SERVICE_IP_FAMILY_POLICY_REQUIRE_DUAL_STACK,

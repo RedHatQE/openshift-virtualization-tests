@@ -14,6 +14,8 @@ from tests.network.localnet.liblocalnet import (
 from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
+pytestmark = pytest.mark.multiarch
+
 
 @pytest.mark.gating
 @pytest.mark.single_nic

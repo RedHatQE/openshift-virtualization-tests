@@ -354,7 +354,7 @@ def test_connectivity_after_migration_and_restart(
 @pytest.mark.parametrize(
     "ip_family",
     [
-        pytest.param("ipv4", marks=[pytest.mark.ipv4, pytest.mark.polarion("CNV-12508")]),
+        pytest.param("ipv4", marks=[pytest.mark.ipv4, pytest.mark.multiarch, pytest.mark.polarion("CNV-12508")]),
         pytest.param("ipv6", marks=[pytest.mark.ipv6, pytest.mark.polarion("CNV-12509")]),
     ],
 )

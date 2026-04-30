@@ -16,6 +16,8 @@ from tests.network.libs.vm_factory import udn_vm
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import LOGGER, migrate_vm_and_verify
 
+pytestmark = pytest.mark.multiarch
+
 
 @retry(wait_timeout=400, sleep=10, exceptions_dict={})
 def wait_for_ready_vm_with_restart(vm: BaseVirtualMachine) -> bool:
