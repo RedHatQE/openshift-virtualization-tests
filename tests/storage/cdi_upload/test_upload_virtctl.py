@@ -12,12 +12,23 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
-from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
+from tests.storage.utils import assert_use_populator
+from utilities.constants import (
+    CDI_UPLOADPROXY,
+    OS_FLAVOR_WINDOWS,
+    QUARANTINED,
+    TIMEOUT_1MIN,
+    U1_LARGE,
+    WINDOWS_2K22_PREFERENCE,
+    Images,
+)
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -27,7 +38,7 @@ from utilities.storage import (
     sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
 )
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -36,8 +47,6 @@ POPULATED_STR = "populated"
 NON_CSI_POPULATED_STR = "imported/cloned/updated"
 DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
-
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
 def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_names):
@@ -424,37 +433,38 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    ("uploaded_dv_with_immediate_binding", "vm_params"),
+    "uploaded_dv_with_immediate_binding",
     [
         pytest.param(
             {
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "remote_name": LATEST_WINDOWS_OS_DICT.get("image_path"),
-                "image_file": LATEST_WINDOWS_OS_DICT.get("image_name"),
-            },
-            {
-                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
-                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
-                "ssh": True,
-                "os_version": LATEST_WINDOWS_OS_DICT.get("os_version"),
+                "remote_name": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+                "image_file": Images.Windows.WIN2022_IMG,
             },
             marks=(pytest.mark.polarion("CNV-3410")),
         ),
     ],
-    indirect=["uploaded_dv_with_immediate_binding"],
+    indirect=True,
 )
-def test_successful_vm_from_uploaded_dv_windows(
+def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
     unprivileged_client,
     namespace,
     uploaded_dv_with_immediate_binding,
-    vm_params,
+    cpu_for_migration,
 ):
-    create_windows_vm_validate_guest_agent_info(
-        dv=uploaded_dv_with_immediate_binding,
-        namespace=namespace,
-        unprivileged_client=unprivileged_client,
-        vm_params=vm_params,
-    )
+    with VirtualMachineForTests(
+        name="win2022-vm",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_WINDOWS,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
+        data_volume=uploaded_dv_with_immediate_binding,
+        cpu_model=cpu_for_migration,
+    ) as vm:
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        wait_for_windows_vm(vm=vm, version="2022")
+        validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
 @pytest.mark.parametrize(
