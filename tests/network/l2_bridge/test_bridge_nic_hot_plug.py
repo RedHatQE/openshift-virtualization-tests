@@ -46,21 +46,12 @@ def running_vm_for_nic_hot_plug(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def bridge_interface_for_hot_plug(nmstate_dependent_placeholder, admin_client, hosts_common_available_ports):
-    yield from create_bridge_interface_for_hot_plug(
-        bridge_name=f"{HOT_PLUG_STR}-br",
-        bridge_port=hosts_common_available_ports[-1],
-        client=admin_client,
-    )
-
-
-@pytest.fixture(scope="module")
 def network_attachment_definition_for_hot_plug(
     admin_client,
     namespace,
-    bridge_interface_for_hot_plug,
+    bridge_nncp,
 ):
-    bridge_name = bridge_interface_for_hot_plug.bridge_name
+    bridge_name = bridge_nncp.desired_state_spec.interfaces[0].name
     with netattachdef.NetworkAttachmentDefinition(
         namespace=namespace.name,
         name=f"{bridge_name}-nad",
