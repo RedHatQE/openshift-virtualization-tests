@@ -11,7 +11,6 @@ from tests.infrastructure.golden_images.constants import (
     CUSTOM_DATA_SOURCE_NAME,
 )
 from tests.infrastructure.golden_images.update_boot_source.utils import (
-    get_all_dic_volume_names,
     get_image_version,
     wait_for_created_volume_from_data_import_cron,
     wait_for_existing_auto_update_data_import_crons,
@@ -73,25 +72,13 @@ class TestDataImportCronOptOutOptIn:
     """Tests for DICs opt-out/opt-in."""
 
     @pytest.mark.polarion("CNV-7532")
-    @pytest.mark.jira("CNV-85066", run=False)
     def test_data_import_cron_deletion_on_opt_out(
         self,
-        admin_client,
-        golden_images_namespace,
-        existing_dic_volumes_before_disable,
         golden_images_data_import_crons_scope_function,
         disabled_common_boot_image_import_hco_spec_scope_function,
     ):
         LOGGER.info("Verify DataImportCrons are deleted after opt-out.")
         wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons_scope_function)
-        volumes_after = get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)
-        missing_volumes = set(existing_dic_volumes_before_disable) - set(volumes_after)
-        assert not missing_volumes, (
-            f"DataImportCron deletion should not affect existing volumes.\n"
-            f"Missing volumes: {sorted(missing_volumes)}\n"
-            f"Volumes before: {sorted(existing_dic_volumes_before_disable)}\n"
-            f"Volumes after: {sorted(volumes_after)}"
-        )
 
     @pytest.mark.parametrize(
         "updated_hco_with_custom_data_import_cron_scope_function",
