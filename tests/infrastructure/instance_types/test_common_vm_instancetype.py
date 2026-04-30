@@ -97,3 +97,10 @@ class TestDedicatedInstancetypeProfile:
             f"'windows-vcpu-overcommit-binding' denied request: {WINDOWS_DEDICATED_CPU_MESSAGE}"
         )
         wait_for_condition_message_value(resource=windows_vm_for_dedicated_cpu, expected_message=expected_message)
+
+    @pytest.mark.polarion("CNV-13746")
+    def test_d1_on_rhel_vm(
+        self,
+        rhel_vm_for_dedicated_cpu,
+    ):
+        running_vm(vm=rhel_vm_for_dedicated_cpu)
