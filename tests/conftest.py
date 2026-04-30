@@ -1114,11 +1114,6 @@ def _skip_access_mode_rwo(storage_class_matrix):
         pytest.skip(reason="Skipping when access_mode is RWO; possible reason: cannot migrate VMI with non-shared PVCs")
 
 
-@pytest.fixture()
-def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__function__)
-
-
 @pytest.fixture(scope="class")
 def skip_access_mode_rwo_scope_class(storage_class_matrix__class__):
     _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__class__)

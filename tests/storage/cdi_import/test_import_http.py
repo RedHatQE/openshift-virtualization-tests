@@ -7,11 +7,12 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.os_params import FEDORA_LATEST, RHEL_LATEST
+from tests.storage.cdi_import.utils import (
+    wait_dv_and_get_importer,
+)
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
     HTTP,
@@ -23,29 +24,18 @@ from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
     get_file_url,
-    get_importer_pod,
     wait_for_importer_container_message,
 )
-from utilities import console
 from utilities.constants import (
-    OS_FLAVOR_RHEL,
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_12MIN,
-    TIMEOUT_20SEC,
     Images,
 )
-from utilities.infra import get_node_selector_dict
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
-    create_dummy_first_consumer_pod,
     create_dv,
-    create_vm_from_dv,
-    get_test_artifact_server_url,
-    sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import running_vm
 
@@ -59,80 +49,7 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
-
-
-def get_importer_pod_node(importer_pod):
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: importer_pod.instance.get("spec", {}).get(
-            "nodeName",
-        ),
-    ):
-        if sample:
-            return sample
-
-
-def wait_for_pvc_recreate(pvc, pvc_original_timestamp):
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_20SEC,
-        sleep=1,
-        func=lambda: pvc.instance.metadata.creationTimestamp != pvc_original_timestamp,
-    ):
-        if sample:
-            break
-
-
-def wait_dv_and_get_importer(dv, admin_client):
-    dv.wait_for_status(
-        status=DataVolume.Status.IMPORT_IN_PROGRESS,
-        timeout=TIMEOUT_1MIN,
-        stop_status=DataVolume.Status.SUCCEEDED,
-    )
-    return get_importer_pod(dyn_client=admin_client, namespace=dv.namespace)
-
-
-@pytest.fixture()
-def dv_with_annotation(admin_client, namespace, linux_nad):
-    with create_dv(
-        dv_name="dv-annotation",
-        namespace=namespace.name,
-        url=f"{get_test_artifact_server_url()}{FEDORA_LATEST['image_path']}",
-        storage_class=py_config["default_storage_class"],
-        multus_annotation=linux_nad.name,
-    ) as dv:
-        return wait_dv_and_get_importer(dv=dv, admin_client=admin_client).instance.metadata.annotations
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "import-http-dv",
-                "source": HTTP,
-                "image": CIRROS_QCOW2_IMG,
-                "dv_size": DEFAULT_DV_SIZE,
-            },
-            marks=pytest.mark.polarion("CNV-675"),
-        ),
-    ],
-    indirect=True,
-)
-def test_delete_pvc_after_successful_import(
-    data_volume_multi_storage_scope_function,
-):
-    pvc = data_volume_multi_storage_scope_function.pvc
-    pvc_original_timestamp = pvc.instance.metadata.creationTimestamp
-    pvc.delete()
-    wait_for_pvc_recreate(pvc=pvc, pvc_original_timestamp=pvc_original_timestamp)
-    storage_class = data_volume_multi_storage_scope_function.storage_class
-    if sc_volume_binding_mode_is_wffc(sc=storage_class):
-        create_dummy_first_consumer_pod(pvc=pvc)
-    data_volume_multi_storage_scope_function.wait_for_dv_success()
 
 
 @pytest.mark.sno
@@ -462,78 +379,6 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
 
 
-@pytest.mark.parametrize(
-    "dv_from_http_import",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-3065",
-                "file_name": Images.Cdi.QCOW2_IMG,
-                "source": HTTPS,
-                "size": "100Mi",
-                "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
-            },
-            marks=pytest.mark.polarion("CNV-3065"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-def test_disk_falloc(internal_http_configmap, dv_from_http_import):
-    dv_from_http_import.wait_for_dv_success()
-    with create_vm_from_dv(dv=dv_from_http_import) as vm_dv:
-        with console.Console(vm=vm_dv) as vm_console:
-            LOGGER.info("Fill disk space.")
-            vm_console.sendline("dd if=/dev/zero of=file bs=1M")
-            vm_console.expect("dd: writing 'file': No space left on device", timeout=TIMEOUT_1MIN)
-
-
-@pytest.mark.destructive
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-3362",
-                "source": HTTP,
-                "image": RHEL_LATEST["image_path"],
-                "dv_size": "25Gi",
-                "access_modes": DataVolume.AccessMode.RWX,
-                "wait": False,
-            },
-            marks=pytest.mark.polarion("CNV-3632"),
-        ),
-    ],
-    indirect=True,
-)
-def test_vm_from_dv_on_different_node(
-    admin_client,
-    skip_access_mode_rwo_scope_function,
-    skip_non_shared_storage,
-    schedulable_nodes,
-    data_volume_multi_storage_scope_function,
-):
-    """
-    Test that create and run VM from DataVolume (only use RWX access mode) on different node.
-    It applies to shared storage like Ceph or NFS. It cannot be tested on local storage like HPP.
-    """
-    importer_pod = get_importer_pod(
-        dyn_client=admin_client,
-        namespace=data_volume_multi_storage_scope_function.namespace,
-    )
-    importer_node_name = get_importer_pod_node(importer_pod=importer_pod)
-    nodes = list(filter(lambda node: importer_node_name != node.name, schedulable_nodes))
-    data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_12MIN)
-    with create_vm_from_dv(
-        dv=data_volume_multi_storage_scope_function,
-        vm_name="rhel-vm",
-        os_flavor=OS_FLAVOR_RHEL,
-        node_selector=get_node_selector_dict(node_selector=nodes[0].name),
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
-    ) as vm_dv:
-        assert vm_dv.vmi.node.name != importer_node_name
-
-
 @pytest.mark.tier3
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function,"
@@ -568,11 +413,3 @@ def test_successful_vm_from_imported_dv_windows(
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
     )
-
-
-@pytest.mark.polarion("CNV-5509")
-@pytest.mark.s390x
-def test_importer_pod_annotation(dv_with_annotation, linux_nad):
-    # verify "k8s.v1.cni.cncf.io/networks" can pass to the importer pod
-    assert dv_with_annotation.get(f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks") == linux_nad.name
-    assert '"interface": "net1"' in dv_with_annotation.get(f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status")
