@@ -27,6 +27,7 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_30MIN,
@@ -355,6 +356,8 @@ def vm_with_mounted_hotplugged_disk(vm_for_storage_class_migration_with_hotplugg
                 f"sudo mount {HOTPLUGGED_DEVICE} {MOUNT_HOTPLUGGED_DEVICE_PATH}",
             ]
         ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )
     yield vm_for_storage_class_migration_with_hotplugged_volume
 
@@ -366,6 +369,8 @@ def written_file_to_the_mounted_hotplugged_disk(vm_with_mounted_hotplugged_disk)
         commands=shlex.split(
             f"echo '{CONTENT}' | sudo tee {MOUNT_HOTPLUGGED_DEVICE_PATH}/{FILE_BEFORE_STORAGE_MIGRATION}"
         ),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )
     yield vm_with_mounted_hotplugged_disk
 
@@ -419,7 +424,7 @@ def written_file_to_windows_vms_before_migration(booted_vms_for_storage_class_mi
         cmd = shlex.split(
             f'powershell -command "\\"{CONTENT}\\" | Out-File -FilePath {WINDOWS_FILE_WITH_PATH} -Append"'
         )
-        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+        run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     yield booted_vms_for_storage_class_migration
 
 
