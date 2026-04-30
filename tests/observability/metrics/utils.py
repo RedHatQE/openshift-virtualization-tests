@@ -9,6 +9,7 @@ from typing import Any, Generator, Optional
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
@@ -708,20 +709,43 @@ def get_vmi_guest_os_kernel_release_info_metric_from_vm(
     }
 
 
-def get_pvc_size_bytes(vm: VirtualMachineForTests) -> str:
+def get_pvc_size_bytes(vm: VirtualMachineForTests, cdi_config: CDIConfig | None = None) -> str:
+    """Return expected PVC size in bytes as a string, adjusted for filesystem overhead.
+
+    When ``cdi_config`` is provided and the PVC's volumeMode is ``Filesystem``,
+    the raw PVC capacity is reduced by the filesystem overhead percentage stored
+    in CDIConfig (per-storage-class value with a global fallback).  For ``Block``
+    PVCs or when no ``cdi_config`` is supplied the raw capacity is returned.
+
+    Args:
+        vm: Virtual machine whose first DataVolume template PVC is inspected.
+        cdi_config: Optional CDIConfig resource used to look up filesystem
+            overhead.  When ``None``, no overhead adjustment is applied.
+
+    Returns:
+        The (possibly adjusted) PVC size in bytes, as a string.
+    """
     vm_dv_templates = vm.instance.spec.dataVolumeTemplates
     assert vm_dv_templates, "VM has no DataVolume templates"
-    return str(
-        int(
-            bitmath.parse_string_unsafe(
-                PersistentVolumeClaim(
-                    name=vm_dv_templates[0].metadata.name,
-                    namespace=vm.namespace,
-                    client=vm.client,
-                ).instance.spec.resources.requests.storage
-            ).Byte.bytes
-        )
+
+    pvc = PersistentVolumeClaim(
+        name=vm_dv_templates[0].metadata.name,
+        namespace=vm.namespace,
+        client=vm.client,
     )
+    raw_size_bytes = int(bitmath.parse_string_unsafe(pvc.instance.spec.resources.requests.storage).bytes)
+
+    if cdi_config is None or pvc.instance.spec.volumeMode != "Filesystem":
+        return str(raw_size_bytes)
+
+    filesystem_overhead = cdi_config.instance.status.filesystemOverhead
+    storage_class_name = pvc.instance.spec.storageClassName
+    per_sc_overhead = (
+        filesystem_overhead.get("storageClass", {}).get(storage_class_name) if storage_class_name else None
+    )
+    overhead_value = float(per_sc_overhead if per_sc_overhead is not None else filesystem_overhead["global"])
+    adjusted_size_bytes = int(raw_size_bytes * (1 - overhead_value))
+    return str(adjusted_size_bytes)
 
 
 def validate_metric_value_greater_than_initial_value(
