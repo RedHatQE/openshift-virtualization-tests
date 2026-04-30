@@ -9,7 +9,6 @@ from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
     create_vm_for_hot_plug,
-    create_vm_with_hot_plugged_sriov_interface,
     create_vm_with_secondary_interface_on_setup,
     get_kubemacpool_controller_log,
     get_primary_and_hot_plugged_mac_addresses,
@@ -395,35 +394,47 @@ def hot_unplug_secondary_interface_from_setup(
 
 
 @pytest.fixture()
-def vm1_with_hot_plugged_sriov_interface(
-    namespace,
-    unprivileged_client,
-    sriov_network_for_hot_plug,
-    index_number,
-):
-    yield from create_vm_with_hot_plugged_sriov_interface(
+def sriov_hot_plug_vm1(namespace, unprivileged_client):
+    with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm1",
-        sriov_network_for_hot_plug=sriov_network_for_hot_plug,
-        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         client=unprivileged_client,
-    )
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture()
-def vm2_with_hot_plugged_sriov_interface(
-    namespace,
-    unprivileged_client,
-    sriov_network_for_hot_plug,
-    index_number,
-):
-    yield from create_vm_with_hot_plugged_sriov_interface(
+def vm1_with_hot_plugged_sriov_interface(sriov_hot_plug_vm1, sriov_network_for_hot_plug, namespace, index_number):
+    hot_plug_interface_and_set_address(
+        vm=sriov_hot_plug_vm1,
+        hot_plugged_interface_name=sriov_network_for_hot_plug.name,
+        net_attach_def_name=f"{namespace.name}/{sriov_network_for_hot_plug.name}",
+        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
+        sriov=True,
+    )
+    return sriov_hot_plug_vm1
+
+
+@pytest.fixture()
+def sriov_hot_plug_vm2(namespace, unprivileged_client):
+    with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm2",
-        sriov_network_for_hot_plug=sriov_network_for_hot_plug,
-        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         client=unprivileged_client,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def vm2_with_hot_plugged_sriov_interface(sriov_hot_plug_vm2, sriov_network_for_hot_plug, namespace, index_number):
+    hot_plug_interface_and_set_address(
+        vm=sriov_hot_plug_vm2,
+        hot_plugged_interface_name=sriov_network_for_hot_plug.name,
+        net_attach_def_name=f"{namespace.name}/{sriov_network_for_hot_plug.name}",
+        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
+        sriov=True,
     )
+    return sriov_hot_plug_vm2
 
 
 @pytest.fixture(scope="module")

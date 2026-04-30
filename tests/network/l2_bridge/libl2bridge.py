@@ -312,28 +312,6 @@ def get_primary_and_hot_plugged_mac_addresses(vm, hot_plugged_interface):
     ]
 
 
-def create_vm_with_hot_plugged_sriov_interface(
-    namespace_name,
-    vm_name,
-    sriov_network_for_hot_plug,
-    ipv4_address,
-    client,
-):
-    with create_vm_for_hot_plug(
-        namespace_name=namespace_name,
-        vm_name=vm_name,
-        client=client,
-    ) as vm:
-        hot_plug_interface_and_set_address(
-            vm=vm,
-            hot_plugged_interface_name=sriov_network_for_hot_plug.name,
-            net_attach_def_name=f"{namespace_name}/{sriov_network_for_hot_plug.name}",
-            ipv4_address=ipv4_address,
-            sriov=True,
-        )
-        yield vm
-
-
 def wait_for_no_packet_loss_after_connection(src_vm, dst_ip, interface=None):
     sleep_count_value = 10
 
