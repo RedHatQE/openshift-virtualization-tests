@@ -121,3 +121,32 @@ class TestPrimaryUdn:
     def test_connectivity_is_preserved_during_server_live_migration(self, server, client):
         migrate_vm_and_verify(vm=server.vm)
         assert is_tcp_connection(server=server, client=client)
+
+
+@pytest.mark.multiarch
+@pytest.mark.polarion("CNV-15942")
+def test_udn_connectivity_between_different_archs():
+    """
+    Test UDN connectivity between VMs on different architectures.
+    Intended to run on multi-architecture cluster with AMD64 and ARM64 worker nodes
+
+    STP Reference:
+    https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/12/
+    (Not yet merged)
+
+    Preconditions:
+        - User Defined Network configured
+        - TCP Client VM on AMD64 node
+        - TCP Server VM on ARM64 node (different from client)
+        - Both VMs connected to the same User Defined Network
+
+    Steps:
+        1. Establish TCP connection from client VM to server VM using UDN IP address
+
+    Expected:
+        - TCP connection succeeds
+    """
+
+
+# Mark test as unimplemented
+test_udn_connectivity_between_different_archs.__test__ = False

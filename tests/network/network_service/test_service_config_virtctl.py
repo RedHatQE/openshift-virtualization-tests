@@ -49,3 +49,30 @@ class TestServiceConfigurationViaVirtctl:
             expected_num_families_in_service=expected_num_families_in_service,
             expected_ip_family_policy=ip_family_policy,
         )
+
+    @pytest.mark.multiarch
+    @pytest.mark.polarion("CNV-15943")
+    def test_services_between_different_archs(self):
+        """
+        Test Kubernetes Service connectivity between VMs on different architectures.
+        Intended to run on multi-architecture cluster with AMD64 and ARM64 worker nodes
+
+        STP Reference:
+        https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/12/
+        (Not yet merged)
+
+        Preconditions:
+            - TCP Server VM on ARM64 node
+            - TCP Client VM on AMD64 node
+            - ClusterIP TCP service exposing the server VM's port
+
+        Steps:
+            1. Establish TCP connection from client VM to server VM via the ClusterIP service
+
+        Expected:
+            - TCP connection through the ClusterIP service succeeds
+        """
+
+
+# Mark test as unimplemented
+TestServiceConfigurationViaVirtctl.test_services_between_different_archs.__test__ = False
