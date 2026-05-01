@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Check team membership
         id: check-user-team
-        uses: tspascoal/get-user-teams-membership@v3
+        uses: tspascoal/get-user-teams-membership@v4
         with:
           team: cnvqe-bot
           username: ${{ github.event.pull_request.user.login }}
