@@ -22,10 +22,10 @@ LOGGER = logging.getLogger(__name__)
 class BaseTcpClient(ABC):
     """Base abstract class for network traffic generator client."""
 
-    def __init__(self, server_ip: str, server_port: int):
+    def __init__(self, server_ip: str, server_port: int, connect_timeout_ms: int = 300):
         self._server_ip = server_ip
         self.server_port = server_port
-        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout {connect_timeout_ms}"
 
     @property
     def server_ip(self) -> str:
@@ -108,8 +108,9 @@ class VMTcpClient(BaseTcpClient):
         server_ip: str,
         server_port: int,
         maximum_segment_size: int = 0,
+        connect_timeout_ms: int = 300,
     ):
-        super().__init__(server_ip=server_ip, server_port=server_port)
+        super().__init__(server_ip=server_ip, server_port=server_port, connect_timeout_ms=connect_timeout_ms)
         self._vm = vm
         self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
@@ -242,6 +243,7 @@ def client_server_active_connection(
     port: int = IPERF_SERVER_PORT,
     maximum_segment_size: int = 0,
     ip_family: int = 4,
+    connect_timeout_ms: int = 300,
 ) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
     """Start iperf3 client-server connection with continuous TCP traffic flow.
 
@@ -257,6 +259,9 @@ def client_server_active_connection(
                               Use for jumbo frame testing.
                               Default value is 0 (do not change mss).
         ip_family: IP version to use (4 for IPv4, 6 for IPv6). Default is 4.
+        connect_timeout_ms: Timeout in milliseconds for the initial TCP connection attempt.
+                            Increase when the network datapath may need extra time to be
+                            programmed (e.g. OVN-K IPAM on a loaded cluster). Default is 300.
 
     Yields:
         tuple[VMTcpClient, TcpServer]: Client and server objects with active traffic flowing.
@@ -271,5 +276,6 @@ def client_server_active_connection(
             server_ip=server_ip,
             server_port=port,
             maximum_segment_size=maximum_segment_size,
+            connect_timeout_ms=connect_timeout_ms,
         ) as client:
             yield client, server
