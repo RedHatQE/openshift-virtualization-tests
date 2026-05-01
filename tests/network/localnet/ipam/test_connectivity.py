@@ -29,5 +29,6 @@ def test_tcp_connectivity_between_vms_with_localnet_ipam_nic(
         server_vm=vm2,
         spec_logical_network=LOCALNET_IPAM_INTERFACE,
         port=8888,
+        connect_timeout_ms=5000,  # OVN-K IPAM datapath programming can lag on loaded clusters
     ) as (client, server):
         assert is_tcp_connection(server=server, client=client)
