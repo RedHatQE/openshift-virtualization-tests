@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.data_source import DataSource
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
 from tests.infrastructure.utils import (
@@ -10,6 +12,7 @@ from tests.infrastructure.utils import (
     verify_tekton_operator_installed,
 )
 from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
+from utilities.constants import DATA_SOURCE_NAME
 from utilities.exceptions import ResourceMissingFieldError, ResourceValueError
 from utilities.pytest_utils import exit_pytest_execution
 
@@ -96,3 +99,13 @@ def infrastructure_special_infra_sanity(
             junitxml_property=junitxml_plugin,
             admin_client=admin_client,
         )
+
+
+@pytest.fixture(scope="module")
+def latest_rhel_data_source(golden_images_namespace):
+    return DataSource(
+        client=golden_images_namespace.client,
+        name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
+        namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
