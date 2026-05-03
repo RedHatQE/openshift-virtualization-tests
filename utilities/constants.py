@@ -1082,3 +1082,13 @@ STRESS_CPU_MEM_IO_COMMAND = (
 
 # High performance & Numa related constants
 NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"
+
+
+class HCOV1SpecFields:
+    FEATURE_GATES = "featureGates"
+    VIRTUALIZATION = "virtualization"
+    STORAGE = "storage"
+    NETWORKING = "networking"
+    WORKLOAD_SOURCES = "workloadSources"
+    SECURITY = "security"
+    DEPLOYMENT = "deployment"

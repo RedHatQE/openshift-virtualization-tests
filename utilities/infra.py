@@ -607,14 +607,14 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
     return mismatch_statuses
 
 
-def get_hyperconverged_resource(client, hco_ns_name):
+def get_hyperconverged_resource(client, hco_ns_name, api_version=HyperConverged.ApiVersion.V1BETA1):
     hco_name = py_config["hco_cr_name"]
     hco = HyperConverged(
         client=client,
         namespace=hco_ns_name,
         name=hco_name,
     )
-    hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{hco.ApiVersion.V1BETA1}"
+    hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{api_version}"
     if hco.exists:
         return hco
     raise ResourceNotFoundError(f"Hyperconverged: {hco_name} not found in {hco_ns_name}")
