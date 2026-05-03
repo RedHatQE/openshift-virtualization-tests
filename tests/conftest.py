@@ -36,6 +36,7 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
+from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
@@ -1165,31 +1166,41 @@ def default_sc(admin_client):
 
 
 @pytest.fixture()
-def hyperconverged_resource_scope_function(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+def hyperconverged_resource_scope_function(request, admin_client, hco_namespace):
+    params = getattr(request, "param", {})
+    api_version = params.get("api_version", HyperConverged.ApiVersion.V1BETA1)
+    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name, api_version=api_version)
 
 
 @pytest.fixture(scope="class")
-def hyperconverged_resource_scope_class(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+def hyperconverged_resource_scope_class(request, admin_client, hco_namespace):
+    params = getattr(request, "param", {})
+    api_version = params.get("api_version", HyperConverged.ApiVersion.V1BETA1)
+    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name, api_version=api_version)
 
 
 @pytest.fixture(scope="module")
-def hyperconverged_resource_scope_module(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_module(request, admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        params = getattr(request, "param", {})
+        api_version = params.get("api_version", HyperConverged.ApiVersion.V1BETA1)
+        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name, api_version=api_version)
 
 
 @pytest.fixture(scope="package")
-def hyperconverged_resource_scope_package(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_package(request, admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        params = getattr(request, "param", {})
+        api_version = params.get("api_version", HyperConverged.ApiVersion.V1BETA1)
+        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name, api_version=api_version)
 
 
 @pytest.fixture(scope="session")
-def hyperconverged_resource_scope_session(admin_client, hco_namespace, installing_cnv):
+def hyperconverged_resource_scope_session(request, admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        params = getattr(request, "param", {})
+        api_version = params.get("api_version", HyperConverged.ApiVersion.V1BETA1)
+        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name, api_version=api_version)
 
 
 @pytest.fixture()

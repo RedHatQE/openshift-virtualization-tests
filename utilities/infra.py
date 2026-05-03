@@ -607,7 +607,9 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
     return mismatch_statuses
 
 
-def get_hyperconverged_resource(client, hco_ns_name, api_version=HyperConverged.ApiVersion.V1BETA1):
+def get_hyperconverged_resource(
+    client: DynamicClient, hco_ns_name: str, *, api_version=HyperConverged.ApiVersion.V1BETA1
+):
     hco_name = py_config["hco_cr_name"]
     hco = HyperConverged(
         client=client,
