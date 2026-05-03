@@ -11,7 +11,7 @@ from tests.storage.utils import (
     get_importer_pod,
     wait_for_importer_container_message,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, REGISTRY_STR, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
 from utilities.virt import running_vm
@@ -37,6 +37,10 @@ LOGGER = logging.getLogger(__name__)
             id="import-registry-fedora29-qcow-rootdir",
         ),
     ],
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: need to check the DV message instead of importer pod; tracked in CNV-86085",
+    run=False,
 )
 def test_disk_image_not_conform_to_registy_disk(
     admin_client, dv_name, url, namespace, storage_class_matrix__function__
