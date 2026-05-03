@@ -28,6 +28,15 @@ storage_class_matrix = [
             "default": True,
         }
     },
+    {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+        }
+    },
 ]
 
 storage_class_a = StorageClassNames.IO2_CSI
