@@ -10,6 +10,25 @@ early_access: true
 enable_free_tier: true
 
 reviews:
+  # Explicit instructions applied to every review, including PR description validation
+  path_instructions:
+    - path: "**"
+      instructions: |
+        ## PR Template Validation
+        Check the PR description for required sections from `.github/pull_request_template.md`.
+        Required sections (must be present, even if empty):
+        - `##### What this PR does / why we need it:` — MUST be present AND have meaningful content.
+          Flag as HIGH if the section is missing, empty, whitespace-only, contains only HTML comments,
+          or contains only placeholder tokens such as `TBD`, `TBA`, `N/A`, `-`, `—`, `none`, or `.`.
+        - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
+        - `##### Special notes for reviewer:` — must be present (may be empty)
+        - `##### jira-ticket:` — must be present (may be empty)
+        Optional sections (may be omitted without issue):
+        - `##### Short description:`
+        - `##### More details:`
+        If any required section is absent, or `What this PR does / why we need it:` has no content,
+        flag it as HIGH severity and ask the author to restore the missing template section(s).
+
   # Assertive profile for strict enforcement of coding standards
   profile: assertive
 

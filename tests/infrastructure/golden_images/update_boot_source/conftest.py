@@ -14,7 +14,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     generate_data_import_cron_dict,
-    get_all_dic_volume_names,
     get_all_release_versions_from_docs,
 )
 from utilities.constants import (
@@ -284,8 +283,3 @@ def created_data_import_cron(
         },
     ) as data_import_cron:
         yield data_import_cron
-
-
-@pytest.fixture
-def existing_dic_volumes_before_disable(admin_client, golden_images_namespace):
-    return get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)

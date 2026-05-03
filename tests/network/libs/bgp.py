@@ -23,7 +23,7 @@ from utilities.infra import get_resources_by_name_prefix
 
 _CLUSTER_FRR_ASN: Final[int] = 64512
 _EXTERNAL_FRR_ASN: Final[int] = 64000
-_EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:9.1.2"
+_EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-statuscleaner"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
@@ -75,13 +75,21 @@ def enable_route_advertisements_in_cluster(
     Namespace(name=NamespacesNames.OPENSHIFT_FRR_K8S, client=client).clean_up()
 
 
-def create_cudn_route_advertisements(name: str, match_labels: dict, client: DynamicClient) -> RouteAdvertisements:
+def create_cudn_route_advertisements(
+    name: str,
+    match_labels: dict,
+    client: DynamicClient,
+    target_vrf: str | None = None,
+    frr_configuration_selector: dict | None = None,
+) -> RouteAdvertisements:
     """Creates a RouteAdvertisements object for a ClusterUserDefinedNetwork (CUDN) based on the provided labels.
 
     Args:
-        name (str): The name of the RouteAdvertisements object.
-        match_labels (dict): A dictionary of labels to match the CUDN.
-        client (DynamicClient): The Kubernetes dynamic client.
+        name: The name of the RouteAdvertisements object.
+        match_labels: A dictionary of labels to match the CUDN.
+        client: The Kubernetes dynamic client.
+        target_vrf: The VRF to advertise routes in.
+        frr_configuration_selector: Label selector for matching FRRConfiguration resources.
 
     Returns:
         RouteAdvertisements: The created RouteAdvertisements object.
@@ -98,7 +106,8 @@ def create_cudn_route_advertisements(name: str, match_labels: dict, client: Dyna
         advertisements=["PodNetwork"],
         network_selectors=network_selectors,
         node_selector={},
-        frr_configuration_selector={},
+        frr_configuration_selector=frr_configuration_selector or {},
+        target_vrf=target_vrf,
         client=client,
     )
 
@@ -136,6 +145,38 @@ def create_frr_configuration(
     return FRRConfiguration(name=name, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, bgp=bgp_config, client=client)
 
 
+def create_evpn_frr_configuration(
+    name: str, frr_pod_ipv4: str, client: DynamicClient, label: dict[str, str] | None = None
+) -> FRRConfiguration:
+    """Creates a FRRConfiguration for BGP EVPN setup.
+
+    Args:
+        name: The name of the FRRConfiguration object.
+        frr_pod_ipv4: The IPv4 address of the external FRR pod.
+        client: The Kubernetes dynamic client.
+        label: Labels for the FRRConfiguration.
+
+    Returns:
+        FRRConfiguration for EVPN peering.
+    """
+    bgp_config = {
+        "routers": [
+            {
+                "asn": _CLUSTER_FRR_ASN,
+                "neighbors": [
+                    {
+                        "address": frr_pod_ipv4,
+                        "asn": _EXTERNAL_FRR_ASN,
+                    }
+                ],
+            }
+        ]
+    }
+    return FRRConfiguration(
+        name=name, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, bgp=bgp_config, label=label, client=client
+    )
+
+
 def generate_frr_conf(
     external_subnet_ipv4: str,
     nodes_ipv4_list: list[str],
@@ -152,30 +193,49 @@ def generate_frr_conf(
     if not nodes_ipv4_list:
         raise ValueError("nodes_ipv4_list cannot be empty")
 
+    evpn_route_map = "evpn-to-ocp"
+
+    # Route-map: strips cluster ASN from AS_PATH for eBGP EVPN re-advertisement
     lines = [
+        f"route-map {evpn_route_map} permit 10",
+        f" set as-path exclude {_CLUSTER_FRR_ASN}",
+        " set ip next-hop unchanged",
+        "exit",
+        "",
+    ]
+
+    # BGP router and neighbor definitions
+    lines.extend([
         f"router bgp {_EXTERNAL_FRR_ASN}",
         " no bgp ebgp-requires-policy",
         " no bgp default ipv4-unicast",
         " no bgp network import-check",
         "",
-    ]
-
+    ])
     lines.extend([f" neighbor {ip} remote-as {_CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
+    # IPv4 unicast: advertise external subnet, activate neighbors
     lines.extend([
         " address-family ipv4 unicast",
         f"  network {external_subnet_ipv4}",
     ])
-
     for ip in nodes_ipv4_list:
         lines.extend([
             f"  neighbor {ip} activate",
             f"  neighbor {ip} next-hop-self",
             f"  neighbor {ip} route-reflector-client",
         ])
+    lines.extend([" exit-address-family", ""])
 
-    lines.append(" exit-address-family")
+    # EVPN: activate neighbors with route-map to handle AS-path loop prevention
+    lines.append(" address-family l2vpn evpn")
+    for ip in nodes_ipv4_list:
+        lines.extend([
+            f"  neighbor {ip} activate",
+            f"  neighbor {ip} route-map {evpn_route_map} out",
+        ])
+    lines.extend(["  advertise-all-vni", " exit-address-family"])
 
     return "\n".join(lines)
 
@@ -268,6 +328,30 @@ def wait_for_bgp_connection_established(node_names: list) -> None:
     """
     for node_name in node_names:
         _get_bgp_session_state(node_name=node_name).wait_for_session_established()
+
+
+@retry(
+    wait_timeout=300,
+    sleep=10,
+    exceptions_dict={RuntimeError: []},
+)
+def wait_for_evpn_established(frr_pod: Pod, expected_neighbors: int) -> bool:
+    """Waits for all expected EVPN neighbors to have received at least one prefix.
+
+    Args:
+        frr_pod: The external FRR pod to query.
+        expected_neighbors: Number of neighbors expected to have received EVPN prefixes.
+    """
+    output = frr_pod.execute(
+        command=shlex.split('vtysh -c "show bgp l2vpn evpn summary json"'),
+        container="frr",
+    )
+    summary = json.loads(output)
+    peers = summary.get("peers", {})
+    active_count = sum(1 for peer_info in peers.values() if peer_info.get("pfxRcd", 0) > 0)
+    if active_count < expected_neighbors:
+        raise RuntimeError(f"EVPN not fully established: {active_count}/{expected_neighbors} neighbors active")
+    return True
 
 
 @retry(
