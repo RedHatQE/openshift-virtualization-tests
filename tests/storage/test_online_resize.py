@@ -16,7 +16,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import create_cirros_dv
-from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
+from utilities.constants import OS_FLAVOR_CIRROS, TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_4MIN, TIMEOUT_5SEC, Images
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -64,9 +64,16 @@ def cksum_file(vm, filename, create=False):
         run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(f"dd if=/dev/urandom of={filename} count=100 && sync"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
         )
 
-    out = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(f"sha256sum {filename}"))[0]
+    out = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"sha256sum {filename}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0]
     sha256sum = out.split()[0]
     LOGGER.info(f"File sha256sum is {sha256sum}")
     return sha256sum
@@ -107,7 +114,14 @@ def expand_pvc(dv, size_change):
 
 def get_resize_count(vm):
     commands = shlex.split("dmesg | grep -c 'new size' || true")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=commands)[0])
+    return int(
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=commands,
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
+    )
 
 
 def check_file_unchanged(orig_cksum, vm):
@@ -137,7 +151,12 @@ def wait_for_resize(vm, count=1):
             if current_resize_count == desired_count:
                 break
     except TimeoutExpiredError:
-        dmesg = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("dmesg"))[0]
+        dmesg = run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("dmesg"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
         LOGGER.error(f"Failed to reach resize count {desired_count}.\ndmesg:\n{dmesg}")
         raise
 
