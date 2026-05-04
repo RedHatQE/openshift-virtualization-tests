@@ -7,6 +7,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
 from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_2MIN, U1_LARGE, WINDOWS_2K22_PREFERENCE, Images
@@ -26,7 +27,6 @@ def windows_vm_with_vtpm_for_memory_dump(
     golden_image_data_source_scope_function,
     cpu_for_migration,
 ):
-    from pytest_testconfig import config as py_config
 
     with VirtualMachineForTests(
         name="windows-vm-mem",
