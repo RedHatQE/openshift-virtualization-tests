@@ -5,6 +5,10 @@ def foo_matrix(matrix):
     return matrix
 """
 
+from functools import cache
+
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.resource import get_client
 from ocp_resources.storage_class import StorageClass
 
 from utilities.infra import cache_admin_client
@@ -71,3 +75,34 @@ def immediate_matrix(matrix):
         if storage_class[storage_class_name]["wffc"] is False:
             matrix_to_return.append(storage_class)
     return matrix_to_return
+
+
+def rwx_matrix(matrix: list[dict[str, dict[str, str]]]) -> list[dict[str, dict[str, str]]]:
+    """Filter storage classes with ReadWriteMany access mode.
+
+    Args:
+        matrix: List of storage class dictionaries.
+
+    Returns:
+        List of storage classes with RWX access mode.
+    """
+    matrix_to_return = []
+    for storage_class in matrix:
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name]["access_mode"] == "ReadWriteMany":
+            matrix_to_return.append(storage_class)
+    return matrix_to_return
+
+
+@cache
+def _cache_admin_client() -> DynamicClient:
+    """Get admin_client once and reuse it
+
+    This usage of this function is limited to places where `client` cannot be passed as an argument.
+
+    Returns:
+        DynamicClient: admin_client
+
+    """
+
+    return get_client()
