@@ -7,8 +7,10 @@ from ocp_resources.namespace import Namespace
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef as libnad
 from libs.net.ip import random_ipv4_address
+from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
+from tests.network.localnet.ipam.lib_helpers import wait_for_ipam_claim_bound
 from tests.network.localnet.liblocalnet import (
     LOCALNET_IPAM_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
@@ -33,8 +35,10 @@ def localnet_ipam_nad(
                 netAttachDefName=f"{namespace_localnet_1.name}/{localnet_ipam_nad_name}",
                 vlanID=vlan_id,
                 subnets=f"{random_ipv4_address(net_seed=0, host_address=0)}/24",
+                allowPersistentIPs=True,
             )
         ],
+        allowPersistentIPs=True,
     )
 
     with libnad.NetworkAttachmentDefinition(
@@ -94,7 +98,12 @@ def vm2_localnet_ipam(
 
 @pytest.fixture()
 def localnet_ipam_running_vms(
-    vm1_localnet_ipam: BaseVirtualMachine, vm2_localnet_ipam: BaseVirtualMachine
+    admin_client: DynamicClient,
+    vm1_localnet_ipam: BaseVirtualMachine,
+    vm2_localnet_ipam: BaseVirtualMachine,
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
     vm1, vm2 = run_vms(vms=(vm1_localnet_ipam, vm2_localnet_ipam))
+    for vm in (vm1, vm2):
+        wait_for_ipam_claim_bound(vm=vm, iface_name=LOCALNET_IPAM_INTERFACE, client=admin_client)
+        lookup_iface_status_ip(vm=vm, iface_name=LOCALNET_IPAM_INTERFACE, ip_family=4)
     return vm1, vm2
