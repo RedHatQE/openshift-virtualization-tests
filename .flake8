@@ -11,10 +11,9 @@ jobs = 0
 #   F821 — undefined name; used in global_config files with dynamic exec() loading
 #
 # Intentionally suppressed (not enforced by either linter):
-#   N815 — mixedCaseVariable in class scope; dataclass fields match Kubernetes API schemas
 #   N802 — function name should be lowercase; method overrides like formatTime from logging.Formatter
 #   N818 — exception name should end with Error; existing names like MissingTemplateVariables
-ignore = N815, N802, E501, F821, E201, W503, N818
+ignore = N802, E501, F821, E201, W503, N818
 exclude =
     doc,
     .tox,

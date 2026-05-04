@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pytest conftest file for CNV tests
 """

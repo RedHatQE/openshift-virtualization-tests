@@ -25,7 +25,7 @@ instance_type_centos_os_list = [CENTOS_STREAM9_PREFERENCE]
 
 
 for _dir in dir():
-    if not config:  # noqa: F821
+    if not config:
         config: dict[str, Any] = {}
     val = locals()[_dir]
     if type(val) not in [bool, list, dict, str]:
@@ -34,4 +34,4 @@ for _dir in dir():
     if _dir in ["encoding", "py_file"]:
         continue
 
-    config[_dir] = locals()[_dir]  # noqa: F821
+    config[_dir] = locals()[_dir]

@@ -1,6 +1,5 @@
 #!/usr/bin/env -S uv run python
 
-# flake8: noqa: N802
 
 """
 Pytest Marker Analyzer

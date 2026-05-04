@@ -54,7 +54,7 @@ storage_class_a = StorageClassNames.IO2_CSI
 storage_class_b = StorageClassNames.IO2_CSI
 
 for _dir in dir():
-    if not config:  # noqa: F821
+    if not config:
         config: dict[str, Any] = {}
     val = locals()[_dir]
     if type(val) not in [bool, list, dict, str]:
@@ -63,4 +63,4 @@ for _dir in dir():
     if _dir in ["encoding", "py_file"]:
         continue
 
-    config[_dir] = locals()[_dir]  # noqa: F821
+    config[_dir] = locals()[_dir]

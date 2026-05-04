@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Hostpath Provisioner test suite
 """
