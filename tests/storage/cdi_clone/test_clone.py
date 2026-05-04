@@ -12,6 +12,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 
 from tests.os_params import FEDORA_LATEST
+from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
@@ -168,13 +169,10 @@ def test_successful_vm_from_cloned_dv_windows_with_vtpm(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume_template={
-            "metadata": cloned_windows_dv_from_registry_scope_function.res["metadata"],
-            "spec": cloned_windows_dv_from_registry_scope_function.res["spec"],
-        },
+        data_volume=cloned_windows_dv_from_registry_scope_function,
     ) as vm:
         vm.start()
-        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
+        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_CLONE_TIMEOUT)
         validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
