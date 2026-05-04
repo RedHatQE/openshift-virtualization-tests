@@ -33,6 +33,7 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_30MIN,
     U1_SMALL,
     Images,
 )
@@ -224,6 +225,11 @@ def vms_for_storage_class_migration(request):
     """
     vms = [request.getfixturevalue(argname=vm_fixture) for vm_fixture in request.param["vms_fixtures"]]
     yield vms
+
+
+@pytest.fixture(scope="class")
+def dv_wait_timeout(request):
+    return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
 
 
 @pytest.fixture(scope="class")

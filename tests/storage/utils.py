@@ -24,16 +24,11 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities import console
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    LS_COMMAND,
     TIMEOUT_2MIN,
-<<<<<<< HEAD
     TIMEOUT_5SEC,
-=======
     TIMEOUT_20SEC,
->>>>>>> cbba4adb ([4.20][Storage] Use native api for storage migration tests)
     TIMEOUT_30MIN,
     Images,
 )
@@ -60,33 +55,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-
-
-def check_file_in_vm(
-    vm: VirtualMachineForTests,
-    file_name: str,
-    file_content: str,
-    username: str | None = None,
-    password: str | None = None,
-) -> None:
-    """
-    Check that a file exists in a VM with expected content.
-    VM must be running before calling this function.
-
-    Args:
-        vm: VirtualMachine instance
-        file_name: Name of the file to check
-        file_content: Expected content in the file
-        username: Optional username for console login (defaults to vm.username)
-        password: Optional password for console login (defaults to vm.password)
-    """
-    LOGGER.info(f"Verifying file {file_name} exists in VM {vm.name}")
-    with console.Console(vm=vm, username=username, password=password) as vm_console:
-        LOGGER.info(f"Checking file contents for {file_name} in VM {vm.name}")
-        vm_console.sendline(LS_COMMAND)
-        vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
-        vm_console.sendline(f"cat {file_name}")
-        vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
 
 
 @contextmanager
