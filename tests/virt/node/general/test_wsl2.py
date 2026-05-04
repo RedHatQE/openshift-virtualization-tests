@@ -8,15 +8,15 @@ import re
 import shlex
 
 import pytest
-from ocp_resources.template import Template
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.utils import verify_wsl2_guest_works
 from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
-from utilities.constants import TCP_TIMEOUT_30SEC, Images
+from utilities.constants import OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, Images
 from utilities.virt import (
-    VirtualMachineForTestsFromTemplate,
-    get_windows_os_dict,
+    VirtualMachineForTests,
     migrate_vm_and_verify,
     running_vm,
 )
@@ -52,26 +52,40 @@ def assert_windows_host_resource_usage(vm):
 
 
 @pytest.fixture(scope="class")
+def wsl2_vm_instance_type(unprivileged_client, namespace):
+    with VirtualMachineInstancetype(
+        client=unprivileged_client,
+        namespace=namespace.name,
+        name="wsl2-windows-instance-type",
+        cpu={"guest": 8},
+        memory={"guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL},
+    ) as instance_type:
+        yield instance_type
+
+
+@pytest.fixture(scope="class")
 def windows_wsl2_vm(
     request,
     namespace,
     unprivileged_client,
+    wsl2_vm_instance_type,
     golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
     vm_cpu_flags,
 ):
     """Create Windows 10/11 VM, Run VM and wait for WSL2 guest to start"""
     win_ver = request.param["win_ver"]
-    with VirtualMachineForTestsFromTemplate(
-        name=f"{win_ver}-wsl2",
-        labels=Template.generate_template_labels(**get_windows_os_dict(windows_version=win_ver)["template_labels"]),
+    with VirtualMachineForTests(
+        name=f"win-{win_ver}-wsl2",
         namespace=namespace.name,
         client=unprivileged_client,
+        vm_instance_type=wsl2_vm_instance_type,
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=f"windows.{win_ver}"),
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         cpu_model=modern_cpu_for_migration,
         cpu_flags=vm_cpu_flags,
-        memory_guest=Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
-        cpu_cores=8,
+        os_flavor=OS_FLAVOR_WINDOWS,
+        disk_type=None,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -90,12 +104,12 @@ def migrated_wsl2_vm(windows_wsl2_vm):
     [
         pytest.param(
             {"os_dict": WINDOWS_10_WSL},
-            {"win_ver": "win-10"},
+            {"win_ver": "10"},
             id="Windows-10",
         ),
         pytest.param(
             {"os_dict": WINDOWS_11_WSL},
-            {"win_ver": "win-11"},
+            {"win_ver": "11"},
             id="Windows-11",
         ),
     ],

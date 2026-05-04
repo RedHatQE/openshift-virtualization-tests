@@ -470,7 +470,10 @@ def windows_vm_for_test(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace, cpu_for_migration):
+def vm_for_migration_metrics_test(namespace, cpu_for_migration, is_postcopy_migration_bug_open):
+    if is_postcopy_migration_bug_open:
+        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
+
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(
         name=name,
@@ -485,6 +488,18 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration):
 
 @pytest.fixture(scope="class")
 def vm_migration_metrics_vmim_scope_class(admin_client, vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
+@pytest.fixture()
+def vm_migration_metrics_vmim_scope_function(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,

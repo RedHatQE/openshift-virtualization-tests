@@ -233,6 +233,12 @@ This is a test suite - internal APIs have NO backward compatibility requirements
 - **Mark PR as draft** when there are unresolved blockers, failing CI, or open design questions.
 - **NEVER** merge a PR with known unresolved issues — fix or document them first.
 - **DCO (Signed-off-by) REQUIRED** — all commits must include `Signed-off-by` trailer (enforced by CI).
+- **PR template sections REQUIRED** — the PR description MUST preserve these sections from `.github/pull_request_template.md` (even if left empty):
+  - `##### What this PR does / why we need it:` — MUST be present **and have meaningful content** (not blank, whitespace-only, HTML comment only, or a placeholder such as `TBD`, `TBA`, `N/A`, `-`, `none`, or `.`)
+  - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
+  - `##### Special notes for reviewer:` — must be present (may be empty)
+  - `##### jira-ticket:` — must be present (may be empty)
+  - `##### Short description:` and `##### More details:` are optional and may be omitted
 
 ## Essential Commands
 

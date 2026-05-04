@@ -15,10 +15,9 @@ from tests.virt.cluster.common_templates.utils import (
 )
 from utilities import console
 from utilities.constants import LINUX_STR
-from utilities.infra import validate_os_info_vmi_vs_linux_os
+from utilities.infra import assert_secure_boot_mokutil_status, validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     assert_linux_efi,
-    assert_vm_xml_efi,
     check_qemu_guest_agent_installed,
     check_vm_xml_smbios,
     migrate_vm_and_verify,
@@ -61,7 +60,6 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-3266")
     def test_start_vm(self, matrix_rhel_os_vm_from_template):
         """Test CNV common templates VM initiation"""
-
         running_vm(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
@@ -88,11 +86,11 @@ class TestCommonTemplatesRhel:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-8712")
     @pytest.mark.usefixtures("xfail_on_rhel_version_below_rhel9")
-    def test_efi_secureboot_enabled_by_default(self, admin_client, matrix_rhel_os_vm_from_template):
+    def test_efi_secureboot_enabled_by_default(self, matrix_rhel_os_vm_from_template):
         """Test CNV common templates EFI secureboot status"""
 
-        assert_vm_xml_efi(vm=matrix_rhel_os_vm_from_template, admin_client=admin_client)
         assert_linux_efi(vm=matrix_rhel_os_vm_from_template)
+        assert_secure_boot_mokutil_status(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.sno
@@ -221,11 +219,11 @@ class TestCommonTemplatesRhel:
     @pytest.mark.polarion("CNV-6951")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.usefixtures("xfail_on_rhel_version_below_rhel9")
-    def test_efi_secureboot_disabled(self, admin_client, matrix_rhel_os_vm_from_template):
+    def test_efi_secureboot_disabled(self, matrix_rhel_os_vm_from_template):
         vm = matrix_rhel_os_vm_from_template
         update_vm_efi_spec_and_restart(vm=vm, spec={"secureBoot": False})
-        assert_vm_xml_efi(vm=vm, admin_client=admin_client, secure_boot_enabled=False)
         assert_linux_efi(vm=vm)
+        assert_secure_boot_mokutil_status(vm=vm, expected_enabled=False)
 
     @pytest.mark.arm64
     @pytest.mark.sno
