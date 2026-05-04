@@ -1,15 +1,11 @@
 import pytest
-from ocp_resources.data_protection_application import DataProtectionApplication
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
-from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.data_protection.oadp.utils import (
-    OADP_DPA_NAME,
-    OADP_VELERO_IMAGE_FQIN_OVERRIDE,
     write_file_windows_vm_for_oadp,
 )
 from utilities.artifactory import (
@@ -19,7 +15,6 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import (
-    ADP_NAMESPACE,
     BACKUP_STORAGE_LOCATION,
     CONTAINER_DISK_IMAGE_PATH_STR,
     FILE_NAME_FOR_BACKUP,
@@ -46,19 +41,6 @@ from utilities.storage import (
     write_file,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
-
-
-@pytest.fixture()
-def dpa_velero_image_override(admin_client):
-    """Temporarily override DPA Velero image, restored on teardown."""
-    dpa = DataProtectionApplication(
-        name=OADP_DPA_NAME,
-        namespace=ADP_NAMESPACE,
-        client=admin_client,
-    )
-    patch = {"spec": {"unsupportedOverrides": {"veleroImageFqin": OADP_VELERO_IMAGE_FQIN_OVERRIDE}}}
-    with ResourceEditor(patches={dpa: patch}):
-        yield dpa
 
 
 @pytest.fixture()
@@ -172,7 +154,6 @@ def rhel_vm_with_data_volume_template(
 @pytest.fixture()
 def windows_vm_with_data_volume_template(
     admin_client,
-    dpa_velero_image_override,
     namespace_for_backup,
     snapshot_storage_class_name_scope_module,
 ):
@@ -184,14 +165,12 @@ def windows_vm_with_data_volume_template(
         artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name)
         artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name)
 
-        registry_url = get_test_artifact_server_url(schema="registry")
-        container_image = py_config["latest_windows_os_dict"][CONTAINER_DISK_IMAGE_PATH_STR]
         dv = DataVolume(
             name="oadp-windows-dv",
             namespace=namespace_for_backup.name,
             storage_class=snapshot_storage_class_name_scope_module,
             source="registry",
-            url=f"{registry_url}/{container_image}",
+            url=f"{get_test_artifact_server_url(schema='registry')}/{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}",
             size=Images.Windows.CONTAINER_DISK_DV_SIZE,
             client=admin_client,
             api_name="storage",
