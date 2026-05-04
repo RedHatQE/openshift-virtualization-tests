@@ -2,7 +2,19 @@
 # UFN plugin must be run in serial
 jobs = 0
 
-max-line-length = 120
+# Ignore rules that conflict with ruff or are intentionally suppressed.
+#
+# Handled by ruff formatter (ruff removes noqa comments for these, causing flake8 failures):
+#   E501 — line too long; ruff formatter manages line length
+#   E201 — whitespace after '('; ruff formatter manages whitespace
+#   W503 — line break before binary operator; PEP 8 reversed this, ruff uses W504 (after)
+#   F821 — undefined name; used in global_config files with dynamic exec() loading
+#
+# Intentionally suppressed (not enforced by either linter):
+#   N815 — mixedCaseVariable in class scope; dataclass fields match Kubernetes API schemas
+#   N802 — function name should be lowercase; method overrides like formatTime from logging.Formatter
+#   N818 — exception name should end with Error; existing names like MissingTemplateVariables
+ignore = N815, N802, E501, F821, E201, W503, N818
 exclude =
     doc,
     .tox,
@@ -75,6 +87,8 @@ fcn_exclude_functions =
     BeautifulSoup,
     usefixtures,
     find_spec,
+    with_suffix,
+    writelines,
     skip,
     QueueListener,
     requests,
