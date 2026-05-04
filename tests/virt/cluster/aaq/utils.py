@@ -1,7 +1,7 @@
 import logging
 
-import bitmath
 from kubernetes.dynamic import DynamicClient
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.application_aware_applied_cluster_resource_quota import ApplicationAwareAppliedClusterResourceQuota
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -56,13 +56,11 @@ def get_pod_total_cpu_memory(pod_instance):
     for container, status in zip(all_containers, containers_statuses):
         if status.state and status.state.running:
             total_resources["limits"]["cpu"] += _convert_cpu(container.resources.limits.get("cpu", 0))
-            total_resources["limits"]["memory"] += int(
-                bitmath.parse_string_unsafe(container.resources.limits.get("memory", "0B")).to_Byte()
-            )
+            total_resources["limits"]["memory"] += int(parse_quantity(container.resources.limits.get("memory", "0")))
 
             total_resources["requests"]["cpu"] += _convert_cpu(container.resources.requests.get("cpu", 0))
             total_resources["requests"]["memory"] += int(
-                bitmath.parse_string_unsafe(container.resources.requests.get("memory", "0B")).to_Byte()
+                parse_quantity(container.resources.requests.get("memory", "0"))
             )
 
     total_resources["limits"]["cpu"] = f"{total_resources['limits']['cpu']}m"
