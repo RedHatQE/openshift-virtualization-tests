@@ -15,9 +15,10 @@ jobs = 0
 #   N802 — function name should be lowercase; ast.NodeVisitor/logging.Formatter method overrides
 #
 # Intentionally suppressed (not enforced by either linter):
-#   TODO: rename exceptions to use Error suffix and remove N818 from ignore
+#   N815 — mixedCaseVariable in class scope; dataclass fields match Kubernetes API schemas
+#   N802 — function name should be lowercase; method overrides like formatTime from logging.Formatter
 #   N818 — exception name should end with Error; existing names like MissingTemplateVariables
-ignore = N802, N815, E501, F821, E201, W503, N818
+ignore = N815, N802, E501, F821, E201, W503, N818
 exclude =
     doc,
     .tox,
