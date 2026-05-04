@@ -30,7 +30,6 @@ from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_30MIN,

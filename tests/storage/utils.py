@@ -28,7 +28,6 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
-    TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
