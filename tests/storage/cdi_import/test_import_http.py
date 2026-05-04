@@ -32,6 +32,7 @@ from utilities.constants import (
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_40MIN,
     U1_LARGE,
     WINDOWS_2K22_PREFERENCE,
 >>>>>>> 21c67484 (increase timeout and remove unused code)
@@ -373,6 +374,6 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         },
         cpu_model=cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm, check_ssh_connectivity=False)
-        wait_for_windows_vm(vm=vm, version="2022")
+        vm.start()
+        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
         validate_os_info_vmi_vs_windows_os(vm=vm)
